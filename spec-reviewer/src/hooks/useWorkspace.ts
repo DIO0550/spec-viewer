@@ -17,14 +17,14 @@ export type WorkspaceState =
   | Readonly<{
       status: "loading";
       workspacePath: string;
-      workspace: null;
+      workspace: Workspace | null;
       error: null;
     }>
   | Readonly<{
       status: "ready";
       workspacePath: string;
       workspace: Workspace;
-      error: null;
+      error: NormalizedCommandError | null;
     }>
   | Readonly<{
       status: "error";
@@ -41,13 +41,20 @@ export type UseWorkspaceOptions = Readonly<{
   loadWorkspace?: LoadWorkspaceCommand;
 }>;
 
+export type LoadWorkspaceOptions = Readonly<{
+  preserveCurrentWorkspace?: boolean;
+}>;
+
 export type UseWorkspaceResult = Readonly<{
   state: WorkspaceState;
   workspacePath: string | null;
   workspace: Workspace | null;
   isLoading: boolean;
   error: NormalizedCommandError | null;
-  load: (selectedDirectory: string) => Promise<void>;
+  load: (
+    selectedDirectory: string,
+    options?: LoadWorkspaceOptions,
+  ) => Promise<boolean>;
   reset: () => void;
 }>;
 
@@ -64,17 +71,31 @@ export function useWorkspace(
 ): UseWorkspaceResult {
   const loadWorkspace = options.loadWorkspace ?? defaultLoadWorkspace;
   const requestIdRef = useRef(0);
+  const stateRef = useRef<WorkspaceState>(initialWorkspaceState);
   const [state, setState] = useState<WorkspaceState>(initialWorkspaceState);
 
+  const updateState = useCallback((nextState: WorkspaceState): void => {
+    stateRef.current = nextState;
+    setState(nextState);
+  }, []);
+
   const load = useCallback(
-    async (selectedDirectory: string): Promise<void> => {
+    async (
+      selectedDirectory: string,
+      loadOptions: LoadWorkspaceOptions = {},
+    ): Promise<boolean> => {
       const requestId = requestIdRef.current + 1;
       requestIdRef.current = requestId;
+      const previousState = stateRef.current;
+      const preservedWorkspace =
+        loadOptions.preserveCurrentWorkspace === true
+          ? previousState.workspace
+          : null;
 
-      setState({
+      updateState({
         status: "loading",
         workspacePath: selectedDirectory,
-        workspace: null,
+        workspace: preservedWorkspace,
         error: null,
       });
 
@@ -82,35 +103,49 @@ export function useWorkspace(
         const workspace = await loadWorkspace(selectedDirectory);
 
         if (requestIdRef.current !== requestId) {
-          return;
+          return false;
         }
 
-        setState({
+        updateState({
           status: "ready",
           workspacePath: workspace.root,
           workspace,
           error: null,
         });
+        return true;
       } catch (error) {
         if (requestIdRef.current !== requestId) {
-          return;
+          return false;
         }
 
-        setState({
+        const normalizedError = normalizeCommandError(error);
+
+        if (preservedWorkspace !== null) {
+          updateState({
+            status: "ready",
+            workspacePath: preservedWorkspace.root,
+            workspace: preservedWorkspace,
+            error: normalizedError,
+          });
+          return false;
+        }
+
+        updateState({
           status: "error",
           workspacePath: selectedDirectory,
           workspace: null,
-          error: normalizeCommandError(error),
+          error: normalizedError,
         });
+        return false;
       }
     },
-    [loadWorkspace],
+    [loadWorkspace, updateState],
   );
 
   const reset = useCallback((): void => {
     requestIdRef.current += 1;
-    setState(initialWorkspaceState);
-  }, []);
+    updateState(initialWorkspaceState);
+  }, [updateState]);
 
   return {
     state,

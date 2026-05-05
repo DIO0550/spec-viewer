@@ -18,7 +18,7 @@ export function OpenWorkspaceEmptyState({ isOpening, onOpenWorkspace }: Props) {
     >
       <EmptyState
         title="Open a workspace"
-        description="Choose a supported spec workspace to read Markdown files."
+        description="Choose or drop a supported spec workspace folder to read Markdown files."
         action={
           <button
             className="button button--primary"

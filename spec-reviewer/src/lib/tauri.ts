@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 
 import type {
   CommandError,
@@ -32,6 +33,22 @@ import type { Workspace } from "../types/workspace";
 
 const UNKNOWN_COMMAND_ERROR_MESSAGE = "Unknown IPC command failure";
 
+export type WorkspaceDragDropEvent =
+  | Readonly<{
+      type: "enter";
+      paths: readonly string[];
+    }>
+  | Readonly<{
+      type: "over";
+    }>
+  | Readonly<{
+      type: "drop";
+      paths: readonly string[];
+    }>
+  | Readonly<{
+      type: "leave";
+    }>;
+
 export type CommentCommands = Readonly<{
   listComments: (request: ListCommentsRequest) => Promise<ListCommentsResponse>;
   addComment: (request: AddCommentRequest) => Promise<Comment>;
@@ -58,6 +75,22 @@ export async function loadWorkspace(
   selectedDirectory: string,
 ): Promise<Workspace> {
   return invokeCommand("load_workspace", { selectedDirectory });
+}
+
+/** @returns Whether the given path points to an existing directory. */
+export async function validateWorkspaceDirectory(
+  path: string,
+): Promise<Readonly<{ isDirectory: boolean }>> {
+  return invokeCommand("validate_workspace_directory", { path });
+}
+
+/** @returns An unlisten function for native Tauri workspace drag-and-drop events. */
+export async function subscribeWorkspaceDragDropEvents(
+  handler: (event: WorkspaceDragDropEvent) => void,
+): Promise<() => void> {
+  return getCurrentWebview().onDragDropEvent((event) => {
+    handler(event.payload as WorkspaceDragDropEvent);
+  });
 }
 
 /** @returns Spec tree for the workspace path. */

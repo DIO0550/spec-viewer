@@ -15,3 +15,11 @@ export type Workspace = Readonly<{
 export type LoadWorkspaceRequest = Readonly<{
   selectedDirectory: string;
 }>;
+
+export type ValidateWorkspaceDirectoryRequest = Readonly<{
+  path: string;
+}>;
+
+export type ValidateWorkspaceDirectoryResponse = Readonly<{
+  isDirectory: boolean;
+}>;

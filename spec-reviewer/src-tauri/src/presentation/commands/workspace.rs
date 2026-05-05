@@ -1,5 +1,7 @@
 //! Workspace command DTOs and handlers.
 
+use std::{fs, io, path::Path};
+
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
@@ -8,12 +10,30 @@ use crate::{
     domain::workspace::{WorkspaceConfig, WorkspaceFileMapping, WorkspaceLayout},
 };
 
-use super::{CommandResult, CommandState};
+use super::{CommandError, CommandResult, CommandState};
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LoadWorkspaceRequest {
     selected_directory: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ValidateWorkspaceDirectoryRequest {
+    path: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ValidateWorkspaceDirectoryResponse {
+    is_directory: bool,
+}
+
+impl ValidateWorkspaceDirectoryResponse {
+    pub fn is_directory(&self) -> bool {
+        self.is_directory
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -70,6 +90,36 @@ pub fn load_workspace(
         .load_workspace(&request.selected_directory)?;
 
     Ok(WorkspaceResponse::from(&workspace))
+}
+
+#[tauri::command]
+pub fn validate_workspace_directory(
+    request: ValidateWorkspaceDirectoryRequest,
+) -> CommandResult<ValidateWorkspaceDirectoryResponse> {
+    let trimmed_path = request.path.trim();
+
+    if trimmed_path.is_empty() {
+        return Ok(ValidateWorkspaceDirectoryResponse {
+            is_directory: false,
+        });
+    }
+
+    let path = Path::new(trimmed_path);
+
+    match fs::metadata(path) {
+        Ok(metadata) => Ok(ValidateWorkspaceDirectoryResponse {
+            is_directory: metadata.is_dir(),
+        }),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            Ok(ValidateWorkspaceDirectoryResponse {
+                is_directory: false,
+            })
+        }
+        Err(error) => Err(CommandError::invalid_request(format!(
+            "failed to inspect dropped path: {}",
+            error
+        ))),
+    }
 }
 
 impl From<&LoadWorkspaceResult> for WorkspaceResponse {
@@ -134,5 +184,12 @@ mod tests {
         assert_eq!("tasks", response.files()[0].key());
         assert_eq!("Tasks", response.files()[0].label());
         assert_eq!("todo.md", response.files()[0].file_name());
+    }
+
+    #[test]
+    fn validate_workspace_directory_response_exposes_directory_flag() {
+        let response = ValidateWorkspaceDirectoryResponse { is_directory: true };
+
+        assert!(response.is_directory());
     }
 }

@@ -11,7 +11,7 @@ use presentation::commands::{
     },
     specs::{list_specs, read_spec_file},
     watch::{start_spec_file_watch, stop_spec_file_watch},
-    workspace::load_workspace,
+    workspace::{load_workspace, validate_workspace_directory},
     CommandState,
 };
 
@@ -23,6 +23,7 @@ pub fn run() {
         .manage(CommandState::default())
         .invoke_handler(tauri::generate_handler![
             load_workspace,
+            validate_workspace_directory,
             list_specs,
             read_spec_file,
             start_spec_file_watch,

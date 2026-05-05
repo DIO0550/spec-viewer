@@ -229,6 +229,13 @@ textarea:disabled {
   flex: 0 0 auto;
 }
 
+.app-drop-root {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  min-height: 0;
+}
+
 .app-shell {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -413,6 +420,51 @@ textarea:disabled {
   background: transparent;
   font: inherit;
   outline: none;
+}
+
+.workspace-drop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  pointer-events: none;
+  background: rgba(23, 33, 29, 0.28);
+  backdrop-filter: blur(2px);
+}
+
+.workspace-drop-overlay__content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(420px, 100%);
+  border: 2px dashed var(--color-accent-border);
+  border-radius: 8px;
+  padding: 18px 20px;
+  color: var(--color-accent);
+  background: var(--color-surface-translucent);
+  box-shadow: var(--shadow-popover);
+}
+
+.workspace-drop-overlay__content p,
+.workspace-drop-overlay__content span {
+  margin: 0;
+}
+
+.workspace-drop-overlay__content p {
+  color: var(--color-text);
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+.workspace-drop-overlay__content span {
+  display: block;
+  margin-top: 3px;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.35;
 }
 
 .spec-tree,
@@ -1581,6 +1633,11 @@ textarea:disabled {
     min-height: 100vh;
     height: auto;
     overflow: visible;
+  }
+
+  .app-drop-root {
+    min-height: 100vh;
+    height: auto;
   }
 
   .workspace-toolbar {

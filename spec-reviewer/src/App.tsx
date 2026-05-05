@@ -8,6 +8,7 @@ import { MarkdownViewer } from "./components/MarkdownViewer";
 import { OpenWorkspaceEmptyState } from "./components/OpenWorkspaceEmptyState";
 import { SpecTabs } from "./components/SpecTabs";
 import { SpecTree } from "./components/SpecTree";
+import { WorkspaceDropOverlay } from "./components/WorkspaceDropOverlay";
 import {
   WorkspaceToolbar,
   type WorkspaceRefreshStatus,
@@ -17,8 +18,13 @@ import { useSpecFileWatcher } from "./hooks/useSpecFileWatcher";
 import { useSpecs } from "./hooks/useSpecs";
 import { useTheme } from "./hooks/useTheme";
 import { useWorkspace } from "./hooks/useWorkspace";
+import { useWorkspaceDrop } from "./hooks/useWorkspaceDrop";
 import type { CommentAnchorDisplayState, CommentId } from "./types/comment";
-import { normalizeCommandError, selectWorkspaceDirectory } from "./lib/tauri";
+import {
+  normalizeCommandError,
+  selectWorkspaceDirectory,
+  validateWorkspaceDirectory,
+} from "./lib/tauri";
 
 const idleRefreshStatus: WorkspaceRefreshStatus = {
   status: "idle",
@@ -31,6 +37,13 @@ type RefreshCurrentViewOptions = Readonly<{
   failureMessage: string;
   run: () => Promise<boolean>;
 }>;
+
+type LoadWorkspacePathOptions = Readonly<{
+  preserveCurrentWorkspace?: boolean;
+}>;
+
+const invalidDroppedDirectoryMessage =
+  "Drop a workspace folder. Files cannot be opened as workspaces.";
 
 function App() {
   const workspace = useWorkspace();
@@ -53,6 +66,7 @@ function App() {
   const [dialogErrorMessage, setDialogErrorMessage] = useState<string | null>(
     null,
   );
+  const [dropErrorMessage, setDropErrorMessage] = useState<string | null>(null);
   const [refreshStatus, setRefreshStatus] =
     useState<WorkspaceRefreshStatus>(idleRefreshStatus);
 
@@ -79,13 +93,20 @@ function App() {
     }
   }, [activeCommentId, comments.comments, comments.listState.status]);
 
-  const loadWorkspacePath = async (
-    selectedDirectory: string,
-  ): Promise<void> => {
-    setDialogErrorMessage(null);
-    setWorkspaceInput(selectedDirectory);
-    await workspace.load(selectedDirectory);
-  };
+  const loadWorkspacePath = useCallback(
+    async (
+      selectedDirectory: string,
+      options: LoadWorkspacePathOptions = {},
+    ): Promise<boolean> => {
+      setDialogErrorMessage(null);
+      setDropErrorMessage(null);
+      setWorkspaceInput(selectedDirectory);
+      return workspace.load(selectedDirectory, {
+        preserveCurrentWorkspace: options.preserveCurrentWorkspace,
+      });
+    },
+    [workspace.load],
+  );
 
   const browseWorkspace = async (): Promise<void> => {
     if (workspace.isLoading || isBrowsingWorkspace) {
@@ -123,9 +144,46 @@ function App() {
   const resetWorkspace = (): void => {
     setWorkspaceInput("");
     setDialogErrorMessage(null);
+    setDropErrorMessage(null);
     setActiveCommentId(null);
     workspace.reset();
   };
+
+  const openDroppedWorkspacePath = useCallback(
+    async (selectedDirectory: string): Promise<void> => {
+      if (workspace.isLoading || isBrowsingWorkspace) {
+        return;
+      }
+
+      setDialogErrorMessage(null);
+      setDropErrorMessage(null);
+      setWorkspaceInput(selectedDirectory);
+
+      try {
+        const validation = await validateWorkspaceDirectory(selectedDirectory);
+
+        if (!validation.isDirectory) {
+          setDropErrorMessage(invalidDroppedDirectoryMessage);
+          return;
+        }
+
+        await loadWorkspacePath(selectedDirectory, {
+          preserveCurrentWorkspace: true,
+        });
+      } catch (error) {
+        setDropErrorMessage(normalizeCommandError(error).message);
+      }
+    },
+    [isBrowsingWorkspace, loadWorkspacePath, workspace.isLoading],
+  );
+
+  const workspaceDrop = useWorkspaceDrop({
+    isDisabled: workspace.isLoading || isBrowsingWorkspace,
+    onDropWorkspacePath: (selectedDirectory) => {
+      void openDroppedWorkspacePath(selectedDirectory);
+    },
+    onInvalidDrop: setDropErrorMessage,
+  });
 
   const resolveComment = (commentId: CommentId): void => {
     void comments.resolveComment(commentId);
@@ -281,7 +339,7 @@ function App() {
   });
 
   const toolbarErrorMessage =
-    dialogErrorMessage ?? workspace.error?.message ?? null;
+    dropErrorMessage ?? dialogErrorMessage ?? workspace.error?.message ?? null;
   const shouldShowOpenWorkspacePrompt =
     workspace.workspace === null && !workspace.isLoading;
   const addCommentErrorMessage =
@@ -298,94 +356,97 @@ function App() {
     specs.selectedFileKey !== null;
 
   return (
-    <AppShell
-      toolbar={
-        <WorkspaceToolbar
-          workspacePath={workspace.workspacePath}
-          inputValue={workspaceInput}
-          isLoading={workspace.isLoading}
-          isBrowsing={isBrowsingWorkspace}
-          errorMessage={toolbarErrorMessage}
-          refreshStatus={refreshStatus}
-          canRefresh={canRefreshCurrentView}
-          themeMode={theme.themeMode}
-          onInputChange={setWorkspaceInput}
-          onBrowse={() => {
-            void browseWorkspace();
-          }}
-          onLoad={loadWorkspace}
-          onRefresh={() => {
-            void refreshCurrentViewManually();
-          }}
-          onReset={resetWorkspace}
-          onThemeModeChange={theme.setThemeMode}
-        />
-      }
-      sidebar={
-        <SpecTree
-          state={specs.specTreeState}
-          selectedSpecId={specs.selectedSpecId}
-          onSelectSpec={(specId) => {
-            void specs.selectSpec(specId);
-          }}
-          onReload={() => {
-            void specs.reloadSpecs({ preserveSelection: true });
-          }}
-        />
-      }
-      tabs={
-        <SpecTabs
-          spec={specs.selectedSpec}
-          selectedFileKey={specs.selectedFileKey}
-          onSelectFile={(fileKey) => {
-            void specs.selectFileKey(fileKey);
-          }}
-        />
-      }
-      viewer={
-        shouldShowOpenWorkspacePrompt ? (
-          <OpenWorkspaceEmptyState
-            isOpening={isBrowsingWorkspace}
-            onOpenWorkspace={() => {
+    <div className="app-drop-root">
+      <AppShell
+        toolbar={
+          <WorkspaceToolbar
+            workspacePath={workspace.workspacePath}
+            inputValue={workspaceInput}
+            isLoading={workspace.isLoading}
+            isBrowsing={isBrowsingWorkspace}
+            errorMessage={toolbarErrorMessage}
+            refreshStatus={refreshStatus}
+            canRefresh={canRefreshCurrentView}
+            themeMode={theme.themeMode}
+            onInputChange={setWorkspaceInput}
+            onBrowse={() => {
               void browseWorkspace();
             }}
-          />
-        ) : (
-          <MarkdownViewer
-            state={specs.documentState}
-            selectedSpecLabel={specs.selectedSpec?.label ?? null}
-            selectedFileLabel={specs.selectedFile?.label ?? null}
-            comments={comments.comments}
-            activeCommentId={activeCommentId}
-            isAddingComment={isAddingComment}
-            addCommentErrorMessage={addCommentErrorMessage}
-            isCommentScopeReady={isCommentScopeReady}
-            onReload={() => {
-              void specs.reloadDocument();
+            onLoad={loadWorkspace}
+            onRefresh={() => {
+              void refreshCurrentViewManually();
             }}
-            onAddComment={addComment}
-            onSelectComment={setActiveCommentId}
-            onAnchorDisplayStatesChange={updateCommentAnchorDisplayStates}
+            onReset={resetWorkspace}
+            onThemeModeChange={theme.setThemeMode}
           />
-        )
-      }
-      comments={
-        <CommentSidebar
-          listState={comments.listState}
-          mutationState={comments.mutationState}
-          activeCommentId={activeCommentId}
-          anchorDisplayStates={commentAnchorDisplayStates}
-          onSelectComment={setActiveCommentId}
-          onResolveComment={resolveComment}
-          onReopenComment={reopenComment}
-          onDeleteComment={deleteComment}
-          onUpdateComment={updateComment}
-          onReload={() => {
-            void comments.reloadComments();
-          }}
-        />
-      }
-    />
+        }
+        sidebar={
+          <SpecTree
+            state={specs.specTreeState}
+            selectedSpecId={specs.selectedSpecId}
+            onSelectSpec={(specId) => {
+              void specs.selectSpec(specId);
+            }}
+            onReload={() => {
+              void specs.reloadSpecs({ preserveSelection: true });
+            }}
+          />
+        }
+        tabs={
+          <SpecTabs
+            spec={specs.selectedSpec}
+            selectedFileKey={specs.selectedFileKey}
+            onSelectFile={(fileKey) => {
+              void specs.selectFileKey(fileKey);
+            }}
+          />
+        }
+        viewer={
+          shouldShowOpenWorkspacePrompt ? (
+            <OpenWorkspaceEmptyState
+              isOpening={isBrowsingWorkspace}
+              onOpenWorkspace={() => {
+                void browseWorkspace();
+              }}
+            />
+          ) : (
+            <MarkdownViewer
+              state={specs.documentState}
+              selectedSpecLabel={specs.selectedSpec?.label ?? null}
+              selectedFileLabel={specs.selectedFile?.label ?? null}
+              comments={comments.comments}
+              activeCommentId={activeCommentId}
+              isAddingComment={isAddingComment}
+              addCommentErrorMessage={addCommentErrorMessage}
+              isCommentScopeReady={isCommentScopeReady}
+              onReload={() => {
+                void specs.reloadDocument();
+              }}
+              onAddComment={addComment}
+              onSelectComment={setActiveCommentId}
+              onAnchorDisplayStatesChange={updateCommentAnchorDisplayStates}
+            />
+          )
+        }
+        comments={
+          <CommentSidebar
+            listState={comments.listState}
+            mutationState={comments.mutationState}
+            activeCommentId={activeCommentId}
+            anchorDisplayStates={commentAnchorDisplayStates}
+            onSelectComment={setActiveCommentId}
+            onResolveComment={resolveComment}
+            onReopenComment={reopenComment}
+            onDeleteComment={deleteComment}
+            onUpdateComment={updateComment}
+            onReload={() => {
+              void comments.reloadComments();
+            }}
+          />
+        }
+      />
+      <WorkspaceDropOverlay isVisible={workspaceDrop.status === "dragging"} />
+    </div>
   );
 }
 

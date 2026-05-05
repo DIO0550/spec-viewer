@@ -11,7 +11,12 @@ import type {
   StopSpecFileWatchRequest,
   StopSpecFileWatchResponse,
 } from "./watch";
-import type { LoadWorkspaceRequest, Workspace } from "./workspace";
+import type {
+  LoadWorkspaceRequest,
+  ValidateWorkspaceDirectoryRequest,
+  ValidateWorkspaceDirectoryResponse,
+  Workspace,
+} from "./workspace";
 
 export type CommandErrorCode =
   | "invalidRequest"
@@ -39,6 +44,10 @@ type WorkspaceCommandPayloads = Readonly<{
   load_workspace: Readonly<{
     request: LoadWorkspaceRequest;
     response: Workspace;
+  }>;
+  validate_workspace_directory: Readonly<{
+    request: ValidateWorkspaceDirectoryRequest;
+    response: ValidateWorkspaceDirectoryResponse;
   }>;
   list_specs: Readonly<{
     request: ListSpecsRequest;
