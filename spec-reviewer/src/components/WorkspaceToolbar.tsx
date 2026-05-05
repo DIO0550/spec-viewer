@@ -1,6 +1,15 @@
-import { FolderOpen, MonitorCog, RefreshCcw, RotateCcw } from "lucide-react";
+import {
+  FolderClock,
+  FolderOpen,
+  MonitorCog,
+  RefreshCcw,
+  RotateCcw,
+  Trash2,
+  X,
+} from "lucide-react";
 
 import type { ThemeMode } from "../hooks/useTheme";
+import type { RecentWorkspace } from "../lib/recentWorkspaces";
 
 export type WorkspaceRefreshStatus = Readonly<{
   status: "idle" | "loading" | "stale" | "error";
@@ -16,12 +25,16 @@ type Props = Readonly<{
   refreshStatus: WorkspaceRefreshStatus;
   canRefresh: boolean;
   themeMode: ThemeMode;
+  recentWorkspaces?: readonly RecentWorkspace[];
   onInputChange: (nextValue: string) => void;
   onBrowse: () => void;
   onLoad: () => void;
   onRefresh: () => void;
   onReset: () => void;
   onThemeModeChange: (nextThemeMode: ThemeMode) => void;
+  onOpenRecentWorkspace?: (path: string) => void;
+  onRemoveRecentWorkspace?: (path: string) => void;
+  onClearRecentWorkspaces?: () => void;
 }>;
 
 /** @returns Workspace path controls and current workspace status. */
@@ -34,16 +47,21 @@ export function WorkspaceToolbar({
   refreshStatus,
   canRefresh,
   themeMode,
+  recentWorkspaces = [],
   onInputChange,
   onBrowse,
   onLoad,
   onRefresh,
   onReset,
   onThemeModeChange,
+  onOpenRecentWorkspace,
+  onRemoveRecentWorkspace,
+  onClearRecentWorkspaces,
 }: Props) {
   const isBusy = isLoading || isBrowsing;
   const canLoad = inputValue.trim().length > 0 && !isBusy;
   const isRefreshing = refreshStatus.status === "loading";
+  const hasRecentWorkspaces = recentWorkspaces.length > 0;
 
   return (
     <form
@@ -118,6 +136,69 @@ export function WorkspaceToolbar({
           <RefreshCcw aria-hidden="true" size={16} />
           {isLoading ? "Loading" : "Load"}
         </button>
+        <details className="workspace-toolbar__recent">
+          <summary
+            aria-label="Recent workspaces"
+            title="Recent workspaces"
+            aria-disabled={!hasRecentWorkspaces}
+          >
+            <FolderClock aria-hidden="true" size={16} />
+          </summary>
+          <div className="workspace-toolbar__recent-menu">
+            {hasRecentWorkspaces ? (
+              <>
+                <div
+                  className="workspace-toolbar__recent-list"
+                  aria-label="Recent workspaces"
+                >
+                  {recentWorkspaces.map((recentWorkspace) => (
+                    <div
+                      className="workspace-toolbar__recent-row"
+                      key={recentWorkspace.path}
+                    >
+                      <button
+                        className="workspace-toolbar__recent-item"
+                        type="button"
+                        disabled={isBusy}
+                        title={recentWorkspace.path}
+                        onClick={() => {
+                          onOpenRecentWorkspace?.(recentWorkspace.path);
+                        }}
+                      >
+                        {recentWorkspace.path}
+                      </button>
+                      <button
+                        className="icon-button"
+                        type="button"
+                        disabled={isBusy}
+                        aria-label={`Remove ${recentWorkspace.path} from recent workspaces`}
+                        title="Remove from recent workspaces"
+                        onClick={() => {
+                          onRemoveRecentWorkspace?.(recentWorkspace.path);
+                        }}
+                      >
+                        <X aria-hidden="true" size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  className="button button--ghost workspace-toolbar__recent-clear"
+                  type="button"
+                  disabled={isBusy}
+                  onClick={onClearRecentWorkspaces}
+                >
+                  <Trash2 aria-hidden="true" size={14} />
+                  Clear
+                </button>
+              </>
+            ) : (
+              <span className="workspace-toolbar__recent-empty">
+                No recent workspaces
+              </span>
+            )}
+          </div>
+        </details>
         <button
           className="icon-button"
           type="button"

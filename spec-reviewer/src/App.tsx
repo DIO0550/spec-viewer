@@ -14,6 +14,7 @@ import {
   type WorkspaceRefreshStatus,
 } from "./components/WorkspaceToolbar";
 import { useComments } from "./hooks/useComments";
+import { useRecentWorkspaces } from "./hooks/useRecentWorkspaces";
 import { useSpecFileWatcher } from "./hooks/useSpecFileWatcher";
 import { useSpecs } from "./hooks/useSpecs";
 import { useTheme } from "./hooks/useTheme";
@@ -44,9 +45,12 @@ type LoadWorkspacePathOptions = Readonly<{
 
 const invalidDroppedDirectoryMessage =
   "Drop a workspace folder. Files cannot be opened as workspaces.";
+const missingRecentWorkspaceMessage =
+  "Recent workspace no longer exists. It was removed from the list.";
 
 function App() {
   const workspace = useWorkspace();
+  const recentWorkspaces = useRecentWorkspaces();
   const theme = useTheme();
   const specs = useSpecs({ workspacePath: workspace.workspace?.root ?? null });
   const comments = useComments({
@@ -101,11 +105,17 @@ function App() {
       setDialogErrorMessage(null);
       setDropErrorMessage(null);
       setWorkspaceInput(selectedDirectory);
-      return workspace.load(selectedDirectory, {
+      const isLoaded = await workspace.load(selectedDirectory, {
         preserveCurrentWorkspace: options.preserveCurrentWorkspace,
       });
+
+      if (isLoaded) {
+        recentWorkspaces.recordWorkspace(selectedDirectory);
+      }
+
+      return isLoaded;
     },
-    [workspace.load],
+    [recentWorkspaces.recordWorkspace, workspace.load],
   );
 
   const browseWorkspace = async (): Promise<void> => {
@@ -175,6 +185,45 @@ function App() {
       }
     },
     [isBrowsingWorkspace, loadWorkspacePath, workspace.isLoading],
+  );
+
+  const openRecentWorkspacePath = useCallback(
+    async (selectedDirectory: string): Promise<void> => {
+      if (workspace.isLoading || isBrowsingWorkspace) {
+        return;
+      }
+
+      setDialogErrorMessage(null);
+      setDropErrorMessage(null);
+      setWorkspaceInput(selectedDirectory);
+
+      try {
+        const validation = await validateWorkspaceDirectory(selectedDirectory);
+
+        if (!validation.isDirectory) {
+          recentWorkspaces.removeWorkspace(selectedDirectory);
+          setDialogErrorMessage(missingRecentWorkspaceMessage);
+          return;
+        }
+
+        const isLoaded = await loadWorkspacePath(selectedDirectory, {
+          preserveCurrentWorkspace: true,
+        });
+
+        if (!isLoaded) {
+          recentWorkspaces.removeWorkspace(selectedDirectory);
+        }
+      } catch (error) {
+        recentWorkspaces.removeWorkspace(selectedDirectory);
+        setDialogErrorMessage(normalizeCommandError(error).message);
+      }
+    },
+    [
+      isBrowsingWorkspace,
+      loadWorkspacePath,
+      recentWorkspaces.removeWorkspace,
+      workspace.isLoading,
+    ],
   );
 
   const workspaceDrop = useWorkspaceDrop({
@@ -368,6 +417,7 @@ function App() {
             refreshStatus={refreshStatus}
             canRefresh={canRefreshCurrentView}
             themeMode={theme.themeMode}
+            recentWorkspaces={recentWorkspaces.recentWorkspaces}
             onInputChange={setWorkspaceInput}
             onBrowse={() => {
               void browseWorkspace();
@@ -378,6 +428,11 @@ function App() {
             }}
             onReset={resetWorkspace}
             onThemeModeChange={theme.setThemeMode}
+            onOpenRecentWorkspace={(path) => {
+              void openRecentWorkspacePath(path);
+            }}
+            onRemoveRecentWorkspace={recentWorkspaces.removeWorkspace}
+            onClearRecentWorkspaces={recentWorkspaces.clearWorkspaces}
           />
         }
         sidebar={
@@ -405,9 +460,14 @@ function App() {
           shouldShowOpenWorkspacePrompt ? (
             <OpenWorkspaceEmptyState
               isOpening={isBrowsingWorkspace}
+              recentWorkspaces={recentWorkspaces.recentWorkspaces}
               onOpenWorkspace={() => {
                 void browseWorkspace();
               }}
+              onOpenRecentWorkspace={(path) => {
+                void openRecentWorkspacePath(path);
+              }}
+              onRemoveRecentWorkspace={recentWorkspaces.removeWorkspace}
             />
           ) : (
             <MarkdownViewer
