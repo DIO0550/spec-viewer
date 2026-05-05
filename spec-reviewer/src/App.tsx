@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import "./App.css";
+import type { AddCommentSubmitInput } from "./components/AddCommentPopover";
 import { AppShell } from "./components/AppShell";
 import { CommentSidebar } from "./components/CommentSidebar";
 import { MarkdownViewer } from "./components/MarkdownViewer";
@@ -121,10 +122,37 @@ function App() {
     void comments.deleteComment(commentId);
   };
 
+  const addComment = async ({
+    anchor,
+    body,
+  }: AddCommentSubmitInput): Promise<boolean> => {
+    const addedComment = await comments.addComment({ anchor, body });
+
+    if (addedComment === null) {
+      return false;
+    }
+
+    setActiveCommentId(addedComment.id);
+    await comments.reloadComments();
+    return true;
+  };
+
   const toolbarErrorMessage =
     dialogErrorMessage ?? workspace.error?.message ?? null;
   const shouldShowOpenWorkspacePrompt =
     workspace.workspace === null && !workspace.isLoading;
+  const addCommentErrorMessage =
+    comments.mutationState.status === "error" &&
+    comments.mutationState.operation === "add"
+      ? comments.mutationState.error.message
+      : null;
+  const isAddingComment =
+    comments.mutationState.status === "saving" &&
+    comments.mutationState.operation === "add";
+  const isCommentScopeReady =
+    workspace.workspace !== null &&
+    specs.selectedSpecId !== null &&
+    specs.selectedFileKey !== null;
 
   return (
     <AppShell
@@ -177,9 +205,13 @@ function App() {
             state={specs.documentState}
             selectedSpecLabel={specs.selectedSpec?.label ?? null}
             selectedFileLabel={specs.selectedFile?.label ?? null}
+            isAddingComment={isAddingComment}
+            addCommentErrorMessage={addCommentErrorMessage}
+            isCommentScopeReady={isCommentScopeReady}
             onReload={() => {
               void specs.reloadDocument();
             }}
+            onAddComment={addComment}
           />
         )
       }

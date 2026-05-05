@@ -6,13 +6,17 @@ import {
   useRef,
   useState,
 } from "react";
-import { MessageSquarePlus, RefreshCcw, X } from "lucide-react";
+import { MessageSquarePlus, RefreshCcw } from "lucide-react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import { useMarkdownTextSelection } from "../hooks/useMarkdownTextSelection";
 import type { SpecDocumentState } from "../hooks/useSpecs";
 import type { CommentAnchorDraft } from "../types/comment";
+import {
+  AddCommentPopover,
+  type AddCommentSubmitInput,
+} from "./AddCommentPopover";
 import { EmptyState } from "./EmptyState";
 import { ErrorState } from "./ErrorState";
 
@@ -31,7 +35,11 @@ type Props = Readonly<{
   state: SpecDocumentState;
   selectedSpecLabel: string | null;
   selectedFileLabel: string | null;
+  isAddingComment?: boolean;
+  addCommentErrorMessage?: string | null;
+  isCommentScopeReady?: boolean;
   onReload: () => void;
+  onAddComment?: (input: AddCommentSubmitInput) => Promise<boolean>;
 }>;
 
 /** @returns The Markdown viewer shell with document loading states. */
@@ -39,7 +47,11 @@ export function MarkdownViewer({
   state,
   selectedSpecLabel,
   selectedFileLabel,
+  isAddingComment = false,
+  addCommentErrorMessage = null,
+  isCommentScopeReady = true,
   onReload,
+  onAddComment,
 }: Props) {
   const panelRef = useRef<HTMLElement>(null);
   const renderedRootRef = useRef<HTMLDivElement>(null);
@@ -55,6 +67,25 @@ export function MarkdownViewer({
   useEffect(() => {
     setActiveAnchorDraft(null);
   }, [resetKey]);
+
+  const closeAnchorDraft = (): void => {
+    setActiveAnchorDraft(null);
+    clearBrowserSelection();
+  };
+
+  const addComment = async (input: AddCommentSubmitInput): Promise<boolean> => {
+    if (onAddComment === undefined) {
+      return false;
+    }
+
+    const wasSaved = await onAddComment(input);
+
+    if (wasSaved) {
+      closeAnchorDraft();
+    }
+
+    return wasSaved;
+  };
 
   if (state.status === "idle") {
     return (
@@ -177,9 +208,11 @@ export function MarkdownViewer({
       />
       <CommentAnchorDraftPopover
         draft={activeAnchorDraft}
-        onClose={() => {
-          setActiveAnchorDraft(null);
-        }}
+        isSaving={isAddingComment}
+        errorMessage={addCommentErrorMessage}
+        isScopeReady={isCommentScopeReady}
+        onSubmit={addComment}
+        onCancel={closeAnchorDraft}
       />
     </article>
   );
@@ -347,13 +380,21 @@ function TextSelectionCommentButton({
 
 type CommentAnchorDraftPopoverProps = Readonly<{
   draft: CommentAnchorDraft | null;
-  onClose: () => void;
+  isSaving: boolean;
+  errorMessage: string | null;
+  isScopeReady: boolean;
+  onSubmit: (input: AddCommentSubmitInput) => Promise<boolean>;
+  onCancel: () => void;
 }>;
 
-/** @returns A compact preview of the pending comment anchor draft. */
+/** @returns The pending comment anchor form, or null when no draft exists. */
 function CommentAnchorDraftPopover({
   draft,
-  onClose,
+  isSaving,
+  errorMessage,
+  isScopeReady,
+  onSubmit,
+  onCancel,
 }: CommentAnchorDraftPopoverProps) {
   if (draft === null) {
     return null;
@@ -362,30 +403,15 @@ function CommentAnchorDraftPopover({
   const style = createFloatingStyle(draft, "popover");
 
   return (
-    <aside
-      className="comment-anchor-draft-popover"
+    <AddCommentPopover
+      draft={draft}
       style={style}
-      role="status"
-      aria-live="polite"
-    >
-      <header className="comment-anchor-draft-popover__header">
-        <span>Anchor ready</span>
-        <button
-          className="icon-button"
-          type="button"
-          aria-label="Dismiss anchor draft"
-          onClick={onClose}
-        >
-          <X aria-hidden="true" size={14} />
-        </button>
-      </header>
-      <blockquote>{draft.anchor.textSnippet}</blockquote>
-      <p>
-        {formatDraftBlockType(draft.anchor.blockType)} block{" "}
-        {draft.anchor.blockIndex + 1}, chars {draft.anchor.charRange.start}-
-        {draft.anchor.charRange.end}
-      </p>
-    </aside>
+      isSaving={isSaving}
+      errorMessage={errorMessage}
+      isScopeReady={isScopeReady}
+      onSubmit={onSubmit}
+      onCancel={onCancel}
+    />
   );
 }
 
@@ -411,9 +437,9 @@ function createFloatingStyle(
   };
 }
 
-/** @returns Human-readable block type text for the anchor preview. */
-function formatDraftBlockType(blockType: string): string {
-  return blockType.replace(/_/g, " ");
+/** Clears the browser selection once a draft has been handled. */
+function clearBrowserSelection(): void {
+  document.getSelection()?.removeAllRanges();
 }
 
 type LinkProps = ComponentPropsWithoutRef<"a">;

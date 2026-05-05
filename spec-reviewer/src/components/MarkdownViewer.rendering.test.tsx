@@ -39,6 +39,7 @@ type RenderResult = Readonly<{
 
 function renderComponent(component: ReactNode): RenderResult {
   const container = document.createElement("div");
+  document.body.append(container);
   const root = createRoot(container);
 
   act(() => {
@@ -51,6 +52,7 @@ function renderComponent(component: ReactNode): RenderResult {
       act(() => {
         root.unmount();
       });
+      container.remove();
     },
   };
 }
@@ -76,6 +78,7 @@ function createReadyState(contents: string | null): SpecDocumentState {
 function renderViewer(
   state: SpecDocumentState,
   onReload = vi.fn(),
+  onAddComment = vi.fn().mockResolvedValue(true),
 ): RenderResult {
   return renderComponent(
     <MarkdownViewer
@@ -83,6 +86,7 @@ function renderViewer(
       selectedSpecLabel={selectedSpecLabel}
       selectedFileLabel={selectedFileLabel}
       onReload={onReload}
+      onAddComment={onAddComment}
     />,
   );
 }
@@ -146,9 +150,12 @@ test("MarkdownViewerはコメントアンカー用のブロックメタデータ
   result.unmount();
 });
 
-test("MarkdownViewerはMarkdown内の選択から追加コメント導線を表示する", () => {
+test("MarkdownViewerはMarkdown内の選択から追加コメントを保存する", async () => {
+  const onAddComment = vi.fn().mockResolvedValue(true);
   const result = renderViewer(
     createReadyState("A paragraph with selectable text."),
+    vi.fn(),
+    onAddComment,
   );
   const textNode = result.container.querySelector(
     ".markdown-rendered p",
@@ -181,10 +188,42 @@ test("MarkdownViewerはMarkdown内の選択から追加コメント導線を表�
     (addButton as HTMLButtonElement).click();
   });
 
-  expect(result.container.textContent).toContain("Anchor ready");
+  expect(result.container.textContent).toContain("Add comment");
   expect(result.container.textContent).toContain(
     "paragraph block 1, chars 2-11",
   );
+
+  const textarea = result.container.querySelector(
+    "textarea",
+  ) as HTMLTextAreaElement;
+  act(() => {
+    textarea.value = " Please clarify this. ";
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  await act(async () => {
+    (
+      Array.from(result.container.querySelectorAll("button")).find((button) =>
+        button.textContent?.includes("Save"),
+      ) as HTMLButtonElement
+    ).click();
+  });
+
+  expect(onAddComment).toHaveBeenCalledWith({
+    anchor: expect.objectContaining({
+      fileKey: "tasks",
+      blockType: "paragraph",
+      blockIndex: 0,
+      textSnippet: "paragraph",
+      charRange: {
+        start: 2,
+        end: 11,
+      },
+    }),
+    body: "Please clarify this.",
+  });
+  expect(result.container.querySelector("textarea")).toBeNull();
+  expect(document.getSelection()?.rangeCount).toBe(0);
   result.unmount();
 });
 
