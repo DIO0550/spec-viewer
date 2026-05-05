@@ -5,10 +5,11 @@ type Props = Readonly<{
   sidebar: ReactNode;
   tabs: ReactNode;
   viewer: ReactNode;
+  comments: ReactNode;
 }>;
 
 /** @returns The three-pane application shell for spec review. */
-export function AppShell({ toolbar, sidebar, tabs, viewer }: Props) {
+export function AppShell({ toolbar, sidebar, tabs, viewer, comments }: Props) {
   return (
     <div className="app-shell">
       <header className="app-shell__toolbar">{toolbar}</header>
@@ -21,10 +22,7 @@ export function AppShell({ toolbar, sidebar, tabs, viewer }: Props) {
           <div className="app-shell__viewer">{viewer}</div>
         </main>
         <aside className="app-shell__comments" aria-label="Comment sidebar">
-          <div className="comment-sidebar">
-            <h2>Comments</h2>
-            <p>Comment threads are reserved for the review workflow.</p>
-          </div>
+          {comments}
         </aside>
       </div>
     </div>

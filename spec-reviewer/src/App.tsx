@@ -1,24 +1,57 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import "./App.css";
 import { AppShell } from "./components/AppShell";
+import { CommentSidebar } from "./components/CommentSidebar";
 import { MarkdownViewer } from "./components/MarkdownViewer";
 import { OpenWorkspaceEmptyState } from "./components/OpenWorkspaceEmptyState";
 import { SpecTabs } from "./components/SpecTabs";
 import { SpecTree } from "./components/SpecTree";
 import { WorkspaceToolbar } from "./components/WorkspaceToolbar";
+import { useComments } from "./hooks/useComments";
 import { useSpecs } from "./hooks/useSpecs";
 import { useWorkspace } from "./hooks/useWorkspace";
+import type { CommentId } from "./types/comment";
 import { normalizeCommandError, selectWorkspaceDirectory } from "./lib/tauri";
 
 function App() {
   const workspace = useWorkspace();
   const specs = useSpecs({ workspacePath: workspace.workspace?.root ?? null });
+  const comments = useComments({
+    workspacePath: workspace.workspace?.root ?? null,
+    specId: specs.selectedSpecId,
+    fileKey: specs.selectedFileKey,
+    statusFilter: "all",
+  });
   const [workspaceInput, setWorkspaceInput] = useState("");
+  const [activeCommentId, setActiveCommentId] = useState<CommentId | null>(
+    null,
+  );
   const [isBrowsingWorkspace, setIsBrowsingWorkspace] = useState(false);
   const [dialogErrorMessage, setDialogErrorMessage] = useState<string | null>(
     null,
   );
+
+  useEffect(() => {
+    setActiveCommentId(null);
+  }, [specs.selectedFileKey, specs.selectedSpecId, workspace.workspace?.root]);
+
+  useEffect(() => {
+    if (
+      comments.listState.status !== "ready" &&
+      comments.listState.status !== "empty"
+    ) {
+      return;
+    }
+
+    const hasActiveComment = comments.comments.some(
+      (comment) => comment.id === activeCommentId,
+    );
+
+    if (activeCommentId !== null && !hasActiveComment) {
+      setActiveCommentId(null);
+    }
+  }, [activeCommentId, comments.comments, comments.listState.status]);
 
   const loadWorkspacePath = async (
     selectedDirectory: string,
@@ -64,7 +97,24 @@ function App() {
   const resetWorkspace = (): void => {
     setWorkspaceInput("");
     setDialogErrorMessage(null);
+    setActiveCommentId(null);
     workspace.reset();
+  };
+
+  const resolveComment = (commentId: CommentId): void => {
+    void comments.resolveComment(commentId);
+  };
+
+  const reopenComment = (commentId: CommentId): void => {
+    void comments.reopenComment(commentId);
+  };
+
+  const deleteComment = (commentId: CommentId): void => {
+    if (commentId === activeCommentId) {
+      setActiveCommentId(null);
+    }
+
+    void comments.deleteComment(commentId);
   };
 
   const toolbarErrorMessage =
@@ -128,6 +178,20 @@ function App() {
             }}
           />
         )
+      }
+      comments={
+        <CommentSidebar
+          listState={comments.listState}
+          mutationState={comments.mutationState}
+          activeCommentId={activeCommentId}
+          onSelectComment={setActiveCommentId}
+          onResolveComment={resolveComment}
+          onReopenComment={reopenComment}
+          onDeleteComment={deleteComment}
+          onReload={() => {
+            void comments.reloadComments();
+          }}
+        />
       }
     />
   );

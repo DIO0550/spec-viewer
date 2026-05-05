@@ -137,6 +137,7 @@ test("AppShellはtoolbar、tree、tabs、viewer、comment sidebarを表示する
           onReload={vi.fn()}
         />
       }
+      comments={<div>Comments</div>}
     />,
   );
 

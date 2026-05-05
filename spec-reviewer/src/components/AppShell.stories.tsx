@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ComponentProps } from "react";
 import { fn } from "storybook/test";
 
+import type { Comment } from "../types/comment";
 import type { SpecDocumentState, SpecTreeState } from "../hooks/useSpecs";
 import type {
   SpecDocument,
@@ -10,6 +11,7 @@ import type {
   SpecTree as SpecTreeShape,
 } from "../types/spec";
 import { AppShell } from "./AppShell";
+import { CommentSidebar } from "./CommentSidebar";
 import { MarkdownViewer } from "./MarkdownViewer";
 import { SpecTabs } from "./SpecTabs";
 import { SpecTree } from "./SpecTree";
@@ -103,6 +105,47 @@ const readyDocumentState: SpecDocumentState = {
   error: null,
 };
 
+const sampleComments: readonly Comment[] = [
+  {
+    id: "cmt_story_open",
+    anchor: {
+      fileKey: "tasks",
+      blockType: "list_item",
+      blockIndex: 1,
+      textHash: "sha256:story-open",
+      textSnippet: "Comment behavior follows in P1.15",
+      charRange: {
+        start: 0,
+        end: 34,
+      },
+    },
+    body: "Check whether this note should move to Phase 2.",
+    status: "open",
+    resolved: false,
+    createdAt: "2026-05-05T10:00:00Z",
+    updatedAt: "2026-05-05T10:15:00Z",
+  },
+  {
+    id: "cmt_story_resolved",
+    anchor: {
+      fileKey: "tasks",
+      blockType: "heading",
+      blockIndex: 0,
+      textHash: "sha256:story-resolved",
+      textSnippet: "P1.14 Markdown Rendering",
+      charRange: {
+        start: 0,
+        end: 25,
+      },
+    },
+    body: "Rendering checklist is already reflected in the plan.",
+    status: "resolved",
+    resolved: true,
+    createdAt: "2026-05-05T11:00:00Z",
+    updatedAt: "2026-05-05T11:30:00Z",
+  },
+];
+
 const meta = {
   component: AppShell,
   argTypes: {
@@ -110,6 +153,7 @@ const meta = {
     sidebar: { control: false },
     tabs: { control: false },
     viewer: { control: false },
+    comments: { control: false },
   },
 } satisfies Meta<typeof AppShell>;
 
@@ -266,6 +310,33 @@ function createShellArgs({
         state={documentState}
         selectedSpecLabel={selectedSpec?.label ?? null}
         selectedFileLabel={selectedFile?.label ?? null}
+        onReload={fn()}
+      />
+    ),
+    comments: (
+      <CommentSidebar
+        listState={{
+          status: "ready",
+          scope: {
+            workspacePath,
+            specId: sampleSpec.id,
+            fileKey: "tasks",
+          },
+          statusFilter: "all",
+          comments: sampleComments,
+          error: null,
+        }}
+        mutationState={{
+          status: "idle",
+          operation: null,
+          commentId: null,
+          error: null,
+        }}
+        activeCommentId="cmt_story_open"
+        onSelectComment={fn()}
+        onResolveComment={fn()}
+        onReopenComment={fn()}
+        onDeleteComment={fn()}
         onReload={fn()}
       />
     ),
