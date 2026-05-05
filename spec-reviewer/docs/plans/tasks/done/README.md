@@ -13,3 +13,4 @@ Completed task files are moved here from the active task groups.
 ## Completed Tasks
 
 - [P1.1 Backend Module Skeleton](./phase-1-viewer/p1-01-backend-module-skeleton.md)
+- [P1.2 Workspace Domain](./phase-1-viewer/p1-02-workspace-domain.md)
