@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<title>md-viewer-app — Design Explorations</title>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #f0eee9;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, sans-serif;
+  }
+  #root { height: 100vh; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="variations.jsx"></script>
+
+<script type="text/babel">
+function App() {
+  return (
+    <DesignCanvas>
+      <DCSection
+        id="md-viewer-app"
+        title="md-viewer-app"
+        subtitle=".plugin-workspace/.specs/ 直下の spec フォルダ一覧を左に、選択中 spec の 4 ファイル (exploration / hearing / impl / tasks) をタブで切替。複数のワークスペースを対象に動かせる前提。"
+      >
+        <DCArtboard id="v1" label="01 · Standard — Finder/Notes 寄り、ニュートラル" width={920} height={620}>
+          <V1Standard />
+        </DCArtboard>
+        <DCArtboard id="v2" label="02 · Technical — 高密度、等幅多め、エディタ寄り" width={920} height={620}>
+          <V2Technical />
+        </DCArtboard>
+        <DCArtboard id="v3" label="03 · Reader — 余白広め・本文セリフ、Markdown主役" width={920} height={620}>
+          <V3Reader />
+        </DCArtboard>
+        <DCArtboard id="v4" label="04 · Dark — Standard のダーク版" width={920} height={620}>
+          <V4Dark />
+        </DCArtboard>
+      </DCSection>
+
+      <DCPostIt x={40} y={40} width={300}>
+        サイドバー: .specs/ ツリー。spec を開くと code-review/ や 4 つの md が展開。
+        archive/ は下に折りたたみ。フッタにワークスペースのパスを表示。
+      </DCPostIt>
+    </DesignCanvas>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>
