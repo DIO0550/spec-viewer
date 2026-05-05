@@ -4,7 +4,6 @@ Goal: track UX polish, export, future AI integration, and release preparation.
 
 ## Tasks
 
-- [P4.2 Comment Search](./p4-02-comment-search.md)
 - [P4.3 Theme Support](./p4-03-theme-support.md)
 - [P4.4 Drag And Drop Workspace Open](./p4-04-drag-and-drop-workspace-open.md)
 - [P4.5 Recent Workspaces](./p4-05-recent-workspaces.md)

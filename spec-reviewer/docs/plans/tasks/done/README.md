@@ -57,3 +57,4 @@ Completed task files are moved here from the active task groups.
 - [P3.11 Refresh UI](./phase-3-anchors/p3-11-refresh-ui.md)
 - [P3.12 Edge Case Coverage](./phase-3-anchors/p3-12-edge-case-coverage.md)
 - [P4.1 Comment Filters](./later-phases/p4-01-comment-filters.md)
+- [P4.2 Comment Search](./later-phases/p4-02-comment-search.md)
