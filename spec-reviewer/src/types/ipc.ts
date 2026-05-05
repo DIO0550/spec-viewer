@@ -1,13 +1,21 @@
-import type { SpecDocument, SpecTree } from "./spec";
+import type { CommentCommandPayloads } from "./comment";
+import type {
+  ListSpecsRequest,
+  ReadSpecFileRequest,
+  SpecDocument,
+  SpecTree,
+} from "./spec";
 import type { LoadWorkspaceRequest, Workspace } from "./workspace";
-import type { ListSpecsRequest, ReadSpecFileRequest } from "./spec";
 
 export type CommandErrorCode =
   | "invalidRequest"
   | "workspaceDetection"
   | "configLoad"
   | "specTreeScan"
-  | "markdownRead";
+  | "markdownRead"
+  | "invalidSpec"
+  | "invalidComment"
+  | "commentRepository";
 
 export type CommandError = Readonly<{
   code: CommandErrorCode;
@@ -20,7 +28,7 @@ export type NormalizedCommandError = Readonly<{
   raw: unknown;
 }>;
 
-export type CommandPayloads = Readonly<{
+type WorkspaceCommandPayloads = Readonly<{
   load_workspace: Readonly<{
     request: LoadWorkspaceRequest;
     response: Workspace;
@@ -34,6 +42,8 @@ export type CommandPayloads = Readonly<{
     response: SpecDocument;
   }>;
 }>;
+
+export type CommandPayloads = WorkspaceCommandPayloads & CommentCommandPayloads;
 
 export type CommandName = keyof CommandPayloads;
 

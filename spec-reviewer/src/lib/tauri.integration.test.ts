@@ -91,6 +91,21 @@ test("normalizeCommandErrorはCommandError DTOを安定したエラーに変換�
   });
 });
 
+test("normalizeCommandErrorはcomment系CommandError DTOも保持する", () => {
+  const rawError = {
+    code: "commentRepository",
+    message: "failed to update comment store",
+  };
+
+  const result = normalizeCommandError(rawError);
+
+  expect(result).toEqual({
+    code: "commentRepository",
+    message: "failed to update comment store",
+    raw: rawError,
+  });
+});
+
 test("loadWorkspaceはinvoke失敗時に正規化済みエラーでrejectする", async () => {
   const rawError = {
     code: "workspaceDetection",

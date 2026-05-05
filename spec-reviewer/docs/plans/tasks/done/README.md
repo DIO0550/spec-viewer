@@ -36,3 +36,4 @@ Completed task files are moved here from the active task groups.
 - [P2.6 Comment Store Implementation](./phase-2-comments/p2-06-comment-store-implementation.md)
 - [P2.7 Comment Use Cases](./phase-2-comments/p2-07-comment-use-cases.md)
 - [P2.8 Comment Commands](./phase-2-comments/p2-08-comment-commands.md)
+- [P2.9 Frontend Comment Types](./phase-2-comments/p2-09-frontend-comment-types.md)

@@ -111,6 +111,9 @@ function isCommandErrorCode(value: unknown): value is CommandError["code"] {
     value === "workspaceDetection" ||
     value === "configLoad" ||
     value === "specTreeScan" ||
-    value === "markdownRead"
+    value === "markdownRead" ||
+    value === "invalidSpec" ||
+    value === "invalidComment" ||
+    value === "commentRepository"
   );
 }
