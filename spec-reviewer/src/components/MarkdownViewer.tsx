@@ -1,14 +1,18 @@
 import {
   type ComponentPropsWithoutRef,
+  type CSSProperties,
   type RefObject,
   useEffect,
   useRef,
+  useState,
 } from "react";
-import { RefreshCcw } from "lucide-react";
+import { MessageSquarePlus, RefreshCcw, X } from "lucide-react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import { useMarkdownTextSelection } from "../hooks/useMarkdownTextSelection";
 import type { SpecDocumentState } from "../hooks/useSpecs";
+import type { CommentAnchorDraft } from "../types/comment";
 import { EmptyState } from "./EmptyState";
 import { ErrorState } from "./ErrorState";
 
@@ -38,8 +42,19 @@ export function MarkdownViewer({
   onReload,
 }: Props) {
   const panelRef = useRef<HTMLElement>(null);
+  const renderedRootRef = useRef<HTMLDivElement>(null);
+  const [activeAnchorDraft, setActiveAnchorDraft] =
+    useState<CommentAnchorDraft | null>(null);
   const resetKey = createViewerResetKey(state);
+  const selectionFileKey = state.status === "ready" ? state.fileKey : null;
+  const { selectionDraft, clearSelectionDraft } = useMarkdownTextSelection({
+    renderedRootRef,
+    fileKey: selectionFileKey,
+  });
   useViewerReset(panelRef, resetKey, state.status !== "idle");
+  useEffect(() => {
+    setActiveAnchorDraft(null);
+  }, [resetKey]);
 
   if (state.status === "idle") {
     return (
@@ -152,7 +167,20 @@ export function MarkdownViewer({
           <RefreshCcw aria-hidden="true" size={16} />
         </button>
       </header>
-      <MarkdownDocument contents={contents} />
+      <MarkdownDocument contents={contents} renderedRootRef={renderedRootRef} />
+      <TextSelectionCommentButton
+        draft={selectionDraft}
+        onCreateDraft={(draft) => {
+          setActiveAnchorDraft(draft);
+          clearSelectionDraft();
+        }}
+      />
+      <CommentAnchorDraftPopover
+        draft={activeAnchorDraft}
+        onClose={() => {
+          setActiveAnchorDraft(null);
+        }}
+      />
     </article>
   );
 }
@@ -200,15 +228,23 @@ function createViewerResetKey(state: SpecDocumentState): string {
 
 type MarkdownDocumentProps = Readonly<{
   contents: string;
+  renderedRootRef: RefObject<HTMLDivElement | null>;
 }>;
 
 /** @returns Rendered Markdown with stable block metadata for comments. */
-function MarkdownDocument({ contents }: MarkdownDocumentProps) {
+function MarkdownDocument({
+  contents,
+  renderedRootRef,
+}: MarkdownDocumentProps) {
   const blockIndexer = createBlockIndexer();
   const components = createMarkdownComponents(blockIndexer);
 
   return (
-    <div className="markdown-rendered" aria-label="Rendered Markdown document">
+    <div
+      ref={renderedRootRef}
+      className="markdown-rendered"
+      aria-label="Rendered Markdown document"
+    >
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
         {contents}
       </ReactMarkdown>
@@ -273,6 +309,111 @@ function createMarkdownComponents(blockIndexer: BlockIndexer): Components {
     a: ({ node: _node, ...props }) => <SafeMarkdownLink {...props} />,
     input: ({ node: _node, ...props }) => <ReadOnlyMarkdownInput {...props} />,
   };
+}
+
+type TextSelectionCommentButtonProps = Readonly<{
+  draft: CommentAnchorDraft | null;
+  onCreateDraft: (draft: CommentAnchorDraft) => void;
+}>;
+
+/** @returns A floating command for turning the current text selection into a draft. */
+function TextSelectionCommentButton({
+  draft,
+  onCreateDraft,
+}: TextSelectionCommentButtonProps) {
+  if (draft === null) {
+    return null;
+  }
+
+  const style = createFloatingStyle(draft, "button");
+
+  return (
+    <button
+      className="text-selection-comment-button"
+      type="button"
+      style={style}
+      onMouseDown={(event) => {
+        event.preventDefault();
+      }}
+      onClick={() => {
+        onCreateDraft(draft);
+      }}
+    >
+      <MessageSquarePlus aria-hidden="true" size={16} />
+      <span>Add comment</span>
+    </button>
+  );
+}
+
+type CommentAnchorDraftPopoverProps = Readonly<{
+  draft: CommentAnchorDraft | null;
+  onClose: () => void;
+}>;
+
+/** @returns A compact preview of the pending comment anchor draft. */
+function CommentAnchorDraftPopover({
+  draft,
+  onClose,
+}: CommentAnchorDraftPopoverProps) {
+  if (draft === null) {
+    return null;
+  }
+
+  const style = createFloatingStyle(draft, "popover");
+
+  return (
+    <aside
+      className="comment-anchor-draft-popover"
+      style={style}
+      role="status"
+      aria-live="polite"
+    >
+      <header className="comment-anchor-draft-popover__header">
+        <span>Anchor ready</span>
+        <button
+          className="icon-button"
+          type="button"
+          aria-label="Dismiss anchor draft"
+          onClick={onClose}
+        >
+          <X aria-hidden="true" size={14} />
+        </button>
+      </header>
+      <blockquote>{draft.anchor.textSnippet}</blockquote>
+      <p>
+        {formatDraftBlockType(draft.anchor.blockType)} block{" "}
+        {draft.anchor.blockIndex + 1}, chars {draft.anchor.charRange.start}-
+        {draft.anchor.charRange.end}
+      </p>
+    </aside>
+  );
+}
+
+type FloatingKind = "button" | "popover";
+
+/** @returns Fixed-position style for selection-adjacent UI. */
+function createFloatingStyle(
+  draft: CommentAnchorDraft,
+  kind: FloatingKind,
+): CSSProperties {
+  const bounds = draft.selectionBounds;
+
+  if (kind === "button") {
+    return {
+      top: Math.max(8, bounds.top - 44),
+      left: Math.max(8, bounds.left + bounds.width / 2),
+    };
+  }
+
+  return {
+    top: Math.max(8, bounds.top + bounds.height + 10),
+    left: Math.max(8, bounds.left),
+  };
+}
+
+/** @returns Human-readable block type text for the anchor preview. */
+function formatDraftBlockType(blockType: string): string {
+  return blockType.replace(/_/g, " ");
 }
 
 type LinkProps = ComponentPropsWithoutRef<"a">;

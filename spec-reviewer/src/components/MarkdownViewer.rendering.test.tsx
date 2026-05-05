@@ -146,6 +146,48 @@ test("MarkdownViewerはコメントアンカー用のブロックメタデータ
   result.unmount();
 });
 
+test("MarkdownViewerはMarkdown内の選択から追加コメント導線を表示する", () => {
+  const result = renderViewer(
+    createReadyState("A paragraph with selectable text."),
+  );
+  const textNode = result.container.querySelector(
+    ".markdown-rendered p",
+  )?.firstChild;
+  expect(textNode).toBeInstanceOf(Text);
+
+  const range = document.createRange();
+  range.setStart(textNode as Text, 2);
+  range.setEnd(textNode as Text, 11);
+  const selection = document.getSelection();
+  expect(selection).not.toBeNull();
+
+  const readySelection = selection as Selection;
+  readySelection.removeAllRanges();
+  readySelection.addRange(range);
+
+  act(() => {
+    document.dispatchEvent(new Event("selectionchange"));
+  });
+
+  const addButton = result.container.querySelector(
+    ".text-selection-comment-button",
+  );
+  expect(addButton?.textContent).toContain("Add comment");
+
+  act(() => {
+    addButton?.dispatchEvent(
+      new MouseEvent("mousedown", { bubbles: true, cancelable: true }),
+    );
+    (addButton as HTMLButtonElement).click();
+  });
+
+  expect(result.container.textContent).toContain("Anchor ready");
+  expect(result.container.textContent).toContain(
+    "paragraph block 1, chars 2-11",
+  );
+  result.unmount();
+});
+
 test("MarkdownViewerは空ファイル状態を表示する", () => {
   const result = renderViewer(createReadyState(" \n\t "));
 

@@ -35,6 +35,18 @@ export type CommentAnchor = Readonly<{
   charRange: CommentCharRange;
 }>;
 
+export type CommentSelectionBounds = Readonly<{
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+}>;
+
+export type CommentAnchorDraft = Readonly<{
+  anchor: CommentAnchor;
+  selectionBounds: CommentSelectionBounds;
+}>;
+
 export type Comment = Readonly<{
   id: CommentId;
   anchor: CommentAnchor;
