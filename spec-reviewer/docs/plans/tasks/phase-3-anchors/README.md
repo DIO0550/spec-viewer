@@ -4,7 +4,6 @@ Goal: keep comments attached to useful Markdown locations even after Markdown fi
 
 ## Tasks
 
-- [P3.1 Markdown Block Domain](./p3-01-markdown-block-domain.md)
 - [P3.2 Markdown Parser Adapter](./p3-02-markdown-parser-adapter.md)
 - [P3.3 Text Normalization](./p3-03-text-normalization.md)
 - [P3.4 Hashing](./p3-04-hashing.md)
@@ -16,4 +15,3 @@ Goal: keep comments attached to useful Markdown locations even after Markdown fi
 - [P3.10 File Watching Strategy](./p3-10-file-watching-strategy.md)
 - [P3.11 Refresh UI](./p3-11-refresh-ui.md)
 - [P3.12 Edge Case Coverage](./p3-12-edge-case-coverage.md)
-

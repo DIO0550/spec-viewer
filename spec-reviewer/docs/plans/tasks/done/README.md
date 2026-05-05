@@ -44,3 +44,4 @@ Completed task files are moved here from the active task groups.
 - [P2.14 Text Selection Flow](./phase-2-comments/p2-14-text-selection-flow.md)
 - [P2.15 Add Comment UI](./phase-2-comments/p2-15-add-comment-ui.md)
 - [P2.16 Highlight Display](./phase-2-comments/p2-16-highlight-display.md)
+- [P3.1 Markdown Block Domain](./phase-3-anchors/p3-01-markdown-block-domain.md)
