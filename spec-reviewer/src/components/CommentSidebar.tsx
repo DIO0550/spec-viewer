@@ -1,5 +1,5 @@
-import { LoaderCircle } from "lucide-react";
-import { useState } from "react";
+import { LoaderCircle, Search, X } from "lucide-react";
+import { useId, useState } from "react";
 
 import type {
   CommentListState,
@@ -47,6 +47,15 @@ type CommentSectionModel = Readonly<{
   title: string;
   comments: readonly Comment[];
   emptyMessage: string;
+}>;
+
+type CommentSearchFilterParams = Readonly<{
+  comments: readonly Comment[];
+  searchQuery: string;
+  anchorDisplayStatusByCommentId: ReadonlyMap<
+    CommentId,
+    CommentAnchorDisplayStatus
+  >;
 }>;
 
 const defaultDisplayFilter: CommentDisplayFilter = "all";
@@ -104,6 +113,7 @@ export function CommentSidebar({
 }: Props) {
   const [activeFilter, setActiveFilter] =
     useState<CommentDisplayFilter>(defaultDisplayFilter);
+  const [searchQuery, setSearchQuery] = useState("");
 
   if (listState.status === "idle") {
     return (
@@ -197,9 +207,15 @@ export function CommentSidebar({
     activeFilter,
     anchorDisplayStatusByCommentId,
   );
+  const normalizedSearchQuery = normalizeCommentSearchQuery(searchQuery);
+  const searchedComments = filterCommentsBySearchQuery({
+    comments: filteredComments,
+    searchQuery: normalizedSearchQuery,
+    anchorDisplayStatusByCommentId,
+  });
   const sectionModels = createCommentSectionModels(
     activeFilter,
-    filteredComments,
+    searchedComments,
   );
 
   return (
@@ -212,9 +228,21 @@ export function CommentSidebar({
         showFilters={true}
         onFilterChange={setActiveFilter}
       />
+      <CommentSearchControl
+        searchQuery={searchQuery}
+        resultCount={searchedComments.length}
+        scopeCount={filteredComments.length}
+        onSearchQueryChange={setSearchQuery}
+        onClearSearch={() => {
+          setSearchQuery("");
+        }}
+      />
       <MutationErrorMessage mutationState={mutationState} />
-      {filteredComments.length === 0 ? (
-        <FilteredEmptyState activeFilter={activeFilter} />
+      {searchedComments.length === 0 ? (
+        <FilteredEmptyState
+          activeFilter={activeFilter}
+          searchQuery={normalizedSearchQuery}
+        />
       ) : (
         sectionModels.map((sectionModel) => (
           <CommentSection
@@ -224,6 +252,7 @@ export function CommentSidebar({
             comments={sectionModel.comments}
             activeCommentId={activeCommentId}
             anchorDisplayStatusByCommentId={anchorDisplayStatusByCommentId}
+            searchQuery={normalizedSearchQuery}
             mutationState={mutationState}
             emptyMessage={sectionModel.emptyMessage}
             onSelectComment={onSelectComment}
@@ -235,6 +264,63 @@ export function CommentSidebar({
         ))
       )}
     </section>
+  );
+}
+
+type CommentSearchControlProps = Readonly<{
+  searchQuery: string;
+  resultCount: number;
+  scopeCount: number;
+  onSearchQueryChange: (query: string) => void;
+  onClearSearch: () => void;
+}>;
+
+/** @returns A local comment search field with a live result count. */
+function CommentSearchControl({
+  searchQuery,
+  resultCount,
+  scopeCount,
+  onSearchQueryChange,
+  onClearSearch,
+}: CommentSearchControlProps) {
+  const inputId = useId();
+  const isSearching = normalizeCommentSearchQuery(searchQuery).length > 0;
+  const resultLabel = isSearching
+    ? formatSearchResultCount(resultCount)
+    : `${scopeCount} comments searchable`;
+
+  return (
+    <div className="comment-sidebar__search">
+      <label className="comment-sidebar__search-label" htmlFor={inputId}>
+        Search comments
+      </label>
+      <div className="comment-sidebar__search-field">
+        <Search aria-hidden="true" size={15} />
+        <input
+          id={inputId}
+          aria-label="Search comments"
+          type="search"
+          placeholder="Body, file, snippet, status"
+          value={searchQuery}
+          onInput={(event) => {
+            onSearchQueryChange(event.currentTarget.value);
+          }}
+        />
+        {searchQuery.length === 0 ? null : (
+          <button
+            className="icon-button comment-sidebar__search-clear"
+            type="button"
+            aria-label="Clear comment search"
+            onClick={onClearSearch}
+          >
+            <X aria-hidden="true" size={15} />
+          </button>
+        )}
+      </div>
+      <p className="comment-sidebar__search-count" aria-live="polite">
+        {resultLabel}
+      </p>
+    </div>
   );
 }
 
@@ -319,6 +405,7 @@ type SectionProps = Readonly<{
     CommentId,
     CommentAnchorDisplayStatus
   >;
+  searchQuery: string;
   mutationState: CommentMutationState;
   emptyMessage: string;
   onSelectComment: (commentId: CommentId) => void;
@@ -335,6 +422,7 @@ function CommentSection({
   comments,
   activeCommentId,
   anchorDisplayStatusByCommentId,
+  searchQuery,
   mutationState,
   emptyMessage,
   onSelectComment,
@@ -361,6 +449,7 @@ function CommentSection({
                 anchorDisplayStatus={
                   anchorDisplayStatusByCommentId.get(comment.id) ?? "exact"
                 }
+                searchQuery={searchQuery}
                 mutationState={mutationState}
                 onSelectComment={onSelectComment}
                 onResolveComment={onResolveComment}
@@ -378,15 +467,109 @@ function CommentSection({
 
 type FilteredEmptyStateProps = Readonly<{
   activeFilter: CommentDisplayFilter;
+  searchQuery: string;
 }>;
 
 /** @returns A focused empty state when the selected filter has no matches. */
-function FilteredEmptyState({ activeFilter }: FilteredEmptyStateProps) {
+function FilteredEmptyState({
+  activeFilter,
+  searchQuery,
+}: FilteredEmptyStateProps) {
+  if (searchQuery.length > 0) {
+    return (
+      <p className="comment-sidebar__filtered-empty">
+        No comments match &quot;{searchQuery}&quot; in the{" "}
+        {formatFilterLabel(activeFilter)} filter.
+      </p>
+    );
+  }
+
   return (
     <p className="comment-sidebar__filtered-empty">
       No comments match the {formatFilterLabel(activeFilter)} filter.
     </p>
   );
+}
+
+/** @returns Comments whose searchable fields include the normalized query. */
+function filterCommentsBySearchQuery({
+  comments,
+  searchQuery,
+  anchorDisplayStatusByCommentId,
+}: CommentSearchFilterParams): readonly Comment[] {
+  if (searchQuery.length === 0) {
+    return comments;
+  }
+
+  return comments.filter((comment) =>
+    commentMatchesSearchQuery(
+      comment,
+      searchQuery,
+      anchorDisplayStatusByCommentId.get(comment.id) ?? "exact",
+    ),
+  );
+}
+
+/** @returns True when a comment contains the normalized query in a visible search field. */
+function commentMatchesSearchQuery(
+  comment: Comment,
+  searchQuery: string,
+  anchorDisplayStatus: CommentAnchorDisplayStatus,
+): boolean {
+  return createCommentSearchFields(comment, anchorDisplayStatus).some((field) =>
+    normalizeCommentSearchQuery(field).includes(searchQuery),
+  );
+}
+
+/** @returns Text fields covered by local comment search. */
+function createCommentSearchFields(
+  comment: Comment,
+  anchorDisplayStatus: CommentAnchorDisplayStatus,
+): readonly string[] {
+  const anchorStatusLabel = formatAnchorDisplayStatus(anchorDisplayStatus);
+
+  return [
+    comment.body,
+    comment.anchor.fileKey,
+    comment.anchor.textSnippet,
+    comment.resolved ? "Resolved" : "Open",
+    anchorStatusLabel ?? "",
+  ];
+}
+
+/** @returns The visible anchor reconciliation status, or null for exact anchors. */
+function formatAnchorDisplayStatus(
+  status: CommentAnchorDisplayStatus,
+): string | null {
+  if (status === "exact") {
+    return null;
+  }
+
+  const statusLabels: Record<
+    Exclude<CommentAnchorDisplayStatus, "exact">,
+    string
+  > = {
+    moved: "Anchor moved",
+    fuzzy: "Fuzzy anchor",
+    orphaned: "Anchor orphaned",
+    stale: "Anchor stale",
+  };
+
+  return statusLabels[status];
+}
+
+/** @returns A case-insensitive query with redundant whitespace collapsed. */
+function normalizeCommentSearchQuery(query: string): string {
+  return query.trim().replace(/\s+/g, " ").toLocaleLowerCase();
+}
+
+/** @returns A compact result count label for the search field. */
+function formatSearchResultCount(resultCount: number): string {
+  if (resultCount === 1) {
+    return "1 result";
+  }
+
+  return `${resultCount} results`;
 }
 
 /** @returns Comments split by open and resolved display sections. */

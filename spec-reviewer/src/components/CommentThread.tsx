@@ -1,5 +1,5 @@
 import { CheckCircle2, Edit3, RotateCcw, Save, Trash2, X } from "lucide-react";
-import { useId, useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent, type ReactNode } from "react";
 
 import type { CommentMutationState } from "../hooks/useComments";
 import type {
@@ -14,6 +14,7 @@ type Props = Readonly<{
   comment: Comment;
   isActive: boolean;
   anchorDisplayStatus: CommentAnchorDisplayStatus;
+  searchQuery?: string;
   mutationState: CommentMutationState;
   onSelectComment: (commentId: CommentId) => void;
   onUpdateComment: (commentId: CommentId, body: string) => void;
@@ -27,6 +28,7 @@ export function CommentThread({
   comment,
   isActive,
   anchorDisplayStatus,
+  searchQuery = "",
   mutationState,
   onSelectComment,
   onUpdateComment,
@@ -119,7 +121,10 @@ export function CommentThread({
                 : "comment-thread__status"
             }
           >
-            {isResolved ? "Resolved" : "Open"}
+            <HighlightedText
+              text={isResolved ? "Resolved" : "Open"}
+              searchQuery={searchQuery}
+            />
           </span>
           <span id={titleId} className="comment-thread__title">
             {formatAnchorTitle(comment)}
@@ -164,7 +169,16 @@ export function CommentThread({
 
       <div className="comment-thread__anchor" aria-label="Anchor details">
         <span className="comment-thread__anchor-snippet">
-          {comment.anchor.textSnippet}
+          <HighlightedText
+            text={comment.anchor.textSnippet}
+            searchQuery={searchQuery}
+          />
+        </span>
+        <span className="comment-thread__anchor-file">
+          <HighlightedText
+            text={comment.anchor.fileKey}
+            searchQuery={searchQuery}
+          />
         </span>
         <span className="comment-thread__anchor-location">
           {formatBlockType(comment.anchor.blockType)} block{" "}
@@ -175,7 +189,10 @@ export function CommentThread({
           <span
             className={`comment-thread__anchor-state comment-thread__anchor-state--${anchorDisplayStatus}`}
           >
-            {anchorStatusLabel}
+            <HighlightedText
+              text={anchorStatusLabel}
+              searchQuery={searchQuery}
+            />
           </span>
         )}
       </div>
@@ -227,7 +244,9 @@ export function CommentThread({
           </div>
         </form>
       ) : (
-        <p className="comment-thread__body">{comment.body}</p>
+        <p className="comment-thread__body">
+          <HighlightedText text={comment.body} searchQuery={searchQuery} />
+        </p>
       )}
 
       {isConfirmingDelete ? (
@@ -268,6 +287,46 @@ export function CommentThread({
       </footer>
     </article>
   );
+}
+
+type HighlightedTextProps = Readonly<{
+  text: string;
+  searchQuery: string;
+}>;
+
+/** @returns Text with every search query occurrence marked for visual scanning. */
+function HighlightedText({ text, searchQuery }: HighlightedTextProps) {
+  if (searchQuery.length === 0) {
+    return text;
+  }
+
+  const lowerText = text.toLocaleLowerCase();
+  const segments: ReactNode[] = [];
+  let cursor = 0;
+  let matchIndex = lowerText.indexOf(searchQuery);
+
+  while (matchIndex >= 0) {
+    if (matchIndex > cursor) {
+      segments.push(text.slice(cursor, matchIndex));
+    }
+
+    const matchEnd = matchIndex + searchQuery.length;
+
+    segments.push(
+      <mark className="comment-thread__search-match" key={matchIndex}>
+        {text.slice(matchIndex, matchEnd)}
+      </mark>,
+    );
+
+    cursor = matchEnd;
+    matchIndex = lowerText.indexOf(searchQuery, cursor);
+  }
+
+  if (cursor < text.length) {
+    segments.push(text.slice(cursor));
+  }
+
+  return <>{segments}</>;
 }
 
 /** @returns A compact title for the selected Markdown anchor. */

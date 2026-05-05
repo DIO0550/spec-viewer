@@ -67,6 +67,19 @@ const orphanedComment: Comment = {
   updatedAt: "2026-05-05T14:15:00Z",
 };
 
+const overviewComment: Comment = {
+  ...openComment,
+  id: "cmt_overview",
+  anchor: {
+    ...anchor,
+    fileKey: "design",
+    textSnippet: "Searchable orphaned snippet for release notes",
+  },
+  body: "Summarize release risk for reviewers.",
+  createdAt: "2026-05-05T15:00:00Z",
+  updatedAt: "2026-05-05T15:15:00Z",
+};
+
 type RenderResult = Readonly<{
   container: HTMLDivElement;
   unmount: () => void;
@@ -400,6 +413,115 @@ test("CommentSidebarはアンカー状態フィルターの件数と空状態を
   expect(result.container.textContent).toContain(
     "No comments match the Resolved filter.",
   );
+  result.unmount();
+});
+
+test("CommentSidebarは検索語でコメント本文を絞り込み件数とクリアボタンを表示する", () => {
+  const result = renderReadySidebar({
+    comments: [openComment, resolvedComment, overviewComment],
+  });
+  const searchInput = result.container.querySelector(
+    '[aria-label="Search comments"]',
+  ) as HTMLInputElement;
+
+  act(() => {
+    searchInput.value = "release risk";
+    searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  const clearButton = result.container.querySelector(
+    '[aria-label="Clear comment search"]',
+  ) as HTMLButtonElement;
+
+  expect(result.container.textContent).toContain("1 result");
+  expect(result.container.textContent).toContain(
+    "Summarize release risk for reviewers.",
+  );
+  expect(result.container.textContent).not.toContain(
+    "Clarify what counts as an active comment highlight.",
+  );
+  expect(result.container.querySelectorAll("mark").length).toBeGreaterThan(0);
+
+  act(() => {
+    clearButton.click();
+  });
+
+  expect(searchInput.value).toBe("");
+  expect(result.container.textContent).toContain(
+    "Clarify what counts as an active comment highlight.",
+  );
+  result.unmount();
+});
+
+test("CommentSidebarはfile keyとorphaned snippetと状態ラベルを検索対象にする", () => {
+  const result = renderReadySidebar({
+    comments: [openComment, resolvedComment, overviewComment, orphanedComment],
+    anchorDisplayStates: [
+      {
+        commentId: "cmt_overview",
+        status: "orphaned",
+      },
+    ],
+  });
+  const searchInput = result.container.querySelector(
+    '[aria-label="Search comments"]',
+  ) as HTMLInputElement;
+
+  act(() => {
+    searchInput.value = "design";
+    searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  expect(result.container.textContent).toContain(
+    "Summarize release risk for reviewers.",
+  );
+  expect(result.container.textContent).not.toContain(
+    "This anchor can no longer be found in the document.",
+  );
+
+  act(() => {
+    searchInput.value = "searchable orphaned snippet";
+    searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  expect(result.container.textContent).toContain(
+    "Summarize release risk for reviewers.",
+  );
+
+  act(() => {
+    searchInput.value = "anchor orphaned";
+    searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  expect(result.container.textContent).toContain(
+    "Summarize release risk for reviewers.",
+  );
+  result.unmount();
+});
+
+test("CommentSidebarは検索とフィルターを組み合わせて一致なし状態を表示する", () => {
+  const result = renderReadySidebar({
+    comments: [openComment, resolvedComment],
+  });
+  const resolvedFilter = result.container.querySelector(
+    '[aria-label="Show resolved comments"]',
+  ) as HTMLButtonElement;
+  const searchInput = result.container.querySelector(
+    '[aria-label="Search comments"]',
+  ) as HTMLInputElement;
+
+  act(() => {
+    resolvedFilter.click();
+  });
+
+  act(() => {
+    searchInput.value = "active comment";
+    searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  expect(result.container.textContent).toContain("No comments match");
+  expect(result.container.textContent).toContain("active comment");
+  expect(result.container.textContent).toContain("Resolved filter");
   result.unmount();
 });
 
