@@ -4,7 +4,6 @@ Goal: keep comments attached to useful Markdown locations even after Markdown fi
 
 ## Tasks
 
-- [P3.2 Markdown Parser Adapter](./p3-02-markdown-parser-adapter.md)
 - [P3.3 Text Normalization](./p3-03-text-normalization.md)
 - [P3.4 Hashing](./p3-04-hashing.md)
 - [P3.5 Anchor Creation Support](./p3-05-anchor-creation-support.md)
