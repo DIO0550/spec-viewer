@@ -15,6 +15,11 @@ use crate::{
     infrastructure::persistence::comment_store::JsonCommentRepository,
 };
 
+const MIN_FUZZY_SNIPPET_CHARS: usize = 8;
+const FUZZY_MATCH_THRESHOLD: u8 = 72;
+const EXACT_MATCH_SCORE: u8 = 100;
+const INDEX_FALLBACK_SCORE: u8 = 0;
+
 pub type FilesystemCommentUseCases =
     CommentUseCases<JsonCommentRepository, UuidCommentIdGenerator, UtcCommentClock>;
 
@@ -267,6 +272,7 @@ pub enum CommentAnchorResolutionStatus {
     Exact,
     MovedByHash,
     Stale,
+    Fuzzy,
     IndexFallback,
     Missing,
 }
@@ -274,17 +280,23 @@ pub enum CommentAnchorResolutionStatus {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommentAnchorResolutionTarget {
     block: MarkdownBlock,
+    score: u8,
 }
 
 impl CommentAnchorResolutionTarget {
-    fn new(block: &MarkdownBlock) -> Self {
+    fn new(block: &MarkdownBlock, score: u8) -> Self {
         Self {
             block: block.clone(),
+            score,
         }
     }
 
     pub fn block(&self) -> &MarkdownBlock {
         &self.block
+    }
+
+    pub fn score(&self) -> u8 {
+        self.score
     }
 }
 
@@ -334,7 +346,7 @@ fn resolve_comment_anchor(
         return CommentAnchorResolution::new(
             comment,
             CommentAnchorResolutionStatus::Exact,
-            Some(CommentAnchorResolutionTarget::new(block)),
+            Some(CommentAnchorResolutionTarget::new(block, EXACT_MATCH_SCORE)),
         );
     }
 
@@ -345,18 +357,18 @@ fn resolve_comment_anchor(
         return CommentAnchorResolution::new(
             comment,
             CommentAnchorResolutionStatus::MovedByHash,
-            Some(CommentAnchorResolutionTarget::new(block)),
+            Some(CommentAnchorResolutionTarget::new(block, EXACT_MATCH_SCORE)),
         );
     }
 
-    if let Some(block) = current_blocks
-        .iter()
-        .find(|block| block_contains_anchor_snippet(block, anchor))
-    {
+    if let Some(candidate) = select_fuzzy_anchor_candidate(current_blocks, anchor) {
         return CommentAnchorResolution::new(
             comment,
-            CommentAnchorResolutionStatus::Stale,
-            Some(CommentAnchorResolutionTarget::new(block)),
+            candidate.status,
+            Some(CommentAnchorResolutionTarget::new(
+                candidate.block,
+                candidate.score,
+            )),
         );
     }
 
@@ -364,25 +376,188 @@ fn resolve_comment_anchor(
         return CommentAnchorResolution::new(
             comment,
             CommentAnchorResolutionStatus::IndexFallback,
-            Some(CommentAnchorResolutionTarget::new(block)),
+            Some(CommentAnchorResolutionTarget::new(
+                block,
+                INDEX_FALLBACK_SCORE,
+            )),
         );
     }
 
     CommentAnchorResolution::new(comment, CommentAnchorResolutionStatus::Missing, None)
 }
 
-fn block_contains_anchor_snippet(block: &MarkdownBlock, anchor: &CommentAnchor) -> bool {
-    let snippet = anchor.text_snippet().as_str().trim();
+#[derive(Debug, Clone, Copy)]
+struct FuzzyAnchorCandidate<'a> {
+    block: &'a MarkdownBlock,
+    status: CommentAnchorResolutionStatus,
+    score: u8,
+    distance_from_original_index: usize,
+}
 
-    if snippet.is_empty() {
-        return false;
+fn select_fuzzy_anchor_candidate<'a>(
+    current_blocks: &'a [MarkdownBlock],
+    anchor: &CommentAnchor,
+) -> Option<FuzzyAnchorCandidate<'a>> {
+    let snippet = normalize_fuzzy_text(anchor.text_snippet().as_str());
+
+    if snippet.chars().count() < MIN_FUZZY_SNIPPET_CHARS {
+        return None;
     }
 
-    block.text().raw().contains(snippet) || block.text().normalized().contains(snippet) || {
-        let snippet = snippet.to_lowercase();
-        block.text().raw().to_lowercase().contains(&snippet)
-            || block.text().normalized().to_lowercase().contains(&snippet)
+    let mut candidates = current_blocks
+        .iter()
+        .filter(|block| {
+            crate::domain::comment::BlockType::from(block.block_type()) == anchor.block_type()
+        })
+        .filter_map(|block| fuzzy_anchor_candidate(block, anchor, &snippet))
+        .collect::<Vec<_>>();
+
+    candidates.sort_by(|left, right| {
+        right
+            .score
+            .cmp(&left.score)
+            .then_with(|| {
+                left.distance_from_original_index
+                    .cmp(&right.distance_from_original_index)
+            })
+            .then_with(|| left.block.index().value().cmp(&right.block.index().value()))
+    });
+
+    let best = candidates.first().copied()?;
+    let equally_good = candidates.iter().filter(|candidate| {
+        candidate.score == best.score
+            && candidate.distance_from_original_index == best.distance_from_original_index
+    });
+
+    if equally_good.count() > 1 {
+        return None;
     }
+
+    Some(best)
+}
+
+fn fuzzy_anchor_candidate<'a>(
+    block: &'a MarkdownBlock,
+    anchor: &CommentAnchor,
+    snippet: &str,
+) -> Option<FuzzyAnchorCandidate<'a>> {
+    let block_text = normalize_fuzzy_text(block.text().normalized());
+    let raw_block_text = normalize_fuzzy_text(block.text().raw());
+    let score = if block_text.contains(snippet) || raw_block_text.contains(snippet) {
+        EXACT_MATCH_SCORE
+    } else {
+        fuzzy_text_score(snippet, &block_text).max(fuzzy_text_score(snippet, &raw_block_text))
+    };
+
+    if score < FUZZY_MATCH_THRESHOLD {
+        return None;
+    }
+
+    let status = if score == EXACT_MATCH_SCORE {
+        CommentAnchorResolutionStatus::Stale
+    } else {
+        CommentAnchorResolutionStatus::Fuzzy
+    };
+
+    Some(FuzzyAnchorCandidate {
+        block,
+        status,
+        score,
+        distance_from_original_index: block.index().value().abs_diff(anchor.block_index().value()),
+    })
+}
+
+fn normalize_fuzzy_text(value: &str) -> String {
+    value
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .to_lowercase()
+}
+
+fn fuzzy_text_score(snippet: &str, block_text: &str) -> u8 {
+    let snippet_words = words(snippet);
+    let block_words = words(block_text);
+
+    if snippet_words.is_empty() || block_words.is_empty() {
+        return 0;
+    }
+
+    let best_window_score = best_word_window_score(&snippet_words, &block_words);
+    let token_score = token_overlap_score(&snippet_words, &block_words);
+
+    best_window_score.max(token_score)
+}
+
+fn words(value: &str) -> Vec<&str> {
+    value.split_whitespace().collect()
+}
+
+fn best_word_window_score(snippet_words: &[&str], block_words: &[&str]) -> u8 {
+    let snippet_word_count = snippet_words.len();
+    let minimum_window_len = snippet_word_count.saturating_sub(1).max(1);
+    let maximum_window_len = (snippet_word_count + 1).min(block_words.len());
+    let snippet = snippet_words.join(" ");
+    let mut best_score = 0;
+
+    for window_len in minimum_window_len..=maximum_window_len {
+        for window in block_words.windows(window_len) {
+            let score = normalized_levenshtein_score(&snippet, &window.join(" "));
+            best_score = best_score.max(score);
+        }
+    }
+
+    best_score
+}
+
+fn token_overlap_score(snippet_words: &[&str], block_words: &[&str]) -> u8 {
+    let mut unmatched_block_words = block_words.to_vec();
+    let mut common_count = 0;
+
+    for snippet_word in snippet_words {
+        if let Some(position) = unmatched_block_words
+            .iter()
+            .position(|block_word| block_word == snippet_word)
+        {
+            common_count += 1;
+            unmatched_block_words.remove(position);
+        }
+    }
+
+    ((2 * common_count * 100) / (snippet_words.len() + block_words.len())) as u8
+}
+
+fn normalized_levenshtein_score(left: &str, right: &str) -> u8 {
+    let left_chars = left.chars().collect::<Vec<_>>();
+    let right_chars = right.chars().collect::<Vec<_>>();
+    let max_len = left_chars.len().max(right_chars.len());
+
+    if max_len == 0 {
+        return EXACT_MATCH_SCORE;
+    }
+
+    let distance = levenshtein_distance(&left_chars, &right_chars);
+    (((max_len - distance) * 100) / max_len) as u8
+}
+
+fn levenshtein_distance(left: &[char], right: &[char]) -> usize {
+    let mut previous_row = (0..=right.len()).collect::<Vec<_>>();
+    let mut current_row = vec![0; right.len() + 1];
+
+    for (left_index, left_char) in left.iter().enumerate() {
+        current_row[0] = left_index + 1;
+
+        for (right_index, right_char) in right.iter().enumerate() {
+            let substitution_cost = usize::from(left_char != right_char);
+            current_row[right_index + 1] = (previous_row[right_index + 1] + 1)
+                .min(current_row[right_index] + 1)
+                .min(previous_row[right_index] + substitution_cost);
+        }
+
+        previous_row.clone_from(&current_row);
+    }
+
+    previous_row[right.len()]
 }
 
 #[cfg(test)]
@@ -890,6 +1065,259 @@ mod tests {
                 .index()
                 .value()
         );
+    }
+
+    #[test]
+    fn resolve_comment_anchors_marks_fuzzy_for_snippet_typo() {
+        let repository = FakeCommentRepository::default();
+        repository
+            .comments
+            .borrow_mut()
+            .push(comment_with_anchor("cmt_typo", anchor(SpecFileKey::Impl)));
+        let use_cases = use_cases(repository);
+        let blocks = [markdown_block(
+            MarkdownBlockType::Paragraph,
+            4,
+            "selected tezt",
+            "selected tezt",
+            "sha256_typo",
+        )];
+
+        let result = use_cases
+            .resolve_comment_anchors(
+                "auth-flow",
+                SpecFileKey::Impl,
+                CommentStatusFilter::All,
+                &blocks,
+            )
+            .expect("anchors should resolve");
+
+        let resolution = &result.resolutions()[0];
+        let target = resolution.target().expect("target should exist");
+        assert_eq!(CommentAnchorResolutionStatus::Fuzzy, resolution.status());
+        assert_eq!(4, target.block().index().value());
+        assert!(target.score() >= FUZZY_MATCH_THRESHOLD);
+        assert!(target.score() < EXACT_MATCH_SCORE);
+    }
+
+    #[test]
+    fn resolve_comment_anchors_marks_fuzzy_for_moved_reworded_block() {
+        let repository = FakeCommentRepository::default();
+        repository.comments.borrow_mut().push(comment_with_anchor(
+            "cmt_reworded",
+            anchor_with(
+                SpecFileKey::Impl,
+                BlockType::Paragraph,
+                2,
+                "sha256_old",
+                "review payment failure handling",
+            ),
+        ));
+        let use_cases = use_cases(repository);
+        let blocks = [markdown_block(
+            MarkdownBlockType::Paragraph,
+            7,
+            "Review payment error handling",
+            "Review payment error handling",
+            "sha256_reworded",
+        )];
+
+        let result = use_cases
+            .resolve_comment_anchors(
+                "auth-flow",
+                SpecFileKey::Impl,
+                CommentStatusFilter::All,
+                &blocks,
+            )
+            .expect("anchors should resolve");
+
+        let resolution = &result.resolutions()[0];
+        let target = resolution.target().expect("target should exist");
+        assert_eq!(CommentAnchorResolutionStatus::Fuzzy, resolution.status());
+        assert_eq!(7, target.block().index().value());
+        assert!(target.score() >= FUZZY_MATCH_THRESHOLD);
+    }
+
+    #[test]
+    fn resolve_comment_anchors_returns_missing_when_fuzzy_score_is_below_threshold() {
+        let repository = FakeCommentRepository::default();
+        repository.comments.borrow_mut().push(comment_with_anchor(
+            "cmt_low_score",
+            anchor_with(
+                SpecFileKey::Impl,
+                BlockType::Paragraph,
+                2,
+                "sha256_old",
+                "review payment failure handling",
+            ),
+        ));
+        let use_cases = use_cases(repository);
+        let blocks = [markdown_block(
+            MarkdownBlockType::Paragraph,
+            8,
+            "Release checklist and deployment notes",
+            "Release checklist and deployment notes",
+            "sha256_unrelated",
+        )];
+
+        let result = use_cases
+            .resolve_comment_anchors(
+                "auth-flow",
+                SpecFileKey::Impl,
+                CommentStatusFilter::All,
+                &blocks,
+            )
+            .expect("anchors should resolve");
+
+        let resolution = &result.resolutions()[0];
+        assert_eq!(CommentAnchorResolutionStatus::Missing, resolution.status());
+        assert!(resolution.target().is_none());
+    }
+
+    #[test]
+    fn resolve_comment_anchors_uses_nearest_index_as_fuzzy_tie_breaker() {
+        let repository = FakeCommentRepository::default();
+        repository.comments.borrow_mut().push(comment_with_anchor(
+            "cmt_tie_breaker",
+            anchor(SpecFileKey::Impl),
+        ));
+        let use_cases = use_cases(repository);
+        let blocks = [
+            markdown_block(
+                MarkdownBlockType::Paragraph,
+                0,
+                "selected text",
+                "selected text",
+                "sha256_first",
+            ),
+            markdown_block(
+                MarkdownBlockType::Paragraph,
+                3,
+                "selected text",
+                "selected text",
+                "sha256_nearest",
+            ),
+        ];
+
+        let result = use_cases
+            .resolve_comment_anchors(
+                "auth-flow",
+                SpecFileKey::Impl,
+                CommentStatusFilter::All,
+                &blocks,
+            )
+            .expect("anchors should resolve");
+
+        let resolution = &result.resolutions()[0];
+        let target = resolution.target().expect("target should exist");
+        assert_eq!(CommentAnchorResolutionStatus::Stale, resolution.status());
+        assert_eq!(3, target.block().index().value());
+        assert_eq!(EXACT_MATCH_SCORE, target.score());
+    }
+
+    #[test]
+    fn resolve_comment_anchors_orphans_ambiguous_duplicate_text() {
+        let repository = FakeCommentRepository::default();
+        repository.comments.borrow_mut().push(comment_with_anchor(
+            "cmt_duplicate",
+            anchor(SpecFileKey::Impl),
+        ));
+        let use_cases = use_cases(repository);
+        let blocks = [
+            markdown_block(
+                MarkdownBlockType::Paragraph,
+                0,
+                "selected text",
+                "selected text",
+                "sha256_first",
+            ),
+            markdown_block(
+                MarkdownBlockType::Paragraph,
+                4,
+                "selected text",
+                "selected text",
+                "sha256_second",
+            ),
+        ];
+
+        let result = use_cases
+            .resolve_comment_anchors(
+                "auth-flow",
+                SpecFileKey::Impl,
+                CommentStatusFilter::All,
+                &blocks,
+            )
+            .expect("anchors should resolve");
+
+        let resolution = &result.resolutions()[0];
+        assert_eq!(CommentAnchorResolutionStatus::Missing, resolution.status());
+        assert!(resolution.is_orphaned());
+    }
+
+    #[test]
+    fn resolve_comment_anchors_filters_fuzzy_candidates_by_block_type() {
+        let repository = FakeCommentRepository::default();
+        repository
+            .comments
+            .borrow_mut()
+            .push(comment_with_anchor("cmt_type", anchor(SpecFileKey::Impl)));
+        let use_cases = use_cases(repository);
+        let blocks = [markdown_block(
+            MarkdownBlockType::Heading,
+            4,
+            "selected text",
+            "selected text",
+            "sha256_heading",
+        )];
+
+        let result = use_cases
+            .resolve_comment_anchors(
+                "auth-flow",
+                SpecFileKey::Impl,
+                CommentStatusFilter::All,
+                &blocks,
+            )
+            .expect("anchors should resolve");
+
+        let resolution = &result.resolutions()[0];
+        assert_eq!(CommentAnchorResolutionStatus::Missing, resolution.status());
+        assert!(resolution.target().is_none());
+    }
+
+    #[test]
+    fn resolve_comment_anchors_ignores_short_snippets_for_fuzzy_matching() {
+        let repository = FakeCommentRepository::default();
+        repository.comments.borrow_mut().push(comment_with_anchor(
+            "cmt_short",
+            anchor_with(
+                SpecFileKey::Impl,
+                BlockType::Paragraph,
+                2,
+                "sha256_old",
+                "short",
+            ),
+        ));
+        let use_cases = use_cases(repository);
+        let blocks = [markdown_block(
+            MarkdownBlockType::Paragraph,
+            9,
+            "short",
+            "short",
+            "sha256_short",
+        )];
+
+        let result = use_cases
+            .resolve_comment_anchors(
+                "auth-flow",
+                SpecFileKey::Impl,
+                CommentStatusFilter::All,
+                &blocks,
+            )
+            .expect("anchors should resolve");
+
+        let resolution = &result.resolutions()[0];
+        assert_eq!(CommentAnchorResolutionStatus::Missing, resolution.status());
+        assert!(resolution.target().is_none());
     }
 
     #[test]
