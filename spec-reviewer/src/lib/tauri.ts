@@ -9,6 +9,16 @@ import type {
   NormalizedCommandError,
 } from "../types/ipc";
 import type {
+  AddCommentRequest,
+  Comment,
+  CommentStatusRequest,
+  DeleteCommentRequest,
+  DeleteCommentResponse,
+  ListCommentsRequest,
+  ListCommentsResponse,
+  UpdateCommentRequest,
+} from "../types/comment";
+import type {
   ReadSpecFileRequest,
   SpecDocument,
   SpecTree,
@@ -16,6 +26,18 @@ import type {
 import type { Workspace } from "../types/workspace";
 
 const UNKNOWN_COMMAND_ERROR_MESSAGE = "Unknown IPC command failure";
+
+export type CommentCommands = Readonly<{
+  listComments: (request: ListCommentsRequest) => Promise<ListCommentsResponse>;
+  addComment: (request: AddCommentRequest) => Promise<Comment>;
+  updateComment: (request: UpdateCommentRequest) => Promise<Comment>;
+  deleteComment: (
+    request: DeleteCommentRequest,
+  ) => Promise<DeleteCommentResponse>;
+  resolveComment: (request: CommentStatusRequest) => Promise<Comment>;
+  reopenComment: (request: CommentStatusRequest) => Promise<Comment>;
+  toggleCommentResolved: (request: CommentStatusRequest) => Promise<Comment>;
+}>;
 
 /** @returns The directory selected from the native workspace picker, or null. */
 export async function selectWorkspaceDirectory(): Promise<string | null> {
@@ -44,6 +66,63 @@ export async function readSpecFile(
 ): Promise<SpecDocument> {
   return invokeCommand("read_spec_file", request);
 }
+
+/** @returns Comment threads for the requested spec file and status filter. */
+export async function listComments(
+  request: ListCommentsRequest,
+): Promise<ListCommentsResponse> {
+  return invokeCommand("list_comments", request);
+}
+
+/** @returns The newly persisted comment. */
+export async function addComment(request: AddCommentRequest): Promise<Comment> {
+  return invokeCommand("add_comment", request);
+}
+
+/** @returns The updated comment after replacing its body. */
+export async function updateComment(
+  request: UpdateCommentRequest,
+): Promise<Comment> {
+  return invokeCommand("update_comment", request);
+}
+
+/** @returns Delete confirmation for the requested comment. */
+export async function deleteComment(
+  request: DeleteCommentRequest,
+): Promise<DeleteCommentResponse> {
+  return invokeCommand("delete_comment", request);
+}
+
+/** @returns The comment after marking it resolved. */
+export async function resolveComment(
+  request: CommentStatusRequest,
+): Promise<Comment> {
+  return invokeCommand("resolve_comment", request);
+}
+
+/** @returns The comment after reopening it. */
+export async function reopenComment(
+  request: CommentStatusRequest,
+): Promise<Comment> {
+  return invokeCommand("reopen_comment", request);
+}
+
+/** @returns The comment after toggling its resolved status. */
+export async function toggleCommentResolved(
+  request: CommentStatusRequest,
+): Promise<Comment> {
+  return invokeCommand("toggle_comment_resolved", request);
+}
+
+export const commentCommands: CommentCommands = {
+  listComments,
+  addComment,
+  updateComment,
+  deleteComment,
+  resolveComment,
+  reopenComment,
+  toggleCommentResolved,
+};
 
 /** @returns A stable command error shape for UI state and messages. */
 export function normalizeCommandError(error: unknown): NormalizedCommandError {

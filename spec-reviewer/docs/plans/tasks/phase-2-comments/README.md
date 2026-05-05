@@ -4,7 +4,6 @@ Goal: allow users to create, view, update, resolve, and delete comments without 
 
 ## Tasks
 
-- [P2.10 Frontend Comment IPC](./p2-10-frontend-comment-ipc.md)
 - [P2.11 Comment State Hook](./p2-11-comment-state-hook.md)
 - [P2.12 Sidebar UI](./p2-12-sidebar-ui.md)
 - [P2.13 Comment Thread UI](./p2-13-comment-thread-ui.md)
