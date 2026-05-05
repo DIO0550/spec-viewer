@@ -4,4 +4,4 @@ Goal: load a spec workspace and provide a usable Markdown viewer for configured 
 
 ## Tasks
 
-- [P1.16 Styling](./p1-16-styling.md)
+No active Phase 1 viewer tasks remain.
