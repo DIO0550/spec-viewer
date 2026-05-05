@@ -4,7 +4,6 @@ Goal: keep comments attached to useful Markdown locations even after Markdown fi
 
 ## Tasks
 
-- [P3.8 Orphan Handling](./p3-08-orphan-handling.md)
 - [P3.9 Frontend Highlight Reconciliation](./p3-09-frontend-highlight-reconciliation.md)
 - [P3.10 File Watching Strategy](./p3-10-file-watching-strategy.md)
 - [P3.11 Refresh UI](./p3-11-refresh-ui.md)

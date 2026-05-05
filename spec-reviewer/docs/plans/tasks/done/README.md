@@ -51,3 +51,4 @@ Completed task files are moved here from the active task groups.
 - [P3.5 Anchor Creation Support](./phase-3-anchors/p3-05-anchor-creation-support.md)
 - [P3.6 Anchor Resolution Use Case](./phase-3-anchors/p3-06-anchor-resolution-use-case.md)
 - [P3.7 Fuzzy Matching](./phase-3-anchors/p3-07-fuzzy-matching.md)
+- [P3.8 Orphan Handling](./phase-3-anchors/p3-08-orphan-handling.md)
