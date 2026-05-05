@@ -4,7 +4,6 @@ Goal: allow users to create, view, update, resolve, and delete comments without 
 
 ## Tasks
 
-- [P2.1 Comment Domain Skeleton](./p2-01-comment-domain-skeleton.md)
 - [P2.2 Anchor Domain](./p2-02-anchor-domain.md)
 - [P2.3 Comment Repository Contract](./p2-03-comment-repository-contract.md)
 - [P2.4 JSON Persistence Format](./p2-04-json-persistence-format.md)
@@ -20,4 +19,3 @@ Goal: allow users to create, view, update, resolve, and delete comments without 
 - [P2.14 Text Selection Flow](./p2-14-text-selection-flow.md)
 - [P2.15 Add Comment UI](./p2-15-add-comment-ui.md)
 - [P2.16 Highlight Display](./p2-16-highlight-display.md)
-

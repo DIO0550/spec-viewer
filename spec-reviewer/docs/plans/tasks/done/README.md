@@ -28,3 +28,4 @@ Completed task files are moved here from the active task groups.
 - [P1.14 Markdown Rendering](./phase-1-viewer/p1-14-markdown-rendering.md)
 - [P1.15 Viewer UI Behavior](./phase-1-viewer/p1-15-viewer-ui-behavior.md)
 - [P1.16 Styling](./phase-1-viewer/p1-16-styling.md)
+- [P2.1 Comment Domain Skeleton](./phase-2-comments/p2-01-comment-domain-skeleton.md)
