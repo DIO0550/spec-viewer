@@ -1,5 +1,7 @@
 //! Markdown file readers.
 
+pub mod parser;
+
 use std::{
     fs, io,
     path::{Path, PathBuf},
