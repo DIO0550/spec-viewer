@@ -9,6 +9,7 @@ use crate::domain::spec::{
     MarkdownBlock, MarkdownBlockIndex, MarkdownBlockSourceRange, MarkdownBlockText,
     MarkdownBlockType, SpecDomainError,
 };
+use crate::infrastructure::markdown::normalizer::normalize_markdown_block_text;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct PulldownMarkdownParser;
@@ -149,7 +150,8 @@ struct PendingMarkdownBlock {
 
 impl PendingMarkdownBlock {
     fn into_domain_block(self, index: usize) -> Result<MarkdownBlock, MarkdownParseError> {
-        let text = MarkdownBlockText::new(self.raw.clone(), self.raw.trim().to_string())?;
+        let normalized = normalize_markdown_block_text(self.block_type, &self.raw);
+        let text = MarkdownBlockText::new(self.raw.clone(), normalized)?;
         let source_range =
             MarkdownBlockSourceRange::new(self.start_byte_offset, self.end_byte_offset)?;
 
@@ -331,5 +333,31 @@ mod tests {
 
     fn raw_texts(blocks: &[MarkdownBlock]) -> Vec<&str> {
         blocks.iter().map(|block| block.text().raw()).collect()
+    }
+
+    #[test]
+    fn parses_blocks_with_normalized_text() {
+        let markdown = [
+            "## Overview",
+            "",
+            "Intro paragraph with **strong** text.",
+            "",
+            "- [x] Checked item",
+            "",
+            "```rust",
+            "fn main() {}",
+            "```",
+        ]
+        .join("\n");
+
+        let blocks = parse_markdown_blocks(&markdown).expect("markdown should parse");
+
+        assert_eq!("Overview", blocks[0].text().normalized());
+        assert_eq!(
+            "Intro paragraph with strong text.",
+            blocks[1].text().normalized()
+        );
+        assert_eq!("Checked item", blocks[2].text().normalized());
+        assert_eq!("fn main() {}", blocks[3].text().normalized());
     }
 }

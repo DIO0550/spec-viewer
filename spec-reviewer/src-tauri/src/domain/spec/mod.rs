@@ -266,10 +266,7 @@ impl MarkdownBlockText {
             return Err(SpecDomainError::MissingNormalizedMarkdownBlockText);
         }
 
-        Ok(Self {
-            raw,
-            normalized: trimmed_normalized.to_string(),
-        })
+        Ok(Self { raw, normalized })
     }
 
     pub fn raw(&self) -> &str {
@@ -588,12 +585,12 @@ mod tests {
     }
 
     #[test]
-    fn markdown_block_text_preserves_raw_and_trims_normalized_representation() {
+    fn markdown_block_text_preserves_raw_and_normalized_representation() {
         let text = MarkdownBlockText::new("  **Selected** text  ", " selected text ")
             .expect("block text should be valid");
 
         assert_eq!("  **Selected** text  ", text.raw());
-        assert_eq!("selected text", text.normalized());
+        assert_eq!(" selected text ", text.normalized());
     }
 
     #[test]

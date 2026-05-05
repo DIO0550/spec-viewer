@@ -1,5 +1,6 @@
 //! Markdown file readers.
 
+pub mod normalizer;
 pub mod parser;
 
 use std::{
