@@ -102,6 +102,16 @@ Do not put Tauri types, filesystem paths, or JSON serialization details into dom
 - Put implementation plans and task breakdowns in `spec-reviewer/docs/plans/`.
 - Keep the root `spec-reviewer-plan.md` as historical/source planning context.
 
+## Task File Workflow
+
+- Active task files live under `spec-reviewer/docs/plans/tasks/<group>/`.
+- Completed task files must be moved to `spec-reviewer/docs/plans/tasks/done/<group>/`.
+- Before moving a task file to `done/`, mark its checklist items as complete and add a short completion note with the implementation commit or PR when available.
+- Preserve the original task filename when moving it so history remains easy to follow.
+- Update the source group's `README.md` so completed tasks no longer appear as active work.
+- Update `spec-reviewer/docs/plans/tasks/done/README.md` with a link to the moved task.
+- Do not delete completed task files; moving them is the record that the task is finished.
+
 ## Generated Files
 
 Do not commit generated output from:
