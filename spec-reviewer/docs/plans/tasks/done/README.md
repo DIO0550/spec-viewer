@@ -30,3 +30,4 @@ Completed task files are moved here from the active task groups.
 - [P1.16 Styling](./phase-1-viewer/p1-16-styling.md)
 - [P2.1 Comment Domain Skeleton](./phase-2-comments/p2-01-comment-domain-skeleton.md)
 - [P2.2 Anchor Domain](./phase-2-comments/p2-02-anchor-domain.md)
+- [P2.3 Comment Repository Contract](./phase-2-comments/p2-03-comment-repository-contract.md)
