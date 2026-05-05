@@ -19,3 +19,4 @@ Completed task files are moved here from the active task groups.
 - [P1.5 Infrastructure: Workspace Detection](./phase-1-viewer/p1-05-workspace-detection.md)
 - [P1.6 Infrastructure: Config Loading](./phase-1-viewer/p1-06-config-loading.md)
 - [P1.7 Infrastructure: Spec Tree Scan](./phase-1-viewer/p1-07-spec-tree-scan.md)
+- [P1.8 Infrastructure: Markdown Read](./phase-1-viewer/p1-08-markdown-read.md)
