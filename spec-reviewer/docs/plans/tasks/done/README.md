@@ -22,3 +22,4 @@ Completed task files are moved here from the active task groups.
 - [P1.8 Infrastructure: Markdown Read](./phase-1-viewer/p1-08-markdown-read.md)
 - [P1.9 App Use Cases](./phase-1-viewer/p1-09-app-use-cases.md)
 - [P1.10 Presentation Commands](./phase-1-viewer/p1-10-presentation-commands.md)
+- [P1.11 Frontend Types And IPC](./phase-1-viewer/p1-11-frontend-types-and-ipc.md)
