@@ -158,6 +158,24 @@ test("AddCommentPopoverはEscapeでキャンセルする", () => {
   result.unmount();
 });
 
+test("AddCommentPopoverはdialog内のbutton focus時もEscapeでキャンセルする", () => {
+  const onCancel = vi.fn();
+  const result = renderPopover({ onCancel });
+  const cancelButton = Array.from(
+    result.container.querySelectorAll("button"),
+  ).find((button) => button.getAttribute("aria-label") === "Cancel comment");
+
+  act(() => {
+    (cancelButton as HTMLButtonElement).focus();
+    cancelButton?.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+  });
+
+  expect(onCancel).toHaveBeenCalledOnce();
+  result.unmount();
+});
+
 test("AddCommentPopoverはCtrl Enterで保存する", async () => {
   const onSubmit = vi.fn().mockResolvedValue(true);
   const result = renderPopover({ onSubmit });

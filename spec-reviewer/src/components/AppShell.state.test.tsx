@@ -207,6 +207,36 @@ test("SpecTreeは矢印キーでtree itemのfocusを移動する", () => {
   result.unmount();
 });
 
+test("SpecTreeは左右矢印キーで親子tree itemへfocusを移動する", () => {
+  const result = renderComponent(
+    <SpecTree
+      state={readyTreeState}
+      selectedSpecId={null}
+      onSelectSpec={vi.fn()}
+      onReload={vi.fn()}
+    />,
+  );
+  const buttons = result.container.querySelectorAll(".spec-tree__item");
+
+  act(() => {
+    (buttons[0] as HTMLButtonElement).focus();
+    buttons[0]?.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
+    );
+  });
+
+  expect(document.activeElement).toBe(buttons[1]);
+
+  act(() => {
+    buttons[1]?.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }),
+    );
+  });
+
+  expect(document.activeElement).toBe(buttons[0]);
+  result.unmount();
+});
+
 test("SpecTabsは選択中tabとfile選択イベントを表現する", () => {
   const onSelectFile = vi.fn();
   const result = renderComponent(
@@ -403,6 +433,53 @@ test("WorkspaceToolbarはrecent workspace操作を発火する", () => {
   expect(onOpenRecentWorkspace).toHaveBeenCalledWith("/workspace/recent");
   expect(onRemoveRecentWorkspace).toHaveBeenCalledWith("/workspace/recent");
   expect(onClearRecentWorkspaces).toHaveBeenCalledOnce();
+  result.unmount();
+});
+
+test("WorkspaceToolbarはEscapeでrecent workspaces menuを閉じる", () => {
+  const result = renderComponent(
+    <WorkspaceToolbar
+      workspacePath={null}
+      inputValue=""
+      isLoading={false}
+      isBrowsing={false}
+      errorMessage={null}
+      refreshStatus={{ status: "idle", message: null }}
+      canRefresh={false}
+      themeMode="system"
+      recentWorkspaces={[
+        {
+          path: "/workspace/recent",
+          openedAt: "2026-05-05T00:00:00.000Z",
+        },
+      ]}
+      onInputChange={vi.fn()}
+      onBrowse={vi.fn()}
+      onLoad={vi.fn()}
+      onRefresh={vi.fn()}
+      onReset={vi.fn()}
+      onThemeModeChange={vi.fn()}
+    />,
+  );
+  const details = result.container.querySelector(
+    ".workspace-toolbar__recent",
+  ) as HTMLDetailsElement;
+  const summary = result.container.querySelector("summary") as HTMLElement;
+
+  act(() => {
+    summary.click();
+  });
+
+  expect(details.open).toBe(true);
+
+  act(() => {
+    details.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+  });
+
+  expect(details.open).toBe(false);
+  expect(document.activeElement).toBe(summary);
   result.unmount();
 });
 

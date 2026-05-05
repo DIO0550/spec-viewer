@@ -325,6 +325,25 @@ test("CommentSidebarはopenとresolvedの件数とコメント本文を表示す
   result.unmount();
 });
 
+test("CommentSidebarは矢印キーで隣のcomment threadを選択する", () => {
+  const onSelectComment = vi.fn();
+  const result = renderReadySidebar({ onSelectComment });
+  const selectors = result.container.querySelectorAll(
+    ".comment-thread__select",
+  );
+
+  act(() => {
+    (selectors[0] as HTMLButtonElement).focus();
+    selectors[0]?.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
+    );
+  });
+
+  expect(document.activeElement).toBe(selectors[1]);
+  expect(onSelectComment).toHaveBeenCalledWith("cmt_resolved");
+  result.unmount();
+});
+
 test("CommentSidebarはコメントexport操作を発火して状態を表示する", () => {
   const onExportComments = vi.fn();
   const result = renderReadySidebar({
