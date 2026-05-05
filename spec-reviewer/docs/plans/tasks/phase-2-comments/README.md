@@ -4,7 +4,6 @@ Goal: allow users to create, view, update, resolve, and delete comments without 
 
 ## Tasks
 
-- [P2.7 Comment Use Cases](./p2-07-comment-use-cases.md)
 - [P2.8 Comment Commands](./p2-08-comment-commands.md)
 - [P2.9 Frontend Comment Types](./p2-09-frontend-comment-types.md)
 - [P2.10 Frontend Comment IPC](./p2-10-frontend-comment-ipc.md)

@@ -1,9 +1,13 @@
 //! Use cases that coordinate domain logic and infrastructure.
 
+pub mod comments;
+
 use thiserror::Error;
 
 use crate::{
     domain::{
+        comment::{CommentDomainError, CommentRepositoryError},
+        spec::SpecDomainError,
         spec::{SpecFileKey, SpecNode},
         workspace::{WorkspaceConfig, WorkspaceLayout},
     },
@@ -18,6 +22,11 @@ use crate::{
         },
         persistence::config::{ConfigLoadError, WorkspaceConfigLoader},
     },
+};
+
+pub use comments::{
+    CommentUseCases, FilesystemCommentUseCases, GenerateCommentId, GetCurrentTime, UtcCommentClock,
+    UuidCommentIdGenerator,
 };
 
 pub type FilesystemAppUseCases = AppUseCases<
@@ -61,6 +70,12 @@ impl Default for FilesystemAppUseCases {
             FilesystemSpecTreeScanner::new(),
             FilesystemMarkdownReader::new(),
         )
+    }
+}
+
+impl FilesystemAppUseCases {
+    pub fn comment_use_cases(&self, workspace: &LoadWorkspaceResult) -> FilesystemCommentUseCases {
+        FilesystemCommentUseCases::for_workspace(workspace)
     }
 }
 
@@ -319,6 +334,12 @@ pub enum AppUseCaseError {
     SpecTreeScan { message: String },
     #[error("failed to read spec file: {message}")]
     MarkdownRead { message: String },
+    #[error("invalid spec input: {message}")]
+    InvalidSpec { message: String },
+    #[error("invalid comment input: {message}")]
+    InvalidComment { message: String },
+    #[error("failed to persist comments: {message}")]
+    CommentRepository { message: String },
 }
 
 impl From<WorkspaceDetectionError> for AppUseCaseError {
@@ -348,6 +369,30 @@ impl From<SpecTreeScanError> for AppUseCaseError {
 impl From<MarkdownReadError> for AppUseCaseError {
     fn from(source: MarkdownReadError) -> Self {
         Self::MarkdownRead {
+            message: source.to_string(),
+        }
+    }
+}
+
+impl From<SpecDomainError> for AppUseCaseError {
+    fn from(source: SpecDomainError) -> Self {
+        Self::InvalidSpec {
+            message: source.to_string(),
+        }
+    }
+}
+
+impl From<CommentDomainError> for AppUseCaseError {
+    fn from(source: CommentDomainError) -> Self {
+        Self::InvalidComment {
+            message: source.to_string(),
+        }
+    }
+}
+
+impl From<CommentRepositoryError> for AppUseCaseError {
+    fn from(source: CommentRepositoryError) -> Self {
+        Self::CommentRepository {
             message: source.to_string(),
         }
     }

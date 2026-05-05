@@ -55,6 +55,9 @@ impl From<AppUseCaseError> for CommandError {
             AppUseCaseError::ConfigLoad { .. } => "configLoad",
             AppUseCaseError::SpecTreeScan { .. } => "specTreeScan",
             AppUseCaseError::MarkdownRead { .. } => "markdownRead",
+            AppUseCaseError::InvalidSpec { .. } => "invalidSpec",
+            AppUseCaseError::InvalidComment { .. } => "invalidComment",
+            AppUseCaseError::CommentRepository { .. } => "commentRepository",
         };
 
         Self {
