@@ -299,6 +299,47 @@ mod tests {
     }
 
     #[test]
+    fn parses_empty_markdown_without_blocks() {
+        let blocks = parse_markdown_blocks("").expect("empty markdown should parse");
+
+        assert!(blocks.is_empty());
+    }
+
+    #[test]
+    fn parses_heading_only_markdown_as_heading_blocks() {
+        let markdown = "# Overview\n\n## Acceptance\n\n### Notes";
+
+        let blocks = parse_markdown_blocks(markdown).expect("headings should parse");
+
+        assert_eq!(
+            vec![
+                MarkdownBlockType::Heading,
+                MarkdownBlockType::Heading,
+                MarkdownBlockType::Heading,
+            ],
+            block_types(&blocks)
+        );
+        assert_eq!(
+            vec!["Overview", "Acceptance", "Notes"],
+            blocks
+                .iter()
+                .map(|block| block.text().normalized())
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn parses_identical_headings_with_distinct_indexes_and_matching_hashes() {
+        let markdown = "# Overview\n\n## Overview";
+
+        let blocks = parse_markdown_blocks(markdown).expect("headings should parse");
+
+        assert_eq!(vec![0, 1], block_indexes(&blocks));
+        assert_eq!("Overview", blocks[0].text().normalized());
+        assert_eq!(blocks[0].text_hash(), blocks[1].text_hash());
+    }
+
+    #[test]
     fn keeps_source_ranges_for_each_parsed_block() {
         let markdown = "# Title\n\nParagraph";
 
@@ -336,6 +377,10 @@ mod tests {
 
     fn raw_texts(blocks: &[MarkdownBlock]) -> Vec<&str> {
         blocks.iter().map(|block| block.text().raw()).collect()
+    }
+
+    fn block_indexes(blocks: &[MarkdownBlock]) -> Vec<usize> {
+        blocks.iter().map(|block| block.index().value()).collect()
     }
 
     #[test]

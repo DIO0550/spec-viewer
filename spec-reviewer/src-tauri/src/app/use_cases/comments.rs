@@ -383,7 +383,11 @@ fn resolve_comment_anchor(
         );
     }
 
-    match select_fuzzy_anchor_candidate(current_blocks, &anchor) {
+    let fuzzy_candidate_blocks = indexed_block
+        .map(|block| vec![block])
+        .unwrap_or_else(|| current_blocks.iter().collect());
+
+    match select_fuzzy_anchor_candidate(&fuzzy_candidate_blocks, &anchor) {
         FuzzyAnchorSelection::Matched(candidate) => {
             return CommentAnchorResolution::new(
                 comment,
@@ -463,7 +467,7 @@ enum FuzzyAnchorSelection<'a> {
 }
 
 fn select_fuzzy_anchor_candidate<'a>(
-    current_blocks: &'a [MarkdownBlock],
+    current_blocks: &[&'a MarkdownBlock],
     anchor: &CommentAnchor,
 ) -> FuzzyAnchorSelection<'a> {
     let snippet = normalize_fuzzy_text(anchor.text_snippet().as_str());
@@ -474,6 +478,7 @@ fn select_fuzzy_anchor_candidate<'a>(
 
     let mut candidates = current_blocks
         .iter()
+        .copied()
         .filter(|block| {
             crate::domain::comment::BlockType::from(block.block_type()) == anchor.block_type()
         })
@@ -557,12 +562,13 @@ fn fuzzy_anchor_candidate<'a>(
 }
 
 fn best_fuzzy_score(
-    current_blocks: &[MarkdownBlock],
+    current_blocks: &[&MarkdownBlock],
     anchor: &CommentAnchor,
     snippet: &str,
 ) -> Option<u8> {
     current_blocks
         .iter()
+        .copied()
         .filter(|block| {
             crate::domain::comment::BlockType::from(block.block_type()) == anchor.block_type()
         })
@@ -812,6 +818,41 @@ mod tests {
     impl GetCurrentTime for FakeClock {
         fn now(&self) -> DateTime<Utc> {
             self.now
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    struct FailingCommentRepository {
+        message: String,
+    }
+
+    impl CommentRepository for FailingCommentRepository {
+        fn list(&self, _query: &CommentListQuery) -> Result<Vec<Comment>, CommentRepositoryError> {
+            Err(CommentRepositoryError::invalid_data(self.message.clone()))
+        }
+
+        fn add(
+            &self,
+            _scope: &CommentScope,
+            _comment: Comment,
+        ) -> Result<Comment, CommentRepositoryError> {
+            unreachable!("failing repository is only used for list")
+        }
+
+        fn update(
+            &self,
+            _scope: &CommentScope,
+            _comment: Comment,
+        ) -> Result<Comment, CommentRepositoryError> {
+            unreachable!("failing repository is only used for list")
+        }
+
+        fn delete(
+            &self,
+            _scope: &CommentScope,
+            _id: &CommentId,
+        ) -> Result<(), CommentRepositoryError> {
+            unreachable!("failing repository is only used for list")
         }
     }
 
@@ -1164,6 +1205,46 @@ mod tests {
     }
 
     #[test]
+    fn resolve_comment_anchors_orphans_deleted_text_when_snippet_exists_elsewhere() {
+        let repository = FakeCommentRepository::default();
+        repository.comments.borrow_mut().push(comment_with_anchor(
+            "cmt_deleted_elsewhere",
+            anchor(SpecFileKey::Impl),
+        ));
+        let use_cases = use_cases(repository);
+        let blocks = [
+            markdown_block(
+                MarkdownBlockType::Paragraph,
+                2,
+                "different block text after deletion",
+                "different block text after deletion",
+                "sha256_different",
+            ),
+            markdown_block(
+                MarkdownBlockType::Paragraph,
+                7,
+                "selected text",
+                "selected text",
+                "sha256_elsewhere",
+            ),
+        ];
+
+        let result = use_cases
+            .resolve_comment_anchors(
+                "auth-flow",
+                SpecFileKey::Impl,
+                CommentStatusFilter::All,
+                &blocks,
+            )
+            .expect("anchors should resolve");
+
+        let resolution = &result.resolutions()[0];
+        assert_eq!(AnchorResolutionStatus::Orphaned, resolution.status());
+        assert_eq!(AnchorResolutionReason::DeletedText, resolution.reason());
+        assert!(resolution.target().is_none());
+    }
+
+    #[test]
     fn resolve_comment_anchors_marks_stale_when_snippet_matches_after_hash_mismatch() {
         let repository = FakeCommentRepository::default();
         repository
@@ -1440,6 +1521,115 @@ mod tests {
     }
 
     #[test]
+    fn resolve_comment_anchors_keeps_duplicate_paragraph_when_original_hash_matches() {
+        let repository = FakeCommentRepository::default();
+        repository.comments.borrow_mut().push(comment_with_anchor(
+            "cmt_duplicate_exact",
+            anchor(SpecFileKey::Impl),
+        ));
+        let use_cases = use_cases(repository);
+        let blocks = [
+            markdown_block(
+                MarkdownBlockType::Paragraph,
+                0,
+                "selected text",
+                "selected text",
+                "sha256_elsewhere",
+            ),
+            markdown_block(
+                MarkdownBlockType::Paragraph,
+                2,
+                "selected text",
+                "selected text",
+                "sha256_prefix_8chars",
+            ),
+            markdown_block(
+                MarkdownBlockType::Paragraph,
+                4,
+                "selected text",
+                "selected text",
+                "sha256_another",
+            ),
+        ];
+
+        let result = use_cases
+            .resolve_comment_anchors(
+                "auth-flow",
+                SpecFileKey::Impl,
+                CommentStatusFilter::All,
+                &blocks,
+            )
+            .expect("anchors should resolve");
+
+        let resolution = &result.resolutions()[0];
+        assert_eq!(AnchorResolutionStatus::Resolved, resolution.status());
+        assert_eq!(AnchorResolutionReason::ExactMatch, resolution.reason());
+        assert_eq!(
+            2,
+            resolution
+                .target()
+                .expect("target should exist")
+                .block()
+                .index()
+                .value()
+        );
+    }
+
+    #[test]
+    fn resolve_comment_anchors_keeps_identical_heading_when_original_hash_matches() {
+        let repository = FakeCommentRepository::default();
+        repository.comments.borrow_mut().push(comment_with_anchor(
+            "cmt_heading_exact",
+            anchor_with(
+                SpecFileKey::Impl,
+                BlockType::Heading,
+                1,
+                "sha256_heading",
+                "Overview",
+            ),
+        ));
+        let use_cases = use_cases(repository);
+        let blocks = [
+            markdown_block(
+                MarkdownBlockType::Heading,
+                0,
+                "# Overview",
+                "Overview",
+                "sha256_other_heading",
+            ),
+            markdown_block(
+                MarkdownBlockType::Heading,
+                1,
+                "## Overview",
+                "Overview",
+                "sha256_heading",
+            ),
+        ];
+
+        let result = use_cases
+            .resolve_comment_anchors(
+                "auth-flow",
+                SpecFileKey::Impl,
+                CommentStatusFilter::All,
+                &blocks,
+            )
+            .expect("anchors should resolve");
+
+        let resolution = &result.resolutions()[0];
+        assert_eq!(AnchorResolutionStatus::Resolved, resolution.status());
+        assert_eq!(AnchorResolutionReason::ExactMatch, resolution.reason());
+        assert_eq!(
+            1,
+            resolution
+                .target()
+                .expect("target should exist")
+                .block()
+                .index()
+                .value()
+        );
+    }
+
+    #[test]
     fn resolve_comment_anchors_ignores_short_snippets_for_fuzzy_matching() {
         let repository = FakeCommentRepository::default();
         repository.comments.borrow_mut().push(comment_with_anchor(
@@ -1552,6 +1742,31 @@ mod tests {
             resolution.reason()
         );
         assert!(resolution.target().is_none());
+    }
+
+    #[test]
+    fn resolve_comment_anchors_returns_invalid_data_for_malformed_comment_json() {
+        let use_cases = CommentUseCases::new(
+            FailingCommentRepository {
+                message: "comment JSON is malformed at impl.json".to_string(),
+            },
+            FakeIdGenerator {
+                id: CommentId::new("cmt_generated").expect("comment id should be valid"),
+            },
+            FakeClock { now: timestamp(5) },
+        );
+
+        let result = use_cases.resolve_comment_anchors(
+            "auth-flow",
+            SpecFileKey::Impl,
+            CommentStatusFilter::All,
+            &[],
+        );
+
+        assert!(matches!(
+            result,
+            Err(AppUseCaseError::CommentRepository { message }) if message.contains("malformed")
+        ));
     }
 
     #[test]

@@ -361,6 +361,55 @@ mod tests {
     }
 
     #[test]
+    fn reads_renamed_markdown_file_through_config_mapping() {
+        let workspace = TestWorkspace::new("renamed-config");
+        workspace.write_file(".plugin-workspace/.specs/auth/todo.md", "# Renamed Tasks");
+        let config =
+            WorkspaceConfig::new(vec![crate::domain::workspace::WorkspaceFileMapping::new(
+                SpecFileKey::Tasks,
+                "todo.md",
+            )
+            .expect("mapping should be valid")])
+            .expect("config should be valid");
+
+        let result = FilesystemMarkdownReader::new()
+            .read(&workspace.layout(), &config, "auth", SpecFileKey::Tasks)
+            .expect("renamed markdown file should be readable");
+
+        match result {
+            MarkdownReadResult::Found(document) => {
+                assert!(document.path().ends_with("auth/todo.md"));
+                assert_eq!("# Renamed Tasks", document.contents());
+                assert_eq!(1, document.blocks().len());
+            }
+            MarkdownReadResult::Missing(_) => panic!("expected renamed markdown document"),
+        }
+    }
+
+    #[test]
+    fn reads_empty_markdown_file_as_document_without_blocks() {
+        let workspace = TestWorkspace::new("empty");
+        workspace.write_file(".plugin-workspace/.specs/auth/tasks.md", "");
+
+        let result = FilesystemMarkdownReader::new()
+            .read(
+                &workspace.layout(),
+                &WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace),
+                "auth",
+                SpecFileKey::Tasks,
+            )
+            .expect("empty markdown file should be readable");
+
+        match result {
+            MarkdownReadResult::Found(document) => {
+                assert_eq!("", document.contents());
+                assert!(document.blocks().is_empty());
+            }
+            MarkdownReadResult::Missing(_) => panic!("expected empty markdown document"),
+        }
+    }
+
+    #[test]
     fn returns_missing_result_for_absent_configured_file() {
         let workspace = TestWorkspace::new("missing");
         workspace.create_dir(".plugin-workspace/.specs/auth");

@@ -92,6 +92,66 @@ const refreshedNestedTree: SpecTree = {
   ],
 };
 
+const tasksAndDesignTree: SpecTree = {
+  specs: [
+    {
+      id: "phase-refresh",
+      label: "Phase Refresh",
+      files: [
+        {
+          key: "design",
+          label: "Design",
+          fileName: "design.md",
+          status: "present",
+        },
+        {
+          key: "tasks",
+          label: "Tasks",
+          fileName: "tasks.md",
+          status: "present",
+        },
+      ],
+      children: [],
+    },
+  ],
+};
+
+const renamedTasksTree: SpecTree = {
+  specs: [
+    {
+      id: "phase-refresh",
+      label: "Phase Refresh",
+      files: [
+        {
+          key: "design",
+          label: "Design",
+          fileName: "design.md",
+          status: "present",
+        },
+      ],
+      children: [],
+    },
+  ],
+};
+
+const missingTasksTree: SpecTree = {
+  specs: [
+    {
+      id: "phase-1-viewer",
+      label: "Phase 1 Viewer",
+      files: [
+        {
+          key: "tasks",
+          label: "Tasks",
+          fileName: "tasks.md",
+          status: "missing",
+        },
+      ],
+      children: [],
+    },
+  ],
+};
+
 const loadedDocument: SpecDocument = {
   key: "tasks",
   path: "/workspace/spec-reviewer/.plugin-workspace/specs/phase-1-viewer/tasks.md",
@@ -103,6 +163,14 @@ const loadedDocument: SpecDocument = {
 const missingDocument: SpecDocument = {
   key: "impl",
   path: "/workspace/spec-reviewer/.plugin-workspace/specs/phase-1-viewer/implementation-plan.md",
+  contents: null,
+  missing: true,
+  blocks: [],
+};
+
+const missingTasksDocument: SpecDocument = {
+  key: "tasks",
+  path: "/workspace/spec-reviewer/.plugin-workspace/specs/phase-1-viewer/tasks.md",
   contents: null,
   missing: true,
   blocks: [],
@@ -385,6 +453,71 @@ test("useSpecsはspec tree再読み込み時に選択中のspecとfileを保持�
     specId: "phase-child",
     fileKey: "design",
     document: designDocument,
+    error: null,
+  });
+  result.unmount();
+});
+
+test("useSpecsはrefresh時に選択中fileが消えたら同じspecの先頭fileへ移る", async () => {
+  const listSpecs = vi.fn().mockResolvedValue(tasksAndDesignTree);
+  const readSpecFile = vi.fn().mockResolvedValue(loadedDocument);
+
+  const result = renderHook(
+    ({ workspacePath }) => useSpecs({ workspacePath, listSpecs, readSpecFile }),
+    { workspacePath: "/workspace/spec-reviewer" },
+  );
+
+  await act(async () => {
+    await result.current.reloadSpecs();
+  });
+  await act(async () => {
+    await result.current.selectFileKey("tasks");
+  });
+  listSpecs.mockResolvedValue(renamedTasksTree);
+  readSpecFile.mockResolvedValue(designDocument);
+  await act(async () => {
+    await result.current.reloadSpecs({ preserveSelection: true });
+  });
+
+  expect(result.current.selectedSpecId).toBe("phase-refresh");
+  expect(result.current.selectedFileKey).toBe("design");
+  expect(result.current.documentState).toEqual({
+    status: "ready",
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "phase-refresh",
+    fileKey: "design",
+    document: designDocument,
+    error: null,
+  });
+  result.unmount();
+});
+
+test("useSpecsはrefresh時に選択中Markdownが削除されたらmissing状態へ更新する", async () => {
+  const listSpecs = vi.fn().mockResolvedValue(populatedTree);
+  const readSpecFile = vi.fn().mockResolvedValue(loadedDocument);
+
+  const result = renderHook(
+    ({ workspacePath }) => useSpecs({ workspacePath, listSpecs, readSpecFile }),
+    { workspacePath: "/workspace/spec-reviewer" },
+  );
+
+  await act(async () => {
+    await result.current.reloadSpecs();
+  });
+  listSpecs.mockResolvedValue(missingTasksTree);
+  readSpecFile.mockResolvedValue(missingTasksDocument);
+  await act(async () => {
+    await result.current.reloadSpecs({ preserveSelection: true });
+  });
+
+  expect(result.current.selectedSpecId).toBe("phase-1-viewer");
+  expect(result.current.selectedFileKey).toBe("tasks");
+  expect(result.current.documentState).toEqual({
+    status: "missing",
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "phase-1-viewer",
+    fileKey: "tasks",
+    document: missingTasksDocument,
     error: null,
   });
   result.unmount();
