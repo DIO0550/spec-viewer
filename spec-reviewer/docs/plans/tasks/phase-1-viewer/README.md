@@ -4,7 +4,6 @@ Goal: load a spec workspace and provide a usable Markdown viewer for configured 
 
 ## Tasks
 
-- [P1.10 Presentation Commands](./p1-10-presentation-commands.md)
 - [P1.11 Frontend Types And IPC](./p1-11-frontend-types-and-ipc.md)
 - [P1.12 Frontend State Hooks](./p1-12-frontend-state-hooks.md)
 - [P1.13 Layout Components](./p1-13-layout-components.md)
