@@ -126,7 +126,7 @@ export type UseCommentsResult = Readonly<{
   isEmpty: boolean;
   error: NormalizedCommandError | null;
   mutationError: NormalizedCommandError | null;
-  reloadComments: () => Promise<void>;
+  reloadComments: () => Promise<boolean>;
   addComment: (input: AddCommentInput) => Promise<Comment | null>;
   updateComment: (input: UpdateCommentInput) => Promise<Comment | null>;
   deleteComment: (commentId: CommentId) => Promise<boolean>;
@@ -174,13 +174,13 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
     commentsRef.current = listState.comments;
   }, [listState.comments]);
 
-  const reloadComments = useCallback(async (): Promise<void> => {
+  const reloadComments = useCallback(async (): Promise<boolean> => {
     const activeScope = scope;
 
     if (activeScope === null) {
       listRequestIdRef.current += 1;
       setListState(createIdleListState(statusFilter));
-      return;
+      return true;
     }
 
     const requestId = listRequestIdRef.current + 1;
@@ -199,15 +199,16 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
       );
 
       if (listRequestIdRef.current !== requestId) {
-        return;
+        return false;
       }
 
       setListState(
         createLoadedListState(activeScope, statusFilter, response.comments),
       );
+      return true;
     } catch (error) {
       if (listRequestIdRef.current !== requestId) {
-        return;
+        return false;
       }
 
       setListState({
@@ -217,6 +218,7 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
         comments: [],
         error: normalizeCommandError(error),
       });
+      return false;
     }
   }, [commands, scope, statusFilter]);
 

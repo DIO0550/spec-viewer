@@ -8,13 +8,28 @@ import { MarkdownViewer } from "./components/MarkdownViewer";
 import { OpenWorkspaceEmptyState } from "./components/OpenWorkspaceEmptyState";
 import { SpecTabs } from "./components/SpecTabs";
 import { SpecTree } from "./components/SpecTree";
-import { WorkspaceToolbar } from "./components/WorkspaceToolbar";
+import {
+  WorkspaceToolbar,
+  type WorkspaceRefreshStatus,
+} from "./components/WorkspaceToolbar";
 import { useComments } from "./hooks/useComments";
 import { useSpecFileWatcher } from "./hooks/useSpecFileWatcher";
 import { useSpecs } from "./hooks/useSpecs";
 import { useWorkspace } from "./hooks/useWorkspace";
 import type { CommentAnchorDisplayState, CommentId } from "./types/comment";
 import { normalizeCommandError, selectWorkspaceDirectory } from "./lib/tauri";
+
+const idleRefreshStatus: WorkspaceRefreshStatus = {
+  status: "idle",
+  message: null,
+};
+
+type RefreshCurrentViewOptions = Readonly<{
+  loadingMessage: string;
+  failureStatus: "stale" | "error";
+  failureMessage: string;
+  run: () => Promise<boolean>;
+}>;
 
 function App() {
   const workspace = useWorkspace();
@@ -36,10 +51,13 @@ function App() {
   const [dialogErrorMessage, setDialogErrorMessage] = useState<string | null>(
     null,
   );
+  const [refreshStatus, setRefreshStatus] =
+    useState<WorkspaceRefreshStatus>(idleRefreshStatus);
 
   useEffect(() => {
     setActiveCommentId(null);
     setCommentAnchorDisplayStates([]);
+    setRefreshStatus(idleRefreshStatus);
   }, [specs.selectedFileKey, specs.selectedSpecId, workspace.workspace?.root]);
 
   useEffect(() => {
@@ -149,19 +167,102 @@ function App() {
     return true;
   };
 
+  const refreshCurrentView = useCallback(
+    async ({
+      loadingMessage,
+      failureStatus,
+      failureMessage,
+      run,
+    }: RefreshCurrentViewOptions): Promise<boolean> => {
+      setDialogErrorMessage(null);
+      setRefreshStatus({
+        status: "loading",
+        message: loadingMessage,
+      });
+
+      try {
+        const isRefreshSuccessful = await run();
+
+        if (!isRefreshSuccessful) {
+          setRefreshStatus({
+            status: failureStatus,
+            message: failureMessage,
+          });
+          return false;
+        }
+
+        setRefreshStatus(idleRefreshStatus);
+        return true;
+      } catch (error) {
+        setRefreshStatus({
+          status: failureStatus,
+          message: `${failureMessage} ${normalizeCommandError(error).message}`,
+        });
+        return false;
+      }
+    },
+    [],
+  );
+
   const reloadCurrentMarkdownFromWatcher =
     useCallback(async (): Promise<void> => {
-      setDialogErrorMessage(null);
-      await specs.reloadDocument();
-      await comments.reloadComments();
-    }, [comments.reloadComments, specs.reloadDocument]);
+      await refreshCurrentView({
+        loadingMessage: "Refreshing after Markdown change",
+        failureStatus: "stale",
+        failureMessage: "Automatic refresh failed. Content may be stale.",
+        run: async () => {
+          const isDocumentReloaded = await specs.reloadDocument();
+          const areCommentsReloaded = await comments.reloadComments();
+          return isDocumentReloaded && areCommentsReloaded;
+        },
+      });
+    }, [comments.reloadComments, refreshCurrentView, specs.reloadDocument]);
 
   const reloadWorkspaceConfigFromWatcher =
     useCallback(async (): Promise<void> => {
-      setDialogErrorMessage(null);
-      await specs.reloadSpecs();
-      await comments.reloadComments();
-    }, [comments.reloadComments, specs.reloadSpecs]);
+      await refreshCurrentView({
+        loadingMessage: "Refreshing after spec config change",
+        failureStatus: "stale",
+        failureMessage: "Automatic refresh failed. Content may be stale.",
+        run: async () => {
+          const areSpecsReloaded = await specs.reloadSpecs({
+            preserveSelection: true,
+          });
+          const areCommentsReloaded = await comments.reloadComments();
+          return areSpecsReloaded && areCommentsReloaded;
+        },
+      });
+    }, [comments.reloadComments, refreshCurrentView, specs.reloadSpecs]);
+
+  const canRefreshCurrentView =
+    workspace.workspace !== null &&
+    specs.selectedSpecId !== null &&
+    specs.selectedFileKey !== null;
+
+  const refreshCurrentViewManually = useCallback(async (): Promise<void> => {
+    if (!canRefreshCurrentView || refreshStatus.status === "loading") {
+      return;
+    }
+
+    await refreshCurrentView({
+      loadingMessage: "Refreshing current view",
+      failureStatus: "error",
+      failureMessage: "Refresh failed. Review the pane error and retry.",
+      run: async () => {
+        const areSpecsReloaded = await specs.reloadSpecs({
+          preserveSelection: true,
+        });
+        const areCommentsReloaded = await comments.reloadComments();
+        return areSpecsReloaded && areCommentsReloaded;
+      },
+    });
+  }, [
+    canRefreshCurrentView,
+    comments.reloadComments,
+    refreshCurrentView,
+    refreshStatus.status,
+    specs.reloadSpecs,
+  ]);
 
   useSpecFileWatcher({
     workspacePath: workspace.workspace?.root ?? null,
@@ -170,7 +271,10 @@ function App() {
     onMarkdownChange: reloadCurrentMarkdownFromWatcher,
     onConfigChange: reloadWorkspaceConfigFromWatcher,
     onWatcherError: (event) => {
-      setDialogErrorMessage(event.message);
+      setRefreshStatus({
+        status: "stale",
+        message: `File watcher failed. Content may be stale. ${event.message}`,
+      });
     },
   });
 
@@ -200,11 +304,16 @@ function App() {
           isLoading={workspace.isLoading}
           isBrowsing={isBrowsingWorkspace}
           errorMessage={toolbarErrorMessage}
+          refreshStatus={refreshStatus}
+          canRefresh={canRefreshCurrentView}
           onInputChange={setWorkspaceInput}
           onBrowse={() => {
             void browseWorkspace();
           }}
           onLoad={loadWorkspace}
+          onRefresh={() => {
+            void refreshCurrentViewManually();
+          }}
           onReset={resetWorkspace}
         />
       }
@@ -216,7 +325,7 @@ function App() {
             void specs.selectSpec(specId);
           }}
           onReload={() => {
-            void specs.reloadSpecs();
+            void specs.reloadSpecs({ preserveSelection: true });
           }}
         />
       }

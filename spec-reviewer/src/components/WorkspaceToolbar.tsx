@@ -1,14 +1,22 @@
 import { FolderOpen, RefreshCcw, RotateCcw } from "lucide-react";
 
+export type WorkspaceRefreshStatus = Readonly<{
+  status: "idle" | "loading" | "stale" | "error";
+  message: string | null;
+}>;
+
 type Props = Readonly<{
   workspacePath: string | null;
   inputValue: string;
   isLoading: boolean;
   isBrowsing: boolean;
   errorMessage: string | null;
+  refreshStatus: WorkspaceRefreshStatus;
+  canRefresh: boolean;
   onInputChange: (nextValue: string) => void;
   onBrowse: () => void;
   onLoad: () => void;
+  onRefresh: () => void;
   onReset: () => void;
 }>;
 
@@ -19,13 +27,17 @@ export function WorkspaceToolbar({
   isLoading,
   isBrowsing,
   errorMessage,
+  refreshStatus,
+  canRefresh,
   onInputChange,
   onBrowse,
   onLoad,
+  onRefresh,
   onReset,
 }: Props) {
   const isBusy = isLoading || isBrowsing;
   const canLoad = inputValue.trim().length > 0 && !isBusy;
+  const isRefreshing = refreshStatus.status === "loading";
 
   return (
     <form
@@ -38,12 +50,17 @@ export function WorkspaceToolbar({
     >
       <div className="workspace-toolbar__brand">
         <span className="workspace-toolbar__title">Spec Reviewer</span>
-        <span className="workspace-toolbar__status" aria-live="polite">
+        <span
+          className="workspace-toolbar__status"
+          aria-live="polite"
+          data-refresh-status={refreshStatus.status}
+        >
           {createStatusLabel({
             workspacePath,
             isLoading,
             isBrowsing,
             errorMessage,
+            refreshStatus,
           })}
         </span>
       </div>
@@ -80,6 +97,16 @@ export function WorkspaceToolbar({
           {isLoading ? "Loading" : "Load"}
         </button>
         <button
+          className="icon-button"
+          type="button"
+          aria-label="Refresh current view"
+          title="Refresh current view"
+          disabled={!canRefresh || isBusy || isRefreshing}
+          onClick={onRefresh}
+        >
+          <RefreshCcw aria-hidden="true" size={16} />
+        </button>
+        <button
           className="button button--ghost"
           type="button"
           disabled={isBusy && workspacePath === null}
@@ -99,11 +126,13 @@ function createStatusLabel({
   isLoading,
   isBrowsing,
   errorMessage,
+  refreshStatus,
 }: Readonly<{
   workspacePath: string | null;
   isLoading: boolean;
   isBrowsing: boolean;
   errorMessage: string | null;
+  refreshStatus: WorkspaceRefreshStatus;
 }>): string {
   if (isBrowsing) {
     return "Opening workspace picker";
@@ -111,6 +140,10 @@ function createStatusLabel({
 
   if (isLoading) {
     return "Loading workspace";
+  }
+
+  if (refreshStatus.status !== "idle" && refreshStatus.message !== null) {
+    return refreshStatus.message;
   }
 
   if (errorMessage !== null) {

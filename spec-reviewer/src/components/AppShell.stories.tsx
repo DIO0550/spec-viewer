@@ -286,9 +286,12 @@ function createShellArgs({
         isLoading={isWorkspaceLoading}
         isBrowsing={false}
         errorMessage={workspaceErrorMessage ?? null}
+        refreshStatus={{ status: "idle", message: null }}
+        canRefresh={selectedSpec !== null && selectedFileKey !== null}
         onInputChange={fn()}
         onBrowse={fn()}
         onLoad={fn()}
+        onRefresh={fn()}
         onReset={fn()}
       />
     ),

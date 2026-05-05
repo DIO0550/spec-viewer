@@ -109,9 +109,12 @@ test("AppShellはtoolbar、tree、tabs、viewer、comment sidebarを表示する
           isLoading={false}
           isBrowsing={false}
           errorMessage={null}
+          refreshStatus={{ status: "idle", message: null }}
+          canRefresh={true}
           onInputChange={vi.fn()}
           onBrowse={vi.fn()}
           onLoad={vi.fn()}
+          onRefresh={vi.fn()}
           onReset={vi.fn()}
         />
       }
@@ -255,9 +258,12 @@ test("WorkspaceToolbarはopen workspace操作を発火する", () => {
       isLoading={false}
       isBrowsing={false}
       errorMessage={null}
+      refreshStatus={{ status: "idle", message: null }}
+      canRefresh={false}
       onInputChange={vi.fn()}
       onBrowse={onBrowse}
       onLoad={vi.fn()}
+      onRefresh={vi.fn()}
       onReset={vi.fn()}
     />,
   );
@@ -270,6 +276,41 @@ test("WorkspaceToolbarはopen workspace操作を発火する", () => {
   });
 
   expect(onBrowse).toHaveBeenCalledOnce();
+  result.unmount();
+});
+
+test("WorkspaceToolbarはcurrent view refresh操作と状態を表示する", () => {
+  const onRefresh = vi.fn();
+  const result = renderComponent(
+    <WorkspaceToolbar
+      workspacePath={workspacePath}
+      inputValue={workspacePath}
+      isLoading={false}
+      isBrowsing={false}
+      errorMessage={null}
+      refreshStatus={{
+        status: "stale",
+        message: "Content may be stale. Refresh to retry.",
+      }}
+      canRefresh={true}
+      onInputChange={vi.fn()}
+      onBrowse={vi.fn()}
+      onLoad={vi.fn()}
+      onRefresh={onRefresh}
+      onReset={vi.fn()}
+    />,
+  );
+  const refreshButton = result.container.querySelector(
+    '[aria-label="Refresh current view"]',
+  ) as HTMLButtonElement;
+
+  expect(result.container.textContent).toContain("Content may be stale");
+
+  act(() => {
+    refreshButton.click();
+  });
+
+  expect(onRefresh).toHaveBeenCalledOnce();
   result.unmount();
 });
 

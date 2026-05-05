@@ -48,6 +48,50 @@ const nestedTree: SpecTree = {
   ],
 };
 
+const refreshedNestedTree: SpecTree = {
+  specs: [
+    {
+      id: "phase-root",
+      label: "Phase Root",
+      files: [],
+      children: [
+        {
+          id: "phase-child",
+          label: "Phase Child",
+          files: [
+            {
+              key: "design",
+              label: "Design",
+              fileName: "design.md",
+              status: "present",
+            },
+            {
+              key: "tasks",
+              label: "Tasks",
+              fileName: "tasks.md",
+              status: "present",
+            },
+          ],
+          children: [],
+        },
+      ],
+    },
+    {
+      id: "phase-new",
+      label: "Phase New",
+      files: [
+        {
+          key: "tasks",
+          label: "Tasks",
+          fileName: "tasks.md",
+          status: "present",
+        },
+      ],
+      children: [],
+    },
+  ],
+};
+
 const loadedDocument: SpecDocument = {
   key: "tasks",
   path: "/workspace/spec-reviewer/.plugin-workspace/specs/phase-1-viewer/tasks.md",
@@ -313,5 +357,35 @@ test("useSpecsはworkspace変更時に選択状態とMarkdown状態をリセッ�
   expect(result.current.selectedSpecId).toBeNull();
   expect(result.current.selectedFileKey).toBeNull();
   expect(result.current.documentState.status).toBe("idle");
+  result.unmount();
+});
+
+test("useSpecsはspec tree再読み込み時に選択中のspecとfileを保持する", async () => {
+  const listSpecs = vi.fn().mockResolvedValue(nestedTree);
+  const readSpecFile = vi.fn().mockResolvedValue(designDocument);
+
+  const result = renderHook(
+    ({ workspacePath }) => useSpecs({ workspacePath, listSpecs, readSpecFile }),
+    { workspacePath: "/workspace/spec-reviewer" },
+  );
+
+  await act(async () => {
+    await result.current.reloadSpecs();
+  });
+  listSpecs.mockResolvedValue(refreshedNestedTree);
+  await act(async () => {
+    await result.current.reloadSpecs({ preserveSelection: true });
+  });
+
+  expect(result.current.selectedSpecId).toBe("phase-child");
+  expect(result.current.selectedFileKey).toBe("design");
+  expect(result.current.documentState).toEqual({
+    status: "ready",
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "phase-child",
+    fileKey: "design",
+    document: designDocument,
+    error: null,
+  });
   result.unmount();
 });
