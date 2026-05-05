@@ -2,7 +2,7 @@
 
 use std::{
     fs, io,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
 };
 
 use thiserror::Error;
@@ -113,6 +113,38 @@ fn display_path(path: &Path) -> String {
 
 pub fn spec_root_path(layout: &WorkspaceLayout) -> PathBuf {
     PathBuf::from(layout.root().as_str()).join(spec_root_directory_for_kind(layout.kind()))
+}
+
+pub fn safe_relative_spec_path(spec_id: &str) -> Result<PathBuf, SafeSpecPathError> {
+    let trimmed = spec_id.trim();
+
+    if trimmed.is_empty() || trimmed.contains('\\') || trimmed.contains('\0') {
+        return Err(SafeSpecPathError::InvalidSpecId {
+            spec_id: spec_id.to_string(),
+        });
+    }
+
+    let mut path = PathBuf::new();
+    let mut component_count = 0;
+
+    for component in Path::new(trimmed).components() {
+        let Component::Normal(name) = component else {
+            return Err(SafeSpecPathError::InvalidSpecId {
+                spec_id: spec_id.to_string(),
+            });
+        };
+
+        path.push(name);
+        component_count += 1;
+    }
+
+    if component_count == 0 {
+        return Err(SafeSpecPathError::InvalidSpecId {
+            spec_id: spec_id.to_string(),
+        });
+    }
+
+    Ok(path)
 }
 
 fn spec_root_directory_for_kind(kind: WorkspaceKind) -> &'static str {
@@ -245,6 +277,12 @@ pub enum SpecTreeScanError {
         path: String,
         source: SpecDomainError,
     },
+}
+
+#[derive(Debug, Error, Clone, PartialEq, Eq)]
+pub enum SafeSpecPathError {
+    #[error("spec id is invalid: {spec_id}")]
+    InvalidSpecId { spec_id: String },
 }
 
 #[cfg(test)]

@@ -2,7 +2,7 @@
 
 use std::{
     fs, io,
-    path::{Component, Path, PathBuf},
+    path::{Path, PathBuf},
     string::FromUtf8Error,
 };
 
@@ -13,7 +13,7 @@ use crate::{
         spec::SpecFileKey,
         workspace::{WorkspaceConfig, WorkspaceLayout},
     },
-    infrastructure::filesystem::spec_root_path,
+    infrastructure::filesystem::{safe_relative_spec_path, spec_root_path},
 };
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -140,43 +140,14 @@ fn resolve_markdown_path(
     let mapping = config
         .file_for_key(key)
         .ok_or(MarkdownReadError::MissingFileMapping { key })?;
-    let relative_spec_path = safe_spec_path(spec_id)?;
+    let relative_spec_path =
+        safe_relative_spec_path(spec_id).map_err(|_| MarkdownReadError::InvalidSpecId {
+            spec_id: spec_id.to_string(),
+        })?;
 
     Ok(spec_root_path(layout)
         .join(relative_spec_path)
         .join(mapping.file_name()))
-}
-
-fn safe_spec_path(spec_id: &str) -> Result<PathBuf, MarkdownReadError> {
-    let trimmed = spec_id.trim();
-
-    if trimmed.is_empty() || trimmed.contains('\\') || trimmed.contains('\0') {
-        return Err(MarkdownReadError::InvalidSpecId {
-            spec_id: spec_id.to_string(),
-        });
-    }
-
-    let mut path = PathBuf::new();
-    let mut component_count = 0;
-
-    for component in Path::new(trimmed).components() {
-        let Component::Normal(name) = component else {
-            return Err(MarkdownReadError::InvalidSpecId {
-                spec_id: spec_id.to_string(),
-            });
-        };
-
-        path.push(name);
-        component_count += 1;
-    }
-
-    if component_count == 0 {
-        return Err(MarkdownReadError::InvalidSpecId {
-            spec_id: spec_id.to_string(),
-        });
-    }
-
-    Ok(path)
 }
 
 fn ensure_within_workspace(
@@ -453,8 +424,9 @@ mod tests {
     }
 
     #[test]
-    fn safe_spec_path_allows_nested_spec_ids() {
-        let path = safe_spec_path("auth/code-review").expect("nested spec id should be allowed");
+    fn safe_relative_spec_path_allows_nested_spec_ids() {
+        let path =
+            safe_relative_spec_path("auth/code-review").expect("nested spec id should be allowed");
 
         assert_eq!(Path::new("auth/code-review"), path);
     }
