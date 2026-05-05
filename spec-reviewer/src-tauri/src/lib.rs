@@ -4,17 +4,23 @@ pub mod domain;
 pub mod infrastructure;
 pub mod presentation;
 
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
+use presentation::commands::{
+    specs::{list_specs, read_spec_file},
+    workspace::load_workspace,
+    CommandState,
+};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet])
+        .manage(CommandState::default())
+        .invoke_handler(tauri::generate_handler![
+            load_workspace,
+            list_specs,
+            read_spec_file
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
