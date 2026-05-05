@@ -64,7 +64,26 @@ const sampleTree: SpecTreeShape = {
 const sampleDocument: SpecDocument = {
   key: "tasks",
   path: "/workspace/spec-reviewer/docs/plans/tasks/phase-1-viewer/p1-13-layout-components.md",
-  contents: "# P1.13 Layout Components\n\n- Toolbar\n- Tree\n- Tabs\n- Viewer",
+  contents: [
+    "# P1.14 Markdown Rendering",
+    "",
+    "> Render review planning documents with anchors ready for comments.",
+    "",
+    "## Acceptance",
+    "",
+    "- [x] Headings and lists",
+    "- [x] Fenced code blocks",
+    "- [ ] Comment behavior follows in P1.15",
+    "",
+    "```ts",
+    'const blockType = "heading";',
+    "```",
+    "",
+    "| Element | Status |",
+    "| --- | --- |",
+    "| GFM table | Ready |",
+    "| External link | [Docs](https://example.com/docs) |",
+  ].join("\n"),
   missing: false,
 };
 

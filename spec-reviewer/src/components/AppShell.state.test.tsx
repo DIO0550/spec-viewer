@@ -220,7 +220,7 @@ test("MarkdownViewerは読み込み中状態をrole statusで表示する", () =
   result.unmount();
 });
 
-test("MarkdownViewerはMarkdown source previewを表示する", () => {
+test("MarkdownViewerはMarkdownをHTMLとして表示する", () => {
   const result = renderComponent(
     <MarkdownViewer
       state={readyDocumentState}
@@ -231,7 +231,7 @@ test("MarkdownViewerはMarkdown source previewを表示する", () => {
   );
 
   expect(
-    result.container.querySelector('[aria-label="Markdown source preview"]')
+    result.container.querySelector('[aria-label="Rendered Markdown document"]')
       ?.textContent,
   ).toContain("Layout components");
   result.unmount();
