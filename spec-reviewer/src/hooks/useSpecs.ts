@@ -154,84 +154,6 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
     setDocumentState(createIdleDocumentState(workspacePath));
   }, [workspacePath]);
 
-  const reloadSpecs = useCallback(async (): Promise<void> => {
-    if (workspacePath === null) {
-      specTreeRequestIdRef.current += 1;
-      setSpecTreeState(initialSpecTreeState);
-      resetSelection();
-      return;
-    }
-
-    const activeWorkspacePath = workspacePath;
-    const requestId = specTreeRequestIdRef.current + 1;
-    specTreeRequestIdRef.current = requestId;
-    setSpecTreeState({
-      status: "loading",
-      workspacePath: activeWorkspacePath,
-      tree: null,
-      error: null,
-    });
-
-    try {
-      const tree = await listSpecs(activeWorkspacePath);
-
-      if (specTreeRequestIdRef.current !== requestId) {
-        return;
-      }
-
-      setSpecTreeState({
-        status: tree.specs.length === 0 ? "empty" : "ready",
-        workspacePath: activeWorkspacePath,
-        tree,
-        error: null,
-      });
-      resetSelection();
-    } catch (error) {
-      if (specTreeRequestIdRef.current !== requestId) {
-        return;
-      }
-
-      setSpecTreeState({
-        status: "error",
-        workspacePath: activeWorkspacePath,
-        tree: null,
-        error: normalizeCommandError(error),
-      });
-      resetSelection();
-    }
-  }, [listSpecs, resetSelection, workspacePath]);
-
-  useEffect(() => {
-    resetSelection();
-
-    if (workspacePath === null) {
-      specTreeRequestIdRef.current += 1;
-      setSpecTreeState(initialSpecTreeState);
-      return;
-    }
-
-    void reloadSpecs();
-  }, [reloadSpecs, resetSelection, workspacePath]);
-
-  const tree = specTreeState.tree;
-  const selectedSpec = useMemo((): SpecNode | null => {
-    if (tree === null || selectedSpecId === null) {
-      return null;
-    }
-
-    return findSpecNode(tree.specs, selectedSpecId);
-  }, [selectedSpecId, tree]);
-
-  const selectedFile = useMemo((): SpecFile | null => {
-    if (selectedSpec === null || selectedFileKey === null) {
-      return null;
-    }
-
-    return (
-      selectedSpec.files.find((file) => file.key === selectedFileKey) ?? null
-    );
-  }, [selectedFileKey, selectedSpec]);
-
   const loadDocument = useCallback(
     async (specId: string, fileKey: SpecFileKey): Promise<void> => {
       if (workspacePath === null) {
@@ -291,14 +213,116 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
     [readSpecFile, workspacePath],
   );
 
+  const reloadSpecs = useCallback(async (): Promise<void> => {
+    if (workspacePath === null) {
+      specTreeRequestIdRef.current += 1;
+      setSpecTreeState(initialSpecTreeState);
+      resetSelection();
+      return;
+    }
+
+    const activeWorkspacePath = workspacePath;
+    const requestId = specTreeRequestIdRef.current + 1;
+    specTreeRequestIdRef.current = requestId;
+    setSpecTreeState({
+      status: "loading",
+      workspacePath: activeWorkspacePath,
+      tree: null,
+      error: null,
+    });
+
+    try {
+      const tree = await listSpecs(activeWorkspacePath);
+
+      if (specTreeRequestIdRef.current !== requestId) {
+        return;
+      }
+
+      setSpecTreeState({
+        status: tree.specs.length === 0 ? "empty" : "ready",
+        workspacePath: activeWorkspacePath,
+        tree,
+        error: null,
+      });
+      const defaultSpec = findDefaultSpecNode(tree.specs);
+      const defaultFileKey = defaultSpec?.files[0]?.key ?? null;
+
+      setSelectedSpecId(defaultSpec?.id ?? null);
+      setSelectedFileKey(defaultFileKey);
+
+      if (defaultSpec === null || defaultFileKey === null) {
+        documentRequestIdRef.current += 1;
+        setDocumentState(createIdleDocumentState(activeWorkspacePath));
+        return;
+      }
+
+      await loadDocument(defaultSpec.id, defaultFileKey);
+    } catch (error) {
+      if (specTreeRequestIdRef.current !== requestId) {
+        return;
+      }
+
+      setSpecTreeState({
+        status: "error",
+        workspacePath: activeWorkspacePath,
+        tree: null,
+        error: normalizeCommandError(error),
+      });
+      resetSelection();
+    }
+  }, [listSpecs, loadDocument, resetSelection, workspacePath]);
+
+  useEffect(() => {
+    resetSelection();
+
+    if (workspacePath === null) {
+      specTreeRequestIdRef.current += 1;
+      setSpecTreeState(initialSpecTreeState);
+      return;
+    }
+
+    void reloadSpecs();
+  }, [reloadSpecs, resetSelection, workspacePath]);
+
+  const tree = specTreeState.tree;
+  const selectedSpec = useMemo((): SpecNode | null => {
+    if (tree === null || selectedSpecId === null) {
+      return null;
+    }
+
+    return findSpecNode(tree.specs, selectedSpecId);
+  }, [selectedSpecId, tree]);
+
+  const selectedFile = useMemo((): SpecFile | null => {
+    if (selectedSpec === null || selectedFileKey === null) {
+      return null;
+    }
+
+    return (
+      selectedSpec.files.find((file) => file.key === selectedFileKey) ?? null
+    );
+  }, [selectedFileKey, selectedSpec]);
+
   const selectSpec = useCallback(
     async (specId: string | null): Promise<void> => {
-      documentRequestIdRef.current += 1;
       setSelectedSpecId(specId);
-      setSelectedFileKey(null);
-      setDocumentState(createIdleDocumentState(workspacePath, specId));
+
+      const nextSpec =
+        tree === null || specId === null
+          ? null
+          : findSpecNode(tree.specs, specId);
+      const defaultFileKey = nextSpec?.files[0]?.key ?? null;
+      setSelectedFileKey(defaultFileKey);
+
+      if (specId === null || defaultFileKey === null) {
+        documentRequestIdRef.current += 1;
+        setDocumentState(createIdleDocumentState(workspacePath, specId));
+        return;
+      }
+
+      await loadDocument(specId, defaultFileKey);
     },
-    [workspacePath],
+    [loadDocument, tree, workspacePath],
   );
 
   const selectFileKey = useCallback(
@@ -356,6 +380,25 @@ function findSpecNode(nodes: readonly SpecNode[], id: string): SpecNode | null {
   }
 
   return null;
+}
+
+/** @returns First spec node that can open a file, falling back to the first node. */
+function findDefaultSpecNode(nodes: readonly SpecNode[]): SpecNode | null {
+  const firstNode = nodes[0] ?? null;
+
+  for (const node of nodes) {
+    if (node.files.length > 0) {
+      return node;
+    }
+
+    const child = findDefaultSpecNode(node.children);
+
+    if (child !== null && child.files.length > 0) {
+      return child;
+    }
+  }
+
+  return firstNode;
 }
 
 /** @returns Idle Markdown document state for the current selection context. */

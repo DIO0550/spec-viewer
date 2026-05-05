@@ -1,3 +1,4 @@
+import type { KeyboardEvent } from "react";
 import { RefreshCcw } from "lucide-react";
 
 import type { SpecTreeState } from "../hooks/useSpecs";
@@ -86,7 +87,7 @@ export function SpecTree({
           <RefreshCcw aria-hidden="true" size={16} />
         </button>
       </div>
-      <ul className="spec-tree__list">
+      <ul className="spec-tree__list" role="tree">
         {state.tree.specs.map((node) => (
           <SpecTreeItem
             key={node.id}
@@ -122,7 +123,10 @@ function SpecTreeItem({
       <button
         className="spec-tree__item"
         type="button"
-        aria-current={isSelected ? "page" : undefined}
+        role="treeitem"
+        aria-level={depth + 1}
+        aria-selected={isSelected}
+        tabIndex={isSelected || selectedSpecId === null ? 0 : -1}
         style={{
           paddingInlineStart:
             BASE_TREE_ITEM_INDENT + depth * TREE_ITEM_INDENT_STEP,
@@ -130,12 +134,13 @@ function SpecTreeItem({
         onClick={() => {
           onSelectSpec(node.id);
         }}
+        onKeyDown={handleTreeItemKeyDown}
       >
         <span>{node.label}</span>
         <span className="spec-tree__file-count">{node.files.length}</span>
       </button>
       {node.children.length === 0 ? null : (
-        <ul className="spec-tree__list">
+        <ul className="spec-tree__list" role="group">
           {node.children.map((child) => (
             <SpecTreeItem
               key={child.id}
@@ -149,4 +154,59 @@ function SpecTreeItem({
       )}
     </li>
   );
+}
+
+/** Moves focus between visible tree items for arrow-key navigation. */
+function handleTreeItemKeyDown(event: KeyboardEvent<HTMLButtonElement>): void {
+  const nextIndex = getNextTreeItemIndex(event);
+
+  if (nextIndex === null) {
+    return;
+  }
+
+  const tree = event.currentTarget.closest('[role="tree"]');
+  const items = Array.from(
+    tree?.querySelectorAll<HTMLButtonElement>(".spec-tree__item") ?? [],
+  );
+  const nextItem = items[nextIndex];
+
+  if (nextItem === undefined) {
+    return;
+  }
+
+  event.preventDefault();
+  nextItem.focus();
+}
+
+/** @returns The next tree item index for supported navigation keys. */
+function getNextTreeItemIndex(
+  event: KeyboardEvent<HTMLButtonElement>,
+): number | null {
+  const tree = event.currentTarget.closest('[role="tree"]');
+  const items = Array.from(
+    tree?.querySelectorAll<HTMLButtonElement>(".spec-tree__item") ?? [],
+  );
+  const currentIndex = items.indexOf(event.currentTarget);
+
+  if (currentIndex < 0) {
+    return null;
+  }
+
+  if (event.key === "ArrowDown") {
+    return Math.min(currentIndex + 1, items.length - 1);
+  }
+
+  if (event.key === "ArrowUp") {
+    return Math.max(currentIndex - 1, 0);
+  }
+
+  if (event.key === "Home") {
+    return 0;
+  }
+
+  if (event.key === "End") {
+    return items.length - 1;
+  }
+
+  return null;
 }

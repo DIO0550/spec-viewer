@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
 
 import type {
   CommandError,
@@ -15,6 +16,15 @@ import type {
 import type { Workspace } from "../types/workspace";
 
 const UNKNOWN_COMMAND_ERROR_MESSAGE = "Unknown IPC command failure";
+
+/** @returns The directory selected from the native workspace picker, or null. */
+export async function selectWorkspaceDirectory(): Promise<string | null> {
+  return open({
+    directory: true,
+    multiple: false,
+    title: "Open workspace",
+  });
+}
 
 /** @returns Loaded workspace metadata for the selected directory. */
 export async function loadWorkspace(

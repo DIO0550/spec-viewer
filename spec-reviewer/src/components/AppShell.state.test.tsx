@@ -80,6 +80,7 @@ type RenderResult = Readonly<{
 
 function renderComponent(component: ReactNode): RenderResult {
   const container = document.createElement("div");
+  document.body.append(container);
   const root = createRoot(container);
 
   act(() => {
@@ -92,6 +93,7 @@ function renderComponent(component: ReactNode): RenderResult {
       act(() => {
         root.unmount();
       });
+      container.remove();
     },
   };
 }
@@ -104,8 +106,10 @@ test("AppShellはtoolbar、tree、tabs、viewer、comment sidebarを表示する
           workspacePath={workspacePath}
           inputValue={workspacePath}
           isLoading={false}
+          isBrowsing={false}
           errorMessage={null}
           onInputChange={vi.fn()}
+          onBrowse={vi.fn()}
           onLoad={vi.fn()}
           onReset={vi.fn()}
         />
@@ -174,6 +178,28 @@ test("SpecTreeはspec選択イベントを発火する", () => {
   result.unmount();
 });
 
+test("SpecTreeは矢印キーでtree itemのfocusを移動する", () => {
+  const result = renderComponent(
+    <SpecTree
+      state={readyTreeState}
+      selectedSpecId={null}
+      onSelectSpec={vi.fn()}
+      onReload={vi.fn()}
+    />,
+  );
+  const buttons = result.container.querySelectorAll(".spec-tree__item");
+
+  act(() => {
+    (buttons[0] as HTMLButtonElement).focus();
+    buttons[0]?.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
+    );
+  });
+
+  expect(document.activeElement).toBe(buttons[1]);
+  result.unmount();
+});
+
 test("SpecTabsは選択中tabとfile選択イベントを表現する", () => {
   const onSelectFile = vi.fn();
   const result = renderComponent(
@@ -193,6 +219,55 @@ test("SpecTabsは選択中tabとfile選択イベントを表現する", () => {
   });
 
   expect(onSelectFile).toHaveBeenCalledWith("impl");
+  result.unmount();
+});
+
+test("SpecTabsは矢印キーで隣のtabを選択する", () => {
+  const onSelectFile = vi.fn();
+  const result = renderComponent(
+    <SpecTabs
+      spec={selectedSpec}
+      selectedFileKey="tasks"
+      onSelectFile={onSelectFile}
+    />,
+  );
+  const tabs = result.container.querySelectorAll('[role="tab"]');
+
+  act(() => {
+    (tabs[0] as HTMLButtonElement).focus();
+    tabs[0]?.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
+    );
+  });
+
+  expect(onSelectFile).toHaveBeenCalledWith("impl");
+  result.unmount();
+});
+
+test("WorkspaceToolbarはopen workspace操作を発火する", () => {
+  const onBrowse = vi.fn();
+  const result = renderComponent(
+    <WorkspaceToolbar
+      workspacePath={null}
+      inputValue=""
+      isLoading={false}
+      isBrowsing={false}
+      errorMessage={null}
+      onInputChange={vi.fn()}
+      onBrowse={onBrowse}
+      onLoad={vi.fn()}
+      onReset={vi.fn()}
+    />,
+  );
+  const openButton = result.container.querySelector(
+    '[aria-label="Open workspace folder"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    openButton.click();
+  });
+
+  expect(onBrowse).toHaveBeenCalledOnce();
   result.unmount();
 });
 

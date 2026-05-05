@@ -1,4 +1,9 @@
-import type { ComponentPropsWithoutRef } from "react";
+import {
+  type ComponentPropsWithoutRef,
+  type RefObject,
+  useEffect,
+  useRef,
+} from "react";
 import { RefreshCcw } from "lucide-react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -32,16 +37,22 @@ export function MarkdownViewer({
   selectedFileLabel,
   onReload,
 }: Props) {
+  const panelRef = useRef<HTMLElement>(null);
+  const resetKey = createViewerResetKey(state);
+  useViewerReset(panelRef, resetKey, state.status !== "idle");
+
   if (state.status === "idle") {
     return (
       <section
+        ref={panelRef}
         id="markdown-viewer-panel"
         className="markdown-viewer markdown-viewer--center"
         role="tabpanel"
+        tabIndex={-1}
       >
         <EmptyState
           title={selectedSpecLabel === null ? "Choose a spec" : "Choose a file"}
-          description="Markdown rendering is reserved for the next viewer task."
+          description="Open a workspace and choose a Markdown file to start reading."
         />
       </section>
     );
@@ -50,10 +61,12 @@ export function MarkdownViewer({
   if (state.status === "loading") {
     return (
       <section
+        ref={panelRef}
         id="markdown-viewer-panel"
         className="markdown-viewer markdown-viewer--center"
         role="tabpanel"
         aria-live="polite"
+        tabIndex={-1}
       >
         <div className="viewer-loading" role="status">
           <span className="viewer-loading__indicator" aria-hidden="true" />
@@ -66,9 +79,11 @@ export function MarkdownViewer({
   if (state.status === "error") {
     return (
       <section
+        ref={panelRef}
         id="markdown-viewer-panel"
         className="markdown-viewer markdown-viewer--center"
         role="tabpanel"
+        tabIndex={-1}
       >
         <ErrorState
           title="Could not load Markdown"
@@ -83,9 +98,11 @@ export function MarkdownViewer({
   if (state.status === "missing") {
     return (
       <section
+        ref={panelRef}
         id="markdown-viewer-panel"
         className="markdown-viewer markdown-viewer--center"
         role="tabpanel"
+        tabIndex={-1}
       >
         <EmptyState
           title="File missing"
@@ -100,9 +117,11 @@ export function MarkdownViewer({
   if (contents === null || contents.trim().length === 0) {
     return (
       <section
+        ref={panelRef}
         id="markdown-viewer-panel"
         className="markdown-viewer markdown-viewer--center"
         role="tabpanel"
+        tabIndex={-1}
       >
         <EmptyState title="File is empty" description={state.document.path} />
       </section>
@@ -111,9 +130,11 @@ export function MarkdownViewer({
 
   return (
     <article
+      ref={panelRef}
       id="markdown-viewer-panel"
       className="markdown-viewer"
       role="tabpanel"
+      tabIndex={-1}
     >
       <header className="markdown-viewer__header">
         <div>
@@ -134,6 +155,47 @@ export function MarkdownViewer({
       <MarkdownDocument contents={contents} />
     </article>
   );
+}
+
+/** Resets the viewer scroll position and focus whenever loaded content changes. */
+function useViewerReset(
+  panelRef: RefObject<HTMLElement | null>,
+  resetKey: string,
+  shouldFocus: boolean,
+): void {
+  const previousResetKeyRef = useRef(resetKey);
+
+  useEffect(() => {
+    if (previousResetKeyRef.current === resetKey) {
+      return;
+    }
+
+    previousResetKeyRef.current = resetKey;
+    const panel = panelRef.current;
+
+    if (panel === null) {
+      return;
+    }
+
+    panel.parentElement?.scrollTo({ top: 0, left: 0, behavior: "auto" });
+
+    if (shouldFocus) {
+      panel.focus({ preventScroll: true });
+    }
+  }, [panelRef, resetKey, shouldFocus]);
+}
+
+/** @returns A stable key for viewer content state transitions. */
+function createViewerResetKey(state: SpecDocumentState): string {
+  const path = state.document?.path ?? "";
+
+  return [
+    state.status,
+    state.workspacePath ?? "",
+    state.specId ?? "",
+    state.fileKey ?? "",
+    path,
+  ].join(":");
 }
 
 type MarkdownDocumentProps = Readonly<{

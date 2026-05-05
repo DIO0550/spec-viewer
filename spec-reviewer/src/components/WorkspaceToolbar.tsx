@@ -1,11 +1,13 @@
-import { RefreshCcw, RotateCcw } from "lucide-react";
+import { FolderOpen, RefreshCcw, RotateCcw } from "lucide-react";
 
 type Props = Readonly<{
   workspacePath: string | null;
   inputValue: string;
   isLoading: boolean;
+  isBrowsing: boolean;
   errorMessage: string | null;
   onInputChange: (nextValue: string) => void;
+  onBrowse: () => void;
   onLoad: () => void;
   onReset: () => void;
 }>;
@@ -15,12 +17,15 @@ export function WorkspaceToolbar({
   workspacePath,
   inputValue,
   isLoading,
+  isBrowsing,
   errorMessage,
   onInputChange,
+  onBrowse,
   onLoad,
   onReset,
 }: Props) {
-  const canLoad = inputValue.trim().length > 0 && !isLoading;
+  const isBusy = isLoading || isBrowsing;
+  const canLoad = inputValue.trim().length > 0 && !isBusy;
 
   return (
     <form
@@ -34,7 +39,12 @@ export function WorkspaceToolbar({
       <div className="workspace-toolbar__brand">
         <span className="workspace-toolbar__title">Spec Reviewer</span>
         <span className="workspace-toolbar__status" aria-live="polite">
-          {createStatusLabel({ workspacePath, isLoading, errorMessage })}
+          {createStatusLabel({
+            workspacePath,
+            isLoading,
+            isBrowsing,
+            errorMessage,
+          })}
         </span>
       </div>
       <label className="workspace-toolbar__field" htmlFor="workspace-path">
@@ -44,7 +54,7 @@ export function WorkspaceToolbar({
           value={inputValue}
           placeholder="/workspace/spec-reviewer"
           autoComplete="off"
-          disabled={isLoading}
+          disabled={isBusy}
           onChange={(event) => {
             onInputChange(event.currentTarget.value);
           }}
@@ -53,6 +63,16 @@ export function WorkspaceToolbar({
       <div className="workspace-toolbar__actions">
         <button
           className="button button--primary"
+          type="button"
+          aria-label="Open workspace folder"
+          disabled={isBusy}
+          onClick={onBrowse}
+        >
+          <FolderOpen aria-hidden="true" size={16} />
+          {isBrowsing ? "Opening" : "Open"}
+        </button>
+        <button
+          className="button button--secondary"
           type="submit"
           disabled={!canLoad}
         >
@@ -62,7 +82,7 @@ export function WorkspaceToolbar({
         <button
           className="button button--ghost"
           type="button"
-          disabled={isLoading && workspacePath === null}
+          disabled={isBusy && workspacePath === null}
           onClick={onReset}
         >
           <RotateCcw aria-hidden="true" size={16} />
@@ -77,12 +97,18 @@ export function WorkspaceToolbar({
 function createStatusLabel({
   workspacePath,
   isLoading,
+  isBrowsing,
   errorMessage,
 }: Readonly<{
   workspacePath: string | null;
   isLoading: boolean;
+  isBrowsing: boolean;
   errorMessage: string | null;
 }>): string {
+  if (isBrowsing) {
+    return "Opening workspace picker";
+  }
+
   if (isLoading) {
     return "Loading workspace";
   }

@@ -260,7 +260,7 @@ input:disabled {
   text-align: left;
 }
 
-.spec-tree__item[aria-current="page"] {
+.spec-tree__item[aria-selected="true"] {
   border-color: #8aa89f;
   background: #e6f0ec;
 }

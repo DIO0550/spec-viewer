@@ -3,16 +3,53 @@ import { useState } from "react";
 import "./App.css";
 import { AppShell } from "./components/AppShell";
 import { MarkdownViewer } from "./components/MarkdownViewer";
+import { OpenWorkspaceEmptyState } from "./components/OpenWorkspaceEmptyState";
 import { SpecTabs } from "./components/SpecTabs";
 import { SpecTree } from "./components/SpecTree";
 import { WorkspaceToolbar } from "./components/WorkspaceToolbar";
 import { useSpecs } from "./hooks/useSpecs";
 import { useWorkspace } from "./hooks/useWorkspace";
+import { normalizeCommandError, selectWorkspaceDirectory } from "./lib/tauri";
 
 function App() {
   const workspace = useWorkspace();
   const specs = useSpecs({ workspacePath: workspace.workspace?.root ?? null });
   const [workspaceInput, setWorkspaceInput] = useState("");
+  const [isBrowsingWorkspace, setIsBrowsingWorkspace] = useState(false);
+  const [dialogErrorMessage, setDialogErrorMessage] = useState<string | null>(
+    null,
+  );
+
+  const loadWorkspacePath = async (
+    selectedDirectory: string,
+  ): Promise<void> => {
+    setDialogErrorMessage(null);
+    setWorkspaceInput(selectedDirectory);
+    await workspace.load(selectedDirectory);
+  };
+
+  const browseWorkspace = async (): Promise<void> => {
+    if (workspace.isLoading || isBrowsingWorkspace) {
+      return;
+    }
+
+    setDialogErrorMessage(null);
+    setIsBrowsingWorkspace(true);
+
+    try {
+      const selectedDirectory = await selectWorkspaceDirectory();
+
+      if (selectedDirectory === null) {
+        return;
+      }
+
+      await loadWorkspacePath(selectedDirectory);
+    } catch (error) {
+      setDialogErrorMessage(normalizeCommandError(error).message);
+    } finally {
+      setIsBrowsingWorkspace(false);
+    }
+  };
 
   const loadWorkspace = (): void => {
     const selectedDirectory = workspaceInput.trim();
@@ -21,13 +58,19 @@ function App() {
       return;
     }
 
-    void workspace.load(selectedDirectory);
+    void loadWorkspacePath(selectedDirectory);
   };
 
   const resetWorkspace = (): void => {
     setWorkspaceInput("");
+    setDialogErrorMessage(null);
     workspace.reset();
   };
+
+  const toolbarErrorMessage =
+    dialogErrorMessage ?? workspace.error?.message ?? null;
+  const shouldShowOpenWorkspacePrompt =
+    workspace.workspace === null && !workspace.isLoading;
 
   return (
     <AppShell
@@ -36,8 +79,12 @@ function App() {
           workspacePath={workspace.workspacePath}
           inputValue={workspaceInput}
           isLoading={workspace.isLoading}
-          errorMessage={workspace.error?.message ?? null}
+          isBrowsing={isBrowsingWorkspace}
+          errorMessage={toolbarErrorMessage}
           onInputChange={setWorkspaceInput}
+          onBrowse={() => {
+            void browseWorkspace();
+          }}
           onLoad={loadWorkspace}
           onReset={resetWorkspace}
         />
@@ -64,14 +111,23 @@ function App() {
         />
       }
       viewer={
-        <MarkdownViewer
-          state={specs.documentState}
-          selectedSpecLabel={specs.selectedSpec?.label ?? null}
-          selectedFileLabel={specs.selectedFile?.label ?? null}
-          onReload={() => {
-            void specs.reloadDocument();
-          }}
-        />
+        shouldShowOpenWorkspacePrompt ? (
+          <OpenWorkspaceEmptyState
+            isOpening={isBrowsingWorkspace}
+            onOpenWorkspace={() => {
+              void browseWorkspace();
+            }}
+          />
+        ) : (
+          <MarkdownViewer
+            state={specs.documentState}
+            selectedSpecLabel={specs.selectedSpec?.label ?? null}
+            selectedFileLabel={specs.selectedFile?.label ?? null}
+            onReload={() => {
+              void specs.reloadDocument();
+            }}
+          />
+        )
       }
     />
   );

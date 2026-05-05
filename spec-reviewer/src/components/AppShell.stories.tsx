@@ -238,8 +238,10 @@ function createShellArgs({
         workspacePath={workspaceStatusPath}
         inputValue={workspaceInput}
         isLoading={isWorkspaceLoading}
+        isBrowsing={false}
         errorMessage={workspaceErrorMessage ?? null}
         onInputChange={fn()}
+        onBrowse={fn()}
         onLoad={fn()}
         onReset={fn()}
       />

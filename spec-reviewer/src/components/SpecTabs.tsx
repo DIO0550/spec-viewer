@@ -1,3 +1,5 @@
+import { type KeyboardEvent, useRef } from "react";
+
 import type { SpecFileKey, SpecNode } from "../types/spec";
 import { EmptyState } from "./EmptyState";
 
@@ -9,6 +11,8 @@ type Props = Readonly<{
 
 /** @returns File tabs for the selected spec. */
 export function SpecTabs({ spec, selectedFileKey, onSelectFile }: Props) {
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
   if (spec === null) {
     return (
       <EmptyState
@@ -29,25 +33,71 @@ export function SpecTabs({ spec, selectedFileKey, onSelectFile }: Props) {
     );
   }
 
+  const selectTabAt = (index: number): void => {
+    const file = spec.files[index];
+
+    if (file === undefined) {
+      return;
+    }
+
+    tabRefs.current[index]?.focus();
+    onSelectFile(file.key);
+  };
+
+  const handleTabKeyDown = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    index: number,
+  ): void => {
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      selectTabAt((index + 1) % spec.files.length);
+      return;
+    }
+
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      selectTabAt((index - 1 + spec.files.length) % spec.files.length);
+      return;
+    }
+
+    if (event.key === "Home") {
+      event.preventDefault();
+      selectTabAt(0);
+      return;
+    }
+
+    if (event.key === "End") {
+      event.preventDefault();
+      selectTabAt(spec.files.length - 1);
+    }
+  };
+
   return (
     <div
       className="spec-tabs"
       role="tablist"
       aria-label={`${spec.label} files`}
     >
-      {spec.files.map((file) => {
+      {spec.files.map((file, index) => {
         const isSelected = selectedFileKey === file.key;
 
         return (
           <button
             key={file.key}
+            ref={(element) => {
+              tabRefs.current[index] = element;
+            }}
             className="spec-tabs__tab"
             type="button"
             role="tab"
             aria-selected={isSelected}
             aria-controls="markdown-viewer-panel"
+            tabIndex={isSelected ? 0 : -1}
             onClick={() => {
               onSelectFile(file.key);
+            }}
+            onKeyDown={(event) => {
+              handleTabKeyDown(event, index);
             }}
           >
             <span>{file.label}</span>

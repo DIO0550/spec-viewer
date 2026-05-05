@@ -23,6 +23,31 @@ const populatedTree: SpecTree = {
   ],
 };
 
+const nestedTree: SpecTree = {
+  specs: [
+    {
+      id: "phase-root",
+      label: "Phase Root",
+      files: [],
+      children: [
+        {
+          id: "phase-child",
+          label: "Phase Child",
+          files: [
+            {
+              key: "design",
+              label: "Design",
+              fileName: "design.md",
+              status: "present",
+            },
+          ],
+          children: [],
+        },
+      ],
+    },
+  ],
+};
+
 const loadedDocument: SpecDocument = {
   key: "tasks",
   path: "/workspace/spec-reviewer/.plugin-workspace/specs/phase-1-viewer/tasks.md",
@@ -35,6 +60,13 @@ const missingDocument: SpecDocument = {
   path: "/workspace/spec-reviewer/.plugin-workspace/specs/phase-1-viewer/implementation-plan.md",
   contents: null,
   missing: true,
+};
+
+const designDocument: SpecDocument = {
+  key: "design",
+  path: "/workspace/spec-reviewer/.plugin-workspace/specs/phase-child/design.md",
+  contents: "# Design",
+  missing: false,
 };
 
 type HookResult<Props, Result> = Readonly<{
@@ -118,6 +150,49 @@ test("useSpecsはworkspace pathからspec treeを読み込みempty状態を表�
   result.unmount();
 });
 
+test("useSpecsはspec tree読み込み後に最初のspecとfileを選択してMarkdownを読み込む", async () => {
+  const listSpecs = vi.fn().mockResolvedValue(populatedTree);
+  const readSpecFile = vi.fn().mockResolvedValue(loadedDocument);
+
+  const result = renderHook(
+    ({ workspacePath }) => useSpecs({ workspacePath, listSpecs, readSpecFile }),
+    { workspacePath: "/workspace/spec-reviewer" },
+  );
+
+  await act(async () => {
+    await result.current.reloadSpecs();
+  });
+
+  expect(result.current.selectedSpecId).toBe("phase-1-viewer");
+  expect(result.current.selectedFileKey).toBe("tasks");
+  expect(result.current.documentState.status).toBe("ready");
+  expect(readSpecFile).toHaveBeenCalledWith({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "phase-1-viewer",
+    fileKey: "tasks",
+  });
+  result.unmount();
+});
+
+test("useSpecsは子階層にある最初のfile付きspecを初期選択する", async () => {
+  const listSpecs = vi.fn().mockResolvedValue(nestedTree);
+  const readSpecFile = vi.fn().mockResolvedValue(designDocument);
+
+  const result = renderHook(
+    ({ workspacePath }) => useSpecs({ workspacePath, listSpecs, readSpecFile }),
+    { workspacePath: "/workspace/spec-reviewer" },
+  );
+
+  await act(async () => {
+    await result.current.reloadSpecs();
+  });
+
+  expect(result.current.selectedSpecId).toBe("phase-child");
+  expect(result.current.selectedFileKey).toBe("design");
+  expect(result.current.documentState.status).toBe("ready");
+  result.unmount();
+});
+
 test("useSpecsは選択したspec fileのMarkdownを読み込む", async () => {
   const listSpecs = vi.fn().mockResolvedValue(populatedTree);
   const readSpecFile = vi.fn().mockResolvedValue(loadedDocument);
@@ -178,6 +253,34 @@ test("useSpecsはmissing Markdownをmissing状態として返す", async () => {
     specId: "phase-1-viewer",
     fileKey: "impl",
     document: missingDocument,
+    error: null,
+  });
+  result.unmount();
+});
+
+test("useSpecsはspec選択時に最初のfileを選択してMarkdownを読み込む", async () => {
+  const listSpecs = vi.fn().mockResolvedValue(nestedTree);
+  const readSpecFile = vi.fn().mockResolvedValue(designDocument);
+
+  const result = renderHook(
+    ({ workspacePath }) => useSpecs({ workspacePath, listSpecs, readSpecFile }),
+    { workspacePath: "/workspace/spec-reviewer" },
+  );
+
+  await act(async () => {
+    await result.current.reloadSpecs();
+  });
+  await act(async () => {
+    await result.current.selectSpec("phase-child");
+  });
+
+  expect(result.current.selectedFileKey).toBe("design");
+  expect(result.current.documentState).toEqual({
+    status: "ready",
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "phase-child",
+    fileKey: "design",
+    document: designDocument,
     error: null,
   });
   result.unmount();
