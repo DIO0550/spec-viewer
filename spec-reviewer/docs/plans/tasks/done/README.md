@@ -33,3 +33,4 @@ Completed task files are moved here from the active task groups.
 - [P2.3 Comment Repository Contract](./phase-2-comments/p2-03-comment-repository-contract.md)
 - [P2.4 JSON Persistence Format](./phase-2-comments/p2-04-json-persistence-format.md)
 - [P2.5 Comment Storage Paths](./phase-2-comments/p2-05-comment-storage-paths.md)
+- [P2.6 Comment Store Implementation](./phase-2-comments/p2-06-comment-store-implementation.md)
