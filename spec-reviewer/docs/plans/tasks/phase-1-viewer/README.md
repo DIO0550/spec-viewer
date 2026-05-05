@@ -4,7 +4,6 @@ Goal: load a spec workspace and provide a usable Markdown viewer for configured 
 
 ## Tasks
 
-- [P1.6 Infrastructure: Config Loading](./p1-06-config-loading.md)
 - [P1.7 Infrastructure: Spec Tree Scan](./p1-07-spec-tree-scan.md)
 - [P1.8 Infrastructure: Markdown Read](./p1-08-markdown-read.md)
 - [P1.9 App Use Cases](./p1-09-app-use-cases.md)
