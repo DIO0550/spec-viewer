@@ -4,7 +4,6 @@ Goal: load a spec workspace and provide a usable Markdown viewer for configured 
 
 ## Tasks
 
-- [P1.3 Spec File Domain](./p1-03-spec-file-domain.md)
 - [P1.4 Config Domain And Defaults](./p1-04-config-domain-and-defaults.md)
 - [P1.5 Infrastructure: Workspace Detection](./p1-05-workspace-detection.md)
 - [P1.6 Infrastructure: Config Loading](./p1-06-config-loading.md)
