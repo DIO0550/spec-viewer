@@ -353,6 +353,59 @@ test("WorkspaceToolbarはtheme mode変更を発火する", () => {
   result.unmount();
 });
 
+test("WorkspaceToolbarはrecent workspace操作を発火する", () => {
+  const onOpenRecentWorkspace = vi.fn();
+  const onRemoveRecentWorkspace = vi.fn();
+  const onClearRecentWorkspaces = vi.fn();
+  const result = renderComponent(
+    <WorkspaceToolbar
+      workspacePath={null}
+      inputValue=""
+      isLoading={false}
+      isBrowsing={false}
+      errorMessage={null}
+      refreshStatus={{ status: "idle", message: null }}
+      canRefresh={false}
+      themeMode="system"
+      recentWorkspaces={[
+        {
+          path: "/workspace/recent",
+          openedAt: "2026-05-05T00:00:00.000Z",
+        },
+      ]}
+      onInputChange={vi.fn()}
+      onBrowse={vi.fn()}
+      onLoad={vi.fn()}
+      onRefresh={vi.fn()}
+      onReset={vi.fn()}
+      onThemeModeChange={vi.fn()}
+      onOpenRecentWorkspace={onOpenRecentWorkspace}
+      onRemoveRecentWorkspace={onRemoveRecentWorkspace}
+      onClearRecentWorkspaces={onClearRecentWorkspaces}
+    />,
+  );
+  const recentItem = result.container.querySelector(
+    ".workspace-toolbar__recent-item",
+  ) as HTMLButtonElement;
+  const removeButton = result.container.querySelector(
+    '[aria-label="Remove /workspace/recent from recent workspaces"]',
+  ) as HTMLButtonElement;
+  const clearButton = result.container.querySelector(
+    ".workspace-toolbar__recent-clear",
+  ) as HTMLButtonElement;
+
+  act(() => {
+    recentItem.click();
+    removeButton.click();
+    clearButton.click();
+  });
+
+  expect(onOpenRecentWorkspace).toHaveBeenCalledWith("/workspace/recent");
+  expect(onRemoveRecentWorkspace).toHaveBeenCalledWith("/workspace/recent");
+  expect(onClearRecentWorkspaces).toHaveBeenCalledOnce();
+  result.unmount();
+});
+
 test("MarkdownViewerは読み込み中状態をrole statusで表示する", () => {
   const loadingState: SpecDocumentState = {
     status: "loading",
