@@ -18,3 +18,4 @@
 ## Completion Note
 
 Implemented app-layer comment use cases for list/add/update/delete/resolve/reopen/toggle using the domain repository contract, with filesystem wiring through `JsonCommentRepository`. Added fake repository tests for orchestration, app-generated IDs/timestamps, body validation before persistence, and status transitions. Verified with `cargo fmt` and `cargo test`.
+Commit: 315304c
