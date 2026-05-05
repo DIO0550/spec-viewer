@@ -49,3 +49,4 @@ Completed task files are moved here from the active task groups.
 - [P3.3 Text Normalization](./phase-3-anchors/p3-03-text-normalization.md)
 - [P3.4 Hashing](./phase-3-anchors/p3-04-hashing.md)
 - [P3.5 Anchor Creation Support](./phase-3-anchors/p3-05-anchor-creation-support.md)
+- [P3.6 Anchor Resolution Use Case](./phase-3-anchors/p3-06-anchor-resolution-use-case.md)

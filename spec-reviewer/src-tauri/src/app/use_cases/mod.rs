@@ -25,8 +25,9 @@ use crate::{
 };
 
 pub use comments::{
-    CommentUseCases, FilesystemCommentUseCases, GenerateCommentId, GetCurrentTime, UtcCommentClock,
-    UuidCommentIdGenerator,
+    CommentAnchorResolution, CommentAnchorResolutionStatus, CommentAnchorResolutionTarget,
+    CommentUseCases, FilesystemCommentUseCases, GenerateCommentId, GetCurrentTime,
+    ResolveCommentAnchorsResult, UtcCommentClock, UuidCommentIdGenerator,
 };
 
 pub type FilesystemAppUseCases = AppUseCases<
