@@ -10,6 +10,7 @@ import { SpecTabs } from "./components/SpecTabs";
 import { SpecTree } from "./components/SpecTree";
 import { WorkspaceToolbar } from "./components/WorkspaceToolbar";
 import { useComments } from "./hooks/useComments";
+import { useSpecFileWatcher } from "./hooks/useSpecFileWatcher";
 import { useSpecs } from "./hooks/useSpecs";
 import { useWorkspace } from "./hooks/useWorkspace";
 import type { CommentAnchorDisplayState, CommentId } from "./types/comment";
@@ -147,6 +148,31 @@ function App() {
     await comments.reloadComments();
     return true;
   };
+
+  const reloadCurrentMarkdownFromWatcher =
+    useCallback(async (): Promise<void> => {
+      setDialogErrorMessage(null);
+      await specs.reloadDocument();
+      await comments.reloadComments();
+    }, [comments.reloadComments, specs.reloadDocument]);
+
+  const reloadWorkspaceConfigFromWatcher =
+    useCallback(async (): Promise<void> => {
+      setDialogErrorMessage(null);
+      await specs.reloadSpecs();
+      await comments.reloadComments();
+    }, [comments.reloadComments, specs.reloadSpecs]);
+
+  useSpecFileWatcher({
+    workspacePath: workspace.workspace?.root ?? null,
+    specId: specs.selectedSpecId,
+    fileKey: specs.selectedFileKey,
+    onMarkdownChange: reloadCurrentMarkdownFromWatcher,
+    onConfigChange: reloadWorkspaceConfigFromWatcher,
+    onWatcherError: (event) => {
+      setDialogErrorMessage(event.message);
+    },
+  });
 
   const toolbarErrorMessage =
     dialogErrorMessage ?? workspace.error?.message ?? null;

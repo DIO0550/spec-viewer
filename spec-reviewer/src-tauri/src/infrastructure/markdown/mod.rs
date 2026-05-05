@@ -37,8 +37,7 @@ impl FilesystemMarkdownReader {
         spec_id: &str,
         key: SpecFileKey,
     ) -> Result<MarkdownReadResult, MarkdownReadError> {
-        let file_path = resolve_markdown_path(layout, config, spec_id, key)?;
-        ensure_within_workspace(layout, &file_path)?;
+        let file_path = markdown_file_path(layout, config, spec_id, key)?;
 
         let contents = match fs::read(&file_path) {
             Ok(contents) => contents,
@@ -169,7 +168,7 @@ pub enum MarkdownReadError {
     },
 }
 
-fn resolve_markdown_path(
+pub fn markdown_file_path(
     layout: &WorkspaceLayout,
     config: &WorkspaceConfig,
     spec_id: &str,
@@ -183,9 +182,13 @@ fn resolve_markdown_path(
             spec_id: spec_id.to_string(),
         })?;
 
-    Ok(spec_root_path(layout)
+    let file_path = spec_root_path(layout)
         .join(relative_spec_path)
-        .join(mapping.file_name()))
+        .join(mapping.file_name());
+
+    ensure_within_workspace(layout, &file_path)?;
+
+    Ok(file_path)
 }
 
 fn ensure_within_workspace(

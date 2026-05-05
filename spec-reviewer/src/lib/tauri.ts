@@ -23,6 +23,11 @@ import type {
   SpecDocument,
   SpecTree,
 } from "../types/spec";
+import type {
+  StartSpecFileWatchRequest,
+  StartSpecFileWatchResponse,
+  StopSpecFileWatchResponse,
+} from "../types/watch";
 import type { Workspace } from "../types/workspace";
 
 const UNKNOWN_COMMAND_ERROR_MESSAGE = "Unknown IPC command failure";
@@ -65,6 +70,18 @@ export async function readSpecFile(
   request: ReadSpecFileRequest,
 ): Promise<SpecDocument> {
   return invokeCommand("read_spec_file", request);
+}
+
+/** @returns Backend watcher registration metadata for the selected spec file. */
+export async function startSpecFileWatch(
+  request: StartSpecFileWatchRequest,
+): Promise<StartSpecFileWatchResponse> {
+  return invokeCommand("start_spec_file_watch", request);
+}
+
+/** @returns Confirmation that the active backend watcher was stopped. */
+export async function stopSpecFileWatch(): Promise<StopSpecFileWatchResponse> {
+  return invokeCommand("stop_spec_file_watch", {});
 }
 
 /** @returns Comment threads for the requested spec file and status filter. */
@@ -193,6 +210,7 @@ function isCommandErrorCode(value: unknown): value is CommandError["code"] {
     value === "markdownRead" ||
     value === "invalidSpec" ||
     value === "invalidComment" ||
-    value === "commentRepository"
+    value === "commentRepository" ||
+    value === "fileWatch"
   );
 }

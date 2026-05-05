@@ -5,6 +5,12 @@ import type {
   SpecDocument,
   SpecTree,
 } from "./spec";
+import type {
+  StartSpecFileWatchRequest,
+  StartSpecFileWatchResponse,
+  StopSpecFileWatchRequest,
+  StopSpecFileWatchResponse,
+} from "./watch";
 import type { LoadWorkspaceRequest, Workspace } from "./workspace";
 
 export type CommandErrorCode =
@@ -15,7 +21,8 @@ export type CommandErrorCode =
   | "markdownRead"
   | "invalidSpec"
   | "invalidComment"
-  | "commentRepository";
+  | "commentRepository"
+  | "fileWatch";
 
 export type CommandError = Readonly<{
   code: CommandErrorCode;
@@ -40,6 +47,14 @@ type WorkspaceCommandPayloads = Readonly<{
   read_spec_file: Readonly<{
     request: ReadSpecFileRequest;
     response: SpecDocument;
+  }>;
+  start_spec_file_watch: Readonly<{
+    request: StartSpecFileWatchRequest;
+    response: StartSpecFileWatchResponse;
+  }>;
+  stop_spec_file_watch: Readonly<{
+    request: StopSpecFileWatchRequest;
+    response: StopSpecFileWatchResponse;
   }>;
 }>;
 

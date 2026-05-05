@@ -5,6 +5,7 @@ pub mod comments;
 use thiserror::Error;
 
 use crate::{
+    app::services::file_watching::{plan_file_watch, FileWatchPlan},
     domain::{
         comment::{CommentDomainError, CommentRepositoryError},
         spec::{MarkdownBlock, SpecDomainError},
@@ -78,6 +79,15 @@ impl Default for FilesystemAppUseCases {
 impl FilesystemAppUseCases {
     pub fn comment_use_cases(&self, workspace: &LoadWorkspaceResult) -> FilesystemCommentUseCases {
         FilesystemCommentUseCases::for_workspace(workspace)
+    }
+
+    pub fn plan_file_watch(
+        &self,
+        workspace: &LoadWorkspaceResult,
+        spec_id: &str,
+        key: SpecFileKey,
+    ) -> Result<FileWatchPlan, AppUseCaseError> {
+        plan_file_watch(workspace, spec_id, key)
     }
 }
 

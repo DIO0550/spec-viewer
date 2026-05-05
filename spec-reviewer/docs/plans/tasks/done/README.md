@@ -53,3 +53,4 @@ Completed task files are moved here from the active task groups.
 - [P3.7 Fuzzy Matching](./phase-3-anchors/p3-07-fuzzy-matching.md)
 - [P3.8 Orphan Handling](./phase-3-anchors/p3-08-orphan-handling.md)
 - [P3.9 Frontend Highlight Reconciliation](./phase-3-anchors/p3-09-frontend-highlight-reconciliation.md)
+- [P3.10 File Watching Strategy](./phase-3-anchors/p3-10-file-watching-strategy.md)
