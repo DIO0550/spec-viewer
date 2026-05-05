@@ -7,6 +7,12 @@ use thiserror::Error;
 
 use crate::domain::spec::SpecFileKey;
 
+mod repository;
+
+pub use repository::{
+    CommentListQuery, CommentRepository, CommentRepositoryError, CommentScope, CommentStatusFilter,
+};
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CommentId {
     value: String,
