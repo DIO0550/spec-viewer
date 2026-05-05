@@ -4,6 +4,10 @@ use std::fmt;
 
 use thiserror::Error;
 
+mod config;
+
+pub use config::{WorkspaceConfig, WorkspaceConfigError, WorkspaceFileMapping};
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct WorkspaceRoot {
     value: String,
