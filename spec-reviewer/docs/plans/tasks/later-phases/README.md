@@ -4,7 +4,6 @@ Goal: track UX polish, export, future AI integration, and release preparation.
 
 ## Tasks
 
-- [P4.4 Drag And Drop Workspace Open](./p4-04-drag-and-drop-workspace-open.md)
 - [P4.5 Recent Workspaces](./p4-05-recent-workspaces.md)
 - [P4.6 Config Overrides](./p4-06-config-overrides.md)
 - [P4.7 Export Comments](./p4-07-export-comments.md)

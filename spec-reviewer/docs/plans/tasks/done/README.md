@@ -59,3 +59,4 @@ Completed task files are moved here from the active task groups.
 - [P4.1 Comment Filters](./later-phases/p4-01-comment-filters.md)
 - [P4.2 Comment Search](./later-phases/p4-02-comment-search.md)
 - [P4.3 Theme Support](./later-phases/p4-03-theme-support.md)
+- [P4.4 Drag And Drop Workspace Open](./later-phases/p4-04-drag-and-drop-workspace-open.md)
