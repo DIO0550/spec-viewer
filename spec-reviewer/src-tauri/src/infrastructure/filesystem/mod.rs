@@ -7,8 +7,11 @@ use std::{
 
 use thiserror::Error;
 
-use crate::domain::workspace::{
-    WorkspaceDomainError, WorkspaceKind, WorkspaceLayout, WorkspaceRoot,
+use crate::domain::{
+    spec::{SpecDomainError, SpecFile, SpecFileStatus, SpecNode},
+    workspace::{
+        WorkspaceConfig, WorkspaceDomainError, WorkspaceKind, WorkspaceLayout, WorkspaceRoot,
+    },
 };
 
 const PLUGIN_WORKSPACE_SPECS_DIR: &str = ".plugin-workspace/.specs";
@@ -57,6 +60,25 @@ impl FilesystemWorkspaceDetector {
 }
 
 #[derive(Debug, Clone, Copy, Default)]
+pub struct FilesystemSpecTreeScanner;
+
+impl FilesystemSpecTreeScanner {
+    pub fn new() -> Self {
+        Self
+    }
+
+    pub fn scan(
+        &self,
+        layout: &WorkspaceLayout,
+        config: &WorkspaceConfig,
+    ) -> Result<Vec<SpecNode>, SpecTreeScanError> {
+        let root = spec_root_path(layout);
+
+        scan_child_directories(&root, "", config)
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
 struct FilesystemPathChecker;
 
 impl FilesystemPathChecker {
@@ -89,6 +111,142 @@ fn display_path(path: &Path) -> String {
     path.to_string_lossy().into_owned()
 }
 
+pub fn spec_root_path(layout: &WorkspaceLayout) -> PathBuf {
+    PathBuf::from(layout.root().as_str()).join(spec_root_directory_for_kind(layout.kind()))
+}
+
+fn spec_root_directory_for_kind(kind: WorkspaceKind) -> &'static str {
+    match kind {
+        WorkspaceKind::PluginWorkspace => PLUGIN_WORKSPACE_SPECS_DIR,
+        WorkspaceKind::SpecSkill => SPEC_SKILL_FEATURES_DIR,
+    }
+}
+
+fn scan_child_directories(
+    directory: &Path,
+    parent_id: &str,
+    config: &WorkspaceConfig,
+) -> Result<Vec<SpecNode>, SpecTreeScanError> {
+    let entries = fs::read_dir(directory).map_err(|source| SpecTreeScanError::ReadDirectory {
+        path: display_path(directory),
+        source,
+    })?;
+    let mut child_directories = Vec::new();
+
+    for entry in entries {
+        let entry = entry.map_err(|source| SpecTreeScanError::ReadDirectory {
+            path: display_path(directory),
+            source,
+        })?;
+        let file_name = entry.file_name().to_string_lossy().into_owned();
+
+        if is_hidden_name(&file_name) {
+            continue;
+        }
+
+        let file_type = entry
+            .file_type()
+            .map_err(|source| SpecTreeScanError::InspectPath {
+                path: display_path(&entry.path()),
+                source,
+            })?;
+
+        if file_type.is_dir() {
+            child_directories.push((file_name, entry.path()));
+        }
+    }
+
+    child_directories.sort_by(|left, right| left.0.cmp(&right.0));
+
+    child_directories
+        .into_iter()
+        .map(|(label, path)| scan_spec_directory(&path, parent_id, &label, config))
+        .collect()
+}
+
+fn scan_spec_directory(
+    directory: &Path,
+    parent_id: &str,
+    label: &str,
+    config: &WorkspaceConfig,
+) -> Result<SpecNode, SpecTreeScanError> {
+    let id = spec_node_id(parent_id, label);
+    let files = scan_spec_files(directory, config)?;
+    let children = scan_child_directories(directory, &id, config)?;
+
+    SpecNode::new(id.clone(), label, files, children).map_err(|source| {
+        SpecTreeScanError::InvalidNode {
+            id,
+            path: display_path(directory),
+            source,
+        }
+    })
+}
+
+fn scan_spec_files(
+    directory: &Path,
+    config: &WorkspaceConfig,
+) -> Result<Vec<SpecFile>, SpecTreeScanError> {
+    config
+        .files()
+        .iter()
+        .map(|mapping| {
+            let file_path = directory.join(mapping.file_name());
+            let status = spec_file_status(&file_path)?;
+
+            SpecFile::new(mapping.key(), mapping.file_name(), status).map_err(|source| {
+                SpecTreeScanError::InvalidFile {
+                    path: display_path(&file_path),
+                    source,
+                }
+            })
+        })
+        .collect()
+}
+
+fn spec_file_status(path: &Path) -> Result<SpecFileStatus, SpecTreeScanError> {
+    match fs::metadata(path) {
+        Ok(metadata) if metadata.is_file() => Ok(SpecFileStatus::Present),
+        Ok(_) => Ok(SpecFileStatus::Missing),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(SpecFileStatus::Missing),
+        Err(source) => Err(SpecTreeScanError::InspectPath {
+            path: display_path(path),
+            source,
+        }),
+    }
+}
+
+fn spec_node_id(parent_id: &str, label: &str) -> String {
+    if parent_id.is_empty() {
+        return label.to_string();
+    }
+
+    format!("{parent_id}/{label}")
+}
+
+fn is_hidden_name(name: &str) -> bool {
+    name.starts_with('.')
+}
+
+#[derive(Debug, Error)]
+pub enum SpecTreeScanError {
+    #[error("failed to read spec directory: {path}")]
+    ReadDirectory { path: String, source: io::Error },
+    #[error("failed to inspect spec path: {path}")]
+    InspectPath { path: String, source: io::Error },
+    #[error("scanned spec node is invalid at {path}: {id}")]
+    InvalidNode {
+        id: String,
+        path: String,
+        source: SpecDomainError,
+    },
+    #[error("scanned spec file is invalid: {path}")]
+    InvalidFile {
+        path: String,
+        source: SpecDomainError,
+    },
+}
+
 #[cfg(test)]
 mod tests {
     use std::{
@@ -98,6 +256,10 @@ mod tests {
     };
 
     use super::*;
+    use crate::domain::{
+        spec::{SpecFileKey, SpecFileStatus},
+        workspace::{WorkspaceFileMapping, WorkspaceRoot},
+    };
 
     struct TestWorkspace {
         root: PathBuf,
@@ -124,6 +286,20 @@ mod tests {
 
         fn create_dir(&self, path: &str) {
             fs::create_dir_all(self.root.join(path)).expect("workspace marker should be created");
+        }
+
+        fn write_file(&self, path: &str, contents: &str) {
+            let path = self.root.join(path);
+            let parent = path.parent().expect("test file should have parent");
+            fs::create_dir_all(parent).expect("test file parent should be created");
+            fs::write(path, contents).expect("test file should be written");
+        }
+
+        fn layout(&self, kind: WorkspaceKind) -> WorkspaceLayout {
+            let root = WorkspaceRoot::new(self.root.to_string_lossy())
+                .expect("test workspace root should be valid");
+
+            WorkspaceLayout::new(root, kind)
         }
     }
 
@@ -183,5 +359,119 @@ mod tests {
             Err(WorkspaceDetectionError::UnsupportedWorkspace { root })
                 if root == workspace.root().to_string_lossy()
         ));
+    }
+
+    #[test]
+    fn spec_tree_scanner_returns_ordered_plugin_workspace_tree_with_file_statuses() {
+        let workspace = TestWorkspace::new("plugin-tree");
+        workspace.create_dir(PLUGIN_WORKSPACE_SPECS_DIR);
+        workspace.create_dir(".plugin-workspace/.specs/zeta");
+        workspace.create_dir(".plugin-workspace/.specs/auth/code-review");
+        workspace.write_file(".plugin-workspace/.specs/auth/tasks.md", "");
+        workspace.write_file(".plugin-workspace/.specs/auth/code-review/impl.md", "");
+        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
+        let config = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
+
+        let tree = FilesystemSpecTreeScanner::new()
+            .scan(&layout, &config)
+            .expect("spec tree should be scanned");
+
+        assert_eq!(vec!["auth", "zeta"], node_ids(&tree));
+        let auth = &tree[0];
+        assert_eq!("auth", auth.label());
+        assert_eq!(vec!["auth/code-review"], node_ids(auth.children()));
+        assert_eq!(
+            Some(SpecFileStatus::Missing),
+            auth.file_for_key(SpecFileKey::Exploration)
+                .map(|file| file.status())
+        );
+        assert_eq!(
+            Some(SpecFileStatus::Present),
+            auth.file_for_key(SpecFileKey::Tasks)
+                .map(|file| file.status())
+        );
+
+        let code_review = &auth.children()[0];
+        assert_eq!(
+            Some(SpecFileStatus::Present),
+            code_review
+                .file_for_key(SpecFileKey::Impl)
+                .map(|file| file.status())
+        );
+    }
+
+    #[test]
+    fn spec_tree_scanner_ignores_hidden_directories() {
+        let workspace = TestWorkspace::new("hidden");
+        workspace.create_dir(PLUGIN_WORKSPACE_SPECS_DIR);
+        workspace.create_dir(".plugin-workspace/.specs/.internal");
+        workspace.create_dir(".plugin-workspace/.specs/visible");
+        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
+        let config = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
+
+        let tree = FilesystemSpecTreeScanner::new()
+            .scan(&layout, &config)
+            .expect("spec tree should be scanned");
+
+        assert_eq!(vec!["visible"], node_ids(&tree));
+    }
+
+    #[test]
+    fn spec_tree_scanner_scans_spec_skill_features_with_compatibility_files() {
+        let workspace = TestWorkspace::new("spec-skill-tree");
+        workspace.create_dir(SPEC_SKILL_FEATURES_DIR);
+        workspace.create_dir(".spec-skill/features/checkout");
+        workspace.write_file(".spec-skill/features/checkout/requirements.md", "");
+        let layout = workspace.layout(WorkspaceKind::SpecSkill);
+        let config = WorkspaceConfig::default_for(WorkspaceKind::SpecSkill);
+
+        let tree = FilesystemSpecTreeScanner::new()
+            .scan(&layout, &config)
+            .expect("spec tree should be scanned");
+
+        assert_eq!(vec!["checkout"], node_ids(&tree));
+        assert_eq!(
+            vec![
+                (SpecFileKey::Requirements, SpecFileStatus::Present),
+                (SpecFileKey::Design, SpecFileStatus::Missing),
+                (SpecFileKey::Tasks, SpecFileStatus::Missing),
+            ],
+            file_statuses(&tree[0])
+        );
+    }
+
+    #[test]
+    fn spec_tree_scanner_uses_configured_file_mappings() {
+        let workspace = TestWorkspace::new("configured-files");
+        workspace.create_dir(PLUGIN_WORKSPACE_SPECS_DIR);
+        workspace.create_dir(".plugin-workspace/.specs/auth");
+        workspace.write_file(".plugin-workspace/.specs/auth/interview.md", "");
+        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
+        let config = WorkspaceConfig::new(vec![WorkspaceFileMapping::new(
+            SpecFileKey::Hearing,
+            "interview.md",
+        )
+        .expect("mapping should be valid")])
+        .expect("config should be valid");
+
+        let tree = FilesystemSpecTreeScanner::new()
+            .scan(&layout, &config)
+            .expect("spec tree should be scanned");
+
+        assert_eq!(
+            vec![(SpecFileKey::Hearing, SpecFileStatus::Present)],
+            file_statuses(&tree[0])
+        );
+    }
+
+    fn node_ids(nodes: &[SpecNode]) -> Vec<&str> {
+        nodes.iter().map(SpecNode::id).collect()
+    }
+
+    fn file_statuses(node: &SpecNode) -> Vec<(SpecFileKey, SpecFileStatus)> {
+        node.files()
+            .iter()
+            .map(|file| (file.key(), file.status()))
+            .collect()
     }
 }
