@@ -1,6 +1,6 @@
 //! Comment command DTOs and handlers.
 
-use std::str::FromStr;
+use std::{fs, path::Path, str::FromStr};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -16,7 +16,7 @@ use crate::{
             BlockIndex, BlockType, CharRange, Comment, CommentAnchor, CommentDomainError,
             CommentStatus, CommentStatusFilter, TextHash, TextSnippet,
         },
-        spec::{MarkdownBlock, MarkdownBlockSourceRange, SpecFileKey},
+        spec::{MarkdownBlock, MarkdownBlockSourceRange, SpecFileKey, SpecNode},
     },
 };
 
@@ -66,6 +66,22 @@ pub struct CommentStatusRequest {
     spec_id: String,
     file_key: String,
     comment_id: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportCommentsRequest {
+    workspace_path: String,
+    target: ExportCommentsTargetRequest,
+    destination_path: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(tag = "scope", rename_all = "camelCase")]
+pub enum ExportCommentsTargetRequest {
+    File { spec_id: String, file_key: String },
+    Spec { spec_id: String },
+    Workspace,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -279,6 +295,28 @@ pub struct DeleteCommentResponse {
     deleted: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportCommentsResponse {
+    destination_path: String,
+    format: String,
+    comment_count: usize,
+}
+
+impl ExportCommentsResponse {
+    pub fn destination_path(&self) -> &str {
+        &self.destination_path
+    }
+
+    pub fn format(&self) -> &str {
+        &self.format
+    }
+
+    pub fn comment_count(&self) -> usize {
+        self.comment_count
+    }
+}
+
 impl DeleteCommentResponse {
     pub fn deleted(&self) -> bool {
         self.deleted
@@ -388,6 +426,26 @@ pub fn toggle_comment_resolved(
     request: CommentStatusRequest,
 ) -> CommandResult<CommentResponse> {
     update_comment_status(state, request, CommentStatusAction::Toggle)
+}
+
+#[tauri::command]
+pub fn export_comments(
+    state: State<'_, CommandState>,
+    request: ExportCommentsRequest,
+) -> CommandResult<ExportCommentsResponse> {
+    let workspace = state
+        .use_cases()
+        .load_workspace(&request.workspace_path)
+        .map_err(CommandError::from)?;
+    let generated_at = Utc::now();
+    let export = build_comment_export(state.use_cases(), &workspace, &request, generated_at)?;
+    write_export_file(&request.destination_path, &export.contents)?;
+
+    Ok(ExportCommentsResponse {
+        destination_path: request.destination_path,
+        format: export.format.as_str().to_string(),
+        comment_count: export.comment_count,
+    })
 }
 
 impl From<Vec<CommentAnchorResolution>> for ListCommentsResponse {
@@ -502,6 +560,74 @@ enum CommentStatusAction {
     Toggle,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CommentExportFormat {
+    Markdown,
+    Json,
+}
+
+impl CommentExportFormat {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Markdown => "markdown",
+            Self::Json => "json",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct CommentExport {
+    format: CommentExportFormat,
+    contents: String,
+    comment_count: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ExportedCommentFile {
+    spec_id: String,
+    spec_label: String,
+    file_key: SpecFileKey,
+    file_label: String,
+    comments: Vec<CommentResponse>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ExportCommentsJsonDocument {
+    version: u8,
+    generated_at: DateTime<Utc>,
+    target: ExportCommentsJsonTarget,
+    workspace_path: String,
+    comment_count: usize,
+    specs: Vec<ExportCommentsJsonSpec>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ExportCommentsJsonTarget {
+    scope: String,
+    format: String,
+    spec_id: Option<String>,
+    file_key: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ExportCommentsJsonSpec {
+    spec_id: String,
+    spec_label: String,
+    files: Vec<ExportCommentsJsonFile>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ExportCommentsJsonFile {
+    file_key: String,
+    file_label: String,
+    comment_count: usize,
+    comments: Vec<CommentResponse>,
+}
+
 fn update_comment_status(
     state: State<'_, CommandState>,
     request: CommentStatusRequest,
@@ -528,6 +654,331 @@ fn update_comment_status(
     };
 
     Ok(CommentResponse::from(&comment))
+}
+
+fn build_comment_export(
+    use_cases: &crate::app::use_cases::FilesystemAppUseCases,
+    workspace: &crate::app::use_cases::LoadWorkspaceResult,
+    request: &ExportCommentsRequest,
+    generated_at: DateTime<Utc>,
+) -> CommandResult<CommentExport> {
+    match &request.target {
+        ExportCommentsTargetRequest::File { spec_id, file_key } => {
+            let file_key = parse_file_key(file_key)?;
+            let file = export_comment_file(
+                use_cases,
+                workspace,
+                spec_id,
+                spec_id,
+                file_key,
+                file_key.display_label(),
+            )?;
+            let comment_count = count_exported_comments(std::slice::from_ref(&file));
+            let contents = render_markdown_comment_export(
+                "Current File Comments",
+                &request.workspace_path,
+                generated_at,
+                std::slice::from_ref(&file),
+                comment_count,
+            );
+
+            Ok(CommentExport {
+                format: CommentExportFormat::Markdown,
+                contents,
+                comment_count,
+            })
+        }
+        ExportCommentsTargetRequest::Spec { spec_id } => {
+            let specs = use_cases.list_specs(workspace)?.into_specs();
+            let spec = find_spec_node(&specs, spec_id).ok_or_else(|| {
+                CommandError::invalid_request(format!("unknown spec id: {spec_id}"))
+            })?;
+            let files = export_comment_files_for_spec(use_cases, workspace, spec)?;
+            let comment_count = count_exported_comments(&files);
+            let contents = render_markdown_comment_export(
+                "Current Spec Comments",
+                &request.workspace_path,
+                generated_at,
+                &files,
+                comment_count,
+            );
+
+            Ok(CommentExport {
+                format: CommentExportFormat::Markdown,
+                contents,
+                comment_count,
+            })
+        }
+        ExportCommentsTargetRequest::Workspace => {
+            let specs = use_cases.list_specs(workspace)?.into_specs();
+            let files = specs
+                .iter()
+                .flat_map(|spec| collect_spec_nodes(spec).into_iter())
+                .map(|spec| export_comment_files_for_spec(use_cases, workspace, spec))
+                .collect::<CommandResult<Vec<_>>>()?
+                .into_iter()
+                .flatten()
+                .collect::<Vec<_>>();
+            let comment_count = count_exported_comments(&files);
+            let document = build_workspace_json_export(
+                &request.workspace_path,
+                generated_at,
+                &files,
+                comment_count,
+            );
+            let contents = serde_json::to_string_pretty(&document).map_err(|source| {
+                CommandError::from(AppUseCaseError::CommentRepository {
+                    message: format!("failed to serialize comment export: {source}"),
+                })
+            })?;
+
+            Ok(CommentExport {
+                format: CommentExportFormat::Json,
+                contents,
+                comment_count,
+            })
+        }
+    }
+}
+
+fn export_comment_files_for_spec(
+    use_cases: &crate::app::use_cases::FilesystemAppUseCases,
+    workspace: &crate::app::use_cases::LoadWorkspaceResult,
+    spec: &SpecNode,
+) -> CommandResult<Vec<ExportedCommentFile>> {
+    spec.files()
+        .iter()
+        .map(|file| {
+            export_comment_file(
+                use_cases,
+                workspace,
+                spec.id(),
+                spec.label(),
+                file.key(),
+                file.display_label(),
+            )
+        })
+        .collect()
+}
+
+fn export_comment_file(
+    use_cases: &crate::app::use_cases::FilesystemAppUseCases,
+    workspace: &crate::app::use_cases::LoadWorkspaceResult,
+    spec_id: &str,
+    spec_label: &str,
+    file_key: SpecFileKey,
+    file_label: &str,
+) -> CommandResult<ExportedCommentFile> {
+    let current_blocks = read_current_markdown_blocks(use_cases, workspace, spec_id, file_key)?;
+    let resolutions = use_cases
+        .comment_use_cases(workspace)
+        .resolve_comment_anchors(spec_id, file_key, CommentStatusFilter::All, &current_blocks)?;
+
+    Ok(ExportedCommentFile {
+        spec_id: spec_id.to_string(),
+        spec_label: spec_label.to_string(),
+        file_key,
+        file_label: file_label.to_string(),
+        comments: resolutions
+            .resolutions()
+            .iter()
+            .map(CommentResponse::from)
+            .collect(),
+    })
+}
+
+fn find_spec_node<'a>(specs: &'a [SpecNode], spec_id: &str) -> Option<&'a SpecNode> {
+    specs.iter().find_map(|spec| {
+        if spec.id() == spec_id {
+            return Some(spec);
+        }
+
+        find_spec_node(spec.children(), spec_id)
+    })
+}
+
+fn collect_spec_nodes(spec: &SpecNode) -> Vec<&SpecNode> {
+    let mut nodes = Vec::new();
+
+    if !spec.files().is_empty() {
+        nodes.push(spec);
+    }
+
+    for child in spec.children() {
+        nodes.extend(collect_spec_nodes(child));
+    }
+
+    nodes
+}
+
+fn count_exported_comments(files: &[ExportedCommentFile]) -> usize {
+    files.iter().map(|file| file.comments.len()).sum()
+}
+
+fn render_markdown_comment_export(
+    title: &str,
+    workspace_path: &str,
+    generated_at: DateTime<Utc>,
+    files: &[ExportedCommentFile],
+    comment_count: usize,
+) -> String {
+    let mut output = String::new();
+    output.push_str(&format!("# {title}\n\n"));
+    output.push_str(&format!("- Workspace: `{workspace_path}`\n"));
+    output.push_str(&format!("- Generated: `{}`\n", generated_at.to_rfc3339()));
+    output.push_str(&format!("- Comment count: `{comment_count}`\n\n"));
+
+    if comment_count == 0 {
+        output.push_str("No comments were found for this export target.\n");
+        return output;
+    }
+
+    for file in files.iter().filter(|file| !file.comments.is_empty()) {
+        output.push_str(&format!(
+            "## {} / {} ({})\n\n",
+            file.spec_label,
+            file.file_label,
+            file.file_key.as_str()
+        ));
+
+        for comment in &file.comments {
+            output.push_str(&render_markdown_comment(comment, &file.spec_id));
+        }
+    }
+
+    output
+}
+
+fn render_markdown_comment(comment: &CommentResponse, spec_id: &str) -> String {
+    let mut output = String::new();
+    output.push_str(&format!(
+        "### {} - {}\n\n",
+        comment.id,
+        format_title_case(&comment.status)
+    ));
+    output.push_str(&format!("- Spec: `{spec_id}`\n"));
+    output.push_str(&format!("- File: `{}`\n", comment.anchor.file_key));
+    output.push_str(&format!(
+        "- Anchor: `{}` block `{}` range `{}..{}`\n",
+        comment.anchor.block_type,
+        comment.anchor.block_index,
+        comment.anchor.char_range.start,
+        comment.anchor.char_range.end
+    ));
+    output.push_str(&format!(
+        "- Comment state: `{}`\n",
+        format_title_case(&comment.status)
+    ));
+    output.push_str(&format!(
+        "- Anchor state: `{}`\n",
+        format_anchor_state(comment.anchor_resolution.as_ref())
+    ));
+    output.push_str(&format!(
+        "- Created: `{}`\n",
+        comment.created_at.to_rfc3339()
+    ));
+    output.push_str(&format!(
+        "- Updated: `{}`\n\n",
+        comment.updated_at.to_rfc3339()
+    ));
+    output.push_str("Anchor snippet:\n\n");
+    output.push_str(&format_blockquote(&comment.anchor.text_snippet));
+    output.push_str("\nComment:\n\n");
+    output.push_str(comment.body.trim());
+    output.push_str("\n\n");
+
+    output
+}
+
+fn format_anchor_state(resolution: Option<&CommentAnchorResolutionResponse>) -> String {
+    let Some(resolution) = resolution else {
+        return "Unresolved".to_string();
+    };
+    let mut state = format_title_case(&resolution.status);
+    state.push_str(" / ");
+    state.push_str(&resolution.reason);
+
+    if let Some(details) = &resolution.details {
+        state.push_str(" - ");
+        state.push_str(details);
+    }
+
+    state
+}
+
+fn format_blockquote(value: &str) -> String {
+    value
+        .lines()
+        .map(|line| format!("> {line}\n"))
+        .collect::<String>()
+}
+
+fn format_title_case(value: &str) -> String {
+    let mut chars = value.chars();
+    let Some(first) = chars.next() else {
+        return String::new();
+    };
+
+    first.to_uppercase().chain(chars).collect()
+}
+
+fn build_workspace_json_export(
+    workspace_path: &str,
+    generated_at: DateTime<Utc>,
+    files: &[ExportedCommentFile],
+    comment_count: usize,
+) -> ExportCommentsJsonDocument {
+    let mut specs = Vec::<ExportCommentsJsonSpec>::new();
+
+    for file in files {
+        if file.comments.is_empty() {
+            continue;
+        }
+
+        let json_file = ExportCommentsJsonFile {
+            file_key: file.file_key.as_str().to_string(),
+            file_label: file.file_label.clone(),
+            comment_count: file.comments.len(),
+            comments: file.comments.clone(),
+        };
+
+        match specs.iter_mut().find(|spec| spec.spec_id == file.spec_id) {
+            Some(spec) => spec.files.push(json_file),
+            None => specs.push(ExportCommentsJsonSpec {
+                spec_id: file.spec_id.clone(),
+                spec_label: file.spec_label.clone(),
+                files: vec![json_file],
+            }),
+        }
+    }
+
+    ExportCommentsJsonDocument {
+        version: 1,
+        generated_at,
+        target: ExportCommentsJsonTarget {
+            scope: "workspace".to_string(),
+            format: CommentExportFormat::Json.as_str().to_string(),
+            spec_id: None,
+            file_key: None,
+        },
+        workspace_path: workspace_path.to_string(),
+        comment_count,
+        specs,
+    }
+}
+
+fn write_export_file(path: &str, contents: &str) -> CommandResult<()> {
+    if path.trim().is_empty() {
+        return Err(CommandError::invalid_request(
+            "comment export destination path is required",
+        ));
+    }
+
+    fs::write(Path::new(path), contents).map_err(|source| {
+        CommandError::from(AppUseCaseError::CommentRepository {
+            message: format!("failed to write comment export {path}: {source}"),
+        })
+    })
 }
 
 fn read_current_markdown_blocks(
@@ -704,6 +1155,82 @@ mod tests {
         assert_eq!("tasks", response.comments()[0].anchor().file_key());
         assert_eq!("open", response.comments()[0].status());
         assert!(!response.comments()[0].resolved());
+    }
+
+    #[test]
+    fn markdown_export_includes_comment_and_anchor_states() {
+        let comment = CommentResponse {
+            id: "cmt_orphaned".to_string(),
+            anchor: CommentAnchorResponse::from(&anchor(SpecFileKey::Tasks, BlockType::Paragraph)),
+            body: "Explain what happens when the source paragraph is deleted.".to_string(),
+            status: "resolved".to_string(),
+            resolved: true,
+            anchor_resolution: Some(CommentAnchorResolutionResponse {
+                status: "orphaned".to_string(),
+                reason: "deleted_text".to_string(),
+                details: Some(
+                    "original block is still present, but selected text could not be found"
+                        .to_string(),
+                ),
+                target: None,
+            }),
+            created_at: timestamp(1),
+            updated_at: timestamp(2),
+        };
+        let file = ExportedCommentFile {
+            spec_id: "review-flow".to_string(),
+            spec_label: "Review Flow".to_string(),
+            file_key: SpecFileKey::Tasks,
+            file_label: "Tasks".to_string(),
+            comments: vec![comment],
+        };
+
+        let markdown = render_markdown_comment_export(
+            "Current File Comments",
+            "/workspace/project",
+            timestamp(3),
+            &[file],
+            1,
+        );
+
+        assert!(markdown.contains("# Current File Comments"));
+        assert!(markdown.contains("- Comment state: `Resolved`"));
+        assert!(markdown.contains("- Anchor state: `Orphaned / deleted_text"));
+        assert!(markdown.contains("Explain what happens when the source paragraph is deleted."));
+    }
+
+    #[test]
+    fn workspace_json_export_groups_comments_by_spec_and_file() {
+        let comment = CommentResponse::from(
+            &Comment::new(
+                CommentId::new("cmt_json").expect("id should be valid"),
+                anchor(SpecFileKey::Impl, BlockType::CodeBlock),
+                CommentBody::new("Keep this in the workspace export")
+                    .expect("body should be valid"),
+                timestamp(1),
+                timestamp(1),
+            )
+            .expect("comment should be valid"),
+        );
+        let file = ExportedCommentFile {
+            spec_id: "auth-flow".to_string(),
+            spec_label: "Auth Flow".to_string(),
+            file_key: SpecFileKey::Impl,
+            file_label: "Implementation".to_string(),
+            comments: vec![comment],
+        };
+
+        let document = build_workspace_json_export("/workspace/project", timestamp(2), &[file], 1);
+        let value = serde_json::to_value(document).expect("export document should serialize");
+
+        assert_eq!(1, value["commentCount"]);
+        assert_eq!("workspace", value["target"]["scope"]);
+        assert_eq!("auth-flow", value["specs"][0]["specId"]);
+        assert_eq!("impl", value["specs"][0]["files"][0]["fileKey"]);
+        assert_eq!(
+            "cmt_json",
+            value["specs"][0]["files"][0]["comments"][0]["id"]
+        );
     }
 
     #[test]

@@ -4,7 +4,6 @@ Goal: track UX polish, export, future AI integration, and release preparation.
 
 ## Tasks
 
-- [P4.7 Export Comments](./p4-07-export-comments.md)
 - [P4.8 Keyboard Navigation](./p4-08-keyboard-navigation.md)
 - [P4.9 Error Boundaries And Loading States](./p4-09-error-boundaries-and-loading-states.md)
 - [P5.1 LLM Prompt Export](./p5-01-llm-prompt-export.md)

@@ -157,12 +157,40 @@ export type CommentStatusRequest = Readonly<{
   commentId: CommentId;
 }>;
 
+export type ExportCommentsTarget =
+  | Readonly<{
+      scope: "file";
+      specId: string;
+      fileKey: SpecFileKey;
+    }>
+  | Readonly<{
+      scope: "spec";
+      specId: string;
+    }>
+  | Readonly<{
+      scope: "workspace";
+    }>;
+
+export type CommentExportScope = ExportCommentsTarget["scope"];
+
+export type ExportCommentsRequest = Readonly<{
+  workspacePath: string;
+  target: ExportCommentsTarget;
+  destinationPath: string;
+}>;
+
 export type ListCommentsResponse = Readonly<{
   comments: readonly Comment[];
 }>;
 
 export type DeleteCommentResponse = Readonly<{
   deleted: boolean;
+}>;
+
+export type ExportCommentsResponse = Readonly<{
+  destinationPath: string;
+  format: "markdown" | "json";
+  commentCount: number;
 }>;
 
 export type CommentCommandPayloads = Readonly<{
@@ -193,5 +221,9 @@ export type CommentCommandPayloads = Readonly<{
   toggle_comment_resolved: Readonly<{
     request: CommentStatusRequest;
     response: Comment;
+  }>;
+  export_comments: Readonly<{
+    request: ExportCommentsRequest;
+    response: ExportCommentsResponse;
   }>;
 }>;

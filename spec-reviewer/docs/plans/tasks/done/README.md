@@ -62,3 +62,4 @@ Completed task files are moved here from the active task groups.
 - [P4.4 Drag And Drop Workspace Open](./later-phases/p4-04-drag-and-drop-workspace-open.md)
 - [P4.5 Recent Workspaces](./later-phases/p4-05-recent-workspaces.md)
 - [P4.6 Config Overrides](./later-phases/p4-06-config-overrides.md)
+- [P4.7 Export Comments](./later-phases/p4-07-export-comments.md)

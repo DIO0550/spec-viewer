@@ -1,4 +1,4 @@
-import { LoaderCircle, Search, X } from "lucide-react";
+import { Download, LoaderCircle, Search, X } from "lucide-react";
 import { useId, useState } from "react";
 
 import type {
@@ -10,6 +10,7 @@ import type {
   CommentAnchorDisplayState,
   CommentAnchorDisplayStatus,
   CommentDisplayFilter,
+  CommentExportScope,
   CommentId,
 } from "../types/comment";
 import { CommentThread } from "./CommentThread";
@@ -19,6 +20,7 @@ import { ErrorState } from "./ErrorState";
 type Props = Readonly<{
   listState: CommentListState;
   mutationState: CommentMutationState;
+  exportState?: CommentExportState;
   activeCommentId: CommentId | null;
   anchorDisplayStates?: readonly CommentAnchorDisplayState[];
   onSelectComment: (commentId: CommentId) => void;
@@ -27,6 +29,7 @@ type Props = Readonly<{
   onDeleteComment: (commentId: CommentId) => void;
   onUpdateComment: (commentId: CommentId, body: string) => void;
   onReload: () => void;
+  onExportComments?: (scope: CommentExportScope) => void;
 }>;
 
 type CommentGroups = Readonly<{
@@ -48,6 +51,18 @@ type CommentSectionModel = Readonly<{
   comments: readonly Comment[];
   emptyMessage: string;
 }>;
+
+export type CommentExportState =
+  | Readonly<{
+      status: "idle";
+      operation: null;
+      message: null;
+    }>
+  | Readonly<{
+      status: "saving" | "success" | "error";
+      operation: CommentExportScope;
+      message: string;
+    }>;
 
 type CommentSearchFilterParams = Readonly<{
   comments: readonly Comment[];
@@ -102,6 +117,7 @@ const commentFilterOptions: readonly CommentFilterOption[] = [
 export function CommentSidebar({
   listState,
   mutationState,
+  exportState = idleCommentExportState,
   activeCommentId,
   anchorDisplayStates = [],
   onSelectComment,
@@ -110,10 +126,13 @@ export function CommentSidebar({
   onDeleteComment,
   onUpdateComment,
   onReload,
+  onExportComments,
 }: Props) {
   const [activeFilter, setActiveFilter] =
     useState<CommentDisplayFilter>(defaultDisplayFilter);
   const [searchQuery, setSearchQuery] = useState("");
+  const canExportComments =
+    listState.status === "ready" || listState.status === "empty";
 
   if (listState.status === "idle") {
     return (
@@ -124,6 +143,8 @@ export function CommentSidebar({
           activeFilter={activeFilter}
           filterCounts={createEmptyFilterCounts()}
           showFilters={false}
+          showExportControls={false}
+          exportState={exportState}
           onFilterChange={setActiveFilter}
         />
         <EmptyState
@@ -144,6 +165,8 @@ export function CommentSidebar({
           activeFilter={activeFilter}
           filterCounts={createEmptyFilterCounts()}
           showFilters={false}
+          showExportControls={false}
+          exportState={exportState}
           onFilterChange={setActiveFilter}
         />
         <div className="comment-sidebar__loading" role="status">
@@ -163,6 +186,8 @@ export function CommentSidebar({
           activeFilter={activeFilter}
           filterCounts={createEmptyFilterCounts()}
           showFilters={false}
+          showExportControls={false}
+          exportState={exportState}
           onFilterChange={setActiveFilter}
         />
         <ErrorState
@@ -184,8 +209,12 @@ export function CommentSidebar({
           activeFilter={activeFilter}
           filterCounts={createEmptyFilterCounts()}
           showFilters={false}
+          showExportControls={canExportComments}
+          exportState={exportState}
           onFilterChange={setActiveFilter}
+          onExportComments={onExportComments}
         />
+        <CommentExportFeedback exportState={exportState} />
         <EmptyState
           title="No comments yet"
           description="Open and resolved comments for this file will appear here."
@@ -226,8 +255,12 @@ export function CommentSidebar({
         activeFilter={activeFilter}
         filterCounts={filterCounts}
         showFilters={true}
+        showExportControls={canExportComments}
+        exportState={exportState}
         onFilterChange={setActiveFilter}
+        onExportComments={onExportComments}
       />
+      <CommentExportFeedback exportState={exportState} />
       <CommentSearchControl
         searchQuery={searchQuery}
         resultCount={searchedComments.length}
@@ -330,7 +363,10 @@ type HeaderProps = Readonly<{
   activeFilter: CommentDisplayFilter;
   filterCounts: CommentFilterCounts;
   showFilters: boolean;
+  showExportControls: boolean;
+  exportState: CommentExportState;
   onFilterChange: (filter: CommentDisplayFilter) => void;
+  onExportComments?: (scope: CommentExportScope) => void;
 }>;
 
 /** @returns Sidebar title and total count badges. */
@@ -340,7 +376,10 @@ function CommentSidebarHeader({
   activeFilter,
   filterCounts,
   showFilters,
+  showExportControls,
+  exportState,
   onFilterChange,
+  onExportComments,
 }: HeaderProps) {
   return (
     <header className="comment-sidebar__header">
@@ -375,7 +414,98 @@ function CommentSidebarHeader({
           ))}
         </div>
       ) : null}
+      {showExportControls && onExportComments !== undefined ? (
+        <CommentExportControls
+          exportState={exportState}
+          onExportComments={onExportComments}
+        />
+      ) : null}
     </header>
+  );
+}
+
+type CommentExportControlsProps = Readonly<{
+  exportState: CommentExportState;
+  onExportComments: (scope: CommentExportScope) => void;
+}>;
+
+const idleCommentExportState: CommentExportState = {
+  status: "idle",
+  operation: null,
+  message: null,
+};
+
+const commentExportOptions: readonly Readonly<{
+  scope: CommentExportScope;
+  label: string;
+  ariaLabel: string;
+}>[] = [
+  {
+    scope: "file",
+    label: "File",
+    ariaLabel: "Export current file comments",
+  },
+  {
+    scope: "spec",
+    label: "Spec",
+    ariaLabel: "Export current spec comments",
+  },
+  {
+    scope: "workspace",
+    label: "Workspace",
+    ariaLabel: "Export workspace comments",
+  },
+];
+
+/** @returns Comment export command buttons for the selected review scope. */
+function CommentExportControls({
+  exportState,
+  onExportComments,
+}: CommentExportControlsProps) {
+  return (
+    <div className="comment-sidebar__exports" aria-label="Comment exports">
+      {commentExportOptions.map((option) => {
+        const isSaving =
+          exportState.status === "saving" &&
+          exportState.operation === option.scope;
+
+        return (
+          <button
+            key={option.scope}
+            className="comment-sidebar__export"
+            type="button"
+            aria-label={option.ariaLabel}
+            disabled={exportState.status === "saving"}
+            onClick={() => {
+              onExportComments(option.scope);
+            }}
+          >
+            <Download aria-hidden="true" size={14} />
+            <span>{isSaving ? "Saving" : option.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+type CommentExportFeedbackProps = Readonly<{
+  exportState: CommentExportState;
+}>;
+
+/** @returns A compact status message for the latest comment export attempt. */
+function CommentExportFeedback({ exportState }: CommentExportFeedbackProps) {
+  if (exportState.status === "idle" || exportState.status === "saving") {
+    return null;
+  }
+
+  return (
+    <p
+      className={`comment-sidebar__export-feedback comment-sidebar__export-feedback--${exportState.status}`}
+      role={exportState.status === "error" ? "alert" : "status"}
+    >
+      {exportState.message}
+    </p>
   );
 }
 

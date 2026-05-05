@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-dialog";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 
 import type {
@@ -15,6 +15,9 @@ import type {
   CommentStatusRequest,
   DeleteCommentRequest,
   DeleteCommentResponse,
+  ExportCommentsRequest,
+  ExportCommentsResponse,
+  ExportCommentsTarget,
   ListCommentsRequest,
   ListCommentsResponse,
   UpdateCommentRequest,
@@ -32,6 +35,7 @@ import type {
 import type { Workspace } from "../types/workspace";
 
 const UNKNOWN_COMMAND_ERROR_MESSAGE = "Unknown IPC command failure";
+const COMMENT_EXPORT_DEFAULT_SPEC_ID = "spec";
 
 export type WorkspaceDragDropEvent =
   | Readonly<{
@@ -68,6 +72,15 @@ export async function selectWorkspaceDirectory(): Promise<string | null> {
     multiple: false,
     title: "Open workspace",
   });
+}
+
+/** @returns A destination path for the requested comment export, or null. */
+export async function selectCommentExportDestination(
+  target: ExportCommentsTarget,
+): Promise<string | null> {
+  const options = createCommentExportDialogOptions(target);
+
+  return save(options);
 }
 
 /** @returns Loaded workspace metadata for the selected directory. */
@@ -164,6 +177,13 @@ export async function toggleCommentResolved(
   return invokeCommand("toggle_comment_resolved", request);
 }
 
+/** @returns Metadata for the comment export written by the backend. */
+export async function exportComments(
+  request: ExportCommentsRequest,
+): Promise<ExportCommentsResponse> {
+  return invokeCommand("export_comments", request);
+}
+
 export const commentCommands: CommentCommands = {
   listComments,
   addComment,
@@ -246,4 +266,49 @@ function isCommandErrorCode(value: unknown): value is CommandError["code"] {
     value === "commentRepository" ||
     value === "fileWatch"
   );
+}
+
+/** @returns Native save dialog options for the requested comment export target. */
+function createCommentExportDialogOptions(target: ExportCommentsTarget) {
+  const fileName = createCommentExportDefaultFileName(target);
+  const isJsonExport = target.scope === "workspace";
+
+  return {
+    title: "Export comments",
+    defaultPath: fileName,
+    filters: [
+      {
+        name: isJsonExport ? "JSON" : "Markdown",
+        extensions: [isJsonExport ? "json" : "md"],
+      },
+    ],
+  };
+}
+
+/** @returns A safe default file name for a comment export. */
+function createCommentExportDefaultFileName(
+  target: ExportCommentsTarget,
+): string {
+  if (target.scope === "workspace") {
+    return "workspace-comments.json";
+  }
+
+  const specId = sanitizeExportPathPart(target.specId);
+
+  if (target.scope === "spec") {
+    return `${specId}-comments.md`;
+  }
+
+  return `${specId}-${target.fileKey}-comments.md`;
+}
+
+/** @returns A file-system-safe path component for save dialog defaults. */
+function sanitizeExportPathPart(value: string): string {
+  const sanitized = value.trim().replace(/[^A-Za-z0-9._-]+/g, "-");
+
+  if (sanitized.length === 0) {
+    return COMMENT_EXPORT_DEFAULT_SPEC_ID;
+  }
+
+  return sanitized;
 }

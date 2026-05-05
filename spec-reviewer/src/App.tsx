@@ -20,9 +20,17 @@ import { useSpecs } from "./hooks/useSpecs";
 import { useTheme } from "./hooks/useTheme";
 import { useWorkspace } from "./hooks/useWorkspace";
 import { useWorkspaceDrop } from "./hooks/useWorkspaceDrop";
-import type { CommentAnchorDisplayState, CommentId } from "./types/comment";
+import type {
+  CommentAnchorDisplayState,
+  CommentExportScope,
+  CommentId,
+  ExportCommentsResponse,
+  ExportCommentsTarget,
+} from "./types/comment";
 import {
+  exportComments,
   normalizeCommandError,
+  selectCommentExportDestination,
   selectWorkspaceDirectory,
   validateWorkspaceDirectory,
 } from "./lib/tauri";
@@ -43,10 +51,37 @@ type LoadWorkspacePathOptions = Readonly<{
   preserveCurrentWorkspace?: boolean;
 }>;
 
+type CommentExportState =
+  | Readonly<{
+      status: "idle";
+      operation: null;
+      message: null;
+    }>
+  | Readonly<{
+      status: "saving";
+      operation: CommentExportScope;
+      message: string;
+    }>
+  | Readonly<{
+      status: "success";
+      operation: CommentExportScope;
+      message: string;
+    }>
+  | Readonly<{
+      status: "error";
+      operation: CommentExportScope;
+      message: string;
+    }>;
+
 const invalidDroppedDirectoryMessage =
   "Drop a workspace folder. Files cannot be opened as workspaces.";
 const missingRecentWorkspaceMessage =
   "Recent workspace no longer exists. It was removed from the list.";
+const idleCommentExportState: CommentExportState = {
+  status: "idle",
+  operation: null,
+  message: null,
+};
 
 function App() {
   const workspace = useWorkspace();
@@ -73,11 +108,14 @@ function App() {
   const [dropErrorMessage, setDropErrorMessage] = useState<string | null>(null);
   const [refreshStatus, setRefreshStatus] =
     useState<WorkspaceRefreshStatus>(idleRefreshStatus);
+  const [commentExportState, setCommentExportState] =
+    useState<CommentExportState>(idleCommentExportState);
 
   useEffect(() => {
     setActiveCommentId(null);
     setCommentAnchorDisplayStates([]);
     setRefreshStatus(idleRefreshStatus);
+    setCommentExportState(idleCommentExportState);
   }, [specs.selectedFileKey, specs.selectedSpecId, workspace.workspace?.root]);
 
   useEffect(() => {
@@ -275,6 +313,86 @@ function App() {
     await comments.reloadComments();
     return true;
   };
+
+  const runCommentExport = useCallback(
+    async (target: ExportCommentsTarget): Promise<void> => {
+      if (workspace.workspace === null) {
+        return;
+      }
+
+      setCommentExportState({
+        status: "saving",
+        operation: target.scope,
+        message: "Choosing export destination",
+      });
+
+      try {
+        const destinationPath = await selectCommentExportDestination(target);
+
+        if (destinationPath === null) {
+          setCommentExportState(idleCommentExportState);
+          return;
+        }
+
+        setCommentExportState({
+          status: "saving",
+          operation: target.scope,
+          message: "Exporting comments",
+        });
+
+        const response = await exportComments({
+          workspacePath: workspace.workspace.root,
+          target,
+          destinationPath,
+        });
+
+        setCommentExportState({
+          status: "success",
+          operation: target.scope,
+          message: formatCommentExportSuccessMessage(response),
+        });
+      } catch (error) {
+        setCommentExportState({
+          status: "error",
+          operation: target.scope,
+          message: normalizeCommandError(error).message,
+        });
+      }
+    },
+    [workspace.workspace],
+  );
+
+  const exportCommentScope = useCallback(
+    (scope: CommentExportScope): void => {
+      if (specs.selectedSpecId === null) {
+        return;
+      }
+
+      if (scope === "workspace") {
+        void runCommentExport({ scope });
+        return;
+      }
+
+      if (scope === "spec") {
+        void runCommentExport({
+          scope,
+          specId: specs.selectedSpecId,
+        });
+        return;
+      }
+
+      if (specs.selectedFileKey === null) {
+        return;
+      }
+
+      void runCommentExport({
+        scope,
+        specId: specs.selectedSpecId,
+        fileKey: specs.selectedFileKey,
+      });
+    },
+    [runCommentExport, specs.selectedFileKey, specs.selectedSpecId],
+  );
 
   const refreshCurrentView = useCallback(
     async ({
@@ -492,6 +610,7 @@ function App() {
           <CommentSidebar
             listState={comments.listState}
             mutationState={comments.mutationState}
+            exportState={commentExportState}
             activeCommentId={activeCommentId}
             anchorDisplayStates={commentAnchorDisplayStates}
             onSelectComment={setActiveCommentId}
@@ -502,12 +621,21 @@ function App() {
             onReload={() => {
               void comments.reloadComments();
             }}
+            onExportComments={exportCommentScope}
           />
         }
       />
       <WorkspaceDropOverlay isVisible={workspaceDrop.status === "dragging"} />
     </div>
   );
+}
+
+function formatCommentExportSuccessMessage(
+  response: ExportCommentsResponse,
+): string {
+  const label = response.commentCount === 1 ? "comment" : "comments";
+
+  return `Exported ${response.commentCount} ${label} to ${response.destinationPath}`;
 }
 
 export default App;

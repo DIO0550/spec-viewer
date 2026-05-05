@@ -7,9 +7,10 @@ import type {
   Comment,
   CommentAnchor,
   CommentAnchorDisplayState,
+  CommentExportScope,
   CommentId,
 } from "../types/comment";
-import { CommentSidebar } from "./CommentSidebar";
+import { CommentSidebar, type CommentExportState } from "./CommentSidebar";
 
 const anchor: CommentAnchor = {
   fileKey: "tasks",
@@ -115,6 +116,8 @@ function renderReadySidebar(
     onReopenComment?: (commentId: CommentId) => void;
     onDeleteComment?: (commentId: CommentId) => void;
     onUpdateComment?: (commentId: CommentId, body: string) => void;
+    exportState?: CommentExportState;
+    onExportComments?: (scope: CommentExportScope) => void;
   }> = {},
 ): RenderResult {
   return renderComponent(
@@ -136,6 +139,13 @@ function renderReadySidebar(
         commentId: null,
         error: null,
       }}
+      exportState={
+        options.exportState ?? {
+          status: "idle",
+          operation: null,
+          message: null,
+        }
+      }
       activeCommentId={options.activeCommentId ?? null}
       anchorDisplayStates={options.anchorDisplayStates ?? []}
       onSelectComment={options.onSelectComment ?? vi.fn()}
@@ -144,6 +154,7 @@ function renderReadySidebar(
       onDeleteComment={options.onDeleteComment ?? vi.fn()}
       onUpdateComment={options.onUpdateComment ?? vi.fn()}
       onReload={vi.fn()}
+      onExportComments={options.onExportComments}
     />,
   );
 }
@@ -311,6 +322,57 @@ test("CommentSidebarはopenとresolvedの件数とコメント本文を表示す
   expect(
     result.container.querySelector('time[datetime="2026-05-05T10:15:00Z"]'),
   ).not.toBeNull();
+  result.unmount();
+});
+
+test("CommentSidebarはコメントexport操作を発火して状態を表示する", () => {
+  const onExportComments = vi.fn();
+  const result = renderReadySidebar({
+    exportState: {
+      status: "success",
+      operation: "file",
+      message: "Exported 2 comments to /tmp/tasks-comments.md",
+    },
+    onExportComments,
+  });
+  const fileExportButton = result.container.querySelector(
+    '[aria-label="Export current file comments"]',
+  ) as HTMLButtonElement;
+  const specExportButton = result.container.querySelector(
+    '[aria-label="Export current spec comments"]',
+  ) as HTMLButtonElement;
+  const workspaceExportButton = result.container.querySelector(
+    '[aria-label="Export workspace comments"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    fileExportButton.click();
+    specExportButton.click();
+    workspaceExportButton.click();
+  });
+
+  expect(onExportComments).toHaveBeenNthCalledWith(1, "file");
+  expect(onExportComments).toHaveBeenNthCalledWith(2, "spec");
+  expect(onExportComments).toHaveBeenNthCalledWith(3, "workspace");
+  expect(result.container.querySelector('[role="status"]')?.textContent).toBe(
+    "Exported 2 comments to /tmp/tasks-comments.md",
+  );
+  result.unmount();
+});
+
+test("CommentSidebarはexport失敗をalertで表示する", () => {
+  const result = renderReadySidebar({
+    exportState: {
+      status: "error",
+      operation: "workspace",
+      message: "failed to write comment export",
+    },
+    onExportComments: vi.fn(),
+  });
+
+  expect(result.container.querySelector('[role="alert"]')?.textContent).toBe(
+    "failed to write comment export",
+  );
   result.unmount();
 });
 
