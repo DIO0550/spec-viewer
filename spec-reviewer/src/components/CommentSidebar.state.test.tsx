@@ -43,6 +43,30 @@ const resolvedComment: Comment = {
   updatedAt: "2026-05-05T11:30:00Z",
 };
 
+const fuzzyComment: Comment = {
+  ...openComment,
+  id: "cmt_fuzzy",
+  body: "Re-check this moved paragraph before final review.",
+  createdAt: "2026-05-05T12:00:00Z",
+  updatedAt: "2026-05-05T12:15:00Z",
+};
+
+const staleComment: Comment = {
+  ...openComment,
+  id: "cmt_stale",
+  body: "Original snippet changed after this comment was created.",
+  createdAt: "2026-05-05T13:00:00Z",
+  updatedAt: "2026-05-05T13:15:00Z",
+};
+
+const orphanedComment: Comment = {
+  ...openComment,
+  id: "cmt_orphaned",
+  body: "This anchor can no longer be found in the document.",
+  createdAt: "2026-05-05T14:00:00Z",
+  updatedAt: "2026-05-05T14:15:00Z",
+};
+
 type RenderResult = Readonly<{
   container: HTMLDivElement;
   unmount: () => void;
@@ -306,6 +330,76 @@ test("CommentSidebarはreconciliationのアンカー状態を表示する", () =
 
   expect(result.container.textContent).toContain("Anchor moved");
   expect(result.container.textContent).toContain("Anchor orphaned");
+  result.unmount();
+});
+
+test("CommentSidebarは選択した状態フィルターのコメントだけを表示する", () => {
+  const result = renderReadySidebar({
+    comments: [openComment, resolvedComment],
+  });
+  const resolvedFilter = result.container.querySelector(
+    '[aria-label="Show resolved comments"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    resolvedFilter.click();
+  });
+
+  expect(resolvedFilter.getAttribute("aria-pressed")).toBe("true");
+  expect(result.container.textContent).toContain(
+    "This acceptance item is covered.",
+  );
+  expect(result.container.textContent).not.toContain(
+    "Clarify what counts as an active comment highlight.",
+  );
+  result.unmount();
+});
+
+test("CommentSidebarはアンカー状態フィルターの件数と空状態を表示する", () => {
+  const result = renderReadySidebar({
+    comments: [openComment, fuzzyComment, staleComment, orphanedComment],
+    anchorDisplayStates: [
+      {
+        commentId: "cmt_fuzzy",
+        status: "fuzzy",
+      },
+      {
+        commentId: "cmt_stale",
+        status: "stale",
+      },
+      {
+        commentId: "cmt_orphaned",
+        status: "orphaned",
+      },
+    ],
+  });
+  const fuzzyFilter = result.container.querySelector(
+    '[aria-label="Show fuzzy anchor comments"]',
+  ) as HTMLButtonElement;
+  const resolvedFilter = result.container.querySelector(
+    '[aria-label="Show resolved comments"]',
+  ) as HTMLButtonElement;
+
+  expect(fuzzyFilter.textContent).toBe("Fuzzy1");
+
+  act(() => {
+    fuzzyFilter.click();
+  });
+
+  expect(result.container.textContent).toContain(
+    "Re-check this moved paragraph before final review.",
+  );
+  expect(result.container.textContent).not.toContain(
+    "Original snippet changed after this comment was created.",
+  );
+
+  act(() => {
+    resolvedFilter.click();
+  });
+
+  expect(result.container.textContent).toContain(
+    "No comments match the Resolved filter.",
+  );
   result.unmount();
 });
 

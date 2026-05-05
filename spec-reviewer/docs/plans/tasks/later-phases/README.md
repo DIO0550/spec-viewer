@@ -4,7 +4,6 @@ Goal: track UX polish, export, future AI integration, and release preparation.
 
 ## Tasks
 
-- [P4.1 Comment Filters](./p4-01-comment-filters.md)
 - [P4.2 Comment Search](./p4-02-comment-search.md)
 - [P4.3 Theme Support](./p4-03-theme-support.md)
 - [P4.4 Drag And Drop Workspace Open](./p4-04-drag-and-drop-workspace-open.md)
@@ -17,4 +16,3 @@ Goal: track UX polish, export, future AI integration, and release preparation.
 - [P5.2 Apply With AI Placeholder](./p5-02-apply-with-ai-placeholder.md)
 - [P5.3 MCP Feedback Path](./p5-03-mcp-feedback-path.md)
 - [P6.1 Packaging And Release](./p6-01-packaging-and-release.md)
-

@@ -5,6 +5,7 @@ import type {
   AddCommentRequest,
   Comment,
   CommentAnchorDisplayStatus,
+  CommentDisplayFilter,
   CommentDisplayState,
   CommentStatusFilter,
   ListCommentsResponse,
@@ -25,6 +26,9 @@ test("comment command payloadsはP2.8 DTOと一致する", () => {
 test("comment view modelは状態フィルターとorphan表示状態を共有できる", () => {
   expectTypeOf<CommentStatusFilter>().toEqualTypeOf<
     "all" | "open" | "resolved"
+  >();
+  expectTypeOf<CommentDisplayFilter>().toEqualTypeOf<
+    "all" | "open" | "resolved" | "moved" | "fuzzy" | "stale" | "orphaned"
   >();
   expectTypeOf<CommentDisplayState>().toEqualTypeOf<
     "open" | "resolved" | "orphaned"

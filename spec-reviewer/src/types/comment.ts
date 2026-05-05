@@ -19,6 +19,13 @@ export type CommentStatus = "open" | "resolved";
 
 export type CommentStatusFilter = "all" | CommentStatus;
 
+export type CommentDisplayFilter =
+  | CommentStatusFilter
+  | "moved"
+  | "fuzzy"
+  | "stale"
+  | "orphaned";
+
 export type CommentDisplayState = CommentStatus | "orphaned";
 
 export type CommentAnchorDisplayStatus =

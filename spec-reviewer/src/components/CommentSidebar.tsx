@@ -1,4 +1,5 @@
 import { LoaderCircle } from "lucide-react";
+import { useState } from "react";
 
 import type {
   CommentListState,
@@ -8,6 +9,7 @@ import type {
   Comment,
   CommentAnchorDisplayState,
   CommentAnchorDisplayStatus,
+  CommentDisplayFilter,
   CommentId,
 } from "../types/comment";
 import { CommentThread } from "./CommentThread";
@@ -32,6 +34,61 @@ type CommentGroups = Readonly<{
   resolvedComments: readonly Comment[];
 }>;
 
+type CommentFilterOption = Readonly<{
+  filter: CommentDisplayFilter;
+  label: string;
+  ariaLabel: string;
+}>;
+
+type CommentFilterCounts = Readonly<Record<CommentDisplayFilter, number>>;
+
+type CommentSectionModel = Readonly<{
+  id: string;
+  title: string;
+  comments: readonly Comment[];
+  emptyMessage: string;
+}>;
+
+const defaultDisplayFilter: CommentDisplayFilter = "all";
+
+const commentFilterOptions: readonly CommentFilterOption[] = [
+  {
+    filter: "all",
+    label: "All",
+    ariaLabel: "Show all comments",
+  },
+  {
+    filter: "open",
+    label: "Open",
+    ariaLabel: "Show open comments",
+  },
+  {
+    filter: "resolved",
+    label: "Resolved",
+    ariaLabel: "Show resolved comments",
+  },
+  {
+    filter: "moved",
+    label: "Moved",
+    ariaLabel: "Show moved anchor comments",
+  },
+  {
+    filter: "fuzzy",
+    label: "Fuzzy",
+    ariaLabel: "Show fuzzy anchor comments",
+  },
+  {
+    filter: "stale",
+    label: "Stale",
+    ariaLabel: "Show stale anchor comments",
+  },
+  {
+    filter: "orphaned",
+    label: "Orphaned",
+    ariaLabel: "Show orphaned anchor comments",
+  },
+];
+
 /** @returns The right-side comment review surface for the active spec file. */
 export function CommentSidebar({
   listState,
@@ -45,10 +102,20 @@ export function CommentSidebar({
   onUpdateComment,
   onReload,
 }: Props) {
+  const [activeFilter, setActiveFilter] =
+    useState<CommentDisplayFilter>(defaultDisplayFilter);
+
   if (listState.status === "idle") {
     return (
       <section className="comment-sidebar" aria-label="Comments">
-        <CommentSidebarHeader openCount={0} resolvedCount={0} />
+        <CommentSidebarHeader
+          openCount={0}
+          resolvedCount={0}
+          activeFilter={activeFilter}
+          filterCounts={createEmptyFilterCounts()}
+          showFilters={false}
+          onFilterChange={setActiveFilter}
+        />
         <EmptyState
           title="Select a spec file"
           description="Comments appear here once a workspace, spec, and file are selected."
@@ -61,7 +128,14 @@ export function CommentSidebar({
   if (listState.status === "loading") {
     return (
       <section className="comment-sidebar" aria-label="Comments">
-        <CommentSidebarHeader openCount={0} resolvedCount={0} />
+        <CommentSidebarHeader
+          openCount={0}
+          resolvedCount={0}
+          activeFilter={activeFilter}
+          filterCounts={createEmptyFilterCounts()}
+          showFilters={false}
+          onFilterChange={setActiveFilter}
+        />
         <div className="comment-sidebar__loading" role="status">
           <LoaderCircle aria-hidden="true" size={18} />
           <span>Loading comments</span>
@@ -73,7 +147,14 @@ export function CommentSidebar({
   if (listState.status === "error") {
     return (
       <section className="comment-sidebar" aria-label="Comments">
-        <CommentSidebarHeader openCount={0} resolvedCount={0} />
+        <CommentSidebarHeader
+          openCount={0}
+          resolvedCount={0}
+          activeFilter={activeFilter}
+          filterCounts={createEmptyFilterCounts()}
+          showFilters={false}
+          onFilterChange={setActiveFilter}
+        />
         <ErrorState
           title="Comments unavailable"
           message={listState.error.message}
@@ -87,7 +168,14 @@ export function CommentSidebar({
   if (listState.status === "empty") {
     return (
       <section className="comment-sidebar" aria-label="Comments">
-        <CommentSidebarHeader openCount={0} resolvedCount={0} />
+        <CommentSidebarHeader
+          openCount={0}
+          resolvedCount={0}
+          activeFilter={activeFilter}
+          filterCounts={createEmptyFilterCounts()}
+          showFilters={false}
+          onFilterChange={setActiveFilter}
+        />
         <EmptyState
           title="No comments yet"
           description="Open and resolved comments for this file will appear here."
@@ -100,40 +188,52 @@ export function CommentSidebar({
   const groups = groupCommentsByStatus(listState.comments);
   const anchorDisplayStatusByCommentId =
     createAnchorDisplayStatusByCommentId(anchorDisplayStates);
+  const filterCounts = createCommentFilterCounts(
+    listState.comments,
+    anchorDisplayStatusByCommentId,
+  );
+  const filteredComments = filterCommentsByDisplayFilter(
+    listState.comments,
+    activeFilter,
+    anchorDisplayStatusByCommentId,
+  );
+  const sectionModels = createCommentSectionModels(
+    activeFilter,
+    filteredComments,
+  );
 
   return (
     <section className="comment-sidebar" aria-label="Comments">
       <CommentSidebarHeader
         openCount={groups.openComments.length}
         resolvedCount={groups.resolvedComments.length}
+        activeFilter={activeFilter}
+        filterCounts={filterCounts}
+        showFilters={true}
+        onFilterChange={setActiveFilter}
       />
       <MutationErrorMessage mutationState={mutationState} />
-      <CommentSection
-        title="Open"
-        comments={groups.openComments}
-        activeCommentId={activeCommentId}
-        anchorDisplayStatusByCommentId={anchorDisplayStatusByCommentId}
-        mutationState={mutationState}
-        emptyMessage="No open comments"
-        onSelectComment={onSelectComment}
-        onResolveComment={onResolveComment}
-        onReopenComment={onReopenComment}
-        onDeleteComment={onDeleteComment}
-        onUpdateComment={onUpdateComment}
-      />
-      <CommentSection
-        title="Resolved"
-        comments={groups.resolvedComments}
-        activeCommentId={activeCommentId}
-        anchorDisplayStatusByCommentId={anchorDisplayStatusByCommentId}
-        mutationState={mutationState}
-        emptyMessage="No resolved comments"
-        onSelectComment={onSelectComment}
-        onResolveComment={onResolveComment}
-        onReopenComment={onReopenComment}
-        onDeleteComment={onDeleteComment}
-        onUpdateComment={onUpdateComment}
-      />
+      {filteredComments.length === 0 ? (
+        <FilteredEmptyState activeFilter={activeFilter} />
+      ) : (
+        sectionModels.map((sectionModel) => (
+          <CommentSection
+            key={sectionModel.id}
+            id={sectionModel.id}
+            title={sectionModel.title}
+            comments={sectionModel.comments}
+            activeCommentId={activeCommentId}
+            anchorDisplayStatusByCommentId={anchorDisplayStatusByCommentId}
+            mutationState={mutationState}
+            emptyMessage={sectionModel.emptyMessage}
+            onSelectComment={onSelectComment}
+            onResolveComment={onResolveComment}
+            onReopenComment={onReopenComment}
+            onDeleteComment={onDeleteComment}
+            onUpdateComment={onUpdateComment}
+          />
+        ))
+      )}
     </section>
   );
 }
@@ -141,10 +241,21 @@ export function CommentSidebar({
 type HeaderProps = Readonly<{
   openCount: number;
   resolvedCount: number;
+  activeFilter: CommentDisplayFilter;
+  filterCounts: CommentFilterCounts;
+  showFilters: boolean;
+  onFilterChange: (filter: CommentDisplayFilter) => void;
 }>;
 
 /** @returns Sidebar title and total count badges. */
-function CommentSidebarHeader({ openCount, resolvedCount }: HeaderProps) {
+function CommentSidebarHeader({
+  openCount,
+  resolvedCount,
+  activeFilter,
+  filterCounts,
+  showFilters,
+  onFilterChange,
+}: HeaderProps) {
   return (
     <header className="comment-sidebar__header">
       <div>
@@ -159,6 +270,25 @@ function CommentSidebarHeader({ openCount, resolvedCount }: HeaderProps) {
           Resolved<span>{resolvedCount}</span>
         </span>
       </div>
+      {showFilters ? (
+        <div className="comment-sidebar__filters" aria-label="Comment filters">
+          {commentFilterOptions.map((option) => (
+            <button
+              key={option.filter}
+              className="comment-sidebar__filter"
+              type="button"
+              aria-label={option.ariaLabel}
+              aria-pressed={activeFilter === option.filter}
+              onClick={() => {
+                onFilterChange(option.filter);
+              }}
+            >
+              <span>{option.label}</span>
+              <span>{filterCounts[option.filter]}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
     </header>
   );
 }
@@ -181,7 +311,8 @@ function MutationErrorMessage({ mutationState }: MutationErrorMessageProps) {
 }
 
 type SectionProps = Readonly<{
-  title: "Open" | "Resolved";
+  id: string;
+  title: string;
   comments: readonly Comment[];
   activeCommentId: CommentId | null;
   anchorDisplayStatusByCommentId: ReadonlyMap<
@@ -199,6 +330,7 @@ type SectionProps = Readonly<{
 
 /** @returns One grouped comment section with its count badge. */
 function CommentSection({
+  id,
   title,
   comments,
   activeCommentId,
@@ -212,9 +344,9 @@ function CommentSection({
   onUpdateComment,
 }: SectionProps) {
   return (
-    <section className="comment-sidebar__section" aria-labelledby={title}>
+    <section className="comment-sidebar__section" aria-labelledby={id}>
       <div className="comment-sidebar__section-header">
-        <h3 id={title}>{title}</h3>
+        <h3 id={id}>{title}</h3>
         <span aria-label={`${title} comment count`}>{comments.length}</span>
       </div>
       {comments.length === 0 ? (
@@ -244,6 +376,19 @@ function CommentSection({
   );
 }
 
+type FilteredEmptyStateProps = Readonly<{
+  activeFilter: CommentDisplayFilter;
+}>;
+
+/** @returns A focused empty state when the selected filter has no matches. */
+function FilteredEmptyState({ activeFilter }: FilteredEmptyStateProps) {
+  return (
+    <p className="comment-sidebar__filtered-empty">
+      No comments match the {formatFilterLabel(activeFilter)} filter.
+    </p>
+  );
+}
+
 /** @returns Comments split by open and resolved display sections. */
 function groupCommentsByStatus(comments: readonly Comment[]): CommentGroups {
   return {
@@ -259,4 +404,123 @@ function createAnchorDisplayStatusByCommentId(
   return new Map(
     states.map((state) => [state.commentId, state.status] as const),
   );
+}
+
+/** @returns An empty filter count record for non-ready sidebar states. */
+function createEmptyFilterCounts(): CommentFilterCounts {
+  return {
+    all: 0,
+    open: 0,
+    resolved: 0,
+    moved: 0,
+    fuzzy: 0,
+    stale: 0,
+    orphaned: 0,
+  };
+}
+
+/** @returns Count badges for each available comment filter. */
+function createCommentFilterCounts(
+  comments: readonly Comment[],
+  anchorDisplayStatusByCommentId: ReadonlyMap<
+    CommentId,
+    CommentAnchorDisplayStatus
+  >,
+): CommentFilterCounts {
+  return comments.reduce<CommentFilterCounts>((counts, comment) => {
+    const anchorStatus =
+      anchorDisplayStatusByCommentId.get(comment.id) ?? "exact";
+
+    return {
+      ...counts,
+      all: counts.all + 1,
+      open: comment.resolved ? counts.open : counts.open + 1,
+      resolved: comment.resolved ? counts.resolved + 1 : counts.resolved,
+      moved: anchorStatus === "moved" ? counts.moved + 1 : counts.moved,
+      fuzzy: anchorStatus === "fuzzy" ? counts.fuzzy + 1 : counts.fuzzy,
+      stale: anchorStatus === "stale" ? counts.stale + 1 : counts.stale,
+      orphaned:
+        anchorStatus === "orphaned" ? counts.orphaned + 1 : counts.orphaned,
+    };
+  }, createEmptyFilterCounts());
+}
+
+/** @returns Comments visible for the selected display filter. */
+function filterCommentsByDisplayFilter(
+  comments: readonly Comment[],
+  activeFilter: CommentDisplayFilter,
+  anchorDisplayStatusByCommentId: ReadonlyMap<
+    CommentId,
+    CommentAnchorDisplayStatus
+  >,
+): readonly Comment[] {
+  if (activeFilter === "all") {
+    return comments;
+  }
+
+  if (activeFilter === "open") {
+    return comments.filter((comment) => !comment.resolved);
+  }
+
+  if (activeFilter === "resolved") {
+    return comments.filter((comment) => comment.resolved);
+  }
+
+  return comments.filter(
+    (comment) =>
+      (anchorDisplayStatusByCommentId.get(comment.id) ?? "exact") ===
+      activeFilter,
+  );
+}
+
+/** @returns Display sections for the filtered comment list. */
+function createCommentSectionModels(
+  activeFilter: CommentDisplayFilter,
+  filteredComments: readonly Comment[],
+): readonly CommentSectionModel[] {
+  if (activeFilter === "all") {
+    const groups = groupCommentsByStatus(filteredComments);
+
+    return [
+      {
+        id: "comment-section-open",
+        title: "Open",
+        comments: groups.openComments,
+        emptyMessage: "No open comments",
+      },
+      {
+        id: "comment-section-resolved",
+        title: "Resolved",
+        comments: groups.resolvedComments,
+        emptyMessage: "No resolved comments",
+      },
+    ];
+  }
+
+  return [
+    {
+      id: `comment-section-${activeFilter}`,
+      title: formatSectionTitle(activeFilter),
+      comments: filteredComments,
+      emptyMessage: `No ${formatFilterLabel(activeFilter).toLowerCase()} comments`,
+    },
+  ];
+}
+
+/** @returns A readable label for the selected filter. */
+function formatFilterLabel(filter: CommentDisplayFilter): string {
+  const option = commentFilterOptions.find(
+    (filterOption) => filterOption.filter === filter,
+  );
+
+  return option?.label ?? filter;
+}
+
+/** @returns Section title for a filtered comment list. */
+function formatSectionTitle(filter: CommentDisplayFilter): string {
+  if (filter === "open" || filter === "resolved") {
+    return formatFilterLabel(filter);
+  }
+
+  return `${formatFilterLabel(filter)} Anchors`;
 }
