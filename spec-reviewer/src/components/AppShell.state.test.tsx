@@ -111,11 +111,13 @@ test("AppShellはtoolbar、tree、tabs、viewer、comment sidebarを表示する
           errorMessage={null}
           refreshStatus={{ status: "idle", message: null }}
           canRefresh={true}
+          themeMode="system"
           onInputChange={vi.fn()}
           onBrowse={vi.fn()}
           onLoad={vi.fn()}
           onRefresh={vi.fn()}
           onReset={vi.fn()}
+          onThemeModeChange={vi.fn()}
         />
       }
       sidebar={
@@ -260,11 +262,13 @@ test("WorkspaceToolbarはopen workspace操作を発火する", () => {
       errorMessage={null}
       refreshStatus={{ status: "idle", message: null }}
       canRefresh={false}
+      themeMode="system"
       onInputChange={vi.fn()}
       onBrowse={onBrowse}
       onLoad={vi.fn()}
       onRefresh={vi.fn()}
       onReset={vi.fn()}
+      onThemeModeChange={vi.fn()}
     />,
   );
   const openButton = result.container.querySelector(
@@ -293,11 +297,13 @@ test("WorkspaceToolbarはcurrent view refresh操作と状態を表示する", ()
         message: "Content may be stale. Refresh to retry.",
       }}
       canRefresh={true}
+      themeMode="system"
       onInputChange={vi.fn()}
       onBrowse={vi.fn()}
       onLoad={vi.fn()}
       onRefresh={onRefresh}
       onReset={vi.fn()}
+      onThemeModeChange={vi.fn()}
     />,
   );
   const refreshButton = result.container.querySelector(
@@ -311,6 +317,39 @@ test("WorkspaceToolbarはcurrent view refresh操作と状態を表示する", ()
   });
 
   expect(onRefresh).toHaveBeenCalledOnce();
+  result.unmount();
+});
+
+test("WorkspaceToolbarはtheme mode変更を発火する", () => {
+  const onThemeModeChange = vi.fn();
+  const result = renderComponent(
+    <WorkspaceToolbar
+      workspacePath={workspacePath}
+      inputValue={workspacePath}
+      isLoading={false}
+      isBrowsing={false}
+      errorMessage={null}
+      refreshStatus={{ status: "idle", message: null }}
+      canRefresh={true}
+      themeMode="system"
+      onInputChange={vi.fn()}
+      onBrowse={vi.fn()}
+      onLoad={vi.fn()}
+      onRefresh={vi.fn()}
+      onReset={vi.fn()}
+      onThemeModeChange={onThemeModeChange}
+    />,
+  );
+  const themeSelect = result.container.querySelector(
+    "#theme-mode",
+  ) as HTMLSelectElement;
+
+  act(() => {
+    themeSelect.value = "dark";
+    themeSelect.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+
+  expect(onThemeModeChange).toHaveBeenCalledWith("dark");
   result.unmount();
 });
 

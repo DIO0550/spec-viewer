@@ -288,11 +288,13 @@ function createShellArgs({
         errorMessage={workspaceErrorMessage ?? null}
         refreshStatus={{ status: "idle", message: null }}
         canRefresh={selectedSpec !== null && selectedFileKey !== null}
+        themeMode="system"
         onInputChange={fn()}
         onBrowse={fn()}
         onLoad={fn()}
         onRefresh={fn()}
         onReset={fn()}
+        onThemeModeChange={fn()}
       />
     ),
     sidebar: (

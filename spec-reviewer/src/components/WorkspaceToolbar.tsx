@@ -1,4 +1,6 @@
-import { FolderOpen, RefreshCcw, RotateCcw } from "lucide-react";
+import { FolderOpen, MonitorCog, RefreshCcw, RotateCcw } from "lucide-react";
+
+import type { ThemeMode } from "../hooks/useTheme";
 
 export type WorkspaceRefreshStatus = Readonly<{
   status: "idle" | "loading" | "stale" | "error";
@@ -13,11 +15,13 @@ type Props = Readonly<{
   errorMessage: string | null;
   refreshStatus: WorkspaceRefreshStatus;
   canRefresh: boolean;
+  themeMode: ThemeMode;
   onInputChange: (nextValue: string) => void;
   onBrowse: () => void;
   onLoad: () => void;
   onRefresh: () => void;
   onReset: () => void;
+  onThemeModeChange: (nextThemeMode: ThemeMode) => void;
 }>;
 
 /** @returns Workspace path controls and current workspace status. */
@@ -29,11 +33,13 @@ export function WorkspaceToolbar({
   errorMessage,
   refreshStatus,
   canRefresh,
+  themeMode,
   onInputChange,
   onBrowse,
   onLoad,
   onRefresh,
   onReset,
+  onThemeModeChange,
 }: Props) {
   const isBusy = isLoading || isBrowsing;
   const canLoad = inputValue.trim().length > 0 && !isBusy;
@@ -78,6 +84,22 @@ export function WorkspaceToolbar({
         />
       </label>
       <div className="workspace-toolbar__actions">
+        <label className="workspace-toolbar__theme" htmlFor="theme-mode">
+          <MonitorCog aria-hidden="true" size={16} />
+          <span>Theme</span>
+          <select
+            id="theme-mode"
+            value={themeMode}
+            aria-label="Theme mode"
+            onChange={(event) => {
+              onThemeModeChange(event.currentTarget.value as ThemeMode);
+            }}
+          >
+            <option value="system">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </label>
         <button
           className="icon-button icon-button--primary"
           type="button"

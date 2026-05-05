@@ -15,6 +15,7 @@ import {
 import { useComments } from "./hooks/useComments";
 import { useSpecFileWatcher } from "./hooks/useSpecFileWatcher";
 import { useSpecs } from "./hooks/useSpecs";
+import { useTheme } from "./hooks/useTheme";
 import { useWorkspace } from "./hooks/useWorkspace";
 import type { CommentAnchorDisplayState, CommentId } from "./types/comment";
 import { normalizeCommandError, selectWorkspaceDirectory } from "./lib/tauri";
@@ -33,6 +34,7 @@ type RefreshCurrentViewOptions = Readonly<{
 
 function App() {
   const workspace = useWorkspace();
+  const theme = useTheme();
   const specs = useSpecs({ workspacePath: workspace.workspace?.root ?? null });
   const comments = useComments({
     workspacePath: workspace.workspace?.root ?? null,
@@ -306,6 +308,7 @@ function App() {
           errorMessage={toolbarErrorMessage}
           refreshStatus={refreshStatus}
           canRefresh={canRefreshCurrentView}
+          themeMode={theme.themeMode}
           onInputChange={setWorkspaceInput}
           onBrowse={() => {
             void browseWorkspace();
@@ -315,6 +318,7 @@ function App() {
             void refreshCurrentViewManually();
           }}
           onReset={resetWorkspace}
+          onThemeModeChange={theme.setThemeMode}
         />
       }
       sidebar={

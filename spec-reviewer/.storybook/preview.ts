@@ -1,7 +1,19 @@
+import { withThemeByDataAttribute } from "@storybook/addon-themes";
 import type { Preview } from "@storybook/react-vite";
 import "../src/App.css";
 
 const preview: Preview = {
+  decorators: [
+    withThemeByDataAttribute({
+      themes: {
+        Light: "light",
+        Dark: "dark",
+      },
+      defaultTheme: "Light",
+      attributeName: "data-theme",
+      parentSelector: "html",
+    }),
+  ],
   parameters: {
     controls: {
       matchers: {
