@@ -91,3 +91,35 @@ test("useWorkspaceは読み込み失敗を正規化済みerror状態にする", 
   });
   result.unmount();
 });
+
+test("useWorkspaceは指定時に読み込み失敗後も現在のworkspaceを保持する", async () => {
+  const loadWorkspace = vi
+    .fn()
+    .mockResolvedValueOnce(workspace)
+    .mockRejectedValueOnce("unsupported workspace");
+  const result = renderHook(() => useWorkspace({ loadWorkspace }));
+
+  await act(async () => {
+    await result.current.load("/workspace/spec-reviewer");
+  });
+
+  await act(async () => {
+    const isLoaded = await result.current.load("/workspace/file.md", {
+      preserveCurrentWorkspace: true,
+    });
+
+    expect(isLoaded).toBe(false);
+  });
+
+  expect(result.current.state).toEqual({
+    status: "ready",
+    workspacePath: "/workspace/spec-reviewer",
+    workspace,
+    error: {
+      code: "unknown",
+      message: "unsupported workspace",
+      raw: "unsupported workspace",
+    },
+  });
+  result.unmount();
+});

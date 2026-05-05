@@ -6,6 +6,7 @@ import {
   loadWorkspace,
   normalizeCommandError,
   readSpecFile,
+  validateWorkspaceDirectory,
 } from "./tauri";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -27,6 +28,18 @@ test("loadWorkspaceはload_workspaceへ選択ディレクトリを渡す", async
   expect(result.root).toBe("/workspace/spec-reviewer");
   expect(invokeMock).toHaveBeenCalledWith("load_workspace", {
     request: { selectedDirectory: "/workspace/spec-reviewer" },
+  });
+});
+
+test("validateWorkspaceDirectoryはvalidate_workspace_directoryへpathを渡す", async () => {
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue({ isDirectory: true });
+
+  const result = await validateWorkspaceDirectory("/workspace/spec-reviewer");
+
+  expect(result.isDirectory).toBe(true);
+  expect(invokeMock).toHaveBeenCalledWith("validate_workspace_directory", {
+    request: { path: "/workspace/spec-reviewer" },
   });
 });
 
