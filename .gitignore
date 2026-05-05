@@ -137,8 +137,16 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+storybook-static/
+
+# Tauri / Rust
+**/src-tauri/target/
+**/src-tauri/gen/
+**/Cargo.lock.bak
 
 .pnpm-store
 .playwright
 .playwright-cli
 playwright-cli/
+.init-done
+.codex/skills
