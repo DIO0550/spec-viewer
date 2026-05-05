@@ -4,7 +4,6 @@ Goal: allow users to create, view, update, resolve, and delete comments without 
 
 ## Tasks
 
-- [P2.4 JSON Persistence Format](./p2-04-json-persistence-format.md)
 - [P2.5 Comment Storage Paths](./p2-05-comment-storage-paths.md)
 - [P2.6 Comment Store Implementation](./p2-06-comment-store-implementation.md)
 - [P2.7 Comment Use Cases](./p2-07-comment-use-cases.md)
