@@ -7,13 +7,16 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::{
-    app::use_cases::AppUseCaseError,
+    app::use_cases::{
+        AnchorResolutionReason, AnchorResolutionStatus, AppUseCaseError, CommentAnchorResolution,
+        CommentAnchorResolutionTarget, ReadSpecFileResult,
+    },
     domain::{
         comment::{
             BlockIndex, BlockType, CharRange, Comment, CommentAnchor, CommentDomainError,
             CommentStatus, CommentStatusFilter, TextHash, TextSnippet,
         },
-        spec::SpecFileKey,
+        spec::{MarkdownBlock, MarkdownBlockSourceRange, SpecFileKey},
     },
 };
 
@@ -96,6 +99,7 @@ pub struct CommentResponse {
     body: String,
     status: String,
     resolved: bool,
+    anchor_resolution: Option<CommentAnchorResolutionResponse>,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
 }
@@ -121,6 +125,10 @@ impl CommentResponse {
         self.resolved
     }
 
+    pub fn anchor_resolution(&self) -> Option<&CommentAnchorResolutionResponse> {
+        self.anchor_resolution.as_ref()
+    }
+
     pub fn created_at(&self) -> DateTime<Utc> {
         self.created_at
     }
@@ -139,6 +147,87 @@ pub struct CommentAnchorResponse {
     text_hash: String,
     text_snippet: String,
     char_range: CharRangeDto,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CommentAnchorResolutionResponse {
+    status: String,
+    reason: String,
+    details: Option<String>,
+    target: Option<CommentAnchorResolutionTargetResponse>,
+}
+
+impl CommentAnchorResolutionResponse {
+    pub fn status(&self) -> &str {
+        &self.status
+    }
+
+    pub fn reason(&self) -> &str {
+        &self.reason
+    }
+
+    pub fn details(&self) -> Option<&str> {
+        self.details.as_deref()
+    }
+
+    pub fn target(&self) -> Option<&CommentAnchorResolutionTargetResponse> {
+        self.target.as_ref()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CommentAnchorResolutionTargetResponse {
+    block_type: String,
+    block_index: usize,
+    text_hash: String,
+    text_snippet: String,
+    source_range: Option<CommentSourceRangeResponse>,
+    score: u8,
+}
+
+impl CommentAnchorResolutionTargetResponse {
+    pub fn block_type(&self) -> &str {
+        &self.block_type
+    }
+
+    pub fn block_index(&self) -> usize {
+        self.block_index
+    }
+
+    pub fn text_hash(&self) -> &str {
+        &self.text_hash
+    }
+
+    pub fn text_snippet(&self) -> &str {
+        &self.text_snippet
+    }
+
+    pub fn source_range(&self) -> Option<&CommentSourceRangeResponse> {
+        self.source_range.as_ref()
+    }
+
+    pub fn score(&self) -> u8 {
+        self.score
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CommentSourceRangeResponse {
+    start_byte_offset: usize,
+    end_byte_offset: usize,
+}
+
+impl CommentSourceRangeResponse {
+    pub fn start_byte_offset(&self) -> usize {
+        self.start_byte_offset
+    }
+
+    pub fn end_byte_offset(&self) -> usize {
+        self.end_byte_offset
+    }
 }
 
 impl CommentAnchorResponse {
@@ -207,12 +296,14 @@ pub fn list_comments(
         .use_cases()
         .load_workspace(&request.workspace_path)
         .map_err(CommandError::from)?;
-    let comments = state
+    let current_blocks =
+        read_current_markdown_blocks(state.use_cases(), &workspace, &request.spec_id, file_key)?;
+    let resolutions = state
         .use_cases()
         .comment_use_cases(&workspace)
-        .list_comments(&request.spec_id, file_key, status_filter)?;
+        .resolve_comment_anchors(&request.spec_id, file_key, status_filter, &current_blocks)?;
 
-    Ok(ListCommentsResponse::from(comments))
+    Ok(ListCommentsResponse::from(resolutions.into_resolutions()))
 }
 
 #[tauri::command]
@@ -299,10 +390,10 @@ pub fn toggle_comment_resolved(
     update_comment_status(state, request, CommentStatusAction::Toggle)
 }
 
-impl From<Vec<Comment>> for ListCommentsResponse {
-    fn from(comments: Vec<Comment>) -> Self {
+impl From<Vec<CommentAnchorResolution>> for ListCommentsResponse {
+    fn from(resolutions: Vec<CommentAnchorResolution>) -> Self {
         Self {
-            comments: comments.iter().map(CommentResponse::from).collect(),
+            comments: resolutions.iter().map(CommentResponse::from).collect(),
         }
     }
 }
@@ -315,9 +406,19 @@ impl From<&Comment> for CommentResponse {
             body: comment.body().as_str().to_string(),
             status: status_to_response(comment.status()).to_string(),
             resolved: comment.is_resolved(),
+            anchor_resolution: None,
             created_at: comment.created_at(),
             updated_at: comment.updated_at(),
         }
+    }
+}
+
+impl From<&CommentAnchorResolution> for CommentResponse {
+    fn from(resolution: &CommentAnchorResolution) -> Self {
+        let mut response = Self::from(resolution.comment());
+        response.anchor_resolution = Some(CommentAnchorResolutionResponse::from(resolution));
+
+        response
     }
 }
 
@@ -335,6 +436,43 @@ impl From<&CommentAnchor> for CommentAnchorResponse {
                 start: char_range.start(),
                 end: char_range.end(),
             },
+        }
+    }
+}
+
+impl From<&CommentAnchorResolution> for CommentAnchorResolutionResponse {
+    fn from(resolution: &CommentAnchorResolution) -> Self {
+        Self {
+            status: anchor_resolution_status_to_response(resolution.status()).to_string(),
+            reason: anchor_resolution_reason_to_response(resolution.reason()).to_string(),
+            details: resolution.details().map(str::to_string),
+            target: resolution
+                .target()
+                .map(CommentAnchorResolutionTargetResponse::from),
+        }
+    }
+}
+
+impl From<&CommentAnchorResolutionTarget> for CommentAnchorResolutionTargetResponse {
+    fn from(target: &CommentAnchorResolutionTarget) -> Self {
+        let block = target.block();
+
+        Self {
+            block_type: block.block_type().as_str().to_string(),
+            block_index: block.index().value(),
+            text_hash: block.text_hash().as_str().to_string(),
+            text_snippet: create_block_text_snippet(block.text().normalized()),
+            source_range: block.source_range().map(CommentSourceRangeResponse::from),
+            score: target.score(),
+        }
+    }
+}
+
+impl From<MarkdownBlockSourceRange> for CommentSourceRangeResponse {
+    fn from(range: MarkdownBlockSourceRange) -> Self {
+        Self {
+            start_byte_offset: range.start_byte_offset(),
+            end_byte_offset: range.end_byte_offset(),
         }
     }
 }
@@ -392,6 +530,22 @@ fn update_comment_status(
     Ok(CommentResponse::from(&comment))
 }
 
+fn read_current_markdown_blocks(
+    use_cases: &crate::app::use_cases::FilesystemAppUseCases,
+    workspace: &crate::app::use_cases::LoadWorkspaceResult,
+    spec_id: &str,
+    file_key: SpecFileKey,
+) -> CommandResult<Vec<MarkdownBlock>> {
+    let result = use_cases
+        .read_spec_file(workspace, spec_id, file_key)
+        .map_err(CommandError::from)?;
+
+    match result {
+        ReadSpecFileResult::Found(document) => Ok(document.blocks().to_vec()),
+        ReadSpecFileResult::Missing(_) => Ok(Vec::new()),
+    }
+}
+
 fn parse_file_key(value: &str) -> CommandResult<SpecFileKey> {
     SpecFileKey::from_str(value)
         .map_err(|_| CommandError::invalid_request(format!("unsupported file key: {value}")))
@@ -444,6 +598,35 @@ fn status_to_response(status: CommentStatus) -> &'static str {
         CommentStatus::Open => "open",
         CommentStatus::Resolved => "resolved",
     }
+}
+
+fn anchor_resolution_status_to_response(status: AnchorResolutionStatus) -> &'static str {
+    match status {
+        AnchorResolutionStatus::Resolved => "resolved",
+        AnchorResolutionStatus::Moved => "moved",
+        AnchorResolutionStatus::Fuzzy => "fuzzy",
+        AnchorResolutionStatus::Orphaned => "orphaned",
+    }
+}
+
+fn anchor_resolution_reason_to_response(reason: AnchorResolutionReason) -> &'static str {
+    match reason {
+        AnchorResolutionReason::ExactMatch => "exact_match",
+        AnchorResolutionReason::MovedByHash => "moved_by_hash",
+        AnchorResolutionReason::StaleSnippet => "stale_snippet",
+        AnchorResolutionReason::FuzzyMatch => "fuzzy_match",
+        AnchorResolutionReason::MissingOriginalBlock => "missing_original_block",
+        AnchorResolutionReason::AmbiguousFuzzyCandidates => "ambiguous_fuzzy_candidates",
+        AnchorResolutionReason::BelowThreshold => "below_threshold",
+        AnchorResolutionReason::DeletedText => "deleted_text",
+        AnchorResolutionReason::UnsupportedBlockType => "unsupported_block_type",
+    }
+}
+
+fn create_block_text_snippet(text: &str) -> String {
+    const MAX_BLOCK_TEXT_SNIPPET_LENGTH: usize = 160;
+
+    text.chars().take(MAX_BLOCK_TEXT_SNIPPET_LENGTH).collect()
 }
 
 fn invalid_comment(error: CommentDomainError) -> CommandError {
@@ -512,13 +695,47 @@ mod tests {
         )
         .expect("comment should be valid");
 
-        let response = ListCommentsResponse::from(vec![comment]);
+        let response = ListCommentsResponse {
+            comments: vec![CommentResponse::from(&comment)],
+        };
 
         assert_eq!(1, response.comments().len());
         assert_eq!("cmt_1", response.comments()[0].id());
         assert_eq!("tasks", response.comments()[0].anchor().file_key());
         assert_eq!("open", response.comments()[0].status());
         assert!(!response.comments()[0].resolved());
+    }
+
+    #[test]
+    fn anchor_resolution_status_and_reason_use_frontend_labels() {
+        assert_eq!(
+            "resolved",
+            anchor_resolution_status_to_response(AnchorResolutionStatus::Resolved)
+        );
+        assert_eq!(
+            "moved",
+            anchor_resolution_status_to_response(AnchorResolutionStatus::Moved)
+        );
+        assert_eq!(
+            "fuzzy",
+            anchor_resolution_status_to_response(AnchorResolutionStatus::Fuzzy)
+        );
+        assert_eq!(
+            "orphaned",
+            anchor_resolution_status_to_response(AnchorResolutionStatus::Orphaned)
+        );
+        assert_eq!(
+            "exact_match",
+            anchor_resolution_reason_to_response(AnchorResolutionReason::ExactMatch)
+        );
+        assert_eq!(
+            "stale_snippet",
+            anchor_resolution_reason_to_response(AnchorResolutionReason::StaleSnippet)
+        );
+        assert_eq!(
+            "ambiguous_fuzzy_candidates",
+            anchor_resolution_reason_to_response(AnchorResolutionReason::AmbiguousFuzzyCandidates)
+        );
     }
 
     #[test]

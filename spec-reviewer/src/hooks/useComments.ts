@@ -675,25 +675,57 @@ function upsertDisplayableComment(
   comment: Comment,
   statusFilter: CommentStatusFilter,
 ): readonly Comment[] {
+  const commentWithResolution = preserveAnchorResolution(comments, comment);
   const withoutComment = comments.filter(
-    (currentComment) => currentComment.id !== comment.id,
+    (currentComment) => currentComment.id !== commentWithResolution.id,
   );
 
-  if (!shouldDisplayComment(comment, statusFilter)) {
+  if (!shouldDisplayComment(commentWithResolution, statusFilter)) {
     return withoutComment;
   }
 
   const replaceIndex = comments.findIndex(
-    (currentComment) => currentComment.id === comment.id,
+    (currentComment) => currentComment.id === commentWithResolution.id,
   );
 
   if (replaceIndex < 0) {
-    return [...comments, comment];
+    return [...comments, commentWithResolution];
   }
 
   return comments.map((currentComment) =>
-    currentComment.id === comment.id ? comment : currentComment,
+    currentComment.id === commentWithResolution.id
+      ? commentWithResolution
+      : currentComment,
   );
+}
+
+/** @returns A command result with existing resolution metadata retained when omitted. */
+function preserveAnchorResolution(
+  comments: readonly Comment[],
+  comment: Comment,
+): Comment {
+  if (
+    comment.anchorResolution !== undefined &&
+    comment.anchorResolution !== null
+  ) {
+    return comment;
+  }
+
+  const currentComment = comments.find(
+    (candidate) => candidate.id === comment.id,
+  );
+
+  if (
+    currentComment === undefined ||
+    currentComment.anchorResolution === undefined
+  ) {
+    return comment;
+  }
+
+  return {
+    ...comment,
+    anchorResolution: currentComment.anchorResolution,
+  };
 }
 
 /** @returns Comments after toggling one comment locally. */

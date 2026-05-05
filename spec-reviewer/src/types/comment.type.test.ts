@@ -4,6 +4,7 @@ import type { CommandRequest, CommandResponse } from "./ipc";
 import type {
   AddCommentRequest,
   Comment,
+  CommentAnchorDisplayStatus,
   CommentDisplayState,
   CommentStatusFilter,
   ListCommentsResponse,
@@ -27,5 +28,8 @@ test("comment view modelは状態フィルターとorphan表示状態を共有�
   >();
   expectTypeOf<CommentDisplayState>().toEqualTypeOf<
     "open" | "resolved" | "orphaned"
+  >();
+  expectTypeOf<CommentAnchorDisplayStatus>().toEqualTypeOf<
+    "exact" | "moved" | "fuzzy" | "orphaned" | "stale"
   >();
 });

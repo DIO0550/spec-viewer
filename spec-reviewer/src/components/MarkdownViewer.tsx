@@ -4,7 +4,11 @@ import {
   type CSSProperties,
   type KeyboardEventHandler,
   type MouseEventHandler,
+  type ReactElement,
+  type ReactNode,
   type RefObject,
+  cloneElement,
+  isValidElement,
   useEffect,
   useRef,
   useState,
@@ -45,6 +49,7 @@ type BlockMetadata = Readonly<{
   "data-source-end-byte-offset"?: number;
   "data-comment-highlight"?: "true";
   "data-comment-highlight-count"?: number;
+  "data-comment-highlight-mode"?: CommentHighlightMode;
   "data-comment-highlight-state"?: CommentHighlightState;
   "data-comment-ids"?: string;
   "aria-label"?: string;
@@ -55,15 +60,37 @@ type BlockMetadata = Readonly<{
 }>;
 
 type BlockIndexer = Readonly<{
-  next: (blockType: BlockType) => BlockMetadata;
+  next: (blockType: BlockType) => IndexedBlock;
 }>;
 
-type CommentHighlightState = "open" | "resolved" | "active" | "stale";
+type CommentHighlightState =
+  | "open"
+  | "resolved"
+  | "active"
+  | "stale"
+  | "moved"
+  | "fuzzy";
+
+type CommentHighlightMode = "block" | "range";
+
+type IndexedBlock = Readonly<{
+  metadata: BlockMetadata;
+  rangeHighlights: readonly CommentRangeHighlight[];
+}>;
+
+type CommentRangeHighlight = Readonly<{
+  commentIds: readonly CommentId[];
+  selectCommentId: CommentId;
+  state: CommentHighlightState;
+  start: number;
+  end: number;
+}>;
 
 type CommentBlockHighlight = Readonly<{
   commentIds: readonly CommentId[];
   selectCommentId: CommentId;
   state: CommentHighlightState;
+  rangeHighlights: readonly CommentRangeHighlight[];
 }>;
 
 type CommentBlockHighlights = ReadonlyMap<string, CommentBlockHighlight>;
@@ -404,7 +431,7 @@ function createBlockIndexer({
   let backendBlockCursor = 0;
 
   return {
-    next: (blockType: BlockType): BlockMetadata => {
+    next: (blockType: BlockType): IndexedBlock => {
       const backendBlock = findNextBackendBlock({
         blocks,
         blockType,
@@ -425,11 +452,14 @@ function createBlockIndexer({
         backendBlockCursor = blocks.indexOf(backendBlock) + 1;
       }
 
-      return createHighlightedBlockMetadata({
-        metadata: attachBackendBlockMetadata(metadata, backendBlock),
-        highlight,
-        onSelectComment,
-      });
+      return {
+        metadata: createHighlightedBlockMetadata({
+          metadata: attachBackendBlockMetadata(metadata, backendBlock),
+          highlight,
+          onSelectComment,
+        }),
+        rangeHighlights: highlight?.rangeHighlights ?? [],
+      };
     },
   };
 }
@@ -495,29 +525,78 @@ function createCommentAnchorDisplayStates({
   if (renderedRoot === null) {
     return comments.map((comment) => ({
       commentId: comment.id,
-      status: "missing",
+      status: "orphaned",
     }));
   }
 
   return comments.map((comment) => {
-    const block = findCommentAnchorBlock(comment.anchor, renderedRoot);
+    const resolvedStatus = createResolvedAnchorDisplayStatus({
+      comment,
+      renderedRoot,
+    });
+
+    if (resolvedStatus !== null) {
+      return {
+        commentId: comment.id,
+        status: resolvedStatus,
+      };
+    }
+
+    const block = findCommentAnchorBlock({
+      anchor: comment.anchor,
+      renderedRoot,
+    });
 
     if (block === null) {
       return {
         commentId: comment.id,
-        status: "missing",
+        status: "orphaned",
       };
     }
 
     const blockTextHash = readRenderedBlockTextHash(block);
     const status: CommentAnchorDisplayStatus =
-      blockTextHash === comment.anchor.textHash ? "current" : "stale";
+      blockTextHash === comment.anchor.textHash ? "exact" : "stale";
 
     return {
       commentId: comment.id,
       status,
     };
   });
+}
+
+/** @returns The backend-resolved display status when command metadata is present. */
+function createResolvedAnchorDisplayStatus({
+  comment,
+  renderedRoot,
+}: Readonly<{
+  comment: Comment;
+  renderedRoot: HTMLElement;
+}>): CommentAnchorDisplayStatus | null {
+  const resolution = comment.anchorResolution;
+
+  if (resolution === undefined || resolution === null) {
+    return null;
+  }
+
+  if (resolution.status === "orphaned") {
+    return "orphaned";
+  }
+
+  const targetBlock = findCommentResolutionTargetBlock({
+    comment,
+    renderedRoot,
+  });
+
+  if (targetBlock === null) {
+    return "stale";
+  }
+
+  if (resolution.status === "resolved") {
+    return "exact";
+  }
+
+  return resolution.status;
 }
 
 /** @returns The backend text hash for a rendered block, or a legacy fallback hash. */
@@ -553,7 +632,10 @@ function scrollActiveCommentIntoView({
     return;
   }
 
-  const block = findCommentAnchorBlock(activeComment.anchor, renderedRoot);
+  const block = findCommentBlockForScroll({
+    comment: activeComment,
+    renderedRoot,
+  });
 
   if (block === null) {
     return;
@@ -591,13 +673,12 @@ function createCommentBlockHighlights({
   const commentsByBlock = new Map<string, Comment[]>();
 
   for (const comment of comments) {
-    const blockType = mapCommentBlockTypeToBlockType(comment.anchor.blockType);
+    const key = createCommentHighlightBlockKey(comment);
 
-    if (blockType === null) {
+    if (key === null) {
       continue;
     }
 
-    const key = createBlockKey(blockType, comment.anchor.blockIndex);
     const blockComments = commentsByBlock.get(key) ?? [];
 
     blockComments.push(comment);
@@ -629,15 +710,49 @@ function createCommentBlockHighlight({
     CommentAnchorDisplayStatus
   >;
 }>): CommentBlockHighlight {
+  const state = selectCommentHighlightState({
+    comments,
+    activeCommentId,
+    anchorDisplayStateByCommentId,
+  });
+
   return {
     commentIds: comments.map((comment) => comment.id),
     selectCommentId: selectCommentIdForHighlight(comments, activeCommentId),
-    state: selectCommentHighlightState({
+    state,
+    rangeHighlights: createCommentRangeHighlights({
       comments,
       activeCommentId,
       anchorDisplayStateByCommentId,
     }),
   };
+}
+
+/** @returns The rendered block key that should receive a comment highlight. */
+function createCommentHighlightBlockKey(comment: Comment): string | null {
+  const target = comment.anchorResolution?.target;
+
+  if (comment.anchorResolution?.status === "orphaned") {
+    return null;
+  }
+
+  if (target !== undefined && target !== null) {
+    const blockType = mapCommentBlockTypeToBlockType(target.blockType);
+
+    if (blockType === null) {
+      return null;
+    }
+
+    return createBlockKey(blockType, target.blockIndex);
+  }
+
+  const blockType = mapCommentBlockTypeToBlockType(comment.anchor.blockType);
+
+  if (blockType === null) {
+    return null;
+  }
+
+  return createBlockKey(blockType, comment.anchor.blockIndex);
 }
 
 /** @returns The comment id to select when a highlighted block is activated. */
@@ -687,9 +802,81 @@ function selectCommentHighlightState({
     return "stale";
   }
 
+  const hasMovedComment = comments.some(
+    (comment) => anchorDisplayStateByCommentId.get(comment.id) === "moved",
+  );
+
+  if (hasMovedComment) {
+    return "moved";
+  }
+
+  const hasFuzzyComment = comments.some(
+    (comment) => anchorDisplayStateByCommentId.get(comment.id) === "fuzzy",
+  );
+
+  if (hasFuzzyComment) {
+    return "fuzzy";
+  }
+
   const hasOpenComment = comments.some((comment) => !comment.resolved);
 
   return hasOpenComment ? "open" : "resolved";
+}
+
+/** @returns Range-level highlights for exact anchors with a usable character range. */
+function createCommentRangeHighlights({
+  comments,
+  activeCommentId,
+  anchorDisplayStateByCommentId,
+}: Readonly<{
+  comments: readonly Comment[];
+  activeCommentId: CommentId | null;
+  anchorDisplayStateByCommentId: ReadonlyMap<
+    CommentId,
+    CommentAnchorDisplayStatus
+  >;
+}>): readonly CommentRangeHighlight[] {
+  return comments.flatMap((comment) => {
+    if (!isReliableRangeHighlight({ comment, anchorDisplayStateByCommentId })) {
+      return [];
+    }
+
+    return [
+      {
+        commentIds: [comment.id],
+        selectCommentId: comment.id,
+        state:
+          comment.id === activeCommentId
+            ? "active"
+            : selectExactRangeState(comment),
+        start: comment.anchor.charRange.start,
+        end: comment.anchor.charRange.end,
+      },
+    ];
+  });
+}
+
+/** @returns true when the original selected text range is safe to emphasize. */
+function isReliableRangeHighlight({
+  comment,
+  anchorDisplayStateByCommentId,
+}: Readonly<{
+  comment: Comment;
+  anchorDisplayStateByCommentId: ReadonlyMap<
+    CommentId,
+    CommentAnchorDisplayStatus
+  >;
+}>): boolean {
+  if (anchorDisplayStateByCommentId.get(comment.id) !== "exact") {
+    return false;
+  }
+
+  return comment.anchor.charRange.end > comment.anchor.charRange.start;
+}
+
+/** @returns The subdued or prominent state for an exact range highlight. */
+function selectExactRangeState(comment: Comment): CommentHighlightState {
+  return comment.resolved ? "resolved" : "open";
 }
 
 /** @returns Block metadata with highlight attributes and selection handlers. */
@@ -711,6 +898,8 @@ function createHighlightedBlockMetadata({
     "aria-label": createHighlightAriaLabel(highlight),
     "data-comment-highlight": "true",
     "data-comment-highlight-count": highlight.commentIds.length,
+    "data-comment-highlight-mode":
+      highlight.rangeHighlights.length > 0 ? "range" : "block",
     "data-comment-highlight-state": highlight.state,
     "data-comment-ids": highlight.commentIds.join(" "),
   };
@@ -745,7 +934,9 @@ function createHighlightedBlockMetadata({
 }
 
 /** @returns An accessible description for a highlighted Markdown block. */
-function createHighlightAriaLabel(highlight: CommentBlockHighlight): string {
+function createHighlightAriaLabel(
+  highlight: Pick<CommentBlockHighlight, "commentIds">,
+): string {
   const countLabel =
     highlight.commentIds.length === 1
       ? "1 comment"
@@ -771,10 +962,13 @@ function isInteractiveHighlightTarget(
 }
 
 /** @returns The rendered Markdown block for a persisted comment anchor. */
-function findCommentAnchorBlock(
-  anchor: CommentAnchor,
-  renderedRoot: HTMLElement,
-): HTMLElement | null {
+function findCommentAnchorBlock({
+  anchor,
+  renderedRoot,
+}: Readonly<{
+  anchor: CommentAnchor;
+  renderedRoot: HTMLElement;
+}>): HTMLElement | null {
   const blockType = mapCommentBlockTypeToBlockType(anchor.blockType);
 
   if (blockType === null) {
@@ -784,6 +978,49 @@ function findCommentAnchorBlock(
   return renderedRoot.querySelector<HTMLElement>(
     `[data-block-type="${blockType}"][data-block-index="${anchor.blockIndex}"]`,
   );
+}
+
+/** @returns The rendered Markdown block for a backend-resolved target. */
+function findCommentResolutionTargetBlock({
+  comment,
+  renderedRoot,
+}: Readonly<{
+  comment: Comment;
+  renderedRoot: HTMLElement;
+}>): HTMLElement | null {
+  const target = comment.anchorResolution?.target;
+
+  if (target === undefined || target === null) {
+    return findCommentAnchorBlock({
+      anchor: comment.anchor,
+      renderedRoot,
+    });
+  }
+
+  const blockType = mapCommentBlockTypeToBlockType(target.blockType);
+
+  if (blockType === null) {
+    return null;
+  }
+
+  return renderedRoot.querySelector<HTMLElement>(
+    `[data-block-type="${blockType}"][data-block-index="${target.blockIndex}"]`,
+  );
+}
+
+/** @returns The best block to scroll for a selected comment. */
+function findCommentBlockForScroll({
+  comment,
+  renderedRoot,
+}: Readonly<{
+  comment: Comment;
+  renderedRoot: HTMLElement;
+}>): HTMLElement | null {
+  if (comment.anchorResolution?.status === "orphaned") {
+    return null;
+  }
+
+  return findCommentResolutionTargetBlock({ comment, renderedRoot });
 }
 
 /** @returns The rendered Markdown block type corresponding to a persisted anchor. */
@@ -824,37 +1061,91 @@ function createBlockKey(blockType: BlockType, blockIndex: number): string {
 /** @returns React Markdown component overrides with comment anchor metadata. */
 function createMarkdownComponents(blockIndexer: BlockIndexer): Components {
   return {
-    h1: ({ node: _node, ...props }) => (
-      <h1 {...props} {...blockIndexer.next("heading")} />
-    ),
-    h2: ({ node: _node, ...props }) => (
-      <h2 {...props} {...blockIndexer.next("heading")} />
-    ),
-    h3: ({ node: _node, ...props }) => (
-      <h3 {...props} {...blockIndexer.next("heading")} />
-    ),
-    h4: ({ node: _node, ...props }) => (
-      <h4 {...props} {...blockIndexer.next("heading")} />
-    ),
-    h5: ({ node: _node, ...props }) => (
-      <h5 {...props} {...blockIndexer.next("heading")} />
-    ),
-    h6: ({ node: _node, ...props }) => (
-      <h6 {...props} {...blockIndexer.next("heading")} />
-    ),
-    p: ({ node: _node, ...props }) => (
-      <p {...props} {...blockIndexer.next("paragraph")} />
-    ),
-    li: (props) => (
-      <MarkdownListItem {...props} {...blockIndexer.next("list-item")} />
-    ),
-    pre: ({ node: _node, ...props }) => (
-      <pre {...props} {...blockIndexer.next("code")} />
-    ),
+    h1: ({ node: _node, children, ...props }) => {
+      const block = blockIndexer.next("heading");
+
+      return (
+        <h1 {...props} {...block.metadata}>
+          {renderRangeHighlightedChildren(children, block.rangeHighlights)}
+        </h1>
+      );
+    },
+    h2: ({ node: _node, children, ...props }) => {
+      const block = blockIndexer.next("heading");
+
+      return (
+        <h2 {...props} {...block.metadata}>
+          {renderRangeHighlightedChildren(children, block.rangeHighlights)}
+        </h2>
+      );
+    },
+    h3: ({ node: _node, children, ...props }) => {
+      const block = blockIndexer.next("heading");
+
+      return (
+        <h3 {...props} {...block.metadata}>
+          {renderRangeHighlightedChildren(children, block.rangeHighlights)}
+        </h3>
+      );
+    },
+    h4: ({ node: _node, children, ...props }) => {
+      const block = blockIndexer.next("heading");
+
+      return (
+        <h4 {...props} {...block.metadata}>
+          {renderRangeHighlightedChildren(children, block.rangeHighlights)}
+        </h4>
+      );
+    },
+    h5: ({ node: _node, children, ...props }) => {
+      const block = blockIndexer.next("heading");
+
+      return (
+        <h5 {...props} {...block.metadata}>
+          {renderRangeHighlightedChildren(children, block.rangeHighlights)}
+        </h5>
+      );
+    },
+    h6: ({ node: _node, children, ...props }) => {
+      const block = blockIndexer.next("heading");
+
+      return (
+        <h6 {...props} {...block.metadata}>
+          {renderRangeHighlightedChildren(children, block.rangeHighlights)}
+        </h6>
+      );
+    },
+    p: ({ node: _node, children, ...props }) => {
+      const block = blockIndexer.next("paragraph");
+
+      return (
+        <p {...props} {...block.metadata}>
+          {renderRangeHighlightedChildren(children, block.rangeHighlights)}
+        </p>
+      );
+    },
+    li: ({ children, ...props }) => {
+      const block = blockIndexer.next("list-item");
+
+      return (
+        <MarkdownListItem {...props} {...block.metadata}>
+          {renderRangeHighlightedChildren(children, block.rangeHighlights)}
+        </MarkdownListItem>
+      );
+    },
+    pre: ({ node: _node, children, ...props }) => {
+      const block = blockIndexer.next("code");
+
+      return (
+        <pre {...props} {...block.metadata}>
+          {renderRangeHighlightedChildren(children, block.rangeHighlights)}
+        </pre>
+      );
+    },
     table: ({ node: _node, ...props }) => (
       <div
         className="markdown-rendered__table-scroll"
-        {...blockIndexer.next("table")}
+        {...blockIndexer.next("table").metadata}
       >
         <table {...props} />
       </div>
@@ -862,6 +1153,147 @@ function createMarkdownComponents(blockIndexer: BlockIndexer): Components {
     a: ({ node: _node, ...props }) => <SafeMarkdownLink {...props} />,
     input: ({ node: _node, ...props }) => <ReadOnlyMarkdownInput {...props} />,
   };
+}
+
+type RangeRenderCursor = {
+  position: number;
+  keyIndex: number;
+};
+
+/** @returns Markdown children with exact comment ranges wrapped for emphasis. */
+function renderRangeHighlightedChildren(
+  children: ReactNode,
+  rangeHighlights: readonly CommentRangeHighlight[],
+): ReactNode {
+  if (rangeHighlights.length === 0) {
+    return children;
+  }
+
+  const cursor: RangeRenderCursor = {
+    position: 0,
+    keyIndex: 0,
+  };
+  const sortedHighlights = [...rangeHighlights].sort(
+    (left, right) => left.start - right.start,
+  );
+
+  return renderRangeHighlightedNode(children, sortedHighlights, cursor);
+}
+
+/** @returns One React node with range highlight spans inserted into text descendants. */
+function renderRangeHighlightedNode(
+  node: ReactNode,
+  rangeHighlights: readonly CommentRangeHighlight[],
+  cursor: RangeRenderCursor,
+): ReactNode {
+  if (typeof node === "string" || typeof node === "number") {
+    return renderRangeHighlightedText(String(node), rangeHighlights, cursor);
+  }
+
+  if (Array.isArray(node)) {
+    return node.map((child) =>
+      renderRangeHighlightedNode(child, rangeHighlights, cursor),
+    );
+  }
+
+  if (!isValidElement<{ children?: ReactNode }>(node)) {
+    return node;
+  }
+
+  const childElement = node as ReactElement<{ children?: ReactNode }>;
+
+  if (childElement.props.children === undefined) {
+    return childElement;
+  }
+
+  return cloneElement(
+    childElement,
+    undefined,
+    renderRangeHighlightedNode(
+      childElement.props.children,
+      rangeHighlights,
+      cursor,
+    ),
+  );
+}
+
+/** @returns Text split into plain and highlighted range segments. */
+function renderRangeHighlightedText(
+  text: string,
+  rangeHighlights: readonly CommentRangeHighlight[],
+  cursor: RangeRenderCursor,
+): ReactNode {
+  const absoluteStart = cursor.position;
+  const absoluteEnd = absoluteStart + text.length;
+  const parts: ReactNode[] = [];
+  let localOffset = 0;
+
+  for (const highlight of rangeHighlights) {
+    if (highlight.end <= absoluteStart) {
+      continue;
+    }
+
+    if (highlight.start >= absoluteEnd) {
+      break;
+    }
+
+    const rangeStart = Math.max(highlight.start - absoluteStart, localOffset);
+    const rangeEnd = Math.min(highlight.end - absoluteStart, text.length);
+
+    if (rangeEnd <= rangeStart) {
+      continue;
+    }
+
+    if (rangeStart > localOffset) {
+      parts.push(text.slice(localOffset, rangeStart));
+    }
+
+    parts.push(
+      <CommentRangeHighlightSpan
+        key={`comment-range-${cursor.keyIndex}`}
+        highlight={highlight}
+      >
+        {text.slice(rangeStart, rangeEnd)}
+      </CommentRangeHighlightSpan>,
+    );
+    cursor.keyIndex += 1;
+    localOffset = rangeEnd;
+  }
+
+  if (localOffset < text.length) {
+    parts.push(text.slice(localOffset));
+  }
+
+  cursor.position = absoluteEnd;
+
+  if (parts.length === 0) {
+    return text;
+  }
+
+  return parts;
+}
+
+type CommentRangeHighlightSpanProps = Readonly<{
+  highlight: CommentRangeHighlight;
+  children: ReactNode;
+}>;
+
+/** @returns An inline exact-range comment highlight with its own activation target. */
+function CommentRangeHighlightSpan({
+  highlight,
+  children,
+}: CommentRangeHighlightSpanProps) {
+  return (
+    <span
+      data-comment-highlight-range="true"
+      data-comment-highlight-count={highlight.commentIds.length}
+      data-comment-highlight-state={highlight.state}
+      data-comment-ids={highlight.commentIds.join(" ")}
+      aria-label={createHighlightAriaLabel(highlight)}
+    >
+      {children}
+    </span>
+  );
 }
 
 type TextSelectionCommentButtonProps = Readonly<{

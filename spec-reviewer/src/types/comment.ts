@@ -21,7 +21,29 @@ export type CommentStatusFilter = "all" | CommentStatus;
 
 export type CommentDisplayState = CommentStatus | "orphaned";
 
-export type CommentAnchorDisplayStatus = "current" | "stale" | "missing";
+export type CommentAnchorDisplayStatus =
+  | "exact"
+  | "moved"
+  | "fuzzy"
+  | "orphaned"
+  | "stale";
+
+export type CommentAnchorResolutionStatus =
+  | "resolved"
+  | "moved"
+  | "fuzzy"
+  | "orphaned";
+
+export type CommentAnchorResolutionReason =
+  | "exact_match"
+  | "moved_by_hash"
+  | "stale_snippet"
+  | "fuzzy_match"
+  | "missing_original_block"
+  | "ambiguous_fuzzy_candidates"
+  | "below_threshold"
+  | "deleted_text"
+  | "unsupported_block_type";
 
 export type CommentCharRange = Readonly<{
   start: number;
@@ -49,12 +71,32 @@ export type CommentAnchorDraft = Readonly<{
   selectionBounds: CommentSelectionBounds;
 }>;
 
+export type CommentAnchorResolutionTarget = Readonly<{
+  blockType: CommentBlockType;
+  blockIndex: number;
+  textHash: string;
+  textSnippet: string;
+  sourceRange: Readonly<{
+    startByteOffset: number;
+    endByteOffset: number;
+  }> | null;
+  score: number;
+}>;
+
+export type CommentAnchorResolution = Readonly<{
+  status: CommentAnchorResolutionStatus;
+  reason: CommentAnchorResolutionReason;
+  details: string | null;
+  target: CommentAnchorResolutionTarget | null;
+}>;
+
 export type Comment = Readonly<{
   id: CommentId;
   anchor: CommentAnchor;
   body: string;
   status: CommentStatus;
   resolved: boolean;
+  anchorResolution?: CommentAnchorResolution | null;
   createdAt: IsoDateTimeString;
   updatedAt: IsoDateTimeString;
 }>;

@@ -227,7 +227,7 @@ function CommentSection({
                 comment={comment}
                 isActive={comment.id === activeCommentId}
                 anchorDisplayStatus={
-                  anchorDisplayStatusByCommentId.get(comment.id) ?? "current"
+                  anchorDisplayStatusByCommentId.get(comment.id) ?? "exact"
                 }
                 mutationState={mutationState}
                 onSelectComment={onSelectComment}

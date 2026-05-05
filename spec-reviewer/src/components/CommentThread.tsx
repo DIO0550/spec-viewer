@@ -99,6 +99,7 @@ export function CommentThread({
     <article
       className="comment-thread"
       data-active={isActive ? "true" : "false"}
+      data-anchor-display-status={anchorDisplayStatus}
       aria-labelledby={titleId}
     >
       <header className="comment-thread__header">
@@ -284,15 +285,25 @@ function formatBlockType(blockType: string): string {
     .join(" ");
 }
 
-/** @returns The visible stale/missing anchor status, or null for current anchors. */
+/** @returns The visible anchor reconciliation status, or null for exact anchors. */
 function formatAnchorDisplayStatus(
   status: CommentAnchorDisplayStatus,
 ): string | null {
-  if (status === "current") {
+  if (status === "exact") {
     return null;
   }
 
-  return status === "stale" ? "Anchor stale" : "Anchor missing";
+  const statusLabels: Record<
+    Exclude<CommentAnchorDisplayStatus, "exact">,
+    string
+  > = {
+    moved: "Anchor moved",
+    fuzzy: "Fuzzy anchor",
+    orphaned: "Anchor orphaned",
+    stale: "Anchor stale",
+  };
+
+  return statusLabels[status];
 }
 
 /** @returns A readable local timestamp, falling back to the raw ISO value. */

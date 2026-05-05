@@ -5,7 +5,7 @@ import { expect, test, vi } from "vitest";
 
 import type { SpecDocumentState } from "../hooks/useSpecs";
 import { createTextHash } from "../lib/comment-anchor-draft";
-import type { Comment } from "../types/comment";
+import type { Comment, CommentAnchorResolution } from "../types/comment";
 import type { MarkdownBlockMetadata, SpecDocument } from "../types/spec";
 import { MarkdownViewer } from "./MarkdownViewer";
 
@@ -86,11 +86,21 @@ function createComment({
   blockIndex,
   text,
   resolved,
+  anchorResolution = null,
+  charRange = {
+    start: 0,
+    end: text.length,
+  },
 }: Readonly<{
   id: string;
   blockIndex: number;
   text: string;
   resolved: boolean;
+  anchorResolution?: CommentAnchorResolution | null;
+  charRange?: Readonly<{
+    start: number;
+    end: number;
+  }>;
 }>): Comment {
   return {
     id,
@@ -100,14 +110,12 @@ function createComment({
       blockIndex,
       textHash: createTextHash(text),
       textSnippet: text,
-      charRange: {
-        start: 0,
-        end: text.length,
-      },
+      charRange,
     },
     body: `${id} body`,
     status: resolved ? "resolved" : "open",
     resolved,
+    anchorResolution,
     createdAt: "2026-05-05T10:00:00Z",
     updatedAt: "2026-05-05T10:00:00Z",
   };
@@ -277,7 +285,7 @@ test("MarkdownViewerはコメント付きブロックを状態別にハイライ
   result.unmount();
 });
 
-test("MarkdownViewerはstaleとmissingのコメントアンカー状態を通知する", () => {
+test("MarkdownViewerはstaleとorphanedのコメントアンカー状態を通知する", () => {
   const onAnchorDisplayStatesChange = vi.fn();
   const contents = "A paragraph with changed anchor text.";
   const comments: readonly Comment[] = [
@@ -288,7 +296,7 @@ test("MarkdownViewerはstaleとmissingのコメントアンカー状態を通知
       resolved: false,
     }),
     createComment({
-      id: "cmt_missing",
+      id: "cmt_orphaned",
       blockIndex: 4,
       text: "A missing anchor.",
       resolved: false,
@@ -320,8 +328,155 @@ test("MarkdownViewerはstaleとmissingのコメントアンカー状態を通知
       status: "stale",
     },
     {
-      commentId: "cmt_missing",
-      status: "missing",
+      commentId: "cmt_orphaned",
+      status: "orphaned",
+    },
+  ]);
+  result.unmount();
+});
+
+test("MarkdownViewerはexact解決済みアンカーの選択範囲をハイライトする", () => {
+  const contents = "A paragraph with selectable text.";
+  const comments: readonly Comment[] = [
+    createComment({
+      id: "cmt_exact",
+      blockIndex: 0,
+      text: contents,
+      resolved: false,
+      charRange: {
+        start: 2,
+        end: 11,
+      },
+      anchorResolution: {
+        status: "resolved",
+        reason: "exact_match",
+        details: null,
+        target: {
+          blockType: "paragraph",
+          blockIndex: 0,
+          textHash: createTextHash(contents),
+          textSnippet: contents,
+          sourceRange: null,
+          score: 100,
+        },
+      },
+    }),
+  ];
+  const result = renderViewer(
+    createReadyState(contents),
+    vi.fn(),
+    vi.fn().mockResolvedValue(true),
+    comments,
+  );
+  const block = result.container.querySelector(
+    '[data-comment-highlight-mode="range"]',
+  );
+  const range = result.container.querySelector(
+    '[data-comment-highlight-range="true"]',
+  );
+
+  expect(block?.textContent).toContain(contents);
+  expect(range?.textContent).toBe("paragraph");
+  result.unmount();
+});
+
+test("MarkdownViewerはmoved/fuzzy/orphaned解決結果をtarget blockへ反映する", () => {
+  const onAnchorDisplayStatesChange = vi.fn();
+  const contents = [
+    "Original paragraph moved away.",
+    "",
+    "Exact target paragraph.",
+    "",
+    "Fuzzy target paragraph with edits.",
+  ].join("\n");
+  const comments: readonly Comment[] = [
+    createComment({
+      id: "cmt_moved",
+      blockIndex: 0,
+      text: "Original paragraph moved away.",
+      resolved: false,
+      anchorResolution: {
+        status: "moved",
+        reason: "moved_by_hash",
+        details: null,
+        target: {
+          blockType: "paragraph",
+          blockIndex: 1,
+          textHash: createTextHash("Exact target paragraph."),
+          textSnippet: "Exact target paragraph.",
+          sourceRange: null,
+          score: 100,
+        },
+      },
+    }),
+    createComment({
+      id: "cmt_fuzzy",
+      blockIndex: 0,
+      text: "Original fuzzy paragraph.",
+      resolved: false,
+      anchorResolution: {
+        status: "fuzzy",
+        reason: "fuzzy_match",
+        details: "score 82",
+        target: {
+          blockType: "paragraph",
+          blockIndex: 2,
+          textHash: createTextHash("Fuzzy target paragraph with edits."),
+          textSnippet: "Fuzzy target paragraph with edits.",
+          sourceRange: null,
+          score: 82,
+        },
+      },
+    }),
+    createComment({
+      id: "cmt_orphaned",
+      blockIndex: 9,
+      text: "Deleted paragraph.",
+      resolved: false,
+      anchorResolution: {
+        status: "orphaned",
+        reason: "deleted_text",
+        details: "deleted",
+        target: null,
+      },
+    }),
+  ];
+  const result = renderComponent(
+    <MarkdownViewer
+      state={createReadyState(contents)}
+      selectedSpecLabel={selectedSpecLabel}
+      selectedFileLabel={selectedFileLabel}
+      comments={comments}
+      activeCommentId={null}
+      onReload={vi.fn()}
+      onAddComment={vi.fn().mockResolvedValue(true)}
+      onSelectComment={vi.fn()}
+      onAnchorDisplayStatesChange={onAnchorDisplayStatesChange}
+    />,
+  );
+  const movedBlock = result.container.querySelector(
+    '[data-comment-highlight-state="moved"]',
+  );
+  const fuzzyBlock = result.container.querySelector(
+    '[data-comment-highlight-state="fuzzy"]',
+  );
+
+  expect(movedBlock?.textContent).toContain("Exact target paragraph.");
+  expect(fuzzyBlock?.textContent).toContain(
+    "Fuzzy target paragraph with edits.",
+  );
+  expect(onAnchorDisplayStatesChange).toHaveBeenLastCalledWith([
+    {
+      commentId: "cmt_moved",
+      status: "moved",
+    },
+    {
+      commentId: "cmt_fuzzy",
+      status: "fuzzy",
+    },
+    {
+      commentId: "cmt_orphaned",
+      status: "orphaned",
     },
   ]);
   result.unmount();

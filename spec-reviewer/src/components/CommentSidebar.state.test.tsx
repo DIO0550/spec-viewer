@@ -290,22 +290,22 @@ test("CommentSidebarは選択中コメントをaria-currentで表現する", () 
   result.unmount();
 });
 
-test("CommentSidebarはstaleとmissingのアンカー状態を表示する", () => {
+test("CommentSidebarはreconciliationのアンカー状態を表示する", () => {
   const result = renderReadySidebar({
     anchorDisplayStates: [
       {
         commentId: "cmt_open",
-        status: "stale",
+        status: "moved",
       },
       {
         commentId: "cmt_resolved",
-        status: "missing",
+        status: "orphaned",
       },
     ],
   });
 
-  expect(result.container.textContent).toContain("Anchor stale");
-  expect(result.container.textContent).toContain("Anchor missing");
+  expect(result.container.textContent).toContain("Anchor moved");
+  expect(result.container.textContent).toContain("Anchor orphaned");
   result.unmount();
 });
 
