@@ -1,0 +1,19 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.13/schema.json",
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2
+  },
+  "files": {
+    "includes": [
+      "**",
+      "!node_modules",
+      "!dist",
+      "!storybook-static",
+      "!**/*.tsbuildinfo",
+      "!src-tauri/gen",
+      "!src-tauri/target"
+    ]
+  }
+}
