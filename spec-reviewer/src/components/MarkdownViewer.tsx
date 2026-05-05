@@ -25,6 +25,7 @@ import type {
   CommentBlockType,
   CommentId,
 } from "../types/comment";
+import type { MarkdownBlockMetadata, MarkdownBlockType } from "../types/spec";
 import {
   AddCommentPopover,
   type AddCommentSubmitInput,
@@ -37,6 +38,11 @@ type BlockType = "heading" | "paragraph" | "list-item" | "table" | "code";
 type BlockMetadata = Readonly<{
   "data-block-type": BlockType;
   "data-block-index": number;
+  "data-comment-block-type"?: CommentBlockType;
+  "data-text-hash"?: string;
+  "data-text-snippet"?: string;
+  "data-source-start-byte-offset"?: number;
+  "data-source-end-byte-offset"?: number;
   "data-comment-highlight"?: "true";
   "data-comment-highlight-count"?: number;
   "data-comment-highlight-state"?: CommentHighlightState;
@@ -270,6 +276,7 @@ export function MarkdownViewer({
       </header>
       <MarkdownDocument
         contents={contents}
+        blocks={state.document.blocks}
         renderedRootRef={renderedRootRef}
         comments={comments}
         activeCommentId={activeCommentId}
@@ -338,6 +345,7 @@ function createViewerResetKey(state: SpecDocumentState): string {
 
 type MarkdownDocumentProps = Readonly<{
   contents: string;
+  blocks: readonly MarkdownBlockMetadata[];
   renderedRootRef: RefObject<HTMLDivElement | null>;
   comments: readonly Comment[];
   activeCommentId: CommentId | null;
@@ -348,6 +356,7 @@ type MarkdownDocumentProps = Readonly<{
 /** @returns Rendered Markdown with stable block metadata for comments. */
 function MarkdownDocument({
   contents,
+  blocks,
   renderedRootRef,
   comments,
   activeCommentId,
@@ -362,6 +371,7 @@ function MarkdownDocument({
     anchorDisplayStateByCommentId,
   });
   const blockIndexer = createBlockIndexer({
+    blocks,
     highlights,
     onSelectComment,
   });
@@ -382,18 +392,26 @@ function MarkdownDocument({
 
 /** @returns A sequential block indexer scoped to one Markdown render. */
 function createBlockIndexer({
+  blocks,
   highlights,
   onSelectComment,
 }: Readonly<{
+  blocks: readonly MarkdownBlockMetadata[];
   highlights: CommentBlockHighlights;
   onSelectComment?: (commentId: CommentId) => void;
 }>): BlockIndexer {
-  let blockIndex = 0;
+  let fallbackBlockIndex = 0;
+  let backendBlockCursor = 0;
 
   return {
     next: (blockType: BlockType): BlockMetadata => {
-      const currentBlockIndex = blockIndex;
-      const metadata = {
+      const backendBlock = findNextBackendBlock({
+        blocks,
+        blockType,
+        startIndex: backendBlockCursor,
+      });
+      const currentBlockIndex = backendBlock?.blockIndex ?? fallbackBlockIndex;
+      const metadata: BlockMetadata = {
         "data-block-type": blockType,
         "data-block-index": currentBlockIndex,
       };
@@ -401,13 +419,68 @@ function createBlockIndexer({
         createBlockKey(blockType, currentBlockIndex),
       );
 
-      blockIndex += 1;
+      fallbackBlockIndex += 1;
+
+      if (backendBlock !== null) {
+        backendBlockCursor = blocks.indexOf(backendBlock) + 1;
+      }
+
       return createHighlightedBlockMetadata({
-        metadata,
+        metadata: attachBackendBlockMetadata(metadata, backendBlock),
         highlight,
         onSelectComment,
       });
     },
+  };
+}
+
+/** @returns The next backend block that can describe this rendered block. */
+function findNextBackendBlock({
+  blocks,
+  blockType,
+  startIndex,
+}: Readonly<{
+  blocks: readonly MarkdownBlockMetadata[];
+  blockType: BlockType;
+  startIndex: number;
+}>): MarkdownBlockMetadata | null {
+  for (let index = startIndex; index < blocks.length; index += 1) {
+    const block = blocks[index];
+
+    if (mapMarkdownBlockTypeToBlockType(block.blockType) === blockType) {
+      return block;
+    }
+  }
+
+  return null;
+}
+
+/** @returns Rendered block attributes enriched with backend anchor metadata. */
+function attachBackendBlockMetadata(
+  metadata: BlockMetadata,
+  block: MarkdownBlockMetadata | null,
+): BlockMetadata {
+  if (block === null) {
+    return metadata;
+  }
+
+  const sourceRange = block.sourceRange;
+  const backendMetadata: BlockMetadata = {
+    ...metadata,
+    "data-block-index": block.blockIndex,
+    "data-comment-block-type": block.blockType,
+    "data-text-hash": block.textHash,
+    "data-text-snippet": block.textSnippet,
+  };
+
+  if (sourceRange === null) {
+    return backendMetadata;
+  }
+
+  return {
+    ...backendMetadata,
+    "data-source-start-byte-offset": sourceRange.startByteOffset,
+    "data-source-end-byte-offset": sourceRange.endByteOffset,
   };
 }
 
@@ -436,7 +509,7 @@ function createCommentAnchorDisplayStates({
       };
     }
 
-    const blockTextHash = createTextHash(block.textContent ?? "");
+    const blockTextHash = readRenderedBlockTextHash(block);
     const status: CommentAnchorDisplayStatus =
       blockTextHash === comment.anchor.textHash ? "current" : "stale";
 
@@ -445,6 +518,17 @@ function createCommentAnchorDisplayStates({
       status,
     };
   });
+}
+
+/** @returns The backend text hash for a rendered block, or a legacy fallback hash. */
+function readRenderedBlockTextHash(block: HTMLElement): string {
+  const textHash = block.dataset.textHash;
+
+  if (textHash !== undefined && textHash.trim().length > 0) {
+    return textHash;
+  }
+
+  return createTextHash(block.textContent ?? "");
 }
 
 /** Scrolls the active comment's Markdown block into view when it exists. */
@@ -707,6 +791,21 @@ function mapCommentBlockTypeToBlockType(
   blockType: CommentBlockType,
 ): BlockType | null {
   const blockTypeMap: Partial<Record<CommentBlockType, BlockType>> = {
+    heading: "heading",
+    paragraph: "paragraph",
+    list_item: "list-item",
+    table: "table",
+    code_block: "code",
+  };
+
+  return blockTypeMap[blockType] ?? null;
+}
+
+/** @returns The rendered block type corresponding to backend Markdown metadata. */
+function mapMarkdownBlockTypeToBlockType(
+  blockType: MarkdownBlockType,
+): BlockType | null {
+  const blockTypeMap: Partial<Record<MarkdownBlockType, BlockType>> = {
     heading: "heading",
     paragraph: "paragraph",
     list_item: "list-item",

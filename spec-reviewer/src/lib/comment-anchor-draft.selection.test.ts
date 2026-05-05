@@ -62,9 +62,33 @@ test("Markdownブロック内の選択からコメントアンカードラフト
   });
 });
 
+test("backendメタデータ付きMarkdownブロックではbackend hashをアンカーに使う", () => {
+  const root = createRenderedRoot(
+    [
+      '<p data-block-type="paragraph" data-block-index="3" ',
+      'data-comment-block-type="paragraph" data-text-hash="sha256:backend1">',
+      "Alpha beta gamma</p>",
+    ].join(""),
+  );
+  const paragraph = root.querySelector("p");
+  const textNode = paragraph?.firstChild;
+  expect(textNode).toBeInstanceOf(Text);
+
+  const selection = selectText(textNode as Text, 6, 10);
+  const draft = createCommentAnchorDraftFromSelection({
+    selection,
+    renderedRoot: root,
+    fileKey: "tasks",
+  });
+
+  expect(draft?.anchor.textHash).toBe("sha256:backend1");
+  expect(draft?.anchor.textSnippet).toBe("beta");
+});
+
 test.each([
   ["list-item", "list_item"],
   ["code", "code_block"],
+  ["blockquote", "block_quote"],
   ["heading", "heading"],
   ["table", "table"],
 ] as const)("Markdownブロック種別%sをコメントブロック種別%sに変換する", (markdownBlockType, commentBlockType) => {

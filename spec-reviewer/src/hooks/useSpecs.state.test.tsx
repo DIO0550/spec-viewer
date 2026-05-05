@@ -53,6 +53,7 @@ const loadedDocument: SpecDocument = {
   path: "/workspace/spec-reviewer/.plugin-workspace/specs/phase-1-viewer/tasks.md",
   contents: "# Tasks",
   missing: false,
+  blocks: [],
 };
 
 const missingDocument: SpecDocument = {
@@ -60,6 +61,7 @@ const missingDocument: SpecDocument = {
   path: "/workspace/spec-reviewer/.plugin-workspace/specs/phase-1-viewer/implementation-plan.md",
   contents: null,
   missing: true,
+  blocks: [],
 };
 
 const designDocument: SpecDocument = {
@@ -67,6 +69,7 @@ const designDocument: SpecDocument = {
   path: "/workspace/spec-reviewer/.plugin-workspace/specs/phase-child/design.md",
   contents: "# Design",
   missing: false,
+  blocks: [],
 };
 
 type HookResult<Props, Result> = Readonly<{

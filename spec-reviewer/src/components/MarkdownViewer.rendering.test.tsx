@@ -6,7 +6,7 @@ import { expect, test, vi } from "vitest";
 import type { SpecDocumentState } from "../hooks/useSpecs";
 import { createTextHash } from "../lib/comment-anchor-draft";
 import type { Comment } from "../types/comment";
-import type { SpecDocument } from "../types/spec";
+import type { MarkdownBlockMetadata, SpecDocument } from "../types/spec";
 import { MarkdownViewer } from "./MarkdownViewer";
 
 const workspacePath = "/workspace/spec-reviewer";
@@ -59,12 +59,16 @@ function renderComponent(component: ReactNode): RenderResult {
   };
 }
 
-function createReadyState(contents: string | null): SpecDocumentState {
+function createReadyState(
+  contents: string | null,
+  blocks: readonly MarkdownBlockMetadata[] = [],
+): SpecDocumentState {
   const document: SpecDocument = {
     key: "tasks",
     path: "/workspace/spec-reviewer/docs/plans/tasks.md",
     contents,
     missing: false,
+    blocks,
   };
 
   return {
@@ -187,6 +191,32 @@ test("MarkdownViewerはコメントアンカー用のブロックメタデータ
   expect(
     blockElements.map((element) => element.getAttribute("data-block-index")),
   ).toEqual(["0", "1", "2", "3", "4", "5", "6"]);
+  result.unmount();
+});
+
+test("MarkdownViewerはbackend block metadataをコメントアンカー用data属性に反映する", () => {
+  const blocks: readonly MarkdownBlockMetadata[] = [
+    {
+      blockType: "paragraph",
+      blockIndex: 5,
+      textHash: "sha256:backend5",
+      textSnippet: "A paragraph with selectable text.",
+      sourceRange: {
+        startByteOffset: 10,
+        endByteOffset: 43,
+      },
+    },
+  ];
+  const result = renderViewer(
+    createReadyState("A paragraph with selectable text.", blocks),
+  );
+  const paragraph = result.container.querySelector(".markdown-rendered p");
+
+  expect(paragraph?.getAttribute("data-block-index")).toBe("5");
+  expect(paragraph?.getAttribute("data-comment-block-type")).toBe("paragraph");
+  expect(paragraph?.getAttribute("data-text-hash")).toBe("sha256:backend5");
+  expect(paragraph?.getAttribute("data-source-start-byte-offset")).toBe("10");
+  expect(paragraph?.getAttribute("data-source-end-byte-offset")).toBe("43");
   result.unmount();
 });
 
@@ -387,6 +417,7 @@ test("MarkdownViewerはmissing状態を表示する", () => {
     path: "/workspace/spec-reviewer/docs/plans/tasks.md",
     contents: null,
     missing: true,
+    blocks: [],
   };
   const result = renderViewer({
     status: "missing",

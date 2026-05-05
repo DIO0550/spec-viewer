@@ -58,6 +58,18 @@ test("readSpecFileはread_spec_fileへspecIdとfileKeyを渡す", async () => {
     path: "/workspace/spec-reviewer/.plugin-workspace/specs/auth/tasks.md",
     contents: "# Tasks",
     missing: false,
+    blocks: [
+      {
+        blockType: "heading",
+        blockIndex: 0,
+        textHash: "sha256:abc12345",
+        textSnippet: "Tasks",
+        sourceRange: {
+          startByteOffset: 0,
+          endByteOffset: 7,
+        },
+      },
+    ],
   });
 
   const result = await readSpecFile({
@@ -67,6 +79,7 @@ test("readSpecFileはread_spec_fileへspecIdとfileKeyを渡す", async () => {
   });
 
   expect(result.contents).toBe("# Tasks");
+  expect(result.blocks[0]?.textHash).toBe("sha256:abc12345");
   expect(invokeMock).toHaveBeenCalledWith("read_spec_file", {
     request: {
       workspacePath: "/workspace/spec-reviewer",

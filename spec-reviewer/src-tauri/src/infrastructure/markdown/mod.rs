@@ -14,11 +14,13 @@ use thiserror::Error;
 
 use crate::{
     domain::{
-        spec::SpecFileKey,
+        spec::{MarkdownBlock, SpecFileKey},
         workspace::{WorkspaceConfig, WorkspaceLayout},
     },
     infrastructure::filesystem::{safe_relative_spec_path, spec_root_path},
 };
+
+use self::parser::{parse_markdown_blocks, MarkdownParseError};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct FilesystemMarkdownReader;
@@ -60,11 +62,19 @@ impl FilesystemMarkdownReader {
                 source,
             })?;
 
-        Ok(MarkdownReadResult::Found(MarkdownDocument {
+        let blocks = parse_markdown_blocks(&contents).map_err(|source| {
+            MarkdownReadError::ParseMarkdown {
+                path: display_path(&file_path),
+                source,
+            }
+        })?;
+
+        Ok(MarkdownReadResult::Found(MarkdownDocument::new(
             key,
-            path: display_path(&file_path),
+            display_path(&file_path),
             contents,
-        }))
+            blocks,
+        )))
     }
 }
 
@@ -85,9 +95,24 @@ pub struct MarkdownDocument {
     key: SpecFileKey,
     path: String,
     contents: String,
+    blocks: Vec<MarkdownBlock>,
 }
 
 impl MarkdownDocument {
+    pub fn new(
+        key: SpecFileKey,
+        path: impl Into<String>,
+        contents: impl Into<String>,
+        blocks: Vec<MarkdownBlock>,
+    ) -> Self {
+        Self {
+            key,
+            path: path.into(),
+            contents: contents.into(),
+            blocks,
+        }
+    }
+
     pub fn key(&self) -> SpecFileKey {
         self.key
     }
@@ -98,6 +123,10 @@ impl MarkdownDocument {
 
     pub fn contents(&self) -> &str {
         &self.contents
+    }
+
+    pub fn blocks(&self) -> &[MarkdownBlock] {
+        &self.blocks
     }
 }
 
@@ -133,6 +162,11 @@ pub enum MarkdownReadError {
     UnreadableFile { path: String, source: io::Error },
     #[error("markdown file is not valid UTF-8: {path}")]
     InvalidUtf8 { path: String, source: FromUtf8Error },
+    #[error("failed to parse markdown blocks: {path}")]
+    ParseMarkdown {
+        path: String,
+        source: MarkdownParseError,
+    },
 }
 
 fn resolve_markdown_path(
@@ -303,6 +337,21 @@ mod tests {
                 assert_eq!(SpecFileKey::Tasks, document.key());
                 assert!(document.path().ends_with("auth/tasks.md"));
                 assert_eq!("# Tasks\n\n- [ ] Review", document.contents());
+                assert_eq!(2, document.blocks().len());
+                assert_eq!(
+                    crate::domain::spec::MarkdownBlockType::Heading,
+                    document.blocks()[0].block_type()
+                );
+                assert_eq!(0, document.blocks()[0].index().value());
+                assert_eq!("Tasks", document.blocks()[0].text().normalized());
+                assert!(document.blocks()[0]
+                    .text_hash()
+                    .as_str()
+                    .starts_with("sha256:"));
+                assert_eq!(
+                    crate::domain::spec::MarkdownBlockType::ListItem,
+                    document.blocks()[1].block_type()
+                );
             }
             MarkdownReadResult::Missing(_) => panic!("expected markdown document"),
         }

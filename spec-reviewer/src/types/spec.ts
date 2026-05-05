@@ -26,6 +26,30 @@ export type SpecTree = Readonly<{
   specs: readonly SpecNode[];
 }>;
 
+export type MarkdownBlockType =
+  | "paragraph"
+  | "heading"
+  | "list_item"
+  | "code_block"
+  | "block_quote"
+  | "table"
+  | "thematic_break"
+  | "html"
+  | "other";
+
+export type MarkdownBlockSourceRange = Readonly<{
+  startByteOffset: number;
+  endByteOffset: number;
+}>;
+
+export type MarkdownBlockMetadata = Readonly<{
+  blockType: MarkdownBlockType;
+  blockIndex: number;
+  textHash: string;
+  textSnippet: string;
+  sourceRange: MarkdownBlockSourceRange | null;
+}>;
+
 export type ListSpecsRequest = Readonly<{
   workspacePath: string;
 }>;
@@ -41,4 +65,5 @@ export type SpecDocument = Readonly<{
   path: string;
   contents: string | null;
   missing: boolean;
+  blocks: readonly MarkdownBlockMetadata[];
 }>;

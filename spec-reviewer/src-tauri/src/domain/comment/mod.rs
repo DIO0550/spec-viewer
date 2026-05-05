@@ -5,7 +5,7 @@ use std::{collections::HashSet, fmt};
 use chrono::{DateTime, Utc};
 use thiserror::Error;
 
-use crate::domain::spec::SpecFileKey;
+use crate::domain::spec::{MarkdownBlock, MarkdownBlockType, SpecFileKey};
 
 mod repository;
 
@@ -219,6 +219,22 @@ impl CommentAnchor {
         }
     }
 
+    pub fn from_markdown_block(
+        file_key: SpecFileKey,
+        block: &MarkdownBlock,
+        text_snippet: TextSnippet,
+        char_range: CharRange,
+    ) -> Result<Self, CommentDomainError> {
+        Ok(Self::new(
+            file_key,
+            BlockType::from(block.block_type()),
+            BlockIndex::new(block.index().value()),
+            TextHash::new(block.text_hash().as_str())?,
+            text_snippet,
+            char_range,
+        ))
+    }
+
     pub fn file_key(&self) -> SpecFileKey {
         self.file_key
     }
@@ -241,6 +257,22 @@ impl CommentAnchor {
 
     pub fn char_range(&self) -> CharRange {
         self.char_range
+    }
+}
+
+impl From<MarkdownBlockType> for BlockType {
+    fn from(block_type: MarkdownBlockType) -> Self {
+        match block_type {
+            MarkdownBlockType::Paragraph => Self::Paragraph,
+            MarkdownBlockType::Heading => Self::Heading,
+            MarkdownBlockType::ListItem => Self::ListItem,
+            MarkdownBlockType::CodeBlock => Self::CodeBlock,
+            MarkdownBlockType::BlockQuote => Self::BlockQuote,
+            MarkdownBlockType::Table => Self::Table,
+            MarkdownBlockType::ThematicBreak => Self::ThematicBreak,
+            MarkdownBlockType::Html => Self::Html,
+            MarkdownBlockType::Other => Self::Other,
+        }
     }
 }
 
@@ -419,6 +451,10 @@ pub enum CommentDomainError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::spec::{
+        MarkdownBlock, MarkdownBlockHash, MarkdownBlockIndex, MarkdownBlockSourceRange,
+        MarkdownBlockText, MarkdownBlockType,
+    };
 
     fn timestamp(second: u32) -> DateTime<Utc> {
         DateTime::parse_from_rfc3339(&format!("2026-05-05T00:00:{second:02}Z"))
@@ -551,6 +587,36 @@ mod tests {
         assert_eq!("Selected text", anchor.text_snippet().as_str());
         assert_eq!(
             CharRange::new(4, 17).expect("range should be valid"),
+            anchor.char_range()
+        );
+    }
+
+    #[test]
+    fn comment_anchor_can_be_created_from_markdown_block_metadata() {
+        let block = MarkdownBlock::new(
+            MarkdownBlockType::ListItem,
+            MarkdownBlockIndex::new(4),
+            MarkdownBlockText::new("- [x] Finish task", "Finish task")
+                .expect("block text should be valid"),
+            MarkdownBlockHash::new("sha256:bd64c9e7").expect("hash should be valid"),
+            Some(MarkdownBlockSourceRange::new(12, 29).expect("range should be valid")),
+        );
+
+        let anchor = CommentAnchor::from_markdown_block(
+            SpecFileKey::Tasks,
+            &block,
+            TextSnippet::new("Finish").expect("snippet should be valid"),
+            CharRange::new(0, 6).expect("range should be valid"),
+        )
+        .expect("anchor should be valid");
+
+        assert_eq!(SpecFileKey::Tasks, anchor.file_key());
+        assert_eq!(BlockType::ListItem, anchor.block_type());
+        assert_eq!(4, anchor.block_index().value());
+        assert_eq!("sha256:bd64c9e7", anchor.text_hash().as_str());
+        assert_eq!("Finish", anchor.text_snippet().as_str());
+        assert_eq!(
+            CharRange::new(0, 6).expect("range should be valid"),
             anchor.char_range()
         );
     }

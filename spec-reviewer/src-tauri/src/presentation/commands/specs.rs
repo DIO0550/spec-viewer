@@ -9,7 +9,9 @@ use crate::{
     app::use_cases::{
         AppMarkdownDocument, AppMissingMarkdownFile, LoadWorkspaceResult, ReadSpecFileResult,
     },
-    domain::spec::{SpecFile, SpecFileKey, SpecFileStatus, SpecNode},
+    domain::spec::{
+        MarkdownBlock, MarkdownBlockSourceRange, SpecFile, SpecFileKey, SpecFileStatus, SpecNode,
+    },
 };
 
 use super::{CommandError, CommandResult, CommandState};
@@ -101,6 +103,7 @@ pub struct ReadSpecFileResponse {
     path: String,
     contents: Option<String>,
     missing: bool,
+    blocks: Vec<MarkdownBlockResponse>,
 }
 
 impl ReadSpecFileResponse {
@@ -118,6 +121,59 @@ impl ReadSpecFileResponse {
 
     pub fn missing(&self) -> bool {
         self.missing
+    }
+
+    pub fn blocks(&self) -> &[MarkdownBlockResponse] {
+        &self.blocks
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MarkdownBlockResponse {
+    block_type: String,
+    block_index: usize,
+    text_hash: String,
+    text_snippet: String,
+    source_range: Option<MarkdownBlockSourceRangeResponse>,
+}
+
+impl MarkdownBlockResponse {
+    pub fn block_type(&self) -> &str {
+        &self.block_type
+    }
+
+    pub fn block_index(&self) -> usize {
+        self.block_index
+    }
+
+    pub fn text_hash(&self) -> &str {
+        &self.text_hash
+    }
+
+    pub fn text_snippet(&self) -> &str {
+        &self.text_snippet
+    }
+
+    pub fn source_range(&self) -> Option<&MarkdownBlockSourceRangeResponse> {
+        self.source_range.as_ref()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MarkdownBlockSourceRangeResponse {
+    start_byte_offset: usize,
+    end_byte_offset: usize,
+}
+
+impl MarkdownBlockSourceRangeResponse {
+    pub fn start_byte_offset(&self) -> usize {
+        self.start_byte_offset
+    }
+
+    pub fn end_byte_offset(&self) -> usize {
+        self.end_byte_offset
     }
 }
 
@@ -201,6 +257,11 @@ impl From<AppMarkdownDocument> for ReadSpecFileResponse {
             path: document.path().to_string(),
             contents: Some(document.contents().to_string()),
             missing: false,
+            blocks: document
+                .blocks()
+                .iter()
+                .map(MarkdownBlockResponse::from)
+                .collect(),
         }
     }
 }
@@ -212,6 +273,30 @@ impl From<AppMissingMarkdownFile> for ReadSpecFileResponse {
             path: missing.path().to_string(),
             contents: None,
             missing: true,
+            blocks: Vec::new(),
+        }
+    }
+}
+
+impl From<&MarkdownBlock> for MarkdownBlockResponse {
+    fn from(block: &MarkdownBlock) -> Self {
+        Self {
+            block_type: block.block_type().as_str().to_string(),
+            block_index: block.index().value(),
+            text_hash: block.text_hash().as_str().to_string(),
+            text_snippet: create_block_text_snippet(block.text().normalized()),
+            source_range: block
+                .source_range()
+                .map(MarkdownBlockSourceRangeResponse::from),
+        }
+    }
+}
+
+impl From<MarkdownBlockSourceRange> for MarkdownBlockSourceRangeResponse {
+    fn from(range: MarkdownBlockSourceRange) -> Self {
+        Self {
+            start_byte_offset: range.start_byte_offset(),
+            end_byte_offset: range.end_byte_offset(),
         }
     }
 }
@@ -223,9 +308,18 @@ fn status_label(status: SpecFileStatus) -> &'static str {
     }
 }
 
+fn create_block_text_snippet(text: &str) -> String {
+    const MAX_BLOCK_TEXT_SNIPPET_LENGTH: usize = 160;
+
+    text.chars().take(MAX_BLOCK_TEXT_SNIPPET_LENGTH).collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::spec::{
+        MarkdownBlockHash, MarkdownBlockIndex, MarkdownBlockText, MarkdownBlockType,
+    };
 
     #[test]
     fn spec_tree_response_serializes_nested_nodes_and_file_statuses() {
@@ -267,8 +361,21 @@ mod tests {
 
     #[test]
     fn read_spec_file_response_serializes_found_document() {
-        let document =
-            AppMarkdownDocument::new(SpecFileKey::Tasks, "/workspace/auth/tasks.md", "# Tasks");
+        let source_range =
+            MarkdownBlockSourceRange::new(0, 7).expect("source range should be valid");
+        let block = MarkdownBlock::new(
+            MarkdownBlockType::Heading,
+            MarkdownBlockIndex::new(0),
+            MarkdownBlockText::new("# Tasks", "Tasks").expect("block text should be valid"),
+            MarkdownBlockHash::new("sha256:abc12345").expect("hash should be valid"),
+            Some(source_range),
+        );
+        let document = AppMarkdownDocument::with_blocks(
+            SpecFileKey::Tasks,
+            "/workspace/auth/tasks.md",
+            "# Tasks",
+            vec![block],
+        );
 
         let response = ReadSpecFileResponse::from(ReadSpecFileResult::Found(document));
 
@@ -276,6 +383,18 @@ mod tests {
         assert_eq!("/workspace/auth/tasks.md", response.path());
         assert_eq!(Some("# Tasks"), response.contents());
         assert!(!response.missing());
+        assert_eq!(1, response.blocks().len());
+        assert_eq!("heading", response.blocks()[0].block_type());
+        assert_eq!(0, response.blocks()[0].block_index());
+        assert_eq!("sha256:abc12345", response.blocks()[0].text_hash());
+        assert_eq!("Tasks", response.blocks()[0].text_snippet());
+        assert_eq!(
+            Some(&MarkdownBlockSourceRangeResponse {
+                start_byte_offset: 0,
+                end_byte_offset: 7,
+            }),
+            response.blocks()[0].source_range()
+        );
     }
 
     #[test]
@@ -288,5 +407,6 @@ mod tests {
         assert_eq!("/workspace/auth/design.md", response.path());
         assert_eq!(None, response.contents());
         assert!(response.missing());
+        assert!(response.blocks().is_empty());
     }
 }

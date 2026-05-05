@@ -7,7 +7,7 @@ use thiserror::Error;
 use crate::{
     domain::{
         comment::{CommentDomainError, CommentRepositoryError},
-        spec::SpecDomainError,
+        spec::{MarkdownBlock, SpecDomainError},
         spec::{SpecFileKey, SpecNode},
         workspace::{WorkspaceConfig, WorkspaceLayout},
     },
@@ -261,14 +261,25 @@ pub struct AppMarkdownDocument {
     key: SpecFileKey,
     path: String,
     contents: String,
+    blocks: Vec<MarkdownBlock>,
 }
 
 impl AppMarkdownDocument {
     pub fn new(key: SpecFileKey, path: impl Into<String>, contents: impl Into<String>) -> Self {
+        Self::with_blocks(key, path, contents, Vec::new())
+    }
+
+    pub fn with_blocks(
+        key: SpecFileKey,
+        path: impl Into<String>,
+        contents: impl Into<String>,
+        blocks: Vec<MarkdownBlock>,
+    ) -> Self {
         Self {
             key,
             path: path.into(),
             contents: contents.into(),
+            blocks,
         }
     }
 
@@ -283,14 +294,19 @@ impl AppMarkdownDocument {
     pub fn contents(&self) -> &str {
         &self.contents
     }
+
+    pub fn blocks(&self) -> &[MarkdownBlock] {
+        &self.blocks
+    }
 }
 
 impl From<MarkdownDocument> for AppMarkdownDocument {
     fn from(document: MarkdownDocument) -> Self {
-        Self::new(
+        Self::with_blocks(
             document.key(),
             document.path().to_string(),
             document.contents().to_string(),
+            document.blocks().to_vec(),
         )
     }
 }

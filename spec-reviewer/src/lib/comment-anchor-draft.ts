@@ -10,7 +10,8 @@ type MarkdownBlockType =
   | "paragraph"
   | "list-item"
   | "table"
-  | "code";
+  | "code"
+  | "blockquote";
 
 type CreateCommentAnchorDraftOptions = Readonly<{
   selection: Selection | null;
@@ -19,6 +20,8 @@ type CreateCommentAnchorDraftOptions = Readonly<{
 }>;
 
 const BLOCK_SELECTOR = "[data-block-type][data-block-index]";
+const BACKEND_BLOCK_SELECTOR =
+  "[data-block-type][data-block-index][data-comment-block-type][data-text-hash]";
 const MAX_SNIPPET_LENGTH = 160;
 const FNV_32_OFFSET = 0x811c9dc5;
 const FNV_32_PRIME = 0x01000193;
@@ -70,7 +73,7 @@ export function createCommentAnchorDraftFromSelection({
       fileKey,
       blockType: blockMetadata.blockType,
       blockIndex: blockMetadata.blockIndex,
-      textHash: createTextHash(blockText),
+      textHash: blockMetadata.textHash ?? createTextHash(blockText),
       textSnippet,
       charRange,
     },
@@ -132,6 +135,12 @@ function findSelectionBlock(
     return null;
   }
 
+  const backendBlock = element.closest<HTMLElement>(BACKEND_BLOCK_SELECTOR);
+
+  if (backendBlock !== null && renderedRoot.contains(backendBlock)) {
+    return backendBlock;
+  }
+
   const block = element.closest<HTMLElement>(BLOCK_SELECTOR);
 
   if (block === null || !renderedRoot.contains(block)) {
@@ -144,11 +153,12 @@ function findSelectionBlock(
 type BlockMetadata = Readonly<{
   blockType: CommentBlockType;
   blockIndex: number;
+  textHash: string | null;
 }>;
 
 /** @returns Validated block metadata from a rendered Markdown block. */
 function readBlockMetadata(block: HTMLElement): BlockMetadata | null {
-  const blockType = mapMarkdownBlockType(block.dataset.blockType);
+  const blockType = readCommentBlockType(block);
   const blockIndex = Number.parseInt(block.dataset.blockIndex ?? "", 10);
 
   if (
@@ -162,7 +172,28 @@ function readBlockMetadata(block: HTMLElement): BlockMetadata | null {
   return {
     blockType,
     blockIndex,
+    textHash: readBackendTextHash(block),
   };
+}
+
+/** @returns The persisted comment block type represented by a rendered block. */
+function readCommentBlockType(block: HTMLElement): CommentBlockType | null {
+  if (isCommentBlockType(block.dataset.commentBlockType)) {
+    return block.dataset.commentBlockType;
+  }
+
+  return mapMarkdownBlockType(block.dataset.blockType);
+}
+
+/** @returns The backend text hash attached to the rendered block, when available. */
+function readBackendTextHash(block: HTMLElement): string | null {
+  const textHash = block.dataset.textHash;
+
+  if (textHash === undefined || textHash.trim().length === 0) {
+    return null;
+  }
+
+  return textHash;
 }
 
 /** @returns The persisted comment block type for a rendered Markdown block type. */
@@ -179,6 +210,7 @@ function mapMarkdownBlockType(
     "list-item": "list_item",
     table: "table",
     code: "code_block",
+    blockquote: "block_quote",
   };
 
   if (!isMarkdownBlockType(blockType)) {
@@ -197,7 +229,25 @@ function isMarkdownBlockType(
     blockType === "paragraph" ||
     blockType === "list-item" ||
     blockType === "table" ||
-    blockType === "code"
+    blockType === "code" ||
+    blockType === "blockquote"
+  );
+}
+
+/** @returns true when the raw data attribute is a persisted comment block type. */
+function isCommentBlockType(
+  blockType: string | undefined,
+): blockType is CommentBlockType {
+  return (
+    blockType === "paragraph" ||
+    blockType === "heading" ||
+    blockType === "list_item" ||
+    blockType === "code_block" ||
+    blockType === "block_quote" ||
+    blockType === "table" ||
+    blockType === "thematic_break" ||
+    blockType === "html" ||
+    blockType === "other"
   );
 }
 

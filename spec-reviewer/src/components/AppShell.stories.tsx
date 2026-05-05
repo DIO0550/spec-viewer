@@ -88,6 +88,7 @@ const sampleDocument: SpecDocument = {
     "| External link | [Docs](https://example.com/docs) |",
   ].join("\n"),
   missing: false,
+  blocks: [],
 };
 
 const readyTreeState: SpecTreeState = {

@@ -62,6 +62,7 @@ const readyDocument: SpecDocument = {
   path: "/workspace/spec-reviewer/docs/plans/tasks.md",
   contents: "# Phase 1 Viewer\n\n- Layout components",
   missing: false,
+  blocks: [],
 };
 
 const readyDocumentState: SpecDocumentState = {
