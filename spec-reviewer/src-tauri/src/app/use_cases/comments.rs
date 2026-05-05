@@ -7,8 +7,9 @@ use crate::{
     app::use_cases::{AppUseCaseError, LoadWorkspaceResult},
     domain::{
         comment::{
-            Comment, CommentAnchor, CommentBody, CommentId, CommentListQuery, CommentRepository,
-            CommentRepositoryError, CommentScope, CommentStatusFilter,
+            AnchorResolutionReason, AnchorResolutionStatus, Comment, CommentAnchor, CommentBody,
+            CommentId, CommentListQuery, CommentRepository, CommentRepositoryError, CommentScope,
+            CommentStatusFilter,
         },
         spec::{MarkdownBlock, SpecFileKey, SpecId},
     },
@@ -18,7 +19,6 @@ use crate::{
 const MIN_FUZZY_SNIPPET_CHARS: usize = 8;
 const FUZZY_MATCH_THRESHOLD: u8 = 72;
 const EXACT_MATCH_SCORE: u8 = 100;
-const INDEX_FALLBACK_SCORE: u8 = 0;
 
 pub type FilesystemCommentUseCases =
     CommentUseCases<JsonCommentRepository, UuidCommentIdGenerator, UtcCommentClock>;
@@ -226,14 +226,18 @@ impl ResolveCommentAnchorsResult {
 pub struct CommentAnchorResolution {
     comment: Comment,
     original_anchor: CommentAnchor,
-    status: CommentAnchorResolutionStatus,
+    status: AnchorResolutionStatus,
+    reason: AnchorResolutionReason,
+    details: Option<String>,
     target: Option<CommentAnchorResolutionTarget>,
 }
 
 impl CommentAnchorResolution {
     fn new(
         comment: Comment,
-        status: CommentAnchorResolutionStatus,
+        status: AnchorResolutionStatus,
+        reason: AnchorResolutionReason,
+        details: Option<String>,
         target: Option<CommentAnchorResolutionTarget>,
     ) -> Self {
         let original_anchor = comment.anchor().clone();
@@ -242,6 +246,8 @@ impl CommentAnchorResolution {
             comment,
             original_anchor,
             status,
+            reason,
+            details,
             target,
         }
     }
@@ -254,8 +260,16 @@ impl CommentAnchorResolution {
         &self.original_anchor
     }
 
-    pub fn status(&self) -> CommentAnchorResolutionStatus {
+    pub fn status(&self) -> AnchorResolutionStatus {
         self.status
+    }
+
+    pub fn reason(&self) -> AnchorResolutionReason {
+        self.reason
+    }
+
+    pub fn details(&self) -> Option<&str> {
+        self.details.as_deref()
     }
 
     pub fn target(&self) -> Option<&CommentAnchorResolutionTarget> {
@@ -263,18 +277,8 @@ impl CommentAnchorResolution {
     }
 
     pub fn is_orphaned(&self) -> bool {
-        self.target.is_none()
+        self.status.is_orphaned()
     }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CommentAnchorResolutionStatus {
-    Exact,
-    MovedByHash,
-    Stale,
-    Fuzzy,
-    IndexFallback,
-    Missing,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -334,7 +338,21 @@ fn resolve_comment_anchor(
     comment: Comment,
     current_blocks: &[MarkdownBlock],
 ) -> CommentAnchorResolution {
-    let anchor = comment.anchor();
+    let anchor = comment.anchor().clone();
+
+    if !is_supported_anchor_block_type(anchor.block_type()) {
+        return CommentAnchorResolution::new(
+            comment,
+            AnchorResolutionStatus::Orphaned,
+            AnchorResolutionReason::UnsupportedBlockType,
+            Some(format!(
+                "anchor block type {:?} is not supported for anchor resolution",
+                anchor.block_type()
+            )),
+            None,
+        );
+    }
+
     let indexed_block = current_blocks.iter().find(|block| {
         block.index().value() == anchor.block_index().value()
             && crate::domain::comment::BlockType::from(block.block_type()) == anchor.block_type()
@@ -345,7 +363,9 @@ fn resolve_comment_anchor(
     {
         return CommentAnchorResolution::new(
             comment,
-            CommentAnchorResolutionStatus::Exact,
+            AnchorResolutionStatus::Resolved,
+            AnchorResolutionReason::ExactMatch,
+            None,
             Some(CommentAnchorResolutionTarget::new(block, EXACT_MATCH_SCORE)),
         );
     }
@@ -356,52 +376,100 @@ fn resolve_comment_anchor(
     {
         return CommentAnchorResolution::new(
             comment,
-            CommentAnchorResolutionStatus::MovedByHash,
+            AnchorResolutionStatus::Moved,
+            AnchorResolutionReason::MovedByHash,
+            None,
             Some(CommentAnchorResolutionTarget::new(block, EXACT_MATCH_SCORE)),
         );
     }
 
-    if let Some(candidate) = select_fuzzy_anchor_candidate(current_blocks, anchor) {
-        return CommentAnchorResolution::new(
-            comment,
-            candidate.status,
-            Some(CommentAnchorResolutionTarget::new(
-                candidate.block,
-                candidate.score,
-            )),
-        );
+    match select_fuzzy_anchor_candidate(current_blocks, &anchor) {
+        FuzzyAnchorSelection::Matched(candidate) => {
+            return CommentAnchorResolution::new(
+                comment,
+                candidate.status,
+                candidate.reason,
+                None,
+                Some(CommentAnchorResolutionTarget::new(
+                    candidate.block,
+                    candidate.score,
+                )),
+            );
+        }
+        FuzzyAnchorSelection::Ambiguous {
+            candidate_count,
+            score,
+        } => {
+            return orphaned_comment_anchor_resolution(
+                comment,
+                AnchorResolutionReason::AmbiguousFuzzyCandidates,
+                format!(
+                    "{candidate_count} fuzzy candidates tied at score {score}; keeping the comment recoverable without choosing a target"
+                ),
+            );
+        }
+        FuzzyAnchorSelection::BelowThreshold { best_score } => {
+            if indexed_block.is_some() {
+                return orphaned_comment_anchor_resolution(
+                    comment,
+                    AnchorResolutionReason::DeletedText,
+                    format!(
+                        "original block is still present, but selected text no longer matches; best fuzzy score {best_score} is below threshold {FUZZY_MATCH_THRESHOLD}"
+                    ),
+                );
+            }
+
+            return orphaned_comment_anchor_resolution(
+                comment,
+                AnchorResolutionReason::BelowThreshold,
+                format!("best fuzzy score {best_score} is below threshold {FUZZY_MATCH_THRESHOLD}"),
+            );
+        }
+        FuzzyAnchorSelection::ShortSnippet | FuzzyAnchorSelection::NoCandidates => {
+            if indexed_block.is_some() {
+                return orphaned_comment_anchor_resolution(
+                    comment,
+                    AnchorResolutionReason::DeletedText,
+                    "original block is still present, but selected text could not be found"
+                        .to_string(),
+                );
+            }
+        }
     }
 
-    if let Some(block) = indexed_block {
-        return CommentAnchorResolution::new(
-            comment,
-            CommentAnchorResolutionStatus::IndexFallback,
-            Some(CommentAnchorResolutionTarget::new(
-                block,
-                INDEX_FALLBACK_SCORE,
-            )),
-        );
-    }
-
-    CommentAnchorResolution::new(comment, CommentAnchorResolutionStatus::Missing, None)
+    orphaned_comment_anchor_resolution(
+        comment,
+        AnchorResolutionReason::MissingOriginalBlock,
+        "original block could not be found in the current Markdown blocks".to_string(),
+    )
 }
 
 #[derive(Debug, Clone, Copy)]
 struct FuzzyAnchorCandidate<'a> {
     block: &'a MarkdownBlock,
-    status: CommentAnchorResolutionStatus,
+    status: AnchorResolutionStatus,
+    reason: AnchorResolutionReason,
     score: u8,
     distance_from_original_index: usize,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum FuzzyAnchorSelection<'a> {
+    Matched(FuzzyAnchorCandidate<'a>),
+    Ambiguous { candidate_count: usize, score: u8 },
+    BelowThreshold { best_score: u8 },
+    ShortSnippet,
+    NoCandidates,
 }
 
 fn select_fuzzy_anchor_candidate<'a>(
     current_blocks: &'a [MarkdownBlock],
     anchor: &CommentAnchor,
-) -> Option<FuzzyAnchorCandidate<'a>> {
+) -> FuzzyAnchorSelection<'a> {
     let snippet = normalize_fuzzy_text(anchor.text_snippet().as_str());
 
     if snippet.chars().count() < MIN_FUZZY_SNIPPET_CHARS {
-        return None;
+        return FuzzyAnchorSelection::ShortSnippet;
     }
 
     let mut candidates = current_blocks
@@ -411,6 +479,14 @@ fn select_fuzzy_anchor_candidate<'a>(
         })
         .filter_map(|block| fuzzy_anchor_candidate(block, anchor, &snippet))
         .collect::<Vec<_>>();
+
+    if candidates.is_empty() {
+        let best_score = best_fuzzy_score(current_blocks, anchor, &snippet);
+
+        return best_score.map_or(FuzzyAnchorSelection::NoCandidates, |best_score| {
+            FuzzyAnchorSelection::BelowThreshold { best_score }
+        });
+    }
 
     candidates.sort_by(|left, right| {
         right
@@ -423,17 +499,23 @@ fn select_fuzzy_anchor_candidate<'a>(
             .then_with(|| left.block.index().value().cmp(&right.block.index().value()))
     });
 
-    let best = candidates.first().copied()?;
-    let equally_good = candidates.iter().filter(|candidate| {
-        candidate.score == best.score
-            && candidate.distance_from_original_index == best.distance_from_original_index
-    });
+    let best = candidates[0];
+    let equally_good_count = candidates
+        .iter()
+        .filter(|candidate| {
+            candidate.score == best.score
+                && candidate.distance_from_original_index == best.distance_from_original_index
+        })
+        .count();
 
-    if equally_good.count() > 1 {
-        return None;
+    if equally_good_count > 1 {
+        return FuzzyAnchorSelection::Ambiguous {
+            candidate_count: equally_good_count,
+            score: best.score,
+        };
     }
 
-    Some(best)
+    FuzzyAnchorSelection::Matched(best)
 }
 
 fn fuzzy_anchor_candidate<'a>(
@@ -453,18 +535,75 @@ fn fuzzy_anchor_candidate<'a>(
         return None;
     }
 
-    let status = if score == EXACT_MATCH_SCORE {
-        CommentAnchorResolutionStatus::Stale
+    let (status, reason) = if score == EXACT_MATCH_SCORE {
+        (
+            AnchorResolutionStatus::Moved,
+            AnchorResolutionReason::StaleSnippet,
+        )
     } else {
-        CommentAnchorResolutionStatus::Fuzzy
+        (
+            AnchorResolutionStatus::Fuzzy,
+            AnchorResolutionReason::FuzzyMatch,
+        )
     };
 
     Some(FuzzyAnchorCandidate {
         block,
         status,
+        reason,
         score,
         distance_from_original_index: block.index().value().abs_diff(anchor.block_index().value()),
     })
+}
+
+fn best_fuzzy_score(
+    current_blocks: &[MarkdownBlock],
+    anchor: &CommentAnchor,
+    snippet: &str,
+) -> Option<u8> {
+    current_blocks
+        .iter()
+        .filter(|block| {
+            crate::domain::comment::BlockType::from(block.block_type()) == anchor.block_type()
+        })
+        .map(|block| {
+            let block_text = normalize_fuzzy_text(block.text().normalized());
+            let raw_block_text = normalize_fuzzy_text(block.text().raw());
+
+            if block_text.contains(snippet) || raw_block_text.contains(snippet) {
+                EXACT_MATCH_SCORE
+            } else {
+                fuzzy_text_score(snippet, &block_text)
+                    .max(fuzzy_text_score(snippet, &raw_block_text))
+            }
+        })
+        .max()
+}
+
+fn is_supported_anchor_block_type(block_type: crate::domain::comment::BlockType) -> bool {
+    matches!(
+        block_type,
+        crate::domain::comment::BlockType::Paragraph
+            | crate::domain::comment::BlockType::Heading
+            | crate::domain::comment::BlockType::ListItem
+            | crate::domain::comment::BlockType::CodeBlock
+            | crate::domain::comment::BlockType::BlockQuote
+            | crate::domain::comment::BlockType::Table
+    )
+}
+
+fn orphaned_comment_anchor_resolution(
+    comment: Comment,
+    reason: AnchorResolutionReason,
+    details: String,
+) -> CommentAnchorResolution {
+    CommentAnchorResolution::new(
+        comment,
+        AnchorResolutionStatus::Orphaned,
+        reason,
+        Some(details),
+        None,
+    )
 }
 
 fn normalize_fuzzy_text(value: &str) -> String {
@@ -922,7 +1061,9 @@ mod tests {
             .expect("anchors should resolve");
 
         let resolution = &result.resolutions()[0];
-        assert_eq!(CommentAnchorResolutionStatus::Exact, resolution.status());
+        assert_eq!(AnchorResolutionStatus::Resolved, resolution.status());
+        assert_eq!(AnchorResolutionReason::ExactMatch, resolution.reason());
+        assert_eq!(None, resolution.details());
         assert_eq!(
             2,
             resolution
@@ -973,10 +1114,8 @@ mod tests {
             .expect("anchors should resolve");
 
         let resolution = &result.resolutions()[0];
-        assert_eq!(
-            CommentAnchorResolutionStatus::MovedByHash,
-            resolution.status()
-        );
+        assert_eq!(AnchorResolutionStatus::Moved, resolution.status());
+        assert_eq!(AnchorResolutionReason::MovedByHash, resolution.reason());
         assert_eq!(
             0,
             resolution
@@ -989,18 +1128,18 @@ mod tests {
     }
 
     #[test]
-    fn resolve_comment_anchors_uses_index_fallback_after_hash_and_snippet_miss() {
+    fn resolve_comment_anchors_orphans_deleted_text_when_original_block_changed() {
         let repository = FakeCommentRepository::default();
-        repository
-            .comments
-            .borrow_mut()
-            .push(comment_with_anchor("cmt_index", anchor(SpecFileKey::Impl)));
+        repository.comments.borrow_mut().push(comment_with_anchor(
+            "cmt_deleted",
+            anchor(SpecFileKey::Impl),
+        ));
         let use_cases = use_cases(repository);
         let blocks = [markdown_block(
             MarkdownBlockType::Paragraph,
             2,
-            "different block text",
-            "different block text",
+            "different block text after deletion",
+            "different block text after deletion",
             "sha256_different",
         )];
 
@@ -1014,19 +1153,14 @@ mod tests {
             .expect("anchors should resolve");
 
         let resolution = &result.resolutions()[0];
-        assert_eq!(
-            CommentAnchorResolutionStatus::IndexFallback,
-            resolution.status()
-        );
-        assert_eq!(
-            "sha256_different",
-            resolution
-                .target()
-                .expect("target should exist")
-                .block()
-                .text_hash()
-                .as_str()
-        );
+        assert_eq!(AnchorResolutionStatus::Orphaned, resolution.status());
+        assert_eq!(AnchorResolutionReason::DeletedText, resolution.reason());
+        assert!(resolution.is_orphaned());
+        assert!(resolution.target().is_none());
+        assert!(resolution
+            .details()
+            .expect("details should explain orphaning")
+            .contains("original block is still present"));
     }
 
     #[test]
@@ -1055,7 +1189,8 @@ mod tests {
             .expect("anchors should resolve");
 
         let resolution = &result.resolutions()[0];
-        assert_eq!(CommentAnchorResolutionStatus::Stale, resolution.status());
+        assert_eq!(AnchorResolutionStatus::Moved, resolution.status());
+        assert_eq!(AnchorResolutionReason::StaleSnippet, resolution.reason());
         assert_eq!(
             3,
             resolution
@@ -1094,7 +1229,8 @@ mod tests {
 
         let resolution = &result.resolutions()[0];
         let target = resolution.target().expect("target should exist");
-        assert_eq!(CommentAnchorResolutionStatus::Fuzzy, resolution.status());
+        assert_eq!(AnchorResolutionStatus::Fuzzy, resolution.status());
+        assert_eq!(AnchorResolutionReason::FuzzyMatch, resolution.reason());
         assert_eq!(4, target.block().index().value());
         assert!(target.score() >= FUZZY_MATCH_THRESHOLD);
         assert!(target.score() < EXACT_MATCH_SCORE);
@@ -1133,13 +1269,14 @@ mod tests {
 
         let resolution = &result.resolutions()[0];
         let target = resolution.target().expect("target should exist");
-        assert_eq!(CommentAnchorResolutionStatus::Fuzzy, resolution.status());
+        assert_eq!(AnchorResolutionStatus::Fuzzy, resolution.status());
+        assert_eq!(AnchorResolutionReason::FuzzyMatch, resolution.reason());
         assert_eq!(7, target.block().index().value());
         assert!(target.score() >= FUZZY_MATCH_THRESHOLD);
     }
 
     #[test]
-    fn resolve_comment_anchors_returns_missing_when_fuzzy_score_is_below_threshold() {
+    fn resolve_comment_anchors_orphans_when_fuzzy_score_is_below_threshold() {
         let repository = FakeCommentRepository::default();
         repository.comments.borrow_mut().push(comment_with_anchor(
             "cmt_low_score",
@@ -1170,7 +1307,12 @@ mod tests {
             .expect("anchors should resolve");
 
         let resolution = &result.resolutions()[0];
-        assert_eq!(CommentAnchorResolutionStatus::Missing, resolution.status());
+        assert_eq!(AnchorResolutionStatus::Orphaned, resolution.status());
+        assert_eq!(AnchorResolutionReason::BelowThreshold, resolution.reason());
+        assert!(resolution
+            .details()
+            .expect("details should include score")
+            .contains("below threshold"));
         assert!(resolution.target().is_none());
     }
 
@@ -1210,7 +1352,8 @@ mod tests {
 
         let resolution = &result.resolutions()[0];
         let target = resolution.target().expect("target should exist");
-        assert_eq!(CommentAnchorResolutionStatus::Stale, resolution.status());
+        assert_eq!(AnchorResolutionStatus::Moved, resolution.status());
+        assert_eq!(AnchorResolutionReason::StaleSnippet, resolution.reason());
         assert_eq!(3, target.block().index().value());
         assert_eq!(EXACT_MATCH_SCORE, target.score());
     }
@@ -1250,8 +1393,16 @@ mod tests {
             .expect("anchors should resolve");
 
         let resolution = &result.resolutions()[0];
-        assert_eq!(CommentAnchorResolutionStatus::Missing, resolution.status());
+        assert_eq!(AnchorResolutionStatus::Orphaned, resolution.status());
+        assert_eq!(
+            AnchorResolutionReason::AmbiguousFuzzyCandidates,
+            resolution.reason()
+        );
         assert!(resolution.is_orphaned());
+        assert!(resolution
+            .details()
+            .expect("details should mention tied candidates")
+            .contains("2 fuzzy candidates"));
     }
 
     #[test]
@@ -1280,7 +1431,11 @@ mod tests {
             .expect("anchors should resolve");
 
         let resolution = &result.resolutions()[0];
-        assert_eq!(CommentAnchorResolutionStatus::Missing, resolution.status());
+        assert_eq!(AnchorResolutionStatus::Orphaned, resolution.status());
+        assert_eq!(
+            AnchorResolutionReason::MissingOriginalBlock,
+            resolution.reason()
+        );
         assert!(resolution.target().is_none());
     }
 
@@ -1316,12 +1471,16 @@ mod tests {
             .expect("anchors should resolve");
 
         let resolution = &result.resolutions()[0];
-        assert_eq!(CommentAnchorResolutionStatus::Missing, resolution.status());
+        assert_eq!(AnchorResolutionStatus::Orphaned, resolution.status());
+        assert_eq!(
+            AnchorResolutionReason::MissingOriginalBlock,
+            resolution.reason()
+        );
         assert!(resolution.target().is_none());
     }
 
     #[test]
-    fn resolve_comment_anchors_returns_missing_when_no_block_can_be_matched() {
+    fn resolve_comment_anchors_orphans_missing_original_block_when_no_block_can_be_matched() {
         let repository = FakeCommentRepository::default();
         repository.comments.borrow_mut().push(comment_with_anchor(
             "cmt_missing",
@@ -1346,8 +1505,52 @@ mod tests {
             .expect("anchors should resolve");
 
         let resolution = &result.resolutions()[0];
-        assert_eq!(CommentAnchorResolutionStatus::Missing, resolution.status());
+        assert_eq!(AnchorResolutionStatus::Orphaned, resolution.status());
+        assert_eq!(
+            AnchorResolutionReason::MissingOriginalBlock,
+            resolution.reason()
+        );
         assert!(resolution.is_orphaned());
+        assert!(resolution.target().is_none());
+    }
+
+    #[test]
+    fn resolve_comment_anchors_orphans_unsupported_anchor_block_type() {
+        let repository = FakeCommentRepository::default();
+        repository.comments.borrow_mut().push(comment_with_anchor(
+            "cmt_unsupported",
+            anchor_with(
+                SpecFileKey::Impl,
+                BlockType::Other,
+                2,
+                "sha256_old",
+                "selected text",
+            ),
+        ));
+        let use_cases = use_cases(repository);
+        let blocks = [markdown_block(
+            MarkdownBlockType::Other,
+            2,
+            "selected text",
+            "selected text",
+            "sha256_old",
+        )];
+
+        let result = use_cases
+            .resolve_comment_anchors(
+                "auth-flow",
+                SpecFileKey::Impl,
+                CommentStatusFilter::All,
+                &blocks,
+            )
+            .expect("anchors should resolve");
+
+        let resolution = &result.resolutions()[0];
+        assert_eq!(AnchorResolutionStatus::Orphaned, resolution.status());
+        assert_eq!(
+            AnchorResolutionReason::UnsupportedBlockType,
+            resolution.reason()
+        );
         assert!(resolution.target().is_none());
     }
 

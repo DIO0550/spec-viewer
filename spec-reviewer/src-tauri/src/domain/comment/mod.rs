@@ -80,6 +80,33 @@ impl CommentStatus {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum AnchorResolutionStatus {
+    Resolved,
+    Moved,
+    Fuzzy,
+    Orphaned,
+}
+
+impl AnchorResolutionStatus {
+    pub fn is_orphaned(self) -> bool {
+        matches!(self, Self::Orphaned)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum AnchorResolutionReason {
+    ExactMatch,
+    MovedByHash,
+    StaleSnippet,
+    FuzzyMatch,
+    MissingOriginalBlock,
+    AmbiguousFuzzyCandidates,
+    BelowThreshold,
+    DeletedText,
+    UnsupportedBlockType,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BlockType {
     Paragraph,
     Heading,

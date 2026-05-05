@@ -24,10 +24,11 @@ use crate::{
     },
 };
 
+pub use crate::domain::comment::{AnchorResolutionReason, AnchorResolutionStatus};
 pub use comments::{
-    CommentAnchorResolution, CommentAnchorResolutionStatus, CommentAnchorResolutionTarget,
-    CommentUseCases, FilesystemCommentUseCases, GenerateCommentId, GetCurrentTime,
-    ResolveCommentAnchorsResult, UtcCommentClock, UuidCommentIdGenerator,
+    CommentAnchorResolution, CommentAnchorResolutionTarget, CommentUseCases,
+    FilesystemCommentUseCases, GenerateCommentId, GetCurrentTime, ResolveCommentAnchorsResult,
+    UtcCommentClock, UuidCommentIdGenerator,
 };
 
 pub type FilesystemAppUseCases = AppUseCases<
