@@ -24,3 +24,4 @@ Completed task files are moved here from the active task groups.
 - [P1.10 Presentation Commands](./phase-1-viewer/p1-10-presentation-commands.md)
 - [P1.11 Frontend Types And IPC](./phase-1-viewer/p1-11-frontend-types-and-ipc.md)
 - [P1.12 Frontend State Hooks](./phase-1-viewer/p1-12-frontend-state-hooks.md)
+- [P1.13 Layout Components](./phase-1-viewer/p1-13-layout-components.md)
