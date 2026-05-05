@@ -7,12 +7,14 @@ export type SpecFileKey =
   | "design";
 
 export type SpecFileStatus = "present" | "missing";
+export type ConfigSource = "default" | "workspaceConfig" | "specOverride";
 
 export type SpecFile = Readonly<{
   key: SpecFileKey;
   label: string;
   fileName: string;
   status: SpecFileStatus;
+  configSource?: ConfigSource;
 }>;
 
 export type SpecNode = Readonly<{

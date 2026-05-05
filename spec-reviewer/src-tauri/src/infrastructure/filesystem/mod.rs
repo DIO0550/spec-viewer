@@ -13,6 +13,7 @@ use crate::domain::{
         WorkspaceConfig, WorkspaceDomainError, WorkspaceKind, WorkspaceLayout, WorkspaceRoot,
     },
 };
+use crate::infrastructure::persistence::config::{ConfigLoadError, WorkspaceConfigLoader};
 
 const PLUGIN_WORKSPACE_SPECS_DIR: &str = ".plugin-workspace/.specs";
 const SPEC_SKILL_FEATURES_DIR: &str = ".spec-skill/features";
@@ -147,6 +148,13 @@ pub fn safe_relative_spec_path(spec_id: &str) -> Result<PathBuf, SafeSpecPathErr
     Ok(path)
 }
 
+pub fn spec_directory_path(
+    layout: &WorkspaceLayout,
+    spec_id: &str,
+) -> Result<PathBuf, SafeSpecPathError> {
+    Ok(spec_root_path(layout).join(safe_relative_spec_path(spec_id)?))
+}
+
 fn spec_root_directory_for_kind(kind: WorkspaceKind) -> &'static str {
     match kind {
         WorkspaceKind::PluginWorkspace => PLUGIN_WORKSPACE_SPECS_DIR,
@@ -203,7 +211,8 @@ fn scan_spec_directory(
     config: &WorkspaceConfig,
 ) -> Result<SpecNode, SpecTreeScanError> {
     let id = spec_node_id(parent_id, label);
-    let files = scan_spec_files(directory, config)?;
+    let effective_config = config_for_spec_directory(directory, config)?;
+    let files = scan_spec_files(directory, &effective_config)?;
     let children = scan_child_directories(directory, &id, config)?;
 
     SpecNode::new(id.clone(), label, files, children).map_err(|source| {
@@ -226,14 +235,35 @@ fn scan_spec_files(
             let file_path = directory.join(mapping.file_name());
             let status = spec_file_status(&file_path)?;
 
-            SpecFile::new(mapping.key(), mapping.file_name(), status).map_err(|source| {
-                SpecTreeScanError::InvalidFile {
-                    path: display_path(&file_path),
-                    source,
-                }
+            SpecFile::with_config_source(
+                mapping.key(),
+                mapping.file_name(),
+                status,
+                mapping.source(),
+            )
+            .map_err(|source| SpecTreeScanError::InvalidFile {
+                path: display_path(&file_path),
+                source,
             })
         })
         .collect()
+}
+
+fn config_for_spec_directory(
+    directory: &Path,
+    config: &WorkspaceConfig,
+) -> Result<WorkspaceConfig, SpecTreeScanError> {
+    let Some(spec_override) = WorkspaceConfigLoader::new()
+        .load_spec_override_from_directory(directory)
+        .map_err(|source| SpecTreeScanError::ConfigOverrideLoad {
+            path: display_path(directory),
+            source,
+        })?
+    else {
+        return Ok(config.clone());
+    };
+
+    Ok(config.merge_spec_override(&spec_override))
 }
 
 fn spec_file_status(path: &Path) -> Result<SpecFileStatus, SpecTreeScanError> {
@@ -276,6 +306,11 @@ pub enum SpecTreeScanError {
     InvalidFile {
         path: String,
         source: SpecDomainError,
+    },
+    #[error("failed to load spec config override for {path}")]
+    ConfigOverrideLoad {
+        path: String,
+        source: ConfigLoadError,
     },
 }
 
@@ -500,6 +535,70 @@ mod tests {
             vec![(SpecFileKey::Hearing, SpecFileStatus::Present)],
             file_statuses(&tree[0])
         );
+    }
+
+    #[test]
+    fn spec_tree_scanner_applies_spec_config_override_to_that_spec_only() {
+        let workspace = TestWorkspace::new("spec-override");
+        workspace.create_dir(PLUGIN_WORKSPACE_SPECS_DIR);
+        workspace.create_dir(".plugin-workspace/.specs/auth");
+        workspace.create_dir(".plugin-workspace/.specs/checkout");
+        workspace.write_file(
+            ".plugin-workspace/.specs/auth/.spec-reviewer/config.json",
+            r#"{
+                "files": {
+                    "tasks": "auth-tasks.md"
+                }
+            }"#,
+        );
+        workspace.write_file(".plugin-workspace/.specs/auth/auth-tasks.md", "");
+        workspace.write_file(".plugin-workspace/.specs/checkout/tasks.md", "");
+        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
+        let config = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
+
+        let tree = FilesystemSpecTreeScanner::new()
+            .scan(&layout, &config)
+            .expect("spec tree should be scanned");
+
+        let auth = &tree[0];
+        let checkout = &tree[1];
+
+        assert_eq!("auth", auth.id());
+        assert_eq!(
+            Some(("auth-tasks.md", SpecFileStatus::Present)),
+            auth.file_for_key(SpecFileKey::Tasks)
+                .map(|file| (file.file_name(), file.status()))
+        );
+        assert_eq!(
+            Some(("tasks.md", SpecFileStatus::Present)),
+            checkout
+                .file_for_key(SpecFileKey::Tasks)
+                .map(|file| (file.file_name(), file.status()))
+        );
+    }
+
+    #[test]
+    fn spec_tree_scanner_returns_error_for_invalid_spec_config_override() {
+        let workspace = TestWorkspace::new("invalid-spec-override");
+        workspace.create_dir(PLUGIN_WORKSPACE_SPECS_DIR);
+        workspace.create_dir(".plugin-workspace/.specs/auth");
+        workspace.write_file(
+            ".plugin-workspace/.specs/auth/.spec-reviewer/config.json",
+            r#"{
+                "files": {
+                    "tasks": "../tasks.md"
+                }
+            }"#,
+        );
+        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
+        let config = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
+
+        let result = FilesystemSpecTreeScanner::new().scan(&layout, &config);
+
+        assert!(matches!(
+            result,
+            Err(SpecTreeScanError::ConfigOverrideLoad { path, .. }) if path.ends_with("auth")
+        ));
     }
 
     fn node_ids(nodes: &[SpecNode]) -> Vec<&str> {

@@ -64,6 +64,7 @@ pub struct WorkspaceFileMappingResponse {
     key: String,
     label: String,
     file_name: String,
+    config_source: String,
 }
 
 impl WorkspaceFileMappingResponse {
@@ -77,6 +78,10 @@ impl WorkspaceFileMappingResponse {
 
     pub fn file_name(&self) -> &str {
         &self.file_name
+    }
+
+    pub fn config_source(&self) -> &str {
+        &self.config_source
     }
 }
 
@@ -153,6 +158,7 @@ impl From<&WorkspaceFileMapping> for WorkspaceFileMappingResponse {
             key: mapping.key().as_str().to_string(),
             label: mapping.key().display_label().to_string(),
             file_name: mapping.file_name().to_string(),
+            config_source: mapping.source().as_str().to_string(),
         }
     }
 }
@@ -184,6 +190,7 @@ mod tests {
         assert_eq!("tasks", response.files()[0].key());
         assert_eq!("Tasks", response.files()[0].label());
         assert_eq!("todo.md", response.files()[0].file_name());
+        assert_eq!("workspaceConfig", response.files()[0].config_source());
     }
 
     #[test]

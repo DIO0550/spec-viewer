@@ -80,6 +80,8 @@ export function SpecTabs({ spec, selectedFileKey, onSelectFile }: Props) {
     >
       {spec.files.map((file, index) => {
         const isSelected = selectedFileKey === file.key;
+        const sourceLabel = configSourceLabel(file.configSource);
+        const title = `${file.fileName} from ${sourceLabel}`;
 
         return (
           <button
@@ -91,8 +93,10 @@ export function SpecTabs({ spec, selectedFileKey, onSelectFile }: Props) {
             type="button"
             role="tab"
             aria-selected={isSelected}
+            aria-label={`${file.label}, ${file.status}, ${title}`}
             aria-controls="markdown-viewer-panel"
             tabIndex={isSelected ? 0 : -1}
+            title={title}
             onClick={() => {
               onSelectFile(file.key);
             }}
@@ -109,4 +113,19 @@ export function SpecTabs({ spec, selectedFileKey, onSelectFile }: Props) {
       })}
     </div>
   );
+}
+
+/** @returns Human-readable config source text for tab debug affordances. */
+function configSourceLabel(
+  source: SpecNode["files"][number]["configSource"],
+): string {
+  if (source === "specOverride") {
+    return "spec override";
+  }
+
+  if (source === "workspaceConfig") {
+    return "workspace config";
+  }
+
+  return "defaults";
 }

@@ -11,16 +11,42 @@ use crate::domain::spec::SpecFileKey;
 
 use super::WorkspaceKind;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum WorkspaceConfigSource {
+    Default,
+    WorkspaceConfig,
+    SpecOverride,
+}
+
+impl WorkspaceConfigSource {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Default => "default",
+            Self::WorkspaceConfig => "workspaceConfig",
+            Self::SpecOverride => "specOverride",
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkspaceFileMapping {
     key: SpecFileKey,
     file_name: String,
+    source: WorkspaceConfigSource,
 }
 
 impl WorkspaceFileMapping {
     pub fn new(
         key: SpecFileKey,
         file_name: impl Into<String>,
+    ) -> Result<Self, WorkspaceConfigError> {
+        Self::with_source(key, file_name, WorkspaceConfigSource::WorkspaceConfig)
+    }
+
+    pub fn with_source(
+        key: SpecFileKey,
+        file_name: impl Into<String>,
+        source: WorkspaceConfigSource,
     ) -> Result<Self, WorkspaceConfigError> {
         let file_name = file_name.into();
         let trimmed = file_name.trim();
@@ -34,6 +60,7 @@ impl WorkspaceFileMapping {
         Ok(Self {
             key,
             file_name: trimmed.to_string(),
+            source,
         })
     }
 
@@ -43,6 +70,10 @@ impl WorkspaceFileMapping {
 
     pub fn file_name(&self) -> &str {
         &self.file_name
+    }
+
+    pub fn source(&self) -> WorkspaceConfigSource {
+        self.source
     }
 }
 
@@ -95,6 +126,10 @@ impl WorkspaceConfig {
         Self { files }
     }
 
+    pub fn merge_spec_override(&self, spec_override: &SpecConfigOverride) -> Self {
+        self.merge_user_config(spec_override.config.clone())
+    }
+
     pub fn files(&self) -> &[WorkspaceFileMapping] {
         &self.files
     }
@@ -107,12 +142,33 @@ impl WorkspaceConfig {
         let files = keys
             .iter()
             .map(|key| {
-                WorkspaceFileMapping::new(*key, default_file_name_for_key(*key))
-                    .expect("workspace default file names should be valid")
+                WorkspaceFileMapping::with_source(
+                    *key,
+                    default_file_name_for_key(*key),
+                    WorkspaceConfigSource::Default,
+                )
+                .expect("workspace default file names should be valid")
             })
             .collect();
 
         Self::new(files).expect("workspace default keys should be unique")
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SpecConfigOverride {
+    config: WorkspaceConfig,
+}
+
+impl SpecConfigOverride {
+    pub fn new(files: Vec<WorkspaceFileMapping>) -> Result<Self, WorkspaceConfigError> {
+        Ok(Self {
+            config: WorkspaceConfig::new(files)?,
+        })
+    }
+
+    pub fn config(&self) -> &WorkspaceConfig {
+        &self.config
     }
 }
 
@@ -232,6 +288,63 @@ mod tests {
                 (SpecFileKey::Design, "design.md"),
             ],
             files
+        );
+    }
+
+    #[test]
+    fn workspace_config_tracks_file_mapping_sources() {
+        let defaults = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
+        let user_config = WorkspaceConfig::new(vec![
+            mapping(SpecFileKey::Tasks, "todo.md").expect("mapping should be valid")
+        ])
+        .expect("config should be valid");
+
+        let merged = defaults.merge_user_config(user_config);
+
+        assert_eq!(
+            Some(WorkspaceConfigSource::Default),
+            merged
+                .file_for_key(SpecFileKey::Exploration)
+                .map(WorkspaceFileMapping::source)
+        );
+        assert_eq!(
+            Some(WorkspaceConfigSource::WorkspaceConfig),
+            merged
+                .file_for_key(SpecFileKey::Tasks)
+                .map(WorkspaceFileMapping::source)
+        );
+    }
+
+    #[test]
+    fn workspace_config_merges_spec_override_after_workspace_config() {
+        let defaults = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
+        let user_config = WorkspaceConfig::new(vec![
+            mapping(SpecFileKey::Tasks, "todo.md").expect("mapping should be valid")
+        ])
+        .expect("config should be valid");
+        let spec_override = SpecConfigOverride::new(vec![WorkspaceFileMapping::with_source(
+            SpecFileKey::Tasks,
+            "local-tasks.md",
+            WorkspaceConfigSource::SpecOverride,
+        )
+        .expect("mapping should be valid")])
+        .expect("override should be valid");
+
+        let merged = defaults
+            .merge_user_config(user_config)
+            .merge_spec_override(&spec_override);
+
+        assert_eq!(
+            Some("local-tasks.md"),
+            merged
+                .file_for_key(SpecFileKey::Tasks)
+                .map(WorkspaceFileMapping::file_name)
+        );
+        assert_eq!(
+            Some(WorkspaceConfigSource::SpecOverride),
+            merged
+                .file_for_key(SpecFileKey::Tasks)
+                .map(WorkspaceFileMapping::source)
         );
     }
 

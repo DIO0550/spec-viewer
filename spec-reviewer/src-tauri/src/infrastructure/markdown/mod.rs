@@ -17,7 +17,7 @@ use crate::{
         spec::{MarkdownBlock, SpecFileKey},
         workspace::{WorkspaceConfig, WorkspaceLayout},
     },
-    infrastructure::filesystem::{safe_relative_spec_path, spec_root_path},
+    infrastructure::filesystem::spec_directory_path,
 };
 
 use self::parser::{parse_markdown_blocks, MarkdownParseError};
@@ -177,13 +177,10 @@ pub fn markdown_file_path(
     let mapping = config
         .file_for_key(key)
         .ok_or(MarkdownReadError::MissingFileMapping { key })?;
-    let relative_spec_path =
-        safe_relative_spec_path(spec_id).map_err(|_| MarkdownReadError::InvalidSpecId {
+    let file_path = spec_directory_path(layout, spec_id)
+        .map_err(|_| MarkdownReadError::InvalidSpecId {
             spec_id: spec_id.to_string(),
-        })?;
-
-    let file_path = spec_root_path(layout)
-        .join(relative_spec_path)
+        })?
         .join(mapping.file_name());
 
     ensure_within_workspace(layout, &file_path)?;
@@ -267,6 +264,7 @@ mod tests {
         spec::SpecFileKey,
         workspace::{WorkspaceConfig, WorkspaceKind, WorkspaceRoot},
     };
+    use crate::infrastructure::filesystem::safe_relative_spec_path;
 
     const SPECS_DIR: &str = ".plugin-workspace/.specs";
 

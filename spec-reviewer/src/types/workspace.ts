@@ -1,9 +1,14 @@
 export type WorkspaceKind = "plugin-workspace" | "spec-skill";
+export type WorkspaceConfigSource =
+  | "default"
+  | "workspaceConfig"
+  | "specOverride";
 
 export type WorkspaceFileMapping = Readonly<{
   key: string;
   label: string;
   fileName: string;
+  configSource?: WorkspaceConfigSource;
 }>;
 
 export type Workspace = Readonly<{

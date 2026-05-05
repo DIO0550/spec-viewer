@@ -13,12 +13,14 @@ use thiserror::Error;
 use crate::domain::{
     spec::{SpecDomainError, SpecFileKey},
     workspace::{
-        WorkspaceConfig, WorkspaceConfigError, WorkspaceFileMapping, WorkspaceKind, WorkspaceLayout,
+        SpecConfigOverride, WorkspaceConfig, WorkspaceConfigError, WorkspaceConfigSource,
+        WorkspaceFileMapping, WorkspaceKind, WorkspaceLayout,
     },
 };
 
 const PLUGIN_WORKSPACE_CONFIG_FILE: &str = ".plugin-workspace/config.json";
 const SPEC_SKILL_CONFIG_FILE: &str = ".spec-skill/config.json";
+const SPEC_OVERRIDE_CONFIG_FILE: &str = ".spec-reviewer/config.json";
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct WorkspaceConfigLoader;
@@ -43,14 +45,39 @@ impl WorkspaceConfigLoader {
             }
         };
 
-        let user_config = parse_workspace_config(&contents, &path)?;
+        let user_config =
+            parse_workspace_config(&contents, &path, WorkspaceConfigSource::WorkspaceConfig)?;
 
         Ok(defaults.merge_user_config(user_config))
+    }
+
+    pub fn load_spec_override_from_directory(
+        &self,
+        spec_directory: &Path,
+    ) -> Result<Option<SpecConfigOverride>, ConfigLoadError> {
+        let path = spec_override_config_file_path(spec_directory);
+
+        let contents = match fs::read_to_string(&path) {
+            Ok(contents) => contents,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+            Err(source) => {
+                return Err(ConfigLoadError::ReadFile {
+                    path: display_path(&path),
+                    source,
+                });
+            }
+        };
+
+        parse_spec_config_override(&contents, &path).map(Some)
     }
 }
 
 pub fn config_file_path(layout: &WorkspaceLayout) -> PathBuf {
     PathBuf::from(layout.root().as_str()).join(config_file_name_for_kind(layout.kind()))
+}
+
+pub fn spec_override_config_file_path(spec_directory: &Path) -> PathBuf {
+    spec_directory.join(SPEC_OVERRIDE_CONFIG_FILE)
 }
 
 fn config_file_name_for_kind(kind: WorkspaceKind) -> &'static str {
@@ -60,7 +87,11 @@ fn config_file_name_for_kind(kind: WorkspaceKind) -> &'static str {
     }
 }
 
-fn parse_workspace_config(contents: &str, path: &Path) -> Result<WorkspaceConfig, ConfigLoadError> {
+fn parse_workspace_config(
+    contents: &str,
+    path: &Path,
+    source: WorkspaceConfigSource,
+) -> Result<WorkspaceConfig, ConfigLoadError> {
     let raw_config: RawWorkspaceConfig =
         serde_json::from_str(contents).map_err(|source| ConfigLoadError::MalformedJson {
             path: display_path(path),
@@ -76,17 +107,53 @@ fn parse_workspace_config(contents: &str, path: &Path) -> Result<WorkspaceConfig
                 key: raw_key,
                 source,
             })?;
-        let mapping = WorkspaceFileMapping::new(key, file_name).map_err(|source| {
-            ConfigLoadError::InvalidFileMapping {
-                path: display_path(path),
-                source,
-            }
-        })?;
+        let mapping =
+            WorkspaceFileMapping::with_source(key, file_name, source).map_err(|source| {
+                ConfigLoadError::InvalidFileMapping {
+                    path: display_path(path),
+                    source,
+                }
+            })?;
 
         files.push(mapping);
     }
 
     WorkspaceConfig::new(files).map_err(|source| ConfigLoadError::InvalidFileMapping {
+        path: display_path(path),
+        source,
+    })
+}
+
+fn parse_spec_config_override(
+    contents: &str,
+    path: &Path,
+) -> Result<SpecConfigOverride, ConfigLoadError> {
+    let raw_config: RawWorkspaceConfig =
+        serde_json::from_str(contents).map_err(|source| ConfigLoadError::MalformedJson {
+            path: display_path(path),
+            source,
+        })?;
+
+    let mut files = Vec::with_capacity(raw_config.files.len());
+
+    for (raw_key, file_name) in raw_config.files {
+        let key =
+            SpecFileKey::from_str(&raw_key).map_err(|source| ConfigLoadError::InvalidFileKey {
+                path: display_path(path),
+                key: raw_key,
+                source,
+            })?;
+        let mapping =
+            WorkspaceFileMapping::with_source(key, file_name, WorkspaceConfigSource::SpecOverride)
+                .map_err(|source| ConfigLoadError::InvalidFileMapping {
+                    path: display_path(path),
+                    source,
+                })?;
+
+        files.push(mapping);
+    }
+
+    SpecConfigOverride::new(files).map_err(|source| ConfigLoadError::InvalidFileMapping {
         path: display_path(path),
         source,
     })
@@ -171,6 +238,10 @@ mod tests {
             fs::create_dir_all(parent).expect("config directory should be created");
             fs::write(path, contents).expect("config file should be written");
         }
+
+        fn spec_directory(&self, relative_path: &str) -> PathBuf {
+            self.root.join(relative_path)
+        }
     }
 
     impl Drop for TestWorkspace {
@@ -198,6 +269,17 @@ mod tests {
         assert_eq!(
             workspace.root().join(SPEC_SKILL_CONFIG_FILE),
             config_file_path(&layout)
+        );
+    }
+
+    #[test]
+    fn spec_override_config_file_path_uses_hidden_spec_reviewer_location() {
+        let workspace = TestWorkspace::new("override-location");
+        let spec_directory = workspace.spec_directory(".plugin-workspace/.specs/auth");
+
+        assert_eq!(
+            spec_directory.join(SPEC_OVERRIDE_CONFIG_FILE),
+            spec_override_config_file_path(&spec_directory)
         );
     }
 
@@ -341,6 +423,70 @@ mod tests {
     }
 
     #[test]
+    fn config_loader_merges_spec_override_after_workspace_config() {
+        let workspace = TestWorkspace::new("spec-override");
+        workspace.write_config(
+            PLUGIN_WORKSPACE_CONFIG_FILE,
+            r#"{
+                "files": {
+                    "tasks": "workspace-tasks.md"
+                }
+            }"#,
+        );
+        workspace.write_config(
+            ".plugin-workspace/.specs/auth/.spec-reviewer/config.json",
+            r#"{
+                "files": {
+                    "tasks": "auth-tasks.md",
+                    "design": "auth-design.md"
+                }
+            }"#,
+        );
+        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
+        let workspace_config = WorkspaceConfigLoader::new()
+            .load(&layout)
+            .expect("workspace config should be loaded");
+        let spec_directory = workspace.spec_directory(".plugin-workspace/.specs/auth");
+        let spec_override = WorkspaceConfigLoader::new()
+            .load_spec_override_from_directory(&spec_directory)
+            .expect("override should load")
+            .expect("override should exist");
+
+        let config = workspace_config.merge_spec_override(&spec_override);
+
+        assert_eq!(
+            Some("auth-tasks.md"),
+            config
+                .file_for_key(SpecFileKey::Tasks)
+                .map(WorkspaceFileMapping::file_name)
+        );
+        assert_eq!(
+            Some(WorkspaceConfigSource::SpecOverride),
+            config
+                .file_for_key(SpecFileKey::Tasks)
+                .map(WorkspaceFileMapping::source)
+        );
+        assert_eq!(
+            Some("auth-design.md"),
+            config
+                .file_for_key(SpecFileKey::Design)
+                .map(WorkspaceFileMapping::file_name)
+        );
+    }
+
+    #[test]
+    fn config_loader_returns_none_when_spec_override_is_missing() {
+        let workspace = TestWorkspace::new("missing-override");
+        let spec_directory = workspace.spec_directory(".plugin-workspace/.specs/auth");
+
+        let override_config = WorkspaceConfigLoader::new()
+            .load_spec_override_from_directory(&spec_directory)
+            .expect("missing override should be accepted");
+
+        assert_eq!(None, override_config);
+    }
+
+    #[test]
     fn config_loader_returns_typed_error_for_malformed_json() {
         let workspace = TestWorkspace::new("malformed");
         workspace.write_config(PLUGIN_WORKSPACE_CONFIG_FILE, r#"{"files":"#);
@@ -390,6 +536,34 @@ mod tests {
         let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
 
         let result = WorkspaceConfigLoader::new().load(&layout);
+
+        assert!(matches!(
+            result,
+            Err(ConfigLoadError::InvalidFileMapping {
+                source: WorkspaceConfigError::UnsafeFileName {
+                    key: SpecFileKey::Tasks,
+                    file_name,
+                },
+                ..
+            }) if file_name == "../tasks.md"
+        ));
+    }
+
+    #[test]
+    fn config_loader_returns_typed_error_for_invalid_spec_override_mapping() {
+        let workspace = TestWorkspace::new("invalid-override-mapping");
+        workspace.write_config(
+            ".plugin-workspace/.specs/auth/.spec-reviewer/config.json",
+            r#"{
+                "files": {
+                    "tasks": "../tasks.md"
+                }
+            }"#,
+        );
+        let spec_directory = workspace.spec_directory(".plugin-workspace/.specs/auth");
+
+        let result =
+            WorkspaceConfigLoader::new().load_spec_override_from_directory(&spec_directory);
 
         assert!(matches!(
             result,

@@ -4,6 +4,8 @@ use std::{fmt, str::FromStr};
 
 use thiserror::Error;
 
+use crate::domain::workspace::WorkspaceConfigSource;
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct SpecId {
     value: String,
@@ -120,6 +122,7 @@ pub struct SpecFile {
     key: SpecFileKey,
     file_name: String,
     status: SpecFileStatus,
+    config_source: WorkspaceConfigSource,
 }
 
 impl SpecFile {
@@ -127,6 +130,20 @@ impl SpecFile {
         key: SpecFileKey,
         file_name: impl Into<String>,
         status: SpecFileStatus,
+    ) -> Result<Self, SpecDomainError> {
+        Self::with_config_source(
+            key,
+            file_name,
+            status,
+            WorkspaceConfigSource::WorkspaceConfig,
+        )
+    }
+
+    pub fn with_config_source(
+        key: SpecFileKey,
+        file_name: impl Into<String>,
+        status: SpecFileStatus,
+        config_source: WorkspaceConfigSource,
     ) -> Result<Self, SpecDomainError> {
         let file_name = file_name.into();
         let trimmed = file_name.trim();
@@ -139,6 +156,7 @@ impl SpecFile {
             key,
             file_name: trimmed.to_string(),
             status,
+            config_source,
         })
     }
 
@@ -170,6 +188,10 @@ impl SpecFile {
 
     pub fn status(&self) -> SpecFileStatus {
         self.status
+    }
+
+    pub fn config_source(&self) -> WorkspaceConfigSource {
+        self.config_source
     }
 
     pub fn is_missing(&self) -> bool {

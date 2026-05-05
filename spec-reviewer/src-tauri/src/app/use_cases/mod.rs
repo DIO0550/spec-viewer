@@ -2,6 +2,8 @@
 
 pub mod comments;
 
+use std::path::Path;
+
 use thiserror::Error;
 
 use crate::{
@@ -14,8 +16,8 @@ use crate::{
     },
     infrastructure::{
         filesystem::{
-            FilesystemSpecTreeScanner, FilesystemWorkspaceDetector, SpecTreeScanError,
-            WorkspaceDetectionError,
+            spec_directory_path, FilesystemSpecTreeScanner, FilesystemWorkspaceDetector,
+            SafeSpecPathError, SpecTreeScanError, WorkspaceDetectionError,
         },
         markdown::{
             FilesystemMarkdownReader, MarkdownDocument, MarkdownReadError, MarkdownReadResult,
@@ -87,7 +89,14 @@ impl FilesystemAppUseCases {
         spec_id: &str,
         key: SpecFileKey,
     ) -> Result<FileWatchPlan, AppUseCaseError> {
-        plan_file_watch(workspace, spec_id, key)
+        let effective_config = spec_config_for_directory(
+            &self.config_loader,
+            workspace.layout(),
+            workspace.config(),
+            spec_id,
+        )?;
+
+        plan_file_watch(workspace, &effective_config, spec_id, key)
     }
 }
 
@@ -128,8 +137,15 @@ where
         spec_id: &str,
         key: SpecFileKey,
     ) -> Result<ReadSpecFileResult, AppUseCaseError> {
+        let effective_config = spec_config_for_directory(
+            &self.config_loader,
+            workspace.layout(),
+            workspace.config(),
+            spec_id,
+        )?;
+
         self.markdown_reader
-            .read_spec_file(workspace.layout(), workspace.config(), spec_id, key)
+            .read_spec_file(workspace.layout(), &effective_config, spec_id, key)
     }
 }
 
@@ -155,6 +171,11 @@ pub trait LoadWorkspaceConfig {
         &self,
         layout: &WorkspaceLayout,
     ) -> Result<WorkspaceConfig, AppUseCaseError>;
+
+    fn load_spec_config_override(
+        &self,
+        spec_directory: &Path,
+    ) -> Result<Option<crate::domain::workspace::SpecConfigOverride>, AppUseCaseError>;
 }
 
 impl LoadWorkspaceConfig for WorkspaceConfigLoader {
@@ -164,6 +185,31 @@ impl LoadWorkspaceConfig for WorkspaceConfigLoader {
     ) -> Result<WorkspaceConfig, AppUseCaseError> {
         self.load(layout).map_err(AppUseCaseError::from)
     }
+
+    fn load_spec_config_override(
+        &self,
+        spec_directory: &Path,
+    ) -> Result<Option<crate::domain::workspace::SpecConfigOverride>, AppUseCaseError> {
+        self.load_spec_override_from_directory(spec_directory)
+            .map_err(AppUseCaseError::from)
+    }
+}
+
+fn spec_config_for_directory<ConfigLoader>(
+    config_loader: &ConfigLoader,
+    layout: &WorkspaceLayout,
+    workspace_config: &WorkspaceConfig,
+    spec_id: &str,
+) -> Result<WorkspaceConfig, AppUseCaseError>
+where
+    ConfigLoader: LoadWorkspaceConfig,
+{
+    let spec_directory = spec_directory_path(layout, spec_id)?;
+    let Some(spec_override) = config_loader.load_spec_config_override(&spec_directory)? else {
+        return Ok(workspace_config.clone());
+    };
+
+    Ok(workspace_config.merge_spec_override(&spec_override))
 }
 
 pub trait ScanSpecTree {
@@ -388,7 +434,21 @@ impl From<ConfigLoadError> for AppUseCaseError {
 
 impl From<SpecTreeScanError> for AppUseCaseError {
     fn from(source: SpecTreeScanError) -> Self {
+        if matches!(source, SpecTreeScanError::ConfigOverrideLoad { .. }) {
+            return Self::ConfigLoad {
+                message: source.to_string(),
+            };
+        }
+
         Self::SpecTreeScan {
+            message: source.to_string(),
+        }
+    }
+}
+
+impl From<SafeSpecPathError> for AppUseCaseError {
+    fn from(source: SafeSpecPathError) -> Self {
+        Self::InvalidSpec {
             message: source.to_string(),
         }
     }
@@ -428,13 +488,17 @@ impl From<CommentRepositoryError> for AppUseCaseError {
 
 #[cfg(test)]
 mod tests {
-    use std::{cell::Cell, rc::Rc};
+    use std::{
+        cell::{Cell, RefCell},
+        rc::Rc,
+    };
 
     use super::*;
     use crate::domain::{
         spec::{SpecFile, SpecFileStatus},
         workspace::{
-            WorkspaceConfig, WorkspaceFileMapping, WorkspaceKind, WorkspaceLayout, WorkspaceRoot,
+            SpecConfigOverride, WorkspaceConfig, WorkspaceConfigSource, WorkspaceFileMapping,
+            WorkspaceKind, WorkspaceLayout, WorkspaceRoot,
         },
     };
 
@@ -463,6 +527,13 @@ mod tests {
             _layout: &WorkspaceLayout,
         ) -> Result<WorkspaceConfig, AppUseCaseError> {
             self.result.clone()
+        }
+
+        fn load_spec_config_override(
+            &self,
+            _spec_directory: &Path,
+        ) -> Result<Option<crate::domain::workspace::SpecConfigOverride>, AppUseCaseError> {
+            Ok(None)
         }
     }
 
@@ -564,6 +635,14 @@ mod tests {
                 self.call_count.set(self.call_count.get() + 1);
                 Ok(WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace))
             }
+
+            fn load_spec_config_override(
+                &self,
+                _spec_directory: &Path,
+            ) -> Result<Option<crate::domain::workspace::SpecConfigOverride>, AppUseCaseError>
+            {
+                Ok(None)
+            }
         }
 
         let config_loader = CountingConfigLoader {
@@ -656,6 +735,93 @@ mod tests {
     }
 
     #[test]
+    fn read_spec_file_applies_spec_config_override_before_reading() {
+        #[derive(Debug, Clone)]
+        struct OverrideConfigLoader {
+            workspace_config: WorkspaceConfig,
+            spec_override: SpecConfigOverride,
+        }
+
+        impl LoadWorkspaceConfig for OverrideConfigLoader {
+            fn load_workspace_config(
+                &self,
+                _layout: &WorkspaceLayout,
+            ) -> Result<WorkspaceConfig, AppUseCaseError> {
+                Ok(self.workspace_config.clone())
+            }
+
+            fn load_spec_config_override(
+                &self,
+                _spec_directory: &Path,
+            ) -> Result<Option<SpecConfigOverride>, AppUseCaseError> {
+                Ok(Some(self.spec_override.clone()))
+            }
+        }
+
+        #[derive(Debug, Clone)]
+        struct CapturingMarkdownReader {
+            observed_file_name: Rc<RefCell<Option<String>>>,
+        }
+
+        impl ReadSpecFile for CapturingMarkdownReader {
+            fn read_spec_file(
+                &self,
+                _layout: &WorkspaceLayout,
+                config: &WorkspaceConfig,
+                _spec_id: &str,
+                key: SpecFileKey,
+            ) -> Result<ReadSpecFileResult, AppUseCaseError> {
+                let file_name = config
+                    .file_for_key(key)
+                    .map(|mapping| mapping.file_name().to_string());
+
+                self.observed_file_name.replace(file_name);
+
+                Ok(ReadSpecFileResult::Missing(AppMissingMarkdownFile::new(
+                    key,
+                    "/workspace/project/auth/local-tasks.md",
+                )))
+            }
+        }
+
+        let observed_file_name = Rc::new(RefCell::new(None));
+        let workspace_config = config_with_mapping(SpecFileKey::Tasks, "workspace-tasks.md");
+        let spec_override = SpecConfigOverride::new(vec![WorkspaceFileMapping::with_source(
+            SpecFileKey::Tasks,
+            "local-tasks.md",
+            WorkspaceConfigSource::SpecOverride,
+        )
+        .expect("mapping should be valid")])
+        .expect("override should be valid");
+        let workspace = LoadWorkspaceResult::new(
+            workspace_layout(WorkspaceKind::PluginWorkspace),
+            workspace_config.clone(),
+        );
+        let use_cases = app_use_cases(
+            FakeWorkspaceDetector {
+                result: Ok(workspace.layout().clone()),
+            },
+            OverrideConfigLoader {
+                workspace_config,
+                spec_override,
+            },
+            PanicSpecTreeScanner,
+            CapturingMarkdownReader {
+                observed_file_name: Rc::clone(&observed_file_name),
+            },
+        );
+
+        use_cases
+            .read_spec_file(&workspace, "auth", SpecFileKey::Tasks)
+            .expect("spec file read should resolve override");
+
+        assert_eq!(
+            Some("local-tasks.md".to_string()),
+            observed_file_name.borrow().clone()
+        );
+    }
+
+    #[test]
     fn read_spec_file_returns_missing_markdown_file() {
         let workspace = LoadWorkspaceResult::new(
             workspace_layout(WorkspaceKind::PluginWorkspace),
@@ -695,6 +861,25 @@ mod tests {
             },
             error
         );
+    }
+
+    #[test]
+    fn spec_config_override_scan_errors_map_to_config_load_errors() {
+        let source = SpecTreeScanError::ConfigOverrideLoad {
+            path: "/workspace/project/.plugin-workspace/.specs/auth".to_string(),
+            source: ConfigLoadError::InvalidFileMapping {
+                path: "/workspace/project/.plugin-workspace/.specs/auth/.spec-reviewer/config.json"
+                    .to_string(),
+                source: crate::domain::workspace::WorkspaceConfigError::UnsafeFileName {
+                    key: SpecFileKey::Tasks,
+                    file_name: "../tasks.md".to_string(),
+                },
+            },
+        };
+
+        let error = AppUseCaseError::from(source);
+
+        assert!(matches!(error, AppUseCaseError::ConfigLoad { .. }));
     }
 
     fn app_use_cases<Detector, ConfigLoader, SpecTreeScanner, MarkdownReader>(

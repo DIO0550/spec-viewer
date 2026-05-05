@@ -17,7 +17,12 @@ use thiserror::Error;
 use crate::{
     app::use_cases::{AppUseCaseError, LoadWorkspaceResult},
     domain::spec::SpecFileKey,
-    infrastructure::{markdown::markdown_file_path, persistence::config::config_file_path},
+    domain::workspace::WorkspaceConfig,
+    infrastructure::{
+        filesystem::spec_directory_path,
+        markdown::markdown_file_path,
+        persistence::config::{config_file_path, spec_override_config_file_path},
+    },
 };
 
 const DEFAULT_DEBOUNCE_MS: u64 = 250;
@@ -153,12 +158,15 @@ impl FileWatchPlan {
 
 pub fn plan_file_watch(
     workspace: &LoadWorkspaceResult,
+    effective_config: &WorkspaceConfig,
     spec_id: &str,
     file_key: SpecFileKey,
 ) -> Result<FileWatchPlan, AppUseCaseError> {
     let markdown_path =
-        markdown_file_path(workspace.layout(), workspace.config(), spec_id, file_key)?;
+        markdown_file_path(workspace.layout(), effective_config, spec_id, file_key)?;
     let config_path = config_file_path(workspace.layout());
+    let spec_override_config_path =
+        spec_override_config_file_path(&spec_directory_path(workspace.layout(), spec_id)?);
     let scope = FileWatchScope::new(workspace.layout().root().as_str(), spec_id, file_key);
 
     Ok(FileWatchPlan::new(
@@ -166,6 +174,7 @@ pub fn plan_file_watch(
         vec![
             FileWatchTarget::required(FileWatchTargetKind::Markdown, markdown_path),
             FileWatchTarget::optional(FileWatchTargetKind::Config, config_path),
+            FileWatchTarget::optional(FileWatchTargetKind::Config, spec_override_config_path),
         ],
     ))
 }

@@ -6,7 +6,10 @@ use thiserror::Error;
 
 mod config;
 
-pub use config::{WorkspaceConfig, WorkspaceConfigError, WorkspaceFileMapping};
+pub use config::{
+    SpecConfigOverride, WorkspaceConfig, WorkspaceConfigError, WorkspaceConfigSource,
+    WorkspaceFileMapping,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct WorkspaceRoot {

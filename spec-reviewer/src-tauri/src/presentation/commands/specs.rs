@@ -76,6 +76,7 @@ pub struct SpecFileResponse {
     label: String,
     file_name: String,
     status: String,
+    config_source: String,
 }
 
 impl SpecFileResponse {
@@ -93,6 +94,10 @@ impl SpecFileResponse {
 
     pub fn status(&self) -> &str {
         &self.status
+    }
+
+    pub fn config_source(&self) -> &str {
+        &self.config_source
     }
 }
 
@@ -237,6 +242,7 @@ impl From<&SpecFile> for SpecFileResponse {
             label: file.display_label().to_string(),
             file_name: file.file_name().to_string(),
             status: status_label(file.status()).to_string(),
+            config_source: file.config_source().as_str().to_string(),
         }
     }
 }
@@ -352,6 +358,10 @@ mod tests {
         assert_eq!("Implementation", response.specs()[0].files()[0].label());
         assert_eq!("impl.md", response.specs()[0].files()[0].file_name());
         assert_eq!("present", response.specs()[0].files()[0].status());
+        assert_eq!(
+            "workspaceConfig",
+            response.specs()[0].files()[0].config_source()
+        );
         assert_eq!("auth/login", response.specs()[0].children()[0].id());
         assert_eq!(
             "missing",
