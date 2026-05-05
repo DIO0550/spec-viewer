@@ -62,14 +62,14 @@ export function WorkspaceToolbar({
       </label>
       <div className="workspace-toolbar__actions">
         <button
-          className="button button--primary"
+          className="icon-button icon-button--primary"
           type="button"
           aria-label="Open workspace folder"
+          title="Open workspace folder"
           disabled={isBusy}
           onClick={onBrowse}
         >
           <FolderOpen aria-hidden="true" size={16} />
-          {isBrowsing ? "Opening" : "Open"}
         </button>
         <button
           className="button button--secondary"

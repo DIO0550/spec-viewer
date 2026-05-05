@@ -60,12 +60,13 @@ export function SpecTree({
         description="This workspace does not contain configured spec files yet."
         action={
           <button
-            className="button button--secondary"
+            className="icon-button"
             type="button"
+            aria-label="Refresh spec tree"
+            title="Refresh spec tree"
             onClick={onReload}
           >
             <RefreshCcw aria-hidden="true" size={16} />
-            Refresh
           </button>
         }
         variant="inline"
