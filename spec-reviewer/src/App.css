@@ -373,11 +373,15 @@ textarea:disabled {
 }
 
 .workspace-toolbar__field input:focus-visible,
+.workspace-toolbar__theme select:focus-visible,
 .button:focus-visible,
 .icon-button:focus-visible,
 .spec-tree__item:focus-visible,
 .spec-tabs__tab:focus-visible,
 .markdown-viewer:focus-visible,
+.comment-sidebar__filter:focus-visible,
+.comment-sidebar__export:focus-visible,
+.comment-sidebar__search-field input:focus-visible,
 .comment-thread__select:focus-visible,
 .comment-thread__editor textarea:focus-visible,
 .add-comment-popover textarea:focus-visible,

@@ -7,6 +7,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { type KeyboardEvent, useRef, useState } from "react";
 
 import type { ThemeMode } from "../hooks/useTheme";
 import type { RecentWorkspace } from "../lib/recentWorkspaces";
@@ -62,6 +63,18 @@ export function WorkspaceToolbar({
   const canLoad = inputValue.trim().length > 0 && !isBusy;
   const isRefreshing = refreshStatus.status === "loading";
   const hasRecentWorkspaces = recentWorkspaces.length > 0;
+  const recentSummaryRef = useRef<HTMLElement>(null);
+  const [isRecentMenuOpen, setIsRecentMenuOpen] = useState(false);
+
+  const closeRecentMenu = (event: KeyboardEvent<HTMLElement>): void => {
+    if (event.key !== "Escape" || !isRecentMenuOpen) {
+      return;
+    }
+
+    event.preventDefault();
+    setIsRecentMenuOpen(false);
+    recentSummaryRef.current?.focus();
+  };
 
   return (
     <form
@@ -136,11 +149,20 @@ export function WorkspaceToolbar({
           <RefreshCcw aria-hidden="true" size={16} />
           {isLoading ? "Loading" : "Load"}
         </button>
-        <details className="workspace-toolbar__recent">
+        <details
+          className="workspace-toolbar__recent"
+          open={isRecentMenuOpen}
+          onToggle={(event) => {
+            setIsRecentMenuOpen(event.currentTarget.open);
+          }}
+          onKeyDown={closeRecentMenu}
+        >
           <summary
+            ref={recentSummaryRef}
             aria-label="Recent workspaces"
             title="Recent workspaces"
             aria-disabled={!hasRecentWorkspaces}
+            aria-keyshortcuts="Escape"
           >
             <FolderClock aria-hidden="true" size={16} />
           </summary>

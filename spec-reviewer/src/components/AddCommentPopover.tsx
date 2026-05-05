@@ -105,12 +105,22 @@ export function AddCommentPopover({
     }
   };
 
+  const handleDialogKeyDown = (event: KeyboardEvent<HTMLElement>): void => {
+    if (event.defaultPrevented || event.key !== "Escape" || isSaving) {
+      return;
+    }
+
+    event.preventDefault();
+    onCancel();
+  };
+
   return (
     <aside
       className="add-comment-popover"
       style={style}
       role="dialog"
       aria-labelledby={titleId}
+      onKeyDown={handleDialogKeyDown}
     >
       <header className="add-comment-popover__header">
         <div>

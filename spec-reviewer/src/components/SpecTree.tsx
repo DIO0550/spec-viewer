@@ -209,5 +209,62 @@ function getNextTreeItemIndex(
     return items.length - 1;
   }
 
+  if (event.key === "ArrowRight") {
+    return findFirstChildTreeItemIndex(items, currentIndex);
+  }
+
+  if (event.key === "ArrowLeft") {
+    return findParentTreeItemIndex(items, currentIndex);
+  }
+
   return null;
+}
+
+/** @returns The first visible child item index, or null when the item is a leaf. */
+function findFirstChildTreeItemIndex(
+  items: readonly HTMLButtonElement[],
+  currentIndex: number,
+): number | null {
+  const nextIndex = currentIndex + 1;
+  const nextItem = items[nextIndex];
+
+  if (nextItem === undefined) {
+    return null;
+  }
+
+  const currentLevel = readTreeItemLevel(items[currentIndex]);
+  const nextLevel = readTreeItemLevel(nextItem);
+
+  return nextLevel > currentLevel ? nextIndex : null;
+}
+
+/** @returns The closest visible parent item index, or null for root items. */
+function findParentTreeItemIndex(
+  items: readonly HTMLButtonElement[],
+  currentIndex: number,
+): number | null {
+  const currentLevel = readTreeItemLevel(items[currentIndex]);
+
+  if (currentLevel <= 1) {
+    return null;
+  }
+
+  for (let index = currentIndex - 1; index >= 0; index -= 1) {
+    if (readTreeItemLevel(items[index]) < currentLevel) {
+      return index;
+    }
+  }
+
+  return null;
+}
+
+/** @returns The aria tree level for a rendered tree item. */
+function readTreeItemLevel(item: HTMLButtonElement | undefined): number {
+  if (item === undefined) {
+    return 1;
+  }
+
+  const level = Number(item.getAttribute("aria-level"));
+
+  return Number.isFinite(level) ? level : 1;
 }

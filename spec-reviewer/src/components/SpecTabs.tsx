@@ -95,6 +95,7 @@ export function SpecTabs({ spec, selectedFileKey, onSelectFile }: Props) {
             aria-selected={isSelected}
             aria-label={`${file.label}, ${file.status}, ${title}`}
             aria-controls="markdown-viewer-panel"
+            aria-keyshortcuts="ArrowLeft ArrowRight Home End Alt+ArrowLeft Alt+ArrowRight"
             tabIndex={isSelected ? 0 : -1}
             title={title}
             onClick={() => {

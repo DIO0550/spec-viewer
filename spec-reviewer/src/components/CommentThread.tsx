@@ -1,5 +1,11 @@
 import { CheckCircle2, Edit3, RotateCcw, Save, Trash2, X } from "lucide-react";
-import { useId, useState, type FormEvent, type ReactNode } from "react";
+import {
+  useId,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 
 import type { CommentMutationState } from "../hooks/useComments";
 import type {
@@ -97,6 +103,26 @@ export function CommentThread({
     onDeleteComment(comment.id);
   };
 
+  const moveCommentSelection = (
+    event: KeyboardEvent<HTMLButtonElement>,
+  ): void => {
+    const nextButton = findNextCommentSelectButton(event);
+
+    if (nextButton === null) {
+      return;
+    }
+
+    const nextCommentId = nextButton.dataset.commentId;
+
+    if (nextCommentId === undefined) {
+      return;
+    }
+
+    event.preventDefault();
+    nextButton.focus();
+    onSelectComment(nextCommentId as CommentId);
+  };
+
   return (
     <article
       className="comment-thread"
@@ -108,11 +134,14 @@ export function CommentThread({
         <button
           className="comment-thread__select"
           type="button"
+          data-comment-id={comment.id}
           aria-current={isActive ? "true" : undefined}
           aria-label={`Select comment ${comment.id}`}
+          aria-keyshortcuts="ArrowUp ArrowDown Home End Alt+ArrowUp Alt+ArrowDown"
           onClick={() => {
             onSelectComment(comment.id);
           }}
+          onKeyDown={moveCommentSelection}
         >
           <span
             className={
@@ -287,6 +316,40 @@ export function CommentThread({
       </footer>
     </article>
   );
+}
+
+/** @returns The adjacent comment select button for list keyboard navigation. */
+function findNextCommentSelectButton(
+  event: KeyboardEvent<HTMLButtonElement>,
+): HTMLButtonElement | null {
+  const buttons = Array.from(
+    event.currentTarget
+      .closest(".comment-sidebar")
+      ?.querySelectorAll<HTMLButtonElement>(".comment-thread__select") ?? [],
+  );
+  const currentIndex = buttons.indexOf(event.currentTarget);
+
+  if (currentIndex < 0) {
+    return null;
+  }
+
+  if (event.key === "ArrowDown") {
+    return buttons[Math.min(currentIndex + 1, buttons.length - 1)] ?? null;
+  }
+
+  if (event.key === "ArrowUp") {
+    return buttons[Math.max(currentIndex - 1, 0)] ?? null;
+  }
+
+  if (event.key === "Home") {
+    return buttons[0] ?? null;
+  }
+
+  if (event.key === "End") {
+    return buttons[buttons.length - 1] ?? null;
+  }
+
+  return null;
 }
 
 type HighlightedTextProps = Readonly<{

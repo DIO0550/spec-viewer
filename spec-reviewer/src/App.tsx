@@ -14,6 +14,7 @@ import {
   type WorkspaceRefreshStatus,
 } from "./components/WorkspaceToolbar";
 import { useComments } from "./hooks/useComments";
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useRecentWorkspaces } from "./hooks/useRecentWorkspaces";
 import { useSpecFileWatcher } from "./hooks/useSpecFileWatcher";
 import { useSpecs } from "./hooks/useSpecs";
@@ -27,6 +28,7 @@ import type {
   ExportCommentsResponse,
   ExportCommentsTarget,
 } from "./types/comment";
+import type { SpecFileKey } from "./types/spec";
 import {
   exportComments,
   normalizeCommandError,
@@ -50,6 +52,8 @@ type RefreshCurrentViewOptions = Readonly<{
 type LoadWorkspacePathOptions = Readonly<{
   preserveCurrentWorkspace?: boolean;
 }>;
+
+type NavigationDirection = "next" | "previous";
 
 type CommentExportState =
   | Readonly<{
@@ -394,6 +398,60 @@ function App() {
     [runCommentExport, specs.selectedFileKey, specs.selectedSpecId],
   );
 
+  const selectAdjacentFile = useCallback(
+    (direction: NavigationDirection): void => {
+      const selectedSpec = specs.selectedSpec;
+
+      if (selectedSpec === null || selectedSpec.files.length === 0) {
+        return;
+      }
+
+      const currentIndex = selectedSpec.files.findIndex(
+        (file) => file.key === specs.selectedFileKey,
+      );
+      const selectedIndex = currentIndex < 0 ? 0 : currentIndex;
+      const offset = direction === "next" ? 1 : -1;
+      const nextIndex =
+        (selectedIndex + offset + selectedSpec.files.length) %
+        selectedSpec.files.length;
+      const nextFileKey: SpecFileKey | undefined =
+        selectedSpec.files[nextIndex]?.key;
+
+      if (nextFileKey === undefined) {
+        return;
+      }
+
+      void specs.selectFileKey(nextFileKey);
+    },
+    [specs.selectFileKey, specs.selectedFileKey, specs.selectedSpec],
+  );
+
+  const selectAdjacentComment = useCallback(
+    (direction: NavigationDirection): void => {
+      if (comments.comments.length === 0) {
+        return;
+      }
+
+      const currentIndex = comments.comments.findIndex(
+        (comment) => comment.id === activeCommentId,
+      );
+      const offset = direction === "next" ? 1 : -1;
+      const nextIndex =
+        currentIndex < 0
+          ? selectFallbackCommentIndex(direction, comments.comments.length)
+          : (currentIndex + offset + comments.comments.length) %
+            comments.comments.length;
+      const nextCommentId = comments.comments[nextIndex]?.id;
+
+      if (nextCommentId === undefined) {
+        return;
+      }
+
+      setActiveCommentId(nextCommentId);
+    },
+    [activeCommentId, comments.comments],
+  );
+
   const refreshCurrentView = useCallback(
     async ({
       loadingMessage,
@@ -522,6 +580,22 @@ function App() {
     specs.selectedSpecId !== null &&
     specs.selectedFileKey !== null;
 
+  useKeyboardShortcuts({
+    isEnabled: true,
+    onNextFile: () => {
+      selectAdjacentFile("next");
+    },
+    onPreviousFile: () => {
+      selectAdjacentFile("previous");
+    },
+    onNextComment: () => {
+      selectAdjacentComment("next");
+    },
+    onPreviousComment: () => {
+      selectAdjacentComment("previous");
+    },
+  });
+
   return (
     <div className="app-drop-root">
       <AppShell
@@ -628,6 +702,18 @@ function App() {
       <WorkspaceDropOverlay isVisible={workspaceDrop.status === "dragging"} />
     </div>
   );
+}
+
+/** @returns The first or last comment index when no comment is active yet. */
+function selectFallbackCommentIndex(
+  direction: NavigationDirection,
+  commentCount: number,
+): number {
+  if (direction === "next") {
+    return 0;
+  }
+
+  return Math.max(commentCount - 1, 0);
 }
 
 function formatCommentExportSuccessMessage(
