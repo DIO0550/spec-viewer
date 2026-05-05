@@ -40,3 +40,4 @@ Completed task files are moved here from the active task groups.
 - [P2.10 Frontend Comment IPC](./phase-2-comments/p2-10-frontend-comment-ipc.md)
 - [P2.11 Comment State Hook](./phase-2-comments/p2-11-comment-state-hook.md)
 - [P2.12 Sidebar UI](./phase-2-comments/p2-12-sidebar-ui.md)
+- [P2.13 Comment Thread UI](./phase-2-comments/p2-13-comment-thread-ui.md)

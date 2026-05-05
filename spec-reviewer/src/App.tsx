@@ -109,6 +109,10 @@ function App() {
     void comments.reopenComment(commentId);
   };
 
+  const updateComment = (commentId: CommentId, body: string): void => {
+    void comments.updateComment({ commentId, body });
+  };
+
   const deleteComment = (commentId: CommentId): void => {
     if (commentId === activeCommentId) {
       setActiveCommentId(null);
@@ -188,6 +192,7 @@ function App() {
           onResolveComment={resolveComment}
           onReopenComment={reopenComment}
           onDeleteComment={deleteComment}
+          onUpdateComment={updateComment}
           onReload={() => {
             void comments.reloadComments();
           }}

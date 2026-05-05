@@ -71,6 +71,7 @@ function renderReadySidebar(
     onResolveComment?: (commentId: CommentId) => void;
     onReopenComment?: (commentId: CommentId) => void;
     onDeleteComment?: (commentId: CommentId) => void;
+    onUpdateComment?: (commentId: CommentId, body: string) => void;
   }> = {},
 ): RenderResult {
   return renderComponent(
@@ -97,6 +98,7 @@ function renderReadySidebar(
       onResolveComment={options.onResolveComment ?? vi.fn()}
       onReopenComment={options.onReopenComment ?? vi.fn()}
       onDeleteComment={options.onDeleteComment ?? vi.fn()}
+      onUpdateComment={options.onUpdateComment ?? vi.fn()}
       onReload={vi.fn()}
     />,
   );
@@ -127,6 +129,7 @@ test("CommentSidebarは読み込み中状態をrole statusで表示する", () =
       onResolveComment={vi.fn()}
       onReopenComment={vi.fn()}
       onDeleteComment={vi.fn()}
+      onUpdateComment={vi.fn()}
       onReload={vi.fn()}
     />,
   );
@@ -158,6 +161,7 @@ test("CommentSidebarは未選択scopeでは空の案内を表示する", () => {
       onResolveComment={vi.fn()}
       onReopenComment={vi.fn()}
       onDeleteComment={vi.fn()}
+      onUpdateComment={vi.fn()}
       onReload={vi.fn()}
     />,
   );
@@ -196,6 +200,7 @@ test("CommentSidebarは読み込み失敗をalertで表示して再読み込み�
       onResolveComment={vi.fn()}
       onReopenComment={vi.fn()}
       onDeleteComment={vi.fn()}
+      onUpdateComment={vi.fn()}
       onReload={onReload}
     />,
   );
@@ -239,6 +244,7 @@ test("CommentSidebarはコメントなし状態を表示する", () => {
       onResolveComment={vi.fn()}
       onReopenComment={vi.fn()}
       onDeleteComment={vi.fn()}
+      onUpdateComment={vi.fn()}
       onReload={vi.fn()}
     />,
   );
@@ -269,21 +275,20 @@ test("CommentSidebarは選択中コメントをaria-currentで表現する", () 
   const activeButton = result.container.querySelector(
     '[aria-current="true"]',
   ) as HTMLButtonElement;
+  const activeThread = activeButton.closest("article") as HTMLElement;
 
-  expect(activeButton.textContent).toContain(
+  expect(activeThread.textContent).toContain(
     "Clarify what counts as an active comment highlight.",
   );
   result.unmount();
 });
 
-test("CommentSidebarはコメント選択とresolveとdelete操作を発火する", () => {
+test("CommentSidebarはコメント選択とresolve操作を発火する", () => {
   const onSelectComment = vi.fn();
   const onResolveComment = vi.fn();
-  const onDeleteComment = vi.fn();
   const result = renderReadySidebar({
     onSelectComment,
     onResolveComment,
-    onDeleteComment,
   });
   const selectButton = result.container.querySelector(
     '[aria-label="Select comment cmt_open"]',
@@ -291,19 +296,14 @@ test("CommentSidebarはコメント選択とresolveとdelete操作を発火す�
   const resolveButton = result.container.querySelector(
     '[aria-label="Resolve comment cmt_open"]',
   ) as HTMLButtonElement;
-  const deleteButton = result.container.querySelector(
-    '[aria-label="Delete comment cmt_open"]',
-  ) as HTMLButtonElement;
 
   act(() => {
     selectButton.click();
     resolveButton.click();
-    deleteButton.click();
   });
 
   expect(onSelectComment).toHaveBeenCalledWith("cmt_open");
   expect(onResolveComment).toHaveBeenCalledWith("cmt_open");
-  expect(onDeleteComment).toHaveBeenCalledWith("cmt_open");
   result.unmount();
 });
 
@@ -319,5 +319,137 @@ test("CommentSidebarはresolvedコメントのreopen操作を発火する", () =
   });
 
   expect(onReopenComment).toHaveBeenCalledWith("cmt_resolved");
+  result.unmount();
+});
+
+test("CommentSidebarはコメント本文を編集して保存できる", () => {
+  const onUpdateComment = vi.fn();
+  const result = renderReadySidebar({ onUpdateComment });
+  const editButton = result.container.querySelector(
+    '[aria-label="Edit comment cmt_open"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    editButton.click();
+  });
+
+  const editor = result.container.querySelector(
+    '[aria-label="Comment body for cmt_open"]',
+  ) as HTMLTextAreaElement;
+
+  act(() => {
+    editor.value = "Clarify the acceptance detail before merge.";
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  const saveButton = result.container.querySelector(
+    '[aria-label="Save comment cmt_open"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    saveButton.click();
+  });
+
+  expect(onUpdateComment).toHaveBeenCalledWith(
+    "cmt_open",
+    "Clarify the acceptance detail before merge.",
+  );
+  expect(result.container.querySelector("textarea")).toBeNull();
+  result.unmount();
+});
+
+test("CommentSidebarは空本文の保存時にvalidation messageを表示する", () => {
+  const onUpdateComment = vi.fn();
+  const result = renderReadySidebar({ onUpdateComment });
+  const editButton = result.container.querySelector(
+    '[aria-label="Edit comment cmt_open"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    editButton.click();
+  });
+
+  const editor = result.container.querySelector(
+    '[aria-label="Comment body for cmt_open"]',
+  ) as HTMLTextAreaElement;
+
+  act(() => {
+    editor.value = "   ";
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  const saveButton = result.container.querySelector(
+    '[aria-label="Save comment cmt_open"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    saveButton.click();
+  });
+
+  expect(onUpdateComment).not.toHaveBeenCalled();
+  expect(result.container.querySelector('[role="alert"]')?.textContent).toBe(
+    "Comment body cannot be empty.",
+  );
+  result.unmount();
+});
+
+test("CommentSidebarは編集をキャンセルすると元の本文表示へ戻る", () => {
+  const result = renderReadySidebar();
+  const editButton = result.container.querySelector(
+    '[aria-label="Edit comment cmt_open"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    editButton.click();
+  });
+
+  const editor = result.container.querySelector(
+    '[aria-label="Comment body for cmt_open"]',
+  ) as HTMLTextAreaElement;
+
+  act(() => {
+    editor.value = "Temporary draft";
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  const cancelButton = result.container.querySelector(
+    '[aria-label="Cancel editing comment cmt_open"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    cancelButton.click();
+  });
+
+  expect(result.container.textContent).toContain(
+    "Clarify what counts as an active comment highlight.",
+  );
+  expect(result.container.querySelector("textarea")).toBeNull();
+  result.unmount();
+});
+
+test("CommentSidebarは確認後にコメント削除を発火する", () => {
+  const onDeleteComment = vi.fn();
+  const result = renderReadySidebar({ onDeleteComment });
+  const deleteButton = result.container.querySelector(
+    '[aria-label="Delete comment cmt_open"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    deleteButton.click();
+  });
+
+  expect(result.container.textContent).toContain(
+    "Delete this comment permanently?",
+  );
+
+  const confirmButton = result.container.querySelector(
+    '[aria-label="Confirm delete comment cmt_open"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    confirmButton.click();
+  });
+
+  expect(onDeleteComment).toHaveBeenCalledWith("cmt_open");
   result.unmount();
 });

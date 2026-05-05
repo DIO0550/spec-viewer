@@ -337,6 +337,7 @@ function createShellArgs({
         onResolveComment={fn()}
         onReopenComment={fn()}
         onDeleteComment={fn()}
+        onUpdateComment={fn()}
         onReload={fn()}
       />
     ),
