@@ -4,7 +4,6 @@ Goal: load a spec workspace and provide a usable Markdown viewer for configured 
 
 ## Tasks
 
-- [P1.1 Backend Module Skeleton](./p1-01-backend-module-skeleton.md)
 - [P1.2 Workspace Domain](./p1-02-workspace-domain.md)
 - [P1.3 Spec File Domain](./p1-03-spec-file-domain.md)
 - [P1.4 Config Domain And Defaults](./p1-04-config-domain-and-defaults.md)
@@ -20,4 +19,3 @@ Goal: load a spec workspace and provide a usable Markdown viewer for configured 
 - [P1.14 Markdown Rendering](./p1-14-markdown-rendering.md)
 - [P1.15 Viewer UI Behavior](./p1-15-viewer-ui-behavior.md)
 - [P1.16 Styling](./p1-16-styling.md)
-
