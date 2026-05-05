@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import "./App.css";
 import type { AddCommentSubmitInput } from "./components/AddCommentPopover";
@@ -12,7 +12,7 @@ import { WorkspaceToolbar } from "./components/WorkspaceToolbar";
 import { useComments } from "./hooks/useComments";
 import { useSpecs } from "./hooks/useSpecs";
 import { useWorkspace } from "./hooks/useWorkspace";
-import type { CommentId } from "./types/comment";
+import type { CommentAnchorDisplayState, CommentId } from "./types/comment";
 import { normalizeCommandError, selectWorkspaceDirectory } from "./lib/tauri";
 
 function App() {
@@ -28,6 +28,9 @@ function App() {
   const [activeCommentId, setActiveCommentId] = useState<CommentId | null>(
     null,
   );
+  const [commentAnchorDisplayStates, setCommentAnchorDisplayStates] = useState<
+    readonly CommentAnchorDisplayState[]
+  >([]);
   const [isBrowsingWorkspace, setIsBrowsingWorkspace] = useState(false);
   const [dialogErrorMessage, setDialogErrorMessage] = useState<string | null>(
     null,
@@ -35,6 +38,7 @@ function App() {
 
   useEffect(() => {
     setActiveCommentId(null);
+    setCommentAnchorDisplayStates([]);
   }, [specs.selectedFileKey, specs.selectedSpecId, workspace.workspace?.root]);
 
   useEffect(() => {
@@ -122,6 +126,13 @@ function App() {
     void comments.deleteComment(commentId);
   };
 
+  const updateCommentAnchorDisplayStates = useCallback(
+    (nextStates: readonly CommentAnchorDisplayState[]): void => {
+      setCommentAnchorDisplayStates(nextStates);
+    },
+    [],
+  );
+
   const addComment = async ({
     anchor,
     body,
@@ -205,6 +216,8 @@ function App() {
             state={specs.documentState}
             selectedSpecLabel={specs.selectedSpec?.label ?? null}
             selectedFileLabel={specs.selectedFile?.label ?? null}
+            comments={comments.comments}
+            activeCommentId={activeCommentId}
             isAddingComment={isAddingComment}
             addCommentErrorMessage={addCommentErrorMessage}
             isCommentScopeReady={isCommentScopeReady}
@@ -212,6 +225,8 @@ function App() {
               void specs.reloadDocument();
             }}
             onAddComment={addComment}
+            onSelectComment={setActiveCommentId}
+            onAnchorDisplayStatesChange={updateCommentAnchorDisplayStates}
           />
         )
       }
@@ -220,6 +235,7 @@ function App() {
           listState={comments.listState}
           mutationState={comments.mutationState}
           activeCommentId={activeCommentId}
+          anchorDisplayStates={commentAnchorDisplayStates}
           onSelectComment={setActiveCommentId}
           onResolveComment={resolveComment}
           onReopenComment={reopenComment}

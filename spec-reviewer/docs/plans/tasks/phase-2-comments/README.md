@@ -4,4 +4,4 @@ Goal: allow users to create, view, update, resolve, and delete comments without 
 
 ## Tasks
 
-- [P2.16 Highlight Display](./p2-16-highlight-display.md)
+No active tasks.

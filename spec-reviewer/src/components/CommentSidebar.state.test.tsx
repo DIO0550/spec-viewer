@@ -3,7 +3,12 @@ import type { ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
-import type { Comment, CommentAnchor, CommentId } from "../types/comment";
+import type {
+  Comment,
+  CommentAnchor,
+  CommentAnchorDisplayState,
+  CommentId,
+} from "../types/comment";
 import { CommentSidebar } from "./CommentSidebar";
 
 const anchor: CommentAnchor = {
@@ -67,6 +72,7 @@ function renderReadySidebar(
   options: Readonly<{
     comments?: readonly Comment[];
     activeCommentId?: CommentId | null;
+    anchorDisplayStates?: readonly CommentAnchorDisplayState[];
     onSelectComment?: (commentId: CommentId) => void;
     onResolveComment?: (commentId: CommentId) => void;
     onReopenComment?: (commentId: CommentId) => void;
@@ -94,6 +100,7 @@ function renderReadySidebar(
         error: null,
       }}
       activeCommentId={options.activeCommentId ?? null}
+      anchorDisplayStates={options.anchorDisplayStates ?? []}
       onSelectComment={options.onSelectComment ?? vi.fn()}
       onResolveComment={options.onResolveComment ?? vi.fn()}
       onReopenComment={options.onReopenComment ?? vi.fn()}
@@ -280,6 +287,25 @@ test("CommentSidebarは選択中コメントをaria-currentで表現する", () 
   expect(activeThread.textContent).toContain(
     "Clarify what counts as an active comment highlight.",
   );
+  result.unmount();
+});
+
+test("CommentSidebarはstaleとmissingのアンカー状態を表示する", () => {
+  const result = renderReadySidebar({
+    anchorDisplayStates: [
+      {
+        commentId: "cmt_open",
+        status: "stale",
+      },
+      {
+        commentId: "cmt_resolved",
+        status: "missing",
+      },
+    ],
+  });
+
+  expect(result.container.textContent).toContain("Anchor stale");
+  expect(result.container.textContent).toContain("Anchor missing");
   result.unmount();
 });
 

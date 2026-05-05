@@ -2,13 +2,18 @@ import { CheckCircle2, Edit3, RotateCcw, Save, Trash2, X } from "lucide-react";
 import { useId, useState, type FormEvent } from "react";
 
 import type { CommentMutationState } from "../hooks/useComments";
-import type { Comment, CommentId } from "../types/comment";
+import type {
+  Comment,
+  CommentAnchorDisplayStatus,
+  CommentId,
+} from "../types/comment";
 
 const emptyBodyMessage = "Comment body cannot be empty.";
 
 type Props = Readonly<{
   comment: Comment;
   isActive: boolean;
+  anchorDisplayStatus: CommentAnchorDisplayStatus;
   mutationState: CommentMutationState;
   onSelectComment: (commentId: CommentId) => void;
   onUpdateComment: (commentId: CommentId, body: string) => void;
@@ -21,6 +26,7 @@ type Props = Readonly<{
 export function CommentThread({
   comment,
   isActive,
+  anchorDisplayStatus,
   mutationState,
   onSelectComment,
   onUpdateComment,
@@ -40,6 +46,7 @@ export function CommentThread({
   const isMutatingComment =
     mutationState.status === "saving" && mutationState.commentId === comment.id;
   const isResolved = comment.resolved;
+  const anchorStatusLabel = formatAnchorDisplayStatus(anchorDisplayStatus);
 
   const beginEdit = (): void => {
     setIsConfirmingDelete(false);
@@ -155,12 +162,21 @@ export function CommentThread({
       </header>
 
       <div className="comment-thread__anchor" aria-label="Anchor details">
-        <span>{comment.anchor.textSnippet}</span>
-        <span>
+        <span className="comment-thread__anchor-snippet">
+          {comment.anchor.textSnippet}
+        </span>
+        <span className="comment-thread__anchor-location">
           {formatBlockType(comment.anchor.blockType)} block{" "}
           {comment.anchor.blockIndex + 1}, chars{" "}
           {comment.anchor.charRange.start}-{comment.anchor.charRange.end}
         </span>
+        {anchorStatusLabel === null ? null : (
+          <span
+            className={`comment-thread__anchor-state comment-thread__anchor-state--${anchorDisplayStatus}`}
+          >
+            {anchorStatusLabel}
+          </span>
+        )}
       </div>
 
       {isEditing ? (
@@ -266,6 +282,17 @@ function formatBlockType(blockType: string): string {
     .split("_")
     .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
     .join(" ");
+}
+
+/** @returns The visible stale/missing anchor status, or null for current anchors. */
+function formatAnchorDisplayStatus(
+  status: CommentAnchorDisplayStatus,
+): string | null {
+  if (status === "current") {
+    return null;
+  }
+
+  return status === "stale" ? "Anchor stale" : "Anchor missing";
 }
 
 /** @returns A readable local timestamp, falling back to the raw ISO value. */

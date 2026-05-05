@@ -4,7 +4,12 @@ import type {
   CommentListState,
   CommentMutationState,
 } from "../hooks/useComments";
-import type { Comment, CommentId } from "../types/comment";
+import type {
+  Comment,
+  CommentAnchorDisplayState,
+  CommentAnchorDisplayStatus,
+  CommentId,
+} from "../types/comment";
 import { CommentThread } from "./CommentThread";
 import { EmptyState } from "./EmptyState";
 import { ErrorState } from "./ErrorState";
@@ -13,6 +18,7 @@ type Props = Readonly<{
   listState: CommentListState;
   mutationState: CommentMutationState;
   activeCommentId: CommentId | null;
+  anchorDisplayStates?: readonly CommentAnchorDisplayState[];
   onSelectComment: (commentId: CommentId) => void;
   onResolveComment: (commentId: CommentId) => void;
   onReopenComment: (commentId: CommentId) => void;
@@ -31,6 +37,7 @@ export function CommentSidebar({
   listState,
   mutationState,
   activeCommentId,
+  anchorDisplayStates = [],
   onSelectComment,
   onResolveComment,
   onReopenComment,
@@ -91,6 +98,8 @@ export function CommentSidebar({
   }
 
   const groups = groupCommentsByStatus(listState.comments);
+  const anchorDisplayStatusByCommentId =
+    createAnchorDisplayStatusByCommentId(anchorDisplayStates);
 
   return (
     <section className="comment-sidebar" aria-label="Comments">
@@ -103,6 +112,7 @@ export function CommentSidebar({
         title="Open"
         comments={groups.openComments}
         activeCommentId={activeCommentId}
+        anchorDisplayStatusByCommentId={anchorDisplayStatusByCommentId}
         mutationState={mutationState}
         emptyMessage="No open comments"
         onSelectComment={onSelectComment}
@@ -115,6 +125,7 @@ export function CommentSidebar({
         title="Resolved"
         comments={groups.resolvedComments}
         activeCommentId={activeCommentId}
+        anchorDisplayStatusByCommentId={anchorDisplayStatusByCommentId}
         mutationState={mutationState}
         emptyMessage="No resolved comments"
         onSelectComment={onSelectComment}
@@ -173,6 +184,10 @@ type SectionProps = Readonly<{
   title: "Open" | "Resolved";
   comments: readonly Comment[];
   activeCommentId: CommentId | null;
+  anchorDisplayStatusByCommentId: ReadonlyMap<
+    CommentId,
+    CommentAnchorDisplayStatus
+  >;
   mutationState: CommentMutationState;
   emptyMessage: string;
   onSelectComment: (commentId: CommentId) => void;
@@ -187,6 +202,7 @@ function CommentSection({
   title,
   comments,
   activeCommentId,
+  anchorDisplayStatusByCommentId,
   mutationState,
   emptyMessage,
   onSelectComment,
@@ -210,6 +226,9 @@ function CommentSection({
               <CommentThread
                 comment={comment}
                 isActive={comment.id === activeCommentId}
+                anchorDisplayStatus={
+                  anchorDisplayStatusByCommentId.get(comment.id) ?? "current"
+                }
                 mutationState={mutationState}
                 onSelectComment={onSelectComment}
                 onResolveComment={onResolveComment}
@@ -231,4 +250,13 @@ function groupCommentsByStatus(comments: readonly Comment[]): CommentGroups {
     openComments: comments.filter((comment) => !comment.resolved),
     resolvedComments: comments.filter((comment) => comment.resolved),
   };
+}
+
+/** @returns A lookup of rendered anchor status by comment id. */
+function createAnchorDisplayStatusByCommentId(
+  states: readonly CommentAnchorDisplayState[],
+): ReadonlyMap<CommentId, CommentAnchorDisplayStatus> {
+  return new Map(
+    states.map((state) => [state.commentId, state.status] as const),
+  );
 }

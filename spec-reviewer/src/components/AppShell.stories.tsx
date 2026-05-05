@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ComponentProps } from "react";
 import { fn } from "storybook/test";
 
+import { createTextHash } from "../lib/comment-anchor-draft";
 import type { Comment } from "../types/comment";
 import type { SpecDocumentState, SpecTreeState } from "../hooks/useSpecs";
 import type {
@@ -111,8 +112,8 @@ const sampleComments: readonly Comment[] = [
     anchor: {
       fileKey: "tasks",
       blockType: "list_item",
-      blockIndex: 1,
-      textHash: "sha256:story-open",
+      blockIndex: 5,
+      textHash: createTextHash("Comment behavior follows in P1.15"),
       textSnippet: "Comment behavior follows in P1.15",
       charRange: {
         start: 0,
@@ -131,7 +132,7 @@ const sampleComments: readonly Comment[] = [
       fileKey: "tasks",
       blockType: "heading",
       blockIndex: 0,
-      textHash: "sha256:story-resolved",
+      textHash: createTextHash("P1.14 Markdown Rendering"),
       textSnippet: "P1.14 Markdown Rendering",
       charRange: {
         start: 0,
@@ -310,7 +311,10 @@ function createShellArgs({
         state={documentState}
         selectedSpecLabel={selectedSpec?.label ?? null}
         selectedFileLabel={selectedFile?.label ?? null}
+        comments={sampleComments}
+        activeCommentId="cmt_story_open"
         onReload={fn()}
+        onSelectComment={fn()}
       />
     ),
     comments: (

@@ -4,6 +4,8 @@ import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
 import type { SpecDocumentState } from "../hooks/useSpecs";
+import { createTextHash } from "../lib/comment-anchor-draft";
+import type { Comment } from "../types/comment";
 import type { SpecDocument } from "../types/spec";
 import { MarkdownViewer } from "./MarkdownViewer";
 
@@ -75,18 +77,56 @@ function createReadyState(contents: string | null): SpecDocumentState {
   };
 }
 
+function createComment({
+  id,
+  blockIndex,
+  text,
+  resolved,
+}: Readonly<{
+  id: string;
+  blockIndex: number;
+  text: string;
+  resolved: boolean;
+}>): Comment {
+  return {
+    id,
+    anchor: {
+      fileKey: "tasks",
+      blockType: "paragraph",
+      blockIndex,
+      textHash: createTextHash(text),
+      textSnippet: text,
+      charRange: {
+        start: 0,
+        end: text.length,
+      },
+    },
+    body: `${id} body`,
+    status: resolved ? "resolved" : "open",
+    resolved,
+    createdAt: "2026-05-05T10:00:00Z",
+    updatedAt: "2026-05-05T10:00:00Z",
+  };
+}
+
 function renderViewer(
   state: SpecDocumentState,
   onReload = vi.fn(),
   onAddComment = vi.fn().mockResolvedValue(true),
+  comments: readonly Comment[] = [],
+  activeCommentId: string | null = null,
+  onSelectComment = vi.fn(),
 ): RenderResult {
   return renderComponent(
     <MarkdownViewer
       state={state}
       selectedSpecLabel={selectedSpecLabel}
       selectedFileLabel={selectedFileLabel}
+      comments={comments}
+      activeCommentId={activeCommentId}
       onReload={onReload}
       onAddComment={onAddComment}
+      onSelectComment={onSelectComment}
     />,
   );
 }
@@ -147,6 +187,113 @@ test("MarkdownViewerはコメントアンカー用のブロックメタデータ
   expect(
     blockElements.map((element) => element.getAttribute("data-block-index")),
   ).toEqual(["0", "1", "2", "3", "4", "5", "6"]);
+  result.unmount();
+});
+
+test("MarkdownViewerはコメント付きブロックを状態別にハイライトして選択できる", () => {
+  const onSelectComment = vi.fn();
+  const contents = [
+    "## Highlight Plan",
+    "",
+    "Open comments should remain prominent.",
+    "",
+    "Resolved comments should stay quieter.",
+  ].join("\n");
+  const comments: readonly Comment[] = [
+    createComment({
+      id: "cmt_open",
+      blockIndex: 1,
+      text: "Open comments should remain prominent.",
+      resolved: false,
+    }),
+    createComment({
+      id: "cmt_resolved",
+      blockIndex: 2,
+      text: "Resolved comments should stay quieter.",
+      resolved: true,
+    }),
+  ];
+  const result = renderViewer(
+    createReadyState(contents),
+    vi.fn(),
+    vi.fn().mockResolvedValue(true),
+    comments,
+    "cmt_open",
+    onSelectComment,
+  );
+  const highlightedBlocks = result.container.querySelectorAll(
+    '[data-comment-highlight="true"]',
+  );
+  const activeBlock = result.container.querySelector(
+    '[data-comment-highlight-state="active"]',
+  ) as HTMLElement;
+  const resolvedBlock = result.container.querySelector(
+    '[data-comment-highlight-state="resolved"]',
+  );
+
+  expect(highlightedBlocks).toHaveLength(2);
+  expect(activeBlock.textContent).toContain(
+    "Open comments should remain prominent.",
+  );
+  expect(resolvedBlock?.textContent).toContain(
+    "Resolved comments should stay quieter.",
+  );
+
+  act(() => {
+    activeBlock.click();
+  });
+
+  expect(onSelectComment).toHaveBeenCalledWith("cmt_open");
+  result.unmount();
+});
+
+test("MarkdownViewerはstaleとmissingのコメントアンカー状態を通知する", () => {
+  const onAnchorDisplayStatesChange = vi.fn();
+  const contents = "A paragraph with changed anchor text.";
+  const comments: readonly Comment[] = [
+    createComment({
+      id: "cmt_stale",
+      blockIndex: 0,
+      text: "The original anchor text.",
+      resolved: false,
+    }),
+    createComment({
+      id: "cmt_missing",
+      blockIndex: 4,
+      text: "A missing anchor.",
+      resolved: false,
+    }),
+  ];
+  const result = renderComponent(
+    <MarkdownViewer
+      state={createReadyState(contents)}
+      selectedSpecLabel={selectedSpecLabel}
+      selectedFileLabel={selectedFileLabel}
+      comments={comments}
+      activeCommentId={null}
+      onReload={vi.fn()}
+      onAddComment={vi.fn().mockResolvedValue(true)}
+      onSelectComment={vi.fn()}
+      onAnchorDisplayStatesChange={onAnchorDisplayStatesChange}
+    />,
+  );
+  const staleBlock = result.container.querySelector(
+    '[data-comment-highlight-state="stale"]',
+  );
+
+  expect(staleBlock?.textContent).toContain(
+    "A paragraph with changed anchor text.",
+  );
+  expect(onAnchorDisplayStatesChange).toHaveBeenLastCalledWith([
+    {
+      commentId: "cmt_stale",
+      status: "stale",
+    },
+    {
+      commentId: "cmt_missing",
+      status: "missing",
+    },
+  ]);
   result.unmount();
 });
 

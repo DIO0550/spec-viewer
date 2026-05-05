@@ -21,6 +21,8 @@ export type CommentStatusFilter = "all" | CommentStatus;
 
 export type CommentDisplayState = CommentStatus | "orphaned";
 
+export type CommentAnchorDisplayStatus = "current" | "stale" | "missing";
+
 export type CommentCharRange = Readonly<{
   start: number;
   end: number;
@@ -63,6 +65,11 @@ export type CommentViewModel = Readonly<{
   isResolved: boolean;
   isOrphaned: boolean;
   canJumpToAnchor: boolean;
+}>;
+
+export type CommentAnchorDisplayState = Readonly<{
+  commentId: CommentId;
+  status: CommentAnchorDisplayStatus;
 }>;
 
 export type ListCommentsRequest = Readonly<{
