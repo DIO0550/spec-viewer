@@ -4,7 +4,6 @@ Goal: allow users to create, view, update, resolve, and delete comments without 
 
 ## Tasks
 
-- [P2.2 Anchor Domain](./p2-02-anchor-domain.md)
 - [P2.3 Comment Repository Contract](./p2-03-comment-repository-contract.md)
 - [P2.4 JSON Persistence Format](./p2-04-json-persistence-format.md)
 - [P2.5 Comment Storage Paths](./p2-05-comment-storage-paths.md)
