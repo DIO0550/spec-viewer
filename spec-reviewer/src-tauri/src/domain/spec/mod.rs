@@ -278,6 +278,36 @@ impl MarkdownBlockText {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct MarkdownBlockHash {
+    value: String,
+}
+
+impl MarkdownBlockHash {
+    pub fn new(value: impl Into<String>) -> Result<Self, SpecDomainError> {
+        let value = value.into();
+        let trimmed = value.trim();
+
+        if trimmed.is_empty() {
+            return Err(SpecDomainError::MissingMarkdownBlockHash);
+        }
+
+        Ok(Self {
+            value: trimmed.to_string(),
+        })
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.value
+    }
+}
+
+impl fmt::Display for MarkdownBlockHash {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct MarkdownBlockSourceRange {
     start_byte_offset: usize,
@@ -321,6 +351,7 @@ pub struct MarkdownBlock {
     block_type: MarkdownBlockType,
     index: MarkdownBlockIndex,
     text: MarkdownBlockText,
+    text_hash: MarkdownBlockHash,
     source_range: Option<MarkdownBlockSourceRange>,
 }
 
@@ -329,12 +360,14 @@ impl MarkdownBlock {
         block_type: MarkdownBlockType,
         index: MarkdownBlockIndex,
         text: MarkdownBlockText,
+        text_hash: MarkdownBlockHash,
         source_range: Option<MarkdownBlockSourceRange>,
     ) -> Self {
         Self {
             block_type,
             index,
             text,
+            text_hash,
             source_range,
         }
     }
@@ -349,6 +382,10 @@ impl MarkdownBlock {
 
     pub fn text(&self) -> &MarkdownBlockText {
         &self.text
+    }
+
+    pub fn text_hash(&self) -> &MarkdownBlockHash {
+        &self.text_hash
     }
 
     pub fn source_range(&self) -> Option<MarkdownBlockSourceRange> {
@@ -441,6 +478,8 @@ pub enum SpecDomainError {
     MissingMarkdownBlockText,
     #[error("normalized markdown block text is required")]
     MissingNormalizedMarkdownBlockText,
+    #[error("markdown block hash is required")]
+    MissingMarkdownBlockHash,
     #[error(
         "markdown block source range end byte offset {end_byte_offset} cannot be before start byte offset {start_byte_offset}"
     )]
@@ -611,6 +650,21 @@ mod tests {
     }
 
     #[test]
+    fn markdown_block_hash_accepts_and_trims_non_empty_value() {
+        let hash = MarkdownBlockHash::new("  sha256:d4b1ea57  ").expect("hash should be valid");
+
+        assert_eq!("sha256:d4b1ea57", hash.as_str());
+        assert_eq!("sha256:d4b1ea57", hash.to_string());
+    }
+
+    #[test]
+    fn markdown_block_hash_rejects_empty_value() {
+        let result = MarkdownBlockHash::new("   ");
+
+        assert_eq!(Err(SpecDomainError::MissingMarkdownBlockHash), result);
+    }
+
+    #[test]
     fn markdown_block_source_range_keeps_byte_offsets() {
         let range = MarkdownBlockSourceRange::new(4, 17).expect("range should be valid");
 
@@ -645,10 +699,12 @@ mod tests {
         let source_range = MarkdownBlockSourceRange::new(10, 30).expect("range should be valid");
         let text =
             MarkdownBlockText::new("## Overview", "overview").expect("block text should be valid");
+        let text_hash = MarkdownBlockHash::new("sha256:d4b1ea57").expect("hash should be valid");
         let block = MarkdownBlock::new(
             MarkdownBlockType::Heading,
             MarkdownBlockIndex::new(1),
             text,
+            text_hash,
             Some(source_range),
         );
 
@@ -656,6 +712,7 @@ mod tests {
         assert_eq!(1, block.index().value());
         assert_eq!("## Overview", block.text().raw());
         assert_eq!("overview", block.text().normalized());
+        assert_eq!("sha256:d4b1ea57", block.text_hash().as_str());
         assert_eq!(Some(source_range), block.source_range());
     }
 
@@ -667,6 +724,7 @@ mod tests {
             MarkdownBlockType::Paragraph,
             MarkdownBlockIndex::new(0),
             text,
+            MarkdownBlockHash::new("sha256:a5dd5c34").expect("hash should be valid"),
             None,
         );
 

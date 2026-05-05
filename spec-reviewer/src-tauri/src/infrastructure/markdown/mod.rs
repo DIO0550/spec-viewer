@@ -1,5 +1,6 @@
 //! Markdown file readers.
 
+pub mod hash;
 pub mod normalizer;
 pub mod parser;
 

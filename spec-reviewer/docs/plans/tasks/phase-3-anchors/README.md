@@ -4,7 +4,6 @@ Goal: keep comments attached to useful Markdown locations even after Markdown fi
 
 ## Tasks
 
-- [P3.4 Hashing](./p3-04-hashing.md)
 - [P3.5 Anchor Creation Support](./p3-05-anchor-creation-support.md)
 - [P3.6 Anchor Resolution Use Case](./p3-06-anchor-resolution-use-case.md)
 - [P3.7 Fuzzy Matching](./p3-07-fuzzy-matching.md)

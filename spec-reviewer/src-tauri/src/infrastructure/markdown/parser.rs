@@ -6,9 +6,10 @@ use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
 use thiserror::Error;
 
 use crate::domain::spec::{
-    MarkdownBlock, MarkdownBlockIndex, MarkdownBlockSourceRange, MarkdownBlockText,
-    MarkdownBlockType, SpecDomainError,
+    MarkdownBlock, MarkdownBlockHash, MarkdownBlockIndex, MarkdownBlockSourceRange,
+    MarkdownBlockText, MarkdownBlockType, SpecDomainError,
 };
+use crate::infrastructure::markdown::hash::hash_normalized_block_text;
 use crate::infrastructure::markdown::normalizer::normalize_markdown_block_text;
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -151,6 +152,7 @@ struct PendingMarkdownBlock {
 impl PendingMarkdownBlock {
     fn into_domain_block(self, index: usize) -> Result<MarkdownBlock, MarkdownParseError> {
         let normalized = normalize_markdown_block_text(self.block_type, &self.raw);
+        let text_hash = MarkdownBlockHash::new(hash_normalized_block_text(&normalized))?;
         let text = MarkdownBlockText::new(self.raw.clone(), normalized)?;
         let source_range =
             MarkdownBlockSourceRange::new(self.start_byte_offset, self.end_byte_offset)?;
@@ -159,6 +161,7 @@ impl PendingMarkdownBlock {
             self.block_type,
             MarkdownBlockIndex::new(index),
             text,
+            text_hash,
             Some(source_range),
         ))
     }
@@ -359,5 +362,17 @@ mod tests {
         );
         assert_eq!("Checked item", blocks[2].text().normalized());
         assert_eq!("fn main() {}", blocks[3].text().normalized());
+    }
+
+    #[test]
+    fn parses_blocks_with_hashes_from_normalized_text() {
+        let markdown = "### Overview ###\n\nOverview";
+
+        let blocks = parse_markdown_blocks(markdown).expect("markdown should parse");
+
+        assert_eq!("Overview", blocks[0].text().normalized());
+        assert_eq!("Overview", blocks[1].text().normalized());
+        assert_eq!("sha256:d4b1ea57", blocks[0].text_hash().as_str());
+        assert_eq!(blocks[0].text_hash(), blocks[1].text_hash());
     }
 }
