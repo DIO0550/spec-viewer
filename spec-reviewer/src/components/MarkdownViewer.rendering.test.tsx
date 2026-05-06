@@ -165,6 +165,15 @@ test("MarkdownViewerはGFM要素を安全なHTMLとして表示する", () => {
   result.unmount();
 });
 
+test("MarkdownViewerは言語指定されたコードブロックにシンタックスハイライト用classを付与する", () => {
+  const result = renderViewer(createReadyState(richMarkdown));
+  const codeBlock = result.container.querySelector("pre code");
+
+  expect(codeBlock?.classList.contains("hljs")).toBe(true);
+  expect(codeBlock?.querySelector(".hljs-keyword")?.textContent).toBe("const");
+  result.unmount();
+});
+
 test("MarkdownViewerはタスクリストを読み取り専用として表示する", () => {
   const result = renderViewer(createReadyState(richMarkdown));
   const checkboxes = result.container.querySelectorAll(

@@ -16,6 +16,7 @@ import {
 } from "react";
 import { MessageSquarePlus, RefreshCcw } from "lucide-react";
 import ReactMarkdown, { type Components } from "react-markdown";
+import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
 
 import { useMarkdownTextSelection } from "../hooks/useMarkdownTextSelection";
@@ -456,7 +457,11 @@ function MarkdownDocument({
       className="markdown-rendered"
       aria-label={uiText.markdown.renderedDocument}
     >
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeHighlight]}
+        components={components}
+      >
         {contents}
       </ReactMarkdown>
     </div>
