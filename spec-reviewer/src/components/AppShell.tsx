@@ -1,4 +1,9 @@
-import { PanelRightClose, PanelRightOpen } from "lucide-react";
+import {
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
+} from "lucide-react";
 import {
   type CSSProperties,
   type KeyboardEvent,
@@ -15,6 +20,13 @@ type Props = Readonly<{
   tabs: ReactNode;
   viewer: ReactNode;
   comments: ReactNode;
+  isLeftNavigationOpen?: boolean;
+  leftNavigationWidth?: number;
+  leftNavigationMinWidth?: number;
+  leftNavigationMaxWidth?: number;
+  onOpenLeftNavigation?: () => void;
+  onCloseLeftNavigation?: () => void;
+  onLeftNavigationWidthChange?: (width: number) => void;
   isCommentsSidebarOpen?: boolean;
   commentsSidebarWidth?: number;
   commentsSidebarMinWidth?: number;
@@ -33,6 +45,13 @@ export function AppShell({
   tabs,
   viewer,
   comments,
+  isLeftNavigationOpen = false,
+  leftNavigationWidth = 268,
+  leftNavigationMinWidth = 216,
+  leftNavigationMaxWidth = 420,
+  onOpenLeftNavigation,
+  onCloseLeftNavigation,
+  onLeftNavigationWidthChange,
   isCommentsSidebarOpen = true,
   commentsSidebarWidth = 360,
   commentsSidebarMinWidth = 280,
@@ -41,13 +60,32 @@ export function AppShell({
   onCloseCommentsSidebar,
   onCommentsSidebarWidthChange,
 }: Props) {
+  const openLeftNavigationButtonRef = useRef<HTMLButtonElement>(null);
+  const closeLeftNavigationButtonRef = useRef<HTMLButtonElement>(null);
+  const leftAsideRef = useRef<HTMLElement>(null);
   const reopenButtonRef = useRef<HTMLButtonElement>(null);
   const commentsAsideRef = useRef<HTMLElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
+  const isResizingLeftNavigationRef = useRef(false);
   const isResizingRef = useRef(false);
   const bodyStyle = {
+    "--left-navigation-width": `${leftNavigationWidth}px`,
     "--comment-sidebar-width": `${commentsSidebarWidth}px`,
   } as CSSProperties;
+
+  const closeLeftNavigation = (): void => {
+    onCloseLeftNavigation?.();
+    requestAnimationFrame(() => {
+      openLeftNavigationButtonRef.current?.focus();
+    });
+  };
+
+  const openLeftNavigation = (): void => {
+    onOpenLeftNavigation?.();
+    requestAnimationFrame(() => {
+      closeLeftNavigationButtonRef.current?.focus();
+    });
+  };
 
   const closeCommentsSidebar = (): void => {
     onCloseCommentsSidebar?.();
@@ -78,6 +116,108 @@ export function AppShell({
 
     event.preventDefault();
     closeCommentsSidebar();
+  };
+
+  const dismissLeftNavigation = (
+    event: KeyboardEvent<HTMLDivElement>,
+  ): void => {
+    if (
+      event.defaultPrevented ||
+      event.key !== "Escape" ||
+      !isLeftNavigationOpen
+    ) {
+      return;
+    }
+
+    const target = event.target;
+    const isFromLeftNavigation =
+      target instanceof Node && leftAsideRef.current?.contains(target) === true;
+
+    if (!isFromLeftNavigation && !isNarrowViewport()) {
+      return;
+    }
+
+    event.preventDefault();
+    closeLeftNavigation();
+  };
+
+  const dismissPanels = (event: KeyboardEvent<HTMLDivElement>): void => {
+    dismissLeftNavigation(event);
+    dismissCommentsSidebar(event);
+  };
+
+  const resizeLeftNavigationFromPointer = (clientX: number): void => {
+    const body = bodyRef.current;
+
+    if (body === null || onLeftNavigationWidthChange === undefined) {
+      return;
+    }
+
+    const nextWidth = clientX - body.getBoundingClientRect().left;
+
+    onLeftNavigationWidthChange(nextWidth);
+  };
+
+  const startLeftNavigationResize = (
+    event: PointerEvent<HTMLButtonElement>,
+  ): void => {
+    if (onLeftNavigationWidthChange === undefined) {
+      return;
+    }
+
+    event.preventDefault();
+    isResizingLeftNavigationRef.current = true;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    resizeLeftNavigationFromPointer(event.clientX);
+  };
+
+  const continueLeftNavigationResize = (
+    event: PointerEvent<HTMLButtonElement>,
+  ): void => {
+    if (!isResizingLeftNavigationRef.current) {
+      return;
+    }
+
+    event.preventDefault();
+    resizeLeftNavigationFromPointer(event.clientX);
+  };
+
+  const stopLeftNavigationResize = (
+    event: PointerEvent<HTMLButtonElement>,
+  ): void => {
+    isResizingLeftNavigationRef.current = false;
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+  };
+
+  const resizeLeftNavigationWithKeyboard = (
+    event: KeyboardEvent<HTMLButtonElement>,
+  ): void => {
+    if (onLeftNavigationWidthChange === undefined) {
+      return;
+    }
+
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      onLeftNavigationWidthChange(leftNavigationWidth + keyboardResizeStep);
+      return;
+    }
+
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      onLeftNavigationWidthChange(leftNavigationWidth - keyboardResizeStep);
+      return;
+    }
+
+    if (event.key === "Home") {
+      event.preventDefault();
+      onLeftNavigationWidthChange(leftNavigationMinWidth);
+      return;
+    }
+
+    if (event.key === "End") {
+      event.preventDefault();
+      onLeftNavigationWidthChange(leftNavigationMaxWidth);
+    }
   };
 
   const resizeSidebarFromPointer = (clientX: number): void => {
@@ -152,18 +292,63 @@ export function AppShell({
 
   return (
     <div className="app-shell">
-      <header className="app-shell__toolbar">{toolbar}</header>
+      <header className="app-shell__toolbar">
+        <button
+          ref={openLeftNavigationButtonRef}
+          className="icon-button app-shell__left-open"
+          type="button"
+          aria-label={uiText.leftNavigation.open}
+          title={uiText.leftNavigation.open}
+          aria-expanded={isLeftNavigationOpen}
+          onClick={openLeftNavigation}
+        >
+          <PanelLeftOpen aria-hidden="true" size={16} />
+        </button>
+        <div className="app-shell__toolbar-content">{toolbar}</div>
+      </header>
       <div
         ref={bodyRef}
         className="app-shell__body"
+        data-left-navigation={isLeftNavigationOpen ? "open" : "collapsed"}
         data-comments-sidebar={isCommentsSidebarOpen ? "open" : "collapsed"}
         style={bodyStyle}
-        onKeyDown={dismissCommentsSidebar}
+        onKeyDown={dismissPanels}
       >
         <aside
+          ref={leftAsideRef}
           className="app-shell__sidebar"
-          aria-label={uiText.appShell.specNavigation}
+          aria-hidden={!isLeftNavigationOpen}
+          aria-label={uiText.leftNavigation.list}
         >
+          <button
+            ref={closeLeftNavigationButtonRef}
+            className="icon-button app-shell__left-close"
+            type="button"
+            aria-label={uiText.leftNavigation.close}
+            title={uiText.leftNavigation.close}
+            onClick={closeLeftNavigation}
+          >
+            <PanelLeftClose aria-hidden="true" size={16} />
+          </button>
+          <button
+            className="app-shell__left-resize"
+            type="button"
+            role="separator"
+            aria-label={uiText.leftNavigation.resize}
+            aria-orientation="vertical"
+            aria-valuemin={leftNavigationMinWidth}
+            aria-valuemax={leftNavigationMaxWidth}
+            aria-valuenow={leftNavigationWidth}
+            title={uiText.leftNavigation.resize}
+            onPointerDown={startLeftNavigationResize}
+            onPointerMove={continueLeftNavigationResize}
+            onPointerUp={stopLeftNavigationResize}
+            onPointerCancel={stopLeftNavigationResize}
+            onLostPointerCapture={() => {
+              isResizingLeftNavigationRef.current = false;
+            }}
+            onKeyDown={resizeLeftNavigationWithKeyboard}
+          />
           {sidebar}
         </aside>
         <main className="app-shell__main">
@@ -221,4 +406,13 @@ export function AppShell({
       </div>
     </div>
   );
+}
+
+/** @returns Whether the shell is currently using drawer-style narrow layout. */
+function isNarrowViewport(): boolean {
+  if (typeof window === "undefined" || window.matchMedia === undefined) {
+    return false;
+  }
+
+  return window.matchMedia("(max-width: 900px)").matches;
 }

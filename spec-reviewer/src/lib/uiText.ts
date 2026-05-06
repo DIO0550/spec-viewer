@@ -3,6 +3,13 @@ export const uiText = {
     specNavigation: "Specナビゲーション",
     commentSidebar: "コメントサイドバー",
   },
+  leftNavigation: {
+    open: "仕様一覧を開く",
+    close: "仕様一覧を閉じる",
+    resize: "仕様一覧の幅を変更",
+    list: "仕様一覧",
+    currentSpec: "現在の仕様",
+  },
   sidebar: {
     comments: "コメント",
     close: "サイドバーを閉じる",

@@ -194,6 +194,131 @@ test("AppShellはコメントサイドバーを閉じると再オープン導線
   result.unmount();
 });
 
+test("AppShellは左ナビゲーションを閉じた状態で表示領域を広げる", () => {
+  const onOpenLeftNavigation = vi.fn();
+  const result = renderComponent(
+    <AppShell
+      toolbar={<div>Toolbar</div>}
+      sidebar={<div>Tree</div>}
+      tabs={<div>Tabs</div>}
+      viewer={<div>Viewer</div>}
+      comments={<div>コメント本文</div>}
+      isLeftNavigationOpen={false}
+      onOpenLeftNavigation={onOpenLeftNavigation}
+    />,
+  );
+  const body = result.container.querySelector(".app-shell__body");
+  const leftNavigation = result.container.querySelector(
+    '[aria-label="仕様一覧"]',
+  );
+  const openButton = result.container.querySelector(
+    '[aria-label="仕様一覧を開く"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    openButton.click();
+  });
+
+  expect(body?.getAttribute("data-left-navigation")).toBe("collapsed");
+  expect(leftNavigation?.getAttribute("aria-hidden")).toBe("true");
+  expect(onOpenLeftNavigation).toHaveBeenCalledOnce();
+  result.unmount();
+});
+
+test("AppShellは左ナビゲーション内の閉じる操作を発火する", () => {
+  const onCloseLeftNavigation = vi.fn();
+  const result = renderComponent(
+    <AppShell
+      toolbar={<div>Toolbar</div>}
+      sidebar={<button type="button">Tree item</button>}
+      tabs={<div>Tabs</div>}
+      viewer={<div>Viewer</div>}
+      comments={<div>コメント本文</div>}
+      isLeftNavigationOpen={true}
+      onCloseLeftNavigation={onCloseLeftNavigation}
+    />,
+  );
+  const closeButton = result.container.querySelector(
+    '[aria-label="仕様一覧を閉じる"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    closeButton.click();
+  });
+
+  expect(onCloseLeftNavigation).toHaveBeenCalledOnce();
+  result.unmount();
+});
+
+test("AppShellはEscapeで開いている左ナビゲーションを閉じる", () => {
+  const onCloseLeftNavigation = vi.fn();
+  const result = renderComponent(
+    <AppShell
+      toolbar={<div>Toolbar</div>}
+      sidebar={<button type="button">Tree item</button>}
+      tabs={<div>Tabs</div>}
+      viewer={<div>Viewer</div>}
+      comments={<div>コメント本文</div>}
+      isLeftNavigationOpen={true}
+      onCloseLeftNavigation={onCloseLeftNavigation}
+    />,
+  );
+  const leftNavigation = result.container.querySelector(
+    '[aria-label="仕様一覧"]',
+  ) as HTMLElement;
+
+  act(() => {
+    leftNavigation.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+  });
+
+  expect(onCloseLeftNavigation).toHaveBeenCalledOnce();
+  result.unmount();
+});
+
+test("AppShellはドラッグで左ナビゲーション幅を変更する", () => {
+  const onLeftNavigationWidthChange = vi.fn();
+  const result = renderComponent(
+    <AppShell
+      toolbar={<div>Toolbar</div>}
+      sidebar={<div>Tree</div>}
+      tabs={<div>Tabs</div>}
+      viewer={<div>Viewer</div>}
+      comments={<div>コメント本文</div>}
+      isLeftNavigationOpen={true}
+      leftNavigationWidth={268}
+      leftNavigationMinWidth={216}
+      leftNavigationMaxWidth={420}
+      onLeftNavigationWidthChange={onLeftNavigationWidthChange}
+    />,
+  );
+  const body = result.container.querySelector(
+    ".app-shell__body",
+  ) as HTMLElement;
+  const resizeHandle = result.container.querySelector(
+    '[aria-label="仕様一覧の幅を変更"]',
+  ) as HTMLButtonElement;
+
+  body.getBoundingClientRect = () =>
+    ({
+      left: 20,
+    }) as DOMRect;
+
+  act(() => {
+    resizeHandle.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        clientX: 320,
+        pointerId: 1,
+      }),
+    );
+  });
+
+  expect(onLeftNavigationWidthChange).toHaveBeenCalledWith(300);
+  result.unmount();
+});
+
 test("AppShellはEscapeで開いているコメントサイドバーを閉じる", () => {
   const onCloseCommentsSidebar = vi.fn();
   const result = renderComponent(

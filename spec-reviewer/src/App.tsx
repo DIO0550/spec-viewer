@@ -16,7 +16,9 @@ import {
 } from "./components/WorkspaceToolbar";
 import { useComments } from "./hooks/useComments";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+import { useLeftNavigationPreference } from "./hooks/useLeftNavigationPreference";
 import { useRecentWorkspaces } from "./hooks/useRecentWorkspaces";
+import { useResizableLeftNavigation } from "./hooks/useResizableLeftNavigation";
 import {
   useReviewRuns,
   type ReviewRunTargetScope,
@@ -109,6 +111,8 @@ function App() {
   const workspace = useWorkspace();
   const recentWorkspaces = useRecentWorkspaces();
   const theme = useTheme();
+  const leftNavigationPreference = useLeftNavigationPreference();
+  const resizableLeftNavigation = useResizableLeftNavigation();
   const sidebarPreference = useSidebarPreference();
   const resizableSidebar = useResizableSidebar();
   const specs = useSpecs({ workspacePath: workspace.workspace?.root ?? null });
@@ -795,6 +799,15 @@ function App() {
   return (
     <div className="app-drop-root">
       <AppShell
+        isLeftNavigationOpen={leftNavigationPreference.isLeftNavigationOpen}
+        onOpenLeftNavigation={leftNavigationPreference.openLeftNavigation}
+        onCloseLeftNavigation={leftNavigationPreference.closeLeftNavigation}
+        leftNavigationWidth={resizableLeftNavigation.leftNavigationWidth}
+        leftNavigationMinWidth={resizableLeftNavigation.minLeftNavigationWidth}
+        leftNavigationMaxWidth={resizableLeftNavigation.maxLeftNavigationWidth}
+        onLeftNavigationWidthChange={
+          resizableLeftNavigation.resizeLeftNavigationTo
+        }
         isCommentsSidebarOpen={sidebarPreference.isSidebarOpen}
         onOpenCommentsSidebar={sidebarPreference.openSidebar}
         onCloseCommentsSidebar={sidebarPreference.closeSidebar}
