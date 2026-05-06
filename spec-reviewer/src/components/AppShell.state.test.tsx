@@ -185,6 +185,30 @@ test("SpecTreeはspec選択イベントを発火する", () => {
   result.unmount();
 });
 
+test("SpecTreeは読み込み中にskeleton statusを表示する", () => {
+  const result = renderComponent(
+    <SpecTree
+      state={{
+        status: "loading",
+        workspacePath,
+        tree: null,
+        error: null,
+      }}
+      selectedSpecId={null}
+      onSelectSpec={vi.fn()}
+      onReload={vi.fn()}
+    />,
+  );
+
+  expect(result.container.querySelector('[role="status"]')?.textContent).toBe(
+    "Scanning spec files",
+  );
+  expect(
+    result.container.querySelectorAll(".loading-skeleton__bar").length,
+  ).toBeGreaterThan(0);
+  result.unmount();
+});
+
 test("SpecTreeは矢印キーでtree itemのfocusを移動する", () => {
   const result = renderComponent(
     <SpecTree

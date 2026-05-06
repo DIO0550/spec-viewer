@@ -34,8 +34,9 @@ import {
   AddCommentPopover,
   type AddCommentSubmitInput,
 } from "./AddCommentPopover";
+import { CommandErrorDisplay } from "./CommandErrorDisplay";
 import { EmptyState } from "./EmptyState";
-import { ErrorState } from "./ErrorState";
+import { LoadingSkeleton } from "./LoadingSkeleton";
 
 type BlockType = "heading" | "paragraph" | "list-item" | "table" | "code";
 
@@ -212,15 +213,24 @@ export function MarkdownViewer({
       <section
         ref={panelRef}
         id="markdown-viewer-panel"
-        className="markdown-viewer markdown-viewer--center"
+        className="markdown-viewer"
         role="tabpanel"
         aria-live="polite"
         tabIndex={-1}
       >
-        <div className="viewer-loading" role="status">
-          <span className="viewer-loading__indicator" aria-hidden="true" />
-          <span>Loading Markdown...</span>
-        </div>
+        <LoadingSkeleton
+          className="markdown-loading-skeleton"
+          label="Loading Markdown"
+          rows={[
+            { width: "short" },
+            { width: "long" },
+            { width: "medium" },
+            { width: "full" },
+            { width: "full" },
+            { width: "medium" },
+            { width: "long" },
+          ]}
+        />
       </section>
     );
   }
@@ -234,9 +244,9 @@ export function MarkdownViewer({
         role="tabpanel"
         tabIndex={-1}
       >
-        <ErrorState
+        <CommandErrorDisplay
           title="Could not load Markdown"
-          message={state.error.message}
+          error={state.error}
           actionLabel="Retry"
           onAction={onReload}
         />

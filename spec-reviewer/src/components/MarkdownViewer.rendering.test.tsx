@@ -587,6 +587,25 @@ test("MarkdownViewerはmissing状態を表示する", () => {
   result.unmount();
 });
 
+test("MarkdownViewerは読み込み中に文書skeletonを表示する", () => {
+  const result = renderViewer({
+    status: "loading",
+    workspacePath,
+    specId: "phase-1-viewer",
+    fileKey: "tasks",
+    document: null,
+    error: null,
+  });
+
+  expect(result.container.querySelector('[role="status"]')?.textContent).toBe(
+    "Loading Markdown",
+  );
+  expect(
+    result.container.querySelector(".markdown-loading-skeleton"),
+  ).not.toBeNull();
+  result.unmount();
+});
+
 test("MarkdownViewerはerror状態で再読み込みイベントを発火する", () => {
   const onReload = vi.fn();
   const result = renderViewer(

@@ -192,6 +192,9 @@ test("CommentSidebarは読み込み中状態をrole statusで表示する", () =
   expect(result.container.querySelector('[role="status"]')?.textContent).toBe(
     "Loading comments",
   );
+  expect(
+    result.container.querySelectorAll(".loading-skeleton__bar").length,
+  ).toBeGreaterThan(0);
   result.unmount();
 });
 

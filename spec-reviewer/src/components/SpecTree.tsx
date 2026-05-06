@@ -3,8 +3,9 @@ import { RefreshCcw } from "lucide-react";
 
 import type { SpecTreeState } from "../hooks/useSpecs";
 import type { SpecNode } from "../types/spec";
+import { CommandErrorDisplay } from "./CommandErrorDisplay";
 import { EmptyState } from "./EmptyState";
-import { ErrorState } from "./ErrorState";
+import { LoadingSkeleton } from "./LoadingSkeleton";
 
 const BASE_TREE_ITEM_INDENT = 10;
 const TREE_ITEM_INDENT_STEP = 16;
@@ -35,18 +36,27 @@ export function SpecTree({
 
   if (state.status === "loading") {
     return (
-      <section className="spec-tree__status" aria-live="polite" role="status">
+      <section className="spec-tree__status" aria-live="polite">
         <h2>Specs</h2>
-        <p>Scanning spec files...</p>
+        <LoadingSkeleton
+          label="Scanning spec files"
+          rows={[
+            { width: "long" },
+            { width: "medium" },
+            { width: "full" },
+            { width: "short" },
+            { width: "medium" },
+          ]}
+        />
       </section>
     );
   }
 
   if (state.status === "error") {
     return (
-      <ErrorState
+      <CommandErrorDisplay
         title="Could not load specs"
-        message={state.error.message}
+        error={state.error}
         actionLabel="Retry"
         onAction={onReload}
       />

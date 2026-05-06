@@ -1,4 +1,4 @@
-import { Download, LoaderCircle, Search, X } from "lucide-react";
+import { Download, Search, X } from "lucide-react";
 import { useId, useState } from "react";
 
 import type {
@@ -13,9 +13,10 @@ import type {
   CommentExportScope,
   CommentId,
 } from "../types/comment";
+import { CommandErrorDisplay } from "./CommandErrorDisplay";
 import { CommentThread } from "./CommentThread";
 import { EmptyState } from "./EmptyState";
-import { ErrorState } from "./ErrorState";
+import { LoadingSkeleton } from "./LoadingSkeleton";
 
 type Props = Readonly<{
   listState: CommentListState;
@@ -169,10 +170,16 @@ export function CommentSidebar({
           exportState={exportState}
           onFilterChange={setActiveFilter}
         />
-        <div className="comment-sidebar__loading" role="status">
-          <LoaderCircle aria-hidden="true" size={18} />
-          <span>Loading comments</span>
-        </div>
+        <LoadingSkeleton
+          className="comment-sidebar__loading"
+          label="Loading comments"
+          rows={[
+            { width: "medium" },
+            { width: "full" },
+            { width: "long" },
+            { width: "medium" },
+          ]}
+        />
       </section>
     );
   }
@@ -190,9 +197,9 @@ export function CommentSidebar({
           exportState={exportState}
           onFilterChange={setActiveFilter}
         />
-        <ErrorState
+        <CommandErrorDisplay
           title="Comments unavailable"
-          message={listState.error.message}
+          error={listState.error}
           actionLabel="Retry"
           onAction={onReload}
         />
