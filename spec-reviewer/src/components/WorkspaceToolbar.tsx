@@ -1,6 +1,7 @@
 import {
   FolderClock,
   FolderOpen,
+  Info,
   MonitorCog,
   RefreshCcw,
   RotateCcw,
@@ -11,6 +12,7 @@ import { type KeyboardEvent, useRef, useState } from "react";
 
 import type { ThemeMode } from "../hooks/useTheme";
 import type { RecentWorkspace } from "../lib/recentWorkspaces";
+import { thirdPartyLicenses } from "../lib/thirdPartyLicenses";
 import { uiText } from "../lib/uiText";
 
 export type WorkspaceRefreshStatus = Readonly<{
@@ -65,7 +67,9 @@ export function WorkspaceToolbar({
   const isRefreshing = refreshStatus.status === "loading";
   const hasRecentWorkspaces = recentWorkspaces.length > 0;
   const recentSummaryRef = useRef<HTMLElement>(null);
+  const licensesSummaryRef = useRef<HTMLElement>(null);
   const [isRecentMenuOpen, setIsRecentMenuOpen] = useState(false);
+  const [isLicensesMenuOpen, setIsLicensesMenuOpen] = useState(false);
 
   const closeRecentMenu = (event: KeyboardEvent<HTMLElement>): void => {
     if (event.key !== "Escape" || !isRecentMenuOpen) {
@@ -75,6 +79,16 @@ export function WorkspaceToolbar({
     event.preventDefault();
     setIsRecentMenuOpen(false);
     recentSummaryRef.current?.focus();
+  };
+
+  const closeLicensesMenu = (event: KeyboardEvent<HTMLElement>): void => {
+    if (event.key !== "Escape" || !isLicensesMenuOpen) {
+      return;
+    }
+
+    event.preventDefault();
+    setIsLicensesMenuOpen(false);
+    licensesSummaryRef.current?.focus();
   };
 
   return (
@@ -232,6 +246,56 @@ export function WorkspaceToolbar({
                 {uiText.workspace.noRecent}
               </span>
             )}
+          </div>
+        </details>
+        <details
+          className="workspace-toolbar__licenses"
+          open={isLicensesMenuOpen}
+          onToggle={(event) => {
+            setIsLicensesMenuOpen(event.currentTarget.open);
+          }}
+          onKeyDown={closeLicensesMenu}
+        >
+          <summary
+            ref={licensesSummaryRef}
+            aria-label={uiText.workspace.licensesTitle}
+            title={uiText.workspace.licensesTitle}
+            aria-keyshortcuts="Escape"
+          >
+            <Info aria-hidden="true" size={16} />
+            <span>{uiText.workspace.licenses}</span>
+          </summary>
+          <div
+            className="workspace-toolbar__licenses-menu"
+            aria-label={uiText.workspace.licensesTitle}
+          >
+            <header className="workspace-toolbar__licenses-header">
+              <h2>{uiText.workspace.licensesTitle}</h2>
+              <p>{uiText.workspace.licensesDescription}</p>
+            </header>
+            <div className="workspace-toolbar__licenses-list">
+              {thirdPartyLicenses.map((packageLicense) => (
+                <article
+                  className="workspace-toolbar__license-item"
+                  key={packageLicense.name}
+                >
+                  <div className="workspace-toolbar__license-summary">
+                    <strong>{packageLicense.name}</strong>
+                    <span>v{packageLicense.version}</span>
+                  </div>
+                  <div className="workspace-toolbar__license-details">
+                    <span>{packageLicense.license}</span>
+                    <a
+                      href={packageLicense.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {uiText.workspace.licenseSource}
+                    </a>
+                  </div>
+                </article>
+              ))}
+            </div>
           </div>
         </details>
         <button

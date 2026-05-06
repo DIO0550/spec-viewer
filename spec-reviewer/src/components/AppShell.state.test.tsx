@@ -814,6 +814,54 @@ test("WorkspaceToolbarはEscapeで保存済みworkspaces menuを閉じる", () =
   result.unmount();
 });
 
+test("WorkspaceToolbarはライセンスメニューでnpmライセンス情報を表示する", () => {
+  const result = renderComponent(
+    <WorkspaceToolbar
+      workspacePath={null}
+      inputValue=""
+      isLoading={false}
+      isBrowsing={false}
+      errorMessage={null}
+      refreshStatus={{ status: "idle", message: null }}
+      canRefresh={false}
+      themeMode="system"
+      onInputChange={vi.fn()}
+      onBrowse={vi.fn()}
+      onLoad={vi.fn()}
+      onRefresh={vi.fn()}
+      onReset={vi.fn()}
+      onThemeModeChange={vi.fn()}
+    />,
+  );
+  const details = result.container.querySelector(
+    ".workspace-toolbar__licenses",
+  ) as HTMLDetailsElement;
+  const summary = result.container.querySelector(
+    ".workspace-toolbar__licenses summary",
+  ) as HTMLElement;
+
+  act(() => {
+    summary.click();
+  });
+
+  expect(details.open).toBe(true);
+  expect(details.textContent).toContain("サードパーティライセンス");
+  expect(details.textContent).toContain("@tauri-apps/api");
+  expect(details.textContent).toContain("Apache-2.0 OR MIT");
+  expect(details.textContent).toContain("react");
+  expect(details.textContent).toContain("MIT");
+
+  act(() => {
+    details.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+  });
+
+  expect(details.open).toBe(false);
+  expect(document.activeElement).toBe(summary);
+  result.unmount();
+});
+
 test("MarkdownViewerは読み込み中状態をrole statusで表示する", () => {
   const loadingState: SpecDocumentState = {
     status: "loading",

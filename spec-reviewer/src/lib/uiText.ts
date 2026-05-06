@@ -110,6 +110,11 @@ export const uiText = {
     noRecent: "保存済みワークスペースはありません",
     removeRecent: "一覧から削除",
     clearRecent: "保存済みをすべて削除",
+    licenses: "ライセンス",
+    licensesTitle: "サードパーティライセンス",
+    licensesDescription:
+      "このアプリが利用する主なnpmパッケージのライセンスです。",
+    licenseSource: "ソース",
     refresh: "現在の表示を再読み込み",
     reset: "リセット",
     openingPicker: "ワークスペース選択を開いています",
