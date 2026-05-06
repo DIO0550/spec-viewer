@@ -897,6 +897,24 @@ textarea:disabled {
   background: var(--color-danger-soft);
 }
 
+.review-run-panel__problems {
+  display: grid;
+  gap: 5px;
+  border: 1px solid var(--color-danger-border);
+  border-radius: 7px;
+  padding: 8px;
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
+  font-size: 0.72rem;
+  font-weight: 740;
+  line-height: 1.35;
+}
+
+.review-run-panel__problems p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 .review-run-panel__runs {
   display: grid;
   gap: 8px;
@@ -924,6 +942,29 @@ textarea:disabled {
   line-height: 1.35;
   overflow-wrap: anywhere;
   white-space: normal;
+}
+
+.review-run-panel__result {
+  display: grid;
+  gap: 5px;
+  border-left: 3px solid var(--color-accent-border);
+  padding-left: 8px;
+  color: var(--color-text-body);
+  font-size: 0.7rem;
+  font-weight: 720;
+  line-height: 1.35;
+}
+
+.review-run-panel__result p,
+.review-run-panel__result ul {
+  margin: 0;
+}
+
+.review-run-panel__result ul {
+  display: grid;
+  gap: 3px;
+  padding-left: 16px;
+  color: var(--color-text-muted);
 }
 
 .review-run-panel__source-files,
@@ -967,6 +1008,18 @@ textarea:disabled {
 
 .review-run-panel__worktree dd {
   margin: 0;
+}
+
+.review-run-panel__actions {
+  display: flex;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.review-run-panel__actions .button {
+  min-height: 30px;
+  padding: 5px 8px;
+  font-size: 0.72rem;
 }
 
 .comment-sidebar__search {

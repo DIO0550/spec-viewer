@@ -2,12 +2,15 @@ import { invoke } from "@tauri-apps/api/core";
 import { expect, test, vi } from "vitest";
 
 import type {
+  ArchiveReviewRunRequest,
+  ArchiveReviewRunResponse,
   CreateReviewRunRequest,
   CreateReviewRunResponse,
   ListReviewRunsRequest,
   ListReviewRunsResponse,
 } from "../types/reviewRun";
 import {
+  archiveReviewRun,
   createReviewRun,
   listReviewRuns,
   normalizeCommandError,
@@ -52,6 +55,8 @@ const response: CreateReviewRunResponse = {
     commentCount: 1,
     createdAt: "2026-05-06T12:00:00Z",
     archivedAt: null,
+    summary: null,
+    warnings: [],
   },
 };
 
@@ -63,6 +68,24 @@ const listRequest: ListReviewRunsRequest = {
 const listResponse: ListReviewRunsResponse = {
   active: [response.reviewRun],
   archived: [],
+  problems: [],
+};
+
+const archiveRequest: ArchiveReviewRunRequest = {
+  workspacePath: "/workspace/spec-reviewer",
+  target: request.target,
+  reviewRunId: response.reviewRun.id,
+};
+
+const archiveResponse: ArchiveReviewRunResponse = {
+  reviewRun: {
+    ...response.reviewRun,
+    status: "archived",
+    folderPath:
+      "/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/archive/2026-05-06T120000Z-file-tasks-abcdef12",
+    archivedAt: "2026-05-06T12:30:00Z",
+    summary: "対応完了",
+  },
 };
 
 test("createReviewRunはcreate_review_runへrequestを渡す", async () => {
@@ -86,6 +109,18 @@ test("listReviewRunsはlist_review_runsへrequestを渡す", async () => {
   expect(result.active).toEqual([response.reviewRun]);
   expect(invokeMock).toHaveBeenCalledWith("list_review_runs", {
     request: listRequest,
+  });
+});
+
+test("archiveReviewRunはarchive_review_runへrequestを渡す", async () => {
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue(archiveResponse);
+
+  const result = await archiveReviewRun(archiveRequest);
+
+  expect(result.reviewRun.status).toBe("archived");
+  expect(invokeMock).toHaveBeenCalledWith("archive_review_run", {
+    request: archiveRequest,
   });
 });
 

@@ -41,6 +41,8 @@ const activeRun: ReviewRun = {
   commentCount: 2,
   createdAt: "2026-05-06T12:00:00Z",
   archivedAt: null,
+  summary: null,
+  warnings: [],
 };
 
 type RenderResult = Readonly<{
@@ -74,6 +76,7 @@ function renderPanel(
     listState?: ReviewRunListState;
     createState?: ReviewRunCreateState;
     onCreateReviewRun?: () => void;
+    onArchiveReviewRun?: (reviewRunId: string) => void;
     onCopyPath?: (path: string) => Promise<void>;
   }> = {},
 ): RenderResult {
@@ -88,6 +91,7 @@ function renderPanel(
           target: activeRun.target,
           active: [activeRun],
           archived: [],
+          problems: [],
           error: null,
         }
       }
@@ -98,9 +102,16 @@ function renderPanel(
           error: null,
         }
       }
+      archiveState={{
+        status: "idle",
+        reviewRunId: null,
+        reviewRun: null,
+        error: null,
+      }}
       onTargetScopeChange={vi.fn()}
       onExecutionModeChange={vi.fn()}
       onCreateReviewRun={options.onCreateReviewRun ?? vi.fn()}
+      onArchiveReviewRun={options.onArchiveReviewRun ?? vi.fn()}
       onRefreshReviewRuns={vi.fn()}
       onCopyPath={options.onCopyPath ?? vi.fn().mockResolvedValue(undefined)}
     />,
@@ -158,4 +169,39 @@ test("ReviewRunPanelはactive runのpathとworktree情報を表示してコピ�
     "フォルダパスをコピーしました。",
   );
   result.unmount();
+});
+
+test("ReviewRunPanelはcompleted runを確認後にアーカイブできる", async () => {
+  const onArchiveReviewRun = vi.fn();
+  const confirmMock = vi.fn(() => true);
+  vi.stubGlobal("confirm", confirmMock);
+  const completedRun: ReviewRun = {
+    ...activeRun,
+    status: "completed",
+    summary: "対応完了",
+  };
+  const result = renderPanel({
+    listState: {
+      status: "ready",
+      target: activeRun.target,
+      active: [completedRun],
+      archived: [],
+      problems: [],
+      error: null,
+    },
+    onArchiveReviewRun,
+  });
+  const archiveButton = result.container.querySelector(
+    `[aria-label="${completedRun.id}をアーカイブ"]`,
+  ) as HTMLButtonElement | null;
+
+  await act(async () => {
+    archiveButton?.click();
+  });
+
+  expect(confirmMock).toHaveBeenCalled();
+  expect(onArchiveReviewRun).toHaveBeenCalledWith(completedRun.id);
+  expect(result.container.textContent).toContain("対応完了");
+  result.unmount();
+  vi.unstubAllGlobals();
 });

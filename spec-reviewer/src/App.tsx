@@ -862,10 +862,14 @@ function App() {
                 openCommentCount={countOpenComments(comments.comments)}
                 listState={reviewRuns.listState}
                 createState={reviewRuns.createState}
+                archiveState={reviewRuns.archiveState}
                 onTargetScopeChange={setReviewRunTargetScope}
                 onExecutionModeChange={setReviewRunExecutionMode}
                 onCreateReviewRun={() => {
                   void createReviewRunFromOpenComments();
+                }}
+                onArchiveReviewRun={(reviewRunId) => {
+                  void reviewRuns.archiveReviewRun(reviewRunId);
                 }}
                 onRefreshReviewRuns={() => {
                   void reviewRuns.reloadReviewRuns();

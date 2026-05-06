@@ -59,6 +59,14 @@ export type ReviewRunStatusDocument = Readonly<{
   warnings: readonly string[];
 }>;
 
+export type ReviewRunListProblemState = "malformed" | "missingFolder";
+
+export type ReviewRunListProblem = Readonly<{
+  folderPath: string;
+  state: ReviewRunListProblemState;
+  message: string;
+}>;
+
 export type ReviewRun = Readonly<{
   id: string;
   status: ReviewRunStatus;
@@ -70,6 +78,8 @@ export type ReviewRun = Readonly<{
   commentCount: number;
   createdAt: IsoDateTimeString;
   archivedAt: IsoDateTimeString | null;
+  summary: string | null;
+  warnings: readonly string[];
 }>;
 
 export type CreateReviewRunRequest = Readonly<{
@@ -91,6 +101,7 @@ export type ListReviewRunsRequest = Readonly<{
 export type ListReviewRunsResponse = Readonly<{
   active: readonly ReviewRun[];
   archived: readonly ReviewRun[];
+  problems: readonly ReviewRunListProblem[];
 }>;
 
 export type ArchiveReviewRunRequest = Readonly<{

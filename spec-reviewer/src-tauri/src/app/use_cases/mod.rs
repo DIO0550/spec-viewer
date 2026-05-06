@@ -35,8 +35,9 @@ pub use comments::{
     UtcCommentClock, UuidCommentIdGenerator,
 };
 pub use review_runs::{
-    CreateReviewRunInput, CreateReviewRunResult, ListReviewRunsInput, ListReviewRunsResult,
-    ListedReviewRun, ReviewRunExecutionMode,
+    ArchiveReviewRunInput, ArchiveReviewRunResult, CreateReviewRunInput, CreateReviewRunResult,
+    ListReviewRunsInput, ListReviewRunsResult, ListedReviewRun, ReviewRunExecutionMode,
+    ReviewRunListProblem, ReviewRunListProblemState,
 };
 
 pub type FilesystemAppUseCases = AppUseCases<

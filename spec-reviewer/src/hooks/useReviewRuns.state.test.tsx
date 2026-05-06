@@ -33,6 +33,22 @@ const activeRun: ReviewRun = {
   commentCount: 1,
   createdAt: "2026-05-06T12:00:00Z",
   archivedAt: null,
+  summary: null,
+  warnings: [],
+};
+
+const completedRun: ReviewRun = {
+  ...activeRun,
+  status: "completed",
+  summary: "対応完了",
+};
+
+const archivedRun: ReviewRun = {
+  ...completedRun,
+  status: "archived",
+  folderPath:
+    "/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/archive/2026-05-06T120000Z-file-tasks-abcdef12",
+  archivedAt: "2026-05-06T12:30:00Z",
 };
 
 type HookProps = Readonly<{
@@ -130,6 +146,7 @@ test("useReviewRunsは対象が揃うとactive run一覧を読み込む", async 
     listReviewRuns: {
       active: [activeRun],
       archived: [],
+      problems: [],
     },
   });
   const result = renderUseReviewRuns({
@@ -162,6 +179,7 @@ test("useReviewRunsは作成したactive runを一覧の先頭に追加する", 
     listReviewRuns: {
       active: [],
       archived: [],
+      problems: [],
     },
     createReviewRun: {
       reviewRun: activeRun,
@@ -195,6 +213,47 @@ test("useReviewRunsは作成したactive runを一覧の先頭に追加する", 
       },
       commentIds: ["cmt_1"],
       executionMode: "currentWorkspace",
+    },
+  ]);
+  result.unmount();
+});
+
+test("useReviewRunsはcompleted runをアーカイブして一覧を移動する", async () => {
+  const double = createReviewRunCommandTestDouble({
+    listReviewRuns: {
+      active: [completedRun],
+      archived: [],
+      problems: [],
+    },
+    archiveReviewRun: {
+      reviewRun: archivedRun,
+    },
+  });
+  const result = renderUseReviewRuns({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "auth",
+    fileKey: "tasks",
+    targetScope: "file",
+    commands: double.commands,
+  });
+
+  await flushAsyncEffects();
+  await act(async () => {
+    await result.current.archiveReviewRun(completedRun.id);
+  });
+
+  expect(result.current.archiveState.status).toBe("success");
+  expect(result.current.activeRuns).toEqual([]);
+  expect(result.current.archivedRuns).toEqual([archivedRun]);
+  expect(double.calls.archiveReviewRun).toEqual([
+    {
+      workspacePath: "/workspace/spec-reviewer",
+      target: {
+        scope: "file",
+        specId: "auth",
+        fileKey: "tasks",
+      },
+      reviewRunId: completedRun.id,
     },
   ]);
   result.unmount();

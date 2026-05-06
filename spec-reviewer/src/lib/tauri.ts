@@ -32,6 +32,8 @@ import type {
 import type {
   CreateReviewRunRequest,
   CreateReviewRunResponse,
+  ArchiveReviewRunRequest,
+  ArchiveReviewRunResponse,
   ListReviewRunsRequest,
   ListReviewRunsResponse,
 } from "../types/reviewRun";
@@ -80,6 +82,9 @@ export type ReviewRunCommands = Readonly<{
   listReviewRuns: (
     request: ListReviewRunsRequest,
   ) => Promise<ListReviewRunsResponse>;
+  archiveReviewRun: (
+    request: ArchiveReviewRunRequest,
+  ) => Promise<ArchiveReviewRunResponse>;
 }>;
 
 /** @returns The directory selected from the native workspace picker, or null. */
@@ -222,9 +227,17 @@ export async function listReviewRuns(
   return invokeCommand("list_review_runs", request);
 }
 
+/** @returns Metadata for the archived review run after moving it out of active. */
+export async function archiveReviewRun(
+  request: ArchiveReviewRunRequest,
+): Promise<ArchiveReviewRunResponse> {
+  return invokeCommand("archive_review_run", request);
+}
+
 export const reviewRunCommands: ReviewRunCommands = {
   createReviewRun,
   listReviewRuns,
+  archiveReviewRun,
 };
 
 export const commentCommands: CommentCommands = {

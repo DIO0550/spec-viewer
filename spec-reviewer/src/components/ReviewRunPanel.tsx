@@ -1,4 +1,5 @@
 import {
+  Archive,
   Clipboard,
   Copy,
   FileText,
@@ -11,6 +12,7 @@ import { useId, useState } from "react";
 
 import type {
   ReviewRunCreateState,
+  ReviewRunArchiveState,
   ReviewRunListState,
   ReviewRunTargetScope,
 } from "../hooks/useReviewRuns";
@@ -27,9 +29,11 @@ type Props = Readonly<{
   openCommentCount: number;
   listState: ReviewRunListState;
   createState: ReviewRunCreateState;
+  archiveState: ReviewRunArchiveState;
   onTargetScopeChange: (scope: ReviewRunTargetScope) => void;
   onExecutionModeChange: (mode: ReviewRunExecutionMode) => void;
   onCreateReviewRun: () => void;
+  onArchiveReviewRun: (reviewRunId: string) => void;
   onRefreshReviewRuns: () => void;
   onCopyPath: (path: string) => Promise<void>;
 }>;
@@ -63,9 +67,11 @@ export function ReviewRunPanel({
   openCommentCount,
   listState,
   createState,
+  archiveState,
   onTargetScopeChange,
   onExecutionModeChange,
   onCreateReviewRun,
+  onArchiveReviewRun,
   onRefreshReviewRuns,
   onCopyPath,
 }: Props) {
@@ -175,13 +181,19 @@ export function ReviewRunPanel({
         <span>{isCreating ? "作成中" : "レビュー作成"}</span>
       </button>
 
-      <ReviewRunFeedback createState={createState} copyState={copyState} />
+      <ReviewRunFeedback
+        createState={createState}
+        archiveState={archiveState}
+        copyState={copyState}
+      />
       <ReviewRunList
         listState={listState}
         activeRuns={activeRuns}
+        archiveState={archiveState}
         onCopyPath={(path) => {
           void copyPath(path);
         }}
+        onArchiveReviewRun={onArchiveReviewRun}
       />
     </section>
   );
@@ -189,11 +201,38 @@ export function ReviewRunPanel({
 
 type ReviewRunFeedbackProps = Readonly<{
   createState: ReviewRunCreateState;
+  archiveState: ReviewRunArchiveState;
   copyState: CopyState;
 }>;
 
 /** @returns The latest create/copy feedback message. */
-function ReviewRunFeedback({ createState, copyState }: ReviewRunFeedbackProps) {
+function ReviewRunFeedback({
+  createState,
+  archiveState,
+  copyState,
+}: ReviewRunFeedbackProps) {
+  if (archiveState.status === "success") {
+    return (
+      <p
+        className="review-run-panel__feedback review-run-panel__feedback--success"
+        role="status"
+      >
+        {formatArchiveSuccessMessage(archiveState.reviewRun)}
+      </p>
+    );
+  }
+
+  if (archiveState.status === "error") {
+    return (
+      <p
+        className="review-run-panel__feedback review-run-panel__feedback--error"
+        role="alert"
+      >
+        {formatArchiveErrorMessage(archiveState.error.message)}
+      </p>
+    );
+  }
+
   if (createState.status === "success") {
     return (
       <p
@@ -233,14 +272,18 @@ function ReviewRunFeedback({ createState, copyState }: ReviewRunFeedbackProps) {
 type ReviewRunListProps = Readonly<{
   listState: ReviewRunListState;
   activeRuns: readonly ReviewRun[];
+  archiveState: ReviewRunArchiveState;
   onCopyPath: (path: string) => void;
+  onArchiveReviewRun: (reviewRunId: string) => void;
 }>;
 
 /** @returns Active review run cards or a loading/empty/error state. */
 function ReviewRunList({
   listState,
   activeRuns,
+  archiveState,
   onCopyPath,
+  onArchiveReviewRun,
 }: ReviewRunListProps) {
   if (listState.status === "idle") {
     return (
@@ -271,14 +314,18 @@ function ReviewRunList({
 
   if (activeRuns.length === 0) {
     return (
-      <p className="review-run-panel__empty">
-        アクティブなレビューはありません。
-      </p>
+      <div className="review-run-panel__runs" aria-label="アクティブレビュー">
+        <ReviewRunProblems problems={listState.problems} />
+        <p className="review-run-panel__empty">
+          アクティブなレビューはありません。
+        </p>
+      </div>
     );
   }
 
   return (
     <div className="review-run-panel__runs" aria-label="アクティブレビュー">
+      <ReviewRunProblems problems={listState.problems} />
       {activeRuns.map((run) => (
         <article className="review-run-panel__run" key={run.id}>
           <div className="review-run-panel__run-header">
@@ -297,11 +344,103 @@ function ReviewRunList({
               <Copy aria-hidden="true" size={14} />
             </button>
           </div>
+          <ReviewRunSummary run={run} />
           <code className="review-run-panel__path">{run.folderPath}</code>
           <SourceFileSummary sourceFiles={run.sourceFiles} />
           <ExecutionTargetSummary executionTarget={run.executionTarget} />
+          <ReviewRunActions
+            run={run}
+            archiveState={archiveState}
+            onArchiveReviewRun={onArchiveReviewRun}
+          />
         </article>
       ))}
+    </div>
+  );
+}
+
+type ReviewRunProblemsProps = Readonly<{
+  problems: ReviewRunListState["problems"];
+}>;
+
+/** @returns Malformed or missing review run folders that need manual attention. */
+function ReviewRunProblems({ problems }: ReviewRunProblemsProps) {
+  if (problems.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="review-run-panel__problems" role="alert">
+      {problems.map((problem) => (
+        <p key={`${problem.state}:${problem.folderPath}`}>
+          {formatProblemState(problem.state)}: {problem.message}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+type ReviewRunSummaryProps = Readonly<{
+  run: ReviewRun;
+}>;
+
+/** @returns Result summary and warnings captured from status/result files. */
+function ReviewRunSummary({ run }: ReviewRunSummaryProps) {
+  if (run.summary === null && run.warnings.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="review-run-panel__result">
+      {run.summary !== null ? <p>{run.summary}</p> : null}
+      {run.warnings.length > 0 ? (
+        <ul>
+          {run.warnings.map((warning) => (
+            <li key={warning}>{warning}</li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+type ReviewRunActionsProps = Readonly<{
+  run: ReviewRun;
+  archiveState: ReviewRunArchiveState;
+  onArchiveReviewRun: (reviewRunId: string) => void;
+}>;
+
+/** @returns Review run lifecycle actions. */
+function ReviewRunActions({
+  run,
+  archiveState,
+  onArchiveReviewRun,
+}: ReviewRunActionsProps) {
+  const isSaving =
+    archiveState.status === "saving" && archiveState.reviewRunId === run.id;
+  const canArchive = run.status === "completed" && !isSaving;
+
+  return (
+    <div className="review-run-panel__actions">
+      <button
+        className="button button--secondary"
+        type="button"
+        aria-label={`${run.id}をアーカイブ`}
+        disabled={!canArchive}
+        title={
+          run.status === "completed"
+            ? "完了済みレビューをアーカイブ"
+            : "status.jsonがcompletedのレビューだけアーカイブできます"
+        }
+        onClick={() => {
+          if (confirmArchiveReviewRun(run)) {
+            onArchiveReviewRun(run.id);
+          }
+        }}
+      >
+        <Archive aria-hidden="true" size={14} />
+        <span>{isSaving ? "アーカイブ中" : "アーカイブ"}</span>
+      </button>
     </div>
   );
 }
@@ -375,7 +514,35 @@ function formatCreateErrorMessage(message: string): string {
   return `レビューを作成できませんでした。${message}`;
 }
 
+/** @returns A Japanese success message for an archived run. */
+function formatArchiveSuccessMessage(reviewRun: ReviewRun): string {
+  return `レビューをアーカイブしました。${reviewRun.folderPath}`;
+}
+
+/** @returns A Japanese error message for archive failures. */
+function formatArchiveErrorMessage(message: string): string {
+  return `レビューをアーカイブできませんでした。${message}`;
+}
+
 /** @returns A compact status and comment summary for an active run. */
 function formatRunSummary(run: ReviewRun): string {
   return `${reviewRunStatusLabels[run.status]} / コメント ${run.commentCount}件`;
+}
+
+/** @returns True when the user confirms the irreversible active-to-archive move. */
+function confirmArchiveReviewRun(run: ReviewRun): boolean {
+  return window.confirm(
+    `完了済みレビュー ${run.id} をアーカイブします。activeフォルダからarchiveフォルダへ移動します。`,
+  );
+}
+
+/** @returns A short Japanese label for malformed/missing folder list states. */
+function formatProblemState(
+  state: ReviewRunListState["problems"][number]["state"],
+): string {
+  if (state === "missingFolder") {
+    return "フォルダなし";
+  }
+
+  return "壊れたレビュー";
 }

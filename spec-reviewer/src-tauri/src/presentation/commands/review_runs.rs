@@ -8,12 +8,14 @@ use tauri::State;
 
 use crate::{
     app::use_cases::{
-        AppUseCaseError, CreateReviewRunInput, ListReviewRunsInput, ReviewRunExecutionMode,
+        AppUseCaseError, ArchiveReviewRunInput, CreateReviewRunInput, ListReviewRunsInput,
+        ReviewRunExecutionMode, ReviewRunListProblem, ReviewRunListProblemState,
     },
     domain::{
         comment::CommentId,
         review_run::{
-            UserReviewExecutionTarget, UserReviewRun, UserReviewRunTarget, UserReviewSourceFile,
+            UserReviewExecutionTarget, UserReviewRun, UserReviewRunId, UserReviewRunTarget,
+            UserReviewSourceFile,
         },
         spec::{SpecFileKey, SpecId},
     },
@@ -59,6 +61,21 @@ pub struct ListReviewRunsRequest {
 pub struct ListReviewRunsResponse {
     active: Vec<ReviewRunResponse>,
     archived: Vec<ReviewRunResponse>,
+    problems: Vec<ReviewRunListProblemResponse>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ArchiveReviewRunRequest {
+    workspace_path: String,
+    target: ReviewRunTargetRequest,
+    review_run_id: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ArchiveReviewRunResponse {
+    review_run: ReviewRunResponse,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -74,6 +91,16 @@ pub struct ReviewRunResponse {
     comment_count: usize,
     created_at: DateTime<Utc>,
     archived_at: Option<DateTime<Utc>>,
+    summary: Option<String>,
+    warnings: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReviewRunListProblemResponse {
+    folder_path: String,
+    state: String,
+    message: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -129,7 +156,12 @@ pub fn create_review_run(
     let result = state.use_cases().create_review_run(&workspace, input)?;
 
     Ok(CreateReviewRunResponse {
-        review_run: ReviewRunResponse::from_run(result.review_run(), result.folder_path()),
+        review_run: ReviewRunResponse::from_run(
+            result.review_run(),
+            result.folder_path(),
+            None,
+            Vec::new(),
+        ),
     })
 }
 
@@ -151,13 +183,43 @@ pub fn list_review_runs(
         active: result
             .active()
             .iter()
-            .map(|run| ReviewRunResponse::from_run(run.review_run(), run.folder_path()))
+            .map(ReviewRunResponse::from_listed)
             .collect(),
         archived: result
             .archived()
             .iter()
-            .map(|run| ReviewRunResponse::from_run(run.review_run(), run.folder_path()))
+            .map(ReviewRunResponse::from_listed)
             .collect(),
+        problems: result
+            .problems()
+            .iter()
+            .map(ReviewRunListProblemResponse::from_problem)
+            .collect(),
+    })
+}
+
+#[tauri::command]
+pub fn archive_review_run(
+    state: State<'_, CommandState>,
+    request: ArchiveReviewRunRequest,
+) -> CommandResult<ArchiveReviewRunResponse> {
+    let workspace = state
+        .use_cases()
+        .load_workspace(&request.workspace_path)
+        .map_err(CommandError::from)?;
+    let input = ArchiveReviewRunInput::new(
+        request.target.into_domain()?,
+        UserReviewRunId::new(request.review_run_id).map_err(invalid_review_run)?,
+    );
+    let result = state.use_cases().archive_review_run(&workspace, input)?;
+
+    Ok(ArchiveReviewRunResponse {
+        review_run: ReviewRunResponse::from_run(
+            result.review_run(),
+            result.folder_path(),
+            result.summary().map(str::to_string),
+            result.warnings().to_vec(),
+        ),
     })
 }
 
@@ -176,7 +238,12 @@ impl ReviewRunTargetRequest {
 }
 
 impl ReviewRunResponse {
-    fn from_run(run: &UserReviewRun, folder_path: &str) -> Self {
+    fn from_run(
+        run: &UserReviewRun,
+        folder_path: &str,
+        summary: Option<String>,
+        warnings: Vec<String>,
+    ) -> Self {
         Self {
             id: run.id().as_str().to_string(),
             status: run.status().as_str().to_string(),
@@ -194,7 +261,18 @@ impl ReviewRunResponse {
             comment_count: run.comment_ids().len(),
             created_at: run.created_at(),
             archived_at: run.archived_at(),
+            summary,
+            warnings,
         }
+    }
+
+    fn from_listed(run: &crate::app::use_cases::ListedReviewRun) -> Self {
+        Self::from_run(
+            run.review_run(),
+            run.folder_path(),
+            run.summary().map(str::to_string),
+            run.warnings().to_vec(),
+        )
     }
 }
 
@@ -243,6 +321,16 @@ impl ReviewRunSourceFileResponse {
     }
 }
 
+impl ReviewRunListProblemResponse {
+    fn from_problem(problem: &ReviewRunListProblem) -> Self {
+        Self {
+            folder_path: problem.folder_path().to_string(),
+            state: format_problem_state(problem.state()).to_string(),
+            message: problem.message().to_string(),
+        }
+    }
+}
+
 fn parse_comment_ids(values: &[String]) -> CommandResult<Vec<CommentId>> {
     values
         .iter()
@@ -266,4 +354,12 @@ fn invalid_spec(error: crate::domain::spec::SpecDomainError) -> CommandError {
 
 fn invalid_comment(error: crate::domain::comment::CommentDomainError) -> CommandError {
     CommandError::from(AppUseCaseError::from(error))
+}
+
+fn invalid_review_run(error: crate::domain::review_run::ReviewRunDomainError) -> CommandError {
+    CommandError::from(AppUseCaseError::from(error))
+}
+
+fn format_problem_state(state: ReviewRunListProblemState) -> &'static str {
+    state.as_str()
 }

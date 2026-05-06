@@ -111,13 +111,22 @@ impl ListReviewRunsInput {
 pub struct ListedReviewRun {
     review_run: UserReviewRun,
     folder_path: String,
+    summary: Option<String>,
+    warnings: Vec<String>,
 }
 
 impl ListedReviewRun {
-    pub fn new(review_run: UserReviewRun, folder_path: impl Into<String>) -> Self {
+    pub fn new(
+        review_run: UserReviewRun,
+        folder_path: impl Into<String>,
+        summary: Option<String>,
+        warnings: Vec<String>,
+    ) -> Self {
         Self {
             review_run,
             folder_path: folder_path.into(),
+            summary,
+            warnings,
         }
     }
 
@@ -128,17 +137,34 @@ impl ListedReviewRun {
     pub fn folder_path(&self) -> &str {
         &self.folder_path
     }
+
+    pub fn summary(&self) -> Option<&str> {
+        self.summary.as_deref()
+    }
+
+    pub fn warnings(&self) -> &[String] {
+        &self.warnings
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ListReviewRunsResult {
     active: Vec<ListedReviewRun>,
     archived: Vec<ListedReviewRun>,
+    problems: Vec<ReviewRunListProblem>,
 }
 
 impl ListReviewRunsResult {
-    pub fn new(active: Vec<ListedReviewRun>, archived: Vec<ListedReviewRun>) -> Self {
-        Self { active, archived }
+    pub fn new(
+        active: Vec<ListedReviewRun>,
+        archived: Vec<ListedReviewRun>,
+        problems: Vec<ReviewRunListProblem>,
+    ) -> Self {
+        Self {
+            active,
+            archived,
+            problems,
+        }
     }
 
     pub fn active(&self) -> &[ListedReviewRun] {
@@ -147,6 +173,121 @@ impl ListReviewRunsResult {
 
     pub fn archived(&self) -> &[ListedReviewRun] {
         &self.archived
+    }
+
+    pub fn problems(&self) -> &[ReviewRunListProblem] {
+        &self.problems
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReviewRunListProblem {
+    folder_path: String,
+    state: ReviewRunListProblemState,
+    message: String,
+}
+
+impl ReviewRunListProblem {
+    pub fn new(
+        folder_path: impl Into<String>,
+        state: ReviewRunListProblemState,
+        message: impl Into<String>,
+    ) -> Self {
+        Self {
+            folder_path: folder_path.into(),
+            state,
+            message: message.into(),
+        }
+    }
+
+    pub fn folder_path(&self) -> &str {
+        &self.folder_path
+    }
+
+    pub fn state(&self) -> ReviewRunListProblemState {
+        self.state
+    }
+
+    pub fn message(&self) -> &str {
+        &self.message
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReviewRunListProblemState {
+    Malformed,
+    MissingFolder,
+}
+
+impl ReviewRunListProblemState {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Malformed => "malformed",
+            Self::MissingFolder => "missingFolder",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ArchiveReviewRunInput {
+    target: UserReviewRunTarget,
+    review_run_id: UserReviewRunId,
+}
+
+impl ArchiveReviewRunInput {
+    pub fn new(target: UserReviewRunTarget, review_run_id: UserReviewRunId) -> Self {
+        Self {
+            target,
+            review_run_id,
+        }
+    }
+
+    pub fn target(&self) -> &UserReviewRunTarget {
+        &self.target
+    }
+
+    pub fn review_run_id(&self) -> &UserReviewRunId {
+        &self.review_run_id
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ArchiveReviewRunResult {
+    review_run: UserReviewRun,
+    folder_path: String,
+    summary: Option<String>,
+    warnings: Vec<String>,
+}
+
+impl ArchiveReviewRunResult {
+    pub fn new(
+        review_run: UserReviewRun,
+        folder_path: impl Into<String>,
+        summary: Option<String>,
+        warnings: Vec<String>,
+    ) -> Self {
+        Self {
+            review_run,
+            folder_path: folder_path.into(),
+            summary,
+            warnings,
+        }
+    }
+
+    pub fn review_run(&self) -> &UserReviewRun {
+        &self.review_run
+    }
+
+    pub fn folder_path(&self) -> &str {
+        &self.folder_path
+    }
+
+    pub fn summary(&self) -> Option<&str> {
+        self.summary.as_deref()
+    }
+
+    pub fn warnings(&self) -> &[String] {
+        &self.warnings
     }
 }
 
@@ -284,18 +425,133 @@ impl FilesystemAppUseCases {
         workspace: &LoadWorkspaceResult,
         input: ListReviewRunsInput,
     ) -> Result<ListReviewRunsResult, AppUseCaseError> {
+        let mut problems = Vec::new();
         let active = list_review_runs_for_state(
             workspace.layout(),
             input.target(),
             ReviewRunFolderState::Active,
+            &mut problems,
         )?;
         let archived = list_review_runs_for_state(
             workspace.layout(),
             input.target(),
             ReviewRunFolderState::Archive,
+            &mut problems,
         )?;
 
-        Ok(ListReviewRunsResult::new(active, archived))
+        Ok(ListReviewRunsResult::new(active, archived, problems))
+    }
+
+    pub fn archive_review_run(
+        &self,
+        workspace: &LoadWorkspaceResult,
+        input: ArchiveReviewRunInput,
+    ) -> Result<ArchiveReviewRunResult, AppUseCaseError> {
+        let active_path = ReviewRunPathResolver::new().resolve(
+            workspace.layout(),
+            input.target().spec_id(),
+            input.review_run_id(),
+            ReviewRunFolderState::Active,
+        )?;
+        let archive_path = ReviewRunPathResolver::new().resolve(
+            workspace.layout(),
+            input.target().spec_id(),
+            input.review_run_id(),
+            ReviewRunFolderState::Archive,
+        )?;
+
+        if !active_path.run_directory().is_dir() {
+            return Err(AppUseCaseError::ReviewRunExport {
+                message: format!(
+                    "active review run folder is missing: {}",
+                    active_path.run_directory().to_string_lossy()
+                ),
+            });
+        }
+
+        if archive_path.run_directory().exists() {
+            return Err(AppUseCaseError::ReviewRunExport {
+                message: format!(
+                    "archived review run already exists: {}",
+                    archive_path.run_directory().to_string_lossy()
+                ),
+            });
+        }
+
+        let mut manifest = read_review_run_manifest(active_path.run_directory())?;
+
+        if manifest.id != input.review_run_id().as_str() {
+            return Err(AppUseCaseError::ReviewRunExport {
+                message: format!(
+                    "review run manifest id does not match requested id: {}",
+                    input.review_run_id()
+                ),
+            });
+        }
+
+        if !manifest.has_supported_schema_version()
+            || !review_run_target_matches(&manifest.target, input.target())
+        {
+            return Err(AppUseCaseError::ReviewRunExport {
+                message: format!(
+                    "review run does not match selected target: {}",
+                    input.review_run_id()
+                ),
+            });
+        }
+
+        let mut status = read_review_run_status(active_path.run_directory())?;
+
+        if status.status != ReviewRunStatusValue::Completed {
+            return Err(AppUseCaseError::ReviewRunExport {
+                message: format!(
+                    "only completed review runs can be archived: {}",
+                    input.review_run_id()
+                ),
+            });
+        }
+
+        let archived_at = Utc::now();
+        let result_summary = read_result_summary(active_path.run_directory())?;
+        let source_warnings = collect_source_file_change_warnings(&manifest)?;
+        status.status = ReviewRunStatusValue::Archived;
+        status.updated_at = archived_at;
+        if status.summary.is_none() {
+            status.summary = result_summary.clone();
+        }
+        append_unique_warnings(&mut status.warnings, source_warnings);
+        manifest.status = ReviewRunStatusValue::Archived;
+        manifest.archived_at = Some(archived_at);
+
+        write_json_document(
+            &active_path.run_directory().join("manifest.json"),
+            &manifest,
+        )?;
+        write_json_document(&active_path.run_directory().join("status.json"), &status)?;
+        fs::create_dir_all(archive_path.archive_directory()).map_err(|source| {
+            AppUseCaseError::ReviewRunExport {
+                message: format!(
+                    "failed to create archive review run directory {}: {source}",
+                    archive_path.archive_directory().to_string_lossy()
+                ),
+            }
+        })?;
+        fs::rename(active_path.run_directory(), archive_path.run_directory()).map_err(
+            |source| AppUseCaseError::ReviewRunExport {
+                message: format!(
+                    "failed to move review run from {} to {}: {source}",
+                    active_path.run_directory().to_string_lossy(),
+                    archive_path.run_directory().to_string_lossy()
+                ),
+            },
+        )?;
+
+        Ok(ArchiveReviewRunResult::new(
+            restore_review_run_from_manifest(manifest)?,
+            archive_path.run_directory().to_string_lossy(),
+            status.summary,
+            status.warnings,
+        ))
     }
 }
 
@@ -798,6 +1054,7 @@ fn list_review_runs_for_state(
     layout: &WorkspaceLayout,
     target: &UserReviewRunTarget,
     state: ReviewRunFolderState,
+    problems: &mut Vec<ReviewRunListProblem>,
 ) -> Result<Vec<ListedReviewRun>, AppUseCaseError> {
     let directory = review_run_state_directory(layout, target.spec_id(), state)?;
 
@@ -822,11 +1079,30 @@ fn list_review_runs_for_state(
         })?;
         let path = entry.path();
 
+        if !path.exists() {
+            problems.push(ReviewRunListProblem::new(
+                path.to_string_lossy(),
+                ReviewRunListProblemState::MissingFolder,
+                "review run folder disappeared while reading the list",
+            ));
+            continue;
+        }
+
         if !path.is_dir() {
             continue;
         }
 
-        let manifest = read_review_run_manifest(&path)?;
+        let manifest = match read_review_run_manifest(&path) {
+            Ok(manifest) => manifest,
+            Err(error) => {
+                problems.push(ReviewRunListProblem::new(
+                    path.to_string_lossy(),
+                    ReviewRunListProblemState::Malformed,
+                    error.to_string(),
+                ));
+                continue;
+            }
+        };
 
         if !manifest.has_supported_schema_version()
             || !review_run_target_matches(&manifest.target, target)
@@ -834,9 +1110,22 @@ fn list_review_runs_for_state(
             continue;
         }
 
+        let metadata = match read_listed_review_run_metadata(&path) {
+            Ok(metadata) => metadata,
+            Err(error) => {
+                problems.push(ReviewRunListProblem::new(
+                    path.to_string_lossy(),
+                    ReviewRunListProblemState::Malformed,
+                    error.to_string(),
+                ));
+                continue;
+            }
+        };
         runs.push(ListedReviewRun::new(
-            restore_review_run_from_manifest(manifest)?,
+            restore_review_run_from_manifest_with_status(manifest, metadata.status)?,
             path.to_string_lossy(),
+            metadata.summary,
+            metadata.warnings,
         ));
     }
 
@@ -883,6 +1172,78 @@ fn read_review_run_manifest(
     })
 }
 
+fn read_review_run_status(
+    run_directory: &Path,
+) -> Result<ReviewRunStatusDocument, AppUseCaseError> {
+    let path = run_directory.join("status.json");
+    let contents =
+        fs::read_to_string(&path).map_err(|source| AppUseCaseError::ReviewRunExport {
+            message: format!(
+                "failed to read review run status {}: {source}",
+                path.to_string_lossy()
+            ),
+        })?;
+
+    serde_json::from_str(&contents).map_err(|source| AppUseCaseError::ReviewRunExport {
+        message: format!(
+            "failed to parse review run status {}: {source}",
+            path.to_string_lossy()
+        ),
+    })
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ListedReviewRunMetadata {
+    status: UserReviewRunStatus,
+    summary: Option<String>,
+    warnings: Vec<String>,
+}
+
+fn read_listed_review_run_metadata(
+    run_directory: &Path,
+) -> Result<ListedReviewRunMetadata, AppUseCaseError> {
+    let status = read_review_run_status(run_directory)?;
+    let result_summary = read_result_summary(run_directory)?;
+
+    Ok(ListedReviewRunMetadata {
+        status: review_run_status_from_document(status.status),
+        summary: status.summary.or(result_summary),
+        warnings: status.warnings,
+    })
+}
+
+fn read_result_summary(run_directory: &Path) -> Result<Option<String>, AppUseCaseError> {
+    let path = run_directory.join("result.md");
+
+    if !path.exists() {
+        return Ok(None);
+    }
+
+    let contents =
+        fs::read_to_string(&path).map_err(|source| AppUseCaseError::ReviewRunExport {
+            message: format!(
+                "failed to read review run result {}: {source}",
+                path.to_string_lossy()
+            ),
+        })?;
+
+    Ok(extract_result_summary(&contents))
+}
+
+fn extract_result_summary(contents: &str) -> Option<String> {
+    contents
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .find(|line| {
+            !line.starts_with('#')
+                && !line.starts_with("- Review run:")
+                && !line.starts_with("- Status:")
+                && *line != "-"
+        })
+        .map(|line| line.trim_start_matches("- ").to_string())
+}
+
 fn review_run_target_matches(
     document: &ReviewRunTargetDocument,
     target: &UserReviewRunTarget,
@@ -908,9 +1269,18 @@ fn review_run_target_matches(
 fn restore_review_run_from_manifest(
     manifest: ReviewRunManifestDocument,
 ) -> Result<UserReviewRun, AppUseCaseError> {
+    let status = review_run_status_from_document(manifest.status);
+
+    restore_review_run_from_manifest_with_status(manifest, status)
+}
+
+fn restore_review_run_from_manifest_with_status(
+    manifest: ReviewRunManifestDocument,
+    status: UserReviewRunStatus,
+) -> Result<UserReviewRun, AppUseCaseError> {
     UserReviewRun::restore(
         UserReviewRunId::new(manifest.id)?,
-        review_run_status_from_document(manifest.status),
+        status,
         review_run_target_from_document(manifest.target)?,
         review_run_execution_target_from_document(manifest.execution_target)?,
         ReviewRunPathValue::new(manifest.spec_folder_path)?,
@@ -928,6 +1298,94 @@ fn restore_review_run_from_manifest(
         manifest.archived_at,
     )
     .map_err(AppUseCaseError::from)
+}
+
+fn collect_source_file_change_warnings(
+    manifest: &ReviewRunManifestDocument,
+) -> Result<Vec<String>, AppUseCaseError> {
+    let workspace_path = execution_workspace_path_from_document(&manifest.execution_target);
+    let mut warnings = Vec::new();
+
+    for source_file in &manifest.source_files {
+        let source_path = Path::new(workspace_path).join(&source_file.relative_path);
+
+        if source_changed_after_export(&source_path, manifest.created_at)? {
+            warnings.push(format!(
+                "source file changed after export: {}",
+                source_file.relative_path
+            ));
+        }
+    }
+
+    Ok(warnings)
+}
+
+fn source_changed_after_export(
+    source_path: &Path,
+    created_at: DateTime<Utc>,
+) -> Result<bool, AppUseCaseError> {
+    let metadata = match fs::metadata(source_path) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(true);
+        }
+        Err(source) => {
+            return Err(AppUseCaseError::ReviewRunExport {
+                message: format!(
+                    "failed to read source file metadata {}: {source}",
+                    source_path.to_string_lossy()
+                ),
+            });
+        }
+    };
+    let modified_at = metadata
+        .modified()
+        .map_err(|source| AppUseCaseError::ReviewRunExport {
+            message: format!(
+                "failed to read source file modified time {}: {source}",
+                source_path.to_string_lossy()
+            ),
+        })?;
+    let modified_at: DateTime<Utc> = modified_at.into();
+
+    Ok(modified_at > created_at)
+}
+
+fn execution_workspace_path_from_document(
+    execution_target: &ReviewRunExecutionTargetDocument,
+) -> &str {
+    match execution_target {
+        ReviewRunExecutionTargetDocument::CurrentWorkspace { workspace_path } => workspace_path,
+        ReviewRunExecutionTargetDocument::Worktree { worktree_path, .. } => worktree_path,
+    }
+}
+
+fn append_unique_warnings(warnings: &mut Vec<String>, next_warnings: Vec<String>) {
+    let mut existing = warnings.iter().cloned().collect::<BTreeSet<_>>();
+
+    for warning in next_warnings {
+        if existing.insert(warning.clone()) {
+            warnings.push(warning);
+        }
+    }
+}
+
+fn write_json_document<T: Serialize>(path: &Path, document: &T) -> Result<(), AppUseCaseError> {
+    let contents = serde_json::to_string_pretty(document).map_err(|source| {
+        AppUseCaseError::ReviewRunExport {
+            message: format!(
+                "failed to serialize review run JSON {}: {source}",
+                path.to_string_lossy()
+            ),
+        }
+    })?;
+
+    fs::write(path, format!("{contents}\n")).map_err(|source| AppUseCaseError::ReviewRunExport {
+        message: format!(
+            "failed to write review run JSON {}: {source}",
+            path.to_string_lossy()
+        ),
+    })
 }
 
 fn review_run_status_from_document(status: ReviewRunStatusValue) -> UserReviewRunStatus {
@@ -1276,6 +1734,11 @@ mod tests {
                 .join(".plugin-workspace/.specs/auth/user-review/active")
         }
 
+        fn archive_directory(&self) -> PathBuf {
+            self.root
+                .join(".plugin-workspace/.specs/auth/user-review/archive")
+        }
+
         fn worktree_parent(&self) -> &Path {
             &self.worktree_parent
         }
@@ -1319,6 +1782,17 @@ mod tests {
             let contents = fs::read_to_string(path).expect("json file should be readable");
 
             serde_json::from_str(&contents).expect("json should parse")
+        }
+
+        fn write_json(&self, path: &Path, value: &Value) {
+            fs::write(
+                path,
+                format!(
+                    "{}\n",
+                    serde_json::to_string_pretty(value).expect("json should serialize")
+                ),
+            )
+            .expect("json file should be written");
         }
 
         fn initialize_git_repo(&self) {
@@ -1370,6 +1844,16 @@ mod tests {
             ),
             vec![CommentId::new(comment_id).expect("comment id should be valid")],
             ReviewRunExecutionMode::Worktree,
+        )
+    }
+
+    fn archive_file_run_input(run_id: &str) -> ArchiveReviewRunInput {
+        ArchiveReviewRunInput::new(
+            UserReviewRunTarget::file(
+                SpecId::new("auth").expect("spec id should be valid"),
+                SpecFileKey::Tasks,
+            ),
+            UserReviewRunId::new(run_id).expect("run id should be valid"),
         )
     }
 
@@ -1445,6 +1929,137 @@ mod tests {
             "cmt_1",
             result.active()[0].review_run().comment_ids()[0].as_str()
         );
+    }
+
+    #[test]
+    fn list_review_runs_reports_malformed_run_without_deleting_folder() {
+        let workspace = TestWorkspace::new("list-malformed");
+        let malformed_directory = workspace
+            .active_directory()
+            .join("2026-05-06T120000Z-file-tasks-bad00000");
+        fs::create_dir_all(&malformed_directory).expect("malformed run should be created");
+        fs::write(malformed_directory.join("manifest.json"), "{ invalid")
+            .expect("bad manifest should be written");
+        let use_cases = FilesystemAppUseCases::default();
+        let loaded_workspace = use_cases
+            .load_workspace(workspace.root_string())
+            .expect("workspace should load");
+        let input = ListReviewRunsInput::new(UserReviewRunTarget::file(
+            SpecId::new("auth").expect("spec id should be valid"),
+            SpecFileKey::Tasks,
+        ));
+
+        let result = use_cases
+            .list_review_runs(&loaded_workspace, input)
+            .expect("review runs should list with problems");
+
+        assert_eq!(0, result.active().len());
+        assert_eq!(1, result.problems().len());
+        assert_eq!(
+            ReviewRunListProblemState::Malformed,
+            result.problems()[0].state()
+        );
+        assert!(malformed_directory.is_dir());
+    }
+
+    #[test]
+    fn archive_review_run_moves_completed_bundle_and_preserves_files() {
+        let workspace = TestWorkspace::new("archive-completed");
+        workspace.write_task_file("# Tasks\n\nClarify checkout task.\n");
+        workspace.write_comment_file("cmt_1");
+        let use_cases = FilesystemAppUseCases::default();
+        let loaded_workspace = use_cases
+            .load_workspace(workspace.root_string())
+            .expect("workspace should load");
+        let created = use_cases
+            .create_review_run(&loaded_workspace, create_file_run_input("cmt_1"))
+            .expect("review run should be created");
+        let active_directory = PathBuf::from(created.folder_path());
+        let mut status = workspace.read_json(&active_directory.join("status.json"));
+        status["status"] = Value::String("completed".to_string());
+        status["summary"] = Value::String("対応完了".to_string());
+        status["warnings"] = Value::Array(vec![Value::String("既存警告".to_string())]);
+        workspace.write_json(&active_directory.join("status.json"), &status);
+        fs::write(
+            active_directory.join("result.md"),
+            "# レビュー対応結果\n\n- 対応内容\n",
+        )
+        .expect("result should be written");
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        workspace.write_task_file("# Tasks\n\nClarify checkout task after archive.\n");
+
+        let archived = use_cases
+            .archive_review_run(
+                &loaded_workspace,
+                archive_file_run_input(created.review_run().id().as_str()),
+            )
+            .expect("review run should archive");
+        let archive_directory = PathBuf::from(archived.folder_path());
+
+        assert!(!active_directory.exists());
+        assert!(archive_directory.join("manifest.json").is_file());
+        assert!(archive_directory.join("instructions.md").is_file());
+        assert!(archive_directory.join("comments.json").is_file());
+        assert!(archive_directory.join("context/auth/tasks.md").is_file());
+        assert!(archive_directory.join("result.md").is_file());
+        assert!(archive_directory.join("status.json").is_file());
+
+        let manifest = workspace.read_json(&archive_directory.join("manifest.json"));
+        assert_eq!("archived", manifest["status"]);
+        assert!(manifest["archivedAt"].as_str().is_some());
+
+        let status = workspace.read_json(&archive_directory.join("status.json"));
+        assert_eq!("archived", status["status"]);
+        assert_eq!("対応完了", status["summary"]);
+        let warnings = status["warnings"]
+            .as_array()
+            .expect("warnings should be an array")
+            .iter()
+            .filter_map(Value::as_str)
+            .collect::<Vec<_>>();
+        assert!(warnings.contains(&"既存警告"));
+        assert!(warnings
+            .iter()
+            .any(|warning| warning.contains("source file changed after export")));
+        assert_eq!(
+            UserReviewRunStatus::Archived,
+            archived.review_run().status()
+        );
+    }
+
+    #[test]
+    fn archive_review_run_refuses_archive_conflict() {
+        let workspace = TestWorkspace::new("archive-conflict");
+        workspace.write_task_file("# Tasks\n\nClarify checkout task.\n");
+        workspace.write_comment_file("cmt_1");
+        let use_cases = FilesystemAppUseCases::default();
+        let loaded_workspace = use_cases
+            .load_workspace(workspace.root_string())
+            .expect("workspace should load");
+        let created = use_cases
+            .create_review_run(&loaded_workspace, create_file_run_input("cmt_1"))
+            .expect("review run should be created");
+        let active_directory = PathBuf::from(created.folder_path());
+        let mut status = workspace.read_json(&active_directory.join("status.json"));
+        status["status"] = Value::String("completed".to_string());
+        workspace.write_json(&active_directory.join("status.json"), &status);
+        fs::create_dir_all(
+            workspace
+                .archive_directory()
+                .join(created.review_run().id().as_str()),
+        )
+        .expect("archive conflict should be created");
+
+        let result = use_cases.archive_review_run(
+            &loaded_workspace,
+            archive_file_run_input(created.review_run().id().as_str()),
+        );
+
+        assert!(matches!(
+            result,
+            Err(AppUseCaseError::ReviewRunExport { .. })
+        ));
+        assert!(active_directory.is_dir());
     }
 
     #[test]

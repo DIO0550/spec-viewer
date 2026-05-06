@@ -1,5 +1,7 @@
 import type { ReviewRunCommands } from "./tauri";
 import type {
+  ArchiveReviewRunRequest,
+  ArchiveReviewRunResponse,
   CreateReviewRunRequest,
   CreateReviewRunResponse,
   ListReviewRunsRequest,
@@ -10,11 +12,13 @@ import type {
 export type ReviewRunCommandTestDoubleResponses = Readonly<{
   createReviewRun?: CreateReviewRunResponse;
   listReviewRuns?: ListReviewRunsResponse;
+  archiveReviewRun?: ArchiveReviewRunResponse;
 }>;
 
 export type ReviewRunCommandTestDoubleCalls = Readonly<{
   createReviewRun: readonly CreateReviewRunRequest[];
   listReviewRuns: readonly ListReviewRunsRequest[];
+  archiveReviewRun: readonly ArchiveReviewRunRequest[];
 }>;
 
 export type ReviewRunCommandTestDouble = Readonly<{
@@ -47,6 +51,8 @@ const defaultReviewRun: ReviewRun = {
   commentCount: 1,
   createdAt: "2026-05-06T12:00:00Z",
   archivedAt: null,
+  summary: null,
+  warnings: [],
 };
 
 /** @returns A typed review run command double for hook and component tests. */
@@ -55,11 +61,13 @@ export function createReviewRunCommandTestDouble(
 ): ReviewRunCommandTestDouble {
   const createReviewRunCalls: CreateReviewRunRequest[] = [];
   const listReviewRunsCalls: ListReviewRunsRequest[] = [];
+  const archiveReviewRunCalls: ArchiveReviewRunRequest[] = [];
 
   return {
     calls: {
       createReviewRun: createReviewRunCalls,
       listReviewRuns: listReviewRunsCalls,
+      archiveReviewRun: archiveReviewRunCalls,
     },
     commands: {
       createReviewRun: async (request) => {
@@ -72,6 +80,23 @@ export function createReviewRunCommandTestDouble(
           responses.listReviewRuns ?? {
             active: [defaultReviewRun],
             archived: [],
+            problems: [],
+          }
+        );
+      },
+      archiveReviewRun: async (request) => {
+        archiveReviewRunCalls.push(request);
+        return (
+          responses.archiveReviewRun ?? {
+            reviewRun: {
+              ...defaultReviewRun,
+              status: "archived",
+              folderPath: defaultReviewRun.folderPath.replace(
+                "/active/",
+                "/archive/",
+              ),
+              archivedAt: "2026-05-06T12:30:00Z",
+            },
           }
         );
       },
