@@ -15,6 +15,12 @@ import type {
   ListCommentsResponse,
   SpecSkillMcpFeedbackPayload,
 } from "./comment";
+import type {
+  CreateReviewRunRequest,
+  ReviewRun,
+  ReviewRunManifest,
+  ReviewRunStatusDocument,
+} from "./reviewRun";
 
 test("comment command payloadsはP2.8 DTOと一致する", () => {
   expectTypeOf<
@@ -83,5 +89,41 @@ test("MCP feedback pathはdry-run payloadとmanual copy operationを表現する
       callProvider: false;
       writeMarkdown: false;
     };
+  }>();
+});
+
+test("review run payloadはfile/spec targetと実行先を表現する", () => {
+  expectTypeOf<
+    CommandRequest<"create_review_run">
+  >().toEqualTypeOf<CreateReviewRunRequest>();
+  expectTypeOf<ReviewRun>().toMatchTypeOf<{
+    status: "active" | "inProgress" | "completed" | "archived";
+    executionTarget:
+      | { mode: "currentWorkspace"; workspacePath: string }
+      | {
+          mode: "worktree";
+          repositoryPath: string;
+          worktreePath: string;
+          branchName: string;
+        };
+  }>();
+  expectTypeOf<CreateReviewRunRequest>().toMatchTypeOf<{
+    target:
+      | { scope: "file"; specId: string }
+      | { scope: "spec"; specId: string };
+    executionMode: "currentWorkspace" | "worktree";
+  }>();
+});
+
+test("review run manifestとstatus documentはbundle schemaを表現する", () => {
+  expectTypeOf<ReviewRunManifest>().toMatchTypeOf<{
+    schemaVersion: "spec-reviewer.review-run.v1";
+    commentIds: readonly string[];
+    archivedAt: string | null;
+  }>();
+  expectTypeOf<ReviewRunStatusDocument>().toMatchTypeOf<{
+    status: "active" | "inProgress" | "completed" | "archived";
+    summary: string | null;
+    warnings: readonly string[];
   }>();
 });

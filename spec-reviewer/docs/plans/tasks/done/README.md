@@ -69,3 +69,4 @@ Completed task files are moved here from the active task groups.
 - [P5.2 Apply With AI Placeholder](./later-phases/p5-02-apply-with-ai-placeholder.md)
 - [P5.3 MCP Feedback Path](./later-phases/p5-03-mcp-feedback-path.md)
 - [P6.1 Packaging And Release](./later-phases/p6-01-packaging-and-release.md)
+- [RL.1 Review Run Domain And Types](./review-loop/rl-01-review-run-domain-and-types.md)

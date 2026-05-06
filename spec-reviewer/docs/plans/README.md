@@ -11,6 +11,7 @@ This folder contains the implementation plan and task breakdown for `spec-review
 - [04-phase-3-anchors-tasks.md](./04-phase-3-anchors-tasks.md): anchor resolution, orphan handling, and file watching tasks.
 - [05-later-phases-tasks.md](./05-later-phases-tasks.md): UX improvements, export, config overrides, and future AI integration.
 - [06-acceptance-checklist.md](./06-acceptance-checklist.md): validation checklist before merging implementation work.
+- [07-review-loop-plan.md](./07-review-loop-plan.md): filesystem-based review loop for handing comment bundles to external AI agents and archiving completed runs.
 - [release-packaging.md](./release-packaging.md): packaging metadata, OS build notes, release checklist, and packaged-app smoke tests.
 - [tasks/](./tasks/): task breakdown split into small, commit-sized Markdown files.
 

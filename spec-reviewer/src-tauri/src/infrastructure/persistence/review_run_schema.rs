@@ -1,0 +1,190 @@
+//! User review run JSON schema DTOs.
+
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+
+use crate::domain::review_run::USER_REVIEW_MANIFEST_SCHEMA_VERSION;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReviewRunManifestDocument {
+    pub schema_version: String,
+    pub id: String,
+    pub status: ReviewRunStatusValue,
+    pub workspace_path: String,
+    pub target: ReviewRunTargetDocument,
+    pub spec_folder_path: String,
+    pub execution_target: ReviewRunExecutionTargetDocument,
+    pub source_files: Vec<ReviewRunSourceFileDocument>,
+    pub comment_ids: Vec<String>,
+    pub created_at: DateTime<Utc>,
+    pub archived_at: Option<DateTime<Utc>>,
+}
+
+impl ReviewRunManifestDocument {
+    pub fn schema_version() -> &'static str {
+        USER_REVIEW_MANIFEST_SCHEMA_VERSION
+    }
+
+    pub fn has_supported_schema_version(&self) -> bool {
+        self.schema_version == Self::schema_version()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ReviewRunStatusValue {
+    #[serde(rename = "active")]
+    Active,
+    #[serde(rename = "inProgress")]
+    InProgress,
+    #[serde(rename = "completed")]
+    Completed,
+    #[serde(rename = "archived")]
+    Archived,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase",
+    tag = "scope"
+)]
+pub enum ReviewRunTargetDocument {
+    File { spec_id: String, file_key: String },
+    Spec { spec_id: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase",
+    tag = "mode"
+)]
+pub enum ReviewRunExecutionTargetDocument {
+    CurrentWorkspace {
+        workspace_path: String,
+    },
+    Worktree {
+        repository_path: String,
+        worktree_path: String,
+        branch_name: String,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReviewRunSourceFileDocument {
+    pub spec_id: String,
+    pub file_key: String,
+    pub relative_path: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReviewRunStatusDocument {
+    pub status: ReviewRunStatusValue,
+    pub updated_at: DateTime<Utc>,
+    pub summary: Option<String>,
+    pub warnings: Vec<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn timestamp() -> DateTime<Utc> {
+        DateTime::parse_from_rfc3339("2026-05-06T12:00:00Z")
+            .expect("timestamp should parse")
+            .with_timezone(&Utc)
+    }
+
+    #[test]
+    fn manifest_serializes_current_workspace_schema() {
+        let manifest = ReviewRunManifestDocument {
+            schema_version: ReviewRunManifestDocument::schema_version().to_string(),
+            id: "2026-05-06T120000Z-file-requirements".to_string(),
+            status: ReviewRunStatusValue::Active,
+            workspace_path: "/workspace/project".to_string(),
+            target: ReviewRunTargetDocument::File {
+                spec_id: "001-checkout-flow".to_string(),
+                file_key: "requirements".to_string(),
+            },
+            spec_folder_path: "/workspace/project/.plugin-workspace/.specs/001-checkout-flow"
+                .to_string(),
+            execution_target: ReviewRunExecutionTargetDocument::CurrentWorkspace {
+                workspace_path: "/workspace/project".to_string(),
+            },
+            source_files: vec![ReviewRunSourceFileDocument {
+                spec_id: "001-checkout-flow".to_string(),
+                file_key: "requirements".to_string(),
+                relative_path: ".plugin-workspace/.specs/001-checkout-flow/requirements.md"
+                    .to_string(),
+            }],
+            comment_ids: vec!["comment-1".to_string()],
+            created_at: timestamp(),
+            archived_at: None,
+        };
+
+        let serialized =
+            serde_json::to_string(&manifest).expect("manifest should serialize to JSON");
+
+        assert!(serialized.contains("\"schemaVersion\":\"spec-reviewer.review-run.v1\""));
+        assert!(serialized.contains("\"mode\":\"currentWorkspace\""));
+        assert!(serialized.contains("\"scope\":\"file\""));
+    }
+
+    #[test]
+    fn manifest_deserializes_worktree_execution_target() {
+        let payload = r#"{
+          "schemaVersion": "spec-reviewer.review-run.v1",
+          "id": "2026-05-06T120000Z-file-requirements",
+          "status": "active",
+          "workspacePath": "/workspace/project",
+          "target": {
+            "scope": "spec",
+            "specId": "001-checkout-flow"
+          },
+          "specFolderPath": "/workspace/project-worktrees/review/.plugin-workspace/.specs/001-checkout-flow",
+          "executionTarget": {
+            "mode": "worktree",
+            "repositoryPath": "/workspace/project",
+            "worktreePath": "/workspace/project-worktrees/review",
+            "branchName": "spec-reviewer/2026-05-06T120000Z-file-requirements"
+          },
+          "sourceFiles": [],
+          "commentIds": [],
+          "createdAt": "2026-05-06T12:00:00Z",
+          "archivedAt": null
+        }"#;
+
+        let manifest: ReviewRunManifestDocument =
+            serde_json::from_str(payload).expect("manifest should deserialize");
+
+        assert!(manifest.has_supported_schema_version());
+        assert_eq!(
+            ReviewRunExecutionTargetDocument::Worktree {
+                repository_path: "/workspace/project".to_string(),
+                worktree_path: "/workspace/project-worktrees/review".to_string(),
+                branch_name: "spec-reviewer/2026-05-06T120000Z-file-requirements".to_string(),
+            },
+            manifest.execution_target
+        );
+    }
+
+    #[test]
+    fn status_document_serializes_japanese_summary_and_warnings() {
+        let document = ReviewRunStatusDocument {
+            status: ReviewRunStatusValue::Completed,
+            updated_at: timestamp(),
+            summary: Some("対応が完了しました".to_string()),
+            warnings: vec!["source file changed after export".to_string()],
+        };
+
+        let serialized =
+            serde_json::to_string(&document).expect("status document should serialize");
+
+        assert!(serialized.contains("\"status\":\"completed\""));
+        assert!(serialized.contains("\"summary\":\"対応が完了しました\""));
+        assert!(serialized.contains("\"warnings\""));
+    }
+}

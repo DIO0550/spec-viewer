@@ -1,4 +1,5 @@
 import type { CommentCommandPayloads } from "./comment";
+import type { ReviewRunCommandPayloads } from "./reviewRun";
 import type {
   ListSpecsRequest,
   ReadSpecFileRequest,
@@ -67,7 +68,9 @@ type WorkspaceCommandPayloads = Readonly<{
   }>;
 }>;
 
-export type CommandPayloads = WorkspaceCommandPayloads & CommentCommandPayloads;
+export type CommandPayloads = WorkspaceCommandPayloads &
+  CommentCommandPayloads &
+  ReviewRunCommandPayloads;
 
 export type CommandName = keyof CommandPayloads;
 

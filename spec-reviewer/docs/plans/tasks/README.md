@@ -8,6 +8,7 @@ This folder contains implementation tasks split into small, commit-sized Markdow
 - [phase-2-comments](./phase-2-comments/): comment domain, persistence, commands, and UI.
 - [phase-3-anchors](./phase-3-anchors/): Markdown block parsing, anchor resolution, orphan handling, and refresh.
 - [later-phases](./later-phases/): UX polish, export, AI integration, and release tasks.
+- [review-loop](./review-loop/): user review bundles, active review runs, and archive workflow.
 - [done](./done/): completed task files moved out of active task groups.
 
 ## Completion Rule
