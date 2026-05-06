@@ -66,6 +66,7 @@ Completed task files are moved here from the active task groups.
 - [P4.8 Keyboard Navigation](./later-phases/p4-08-keyboard-navigation.md)
 - [P4.9 Error Boundaries And Loading States](./later-phases/p4-09-error-boundaries-and-loading-states.md)
 - [P4.10 Collapsible Sidebar And Japanese UI](./later-phases/p4-10-collapsible-sidebar-and-japanese-ui.md)
+- [P4.11 Resizable Sidebar And Comment Entry UX](./later-phases/p4-11-resizable-sidebar-and-comment-entry-ux.md)
 - [P5.1 LLM Prompt Export](./later-phases/p5-01-llm-prompt-export.md)
 - [P5.2 Apply With AI Placeholder](./later-phases/p5-02-apply-with-ai-placeholder.md)
 - [P5.3 MCP Feedback Path](./later-phases/p5-03-mcp-feedback-path.md)

@@ -14,6 +14,8 @@
 - [ ] Add loading and error boundaries for IPC calls.
 - [x] Add collapsible right sidebar.
 - [x] Add Japanese-first UI copy for the primary reviewer workflow.
+- [x] Add resizable right sidebar.
+- [x] Clarify comment creation UX from Markdown line/block clicks.
 
 ## Phase 5: AI integration
 
@@ -135,6 +137,17 @@
 - [x] Add a typed Japanese UI copy catalog.
 - [x] Migrate high-traffic app shell, comment sidebar, and user-review labels to Japanese.
 - [x] Add tests for sidebar behavior, preference persistence, keyboard behavior, and Japanese labels.
+
+### P4.11 Resizable Sidebar And Comment Entry UX
+
+- [x] Add a draggable resize handle between Markdown pane and right sidebar.
+- [x] Persist sidebar width separately from open/closed state.
+- [x] Constrain sidebar width for desktop and narrow viewports.
+- [x] Add Japanese accessible label for the resize handle.
+- [x] Add empty-state guidance for how to create comments from Markdown line/block affordances.
+- [x] Keep clicked Markdown line/block as the primary comment creation path.
+- [x] Keep selected Markdown text as a secondary precision path.
+- [x] Add tests for resizing, width persistence, viewport fallback, line/block comment affordances, and comment-entry hints.
 
 ### P5.1 LLM Prompt Export
 
