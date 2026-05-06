@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Spec Reviewer app icon">
+  <defs>
+    <linearGradient id="background" x1="72" y1="48" x2="440" y2="464" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2357a5" />
+      <stop offset="0.52" stop-color="#1f8a83" />
+      <stop offset="1" stop-color="#2f4b3a" />
+    </linearGradient>
+    <linearGradient id="paper" x1="142" y1="92" x2="352" y2="420" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" />
+      <stop offset="1" stop-color="#e9f4f2" />
+    </linearGradient>
+    <filter id="shadow" x="80" y="64" width="360" height="392" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#0b1d26" flood-opacity="0.34" />
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#background)" />
+  <path d="M105 378c42-10 65-38 82-73 12-25 26-37 52-38 32-1 58-12 77-36 23-30 49-45 87-45v165c0 40-32 72-72 72H177c-31 0-58-18-72-45z" fill="#102a35" opacity="0.2" />
+  <g filter="url(#shadow)">
+    <path d="M149 82h151l71 72v262H149z" fill="url(#paper)" />
+    <path d="M300 82v76h71z" fill="#cfe5e1" />
+    <path d="M191 187h119" stroke="#265f69" stroke-width="22" stroke-linecap="round" />
+    <path d="M191 241h139" stroke="#265f69" stroke-width="22" stroke-linecap="round" opacity="0.72" />
+    <path d="M191 295h85" stroke="#265f69" stroke-width="22" stroke-linecap="round" opacity="0.72" />
+  </g>
+  <path d="M318 277h86c24 0 43 19 43 43v26c0 24-19 43-43 43h-28l-38 39v-39h-20c-24 0-43-19-43-43v-26c0-24 19-43 43-43z" fill="#f4b544" />
+  <path d="M319 325h84" stroke="#5b3e0c" stroke-width="18" stroke-linecap="round" opacity="0.78" />
+  <path d="M319 360h49" stroke="#5b3e0c" stroke-width="18" stroke-linecap="round" opacity="0.64" />
+</svg>

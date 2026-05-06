@@ -2,6 +2,12 @@
 
 Spec Skill が生成する Markdown 仕様をレビューするための Tauri desktop app.
 
+## Product Metadata
+
+- Product name: `Spec Reviewer`
+- App identifier: `io.github.dio0550.spec-reviewer`
+- Version: `0.1.0`
+
 ## Development
 
 ```bash
@@ -21,6 +27,17 @@ pnpm dev
 pnpm check
 pnpm build
 ```
+
+## Packaging
+
+Release preparation is documented in [docs/plans/release-packaging.md](./docs/plans/release-packaging.md).
+
+```bash
+pnpm package:debug
+pnpm package:debug:linux
+```
+
+`pnpm package` creates release artifacts. Do not commit generated outputs from `dist/`, `storybook-static/`, `src-tauri/target/`, or `src-tauri/gen/`.
 
 ## Added Libraries
 
