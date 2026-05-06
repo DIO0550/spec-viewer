@@ -1,0 +1,109 @@
+name: release-macos
+
+on:
+  push:
+    tags:
+      - "*"
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: Release tag to create or update
+        required: true
+        type: string
+
+concurrency:
+  group: release-macos-${{ github.event.release.tag_name || inputs.tag_name || github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  build-apple-silicon:
+    name: build Apple Silicon .app and .dmg
+    runs-on: macos-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: spec-reviewer
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag_name || github.ref_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.release.tag_name || inputs.tag_name || github.ref }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+        with:
+          version: 10.33.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: spec-reviewer/pnpm-lock.yaml
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          toolchain: stable
+          targets: aarch64-apple-darwin
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build app and dmg
+        run: pnpm tauri build --target aarch64-apple-darwin --bundles app,dmg --ci --no-sign
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-assets
+
+          APP_BUNDLES=(src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app)
+          DMG_FILES=(src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg)
+
+          APP_PATH="${APP_BUNDLES[0]}"
+          DMG_PATH="${DMG_FILES[0]}"
+
+          if [ ! -d "$APP_PATH" ]; then
+            echo "No .app bundle found under src-tauri/target/aarch64-apple-darwin/release/bundle/macos"
+            exit 1
+          fi
+
+          if [ ! -f "$DMG_PATH" ]; then
+            echo "No .dmg bundle found under src-tauri/target/aarch64-apple-darwin/release/bundle/dmg"
+            exit 1
+          fi
+
+          APP_NAME="$(basename "$APP_PATH" .app)"
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "release-assets/${APP_NAME}-aarch64.app.zip"
+          cp "$DMG_PATH" "release-assets/$(basename "$DMG_PATH")"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: macos-aarch64-release-assets
+          path: spec-reviewer/release-assets/*
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RELEASE_TARGET="$(git rev-parse HEAD)"
+
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Release $RELEASE_TAG already exists."
+          else
+            gh release create "$RELEASE_TAG" --title "$RELEASE_TAG" --generate-notes --target "$RELEASE_TARGET"
+          fi
+
+          gh release upload "$RELEASE_TAG" release-assets/* --clobber
