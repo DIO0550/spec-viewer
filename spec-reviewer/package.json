@@ -27,7 +27,7 @@
     "package:debug": "tauri build --debug --ci --no-bundle",
     "package:debug:linux": "tauri build --debug --ci --bundles deb",
     "release:check": "pnpm check && pnpm test:run && cargo test --manifest-path src-tauri/Cargo.toml && pnpm build && pnpm package:debug:linux",
-    "storybook": "storybook dev -p 6006",
+    "storybook": "storybook dev -p 6006 --no-open",
     "build-storybook": "storybook build",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
