@@ -1,4 +1,4 @@
-import { Clipboard, Download, Search, X } from "lucide-react";
+import { Clipboard, Download, Search, Sparkles, X } from "lucide-react";
 import { useId, useState } from "react";
 
 import type {
@@ -6,6 +6,7 @@ import type {
   CommentMutationState,
 } from "../hooks/useComments";
 import type {
+  ApplyWithAiPlaceholderState,
   Comment,
   CommentAnchorDisplayState,
   CommentAnchorDisplayStatus,
@@ -452,6 +453,20 @@ const idleCommentExportState: CommentExportState = {
   message: null,
 };
 
+const applyWithAiPlaceholderState: ApplyWithAiPlaceholderState = {
+  availability: "placeholder",
+  enabled: false,
+  selectedCommentsInput: null,
+  generatedDiffPreview: {
+    status: "notGenerated",
+    files: [],
+  },
+  requiresExplicitUserConfirmationBeforeWrite: true,
+  markdownWriteSupport: "notConnected",
+  explanation:
+    "Prompt export is ready; AI apply will be enabled after provider integration adds a generated diff preview. Markdown writes will require explicit confirmation.",
+};
+
 const commentExportOptions: readonly Readonly<{
   scope: CommentExportScope;
   label: string;
@@ -480,49 +495,69 @@ function CommentExportControls({
   onExportComments,
   onCopyLlmPrompt,
 }: CommentExportControlsProps) {
-  return (
-    <div className="comment-sidebar__exports" aria-label="Comment exports">
-      {onExportComments === undefined
-        ? null
-        : commentExportOptions.map((option) => {
-            const isSaving =
-              exportState.status === "saving" &&
-              exportState.operation === option.scope;
+  const placeholderDescriptionId = useId();
 
-            return (
+  return (
+    <>
+      <div className="comment-sidebar__exports" aria-label="Comment exports">
+        {onExportComments === undefined
+          ? null
+          : commentExportOptions.map((option) => {
+              const isSaving =
+                exportState.status === "saving" &&
+                exportState.operation === option.scope;
+
+              return (
+                <button
+                  key={`comments-${option.scope}`}
+                  className="comment-sidebar__export"
+                  type="button"
+                  aria-label={option.ariaLabel}
+                  disabled={exportState.status === "saving"}
+                  onClick={() => {
+                    onExportComments(option.scope);
+                  }}
+                >
+                  <Download aria-hidden="true" size={14} />
+                  <span>{isSaving ? "Saving" : option.label}</span>
+                </button>
+              );
+            })}
+        {onCopyLlmPrompt === undefined
+          ? null
+          : commentExportOptions.map((option) => (
               <button
-                key={`comments-${option.scope}`}
+                key={`prompt-${option.scope}`}
                 className="comment-sidebar__export"
                 type="button"
-                aria-label={option.ariaLabel}
+                aria-label={`Copy ${option.scope} LLM prompt`}
                 disabled={exportState.status === "saving"}
                 onClick={() => {
-                  onExportComments(option.scope);
+                  onCopyLlmPrompt(option.scope);
                 }}
               >
-                <Download aria-hidden="true" size={14} />
-                <span>{isSaving ? "Saving" : option.label}</span>
+                <Clipboard aria-hidden="true" size={14} />
+                <span>Prompt {option.label}</span>
               </button>
-            );
-          })}
-      {onCopyLlmPrompt === undefined
-        ? null
-        : commentExportOptions.map((option) => (
-            <button
-              key={`prompt-${option.scope}`}
-              className="comment-sidebar__export"
-              type="button"
-              aria-label={`Copy ${option.scope} LLM prompt`}
-              disabled={exportState.status === "saving"}
-              onClick={() => {
-                onCopyLlmPrompt(option.scope);
-              }}
-            >
-              <Clipboard aria-hidden="true" size={14} />
-              <span>Prompt {option.label}</span>
-            </button>
-          ))}
-    </div>
+            ))}
+        <button
+          className="comment-sidebar__export comment-sidebar__export--placeholder"
+          type="button"
+          aria-label="Apply comments with AI"
+          aria-describedby={placeholderDescriptionId}
+          disabled={!applyWithAiPlaceholderState.enabled}
+        >
+          <Sparkles aria-hidden="true" size={14} />
+          <span>Apply AI</span>
+        </button>
+      </div>
+      <p
+        id={placeholderDescriptionId}
+        className="comment-sidebar__apply-ai-note"
+      >
+        {applyWithAiPlaceholderState.explanation}
+      </p>
+    </>
   );
 }
 

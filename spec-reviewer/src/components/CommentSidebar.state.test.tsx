@@ -391,6 +391,25 @@ test("CommentSidebarはコメントexport操作を発火して状態を表示す
   result.unmount();
 });
 
+test("CommentSidebarはAI適用placeholderをdisabledで表示する", () => {
+  const result = renderReadySidebar({
+    onCopyLlmPrompt: vi.fn(),
+  });
+  const applyWithAiButton = result.container.querySelector(
+    '[aria-label="Apply comments with AI"]',
+  ) as HTMLButtonElement;
+
+  expect(applyWithAiButton.disabled).toBe(true);
+  expect(applyWithAiButton.textContent).toContain("Apply AI");
+  expect(result.container.textContent).toContain(
+    "Prompt export is ready; AI apply will be enabled after provider integration adds a generated diff preview.",
+  );
+  expect(result.container.textContent).toContain(
+    "Markdown writes will require explicit confirmation.",
+  );
+  result.unmount();
+});
+
 test("CommentSidebarはexport失敗をalertで表示する", () => {
   const result = renderReadySidebar({
     exportState: {
