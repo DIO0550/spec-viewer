@@ -163,6 +163,64 @@ function renderReadySidebar(
   );
 }
 
+function renderEmptySidebar(
+  options: Readonly<{
+    exportState?: CommentExportState;
+    onExportComments?: (scope: CommentExportScope) => void;
+    onCopyLlmPrompt?: (scope: CommentExportScope) => void;
+    onCopyMcpFeedback?: () => void;
+  }> = {},
+): RenderResult {
+  return renderComponent(
+    <CommentSidebar
+      listState={{
+        status: "empty",
+        scope: {
+          workspacePath: "/workspace/spec-reviewer",
+          specId: "phase-2-comments",
+          fileKey: "tasks",
+        },
+        statusFilter: "all",
+        comments: [],
+        error: null,
+      }}
+      mutationState={{
+        status: "idle",
+        operation: null,
+        commentId: null,
+        error: null,
+      }}
+      exportState={
+        options.exportState ?? {
+          status: "idle",
+          operation: null,
+          message: null,
+        }
+      }
+      activeCommentId={null}
+      onSelectComment={vi.fn()}
+      onResolveComment={vi.fn()}
+      onReopenComment={vi.fn()}
+      onDeleteComment={vi.fn()}
+      onUpdateComment={vi.fn()}
+      onReload={vi.fn()}
+      onExportComments={options.onExportComments}
+      onCopyLlmPrompt={options.onCopyLlmPrompt}
+      onCopyMcpFeedback={options.onCopyMcpFeedback}
+    />,
+  );
+}
+
+function openSecondaryActions(result: RenderResult): void {
+  const moreButton = result.container.querySelector(
+    '[aria-label="その他"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    moreButton.click();
+  });
+}
+
 test("CommentSidebarは読み込み中状態をrole statusで表示する", () => {
   const result = renderComponent(
     <CommentSidebar
@@ -282,39 +340,46 @@ test("CommentSidebarは読み込み失敗をalertで表示して再読み込み�
 });
 
 test("CommentSidebarはコメントなし状態を表示する", () => {
-  const result = renderComponent(
-    <CommentSidebar
-      listState={{
-        status: "empty",
-        scope: {
-          workspacePath: "/workspace/spec-reviewer",
-          specId: "phase-2-comments",
-          fileKey: "tasks",
-        },
-        statusFilter: "all",
-        comments: [],
-        error: null,
-      }}
-      mutationState={{
-        status: "idle",
-        operation: null,
-        commentId: null,
-        error: null,
-      }}
-      activeCommentId={null}
-      onSelectComment={vi.fn()}
-      onResolveComment={vi.fn()}
-      onReopenComment={vi.fn()}
-      onDeleteComment={vi.fn()}
-      onUpdateComment={vi.fn()}
-      onReload={vi.fn()}
-    />,
-  );
+  const result = renderEmptySidebar();
 
   expect(result.container.textContent).toContain("コメントはまだありません");
   expect(result.container.textContent).toContain(
     "Markdown本文の行にあるコメントボタンから追加できます",
   );
+  result.unmount();
+});
+
+test("CommentSidebarは空状態でexport操作を常設表示しない", () => {
+  const result = renderEmptySidebar({
+    onExportComments: vi.fn(),
+    onCopyLlmPrompt: vi.fn(),
+    onCopyMcpFeedback: vi.fn(),
+  });
+
+  expect(result.container.textContent).toContain("コメントはまだありません");
+  expect(
+    result.container.querySelector(
+      '[aria-label="このファイルのコメントを書き出す"]',
+    ),
+  ).toBeNull();
+  expect(
+    result.container.querySelector(
+      '[aria-label="ファイルのAI用プロンプトをコピー"]',
+    ),
+  ).toBeNull();
+
+  openSecondaryActions(result);
+
+  expect(
+    result.container.querySelector(
+      '[aria-label="このファイルのコメントを書き出す"]',
+    ),
+  ).not.toBeNull();
+  expect(
+    result.container.querySelector(
+      '[aria-label="ファイルのAI用プロンプトをコピー"]',
+    ),
+  ).not.toBeNull();
   result.unmount();
 });
 
@@ -368,17 +433,26 @@ test("CommentSidebarはコメントexport操作を発火して状態を表示す
     onCopyLlmPrompt,
     onCopyMcpFeedback,
   });
+
+  expect(
+    result.container.querySelector(
+      '[aria-label="このファイルのコメントを書き出す"]',
+    ),
+  ).toBeNull();
+
+  openSecondaryActions(result);
+
   const fileExportButton = result.container.querySelector(
-    '[aria-label="現在のファイルのコメントをexport"]',
+    '[aria-label="このファイルのコメントを書き出す"]',
   ) as HTMLButtonElement;
   const specExportButton = result.container.querySelector(
-    '[aria-label="現在のSpecのコメントをexport"]',
+    '[aria-label="この仕様のコメントを書き出す"]',
   ) as HTMLButtonElement;
   const workspaceExportButton = result.container.querySelector(
-    '[aria-label="ワークスペースのコメントをexport"]',
+    '[aria-label="ワークスペースのコメントを書き出す"]',
   ) as HTMLButtonElement;
   const filePromptButton = result.container.querySelector(
-    '[aria-label="ファイルのLLM promptをコピー"]',
+    '[aria-label="ファイルのAI用プロンプトをコピー"]',
   ) as HTMLButtonElement;
   const mcpFeedbackButton = result.container.querySelector(
     '[aria-label="現在のファイルのMCP feedback payloadをコピー"]',
@@ -412,6 +486,9 @@ test("CommentSidebarはMCP feedback dry-runコピー中状態を表示する", (
     },
     onCopyMcpFeedback: vi.fn(),
   });
+
+  openSecondaryActions(result);
+
   const mcpFeedbackButton = result.container.querySelector(
     '[aria-label="現在のファイルのMCP feedback payloadをコピー"]',
   ) as HTMLButtonElement;
@@ -425,6 +502,9 @@ test("CommentSidebarはAI適用placeholderをdisabledで表示する", () => {
   const result = renderReadySidebar({
     onCopyLlmPrompt: vi.fn(),
   });
+
+  openSecondaryActions(result);
+
   const applyWithAiButton = result.container.querySelector(
     '[aria-label="コメントをAIで適用"]',
   ) as HTMLButtonElement;
@@ -432,7 +512,7 @@ test("CommentSidebarはAI適用placeholderをdisabledで表示する", () => {
   expect(applyWithAiButton.disabled).toBe(true);
   expect(applyWithAiButton.textContent).toContain("AI適用");
   expect(result.container.textContent).toContain(
-    "Prompt exportは利用できます。AI適用はprovider連携で差分プレビューを生成できるようになってから有効になります。",
+    "AI用プロンプトのコピーは利用できます。AI適用はprovider連携で差分プレビューを生成できるようになってから有効になります。",
   );
   expect(result.container.textContent).toContain(
     "Markdownの書き込みには明示的な確認が必要です。",

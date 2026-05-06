@@ -1,4 +1,11 @@
-import { Clipboard, Download, Search, Sparkles, X } from "lucide-react";
+import {
+  Clipboard,
+  Download,
+  MoreHorizontal,
+  Search,
+  Sparkles,
+  X,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { useId, useState } from "react";
 
@@ -494,119 +501,156 @@ const applyWithAiPlaceholderState: ApplyWithAiPlaceholderState = {
 
 const commentExportOptions: readonly Readonly<{
   scope: CommentExportScope;
-  label: string;
-  ariaLabel: string;
+  exportLabel: string;
+  exportAriaLabel: string;
+  promptLabel: string;
+  promptAriaLabel: string;
 }>[] = [
   {
     scope: "file",
-    label: uiText.sidebar.file,
-    ariaLabel: "現在のファイルのコメントをexport",
+    exportLabel: uiText.sidebar.exportFileComments,
+    exportAriaLabel: uiText.sidebar.exportFileComments,
+    promptLabel: `${uiText.sidebar.file}の${uiText.sidebar.copyPrompt}`,
+    promptAriaLabel: `${uiText.sidebar.file}の${uiText.sidebar.copyPrompt}`,
   },
   {
     scope: "spec",
-    label: uiText.sidebar.spec,
-    ariaLabel: "現在のSpecのコメントをexport",
+    exportLabel: uiText.sidebar.exportSpecComments,
+    exportAriaLabel: uiText.sidebar.exportSpecComments,
+    promptLabel: `${uiText.sidebar.spec}の${uiText.sidebar.copyPrompt}`,
+    promptAriaLabel: `${uiText.sidebar.spec}の${uiText.sidebar.copyPrompt}`,
   },
   {
     scope: "workspace",
-    label: uiText.sidebar.workspace,
-    ariaLabel: "ワークスペースのコメントをexport",
+    exportLabel: uiText.sidebar.exportWorkspaceComments,
+    exportAriaLabel: uiText.sidebar.exportWorkspaceComments,
+    promptLabel: `${uiText.sidebar.workspace}の${uiText.sidebar.copyPrompt}`,
+    promptAriaLabel: `${uiText.sidebar.workspace}の${uiText.sidebar.copyPrompt}`,
   },
 ];
 
-/** @returns Comment export command buttons for the selected review scope. */
+/** @returns Secondary comment export and AI handoff actions for the selected review scope. */
 function CommentExportControls({
   exportState,
   onExportComments,
   onCopyLlmPrompt,
   onCopyMcpFeedback,
 }: CommentExportControlsProps) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuId = useId();
   const placeholderDescriptionId = useId();
   const isCopyingMcpFeedback =
     exportState.status === "saving" && exportState.operation === "mcpFeedback";
 
   return (
-    <>
-      <div
-        className="comment-sidebar__exports"
-        aria-label={uiText.sidebar.exports}
+    <div className="comment-sidebar__secondary-actions">
+      <button
+        className="comment-sidebar__secondary-trigger"
+        type="button"
+        aria-label={uiText.sidebar.moreActions}
+        aria-controls={menuId}
+        aria-expanded={isMenuOpen}
+        aria-haspopup="menu"
+        onClick={() => {
+          setIsMenuOpen((currentIsMenuOpen) => !currentIsMenuOpen);
+        }}
       >
-        {onExportComments === undefined
-          ? null
-          : commentExportOptions.map((option) => {
-              const isSaving =
-                exportState.status === "saving" &&
-                exportState.operation === option.scope;
+        <MoreHorizontal aria-hidden="true" size={15} />
+        <span>{uiText.sidebar.moreActions}</span>
+      </button>
+      {isMenuOpen ? (
+        <div
+          id={menuId}
+          className="comment-sidebar__exports"
+          role="menu"
+          aria-label={uiText.sidebar.exports}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              setIsMenuOpen(false);
+            }
+          }}
+        >
+          {onExportComments === undefined
+            ? null
+            : commentExportOptions.map((option) => {
+                const isSaving =
+                  exportState.status === "saving" &&
+                  exportState.operation === option.scope;
 
-              return (
+                return (
+                  <button
+                    key={`comments-${option.scope}`}
+                    className="comment-sidebar__export"
+                    type="button"
+                    role="menuitem"
+                    aria-label={option.exportAriaLabel}
+                    disabled={exportState.status === "saving"}
+                    onClick={() => {
+                      onExportComments(option.scope);
+                    }}
+                  >
+                    <Download aria-hidden="true" size={14} />
+                    <span>
+                      {isSaving ? uiText.sidebar.saving : option.exportLabel}
+                    </span>
+                  </button>
+                );
+              })}
+          {onCopyLlmPrompt === undefined
+            ? null
+            : commentExportOptions.map((option) => (
                 <button
-                  key={`comments-${option.scope}`}
+                  key={`prompt-${option.scope}`}
                   className="comment-sidebar__export"
                   type="button"
-                  aria-label={option.ariaLabel}
+                  role="menuitem"
+                  aria-label={option.promptAriaLabel}
                   disabled={exportState.status === "saving"}
                   onClick={() => {
-                    onExportComments(option.scope);
+                    onCopyLlmPrompt(option.scope);
                   }}
                 >
-                  <Download aria-hidden="true" size={14} />
-                  <span>{isSaving ? uiText.sidebar.saving : option.label}</span>
+                  <Clipboard aria-hidden="true" size={14} />
+                  <span>{option.promptLabel}</span>
                 </button>
-              );
-            })}
-        {onCopyLlmPrompt === undefined
-          ? null
-          : commentExportOptions.map((option) => (
-              <button
-                key={`prompt-${option.scope}`}
-                className="comment-sidebar__export"
-                type="button"
-                aria-label={`${option.label}のLLM promptをコピー`}
-                disabled={exportState.status === "saving"}
-                onClick={() => {
-                  onCopyLlmPrompt(option.scope);
-                }}
-              >
-                <Clipboard aria-hidden="true" size={14} />
-                <span>
-                  {uiText.sidebar.prompt} {option.label}
-                </span>
-              </button>
-            ))}
-        {onCopyMcpFeedback === undefined ? null : (
+              ))}
+          {onCopyMcpFeedback === undefined ? null : (
+            <button
+              className="comment-sidebar__export"
+              type="button"
+              role="menuitem"
+              aria-label="現在のファイルのMCP feedback payloadをコピー"
+              disabled={exportState.status === "saving"}
+              onClick={onCopyMcpFeedback}
+            >
+              <Clipboard aria-hidden="true" size={14} />
+              <span>
+                {isCopyingMcpFeedback
+                  ? uiText.sidebar.copying
+                  : uiText.sidebar.mcpFeedback}
+              </span>
+            </button>
+          )}
           <button
-            className="comment-sidebar__export"
+            className="comment-sidebar__export comment-sidebar__export--placeholder"
             type="button"
-            aria-label="現在のファイルのMCP feedback payloadをコピー"
-            disabled={exportState.status === "saving"}
-            onClick={onCopyMcpFeedback}
+            role="menuitem"
+            aria-label={uiText.sidebar.applyAiLabel}
+            aria-describedby={placeholderDescriptionId}
+            disabled={!applyWithAiPlaceholderState.enabled}
           >
-            <Clipboard aria-hidden="true" size={14} />
-            <span>
-              {isCopyingMcpFeedback
-                ? uiText.sidebar.copying
-                : uiText.sidebar.mcpFeedback}
-            </span>
+            <Sparkles aria-hidden="true" size={14} />
+            <span>{uiText.sidebar.applyAi}</span>
           </button>
-        )}
-        <button
-          className="comment-sidebar__export comment-sidebar__export--placeholder"
-          type="button"
-          aria-label={uiText.sidebar.applyAiLabel}
-          aria-describedby={placeholderDescriptionId}
-          disabled={!applyWithAiPlaceholderState.enabled}
-        >
-          <Sparkles aria-hidden="true" size={14} />
-          <span>{uiText.sidebar.applyAi}</span>
-        </button>
-      </div>
-      <p
-        id={placeholderDescriptionId}
-        className="comment-sidebar__apply-ai-note"
-      >
-        {applyWithAiPlaceholderState.explanation}
-      </p>
-    </>
+          <p
+            id={placeholderDescriptionId}
+            className="comment-sidebar__apply-ai-note"
+          >
+            {applyWithAiPlaceholderState.explanation}
+          </p>
+        </div>
+      ) : null}
+    </div>
   );
 }
 

@@ -18,7 +18,8 @@ export const uiText = {
     description: "現在のファイルのレビューコメント",
     counts: "コメント件数",
     filters: "コメントフィルター",
-    exports: "コメントexport",
+    moreActions: "その他",
+    exports: "エクスポート",
     empty: "コメントはまだありません",
     emptyDescription:
       "このファイルの未解決・解決済みコメントがここに表示されます。",
@@ -50,12 +51,16 @@ export const uiText = {
     file: "ファイル",
     spec: "Spec",
     workspace: "ワークスペース",
-    prompt: "Prompt",
+    exportFileComments: "このファイルのコメントを書き出す",
+    exportSpecComments: "この仕様のコメントを書き出す",
+    exportWorkspaceComments: "ワークスペースのコメントを書き出す",
+    copyPrompt: "AI用プロンプトをコピー",
+    prompt: "AI用プロンプト",
     mcpFeedback: "MCP Feedback",
     applyAi: "AI適用",
     applyAiLabel: "コメントをAIで適用",
     applyAiPlaceholder:
-      "Prompt exportは利用できます。AI適用はprovider連携で差分プレビューを生成できるようになってから有効になります。Markdownの書き込みには明示的な確認が必要です。",
+      "AI用プロンプトのコピーは利用できます。AI適用はprovider連携で差分プレビューを生成できるようになってから有効になります。Markdownの書き込みには明示的な確認が必要です。",
   },
   commentThread: {
     edit: "コメントを編集",
