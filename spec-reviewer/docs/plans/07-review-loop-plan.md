@@ -268,14 +268,13 @@ This folder must not be confused with the AI-owned review folders used by spec-d
 
 ### instructions.md
 
-The human-readable entrypoint for AI agents. It should be Japanese-first because the target users write review comments in Japanese. It should include:
+The human-readable entrypoint for AI agents. It should be Japanese because the target users write review comments in Japanese. It should include:
 
 - Target scope and source files.
 - Clear instruction to edit the source Markdown files in the selected workspace/worktree, not files under `context/`.
 - Comment list grouped by file.
 - Anchor snippets and current resolution state.
 - Completion contract: update `result.md` and optionally set `status.json` to `completed`.
-- A concise English fallback section only for tool interoperability if needed.
 
 ### comments.json
 
@@ -387,7 +386,7 @@ export type ReviewRun = Readonly<{
 
 ### UI
 
-- Use Japanese-first UI copy for this workflow.
+- Use Japanese UI copy for this workflow.
 - Add a `レビュー作成` action near the existing export controls.
 - Let the user choose scope and selected/open comments with Japanese labels.
 - Let the user choose `現在のワークスペース` or `新しいworktree` before creating the run.
@@ -436,7 +435,7 @@ Suggested Japanese labels:
 - User review run domain and folder lifecycle.
 - Git repository/worktree detection and creation.
 - Review bundle writer.
-- Japanese-first UI copy and bundle templates.
+- Japanese UI copy and bundle templates.
 - Active/archive review run listing.
 - Completion/status detection.
 - Archive action.
@@ -494,4 +493,4 @@ Suggested Japanese labels:
 - Should worktree mode be the default, or only an explicit safer option?
 - Should later versions offer guarded worktree cleanup after archive?
 - Should later versions support carrying uncommitted current-workspace changes into a review worktree?
-- Should the whole app become Japanese-first, or only the user-review workflow for the first pass?
+- Should all existing English UI be migrated in one pass, or should the comment and user-review workflows come first?

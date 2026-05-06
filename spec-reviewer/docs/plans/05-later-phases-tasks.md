@@ -12,6 +12,8 @@
 - [ ] Add comment export to JSON.
 - [ ] Improve keyboard navigation for feature list, tabs, and sidebar.
 - [ ] Add loading and error boundaries for IPC calls.
+- [x] Add collapsible right sidebar.
+- [x] Add Japanese-first UI copy for the primary reviewer workflow.
 
 ## Phase 5: AI integration
 
@@ -122,6 +124,17 @@
 - [ ] Add skeleton state for Markdown loading.
 - [ ] Add sidebar loading state.
 - [ ] Add retry actions for recoverable failures.
+
+### P4.10 Collapsible Sidebar And Japanese UI
+
+- [x] Add right sidebar expanded/collapsed state.
+- [x] Add close and reopen controls with Japanese accessible labels.
+- [x] Persist sidebar open/closed preference.
+- [x] Add narrow viewport overlay behavior and Escape dismissal.
+- [x] Preserve comment and review-run state while hidden.
+- [x] Add a typed Japanese UI copy catalog.
+- [x] Migrate high-traffic app shell, comment sidebar, and user-review labels to Japanese.
+- [x] Add tests for sidebar behavior, preference persistence, keyboard behavior, and Japanese labels.
 
 ### P5.1 LLM Prompt Export
 
