@@ -21,6 +21,7 @@ import {
   useReviewRuns,
   type ReviewRunTargetScope,
 } from "./hooks/useReviewRuns";
+import { useSidebarPreference } from "./hooks/useSidebarPreference";
 import { useSpecFileWatcher } from "./hooks/useSpecFileWatcher";
 import { useSpecs } from "./hooks/useSpecs";
 import { useTheme } from "./hooks/useTheme";
@@ -92,9 +93,9 @@ type CommentExportState =
     }>;
 
 const invalidDroppedDirectoryMessage =
-  "Drop a workspace folder. Files cannot be opened as workspaces.";
+  "ワークスペースフォルダをドロップしてください。ファイルはワークスペースとして開けません。";
 const missingRecentWorkspaceMessage =
-  "Recent workspace no longer exists. It was removed from the list.";
+  "最近使ったワークスペースが見つかりません。履歴から削除しました。";
 const idleCommentExportState: CommentExportState = {
   status: "idle",
   operation: null,
@@ -105,6 +106,7 @@ function App() {
   const workspace = useWorkspace();
   const recentWorkspaces = useRecentWorkspaces();
   const theme = useTheme();
+  const sidebarPreference = useSidebarPreference();
   const specs = useSpecs({ workspacePath: workspace.workspace?.root ?? null });
   const comments = useComments({
     workspacePath: workspace.workspace?.root ?? null,
@@ -356,7 +358,7 @@ function App() {
       setCommentExportState({
         status: "saving",
         operation: target.scope,
-        message: "Choosing export destination",
+        message: "export先を選択中",
       });
 
       try {
@@ -370,7 +372,7 @@ function App() {
         setCommentExportState({
           status: "saving",
           operation: target.scope,
-          message: "Exporting comments",
+          message: "コメントをexport中",
         });
 
         const response = await exportComments({
@@ -436,7 +438,7 @@ function App() {
       setCommentExportState({
         status: "saving",
         operation: target.scope,
-        message: "Generating LLM prompt",
+        message: "LLM promptを生成中",
       });
 
       try {
@@ -506,7 +508,7 @@ function App() {
     setCommentExportState({
       status: "saving",
       operation: "mcpFeedback",
-      message: "Preparing MCP feedback dry-run payload",
+      message: "MCP feedback dry-run payloadを準備中",
     });
 
     try {
@@ -647,9 +649,10 @@ function App() {
   const reloadCurrentMarkdownFromWatcher =
     useCallback(async (): Promise<void> => {
       await refreshCurrentView({
-        loadingMessage: "Refreshing after Markdown change",
+        loadingMessage: "Markdown変更を反映中",
         failureStatus: "stale",
-        failureMessage: "Automatic refresh failed. Content may be stale.",
+        failureMessage:
+          "自動再読み込みに失敗しました。内容が古い可能性があります。",
         run: async () => {
           const isDocumentReloaded = await specs.reloadDocument();
           const areCommentsReloaded = await comments.reloadComments();
@@ -661,9 +664,10 @@ function App() {
   const reloadWorkspaceConfigFromWatcher =
     useCallback(async (): Promise<void> => {
       await refreshCurrentView({
-        loadingMessage: "Refreshing after spec config change",
+        loadingMessage: "Spec設定変更を反映中",
         failureStatus: "stale",
-        failureMessage: "Automatic refresh failed. Content may be stale.",
+        failureMessage:
+          "自動再読み込みに失敗しました。内容が古い可能性があります。",
         run: async () => {
           const areSpecsReloaded = await specs.reloadSpecs({
             preserveSelection: true,
@@ -685,9 +689,10 @@ function App() {
     }
 
     await refreshCurrentView({
-      loadingMessage: "Refreshing current view",
+      loadingMessage: "現在の表示を再読み込み中",
       failureStatus: "error",
-      failureMessage: "Refresh failed. Review the pane error and retry.",
+      failureMessage:
+        "再読み込みに失敗しました。エラーを確認して再試行してください。",
       run: async () => {
         const areSpecsReloaded = await specs.reloadSpecs({
           preserveSelection: true,
@@ -713,7 +718,7 @@ function App() {
     onWatcherError: (event) => {
       setRefreshStatus({
         status: "stale",
-        message: `File watcher failed. Content may be stale. ${event.message}`,
+        message: `ファイル監視に失敗しました。内容が古い可能性があります。${event.message}`,
       });
     },
   });
@@ -754,6 +759,9 @@ function App() {
   return (
     <div className="app-drop-root">
       <AppShell
+        isCommentsSidebarOpen={sidebarPreference.isSidebarOpen}
+        onOpenCommentsSidebar={sidebarPreference.openSidebar}
+        onCloseCommentsSidebar={sidebarPreference.closeSidebar}
         toolbar={
           <WorkspaceToolbar
             workspacePath={workspace.workspacePath}
@@ -900,9 +908,7 @@ function selectFallbackCommentIndex(
 function formatCommentExportSuccessMessage(
   response: ExportCommentsResponse,
 ): string {
-  const label = response.commentCount === 1 ? "comment" : "comments";
-
-  return `Exported ${response.commentCount} ${label} to ${response.destinationPath}`;
+  return `${response.commentCount}件のコメントを${response.destinationPath}へexportしました。`;
 }
 
 /** @returns The number of unresolved comments in the active sidebar list. */
@@ -913,7 +919,7 @@ function countOpenComments(comments: readonly { status: string }[]): number {
 /** Copies generated prompt text to the browser clipboard. */
 async function copyTextToClipboard(text: string): Promise<void> {
   if (navigator.clipboard === undefined) {
-    throw new Error("Clipboard is unavailable in this environment.");
+    throw new Error("この環境ではクリップボードを利用できません。");
   }
 
   await navigator.clipboard.writeText(text);
@@ -923,19 +929,14 @@ async function copyTextToClipboard(text: string): Promise<void> {
 function formatLlmPromptCopySuccessMessage(
   response: GenerateLlmPromptResponse,
 ): string {
-  const commentLabel = response.commentCount === 1 ? "comment" : "comments";
-  const fileLabel = response.contextFileCount === 1 ? "file" : "files";
-
-  return `Copied LLM prompt with ${response.commentCount} ${commentLabel} across ${response.contextFileCount} ${fileLabel}`;
+  return `${response.contextFileCount}ファイル / ${response.commentCount}件のコメントを含むLLM promptをコピーしました。`;
 }
 
 /** @returns A compact success message for copied Spec Skill MCP feedback dry-runs. */
 function formatMcpFeedbackCopySuccessMessage(
   payload: SpecSkillMcpFeedbackPayload,
 ): string {
-  const label = payload.summary.commentCount === 1 ? "comment" : "comments";
-
-  return `Copied dry-run MCP feedback payload for ${payload.summary.commentCount} ${label} to ${payload.interface.toolName}`;
+  return `${payload.summary.commentCount}件のコメントを${payload.interface.toolName}向けdry-run MCP feedback payloadとしてコピーしました。`;
 }
 
 export default App;

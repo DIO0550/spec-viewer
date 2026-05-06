@@ -16,6 +16,7 @@ import type {
   CommentExportScope,
   CommentId,
 } from "../types/comment";
+import { uiText } from "../lib/uiText";
 import { CommandErrorDisplay } from "./CommandErrorDisplay";
 import { CommentThread } from "./CommentThread";
 import { EmptyState } from "./EmptyState";
@@ -85,38 +86,38 @@ const defaultDisplayFilter: CommentDisplayFilter = "all";
 const commentFilterOptions: readonly CommentFilterOption[] = [
   {
     filter: "all",
-    label: "All",
-    ariaLabel: "Show all comments",
+    label: uiText.sidebar.all,
+    ariaLabel: "すべてのコメントを表示",
   },
   {
     filter: "open",
-    label: "Open",
-    ariaLabel: "Show open comments",
+    label: uiText.sidebar.openFilter,
+    ariaLabel: "未解決コメントを表示",
   },
   {
     filter: "resolved",
-    label: "Resolved",
-    ariaLabel: "Show resolved comments",
+    label: uiText.sidebar.resolved,
+    ariaLabel: "解決済みコメントを表示",
   },
   {
     filter: "moved",
-    label: "Moved",
-    ariaLabel: "Show moved anchor comments",
+    label: uiText.sidebar.moved,
+    ariaLabel: "移動したアンカーのコメントを表示",
   },
   {
     filter: "fuzzy",
-    label: "Fuzzy",
-    ariaLabel: "Show fuzzy anchor comments",
+    label: uiText.sidebar.fuzzy,
+    ariaLabel: "曖昧なアンカーのコメントを表示",
   },
   {
     filter: "stale",
-    label: "Stale",
-    ariaLabel: "Show stale anchor comments",
+    label: uiText.sidebar.stale,
+    ariaLabel: "古いアンカーのコメントを表示",
   },
   {
     filter: "orphaned",
-    label: "Orphaned",
-    ariaLabel: "Show orphaned anchor comments",
+    label: uiText.sidebar.orphaned,
+    ariaLabel: "位置不明アンカーのコメントを表示",
   },
 ];
 
@@ -146,7 +147,7 @@ export function CommentSidebar({
 
   if (listState.status === "idle") {
     return (
-      <section className="comment-sidebar" aria-label="Comments">
+      <section className="comment-sidebar" aria-label={uiText.sidebar.comments}>
         <CommentSidebarHeader
           openCount={0}
           resolvedCount={0}
@@ -160,8 +161,8 @@ export function CommentSidebar({
           onCopyMcpFeedback={onCopyMcpFeedback}
         />
         <EmptyState
-          title="Select a spec file"
-          description="Comments appear here once a workspace, spec, and file are selected."
+          title={uiText.sidebar.idleTitle}
+          description={uiText.sidebar.idleDescription}
           variant="inline"
         />
       </section>
@@ -170,7 +171,7 @@ export function CommentSidebar({
 
   if (listState.status === "loading") {
     return (
-      <section className="comment-sidebar" aria-label="Comments">
+      <section className="comment-sidebar" aria-label={uiText.sidebar.comments}>
         <CommentSidebarHeader
           openCount={0}
           resolvedCount={0}
@@ -183,7 +184,7 @@ export function CommentSidebar({
         />
         <LoadingSkeleton
           className="comment-sidebar__loading"
-          label="Loading comments"
+          label={uiText.sidebar.loading}
           rows={[
             { width: "medium" },
             { width: "full" },
@@ -197,7 +198,7 @@ export function CommentSidebar({
 
   if (listState.status === "error") {
     return (
-      <section className="comment-sidebar" aria-label="Comments">
+      <section className="comment-sidebar" aria-label={uiText.sidebar.comments}>
         <CommentSidebarHeader
           openCount={0}
           resolvedCount={0}
@@ -209,9 +210,9 @@ export function CommentSidebar({
           onFilterChange={setActiveFilter}
         />
         <CommandErrorDisplay
-          title="Comments unavailable"
+          title={uiText.sidebar.unavailable}
           error={listState.error}
-          actionLabel="Retry"
+          actionLabel={uiText.sidebar.retry}
           onAction={onReload}
         />
       </section>
@@ -220,7 +221,7 @@ export function CommentSidebar({
 
   if (listState.status === "empty") {
     return (
-      <section className="comment-sidebar" aria-label="Comments">
+      <section className="comment-sidebar" aria-label={uiText.sidebar.comments}>
         <CommentSidebarHeader
           openCount={0}
           resolvedCount={0}
@@ -237,8 +238,8 @@ export function CommentSidebar({
         <CommentExportFeedback exportState={exportState} />
         {reviewRunPanel}
         <EmptyState
-          title="No comments yet"
-          description="Open and resolved comments for this file will appear here."
+          title={uiText.sidebar.empty}
+          description={uiText.sidebar.emptyDescription}
           variant="inline"
         />
       </section>
@@ -269,7 +270,7 @@ export function CommentSidebar({
   );
 
   return (
-    <section className="comment-sidebar" aria-label="Comments">
+    <section className="comment-sidebar" aria-label={uiText.sidebar.comments}>
       <CommentSidebarHeader
         openCount={groups.openComments.length}
         resolvedCount={groups.resolvedComments.length}
@@ -344,20 +345,20 @@ function CommentSearchControl({
   const isSearching = normalizeCommentSearchQuery(searchQuery).length > 0;
   const resultLabel = isSearching
     ? formatSearchResultCount(resultCount)
-    : `${scopeCount} comments searchable`;
+    : `${scopeCount}件が${uiText.sidebar.searchable}`;
 
   return (
     <div className="comment-sidebar__search">
       <label className="comment-sidebar__search-label" htmlFor={inputId}>
-        Search comments
+        {uiText.sidebar.search}
       </label>
       <div className="comment-sidebar__search-field">
         <Search aria-hidden="true" size={15} />
         <input
           id={inputId}
-          aria-label="Search comments"
+          aria-label={uiText.sidebar.search}
           type="search"
-          placeholder="Body, file, snippet, status"
+          placeholder={uiText.sidebar.searchPlaceholder}
           value={searchQuery}
           onInput={(event) => {
             onSearchQueryChange(event.currentTarget.value);
@@ -367,7 +368,7 @@ function CommentSearchControl({
           <button
             className="icon-button comment-sidebar__search-clear"
             type="button"
-            aria-label="Clear comment search"
+            aria-label={uiText.sidebar.clearSearch}
             onClick={onClearSearch}
           >
             <X aria-hidden="true" size={15} />
@@ -412,19 +413,27 @@ function CommentSidebarHeader({
   return (
     <header className="comment-sidebar__header">
       <div>
-        <h2>Comments</h2>
-        <p>Active file review notes</p>
+        <h2>{uiText.sidebar.comments}</h2>
+        <p>{uiText.sidebar.description}</p>
       </div>
-      <div className="comment-sidebar__summary" aria-label="Comment counts">
+      <div
+        className="comment-sidebar__summary"
+        aria-label={uiText.sidebar.counts}
+      >
         <span className="comment-sidebar__count">
-          Open<span>{openCount}</span>
+          {uiText.sidebar.openFilter}
+          <span>{openCount}</span>
         </span>
         <span className="comment-sidebar__count comment-sidebar__count--muted">
-          Resolved<span>{resolvedCount}</span>
+          {uiText.sidebar.resolved}
+          <span>{resolvedCount}</span>
         </span>
       </div>
       {showFilters ? (
-        <div className="comment-sidebar__filters" aria-label="Comment filters">
+        <div
+          className="comment-sidebar__filters"
+          aria-label={uiText.sidebar.filters}
+        >
           {commentFilterOptions.map((option) => (
             <button
               key={option.filter}
@@ -480,8 +489,7 @@ const applyWithAiPlaceholderState: ApplyWithAiPlaceholderState = {
   },
   requiresExplicitUserConfirmationBeforeWrite: true,
   markdownWriteSupport: "notConnected",
-  explanation:
-    "Prompt export is ready; AI apply will be enabled after provider integration adds a generated diff preview. Markdown writes will require explicit confirmation.",
+  explanation: uiText.sidebar.applyAiPlaceholder,
 };
 
 const commentExportOptions: readonly Readonly<{
@@ -491,18 +499,18 @@ const commentExportOptions: readonly Readonly<{
 }>[] = [
   {
     scope: "file",
-    label: "File",
-    ariaLabel: "Export current file comments",
+    label: uiText.sidebar.file,
+    ariaLabel: "現在のファイルのコメントをexport",
   },
   {
     scope: "spec",
-    label: "Spec",
-    ariaLabel: "Export current spec comments",
+    label: uiText.sidebar.spec,
+    ariaLabel: "現在のSpecのコメントをexport",
   },
   {
     scope: "workspace",
-    label: "Workspace",
-    ariaLabel: "Export workspace comments",
+    label: uiText.sidebar.workspace,
+    ariaLabel: "ワークスペースのコメントをexport",
   },
 ];
 
@@ -519,7 +527,10 @@ function CommentExportControls({
 
   return (
     <>
-      <div className="comment-sidebar__exports" aria-label="Comment exports">
+      <div
+        className="comment-sidebar__exports"
+        aria-label={uiText.sidebar.exports}
+      >
         {onExportComments === undefined
           ? null
           : commentExportOptions.map((option) => {
@@ -539,7 +550,7 @@ function CommentExportControls({
                   }}
                 >
                   <Download aria-hidden="true" size={14} />
-                  <span>{isSaving ? "Saving" : option.label}</span>
+                  <span>{isSaving ? uiText.sidebar.saving : option.label}</span>
                 </button>
               );
             })}
@@ -550,37 +561,43 @@ function CommentExportControls({
                 key={`prompt-${option.scope}`}
                 className="comment-sidebar__export"
                 type="button"
-                aria-label={`Copy ${option.scope} LLM prompt`}
+                aria-label={`${option.label}のLLM promptをコピー`}
                 disabled={exportState.status === "saving"}
                 onClick={() => {
                   onCopyLlmPrompt(option.scope);
                 }}
               >
                 <Clipboard aria-hidden="true" size={14} />
-                <span>Prompt {option.label}</span>
+                <span>
+                  {uiText.sidebar.prompt} {option.label}
+                </span>
               </button>
             ))}
         {onCopyMcpFeedback === undefined ? null : (
           <button
             className="comment-sidebar__export"
             type="button"
-            aria-label="Copy current file MCP feedback payload"
+            aria-label="現在のファイルのMCP feedback payloadをコピー"
             disabled={exportState.status === "saving"}
             onClick={onCopyMcpFeedback}
           >
             <Clipboard aria-hidden="true" size={14} />
-            <span>{isCopyingMcpFeedback ? "Copying" : "MCP Feedback"}</span>
+            <span>
+              {isCopyingMcpFeedback
+                ? uiText.sidebar.copying
+                : uiText.sidebar.mcpFeedback}
+            </span>
           </button>
         )}
         <button
           className="comment-sidebar__export comment-sidebar__export--placeholder"
           type="button"
-          aria-label="Apply comments with AI"
+          aria-label={uiText.sidebar.applyAiLabel}
           aria-describedby={placeholderDescriptionId}
           disabled={!applyWithAiPlaceholderState.enabled}
         >
           <Sparkles aria-hidden="true" size={14} />
-          <span>Apply AI</span>
+          <span>{uiText.sidebar.applyAi}</span>
         </button>
       </div>
       <p
@@ -712,15 +729,15 @@ function FilteredEmptyState({
   if (searchQuery.length > 0) {
     return (
       <p className="comment-sidebar__filtered-empty">
-        No comments match &quot;{searchQuery}&quot; in the{" "}
-        {formatFilterLabel(activeFilter)} filter.
+        &quot;{searchQuery}&quot;{uiText.sidebar.noSearchResults}
       </p>
     );
   }
 
   return (
     <p className="comment-sidebar__filtered-empty">
-      No comments match the {formatFilterLabel(activeFilter)} filter.
+      {formatFilterLabel(activeFilter)}
+      {uiText.sidebar.noFilterResults}
     </p>
   );
 }
@@ -766,7 +783,7 @@ function createCommentSearchFields(
     comment.body,
     comment.anchor.fileKey,
     comment.anchor.textSnippet,
-    comment.resolved ? "Resolved" : "Open",
+    comment.resolved ? uiText.sidebar.resolved : uiText.sidebar.openFilter,
     anchorStatusLabel ?? "",
   ];
 }
@@ -783,10 +800,10 @@ function formatAnchorDisplayStatus(
     Exclude<CommentAnchorDisplayStatus, "exact">,
     string
   > = {
-    moved: "Anchor moved",
-    fuzzy: "Fuzzy anchor",
-    orphaned: "Anchor orphaned",
-    stale: "Anchor stale",
+    moved: uiText.commentThread.anchorMoved,
+    fuzzy: uiText.commentThread.fuzzyAnchor,
+    orphaned: uiText.commentThread.anchorOrphaned,
+    stale: uiText.commentThread.anchorStale,
   };
 
   return statusLabels[status];
@@ -800,10 +817,10 @@ function normalizeCommentSearchQuery(query: string): string {
 /** @returns A compact result count label for the search field. */
 function formatSearchResultCount(resultCount: number): string {
   if (resultCount === 1) {
-    return "1 result";
+    return "1件";
   }
 
-  return `${resultCount} results`;
+  return `${resultCount}件`;
 }
 
 /** @returns Comments split by open and resolved display sections. */
@@ -901,15 +918,15 @@ function createCommentSectionModels(
     return [
       {
         id: "comment-section-open",
-        title: "Open",
+        title: uiText.sidebar.openFilter,
         comments: groups.openComments,
-        emptyMessage: "No open comments",
+        emptyMessage: uiText.sidebar.noOpenComments,
       },
       {
         id: "comment-section-resolved",
-        title: "Resolved",
+        title: uiText.sidebar.resolved,
         comments: groups.resolvedComments,
-        emptyMessage: "No resolved comments",
+        emptyMessage: uiText.sidebar.noResolvedComments,
       },
     ];
   }
@@ -919,7 +936,7 @@ function createCommentSectionModels(
       id: `comment-section-${activeFilter}`,
       title: formatSectionTitle(activeFilter),
       comments: filteredComments,
-      emptyMessage: `No ${formatFilterLabel(activeFilter).toLowerCase()} comments`,
+      emptyMessage: `${formatFilterLabel(activeFilter)}${uiText.sidebar.noFilterResults}`,
     },
   ];
 }
@@ -939,5 +956,5 @@ function formatSectionTitle(filter: CommentDisplayFilter): string {
     return formatFilterLabel(filter);
   }
 
-  return `${formatFilterLabel(filter)} Anchors`;
+  return `${formatFilterLabel(filter)}${uiText.sidebar.anchorsSuffix}`;
 }

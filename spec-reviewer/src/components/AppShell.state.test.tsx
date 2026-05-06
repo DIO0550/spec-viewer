@@ -148,18 +148,76 @@ test("AppShellはtoolbar、tree、tabs、viewer、comment sidebarを表示する
   );
 
   expect(
-    result.container.querySelector('[aria-label="Workspace controls"]'),
+    result.container.querySelector('[aria-label="ワークスペース操作"]'),
   ).not.toBeNull();
   expect(
-    result.container.querySelector('[aria-label="Spec tree"]'),
+    result.container.querySelector('[aria-label="Specツリー"]'),
   ).not.toBeNull();
   expect(result.container.querySelector('[role="tablist"]')).not.toBeNull();
   expect(
     result.container.querySelector("#markdown-viewer-panel"),
   ).not.toBeNull();
   expect(
-    result.container.querySelector('[aria-label="Comment sidebar"]'),
+    result.container.querySelector('[aria-label="コメントサイドバー"]'),
   ).not.toBeNull();
+  result.unmount();
+});
+
+test("AppShellはコメントサイドバーを閉じると再オープン導線を表示する", () => {
+  const onOpenCommentsSidebar = vi.fn();
+  const result = renderComponent(
+    <AppShell
+      toolbar={<div>Toolbar</div>}
+      sidebar={<div>Tree</div>}
+      tabs={<div>Tabs</div>}
+      viewer={<div>Viewer</div>}
+      comments={<div>コメント本文</div>}
+      isCommentsSidebarOpen={false}
+      onOpenCommentsSidebar={onOpenCommentsSidebar}
+    />,
+  );
+  const body = result.container.querySelector(".app-shell__body");
+  const commentsSidebar = result.container.querySelector(
+    '[aria-label="コメントサイドバー"]',
+  );
+  const reopenButton = result.container.querySelector(
+    '[aria-label="サイドバーを開く"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    reopenButton.click();
+  });
+
+  expect(body?.getAttribute("data-comments-sidebar")).toBe("collapsed");
+  expect(commentsSidebar?.getAttribute("aria-hidden")).toBe("true");
+  expect(onOpenCommentsSidebar).toHaveBeenCalledOnce();
+  result.unmount();
+});
+
+test("AppShellはEscapeで開いているコメントサイドバーを閉じる", () => {
+  const onCloseCommentsSidebar = vi.fn();
+  const result = renderComponent(
+    <AppShell
+      toolbar={<div>Toolbar</div>}
+      sidebar={<div>Tree</div>}
+      tabs={<div>Tabs</div>}
+      viewer={<div>Viewer</div>}
+      comments={<button type="button">コメント操作</button>}
+      isCommentsSidebarOpen={true}
+      onCloseCommentsSidebar={onCloseCommentsSidebar}
+    />,
+  );
+  const body = result.container.querySelector(
+    ".app-shell__body",
+  ) as HTMLElement;
+
+  act(() => {
+    body.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+  });
+
+  expect(onCloseCommentsSidebar).toHaveBeenCalledOnce();
   result.unmount();
 });
 
@@ -201,7 +259,7 @@ test("SpecTreeは読み込み中にskeleton statusを表示する", () => {
   );
 
   expect(result.container.querySelector('[role="status"]')?.textContent).toBe(
-    "Scanning spec files",
+    "Specファイルをスキャン中",
   );
   expect(
     result.container.querySelectorAll(".loading-skeleton__bar").length,
@@ -326,7 +384,7 @@ test("WorkspaceToolbarはopen workspace操作を発火する", () => {
     />,
   );
   const openButton = result.container.querySelector(
-    '[aria-label="Open workspace folder"]',
+    '[aria-label="ワークスペースフォルダを開く"]',
   ) as HTMLButtonElement;
 
   act(() => {
@@ -361,7 +419,7 @@ test("WorkspaceToolbarはcurrent view refresh操作と状態を表示する", ()
     />,
   );
   const refreshButton = result.container.querySelector(
-    '[aria-label="Refresh current view"]',
+    '[aria-label="現在の表示を再読み込み"]',
   ) as HTMLButtonElement;
 
   expect(result.container.textContent).toContain("Content may be stale");
@@ -442,7 +500,7 @@ test("WorkspaceToolbarはrecent workspace操作を発火する", () => {
     ".workspace-toolbar__recent-item",
   ) as HTMLButtonElement;
   const removeButton = result.container.querySelector(
-    '[aria-label="Remove /workspace/recent from recent workspaces"]',
+    '[aria-label="/workspace/recentを最近使ったワークスペースから削除"]',
   ) as HTMLButtonElement;
   const clearButton = result.container.querySelector(
     ".workspace-toolbar__recent-clear",
@@ -527,7 +585,7 @@ test("MarkdownViewerは読み込み中状態をrole statusで表示する", () =
 
   expect(
     result.container.querySelector('[role="status"]')?.textContent,
-  ).toContain("Loading Markdown");
+  ).toContain("Markdownを読み込み中");
   result.unmount();
 });
 
@@ -542,8 +600,9 @@ test("MarkdownViewerはMarkdownをHTMLとして表示する", () => {
   );
 
   expect(
-    result.container.querySelector('[aria-label="Rendered Markdown document"]')
-      ?.textContent,
+    result.container.querySelector(
+      '[aria-label="レンダリング済みMarkdownドキュメント"]',
+    )?.textContent,
   ).toContain("Layout components");
   result.unmount();
 });

@@ -194,7 +194,7 @@ test("CommentSidebarは読み込み中状態をrole statusで表示する", () =
   );
 
   expect(result.container.querySelector('[role="status"]')?.textContent).toBe(
-    "Loading comments",
+    "コメントを読み込み中",
   );
   expect(
     result.container.querySelectorAll(".loading-skeleton__bar").length,
@@ -228,7 +228,7 @@ test("CommentSidebarは未選択scopeでは空の案内を表示する", () => {
     />,
   );
 
-  expect(result.container.textContent).toContain("Select a spec file");
+  expect(result.container.textContent).toContain("Specファイルを選択");
   result.unmount();
 });
 
@@ -311,15 +311,15 @@ test("CommentSidebarはコメントなし状態を表示する", () => {
     />,
   );
 
-  expect(result.container.textContent).toContain("No comments yet");
+  expect(result.container.textContent).toContain("コメントはまだありません");
   result.unmount();
 });
 
 test("CommentSidebarはopenとresolvedの件数とコメント本文を表示する", () => {
   const result = renderReadySidebar();
 
-  expect(result.container.textContent).toContain("Open1");
-  expect(result.container.textContent).toContain("Resolved1");
+  expect(result.container.textContent).toContain("未解決1");
+  expect(result.container.textContent).toContain("解決済み1");
   expect(result.container.textContent).toContain(
     "Clarify what counts as an active comment highlight.",
   );
@@ -366,19 +366,19 @@ test("CommentSidebarはコメントexport操作を発火して状態を表示す
     onCopyMcpFeedback,
   });
   const fileExportButton = result.container.querySelector(
-    '[aria-label="Export current file comments"]',
+    '[aria-label="現在のファイルのコメントをexport"]',
   ) as HTMLButtonElement;
   const specExportButton = result.container.querySelector(
-    '[aria-label="Export current spec comments"]',
+    '[aria-label="現在のSpecのコメントをexport"]',
   ) as HTMLButtonElement;
   const workspaceExportButton = result.container.querySelector(
-    '[aria-label="Export workspace comments"]',
+    '[aria-label="ワークスペースのコメントをexport"]',
   ) as HTMLButtonElement;
   const filePromptButton = result.container.querySelector(
-    '[aria-label="Copy file LLM prompt"]',
+    '[aria-label="ファイルのLLM promptをコピー"]',
   ) as HTMLButtonElement;
   const mcpFeedbackButton = result.container.querySelector(
-    '[aria-label="Copy current file MCP feedback payload"]',
+    '[aria-label="現在のファイルのMCP feedback payloadをコピー"]',
   ) as HTMLButtonElement;
 
   act(() => {
@@ -410,11 +410,11 @@ test("CommentSidebarはMCP feedback dry-runコピー中状態を表示する", (
     onCopyMcpFeedback: vi.fn(),
   });
   const mcpFeedbackButton = result.container.querySelector(
-    '[aria-label="Copy current file MCP feedback payload"]',
+    '[aria-label="現在のファイルのMCP feedback payloadをコピー"]',
   ) as HTMLButtonElement;
 
   expect(mcpFeedbackButton.disabled).toBe(true);
-  expect(mcpFeedbackButton.textContent).toContain("Copying");
+  expect(mcpFeedbackButton.textContent).toContain("コピー中");
   result.unmount();
 });
 
@@ -423,16 +423,16 @@ test("CommentSidebarはAI適用placeholderをdisabledで表示する", () => {
     onCopyLlmPrompt: vi.fn(),
   });
   const applyWithAiButton = result.container.querySelector(
-    '[aria-label="Apply comments with AI"]',
+    '[aria-label="コメントをAIで適用"]',
   ) as HTMLButtonElement;
 
   expect(applyWithAiButton.disabled).toBe(true);
-  expect(applyWithAiButton.textContent).toContain("Apply AI");
+  expect(applyWithAiButton.textContent).toContain("AI適用");
   expect(result.container.textContent).toContain(
-    "Prompt export is ready; AI apply will be enabled after provider integration adds a generated diff preview.",
+    "Prompt exportは利用できます。AI適用はprovider連携で差分プレビューを生成できるようになってから有効になります。",
   );
   expect(result.container.textContent).toContain(
-    "Markdown writes will require explicit confirmation.",
+    "Markdownの書き込みには明示的な確認が必要です。",
   );
   result.unmount();
 });
@@ -480,8 +480,8 @@ test("CommentSidebarはreconciliationのアンカー状態を表示する", () =
     ],
   });
 
-  expect(result.container.textContent).toContain("Anchor moved");
-  expect(result.container.textContent).toContain("Anchor orphaned");
+  expect(result.container.textContent).toContain("アンカー移動");
+  expect(result.container.textContent).toContain("位置不明アンカー");
   result.unmount();
 });
 
@@ -490,7 +490,7 @@ test("CommentSidebarは選択した状態フィルターのコメントだけを
     comments: [openComment, resolvedComment],
   });
   const resolvedFilter = result.container.querySelector(
-    '[aria-label="Show resolved comments"]',
+    '[aria-label="解決済みコメントを表示"]',
   ) as HTMLButtonElement;
 
   act(() => {
@@ -526,13 +526,13 @@ test("CommentSidebarはアンカー状態フィルターの件数と空状態を
     ],
   });
   const fuzzyFilter = result.container.querySelector(
-    '[aria-label="Show fuzzy anchor comments"]',
+    '[aria-label="曖昧なアンカーのコメントを表示"]',
   ) as HTMLButtonElement;
   const resolvedFilter = result.container.querySelector(
-    '[aria-label="Show resolved comments"]',
+    '[aria-label="解決済みコメントを表示"]',
   ) as HTMLButtonElement;
 
-  expect(fuzzyFilter.textContent).toBe("Fuzzy1");
+  expect(fuzzyFilter.textContent).toBe("曖昧1");
 
   act(() => {
     fuzzyFilter.click();
@@ -550,7 +550,7 @@ test("CommentSidebarはアンカー状態フィルターの件数と空状態を
   });
 
   expect(result.container.textContent).toContain(
-    "No comments match the Resolved filter.",
+    "解決済みフィルターに一致するコメントはありません。",
   );
   result.unmount();
 });
@@ -560,7 +560,7 @@ test("CommentSidebarは検索語でコメント本文を絞り込み件数とク
     comments: [openComment, resolvedComment, overviewComment],
   });
   const searchInput = result.container.querySelector(
-    '[aria-label="Search comments"]',
+    '[aria-label="コメント検索"]',
   ) as HTMLInputElement;
 
   act(() => {
@@ -569,10 +569,10 @@ test("CommentSidebarは検索語でコメント本文を絞り込み件数とク
   });
 
   const clearButton = result.container.querySelector(
-    '[aria-label="Clear comment search"]',
+    '[aria-label="コメント検索をクリア"]',
   ) as HTMLButtonElement;
 
-  expect(result.container.textContent).toContain("1 result");
+  expect(result.container.textContent).toContain("1件");
   expect(result.container.textContent).toContain(
     "Summarize release risk for reviewers.",
   );
@@ -603,7 +603,7 @@ test("CommentSidebarはfile keyとorphaned snippetと状態ラベルを検索対
     ],
   });
   const searchInput = result.container.querySelector(
-    '[aria-label="Search comments"]',
+    '[aria-label="コメント検索"]',
   ) as HTMLInputElement;
 
   act(() => {
@@ -628,7 +628,7 @@ test("CommentSidebarはfile keyとorphaned snippetと状態ラベルを検索対
   );
 
   act(() => {
-    searchInput.value = "anchor orphaned";
+    searchInput.value = "位置不明アンカー";
     searchInput.dispatchEvent(new Event("input", { bubbles: true }));
   });
 
@@ -643,10 +643,10 @@ test("CommentSidebarは検索とフィルターを組み合わせて一致なし
     comments: [openComment, resolvedComment],
   });
   const resolvedFilter = result.container.querySelector(
-    '[aria-label="Show resolved comments"]',
+    '[aria-label="解決済みコメントを表示"]',
   ) as HTMLButtonElement;
   const searchInput = result.container.querySelector(
-    '[aria-label="Search comments"]',
+    '[aria-label="コメント検索"]',
   ) as HTMLInputElement;
 
   act(() => {
@@ -658,9 +658,11 @@ test("CommentSidebarは検索とフィルターを組み合わせて一致なし
     searchInput.dispatchEvent(new Event("input", { bubbles: true }));
   });
 
-  expect(result.container.textContent).toContain("No comments match");
+  expect(result.container.textContent).toContain(
+    "に一致するコメントはありません。",
+  );
   expect(result.container.textContent).toContain("active comment");
-  expect(result.container.textContent).toContain("Resolved filter");
+  expect(result.container.textContent).toContain("解決済み");
   result.unmount();
 });
 
@@ -672,10 +674,10 @@ test("CommentSidebarはコメント選択とresolve操作を発火する", () =>
     onResolveComment,
   });
   const selectButton = result.container.querySelector(
-    '[aria-label="Select comment cmt_open"]',
+    '[aria-label="コメントを選択 cmt_open"]',
   ) as HTMLButtonElement;
   const resolveButton = result.container.querySelector(
-    '[aria-label="Resolve comment cmt_open"]',
+    '[aria-label="解決する cmt_open"]',
   ) as HTMLButtonElement;
 
   act(() => {
@@ -692,7 +694,7 @@ test("CommentSidebarはresolvedコメントのreopen操作を発火する", () =
   const onReopenComment = vi.fn();
   const result = renderReadySidebar({ onReopenComment });
   const reopenButton = result.container.querySelector(
-    '[aria-label="Reopen comment cmt_resolved"]',
+    '[aria-label="再オープン cmt_resolved"]',
   ) as HTMLButtonElement;
 
   act(() => {
@@ -707,7 +709,7 @@ test("CommentSidebarはコメント本文を編集して保存できる", () => 
   const onUpdateComment = vi.fn();
   const result = renderReadySidebar({ onUpdateComment });
   const editButton = result.container.querySelector(
-    '[aria-label="Edit comment cmt_open"]',
+    '[aria-label="コメントを編集 cmt_open"]',
   ) as HTMLButtonElement;
 
   act(() => {
@@ -715,7 +717,7 @@ test("CommentSidebarはコメント本文を編集して保存できる", () => 
   });
 
   const editor = result.container.querySelector(
-    '[aria-label="Comment body for cmt_open"]',
+    '[aria-label="コメント本文 cmt_open"]',
   ) as HTMLTextAreaElement;
 
   act(() => {
@@ -724,7 +726,7 @@ test("CommentSidebarはコメント本文を編集して保存できる", () => 
   });
 
   const saveButton = result.container.querySelector(
-    '[aria-label="Save comment cmt_open"]',
+    '[aria-label="保存 cmt_open"]',
   ) as HTMLButtonElement;
 
   act(() => {
@@ -743,7 +745,7 @@ test("CommentSidebarは空本文の保存時にvalidation messageを表示する
   const onUpdateComment = vi.fn();
   const result = renderReadySidebar({ onUpdateComment });
   const editButton = result.container.querySelector(
-    '[aria-label="Edit comment cmt_open"]',
+    '[aria-label="コメントを編集 cmt_open"]',
   ) as HTMLButtonElement;
 
   act(() => {
@@ -751,7 +753,7 @@ test("CommentSidebarは空本文の保存時にvalidation messageを表示する
   });
 
   const editor = result.container.querySelector(
-    '[aria-label="Comment body for cmt_open"]',
+    '[aria-label="コメント本文 cmt_open"]',
   ) as HTMLTextAreaElement;
 
   act(() => {
@@ -760,7 +762,7 @@ test("CommentSidebarは空本文の保存時にvalidation messageを表示する
   });
 
   const saveButton = result.container.querySelector(
-    '[aria-label="Save comment cmt_open"]',
+    '[aria-label="保存 cmt_open"]',
   ) as HTMLButtonElement;
 
   act(() => {
@@ -769,7 +771,7 @@ test("CommentSidebarは空本文の保存時にvalidation messageを表示する
 
   expect(onUpdateComment).not.toHaveBeenCalled();
   expect(result.container.querySelector('[role="alert"]')?.textContent).toBe(
-    "Comment body cannot be empty.",
+    "コメント本文を入力してください。",
   );
   result.unmount();
 });
@@ -777,7 +779,7 @@ test("CommentSidebarは空本文の保存時にvalidation messageを表示する
 test("CommentSidebarは編集をキャンセルすると元の本文表示へ戻る", () => {
   const result = renderReadySidebar();
   const editButton = result.container.querySelector(
-    '[aria-label="Edit comment cmt_open"]',
+    '[aria-label="コメントを編集 cmt_open"]',
   ) as HTMLButtonElement;
 
   act(() => {
@@ -785,7 +787,7 @@ test("CommentSidebarは編集をキャンセルすると元の本文表示へ戻
   });
 
   const editor = result.container.querySelector(
-    '[aria-label="Comment body for cmt_open"]',
+    '[aria-label="コメント本文 cmt_open"]',
   ) as HTMLTextAreaElement;
 
   act(() => {
@@ -794,7 +796,7 @@ test("CommentSidebarは編集をキャンセルすると元の本文表示へ戻
   });
 
   const cancelButton = result.container.querySelector(
-    '[aria-label="Cancel editing comment cmt_open"]',
+    '[aria-label="キャンセル cmt_open"]',
   ) as HTMLButtonElement;
 
   act(() => {
@@ -812,7 +814,7 @@ test("CommentSidebarは確認後にコメント削除を発火する", () => {
   const onDeleteComment = vi.fn();
   const result = renderReadySidebar({ onDeleteComment });
   const deleteButton = result.container.querySelector(
-    '[aria-label="Delete comment cmt_open"]',
+    '[aria-label="削除 cmt_open"]',
   ) as HTMLButtonElement;
 
   act(() => {
@@ -820,11 +822,11 @@ test("CommentSidebarは確認後にコメント削除を発火する", () => {
   });
 
   expect(result.container.textContent).toContain(
-    "Delete this comment permanently?",
+    "このコメントを完全に削除しますか？",
   );
 
   const confirmButton = result.container.querySelector(
-    '[aria-label="Confirm delete comment cmt_open"]',
+    '[aria-label="コメント削除を確定 cmt_open"]',
   ) as HTMLButtonElement;
 
   act(() => {

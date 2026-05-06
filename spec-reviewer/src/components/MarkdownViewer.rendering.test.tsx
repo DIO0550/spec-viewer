@@ -511,7 +511,7 @@ test("MarkdownViewerはMarkdown内の選択から追加コメントを保存す�
   const addButton = result.container.querySelector(
     ".text-selection-comment-button",
   );
-  expect(addButton?.textContent).toContain("Add comment");
+  expect(addButton?.textContent).toContain("コメント追加");
 
   act(() => {
     addButton?.dispatchEvent(
@@ -520,9 +520,9 @@ test("MarkdownViewerはMarkdown内の選択から追加コメントを保存す�
     (addButton as HTMLButtonElement).click();
   });
 
-  expect(result.container.textContent).toContain("Add comment");
+  expect(result.container.textContent).toContain("コメント追加");
   expect(result.container.textContent).toContain(
-    "paragraph block 1, chars 2-11",
+    "paragraphブロック 1, 文字 2-11",
   );
 
   const textarea = result.container.querySelector(
@@ -536,7 +536,7 @@ test("MarkdownViewerはMarkdown内の選択から追加コメントを保存す�
   await act(async () => {
     (
       Array.from(result.container.querySelectorAll("button")).find((button) =>
-        button.textContent?.includes("Save"),
+        button.textContent?.includes("保存"),
       ) as HTMLButtonElement
     ).click();
   });
@@ -562,7 +562,7 @@ test("MarkdownViewerはMarkdown内の選択から追加コメントを保存す�
 test("MarkdownViewerは空ファイル状態を表示する", () => {
   const result = renderViewer(createReadyState(" \n\t "));
 
-  expect(result.container.textContent).toContain("File is empty");
+  expect(result.container.textContent).toContain("ファイルは空です");
   result.unmount();
 });
 
@@ -583,7 +583,7 @@ test("MarkdownViewerはmissing状態を表示する", () => {
     error: null,
   });
 
-  expect(result.container.textContent).toContain("File missing");
+  expect(result.container.textContent).toContain("ファイルが見つかりません");
   result.unmount();
 });
 
@@ -598,7 +598,7 @@ test("MarkdownViewerは読み込み中に文書skeletonを表示する", () => {
   });
 
   expect(result.container.querySelector('[role="status"]')?.textContent).toBe(
-    "Loading Markdown",
+    "Markdownを読み込み中",
   );
   expect(
     result.container.querySelector(".markdown-loading-skeleton"),
@@ -629,7 +629,7 @@ test("MarkdownViewerはerror状態で再読み込みイベントを発火する"
     retryButton?.click();
   });
 
-  expect(result.container.textContent).toContain("Could not load Markdown");
+  expect(result.container.textContent).toContain("Markdownを読み込めません");
   expect(onReload).toHaveBeenCalledTimes(1);
   result.unmount();
 });

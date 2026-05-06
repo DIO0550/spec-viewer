@@ -11,6 +11,7 @@ import { type KeyboardEvent, useRef, useState } from "react";
 
 import type { ThemeMode } from "../hooks/useTheme";
 import type { RecentWorkspace } from "../lib/recentWorkspaces";
+import { uiText } from "../lib/uiText";
 
 export type WorkspaceRefreshStatus = Readonly<{
   status: "idle" | "loading" | "stale" | "error";
@@ -79,7 +80,7 @@ export function WorkspaceToolbar({
   return (
     <form
       className="workspace-toolbar"
-      aria-label="Workspace controls"
+      aria-label={uiText.workspace.controls}
       onSubmit={(event) => {
         event.preventDefault();
         onLoad();
@@ -102,7 +103,7 @@ export function WorkspaceToolbar({
         </span>
       </div>
       <label className="workspace-toolbar__field" htmlFor="workspace-path">
-        <span>Workspace path</span>
+        <span>{uiText.workspace.path}</span>
         <input
           id="workspace-path"
           value={inputValue}
@@ -117,25 +118,25 @@ export function WorkspaceToolbar({
       <div className="workspace-toolbar__actions">
         <label className="workspace-toolbar__theme" htmlFor="theme-mode">
           <MonitorCog aria-hidden="true" size={16} />
-          <span>Theme</span>
+          <span>{uiText.workspace.theme}</span>
           <select
             id="theme-mode"
             value={themeMode}
-            aria-label="Theme mode"
+            aria-label={uiText.workspace.themeMode}
             onChange={(event) => {
               onThemeModeChange(event.currentTarget.value as ThemeMode);
             }}
           >
-            <option value="system">System</option>
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
+            <option value="system">{uiText.workspace.system}</option>
+            <option value="light">{uiText.workspace.light}</option>
+            <option value="dark">{uiText.workspace.dark}</option>
           </select>
         </label>
         <button
           className="icon-button icon-button--primary"
           type="button"
-          aria-label="Open workspace folder"
-          title="Open workspace folder"
+          aria-label={uiText.workspace.openFolder}
+          title={uiText.workspace.openFolder}
           disabled={isBusy}
           onClick={onBrowse}
         >
@@ -147,7 +148,7 @@ export function WorkspaceToolbar({
           disabled={!canLoad}
         >
           <RefreshCcw aria-hidden="true" size={16} />
-          {isLoading ? "Loading" : "Load"}
+          {isLoading ? uiText.workspace.loading : uiText.workspace.load}
         </button>
         <details
           className="workspace-toolbar__recent"
@@ -159,8 +160,8 @@ export function WorkspaceToolbar({
         >
           <summary
             ref={recentSummaryRef}
-            aria-label="Recent workspaces"
-            title="Recent workspaces"
+            aria-label={uiText.workspace.recent}
+            title={uiText.workspace.recent}
             aria-disabled={!hasRecentWorkspaces}
             aria-keyshortcuts="Escape"
           >
@@ -171,7 +172,7 @@ export function WorkspaceToolbar({
               <>
                 <div
                   className="workspace-toolbar__recent-list"
-                  aria-label="Recent workspaces"
+                  aria-label={uiText.workspace.recent}
                 >
                   {recentWorkspaces.map((recentWorkspace) => (
                     <div
@@ -193,8 +194,8 @@ export function WorkspaceToolbar({
                         className="icon-button"
                         type="button"
                         disabled={isBusy}
-                        aria-label={`Remove ${recentWorkspace.path} from recent workspaces`}
-                        title="Remove from recent workspaces"
+                        aria-label={`${recentWorkspace.path}を${uiText.workspace.removeRecent}`}
+                        title={uiText.workspace.removeRecent}
                         onClick={() => {
                           onRemoveRecentWorkspace?.(recentWorkspace.path);
                         }}
@@ -211,12 +212,12 @@ export function WorkspaceToolbar({
                   onClick={onClearRecentWorkspaces}
                 >
                   <Trash2 aria-hidden="true" size={14} />
-                  Clear
+                  {uiText.workspace.clearRecent}
                 </button>
               </>
             ) : (
               <span className="workspace-toolbar__recent-empty">
-                No recent workspaces
+                {uiText.workspace.noRecent}
               </span>
             )}
           </div>
@@ -224,8 +225,8 @@ export function WorkspaceToolbar({
         <button
           className="icon-button"
           type="button"
-          aria-label="Refresh current view"
-          title="Refresh current view"
+          aria-label={uiText.workspace.refresh}
+          title={uiText.workspace.refresh}
           disabled={!canRefresh || isBusy || isRefreshing}
           onClick={onRefresh}
         >
@@ -238,7 +239,7 @@ export function WorkspaceToolbar({
           onClick={onReset}
         >
           <RotateCcw aria-hidden="true" size={16} />
-          Reset
+          {uiText.workspace.reset}
         </button>
       </div>
     </form>
@@ -260,11 +261,11 @@ function createStatusLabel({
   refreshStatus: WorkspaceRefreshStatus;
 }>): string {
   if (isBrowsing) {
-    return "Opening workspace picker";
+    return uiText.workspace.openingPicker;
   }
 
   if (isLoading) {
-    return "Loading workspace";
+    return uiText.workspace.loadingWorkspace;
   }
 
   if (refreshStatus.status !== "idle" && refreshStatus.message !== null) {
@@ -279,5 +280,5 @@ function createStatusLabel({
     return workspacePath;
   }
 
-  return "No workspace selected";
+  return uiText.workspace.noWorkspace;
 }

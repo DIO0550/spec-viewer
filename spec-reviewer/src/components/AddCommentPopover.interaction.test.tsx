@@ -74,7 +74,7 @@ function findTextarea(container: ParentNode): HTMLTextAreaElement {
 
 function findSaveButton(container: ParentNode): HTMLButtonElement {
   return Array.from(container.querySelectorAll("button")).find(
-    (button) => button.textContent?.includes("Save") ?? false,
+    (button) => button.textContent?.includes("保存") ?? false,
   ) as HTMLButtonElement;
 }
 
@@ -124,7 +124,7 @@ test("AddCommentPopoverはscope不足時に保存を止めて理由を表示す�
 
   expect(findSaveButton(result.container).disabled).toBe(true);
   expect(result.container.textContent).toContain(
-    "Choose a workspace, spec, and file before saving.",
+    "保存する前にワークスペース、Spec、ファイルを選択してください。",
   );
   expect(onSubmit).not.toHaveBeenCalled();
   result.unmount();
@@ -163,7 +163,10 @@ test("AddCommentPopoverはdialog内のbutton focus時もEscapeでキャンセル
   const result = renderPopover({ onCancel });
   const cancelButton = Array.from(
     result.container.querySelectorAll("button"),
-  ).find((button) => button.getAttribute("aria-label") === "Cancel comment");
+  ).find(
+    (button) =>
+      button.getAttribute("aria-label") === "コメント追加をキャンセル",
+  );
 
   act(() => {
     (cancelButton as HTMLButtonElement).focus();

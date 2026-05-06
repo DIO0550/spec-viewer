@@ -1,6 +1,7 @@
 import { FolderClock, FolderOpen, X } from "lucide-react";
 
 import type { RecentWorkspace } from "../lib/recentWorkspaces";
+import { uiText } from "../lib/uiText";
 import { EmptyState } from "./EmptyState";
 
 type Props = Readonly<{
@@ -27,8 +28,8 @@ export function OpenWorkspaceEmptyState({
       tabIndex={-1}
     >
       <EmptyState
-        title="Open a workspace"
-        description="Choose or drop a supported spec workspace folder to read Markdown files."
+        title={uiText.workspace.openTitle}
+        description={uiText.workspace.openDescription}
         action={
           <div className="open-workspace-actions">
             <button
@@ -38,16 +39,18 @@ export function OpenWorkspaceEmptyState({
               onClick={onOpenWorkspace}
             >
               <FolderOpen aria-hidden="true" size={16} />
-              {isOpening ? "Opening" : "Open workspace"}
+              {isOpening
+                ? uiText.workspace.opening
+                : uiText.workspace.openTitle}
             </button>
             {recentWorkspaces.length > 0 ? (
               <div
                 className="open-workspace-actions__recent"
-                aria-label="Recent workspaces"
+                aria-label={uiText.workspace.recent}
               >
                 <span className="open-workspace-actions__recent-title">
                   <FolderClock aria-hidden="true" size={15} />
-                  Recent
+                  {uiText.workspace.recentShort}
                 </span>
                 <div className="open-workspace-actions__recent-list">
                   {recentWorkspaces.map((recentWorkspace) => (
@@ -70,8 +73,8 @@ export function OpenWorkspaceEmptyState({
                         className="icon-button"
                         type="button"
                         disabled={isOpening}
-                        aria-label={`Remove ${recentWorkspace.path} from recent workspaces`}
-                        title="Remove from recent workspaces"
+                        aria-label={`${recentWorkspace.path}を${uiText.workspace.removeRecent}`}
+                        title={uiText.workspace.removeRecent}
                         onClick={() => {
                           onRemoveRecentWorkspace?.(recentWorkspace.path);
                         }}

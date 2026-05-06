@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 
+import { uiText } from "../lib/uiText";
 import type { CommentAnchor, CommentAnchorDraft } from "../types/comment";
 
 export type AddCommentSubmitInput = Readonly<{
@@ -26,9 +27,11 @@ type Props = Readonly<{
   onCancel: () => void;
 }>;
 
-const missingScopeMessage = "Choose a workspace, spec, and file before saving.";
-const emptyBodyMessage = "Enter a comment before saving.";
-const failedSaveMessage = "Comment could not be saved. Try again.";
+const missingScopeMessage =
+  "保存する前にワークスペース、Spec、ファイルを選択してください。";
+const emptyBodyMessage = "保存するコメントを入力してください。";
+const failedSaveMessage =
+  "コメントを保存できませんでした。再試行してください。";
 
 /** @returns A floating form for saving a comment from a Markdown selection. */
 export function AddCommentPopover({
@@ -126,14 +129,14 @@ export function AddCommentPopover({
         <div>
           <span className="add-comment-popover__eyebrow">
             <MessageSquarePlus aria-hidden="true" size={14} />
-            New comment
+            新規コメント
           </span>
-          <h2 id={titleId}>Add comment</h2>
+          <h2 id={titleId}>コメント追加</h2>
         </div>
         <button
           className="icon-button"
           type="button"
-          aria-label="Cancel comment"
+          aria-label="コメント追加をキャンセル"
           onClick={onCancel}
           disabled={isSaving}
         >
@@ -142,7 +145,7 @@ export function AddCommentPopover({
       </header>
       <blockquote>{draft.anchor.textSnippet}</blockquote>
       <form className="add-comment-popover__form" onSubmit={submitForm}>
-        <label htmlFor={textareaId}>Comment</label>
+        <label htmlFor={textareaId}>{uiText.sidebar.comments}</label>
         <textarea
           id={textareaId}
           ref={textareaRef}
@@ -150,7 +153,7 @@ export function AddCommentPopover({
           rows={4}
           aria-describedby={describedBy}
           aria-invalid={visibleErrorMessage !== null}
-          placeholder="Write a review note..."
+          placeholder="レビューコメントを書く..."
           onInput={(event) => {
             setBody(event.currentTarget.value);
             setValidationMessage(null);
@@ -159,8 +162,9 @@ export function AddCommentPopover({
           disabled={isSaving}
         />
         <p id={hintId} className="add-comment-popover__hint">
-          {formatDraftBlockType(draft.anchor.blockType)} block{" "}
-          {draft.anchor.blockIndex + 1}, chars {draft.anchor.charRange.start}-
+          {formatDraftBlockType(draft.anchor.blockType)}
+          {uiText.commentThread.block} {draft.anchor.blockIndex + 1},{" "}
+          {uiText.commentThread.chars} {draft.anchor.charRange.start}-
           {draft.anchor.charRange.end}
         </p>
         {visibleErrorMessage === null ? null : (
@@ -175,7 +179,7 @@ export function AddCommentPopover({
             onClick={onCancel}
             disabled={isSaving}
           >
-            Cancel
+            {uiText.commentThread.cancel}
           </button>
           <button
             className="button button--primary"
@@ -191,7 +195,7 @@ export function AddCommentPopover({
             ) : (
               <Send aria-hidden="true" size={15} />
             )}
-            Save
+            {uiText.commentThread.save}
           </button>
         </div>
       </form>

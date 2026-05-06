@@ -52,7 +52,7 @@ test("ErrorBoundaryは子コンポーネントの例外を復旧操作付きで�
     </ErrorBoundary>,
   );
 
-  expect(result.container.textContent).toContain("Something went wrong");
+  expect(result.container.textContent).toContain("問題が発生しました");
   expect(result.container.textContent).toContain("Viewer render failed.");
 
   result.rerender(
@@ -64,7 +64,7 @@ test("ErrorBoundaryは子コンポーネントの例外を復旧操作付きで�
   act(() => {
     (
       Array.from(result.container.querySelectorAll("button")).find(
-        (button) => button.textContent === "Try again",
+        (button) => button.textContent === "再試行",
       ) as HTMLButtonElement
     ).click();
   });

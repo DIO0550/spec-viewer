@@ -13,8 +13,9 @@ import type {
   CommentAnchorDisplayStatus,
   CommentId,
 } from "../types/comment";
+import { uiText } from "../lib/uiText";
 
-const emptyBodyMessage = "Comment body cannot be empty.";
+const emptyBodyMessage = uiText.commentThread.emptyBody;
 
 type Props = Readonly<{
   comment: Comment;
@@ -136,7 +137,7 @@ export function CommentThread({
           type="button"
           data-comment-id={comment.id}
           aria-current={isActive ? "true" : undefined}
-          aria-label={`Select comment ${comment.id}`}
+          aria-label={`${uiText.commentThread.select} ${comment.id}`}
           aria-keyshortcuts="ArrowUp ArrowDown Home End Alt+ArrowUp Alt+ArrowDown"
           onClick={() => {
             onSelectComment(comment.id);
@@ -151,7 +152,9 @@ export function CommentThread({
             }
           >
             <HighlightedText
-              text={isResolved ? "Resolved" : "Open"}
+              text={
+                isResolved ? uiText.sidebar.resolved : uiText.sidebar.openFilter
+              }
               searchQuery={searchQuery}
             />
           </span>
@@ -159,11 +162,14 @@ export function CommentThread({
             {formatAnchorTitle(comment)}
           </span>
         </button>
-        <div className="comment-thread__actions" aria-label="Comment actions">
+        <div
+          className="comment-thread__actions"
+          aria-label={uiText.commentThread.actions}
+        >
           <button
             className="icon-button"
             type="button"
-            aria-label={`Edit comment ${comment.id}`}
+            aria-label={`${uiText.commentThread.edit} ${comment.id}`}
             disabled={isMutatingComment || isEditing}
             onClick={beginEdit}
           >
@@ -172,9 +178,11 @@ export function CommentThread({
           <button
             className="icon-button"
             type="button"
-            aria-label={`${isResolved ? "Reopen" : "Resolve"} comment ${
-              comment.id
-            }`}
+            aria-label={`${
+              isResolved
+                ? uiText.commentThread.reopen
+                : uiText.commentThread.resolve
+            } ${comment.id}`}
             disabled={isMutatingComment}
             onClick={toggleResolved}
           >
@@ -187,7 +195,7 @@ export function CommentThread({
           <button
             className="icon-button icon-button--danger"
             type="button"
-            aria-label={`Delete comment ${comment.id}`}
+            aria-label={`${uiText.commentThread.delete} ${comment.id}`}
             disabled={isMutatingComment || isConfirmingDelete}
             onClick={requestDelete}
           >
@@ -196,7 +204,10 @@ export function CommentThread({
         </div>
       </header>
 
-      <div className="comment-thread__anchor" aria-label="Anchor details">
+      <div
+        className="comment-thread__anchor"
+        aria-label={uiText.commentThread.anchorDetails}
+      >
         <span className="comment-thread__anchor-snippet">
           <HighlightedText
             text={comment.anchor.textSnippet}
@@ -210,9 +221,10 @@ export function CommentThread({
           />
         </span>
         <span className="comment-thread__anchor-location">
-          {formatBlockType(comment.anchor.blockType)} block{" "}
-          {comment.anchor.blockIndex + 1}, chars{" "}
-          {comment.anchor.charRange.start}-{comment.anchor.charRange.end}
+          {formatBlockType(comment.anchor.blockType)}
+          {uiText.commentThread.block} {comment.anchor.blockIndex + 1},{" "}
+          {uiText.commentThread.chars} {comment.anchor.charRange.start}-
+          {comment.anchor.charRange.end}
         </span>
         {anchorStatusLabel === null ? null : (
           <span
@@ -229,11 +241,11 @@ export function CommentThread({
       {isEditing ? (
         <form className="comment-thread__editor" onSubmit={submitEdit}>
           <label className="comment-thread__editor-label" htmlFor={bodyId}>
-            Body
+            {uiText.commentThread.body}
           </label>
           <textarea
             id={bodyId}
-            aria-label={`Comment body for ${comment.id}`}
+            aria-label={`${uiText.commentThread.bodyLabel} ${comment.id}`}
             aria-describedby={
               validationMessage === null ? undefined : validationId
             }
@@ -256,7 +268,7 @@ export function CommentThread({
             <button
               className="icon-button"
               type="submit"
-              aria-label={`Save comment ${comment.id}`}
+              aria-label={`${uiText.commentThread.save} ${comment.id}`}
               disabled={isMutatingComment}
             >
               <Save aria-hidden="true" size={16} />
@@ -264,7 +276,7 @@ export function CommentThread({
             <button
               className="icon-button"
               type="button"
-              aria-label={`Cancel editing comment ${comment.id}`}
+              aria-label={`${uiText.commentThread.cancel} ${comment.id}`}
               disabled={isMutatingComment}
               onClick={cancelEdit}
             >
@@ -280,27 +292,27 @@ export function CommentThread({
 
       {isConfirmingDelete ? (
         <div className="comment-thread__confirm" role="alert">
-          <p>Delete this comment permanently?</p>
+          <p>{uiText.commentThread.confirmDelete}</p>
           <div className="comment-thread__confirm-actions">
             <button
               className="button button--danger"
               type="button"
-              aria-label={`Confirm delete comment ${comment.id}`}
+              aria-label={`${uiText.commentThread.confirmDeleteAction} ${comment.id}`}
               disabled={isMutatingComment}
               onClick={confirmDelete}
             >
-              Delete
+              {uiText.commentThread.delete}
             </button>
             <button
               className="button button--secondary"
               type="button"
-              aria-label={`Cancel delete comment ${comment.id}`}
+              aria-label={`${uiText.commentThread.cancelDeleteAction} ${comment.id}`}
               disabled={isMutatingComment}
               onClick={() => {
                 setIsConfirmingDelete(false);
               }}
             >
-              Cancel
+              {uiText.commentThread.cancel}
             </button>
           </div>
         </div>
@@ -308,10 +320,12 @@ export function CommentThread({
 
       <footer className="comment-thread__footer">
         <time dateTime={comment.createdAt}>
-          Created {formatCommentTimestamp(comment.createdAt)}
+          {uiText.commentThread.created}{" "}
+          {formatCommentTimestamp(comment.createdAt)}
         </time>
         <time dateTime={comment.updatedAt}>
-          Updated {formatCommentTimestamp(comment.updatedAt)}
+          {uiText.commentThread.updated}{" "}
+          {formatCommentTimestamp(comment.updatedAt)}
         </time>
       </footer>
     </article>
@@ -419,10 +433,10 @@ function formatAnchorDisplayStatus(
     Exclude<CommentAnchorDisplayStatus, "exact">,
     string
   > = {
-    moved: "Anchor moved",
-    fuzzy: "Fuzzy anchor",
-    orphaned: "Anchor orphaned",
-    stale: "Anchor stale",
+    moved: uiText.commentThread.anchorMoved,
+    fuzzy: uiText.commentThread.fuzzyAnchor,
+    orphaned: uiText.commentThread.anchorOrphaned,
+    stale: uiText.commentThread.anchorStale,
   };
 
   return statusLabels[status];

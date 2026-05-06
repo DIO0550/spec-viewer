@@ -2,6 +2,7 @@ import type { KeyboardEvent } from "react";
 import { RefreshCcw } from "lucide-react";
 
 import type { SpecTreeState } from "../hooks/useSpecs";
+import { uiText } from "../lib/uiText";
 import type { SpecNode } from "../types/spec";
 import { CommandErrorDisplay } from "./CommandErrorDisplay";
 import { EmptyState } from "./EmptyState";
@@ -27,8 +28,8 @@ export function SpecTree({
   if (state.status === "idle") {
     return (
       <EmptyState
-        title="No workspace"
-        description="Load a workspace to see available specs."
+        title={uiText.specTree.noWorkspaceTitle}
+        description={uiText.specTree.noWorkspaceDescription}
         variant="inline"
       />
     );
@@ -37,9 +38,9 @@ export function SpecTree({
   if (state.status === "loading") {
     return (
       <section className="spec-tree__status" aria-live="polite">
-        <h2>Specs</h2>
+        <h2>{uiText.specTree.specs}</h2>
         <LoadingSkeleton
-          label="Scanning spec files"
+          label={uiText.specTree.loading}
           rows={[
             { width: "long" },
             { width: "medium" },
@@ -55,9 +56,9 @@ export function SpecTree({
   if (state.status === "error") {
     return (
       <CommandErrorDisplay
-        title="Could not load specs"
+        title={uiText.specTree.loadError}
         error={state.error}
-        actionLabel="Retry"
+        actionLabel={uiText.sidebar.retry}
         onAction={onReload}
       />
     );
@@ -66,14 +67,14 @@ export function SpecTree({
   if (state.status === "empty") {
     return (
       <EmptyState
-        title="No specs found"
-        description="This workspace does not contain configured spec files yet."
+        title={uiText.specTree.noSpecsTitle}
+        description={uiText.specTree.noSpecsDescription}
         action={
           <button
             className="icon-button"
             type="button"
-            aria-label="Refresh spec tree"
-            title="Refresh spec tree"
+            aria-label={uiText.specTree.refresh}
+            title={uiText.specTree.refresh}
             onClick={onReload}
           >
             <RefreshCcw aria-hidden="true" size={16} />
@@ -85,14 +86,14 @@ export function SpecTree({
   }
 
   return (
-    <nav className="spec-tree" aria-label="Spec tree">
+    <nav className="spec-tree" aria-label={uiText.specTree.tree}>
       <div className="spec-tree__header">
-        <h2>Specs</h2>
+        <h2>{uiText.specTree.specs}</h2>
         <button
           className="icon-button"
           type="button"
-          aria-label="Refresh spec tree"
-          title="Refresh spec tree"
+          aria-label={uiText.specTree.refresh}
+          title={uiText.specTree.refresh}
           onClick={onReload}
         >
           <RefreshCcw aria-hidden="true" size={16} />

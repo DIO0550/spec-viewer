@@ -20,6 +20,7 @@ import remarkGfm from "remark-gfm";
 import { useMarkdownTextSelection } from "../hooks/useMarkdownTextSelection";
 import type { SpecDocumentState } from "../hooks/useSpecs";
 import { createTextHash } from "../lib/comment-anchor-draft";
+import { uiText } from "../lib/uiText";
 import type {
   Comment,
   CommentAnchor,
@@ -201,8 +202,12 @@ export function MarkdownViewer({
         tabIndex={-1}
       >
         <EmptyState
-          title={selectedSpecLabel === null ? "Choose a spec" : "Choose a file"}
-          description="Open a workspace and choose a Markdown file to start reading."
+          title={
+            selectedSpecLabel === null
+              ? uiText.markdown.chooseSpec
+              : uiText.markdown.chooseFile
+          }
+          description={uiText.markdown.idleDescription}
         />
       </section>
     );
@@ -220,7 +225,7 @@ export function MarkdownViewer({
       >
         <LoadingSkeleton
           className="markdown-loading-skeleton"
-          label="Loading Markdown"
+          label={uiText.markdown.loading}
           rows={[
             { width: "short" },
             { width: "long" },
@@ -245,9 +250,9 @@ export function MarkdownViewer({
         tabIndex={-1}
       >
         <CommandErrorDisplay
-          title="Could not load Markdown"
+          title={uiText.markdown.loadError}
           error={state.error}
-          actionLabel="Retry"
+          actionLabel={uiText.sidebar.retry}
           onAction={onReload}
         />
       </section>
@@ -264,8 +269,8 @@ export function MarkdownViewer({
         tabIndex={-1}
       >
         <EmptyState
-          title="File missing"
-          description={`${state.document.path} is not available in this workspace.`}
+          title={uiText.markdown.missingTitle}
+          description={`${state.document.path} ${uiText.markdown.missingDescription}`}
         />
       </section>
     );
@@ -282,7 +287,10 @@ export function MarkdownViewer({
         role="tabpanel"
         tabIndex={-1}
       >
-        <EmptyState title="File is empty" description={state.document.path} />
+        <EmptyState
+          title={uiText.markdown.emptyTitle}
+          description={state.document.path}
+        />
       </section>
     );
   }
@@ -304,8 +312,8 @@ export function MarkdownViewer({
         <button
           className="icon-button"
           type="button"
-          aria-label="Reload Markdown"
-          title="Reload Markdown"
+          aria-label={uiText.markdown.reload}
+          title={uiText.markdown.reload}
           onClick={onReload}
         >
           <RefreshCcw aria-hidden="true" size={16} />
@@ -418,7 +426,7 @@ function MarkdownDocument({
     <div
       ref={renderedRootRef}
       className="markdown-rendered"
-      aria-label="Rendered Markdown document"
+      aria-label={uiText.markdown.renderedDocument}
     >
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
         {contents}
@@ -949,10 +957,10 @@ function createHighlightAriaLabel(
 ): string {
   const countLabel =
     highlight.commentIds.length === 1
-      ? "1 comment"
-      : `${highlight.commentIds.length} comments`;
+      ? "1件のコメント"
+      : `${highlight.commentIds.length}件のコメント`;
 
-  return `Markdown block with ${countLabel}`;
+  return `${countLabel}があるMarkdownブロック`;
 }
 
 /** @returns true when a click originated from an interactive child element. */
@@ -1335,7 +1343,7 @@ function TextSelectionCommentButton({
       }}
     >
       <MessageSquarePlus aria-hidden="true" size={16} />
-      <span>Add comment</span>
+      <span>コメント追加</span>
     </button>
   );
 }
