@@ -16,7 +16,7 @@ export function WorkspaceDropOverlay({ isVisible }: Props) {
         <FolderInput aria-hidden="true" size={26} />
         <div>
           <p>Drop workspace folder</p>
-          <span>Release to open it in Spec Reviewer.</span>
+          <span>Release to open it in Spec Viewer.</span>
         </div>
       </div>
     </div>

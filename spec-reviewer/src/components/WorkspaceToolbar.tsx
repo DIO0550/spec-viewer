@@ -101,7 +101,7 @@ export function WorkspaceToolbar({
       }}
     >
       <div className="workspace-toolbar__brand">
-        <span className="workspace-toolbar__title">Spec Reviewer</span>
+        <span className="workspace-toolbar__title">Spec Viewer</span>
         <span
           className="workspace-toolbar__status"
           aria-live="polite"

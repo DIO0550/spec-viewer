@@ -3401,7 +3401,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "spec-reviewer"
+name = "spec-viewer"
 version = "0.1.0"
 dependencies = [
  "anyhow",

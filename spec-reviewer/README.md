@@ -1,11 +1,11 @@
-# spec-reviewer
+# spec-viewer
 
 Spec Skill が生成する Markdown 仕様をレビューするための Tauri desktop app.
 
 ## Product Metadata
 
-- Product name: `Spec Reviewer`
-- App identifier: `io.github.dio0550.spec-reviewer`
+- Product name: `Spec Viewer`
+- App identifier: `io.github.dio0550.spec-viewer`
 - Version: `0.1.0`
 
 ## Development

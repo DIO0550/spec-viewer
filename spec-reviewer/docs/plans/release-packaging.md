@@ -1,13 +1,13 @@
 # Release Packaging
 
-This note captures the packaging decisions and release checklist for Spec Reviewer `0.1.0`.
+This note captures the packaging decisions and release checklist for Spec Viewer `0.1.0`.
 
 ## Product Metadata
 
-- Product name: `Spec Reviewer`
-- npm package name: `spec-reviewer`
-- Cargo package name: `spec-reviewer`
-- Tauri identifier: `io.github.dio0550.spec-reviewer`
+- Product name: `Spec Viewer`
+- npm package name: `spec-viewer`
+- Cargo package name: `spec-viewer`
+- Tauri identifier: `io.github.dio0550.spec-viewer`
 - Current app version: `0.1.0`
 - Icon source: `src-tauri/app-icon.svg`
 
@@ -65,7 +65,7 @@ Use `pnpm package` only when producing release artifacts. The packaging commands
 
 ## Packaged App Smoke Test
 
-- Launch the packaged app and confirm the window title is `Spec Reviewer`.
+- Launch the packaged app and confirm the window title is `Spec Viewer`.
 - Open a workspace containing `.plugin-workspace/.specs/`.
 - Select a feature and switch between exploration, hearing, impl, and tasks tabs.
 - Add a comment from selected Markdown text.
@@ -77,7 +77,7 @@ Use `pnpm package` only when producing release artifacts. The packaging commands
 
 ## Draft 0.1.0 Release Notes
 
-Spec Reviewer `0.1.0` packages the local desktop review workflow for Spec Skill Markdown workspaces. It includes workspace loading, Markdown viewing, persisted anchored comments, orphan handling after file edits, comment filtering/search/export, theme support, keyboard navigation improvements, and AI-oriented prompt/feedback export flows.
+Spec Viewer `0.1.0` packages the local desktop review workflow for Spec Skill Markdown workspaces. It includes workspace loading, Markdown viewing, persisted anchored comments, orphan handling after file edits, comment filtering/search/export, theme support, keyboard navigation improvements, and AI-oriented prompt/feedback export flows.
 
 Known limitations:
 

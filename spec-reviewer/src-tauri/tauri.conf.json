@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Spec Reviewer",
+  "productName": "Spec Viewer",
   "version": "0.1.0",
-  "identifier": "io.github.dio0550.spec-reviewer",
+  "identifier": "io.github.dio0550.spec-viewer",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Spec Reviewer",
+        "title": "Spec Viewer",
         "width": 800,
         "height": 600
       }
