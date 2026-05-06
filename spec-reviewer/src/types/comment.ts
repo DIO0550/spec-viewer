@@ -184,6 +184,40 @@ export type GenerateLlmPromptRequest = Readonly<{
   target: ExportCommentsTarget;
 }>;
 
+export type ApplyWithAiCommentSelectionInput = Readonly<{
+  workspacePath: string;
+  target: ExportCommentsTarget;
+  commentIds: readonly CommentId[];
+}>;
+
+export type ApplyWithAiGeneratedDiffPreviewFile = Readonly<{
+  fileKey: SpecFileKey;
+  originalMarkdown: string;
+  proposedMarkdown: string;
+  unifiedDiff: string;
+}>;
+
+export type ApplyWithAiGeneratedDiffPreview =
+  | Readonly<{
+      status: "notGenerated";
+      files: readonly [];
+    }>
+  | Readonly<{
+      status: "ready";
+      files: readonly ApplyWithAiGeneratedDiffPreviewFile[];
+      requiresExplicitConfirmation: true;
+    }>;
+
+export type ApplyWithAiPlaceholderState = Readonly<{
+  availability: "placeholder";
+  enabled: false;
+  selectedCommentsInput: ApplyWithAiCommentSelectionInput | null;
+  generatedDiffPreview: ApplyWithAiGeneratedDiffPreview;
+  requiresExplicitUserConfirmationBeforeWrite: true;
+  markdownWriteSupport: "notConnected";
+  explanation: string;
+}>;
+
 export type ListCommentsResponse = Readonly<{
   comments: readonly Comment[];
 }>;

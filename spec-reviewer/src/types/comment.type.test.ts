@@ -3,6 +3,9 @@ import { expectTypeOf, test } from "vitest";
 import type { CommandRequest, CommandResponse } from "./ipc";
 import type {
   AddCommentRequest,
+  ApplyWithAiCommentSelectionInput,
+  ApplyWithAiGeneratedDiffPreview,
+  ApplyWithAiPlaceholderState,
   Comment,
   CommentAnchorDisplayStatus,
   CommentDisplayFilter,
@@ -36,4 +39,27 @@ test("comment view modelは状態フィルターとorphan表示状態を共有�
   expectTypeOf<CommentAnchorDisplayStatus>().toEqualTypeOf<
     "exact" | "moved" | "fuzzy" | "orphaned" | "stale"
   >();
+});
+
+test("apply with AI placeholderは選択コメント入力と確認必須diff previewを表現する", () => {
+  expectTypeOf<ApplyWithAiCommentSelectionInput>().toMatchTypeOf<{
+    workspacePath: string;
+    target: {
+      scope: "file" | "spec" | "workspace";
+    };
+    commentIds: readonly string[];
+  }>();
+  expectTypeOf<ApplyWithAiGeneratedDiffPreview>().toMatchTypeOf<
+    | {
+        status: "notGenerated";
+      }
+    | {
+        status: "ready";
+        requiresExplicitConfirmation: true;
+      }
+  >();
+  expectTypeOf<ApplyWithAiPlaceholderState>().toMatchTypeOf<{
+    enabled: false;
+    requiresExplicitUserConfirmationBeforeWrite: true;
+  }>();
 });
