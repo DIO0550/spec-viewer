@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "spec-reviewer.review-comments.v1",
+  "comments": [
+    {
+      "id": "cmt_login_error_copy",
+      "fileKey": "tasks",
+      "body": "ログイン失敗時のエラーメッセージを日本語で明記してください。",
+      "status": "open"
+    }
+  ]
+}

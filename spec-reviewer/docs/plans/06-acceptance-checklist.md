@@ -42,6 +42,18 @@
 - [ ] Orphaned comments are preserved and shown separately.
 - [ ] File changes trigger comment re-resolution.
 
+## Review Loop Acceptance
+
+- [ ] `レビュー作成` creates a filesystem `user-review/active/<review-run-id>/` bundle with manifest, instructions, comments, context snapshots, result template, and status.
+- [ ] Documentation and bundle instructions explain the workflow is provider-independent and filesystem-based.
+- [ ] Documentation and UI-facing copy use Japanese-first terminology for the user-review workflow.
+- [ ] Current-workspace mode supports create, external edit, completed status refresh, archive, restart, and a second review loop on the same spec.
+- [ ] Worktree mode supports create, external edit, completed status refresh, archive, restart, and a second review loop on the same spec.
+- [ ] Archived review runs remain readable after app restart.
+- [ ] New review runs never overwrite archived runs.
+- [ ] Worktree merge, rebase, deletion, pruning, and cleanup remain explicit user actions.
+- [ ] Dirty target source files block worktree review creation with a clear error.
+
 ## Manual Review Scenarios
 
 - [ ] Open a workspace with one feature and all three Markdown files.

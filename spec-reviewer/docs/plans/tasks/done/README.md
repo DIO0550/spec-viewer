@@ -74,3 +74,4 @@ Completed task files are moved here from the active task groups.
 - [RL.3 Worktree Isolation](./review-loop/rl-03-worktree-isolation.md)
 - [RL.4 Active Review Run UI](./review-loop/rl-04-active-review-run-ui.md)
 - [RL.5 Completion And Archive](./review-loop/rl-05-completion-and-archive.md)
+- [RL.6 Loop QA And Documentation](./review-loop/rl-06-loop-qa-and-documentation.md)

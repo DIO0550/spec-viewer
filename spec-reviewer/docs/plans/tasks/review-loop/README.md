@@ -4,4 +4,4 @@ Goal: turn user comments into filesystem user-review bundles inside each spec-dr
 
 ## Tasks
 
-- [RL.6 Loop QA And Documentation](./rl-06-loop-qa-and-documentation.md)
+No active review-loop tasks remain. Completed review-loop task files are listed in [done/review-loop](../done/review-loop/).

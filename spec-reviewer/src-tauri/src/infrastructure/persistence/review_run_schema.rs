@@ -187,4 +187,91 @@ mod tests {
         assert!(serialized.contains("\"summary\":\"対応が完了しました\""));
         assert!(serialized.contains("\"warnings\""));
     }
+
+    #[test]
+    fn current_workspace_fixture_bundle_matches_supported_schema() {
+        let manifest: ReviewRunManifestDocument = serde_json::from_str(include_str!(
+            "../../../tests/fixtures/review-runs/current-workspace-active/manifest.json"
+        ))
+        .expect("current workspace fixture manifest should deserialize");
+        let status: ReviewRunStatusDocument = serde_json::from_str(include_str!(
+            "../../../tests/fixtures/review-runs/current-workspace-active/status.json"
+        ))
+        .expect("current workspace fixture status should deserialize");
+        let comments: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../tests/fixtures/review-runs/current-workspace-active/comments.json"
+        ))
+        .expect("current workspace fixture comments should deserialize");
+        let instructions = include_str!(
+            "../../../tests/fixtures/review-runs/current-workspace-active/instructions.md"
+        );
+        let context =
+            include_str!("../../../tests/fixtures/review-runs/current-workspace-active/context/001-auth-flow/tasks.md");
+
+        assert!(manifest.has_supported_schema_version());
+        assert_eq!(ReviewRunStatusValue::Active, manifest.status);
+        assert_eq!(ReviewRunStatusValue::Active, status.status);
+        assert_eq!(
+            ReviewRunExecutionTargetDocument::CurrentWorkspace {
+                workspace_path: "/workspace/spec-reviewer-fixture".to_string(),
+            },
+            manifest.execution_target
+        );
+        assert_eq!(1, manifest.source_files.len());
+        assert_eq!(
+            Some("spec-reviewer.review-comments.v1"),
+            comments
+                .get("schemaVersion")
+                .and_then(serde_json::Value::as_str)
+        );
+        assert!(instructions.contains("ユーザーレビュー"));
+        assert!(instructions.contains("context/"));
+        assert!(context.contains("ログイン失敗時"));
+    }
+
+    #[test]
+    fn worktree_archived_fixture_bundle_matches_supported_schema() {
+        let manifest: ReviewRunManifestDocument = serde_json::from_str(include_str!(
+            "../../../tests/fixtures/review-runs/worktree-archived/manifest.json"
+        ))
+        .expect("worktree fixture manifest should deserialize");
+        let status: ReviewRunStatusDocument = serde_json::from_str(include_str!(
+            "../../../tests/fixtures/review-runs/worktree-archived/status.json"
+        ))
+        .expect("worktree fixture status should deserialize");
+        let comments: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../tests/fixtures/review-runs/worktree-archived/comments.json"
+        ))
+        .expect("worktree fixture comments should deserialize");
+        let instructions =
+            include_str!("../../../tests/fixtures/review-runs/worktree-archived/instructions.md");
+        let result =
+            include_str!("../../../tests/fixtures/review-runs/worktree-archived/result.md");
+
+        assert!(manifest.has_supported_schema_version());
+        assert_eq!(ReviewRunStatusValue::Archived, manifest.status);
+        assert_eq!(ReviewRunStatusValue::Archived, status.status);
+        assert!(manifest.archived_at.is_some());
+        assert_eq!(
+            ReviewRunExecutionTargetDocument::Worktree {
+                repository_path: "/workspace/spec-reviewer-fixture".to_string(),
+                worktree_path:
+                    "/workspace/spec-reviewer-fixture-worktrees/2026-05-06T123000Z-spec-worktree"
+                        .to_string(),
+                branch_name: "spec-reviewer/2026-05-06T123000Z-spec-worktree".to_string(),
+            },
+            manifest.execution_target
+        );
+        assert_eq!(2, manifest.source_files.len());
+        assert_eq!(
+            2,
+            comments
+                .get("comments")
+                .and_then(serde_json::Value::as_array)
+                .map_or(0, Vec::len)
+        );
+        assert!(instructions.contains("worktree"));
+        assert!(result.contains("認証スコープ"));
+        assert_eq!(vec!["source file changed after export"], status.warnings);
+    }
 }
