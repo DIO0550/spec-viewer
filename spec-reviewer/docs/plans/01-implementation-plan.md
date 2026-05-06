@@ -31,9 +31,9 @@ Workspace config maps logical keys to actual filenames. The implementation shoul
 ```json
 {
   "files": {
-    "exploration": "exploration.md",
-    "hearing": "hearing.md",
-    "impl": "impl.md",
+    "exploration": "exploration-report.md",
+    "hearing": "hearing-notes.md",
+    "impl": "implementation-plan.md",
     "tasks": "tasks.md"
   }
 }

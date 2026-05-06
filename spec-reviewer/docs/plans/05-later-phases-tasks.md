@@ -16,6 +16,7 @@
 - [x] Add Japanese-first UI copy for the primary reviewer workflow.
 - [x] Add resizable right sidebar.
 - [x] Clarify comment creation UX from Markdown line/block clicks.
+- [x] Fix spec-driven-dev default Markdown file mapping.
 
 ## Phase 5: AI integration
 
@@ -148,6 +149,17 @@
 - [x] Keep clicked Markdown line/block as the primary comment creation path.
 - [x] Keep selected Markdown text as a secondary precision path.
 - [x] Add tests for resizing, width persistence, viewport fallback, line/block comment affordances, and comment-entry hints.
+
+### P4.12 Spec-driven-dev File Mapping
+
+- [x] Change plugin-workspace defaults to `exploration-report.md`, `hearing-notes.md`, `implementation-plan.md`, and `tasks.md`.
+- [x] Keep logical keys as `exploration`, `hearing`, `impl`, and `tasks`.
+- [x] Update `src-tauri/src/domain/workspace/config.rs` default plugin-workspace mapping.
+- [x] Update config, spec scanning, markdown read, and review-run tests that encode old plugin-workspace file names.
+- [x] Update tests that still expect `exploration.md`, `hearing.md`, or `impl.md`.
+- [x] Confirm a workspace like `.plugin-workspace/.specs/021-issue-262/` loads all four tabs without config overrides.
+- [x] Confirm review-run manifests point at `implementation-plan.md` for logical key `impl`.
+- [x] Keep `.spec-skill` compatibility mappings as `requirements.md`, `design.md`, and `tasks.md`.
 
 ### P5.1 LLM Prompt Export
 
