@@ -32,6 +32,8 @@ import type {
 import type {
   CreateReviewRunRequest,
   CreateReviewRunResponse,
+  ListReviewRunsRequest,
+  ListReviewRunsResponse,
 } from "../types/reviewRun";
 import type {
   StartSpecFileWatchRequest,
@@ -69,6 +71,15 @@ export type CommentCommands = Readonly<{
   resolveComment: (request: CommentStatusRequest) => Promise<Comment>;
   reopenComment: (request: CommentStatusRequest) => Promise<Comment>;
   toggleCommentResolved: (request: CommentStatusRequest) => Promise<Comment>;
+}>;
+
+export type ReviewRunCommands = Readonly<{
+  createReviewRun: (
+    request: CreateReviewRunRequest,
+  ) => Promise<CreateReviewRunResponse>;
+  listReviewRuns: (
+    request: ListReviewRunsRequest,
+  ) => Promise<ListReviewRunsResponse>;
 }>;
 
 /** @returns The directory selected from the native workspace picker, or null. */
@@ -203,6 +214,18 @@ export async function createReviewRun(
 ): Promise<CreateReviewRunResponse> {
   return invokeCommand("create_review_run", request);
 }
+
+/** @returns Active and archived review runs for the selected review target. */
+export async function listReviewRuns(
+  request: ListReviewRunsRequest,
+): Promise<ListReviewRunsResponse> {
+  return invokeCommand("list_review_runs", request);
+}
+
+export const reviewRunCommands: ReviewRunCommands = {
+  createReviewRun,
+  listReviewRuns,
+};
 
 export const commentCommands: CommentCommands = {
   listComments,

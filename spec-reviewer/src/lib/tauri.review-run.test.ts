@@ -4,8 +4,14 @@ import { expect, test, vi } from "vitest";
 import type {
   CreateReviewRunRequest,
   CreateReviewRunResponse,
+  ListReviewRunsRequest,
+  ListReviewRunsResponse,
 } from "../types/reviewRun";
-import { createReviewRun, normalizeCommandError } from "./tauri";
+import {
+  createReviewRun,
+  listReviewRuns,
+  normalizeCommandError,
+} from "./tauri";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
@@ -36,10 +42,27 @@ const response: CreateReviewRunResponse = {
     specFolderPath: "/workspace/spec-reviewer/.plugin-workspace/.specs/auth",
     folderPath:
       "/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/active/2026-05-06T120000Z-file-tasks-abcdef12",
+    sourceFiles: [
+      {
+        specId: "auth",
+        fileKey: "tasks",
+        relativePath: ".plugin-workspace/.specs/auth/tasks.md",
+      },
+    ],
     commentCount: 1,
     createdAt: "2026-05-06T12:00:00Z",
     archivedAt: null,
   },
+};
+
+const listRequest: ListReviewRunsRequest = {
+  workspacePath: "/workspace/spec-reviewer",
+  target: request.target,
+};
+
+const listResponse: ListReviewRunsResponse = {
+  active: [response.reviewRun],
+  archived: [],
 };
 
 test("createReviewRunはcreate_review_runへrequestを渡す", async () => {
@@ -51,6 +74,18 @@ test("createReviewRunはcreate_review_runへrequestを渡す", async () => {
   expect(result.reviewRun.id).toBe(response.reviewRun.id);
   expect(invokeMock).toHaveBeenCalledWith("create_review_run", {
     request,
+  });
+});
+
+test("listReviewRunsはlist_review_runsへrequestを渡す", async () => {
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue(listResponse);
+
+  const result = await listReviewRuns(listRequest);
+
+  expect(result.active).toEqual([response.reviewRun]);
+  expect(invokeMock).toHaveBeenCalledWith("list_review_runs", {
+    request: listRequest,
   });
 });
 

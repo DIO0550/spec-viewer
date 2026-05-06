@@ -66,6 +66,7 @@ export type ReviewRun = Readonly<{
   executionTarget: ReviewRunExecutionTarget;
   specFolderPath: string;
   folderPath: string;
+  sourceFiles: readonly ReviewRunSourceFile[];
   commentCount: number;
   createdAt: IsoDateTimeString;
   archivedAt: IsoDateTimeString | null;

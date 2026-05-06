@@ -1,4 +1,5 @@
 import { Clipboard, Download, Search, Sparkles, X } from "lucide-react";
+import type { ReactNode } from "react";
 import { useId, useState } from "react";
 
 import type {
@@ -35,6 +36,7 @@ type Props = Readonly<{
   onExportComments?: (scope: CommentExportScope) => void;
   onCopyLlmPrompt?: (scope: CommentExportScope) => void;
   onCopyMcpFeedback?: () => void;
+  reviewRunPanel?: ReactNode;
 }>;
 
 type CommentGroups = Readonly<{
@@ -134,6 +136,7 @@ export function CommentSidebar({
   onExportComments,
   onCopyLlmPrompt,
   onCopyMcpFeedback,
+  reviewRunPanel,
 }: Props) {
   const [activeFilter, setActiveFilter] =
     useState<CommentDisplayFilter>(defaultDisplayFilter);
@@ -232,6 +235,7 @@ export function CommentSidebar({
           onCopyMcpFeedback={onCopyMcpFeedback}
         />
         <CommentExportFeedback exportState={exportState} />
+        {reviewRunPanel}
         <EmptyState
           title="No comments yet"
           description="Open and resolved comments for this file will appear here."
@@ -280,6 +284,7 @@ export function CommentSidebar({
         onCopyMcpFeedback={onCopyMcpFeedback}
       />
       <CommentExportFeedback exportState={exportState} />
+      {reviewRunPanel}
       <CommentSearchControl
         searchQuery={searchQuery}
         resultCount={searchedComments.length}

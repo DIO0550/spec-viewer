@@ -34,7 +34,10 @@ pub use comments::{
     FilesystemCommentUseCases, GenerateCommentId, GetCurrentTime, ResolveCommentAnchorsResult,
     UtcCommentClock, UuidCommentIdGenerator,
 };
-pub use review_runs::{CreateReviewRunInput, CreateReviewRunResult, ReviewRunExecutionMode};
+pub use review_runs::{
+    CreateReviewRunInput, CreateReviewRunResult, ListReviewRunsInput, ListReviewRunsResult,
+    ListedReviewRun, ReviewRunExecutionMode,
+};
 
 pub type FilesystemAppUseCases = AppUseCases<
     FilesystemWorkspaceDetector,

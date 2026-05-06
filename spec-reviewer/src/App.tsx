@@ -6,6 +6,7 @@ import { AppShell } from "./components/AppShell";
 import { CommentSidebar } from "./components/CommentSidebar";
 import { MarkdownViewer } from "./components/MarkdownViewer";
 import { OpenWorkspaceEmptyState } from "./components/OpenWorkspaceEmptyState";
+import { ReviewRunPanel } from "./components/ReviewRunPanel";
 import { SpecTabs } from "./components/SpecTabs";
 import { SpecTree } from "./components/SpecTree";
 import { WorkspaceDropOverlay } from "./components/WorkspaceDropOverlay";
@@ -16,6 +17,10 @@ import {
 import { useComments } from "./hooks/useComments";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useRecentWorkspaces } from "./hooks/useRecentWorkspaces";
+import {
+  useReviewRuns,
+  type ReviewRunTargetScope,
+} from "./hooks/useReviewRuns";
 import { useSpecFileWatcher } from "./hooks/useSpecFileWatcher";
 import { useSpecs } from "./hooks/useSpecs";
 import { useTheme } from "./hooks/useTheme";
@@ -32,6 +37,7 @@ import type {
   SpecSkillMcpFeedbackPayload,
 } from "./types/comment";
 import type { SpecFileKey } from "./types/spec";
+import type { ReviewRunExecutionMode } from "./types/reviewRun";
 import {
   exportComments,
   generateLlmPrompt,
@@ -106,6 +112,16 @@ function App() {
     fileKey: specs.selectedFileKey,
     statusFilter: "all",
   });
+  const [reviewRunTargetScope, setReviewRunTargetScope] =
+    useState<ReviewRunTargetScope>("file");
+  const [reviewRunExecutionMode, setReviewRunExecutionMode] =
+    useState<ReviewRunExecutionMode>("currentWorkspace");
+  const reviewRuns = useReviewRuns({
+    workspacePath: workspace.workspace?.root ?? null,
+    specId: specs.selectedSpecId,
+    fileKey: specs.selectedFileKey,
+    targetScope: reviewRunTargetScope,
+  });
   const [workspaceInput, setWorkspaceInput] = useState("");
   const [activeCommentId, setActiveCommentId] = useState<CommentId | null>(
     null,
@@ -128,6 +144,11 @@ function App() {
     setCommentAnchorDisplayStates([]);
     setRefreshStatus(idleRefreshStatus);
     setCommentExportState(idleCommentExportState);
+  }, [specs.selectedFileKey, specs.selectedSpecId, workspace.workspace?.root]);
+
+  useEffect(() => {
+    setReviewRunTargetScope("file");
+    setReviewRunExecutionMode("currentWorkspace");
   }, [specs.selectedFileKey, specs.selectedSpecId, workspace.workspace?.root]);
 
   useEffect(() => {
@@ -520,6 +541,18 @@ function App() {
     workspace.workspace,
   ]);
 
+  const createReviewRunFromOpenComments =
+    useCallback(async (): Promise<void> => {
+      const openCommentIds = comments.comments
+        .filter((comment) => comment.status === "open")
+        .map((comment) => comment.id);
+
+      await reviewRuns.createReviewRun({
+        commentIds: openCommentIds,
+        executionMode: reviewRunExecutionMode,
+      });
+    }, [comments.comments, reviewRunExecutionMode, reviewRuns.createReviewRun]);
+
   const selectAdjacentFile = useCallback(
     (direction: NavigationDirection): void => {
       const selectedSpec = specs.selectedSpec;
@@ -822,6 +855,24 @@ function App() {
             onCopyMcpFeedback={() => {
               void copyMcpFeedbackPayload();
             }}
+            reviewRunPanel={
+              <ReviewRunPanel
+                targetScope={reviewRunTargetScope}
+                executionMode={reviewRunExecutionMode}
+                openCommentCount={countOpenComments(comments.comments)}
+                listState={reviewRuns.listState}
+                createState={reviewRuns.createState}
+                onTargetScopeChange={setReviewRunTargetScope}
+                onExecutionModeChange={setReviewRunExecutionMode}
+                onCreateReviewRun={() => {
+                  void createReviewRunFromOpenComments();
+                }}
+                onRefreshReviewRuns={() => {
+                  void reviewRuns.reloadReviewRuns();
+                }}
+                onCopyPath={copyTextToClipboard}
+              />
+            }
           />
         }
       />
@@ -848,6 +899,11 @@ function formatCommentExportSuccessMessage(
   const label = response.commentCount === 1 ? "comment" : "comments";
 
   return `Exported ${response.commentCount} ${label} to ${response.destinationPath}`;
+}
+
+/** @returns The number of unresolved comments in the active sidebar list. */
+function countOpenComments(comments: readonly { status: string }[]): number {
+  return comments.filter((comment) => comment.status === "open").length;
 }
 
 /** Copies generated prompt text to the browser clipboard. */

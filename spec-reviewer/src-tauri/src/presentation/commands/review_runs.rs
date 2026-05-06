@@ -7,10 +7,14 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::{
-    app::use_cases::{AppUseCaseError, CreateReviewRunInput, ReviewRunExecutionMode},
+    app::use_cases::{
+        AppUseCaseError, CreateReviewRunInput, ListReviewRunsInput, ReviewRunExecutionMode,
+    },
     domain::{
         comment::CommentId,
-        review_run::{UserReviewExecutionTarget, UserReviewRun, UserReviewRunTarget},
+        review_run::{
+            UserReviewExecutionTarget, UserReviewRun, UserReviewRunTarget, UserReviewSourceFile,
+        },
         spec::{SpecFileKey, SpecId},
     },
 };
@@ -43,6 +47,20 @@ pub struct CreateReviewRunResponse {
     review_run: ReviewRunResponse,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ListReviewRunsRequest {
+    workspace_path: String,
+    target: ReviewRunTargetRequest,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ListReviewRunsResponse {
+    active: Vec<ReviewRunResponse>,
+    archived: Vec<ReviewRunResponse>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ReviewRunResponse {
@@ -52,9 +70,18 @@ pub struct ReviewRunResponse {
     execution_target: ReviewRunExecutionTargetResponse,
     spec_folder_path: String,
     folder_path: String,
+    source_files: Vec<ReviewRunSourceFileResponse>,
     comment_count: usize,
     created_at: DateTime<Utc>,
     archived_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReviewRunSourceFileResponse {
+    spec_id: String,
+    file_key: String,
+    relative_path: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -106,6 +133,34 @@ pub fn create_review_run(
     })
 }
 
+#[tauri::command]
+pub fn list_review_runs(
+    state: State<'_, CommandState>,
+    request: ListReviewRunsRequest,
+) -> CommandResult<ListReviewRunsResponse> {
+    let workspace = state
+        .use_cases()
+        .load_workspace(&request.workspace_path)
+        .map_err(CommandError::from)?;
+    let result = state.use_cases().list_review_runs(
+        &workspace,
+        ListReviewRunsInput::new(request.target.into_domain()?),
+    )?;
+
+    Ok(ListReviewRunsResponse {
+        active: result
+            .active()
+            .iter()
+            .map(|run| ReviewRunResponse::from_run(run.review_run(), run.folder_path()))
+            .collect(),
+        archived: result
+            .archived()
+            .iter()
+            .map(|run| ReviewRunResponse::from_run(run.review_run(), run.folder_path()))
+            .collect(),
+    })
+}
+
 impl ReviewRunTargetRequest {
     fn into_domain(self) -> CommandResult<UserReviewRunTarget> {
         match self {
@@ -131,6 +186,11 @@ impl ReviewRunResponse {
             ),
             spec_folder_path: run.spec_folder_path().as_str().to_string(),
             folder_path: folder_path.to_string(),
+            source_files: run
+                .source_files()
+                .iter()
+                .map(ReviewRunSourceFileResponse::from_source_file)
+                .collect(),
             comment_count: run.comment_ids().len(),
             created_at: run.created_at(),
             archived_at: run.archived_at(),
@@ -169,6 +229,16 @@ impl ReviewRunExecutionTargetResponse {
                 worktree_path: worktree_path.as_str().to_string(),
                 branch_name: branch_name.as_str().to_string(),
             },
+        }
+    }
+}
+
+impl ReviewRunSourceFileResponse {
+    fn from_source_file(source_file: &UserReviewSourceFile) -> Self {
+        Self {
+            spec_id: source_file.spec_id().as_str().to_string(),
+            file_key: source_file.file_key().as_str().to_string(),
+            relative_path: source_file.relative_path().as_str().to_string(),
         }
     }
 }

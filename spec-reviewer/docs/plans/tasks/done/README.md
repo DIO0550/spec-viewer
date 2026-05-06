@@ -72,3 +72,4 @@ Completed task files are moved here from the active task groups.
 - [RL.1 Review Run Domain And Types](./review-loop/rl-01-review-run-domain-and-types.md)
 - [RL.2 Review Bundle Export](./review-loop/rl-02-review-bundle-export.md)
 - [RL.3 Worktree Isolation](./review-loop/rl-03-worktree-isolation.md)
+- [RL.4 Active Review Run UI](./review-loop/rl-04-active-review-run-ui.md)

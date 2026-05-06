@@ -769,6 +769,206 @@ textarea:disabled {
   background: var(--color-danger-soft);
 }
 
+.review-run-panel {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--color-raised);
+}
+
+.review-run-panel__header,
+.review-run-panel__run-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.review-run-panel__header h3,
+.review-run-panel__run h4 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 0.84rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.review-run-panel__header p,
+.review-run-panel__run p {
+  margin: 4px 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 720;
+  line-height: 1.35;
+}
+
+.review-run-panel__target {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.review-run-panel__target button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 30px;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  padding: 4px 7px;
+  color: var(--color-text-body);
+  background: var(--color-control);
+  font-size: 0.74rem;
+  font-weight: 820;
+}
+
+.review-run-panel__target button[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.review-run-panel__modes {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.review-run-panel__modes legend {
+  margin-bottom: 1px;
+  color: var(--color-text-muted);
+  font-size: 0.68rem;
+  font-weight: 820;
+}
+
+.review-run-panel__modes label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  color: var(--color-text-body);
+  font-size: 0.74rem;
+  font-weight: 780;
+}
+
+.review-run-panel__modes input {
+  accent-color: var(--color-accent);
+}
+
+.review-run-panel__create {
+  min-height: 32px;
+  justify-content: center;
+}
+
+.review-run-panel__feedback,
+.review-run-panel__empty {
+  margin: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  padding: 8px 9px;
+  font-size: 0.74rem;
+  font-weight: 740;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.review-run-panel__empty {
+  color: var(--color-text-muted);
+  background: var(--color-control);
+}
+
+.review-run-panel__feedback--success {
+  border-color: var(--color-accent-border);
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.review-run-panel__feedback--error {
+  border-color: var(--color-danger-border);
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
+}
+
+.review-run-panel__runs {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.review-run-panel__run {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  padding: 8px;
+  background: var(--color-surface);
+}
+
+.review-run-panel__path {
+  display: block;
+  min-width: 0;
+  border-radius: 6px;
+  padding: 6px 7px;
+  color: var(--color-text-body);
+  background: var(--color-code-surface);
+  font-size: 0.68rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.review-run-panel__source-files,
+.review-run-panel__worktree {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+}
+
+.review-run-panel__source-files li,
+.review-run-panel__worktree div {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+  font-weight: 720;
+  line-height: 1.35;
+}
+
+.review-run-panel__source-files li {
+  align-items: center;
+  list-style: none;
+}
+
+.review-run-panel__source-files span,
+.review-run-panel__worktree dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.review-run-panel__worktree dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  color: var(--color-text-body);
+  font-weight: 820;
+}
+
+.review-run-panel__worktree dd {
+  margin: 0;
+}
+
 .comment-sidebar__search {
   display: grid;
   gap: 6px;

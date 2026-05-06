@@ -2,7 +2,9 @@
 
 use std::{
     collections::{BTreeSet, HashSet},
+    fs,
     path::{Path, PathBuf},
+    str::FromStr,
 };
 
 use chrono::{DateTime, Utc};
@@ -27,10 +29,12 @@ use crate::{
         workspace::{WorkspaceLayout, WorkspaceRoot},
     },
     infrastructure::{
-        filesystem::safe_relative_spec_path,
+        filesystem::{safe_relative_spec_path, spec_root_path},
         git::{GitReviewWorktreeError, GitReviewWorktreeService},
         persistence::{
-            review_run_paths::{ReviewRunFolderState, ReviewRunPathResolver},
+            review_run_paths::{
+                ReviewRunFolderState, ReviewRunPathResolver, USER_REVIEW_DIRECTORY,
+            },
             review_run_schema::{
                 ReviewRunExecutionTargetDocument, ReviewRunManifestDocument,
                 ReviewRunSourceFileDocument, ReviewRunStatusDocument, ReviewRunStatusValue,
@@ -86,6 +90,64 @@ impl CreateReviewRunInput {
 pub struct CreateReviewRunResult {
     review_run: UserReviewRun,
     folder_path: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ListReviewRunsInput {
+    target: UserReviewRunTarget,
+}
+
+impl ListReviewRunsInput {
+    pub fn new(target: UserReviewRunTarget) -> Self {
+        Self { target }
+    }
+
+    pub fn target(&self) -> &UserReviewRunTarget {
+        &self.target
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ListedReviewRun {
+    review_run: UserReviewRun,
+    folder_path: String,
+}
+
+impl ListedReviewRun {
+    pub fn new(review_run: UserReviewRun, folder_path: impl Into<String>) -> Self {
+        Self {
+            review_run,
+            folder_path: folder_path.into(),
+        }
+    }
+
+    pub fn review_run(&self) -> &UserReviewRun {
+        &self.review_run
+    }
+
+    pub fn folder_path(&self) -> &str {
+        &self.folder_path
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ListReviewRunsResult {
+    active: Vec<ListedReviewRun>,
+    archived: Vec<ListedReviewRun>,
+}
+
+impl ListReviewRunsResult {
+    pub fn new(active: Vec<ListedReviewRun>, archived: Vec<ListedReviewRun>) -> Self {
+        Self { active, archived }
+    }
+
+    pub fn active(&self) -> &[ListedReviewRun] {
+        &self.active
+    }
+
+    pub fn archived(&self) -> &[ListedReviewRun] {
+        &self.archived
+    }
 }
 
 impl CreateReviewRunResult {
@@ -215,6 +277,25 @@ impl FilesystemAppUseCases {
             run,
             path.run_directory().to_string_lossy(),
         ))
+    }
+
+    pub fn list_review_runs(
+        &self,
+        workspace: &LoadWorkspaceResult,
+        input: ListReviewRunsInput,
+    ) -> Result<ListReviewRunsResult, AppUseCaseError> {
+        let active = list_review_runs_for_state(
+            workspace.layout(),
+            input.target(),
+            ReviewRunFolderState::Active,
+        )?;
+        let archived = list_review_runs_for_state(
+            workspace.layout(),
+            input.target(),
+            ReviewRunFolderState::Archive,
+        )?;
+
+        Ok(ListReviewRunsResult::new(active, archived))
     }
 }
 
@@ -713,6 +794,194 @@ impl Serialize for ReviewRunBundleFile {
     }
 }
 
+fn list_review_runs_for_state(
+    layout: &WorkspaceLayout,
+    target: &UserReviewRunTarget,
+    state: ReviewRunFolderState,
+) -> Result<Vec<ListedReviewRun>, AppUseCaseError> {
+    let directory = review_run_state_directory(layout, target.spec_id(), state)?;
+
+    if !directory.exists() {
+        return Ok(Vec::new());
+    }
+
+    let entries = fs::read_dir(&directory).map_err(|source| AppUseCaseError::ReviewRunExport {
+        message: format!(
+            "failed to read review run directory {}: {source}",
+            directory.to_string_lossy()
+        ),
+    })?;
+    let mut runs = Vec::new();
+
+    for entry in entries {
+        let entry = entry.map_err(|source| AppUseCaseError::ReviewRunExport {
+            message: format!(
+                "failed to read review run entry {}: {source}",
+                directory.to_string_lossy()
+            ),
+        })?;
+        let path = entry.path();
+
+        if !path.is_dir() {
+            continue;
+        }
+
+        let manifest = read_review_run_manifest(&path)?;
+
+        if !manifest.has_supported_schema_version()
+            || !review_run_target_matches(&manifest.target, target)
+        {
+            continue;
+        }
+
+        runs.push(ListedReviewRun::new(
+            restore_review_run_from_manifest(manifest)?,
+            path.to_string_lossy(),
+        ));
+    }
+
+    runs.sort_by(|left, right| {
+        right
+            .review_run()
+            .created_at()
+            .cmp(&left.review_run().created_at())
+    });
+
+    Ok(runs)
+}
+
+fn review_run_state_directory(
+    layout: &WorkspaceLayout,
+    spec_id: &SpecId,
+    state: ReviewRunFolderState,
+) -> Result<PathBuf, AppUseCaseError> {
+    let relative_spec_path = safe_relative_spec_path(spec_id.as_str())?;
+
+    Ok(spec_root_path(layout)
+        .join(relative_spec_path)
+        .join(USER_REVIEW_DIRECTORY)
+        .join(state.directory_name()))
+}
+
+fn read_review_run_manifest(
+    run_directory: &Path,
+) -> Result<ReviewRunManifestDocument, AppUseCaseError> {
+    let path = run_directory.join("manifest.json");
+    let contents =
+        fs::read_to_string(&path).map_err(|source| AppUseCaseError::ReviewRunExport {
+            message: format!(
+                "failed to read review run manifest {}: {source}",
+                path.to_string_lossy()
+            ),
+        })?;
+
+    serde_json::from_str(&contents).map_err(|source| AppUseCaseError::ReviewRunExport {
+        message: format!(
+            "failed to parse review run manifest {}: {source}",
+            path.to_string_lossy()
+        ),
+    })
+}
+
+fn review_run_target_matches(
+    document: &ReviewRunTargetDocument,
+    target: &UserReviewRunTarget,
+) -> bool {
+    match (document, target) {
+        (
+            ReviewRunTargetDocument::File { spec_id, file_key },
+            UserReviewRunTarget::File {
+                spec_id: target_spec_id,
+                file_key: target_file_key,
+            },
+        ) => spec_id == target_spec_id.as_str() && file_key == target_file_key.as_str(),
+        (
+            ReviewRunTargetDocument::Spec { spec_id },
+            UserReviewRunTarget::Spec {
+                spec_id: target_spec_id,
+            },
+        ) => spec_id == target_spec_id.as_str(),
+        _ => false,
+    }
+}
+
+fn restore_review_run_from_manifest(
+    manifest: ReviewRunManifestDocument,
+) -> Result<UserReviewRun, AppUseCaseError> {
+    UserReviewRun::restore(
+        UserReviewRunId::new(manifest.id)?,
+        review_run_status_from_document(manifest.status),
+        review_run_target_from_document(manifest.target)?,
+        review_run_execution_target_from_document(manifest.execution_target)?,
+        ReviewRunPathValue::new(manifest.spec_folder_path)?,
+        manifest
+            .source_files
+            .into_iter()
+            .map(review_run_source_file_from_document)
+            .collect::<Result<Vec<_>, _>>()?,
+        manifest
+            .comment_ids
+            .into_iter()
+            .map(CommentId::new)
+            .collect::<Result<Vec<_>, _>>()?,
+        manifest.created_at,
+        manifest.archived_at,
+    )
+    .map_err(AppUseCaseError::from)
+}
+
+fn review_run_status_from_document(status: ReviewRunStatusValue) -> UserReviewRunStatus {
+    match status {
+        ReviewRunStatusValue::Active => UserReviewRunStatus::Active,
+        ReviewRunStatusValue::InProgress => UserReviewRunStatus::InProgress,
+        ReviewRunStatusValue::Completed => UserReviewRunStatus::Completed,
+        ReviewRunStatusValue::Archived => UserReviewRunStatus::Archived,
+    }
+}
+
+fn review_run_target_from_document(
+    target: ReviewRunTargetDocument,
+) -> Result<UserReviewRunTarget, AppUseCaseError> {
+    match target {
+        ReviewRunTargetDocument::File { spec_id, file_key } => Ok(UserReviewRunTarget::file(
+            SpecId::new(spec_id)?,
+            SpecFileKey::from_str(&file_key)?,
+        )),
+        ReviewRunTargetDocument::Spec { spec_id } => {
+            Ok(UserReviewRunTarget::spec(SpecId::new(spec_id)?))
+        }
+    }
+}
+
+fn review_run_execution_target_from_document(
+    target: ReviewRunExecutionTargetDocument,
+) -> Result<UserReviewExecutionTarget, AppUseCaseError> {
+    match target {
+        ReviewRunExecutionTargetDocument::CurrentWorkspace { workspace_path } => Ok(
+            UserReviewExecutionTarget::current_workspace(ReviewRunPathValue::new(workspace_path)?),
+        ),
+        ReviewRunExecutionTargetDocument::Worktree {
+            repository_path,
+            worktree_path,
+            branch_name,
+        } => Ok(UserReviewExecutionTarget::worktree(
+            ReviewRunPathValue::new(repository_path)?,
+            ReviewRunPathValue::new(worktree_path)?,
+            ReviewRunBranchName::new(branch_name)?,
+        )),
+    }
+}
+
+fn review_run_source_file_from_document(
+    source_file: ReviewRunSourceFileDocument,
+) -> Result<UserReviewSourceFile, AppUseCaseError> {
+    Ok(UserReviewSourceFile::new(
+        SpecId::new(source_file.spec_id)?,
+        SpecFileKey::from_str(&source_file.file_key)?,
+        ReviewRunRelativePath::new(source_file.relative_path)?,
+    ))
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct ReviewRunCommentDocument {
@@ -1146,6 +1415,36 @@ mod tests {
             .expect("instructions should be readable");
         assert!(instructions.contains("編集してはいけません"));
         assert!(instructions.contains("Edit the source Markdown files listed above"));
+    }
+
+    #[test]
+    fn list_review_runs_returns_active_runs_for_selected_target() {
+        let workspace = TestWorkspace::new("list-active");
+        workspace.write_task_file("# Tasks\n\nClarify checkout task.\n");
+        workspace.write_comment_file("cmt_1");
+        let use_cases = FilesystemAppUseCases::default();
+        let loaded_workspace = use_cases
+            .load_workspace(workspace.root_string())
+            .expect("workspace should load");
+        let created = use_cases
+            .create_review_run(&loaded_workspace, create_file_run_input("cmt_1"))
+            .expect("review run should be created");
+        let input = ListReviewRunsInput::new(UserReviewRunTarget::file(
+            SpecId::new("auth").expect("spec id should be valid"),
+            SpecFileKey::Tasks,
+        ));
+
+        let result = use_cases
+            .list_review_runs(&loaded_workspace, input)
+            .expect("review runs should list");
+
+        assert_eq!(1, result.active().len());
+        assert_eq!(0, result.archived().len());
+        assert_eq!(created.folder_path(), result.active()[0].folder_path());
+        assert_eq!(
+            "cmt_1",
+            result.active()[0].review_run().comment_ids()[0].as_str()
+        );
     }
 
     #[test]
