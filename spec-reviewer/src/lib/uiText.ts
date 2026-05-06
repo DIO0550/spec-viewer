@@ -100,6 +100,7 @@ export const uiText = {
     loading: "読み込み中",
     opening: "開いています",
     switcher: "ワークスペース",
+    sidebarList: "ワークスペース一覧",
     saved: "保存済みワークスペース",
     currentWorkspace: "現在のワークスペース",
     recent: "保存済みワークスペース",

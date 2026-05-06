@@ -50,6 +50,29 @@ const readyTree: SpecTreeShape = {
   specs: [selectedSpec],
 };
 
+const issueTreeState: SpecTreeState = {
+  status: "ready",
+  workspacePath: "/workspace",
+  tree: {
+    specs: [
+      {
+        id: "021-issue-262",
+        label: "021-issue-262",
+        files: [taskFile, implFile],
+        children: [
+          {
+            id: "021-issue-262/code-review",
+            label: "code-review",
+            files: [implFile],
+            children: [],
+          },
+        ],
+      },
+    ],
+  },
+  error: null,
+};
+
 const readyTreeState: SpecTreeState = {
   status: "ready",
   workspacePath,
@@ -466,7 +489,7 @@ test("SpecTreeは矢印キーでtree itemのfocusを移動する", () => {
   const result = renderComponent(
     <SpecTree
       state={readyTreeState}
-      selectedSpecId={null}
+      selectedSpecId="phase-1-comments"
       onSelectSpec={vi.fn()}
       onReload={vi.fn()}
     />,
@@ -488,7 +511,7 @@ test("SpecTreeは左右矢印キーで親子tree itemへfocusを移動する", (
   const result = renderComponent(
     <SpecTree
       state={readyTreeState}
-      selectedSpecId={null}
+      selectedSpecId="phase-1-comments"
       onSelectSpec={vi.fn()}
       onReload={vi.fn()}
     />,
@@ -511,6 +534,31 @@ test("SpecTreeは左右矢印キーで親子tree itemへfocusを移動する", (
   });
 
   expect(document.activeElement).toBe(buttons[0]);
+  result.unmount();
+});
+
+test("SpecTreeはissueフォルダ単位を表示して子フォルダを展開できる", () => {
+  const result = renderComponent(
+    <SpecTree
+      state={issueTreeState}
+      selectedSpecId={null}
+      onSelectSpec={vi.fn()}
+      onReload={vi.fn()}
+    />,
+  );
+  const issueButton = result.container.querySelector(
+    '[aria-label="021-issue-262を展開"]',
+  ) as HTMLButtonElement;
+
+  expect(result.container.textContent).toContain("021-issue-262");
+  expect(result.container.textContent).not.toContain("code-review");
+
+  act(() => {
+    issueButton.click();
+  });
+
+  expect(issueButton.getAttribute("aria-expanded")).toBe("true");
+  expect(result.container.textContent).toContain("code-review");
   result.unmount();
 });
 

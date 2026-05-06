@@ -14,6 +14,7 @@ import {
   WorkspaceToolbar,
   type WorkspaceRefreshStatus,
 } from "./components/WorkspaceToolbar";
+import { WorkspaceSidebarSection } from "./components/WorkspaceSidebarSection";
 import { useComments } from "./hooks/useComments";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useLeftNavigationPreference } from "./hooks/useLeftNavigationPreference";
@@ -844,16 +845,30 @@ function App() {
           />
         }
         sidebar={
-          <SpecTree
-            state={specs.specTreeState}
-            selectedSpecId={specs.selectedSpecId}
-            onSelectSpec={(specId) => {
-              void specs.selectSpec(specId);
-            }}
-            onReload={() => {
-              void specs.reloadSpecs({ preserveSelection: true });
-            }}
-          />
+          <div className="left-navigation-panel">
+            <WorkspaceSidebarSection
+              currentWorkspacePath={workspace.workspacePath}
+              isBusy={workspace.isLoading || isBrowsingWorkspace}
+              recentWorkspaces={recentWorkspaces.recentWorkspaces}
+              onBrowse={() => {
+                void browseWorkspace();
+              }}
+              onOpenWorkspace={(path) => {
+                void openRecentWorkspacePath(path);
+              }}
+              onRemoveWorkspace={recentWorkspaces.removeWorkspace}
+            />
+            <SpecTree
+              state={specs.specTreeState}
+              selectedSpecId={specs.selectedSpecId}
+              onSelectSpec={(specId) => {
+                void specs.selectSpec(specId);
+              }}
+              onReload={() => {
+                void specs.reloadSpecs({ preserveSelection: true });
+              }}
+            />
+          </div>
         }
         tabs={
           <SpecTabs

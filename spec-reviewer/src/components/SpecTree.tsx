@@ -1,5 +1,5 @@
-import type { KeyboardEvent } from "react";
-import { RefreshCcw } from "lucide-react";
+import { type KeyboardEvent, useEffect, useState } from "react";
+import { ChevronDown, ChevronRight, RefreshCcw } from "lucide-react";
 
 import type { SpecTreeState } from "../hooks/useSpecs";
 import { uiText } from "../lib/uiText";
@@ -25,6 +25,46 @@ export function SpecTree({
   onSelectSpec,
   onReload,
 }: Props) {
+  const [expandedSpecIds, setExpandedSpecIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+
+  useEffect(() => {
+    if (state.status !== "ready" || selectedSpecId === null) {
+      return;
+    }
+
+    const ancestorIds = findAncestorSpecIds(state.tree.specs, selectedSpecId);
+
+    if (ancestorIds.length === 0) {
+      return;
+    }
+
+    setExpandedSpecIds((currentIds) => {
+      const nextIds = new Set(currentIds);
+
+      ancestorIds.forEach((id) => {
+        nextIds.add(id);
+      });
+
+      return nextIds;
+    });
+  }, [selectedSpecId, state]);
+
+  const toggleSpecExpanded = (specId: string): void => {
+    setExpandedSpecIds((currentIds) => {
+      const nextIds = new Set(currentIds);
+
+      if (nextIds.has(specId)) {
+        nextIds.delete(specId);
+        return nextIds;
+      }
+
+      nextIds.add(specId);
+      return nextIds;
+    });
+  };
+
   if (state.status === "idle") {
     return (
       <EmptyState
@@ -105,8 +145,10 @@ export function SpecTree({
             key={node.id}
             node={node}
             depth={0}
+            expandedSpecIds={expandedSpecIds}
             selectedSpecId={selectedSpecId}
             onSelectSpec={onSelectSpec}
+            onToggleExpanded={toggleSpecExpanded}
           />
         ))}
       </ul>
@@ -117,59 +159,124 @@ export function SpecTree({
 type SpecTreeItemProps = Readonly<{
   node: SpecNode;
   depth: number;
+  expandedSpecIds: ReadonlySet<string>;
   selectedSpecId: string | null;
   onSelectSpec: (specId: string) => void;
+  onToggleExpanded: (specId: string) => void;
 }>;
 
 /** @returns One spec tree row plus any child rows. */
 function SpecTreeItem({
   node,
   depth,
+  expandedSpecIds,
   selectedSpecId,
   onSelectSpec,
+  onToggleExpanded,
 }: SpecTreeItemProps) {
   const isSelected = selectedSpecId === node.id;
+  const hasChildren = node.children.length > 0;
+  const isExpanded = expandedSpecIds.has(node.id);
+  const indentation = BASE_TREE_ITEM_INDENT + depth * TREE_ITEM_INDENT_STEP;
 
   return (
     <li>
-      <button
-        className="spec-tree__item"
-        type="button"
-        role="treeitem"
-        aria-level={depth + 1}
-        aria-selected={isSelected}
-        tabIndex={isSelected || selectedSpecId === null ? 0 : -1}
+      <div
+        className="spec-tree__row"
         style={{
-          paddingInlineStart:
-            BASE_TREE_ITEM_INDENT + depth * TREE_ITEM_INDENT_STEP,
+          paddingInlineStart: indentation,
         }}
-        onClick={() => {
-          onSelectSpec(node.id);
-        }}
-        onKeyDown={handleTreeItemKeyDown}
       >
-        <span>{node.label}</span>
-        <span className="spec-tree__file-count">{node.files.length}</span>
-      </button>
-      {node.children.length === 0 ? null : (
+        {hasChildren ? (
+          <button
+            className="icon-button spec-tree__expand"
+            type="button"
+            aria-label={
+              isExpanded ? `${node.label}を折りたたむ` : `${node.label}を展開`
+            }
+            aria-expanded={isExpanded}
+            title={
+              isExpanded ? `${node.label}を折りたたむ` : `${node.label}を展開`
+            }
+            onClick={() => {
+              onToggleExpanded(node.id);
+            }}
+          >
+            {isExpanded ? (
+              <ChevronDown aria-hidden="true" size={14} />
+            ) : (
+              <ChevronRight aria-hidden="true" size={14} />
+            )}
+          </button>
+        ) : (
+          <span className="spec-tree__expand-spacer" aria-hidden="true" />
+        )}
+        <button
+          className="spec-tree__item"
+          type="button"
+          role="treeitem"
+          aria-level={depth + 1}
+          aria-selected={isSelected}
+          tabIndex={isSelected || selectedSpecId === null ? 0 : -1}
+          onClick={() => {
+            onSelectSpec(node.id);
+          }}
+          onKeyDown={(event) => {
+            handleTreeItemKeyDown(event, {
+              hasChildren,
+              isExpanded,
+              onToggleExpanded: () => {
+                onToggleExpanded(node.id);
+              },
+            });
+          }}
+        >
+          <span>{node.label}</span>
+          <span className="spec-tree__file-count">{node.files.length}</span>
+        </button>
+      </div>
+      {hasChildren && isExpanded ? (
         <ul className="spec-tree__list" role="group">
           {node.children.map((child) => (
             <SpecTreeItem
               key={child.id}
               node={child}
               depth={depth + 1}
+              expandedSpecIds={expandedSpecIds}
               selectedSpecId={selectedSpecId}
               onSelectSpec={onSelectSpec}
+              onToggleExpanded={onToggleExpanded}
             />
           ))}
         </ul>
-      )}
+      ) : null}
     </li>
   );
 }
 
+type TreeItemKeyDownOptions = Readonly<{
+  hasChildren: boolean;
+  isExpanded: boolean;
+  onToggleExpanded: () => void;
+}>;
+
 /** Moves focus between visible tree items for arrow-key navigation. */
-function handleTreeItemKeyDown(event: KeyboardEvent<HTMLButtonElement>): void {
+function handleTreeItemKeyDown(
+  event: KeyboardEvent<HTMLButtonElement>,
+  options: TreeItemKeyDownOptions,
+): void {
+  if (event.key === "ArrowRight" && options.hasChildren && !options.isExpanded) {
+    event.preventDefault();
+    options.onToggleExpanded();
+    return;
+  }
+
+  if (event.key === "ArrowLeft" && options.hasChildren && options.isExpanded) {
+    event.preventDefault();
+    options.onToggleExpanded();
+    return;
+  }
+
   const nextIndex = getNextTreeItemIndex(event);
 
   if (nextIndex === null) {
@@ -278,4 +385,28 @@ function readTreeItemLevel(item: HTMLButtonElement | undefined): number {
   const level = Number(item.getAttribute("aria-level"));
 
   return Number.isFinite(level) ? level : 1;
+}
+
+/** @returns Ancestor spec IDs for the selected node, excluding the selected ID. */
+function findAncestorSpecIds(
+  nodes: readonly SpecNode[],
+  selectedSpecId: string,
+  ancestors: readonly string[] = [],
+): readonly string[] {
+  for (const node of nodes) {
+    if (node.id === selectedSpecId) {
+      return ancestors;
+    }
+
+    const childAncestors = findAncestorSpecIds(node.children, selectedSpecId, [
+      ...ancestors,
+      node.id,
+    ]);
+
+    if (childAncestors.length > 0) {
+      return childAncestors;
+    }
+  }
+
+  return [];
 }
