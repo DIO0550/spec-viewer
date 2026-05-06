@@ -19,6 +19,11 @@ type CreateCommentAnchorDraftOptions = Readonly<{
   fileKey: SpecFileKey;
 }>;
 
+type CreateCommentAnchorDraftFromBlockOptions = Readonly<{
+  block: HTMLElement | null;
+  fileKey: SpecFileKey;
+}>;
+
 const BLOCK_SELECTOR = "[data-block-type][data-block-index]";
 const BACKEND_BLOCK_SELECTOR =
   "[data-block-type][data-block-index][data-comment-block-type][data-text-hash]";
@@ -78,6 +83,44 @@ export function createCommentAnchorDraftFromSelection({
       charRange,
     },
     selectionBounds: createSelectionBounds(range),
+  };
+}
+
+/** @returns A comment anchor draft for an entire rendered Markdown block. */
+export function createCommentAnchorDraftFromBlock({
+  block,
+  fileKey,
+}: CreateCommentAnchorDraftFromBlockOptions): CommentAnchorDraft | null {
+  if (block === null) {
+    return null;
+  }
+
+  const blockMetadata = readBlockMetadata(block);
+
+  if (blockMetadata === null) {
+    return null;
+  }
+
+  const blockText = block.textContent ?? "";
+  const textSnippet = createTextSnippet(blockText);
+
+  if (textSnippet === null) {
+    return null;
+  }
+
+  return {
+    anchor: {
+      fileKey,
+      blockType: blockMetadata.blockType,
+      blockIndex: blockMetadata.blockIndex,
+      textHash: blockMetadata.textHash ?? createTextHash(blockText),
+      textSnippet,
+      charRange: {
+        start: 0,
+        end: blockText.length,
+      },
+    },
+    selectionBounds: createBlockSelectionBounds(block),
   };
 }
 
@@ -292,6 +335,20 @@ function getTextOffsetWithinBlock(
 /** @returns Viewport bounds for placing the comment affordance. */
 function createSelectionBounds(range: Range): CommentSelectionBounds {
   const rect = range.getBoundingClientRect();
+
+  return {
+    top: rect.top,
+    left: rect.left,
+    width: rect.width,
+    height: rect.height,
+  };
+}
+
+/** @returns Viewport bounds for placing a block comment popover. */
+function createBlockSelectionBounds(
+  block: HTMLElement,
+): CommentSelectionBounds {
+  const rect = block.getBoundingClientRect();
 
   return {
     top: rect.top,

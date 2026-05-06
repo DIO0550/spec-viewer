@@ -312,6 +312,9 @@ test("CommentSidebarはコメントなし状態を表示する", () => {
   );
 
   expect(result.container.textContent).toContain("コメントはまだありません");
+  expect(result.container.textContent).toContain(
+    "Markdown本文の行にあるコメントボタンから追加できます",
+  );
   result.unmount();
 });
 

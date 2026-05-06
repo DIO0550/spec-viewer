@@ -559,6 +559,72 @@ test("MarkdownViewerはMarkdown内の選択から追加コメントを保存す�
   result.unmount();
 });
 
+test("MarkdownViewerはMarkdownブロックのコメントボタンから追加コメントを保存する", async () => {
+  const onAddComment = vi.fn().mockResolvedValue(true);
+  const result = renderViewer(
+    createReadyState("A paragraph with block comment affordance."),
+    vi.fn(),
+    onAddComment,
+  );
+  const addButton = result.container.querySelector(
+    ".markdown-block-comment-button",
+  ) as HTMLButtonElement;
+
+  act(() => {
+    addButton.click();
+  });
+
+  expect(result.container.textContent).toContain("コメント追加");
+  expect(result.container.textContent).toContain(
+    "paragraphブロック 1, 文字 0-42",
+  );
+
+  const textarea = result.container.querySelector(
+    "textarea",
+  ) as HTMLTextAreaElement;
+  act(() => {
+    textarea.value = " ブロック全体にコメントします。 ";
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  await act(async () => {
+    (
+      Array.from(result.container.querySelectorAll("button")).find((button) =>
+        button.textContent?.includes("保存"),
+      ) as HTMLButtonElement
+    ).click();
+  });
+
+  expect(onAddComment).toHaveBeenCalledWith({
+    anchor: expect.objectContaining({
+      fileKey: "tasks",
+      blockType: "paragraph",
+      blockIndex: 0,
+      textSnippet: "A paragraph with block comment affordance.",
+      charRange: {
+        start: 0,
+        end: 42,
+      },
+    }),
+    body: "ブロック全体にコメントします。",
+  });
+  result.unmount();
+});
+
+test("MarkdownViewerはコメント追加ボタンをキーボードでフォーカスできる", () => {
+  const result = renderViewer(createReadyState("Focusable paragraph."));
+  const addButton = result.container.querySelector(
+    '[aria-label="コメント追加"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    addButton.focus();
+  });
+
+  expect(document.activeElement).toBe(addButton);
+  result.unmount();
+});
+
 test("MarkdownViewerは空ファイル状態を表示する", () => {
   const result = renderViewer(createReadyState(" \n\t "));
 

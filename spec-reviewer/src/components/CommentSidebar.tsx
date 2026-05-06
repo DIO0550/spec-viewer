@@ -239,7 +239,7 @@ export function CommentSidebar({
         {reviewRunPanel}
         <EmptyState
           title={uiText.sidebar.empty}
-          description={uiText.sidebar.emptyDescription}
+          description={`${uiText.sidebar.emptyDescription} ${uiText.sidebar.addHint}`}
           variant="inline"
         />
       </section>

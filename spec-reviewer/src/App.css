@@ -258,10 +258,9 @@ textarea:disabled {
 
 .app-shell__body {
   display: grid;
-  grid-template-columns: minmax(216px, 268px) minmax(0, 1fr) minmax(
-      224px,
-      292px
-    );
+  grid-template-columns:
+    minmax(216px, 268px) minmax(0, 1fr)
+    var(--comment-sidebar-width, 360px);
   min-height: 0;
   overflow: hidden;
 }
@@ -285,6 +284,39 @@ textarea:disabled {
 .app-shell__comments {
   position: relative;
   border-left: 1px solid var(--color-border);
+}
+
+.app-shell__comments-resize {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -6px;
+  z-index: 4;
+  width: 12px;
+  border: 0;
+  padding: 0;
+  cursor: col-resize;
+  background: transparent;
+}
+
+.app-shell__comments-resize::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 5px;
+  width: 2px;
+  border-radius: 999px;
+  background: transparent;
+  content: "";
+  transition:
+    background-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.app-shell__comments-resize:hover::before,
+.app-shell__comments-resize:focus-visible::before {
+  background: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-focus-glow);
 }
 
 .app-shell__body[data-comments-sidebar="collapsed"] .app-shell__comments {
@@ -1667,8 +1699,59 @@ textarea:disabled {
 }
 
 .markdown-rendered li {
+  position: relative;
   margin: 0.25rem 0;
   overflow-wrap: anywhere;
+}
+
+.markdown-comment-target {
+  position: relative;
+}
+
+.markdown-block-comment-button {
+  position: absolute;
+  top: 0.15rem;
+  left: 0;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  border: 1px solid var(--color-accent-hover);
+  border-radius: 7px;
+  padding: 0 8px;
+  color: var(--color-text-inverse);
+  background: var(--color-accent);
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1;
+  opacity: 0;
+  cursor: pointer;
+  transform: translateX(-10px);
+  transition:
+    opacity 120ms ease,
+    background-color 120ms ease;
+}
+
+.markdown-block-comment-button:hover,
+.markdown-block-comment-button:focus-visible,
+.markdown-comment-target:hover > .markdown-block-comment-button,
+.markdown-comment-target:focus-within > .markdown-block-comment-button,
+.markdown-rendered li:hover > .markdown-block-comment-button,
+.markdown-rendered li:focus-within > .markdown-block-comment-button {
+  opacity: 1;
+}
+
+.markdown-block-comment-button:hover {
+  background: var(--color-accent-hover);
+}
+
+.markdown-block-comment-button--inline {
+  top: 0;
+}
+
+.markdown-block-comment-button--inline::after {
+  content: "コメント追加";
 }
 
 .markdown-rendered input[type="checkbox"] {
@@ -2290,9 +2373,13 @@ textarea:disabled {
     bottom: 0;
     z-index: 14;
     display: block;
-    width: min(340px, calc(100vw - 56px));
+    width: min(var(--comment-sidebar-width, 360px), calc(100vw - 56px));
     border-left: 1px solid var(--color-border);
     box-shadow: var(--shadow-popover);
+  }
+
+  .app-shell__comments-resize {
+    display: none;
   }
 
   .app-shell__body[data-comments-sidebar="collapsed"] .app-shell__comments {
@@ -2352,7 +2439,7 @@ textarea:disabled {
   }
 
   .app-shell__comments {
-    width: min(340px, calc(100vw - 42px));
+    width: min(var(--comment-sidebar-width, 360px), calc(100vw - 42px));
   }
 
   .app-shell__comments-rail {

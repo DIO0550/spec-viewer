@@ -21,6 +21,7 @@ import {
   useReviewRuns,
   type ReviewRunTargetScope,
 } from "./hooks/useReviewRuns";
+import { useResizableSidebar } from "./hooks/useResizableSidebar";
 import { useSidebarPreference } from "./hooks/useSidebarPreference";
 import { useSpecFileWatcher } from "./hooks/useSpecFileWatcher";
 import { useSpecs } from "./hooks/useSpecs";
@@ -107,6 +108,7 @@ function App() {
   const recentWorkspaces = useRecentWorkspaces();
   const theme = useTheme();
   const sidebarPreference = useSidebarPreference();
+  const resizableSidebar = useResizableSidebar();
   const specs = useSpecs({ workspacePath: workspace.workspace?.root ?? null });
   const comments = useComments({
     workspacePath: workspace.workspace?.root ?? null,
@@ -762,6 +764,10 @@ function App() {
         isCommentsSidebarOpen={sidebarPreference.isSidebarOpen}
         onOpenCommentsSidebar={sidebarPreference.openSidebar}
         onCloseCommentsSidebar={sidebarPreference.closeSidebar}
+        commentsSidebarWidth={resizableSidebar.sidebarWidth}
+        commentsSidebarMinWidth={resizableSidebar.minSidebarWidth}
+        commentsSidebarMaxWidth={resizableSidebar.maxSidebarWidth}
+        onCommentsSidebarWidthChange={resizableSidebar.resizeSidebarTo}
         toolbar={
           <WorkspaceToolbar
             workspacePath={workspace.workspacePath}

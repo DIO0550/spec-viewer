@@ -7,6 +7,7 @@ export const uiText = {
     comments: "コメント",
     close: "サイドバーを閉じる",
     reopen: "サイドバーを開く",
+    resize: "サイドバー幅を変更",
     description: "現在のファイルのレビューコメント",
     counts: "コメント件数",
     filters: "コメントフィルター",
@@ -14,6 +15,7 @@ export const uiText = {
     empty: "コメントはまだありません",
     emptyDescription:
       "このファイルの未解決・解決済みコメントがここに表示されます。",
+    addHint: "Markdown本文の行にあるコメントボタンから追加できます。",
     idleTitle: "Specファイルを選択",
     idleDescription:
       "ワークスペース、Spec、ファイルを選択するとコメントが表示されます。",

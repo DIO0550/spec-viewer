@@ -221,6 +221,76 @@ test("AppShellはEscapeで開いているコメントサイドバーを閉じる
   result.unmount();
 });
 
+test("AppShellはドラッグでコメントサイドバー幅を変更する", () => {
+  const onCommentsSidebarWidthChange = vi.fn();
+  const result = renderComponent(
+    <AppShell
+      toolbar={<div>Toolbar</div>}
+      sidebar={<div>Tree</div>}
+      tabs={<div>Tabs</div>}
+      viewer={<div>Viewer</div>}
+      comments={<div>コメント本文</div>}
+      commentsSidebarWidth={360}
+      commentsSidebarMinWidth={280}
+      commentsSidebarMaxWidth={560}
+      onCommentsSidebarWidthChange={onCommentsSidebarWidthChange}
+    />,
+  );
+  const body = result.container.querySelector(
+    ".app-shell__body",
+  ) as HTMLElement;
+  const resizeHandle = result.container.querySelector(
+    '[aria-label="サイドバー幅を変更"]',
+  ) as HTMLButtonElement;
+
+  body.getBoundingClientRect = () =>
+    ({
+      right: 1000,
+    }) as DOMRect;
+
+  act(() => {
+    resizeHandle.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        clientX: 620,
+        pointerId: 1,
+      }),
+    );
+  });
+
+  expect(onCommentsSidebarWidthChange).toHaveBeenCalledWith(380);
+  result.unmount();
+});
+
+test("AppShellはキーボードでコメントサイドバー幅を変更する", () => {
+  const onCommentsSidebarWidthChange = vi.fn();
+  const result = renderComponent(
+    <AppShell
+      toolbar={<div>Toolbar</div>}
+      sidebar={<div>Tree</div>}
+      tabs={<div>Tabs</div>}
+      viewer={<div>Viewer</div>}
+      comments={<div>コメント本文</div>}
+      commentsSidebarWidth={360}
+      commentsSidebarMinWidth={280}
+      commentsSidebarMaxWidth={560}
+      onCommentsSidebarWidthChange={onCommentsSidebarWidthChange}
+    />,
+  );
+  const resizeHandle = result.container.querySelector(
+    '[aria-label="サイドバー幅を変更"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    resizeHandle.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }),
+    );
+  });
+
+  expect(onCommentsSidebarWidthChange).toHaveBeenCalledWith(376);
+  result.unmount();
+});
+
 test("SpecTreeはspec選択イベントを発火する", () => {
   const onSelectSpec = vi.fn();
   const result = renderComponent(
