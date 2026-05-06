@@ -44,6 +44,10 @@ function readStoredLeftNavigationPreference(): boolean {
       leftNavigationPreferenceStorageKey,
     );
 
+    if (storedPreference === null) {
+      return true;
+    }
+
     if (storedPreference === "true") {
       return true;
     }

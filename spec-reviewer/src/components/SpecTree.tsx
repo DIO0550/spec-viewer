@@ -265,7 +265,11 @@ function handleTreeItemKeyDown(
   event: KeyboardEvent<HTMLButtonElement>,
   options: TreeItemKeyDownOptions,
 ): void {
-  if (event.key === "ArrowRight" && options.hasChildren && !options.isExpanded) {
+  if (
+    event.key === "ArrowRight" &&
+    options.hasChildren &&
+    !options.isExpanded
+  ) {
     event.preventDefault();
     options.onToggleExpanded();
     return;

@@ -4,6 +4,8 @@ import { expect, test } from "vitest";
 
 import { useLeftNavigationPreference } from "./useLeftNavigationPreference";
 
+const storageKey = "spec-reviewer.left-navigation-open";
+
 type HookResult<Result> = Readonly<{
   current: Result;
   unmount: () => void;
@@ -31,52 +33,62 @@ function renderHook<Result>(hook: () => Result): HookResult<Result> {
       act(() => {
         root.unmount();
       });
+      container.remove();
     },
   };
 }
 
-test("useLeftNavigationPreferenceは初期状態で左ナビゲーションを閉じる", () => {
-  window.localStorage.clear();
+test("useLeftNavigationPreferenceは保存済み設定がなければ左ナビを開いた状態にする", () => {
+  window.localStorage.removeItem(storageKey);
 
-  const result = renderHook(() => useLeftNavigationPreference());
+  const result = renderHook(useLeftNavigationPreference);
+
+  expect(result.current.isLeftNavigationOpen).toBe(true);
+  result.unmount();
+  window.localStorage.removeItem(storageKey);
+});
+
+test("useLeftNavigationPreferenceは保存済みの閉じた状態を尊重する", () => {
+  window.localStorage.setItem(storageKey, "false");
+
+  const result = renderHook(useLeftNavigationPreference);
 
   expect(result.current.isLeftNavigationOpen).toBe(false);
   result.unmount();
+  window.localStorage.removeItem(storageKey);
 });
 
 test("useLeftNavigationPreferenceは開いた状態を保存して復元する", () => {
-  window.localStorage.clear();
+  window.localStorage.setItem(storageKey, "false");
 
-  const result = renderHook(() => useLeftNavigationPreference());
+  const result = renderHook(useLeftNavigationPreference);
 
   act(() => {
     result.current.openLeftNavigation();
   });
 
   expect(result.current.isLeftNavigationOpen).toBe(true);
-  expect(
-    window.localStorage.getItem("spec-reviewer.left-navigation-open"),
-  ).toBe("true");
+  expect(window.localStorage.getItem(storageKey)).toBe("true");
   result.unmount();
 
-  const restored = renderHook(() => useLeftNavigationPreference());
+  const restored = renderHook(useLeftNavigationPreference);
 
   expect(restored.current.isLeftNavigationOpen).toBe(true);
   restored.unmount();
+  window.localStorage.removeItem(storageKey);
 });
 
 test("useLeftNavigationPreferenceは閉じた状態を保存する", () => {
-  window.localStorage.setItem("spec-reviewer.left-navigation-open", "true");
+  window.localStorage.setItem(storageKey, "true");
 
-  const result = renderHook(() => useLeftNavigationPreference());
+  const result = renderHook(useLeftNavigationPreference);
 
   act(() => {
     result.current.closeLeftNavigation();
   });
 
   expect(result.current.isLeftNavigationOpen).toBe(false);
-  expect(
-    window.localStorage.getItem("spec-reviewer.left-navigation-open"),
-  ).toBe("false");
+  expect(window.localStorage.getItem(storageKey)).toBe("false");
   result.unmount();
+  window.localStorage.removeItem(storageKey);
 });

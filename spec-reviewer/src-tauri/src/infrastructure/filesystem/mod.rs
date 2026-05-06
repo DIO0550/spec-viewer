@@ -33,25 +33,24 @@ impl FilesystemWorkspaceDetector {
         selected_directory: impl AsRef<Path>,
     ) -> Result<WorkspaceLayout, WorkspaceDetectionError> {
         let selected_directory = selected_directory.as_ref();
-        let root = WorkspaceRoot::new(selected_directory.to_string_lossy()).map_err(|source| {
-            WorkspaceDetectionError::InvalidRoot {
-                root: display_path(selected_directory),
-                source,
+        let mut current_directory = Some(selected_directory);
+
+        while let Some(directory) = current_directory {
+            if self
+                .path_checker
+                .directory_exists(directory.join(PLUGIN_WORKSPACE_SPECS_DIR))?
+            {
+                return create_workspace_layout(directory, WorkspaceKind::PluginWorkspace);
             }
-        })?;
 
-        if self
-            .path_checker
-            .directory_exists(selected_directory.join(PLUGIN_WORKSPACE_SPECS_DIR))?
-        {
-            return Ok(WorkspaceLayout::new(root, WorkspaceKind::PluginWorkspace));
-        }
+            if self
+                .path_checker
+                .directory_exists(directory.join(SPEC_SKILL_FEATURES_DIR))?
+            {
+                return create_workspace_layout(directory, WorkspaceKind::SpecSkill);
+            }
 
-        if self
-            .path_checker
-            .directory_exists(selected_directory.join(SPEC_SKILL_FEATURES_DIR))?
-        {
-            return Ok(WorkspaceLayout::new(root, WorkspaceKind::SpecSkill));
+            current_directory = directory.parent();
         }
 
         Err(WorkspaceDetectionError::UnsupportedWorkspace {
@@ -110,6 +109,20 @@ pub enum WorkspaceDetectionError {
 
 fn display_path(path: &Path) -> String {
     path.to_string_lossy().into_owned()
+}
+
+fn create_workspace_layout(
+    root_path: &Path,
+    kind: WorkspaceKind,
+) -> Result<WorkspaceLayout, WorkspaceDetectionError> {
+    let root = WorkspaceRoot::new(root_path.to_string_lossy()).map_err(|source| {
+        WorkspaceDetectionError::InvalidRoot {
+            root: display_path(root_path),
+            source,
+        }
+    })?;
+
+    Ok(WorkspaceLayout::new(root, kind))
 }
 
 pub fn spec_root_path(layout: &WorkspaceLayout) -> PathBuf {
@@ -390,6 +403,22 @@ mod tests {
         let layout = FilesystemWorkspaceDetector::new()
             .detect(workspace.root())
             .expect("plugin workspace should be detected");
+
+        assert_eq!(workspace.root().to_string_lossy(), layout.root().as_str());
+        assert_eq!(WorkspaceKind::PluginWorkspace, layout.kind());
+    }
+
+    #[test]
+    fn detects_plugin_workspace_layout_from_selected_spec_directory() {
+        let workspace = TestWorkspace::new("plugin-workspace-spec-directory");
+        workspace.create_dir(".plugin-workspace/.specs/021-issue-262");
+        let selected_directory = workspace
+            .root()
+            .join(".plugin-workspace/.specs/021-issue-262");
+
+        let layout = FilesystemWorkspaceDetector::new()
+            .detect(selected_directory)
+            .expect("plugin workspace should be detected from a spec directory");
 
         assert_eq!(workspace.root().to_string_lossy(), layout.root().as_str());
         assert_eq!(WorkspaceKind::PluginWorkspace, layout.kind());
