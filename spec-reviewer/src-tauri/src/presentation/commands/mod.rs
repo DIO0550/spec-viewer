@@ -1,6 +1,7 @@
 //! Tauri command handlers and DTOs.
 
 pub mod comments;
+pub mod review_runs;
 pub mod specs;
 pub mod watch;
 pub mod workspace;
@@ -80,6 +81,7 @@ impl From<AppUseCaseError> for CommandError {
             AppUseCaseError::InvalidSpec { .. } => "invalidSpec",
             AppUseCaseError::InvalidComment { .. } => "invalidComment",
             AppUseCaseError::CommentRepository { .. } => "commentRepository",
+            AppUseCaseError::ReviewRunExport { .. } => "reviewRunExport",
         };
 
         Self {

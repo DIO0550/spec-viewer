@@ -30,6 +30,10 @@ import type {
   SpecTree,
 } from "../types/spec";
 import type {
+  CreateReviewRunRequest,
+  CreateReviewRunResponse,
+} from "../types/reviewRun";
+import type {
   StartSpecFileWatchRequest,
   StartSpecFileWatchResponse,
   StopSpecFileWatchResponse,
@@ -193,6 +197,13 @@ export async function generateLlmPrompt(
   return invokeCommand("generate_llm_prompt", request);
 }
 
+/** @returns Metadata for the active review run bundle created by the backend. */
+export async function createReviewRun(
+  request: CreateReviewRunRequest,
+): Promise<CreateReviewRunResponse> {
+  return invokeCommand("create_review_run", request);
+}
+
 export const commentCommands: CommentCommands = {
   listComments,
   addComment,
@@ -273,6 +284,7 @@ function isCommandErrorCode(value: unknown): value is CommandError["code"] {
     value === "invalidSpec" ||
     value === "invalidComment" ||
     value === "commentRepository" ||
+    value === "reviewRunExport" ||
     value === "fileWatch"
   );
 }

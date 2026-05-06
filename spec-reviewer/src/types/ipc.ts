@@ -28,6 +28,7 @@ export type CommandErrorCode =
   | "invalidSpec"
   | "invalidComment"
   | "commentRepository"
+  | "reviewRunExport"
   | "fileWatch";
 
 export type CommandError = Readonly<{
