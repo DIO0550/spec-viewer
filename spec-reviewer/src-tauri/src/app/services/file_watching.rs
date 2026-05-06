@@ -581,7 +581,7 @@ mod tests {
             PathBuf::from("/workspace/spec/tasks.md"),
         )];
         let event = Event::new(EventKind::Modify(ModifyKind::Data(DataChange::Any)))
-            .add_path(PathBuf::from("/workspace/spec/impl.md"));
+            .add_path(PathBuf::from("/workspace/spec/implementation-plan.md"));
 
         assert!(matching_target_kinds(&event, &targets).is_empty());
     }

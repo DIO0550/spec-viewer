@@ -2,8 +2,8 @@
   "schemaVersion": "spec-reviewer.review-comments.v1",
   "comments": [
     {
-      "id": "cmt_requirements_scope",
-      "fileKey": "requirements",
+      "id": "cmt_impl_scope",
+      "fileKey": "impl",
       "body": "認証スコープの説明を追加してください。",
       "status": "open"
     },

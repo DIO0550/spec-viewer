@@ -300,9 +300,9 @@ mod tests {
 
         assert_eq!(
             vec![
-                (SpecFileKey::Exploration, "exploration.md"),
-                (SpecFileKey::Hearing, "hearing.md"),
-                (SpecFileKey::Impl, "impl.md"),
+                (SpecFileKey::Exploration, "exploration-report.md"),
+                (SpecFileKey::Hearing, "hearing-notes.md"),
+                (SpecFileKey::Impl, "implementation-plan.md"),
                 (SpecFileKey::Tasks, "tasks.md"),
             ],
             files
@@ -328,7 +328,7 @@ mod tests {
             .expect("valid config should be loaded");
 
         assert_eq!(
-            Some("exploration.md"),
+            Some("exploration-report.md"),
             config
                 .file_for_key(SpecFileKey::Exploration)
                 .map(WorkspaceFileMapping::file_name)
@@ -403,7 +403,7 @@ mod tests {
             .expect("partial config should be merged with defaults");
 
         assert_eq!(
-            Some("exploration.md"),
+            Some("exploration-report.md"),
             config
                 .file_for_key(SpecFileKey::Exploration)
                 .map(WorkspaceFileMapping::file_name)

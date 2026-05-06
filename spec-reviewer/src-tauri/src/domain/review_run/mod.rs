@@ -483,9 +483,9 @@ mod tests {
     fn source_file() -> UserReviewSourceFile {
         UserReviewSourceFile::new(
             SpecId::new("001-checkout-flow").expect("spec id should be valid"),
-            SpecFileKey::Requirements,
+            SpecFileKey::Impl,
             ReviewRunRelativePath::new(
-                ".plugin-workspace/.specs/001-checkout-flow/requirements.md",
+                ".plugin-workspace/.specs/001-checkout-flow/implementation-plan.md",
             )
             .expect("relative path should be valid"),
         )
@@ -493,12 +493,11 @@ mod tests {
 
     fn active_run() -> UserReviewRun {
         UserReviewRun::restore(
-            UserReviewRunId::new("2026-05-06T120000Z-file-requirements")
-                .expect("id should be valid"),
+            UserReviewRunId::new("2026-05-06T120000Z-file-impl").expect("id should be valid"),
             UserReviewRunStatus::Active,
             UserReviewRunTarget::file(
                 SpecId::new("001-checkout-flow").expect("spec id should be valid"),
-                SpecFileKey::Requirements,
+                SpecFileKey::Impl,
             ),
             UserReviewExecutionTarget::current_workspace(
                 ReviewRunPathValue::new("/workspace/project").expect("path should be valid"),

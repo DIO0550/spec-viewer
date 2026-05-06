@@ -1729,6 +1729,12 @@ mod tests {
                 .join("tasks.md")
         }
 
+        fn impl_file_path(&self) -> PathBuf {
+            self.root
+                .join(".plugin-workspace/.specs/auth")
+                .join("implementation-plan.md")
+        }
+
         fn active_directory(&self) -> PathBuf {
             self.root
                 .join(".plugin-workspace/.specs/auth/user-review/active")
@@ -1745,6 +1751,10 @@ mod tests {
 
         fn write_task_file(&self, contents: &str) {
             fs::write(self.task_file_path(), contents).expect("task file should be written");
+        }
+
+        fn write_impl_file(&self, contents: &str) {
+            fs::write(self.impl_file_path(), contents).expect("impl file should be written");
         }
 
         fn write_comment_file(&self, comment_id: &str) {
@@ -1776,6 +1786,37 @@ mod tests {
                 contents,
             )
             .expect("comment file should be written");
+        }
+
+        fn write_impl_comment_file(&self, comment_id: &str) {
+            let contents = format!(
+                r#"{{
+  "version": 1,
+  "comments": [
+    {{
+      "id": "{comment_id}",
+      "anchor": {{
+        "blockType": "paragraph",
+        "blockIndex": 1,
+        "textHash": "sha256:stale",
+        "textSnippet": "Clarify implementation plan",
+        "charOffset": [0, 27]
+      }},
+      "body": "ここを明確にしてください",
+      "resolved": false,
+      "createdAt": "2026-05-06T12:00:00Z",
+      "updatedAt": "2026-05-06T12:00:00Z"
+    }}
+  ]
+}}"#
+            );
+
+            fs::write(
+                self.root
+                    .join(".plugin-workspace/.specs/auth/.comments/impl.json"),
+                contents,
+            )
+            .expect("impl comment file should be written");
         }
 
         fn read_json(&self, path: &Path) -> Value {
@@ -1830,6 +1871,17 @@ mod tests {
             UserReviewRunTarget::file(
                 SpecId::new("auth").expect("spec id should be valid"),
                 SpecFileKey::Tasks,
+            ),
+            vec![CommentId::new(comment_id).expect("comment id should be valid")],
+            ReviewRunExecutionMode::CurrentWorkspace,
+        )
+    }
+
+    fn create_impl_file_run_input(comment_id: &str) -> CreateReviewRunInput {
+        CreateReviewRunInput::new(
+            UserReviewRunTarget::file(
+                SpecId::new("auth").expect("spec id should be valid"),
+                SpecFileKey::Impl,
             ),
             vec![CommentId::new(comment_id).expect("comment id should be valid")],
             ReviewRunExecutionMode::CurrentWorkspace,
@@ -1899,6 +1951,30 @@ mod tests {
             .expect("instructions should be readable");
         assert!(instructions.contains("編集してはいけません"));
         assert!(instructions.contains("Edit the source Markdown files listed above"));
+    }
+
+    #[test]
+    fn create_review_run_manifest_uses_mapped_impl_source_file_path() {
+        let workspace = TestWorkspace::new("mapped-impl-source");
+        workspace.write_impl_file("# Implementation\n\nClarify implementation plan.\n");
+        workspace.write_impl_comment_file("cmt_impl");
+        let use_cases = FilesystemAppUseCases::default();
+        let loaded_workspace = use_cases
+            .load_workspace(workspace.root_string())
+            .expect("workspace should load");
+
+        let result = use_cases
+            .create_review_run(&loaded_workspace, create_impl_file_run_input("cmt_impl"))
+            .expect("review run should be created");
+        let run_directory = PathBuf::from(result.folder_path());
+
+        assert!(run_directory.join("context/auth/impl.md").is_file());
+        let manifest = workspace.read_json(&run_directory.join("manifest.json"));
+        assert_eq!("impl", manifest["sourceFiles"][0]["fileKey"]);
+        assert_eq!(
+            ".plugin-workspace/.specs/auth/implementation-plan.md",
+            manifest["sourceFiles"][0]["relativePath"]
+        );
     }
 
     #[test]

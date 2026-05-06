@@ -103,11 +103,17 @@ impl WorkspaceConfig {
     }
 
     pub fn plugin_workspace_default() -> Self {
-        Self::from_default_keys(SpecFileKey::default_keys())
+        Self::from_default_keys(
+            SpecFileKey::default_keys(),
+            plugin_workspace_default_file_name,
+        )
     }
 
     pub fn spec_skill_default() -> Self {
-        Self::from_default_keys(SpecFileKey::compatibility_keys())
+        Self::from_default_keys(
+            SpecFileKey::compatibility_keys(),
+            spec_skill_default_file_name,
+        )
     }
 
     pub fn merge_user_config(&self, user_config: Self) -> Self {
@@ -138,13 +144,16 @@ impl WorkspaceConfig {
         self.files.iter().find(|file| file.key() == key)
     }
 
-    fn from_default_keys(keys: &[SpecFileKey]) -> Self {
+    fn from_default_keys(
+        keys: &[SpecFileKey],
+        default_file_name: fn(SpecFileKey) -> &'static str,
+    ) -> Self {
         let files = keys
             .iter()
             .map(|key| {
                 WorkspaceFileMapping::with_source(
                     *key,
-                    default_file_name_for_key(*key),
+                    default_file_name(*key),
                     WorkspaceConfigSource::Default,
                 )
                 .expect("workspace default file names should be valid")
@@ -182,8 +191,26 @@ pub enum WorkspaceConfigError {
     UnsafeFileName { key: SpecFileKey, file_name: String },
 }
 
-fn default_file_name_for_key(key: SpecFileKey) -> String {
-    format!("{}.md", key.as_str())
+fn plugin_workspace_default_file_name(key: SpecFileKey) -> &'static str {
+    match key {
+        SpecFileKey::Exploration => "exploration-report.md",
+        SpecFileKey::Hearing => "hearing-notes.md",
+        SpecFileKey::Impl => "implementation-plan.md",
+        SpecFileKey::Tasks => "tasks.md",
+        SpecFileKey::Requirements => "requirements.md",
+        SpecFileKey::Design => "design.md",
+    }
+}
+
+fn spec_skill_default_file_name(key: SpecFileKey) -> &'static str {
+    match key {
+        SpecFileKey::Requirements => "requirements.md",
+        SpecFileKey::Design => "design.md",
+        SpecFileKey::Tasks => "tasks.md",
+        SpecFileKey::Exploration => "exploration-report.md",
+        SpecFileKey::Hearing => "hearing-notes.md",
+        SpecFileKey::Impl => "implementation-plan.md",
+    }
 }
 
 fn validate_safe_file_name(key: SpecFileKey, file_name: &str) -> Result<(), WorkspaceConfigError> {
@@ -233,9 +260,9 @@ mod tests {
 
         assert_eq!(
             vec![
-                (SpecFileKey::Exploration, "exploration.md"),
-                (SpecFileKey::Hearing, "hearing.md"),
-                (SpecFileKey::Impl, "impl.md"),
+                (SpecFileKey::Exploration, "exploration-report.md"),
+                (SpecFileKey::Hearing, "hearing-notes.md"),
+                (SpecFileKey::Impl, "implementation-plan.md"),
                 (SpecFileKey::Tasks, "tasks.md"),
             ],
             files
@@ -281,9 +308,9 @@ mod tests {
 
         assert_eq!(
             vec![
-                (SpecFileKey::Exploration, "exploration.md"),
+                (SpecFileKey::Exploration, "exploration-report.md"),
                 (SpecFileKey::Hearing, "interview.md"),
-                (SpecFileKey::Impl, "impl.md"),
+                (SpecFileKey::Impl, "implementation-plan.md"),
                 (SpecFileKey::Tasks, "tasks.md"),
                 (SpecFileKey::Design, "design.md"),
             ],
@@ -429,6 +456,6 @@ mod tests {
             .file_for_key(SpecFileKey::Impl)
             .expect("impl mapping should exist");
 
-        assert_eq!("impl.md", file.file_name());
+        assert_eq!("implementation-plan.md", file.file_name());
     }
 }

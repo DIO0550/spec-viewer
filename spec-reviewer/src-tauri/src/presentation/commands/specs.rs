@@ -341,10 +341,12 @@ mod tests {
         let root = SpecNode::new(
             "auth",
             "auth",
-            vec![
-                SpecFile::new(SpecFileKey::Impl, "impl.md", SpecFileStatus::Present)
-                    .expect("file should be valid"),
-            ],
+            vec![SpecFile::new(
+                SpecFileKey::Impl,
+                "implementation-plan.md",
+                SpecFileStatus::Present,
+            )
+            .expect("file should be valid")],
             vec![child],
         )
         .expect("node should be valid");
@@ -356,7 +358,10 @@ mod tests {
         assert_eq!("auth", response.specs()[0].label());
         assert_eq!("impl", response.specs()[0].files()[0].key());
         assert_eq!("Implementation", response.specs()[0].files()[0].label());
-        assert_eq!("impl.md", response.specs()[0].files()[0].file_name());
+        assert_eq!(
+            "implementation-plan.md",
+            response.specs()[0].files()[0].file_name()
+        );
         assert_eq!("present", response.specs()[0].files()[0].status());
         assert_eq!(
             "workspaceConfig",

@@ -441,7 +441,10 @@ mod tests {
         workspace.create_dir(".plugin-workspace/.specs/zeta");
         workspace.create_dir(".plugin-workspace/.specs/auth/code-review");
         workspace.write_file(".plugin-workspace/.specs/auth/tasks.md", "");
-        workspace.write_file(".plugin-workspace/.specs/auth/code-review/impl.md", "");
+        workspace.write_file(
+            ".plugin-workspace/.specs/auth/code-review/implementation-plan.md",
+            "",
+        );
         let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
         let config = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
 
@@ -510,6 +513,49 @@ mod tests {
                 (SpecFileKey::Tasks, SpecFileStatus::Missing),
             ],
             file_statuses(&tree[0])
+        );
+    }
+
+    #[test]
+    fn spec_tree_scanner_loads_spec_driven_dev_plugin_workspace_files_without_config() {
+        let workspace = TestWorkspace::new("spec-driven-dev-files");
+        workspace.create_dir(PLUGIN_WORKSPACE_SPECS_DIR);
+        workspace.create_dir(".plugin-workspace/.specs/021-issue-262/plan-review");
+        workspace.create_dir(".plugin-workspace/.specs/021-issue-262/code-review");
+        workspace.write_file(
+            ".plugin-workspace/.specs/021-issue-262/hearing-notes.md",
+            "",
+        );
+        workspace.write_file(
+            ".plugin-workspace/.specs/021-issue-262/exploration-report.md",
+            "",
+        );
+        workspace.write_file(
+            ".plugin-workspace/.specs/021-issue-262/implementation-plan.md",
+            "",
+        );
+        workspace.write_file(".plugin-workspace/.specs/021-issue-262/tasks.md", "");
+        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
+        let config = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
+
+        let tree = FilesystemSpecTreeScanner::new()
+            .scan(&layout, &config)
+            .expect("spec-driven-dev tree should be scanned");
+
+        let issue = &tree[0];
+        assert_eq!("021-issue-262", issue.id());
+        assert_eq!(
+            vec!["021-issue-262/code-review", "021-issue-262/plan-review"],
+            node_ids(issue.children())
+        );
+        assert_eq!(
+            vec![
+                (SpecFileKey::Exploration, SpecFileStatus::Present),
+                (SpecFileKey::Hearing, SpecFileStatus::Present),
+                (SpecFileKey::Impl, SpecFileStatus::Present),
+                (SpecFileKey::Tasks, SpecFileStatus::Present),
+            ],
+            file_statuses(issue)
         );
     }
 

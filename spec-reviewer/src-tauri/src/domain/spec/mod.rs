@@ -586,11 +586,11 @@ mod tests {
 
     #[test]
     fn spec_file_keeps_key_file_name_label_and_status() {
-        let file = SpecFile::present(SpecFileKey::Exploration, " exploration.md ")
+        let file = SpecFile::present(SpecFileKey::Exploration, " exploration-report.md ")
             .expect("file should be valid");
 
         assert_eq!(SpecFileKey::Exploration, file.key());
-        assert_eq!("exploration.md", file.file_name());
+        assert_eq!("exploration-report.md", file.file_name());
         assert_eq!("Exploration", file.display_label());
         assert_eq!(SpecFileStatus::Present, file.status());
         assert!(!file.is_missing());
@@ -755,8 +755,8 @@ mod tests {
 
     #[test]
     fn spec_node_keeps_tree_compatible_metadata() {
-        let child_file =
-            SpecFile::missing(SpecFileKey::Impl, "impl.md").expect("file should be valid");
+        let child_file = SpecFile::missing(SpecFileKey::Impl, "implementation-plan.md")
+            .expect("file should be valid");
         let child = SpecNode::leaf("auth/code-review", "code-review", vec![child_file])
             .expect("child should be valid");
         let root_file =

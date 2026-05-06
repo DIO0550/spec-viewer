@@ -102,12 +102,12 @@ mod tests {
     fn manifest_serializes_current_workspace_schema() {
         let manifest = ReviewRunManifestDocument {
             schema_version: ReviewRunManifestDocument::schema_version().to_string(),
-            id: "2026-05-06T120000Z-file-requirements".to_string(),
+            id: "2026-05-06T120000Z-file-impl".to_string(),
             status: ReviewRunStatusValue::Active,
             workspace_path: "/workspace/project".to_string(),
             target: ReviewRunTargetDocument::File {
                 spec_id: "001-checkout-flow".to_string(),
-                file_key: "requirements".to_string(),
+                file_key: "impl".to_string(),
             },
             spec_folder_path: "/workspace/project/.plugin-workspace/.specs/001-checkout-flow"
                 .to_string(),
@@ -116,8 +116,8 @@ mod tests {
             },
             source_files: vec![ReviewRunSourceFileDocument {
                 spec_id: "001-checkout-flow".to_string(),
-                file_key: "requirements".to_string(),
-                relative_path: ".plugin-workspace/.specs/001-checkout-flow/requirements.md"
+                file_key: "impl".to_string(),
+                relative_path: ".plugin-workspace/.specs/001-checkout-flow/implementation-plan.md"
                     .to_string(),
             }],
             comment_ids: vec!["comment-1".to_string()],
@@ -263,6 +263,10 @@ mod tests {
             manifest.execution_target
         );
         assert_eq!(2, manifest.source_files.len());
+        assert_eq!(
+            ".plugin-workspace/.specs/001-auth-flow/implementation-plan.md",
+            manifest.source_files[0].relative_path
+        );
         assert_eq!(
             2,
             comments
