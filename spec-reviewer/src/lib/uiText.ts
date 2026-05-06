@@ -100,6 +100,8 @@ export const uiText = {
     loading: "読み込み中",
     opening: "開いています",
     switcher: "ワークスペース",
+    collapseSwitcher: "ワークスペースセクションを折りたたむ",
+    expandSwitcher: "ワークスペースセクションを展開",
     sidebarList: "ワークスペース一覧",
     saved: "保存済みワークスペース",
     currentWorkspace: "現在のワークスペース",

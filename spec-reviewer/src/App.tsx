@@ -31,6 +31,7 @@ import { useSpecs } from "./hooks/useSpecs";
 import { useTheme } from "./hooks/useTheme";
 import { useWorkspace } from "./hooks/useWorkspace";
 import { useWorkspaceDrop } from "./hooks/useWorkspaceDrop";
+import { useWorkspaceSidebarSectionPreference } from "./hooks/useWorkspaceSidebarSectionPreference";
 import type {
   CommentAnchorDisplayState,
   CommentExportOperation,
@@ -113,6 +114,8 @@ function App() {
   const recentWorkspaces = useRecentWorkspaces();
   const theme = useTheme();
   const leftNavigationPreference = useLeftNavigationPreference();
+  const workspaceSidebarSectionPreference =
+    useWorkspaceSidebarSectionPreference();
   const resizableLeftNavigation = useResizableLeftNavigation();
   const sidebarPreference = useSidebarPreference();
   const resizableSidebar = useResizableSidebar();
@@ -848,11 +851,17 @@ function App() {
           <div className="left-navigation-panel">
             <WorkspaceSidebarSection
               currentWorkspacePath={workspace.workspacePath}
+              isOpen={
+                workspaceSidebarSectionPreference.isWorkspaceSidebarSectionOpen
+              }
               isBusy={workspace.isLoading || isBrowsingWorkspace}
               recentWorkspaces={recentWorkspaces.recentWorkspaces}
               onBrowse={() => {
                 void browseWorkspace();
               }}
+              onToggleOpen={
+                workspaceSidebarSectionPreference.toggleWorkspaceSidebarSection
+              }
               onOpenWorkspace={(path) => {
                 void openRecentWorkspacePath(path);
               }}

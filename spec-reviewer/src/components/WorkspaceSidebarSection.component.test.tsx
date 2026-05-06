@@ -34,6 +34,7 @@ test("WorkspaceSidebarSectionは現在のworkspaceと保存済みworkspaceを左
   const result = renderComponent(
     <WorkspaceSidebarSection
       currentWorkspacePath="/workspace"
+      isOpen={true}
       isBusy={false}
       recentWorkspaces={[
         {
@@ -50,6 +51,7 @@ test("WorkspaceSidebarSectionは現在のworkspaceと保存済みworkspaceを左
         },
       ]}
       onBrowse={vi.fn()}
+      onToggleOpen={vi.fn()}
       onOpenWorkspace={vi.fn()}
       onRemoveWorkspace={vi.fn()}
     />,
@@ -66,11 +68,13 @@ test("WorkspaceSidebarSectionは現在のworkspaceと保存済みworkspaceを左
 
 test("WorkspaceSidebarSectionは保存済みworkspace操作を発火する", () => {
   const onBrowse = vi.fn();
+  const onToggleOpen = vi.fn();
   const onOpenWorkspace = vi.fn();
   const onRemoveWorkspace = vi.fn();
   const result = renderComponent(
     <WorkspaceSidebarSection
       currentWorkspacePath="/workspace"
+      isOpen={true}
       isBusy={false}
       recentWorkspaces={[
         {
@@ -81,12 +85,16 @@ test("WorkspaceSidebarSectionは保存済みworkspace操作を発火する", () 
         },
       ]}
       onBrowse={onBrowse}
+      onToggleOpen={onToggleOpen}
       onOpenWorkspace={onOpenWorkspace}
       onRemoveWorkspace={onRemoveWorkspace}
     />,
   );
   const browseButton = result.container.querySelector(
     '[aria-label="ワークスペースフォルダを開く"]',
+  ) as HTMLButtonElement;
+  const toggleButton = result.container.querySelector(
+    '[aria-label="ワークスペースセクションを折りたたむ"]',
   ) as HTMLButtonElement;
   const openButton = result.container.querySelector(
     '[aria-label="spec-reviewerを開く"]',
@@ -96,13 +104,46 @@ test("WorkspaceSidebarSectionは保存済みworkspace操作を発火する", () 
   ) as HTMLButtonElement;
 
   act(() => {
+    toggleButton.click();
     browseButton.click();
     openButton.click();
     removeButton.click();
   });
 
+  expect(onToggleOpen).toHaveBeenCalledOnce();
   expect(onBrowse).toHaveBeenCalledOnce();
   expect(onOpenWorkspace).toHaveBeenCalledWith("/workspace/spec-reviewer");
   expect(onRemoveWorkspace).toHaveBeenCalledWith("/workspace/spec-reviewer");
+  result.unmount();
+});
+
+test("WorkspaceSidebarSectionは折りたたみ時に現在のworkspaceを残して保存済み一覧を隠す", () => {
+  const result = renderComponent(
+    <WorkspaceSidebarSection
+      currentWorkspacePath="/workspace"
+      isOpen={false}
+      isBusy={false}
+      recentWorkspaces={[
+        {
+          path: "/workspace/spec-reviewer",
+          displayName: "spec-reviewer",
+          kind: "plugin-workspace",
+          lastOpenedAt: "2026-05-05T00:00:00.000Z",
+        },
+      ]}
+      onBrowse={vi.fn()}
+      onToggleOpen={vi.fn()}
+      onOpenWorkspace={vi.fn()}
+      onRemoveWorkspace={vi.fn()}
+    />,
+  );
+  const toggleButton = result.container.querySelector(
+    '[aria-label="ワークスペースセクションを展開"]',
+  ) as HTMLButtonElement;
+
+  expect(toggleButton.getAttribute("aria-expanded")).toBe("false");
+  expect(result.container.textContent).toContain("現在のワークスペース");
+  expect(result.container.textContent).toContain("/workspace");
+  expect(result.container.textContent).not.toContain("spec-reviewer");
   result.unmount();
 });

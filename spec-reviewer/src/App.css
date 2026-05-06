@@ -771,6 +771,19 @@ textarea:disabled {
   gap: 10px;
 }
 
+.workspace-sidebar-section__title {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 6px;
+}
+
+.workspace-sidebar-section__toggle {
+  width: 26px;
+  min-width: 26px;
+  height: 26px;
+}
+
 .workspace-sidebar-section h2 {
   margin: 0;
   font-size: 0.9rem;
@@ -804,6 +817,11 @@ textarea:disabled {
   line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.workspace-sidebar-section__content {
+  display: grid;
+  min-width: 0;
 }
 
 .workspace-sidebar-section__list {
