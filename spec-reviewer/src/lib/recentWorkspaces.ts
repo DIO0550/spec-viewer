@@ -1,6 +1,10 @@
+import type { Workspace, WorkspaceKind } from "../types/workspace";
+
 export type RecentWorkspace = Readonly<{
   path: string;
-  openedAt: string;
+  displayName: string;
+  kind: WorkspaceKind;
+  lastOpenedAt: string;
 }>;
 
 export type RecentWorkspaceStorage = Pick<
@@ -9,6 +13,7 @@ export type RecentWorkspaceStorage = Pick<
 >;
 
 const recentWorkspaceStorageKey = "spec-reviewer.recent-workspaces";
+const lastActiveWorkspaceStorageKey = "spec-reviewer.last-active-workspace";
 export const recentWorkspaceLimit = 8;
 
 /** @returns Recent workspaces loaded from browser storage, or an empty list. */
@@ -23,6 +28,62 @@ export function readRecentWorkspaces(
     return parseRecentWorkspaces(storage.getItem(recentWorkspaceStorageKey));
   } catch {
     return [];
+  }
+}
+
+/** @returns The last active workspace path stored in browser storage. */
+export function readLastActiveWorkspacePath(
+  storage: RecentWorkspaceStorage | null = getBrowserStorage(),
+): string | null {
+  if (storage === null) {
+    return null;
+  }
+
+  try {
+    const normalizedPath = normalizeWorkspacePath(
+      storage.getItem(lastActiveWorkspaceStorageKey) ?? "",
+    );
+    return normalizedPath;
+  } catch {
+    return null;
+  }
+}
+
+/** Persists the last active workspace path when browser storage is available. */
+export function writeLastActiveWorkspacePath(
+  path: string,
+  storage: RecentWorkspaceStorage | null = getBrowserStorage(),
+): void {
+  if (storage === null) {
+    return;
+  }
+
+  const normalizedPath = normalizeWorkspacePath(path);
+
+  if (normalizedPath === null) {
+    clearLastActiveWorkspacePath(storage);
+    return;
+  }
+
+  try {
+    storage.setItem(lastActiveWorkspaceStorageKey, normalizedPath);
+  } catch {
+    return;
+  }
+}
+
+/** Removes the persisted last active workspace path. */
+export function clearLastActiveWorkspacePath(
+  storage: RecentWorkspaceStorage | null = getBrowserStorage(),
+): void {
+  if (storage === null) {
+    return;
+  }
+
+  try {
+    storage.removeItem(lastActiveWorkspaceStorageKey);
+  } catch {
+    return;
   }
 }
 
@@ -60,17 +121,22 @@ export function clearStoredRecentWorkspaces(
 /** @returns A recent list with the path moved to the front. */
 export function recordRecentWorkspace(
   workspaces: readonly RecentWorkspace[],
-  path: string,
-  openedAt = new Date().toISOString(),
+  workspace: Workspace,
+  lastOpenedAt = new Date().toISOString(),
 ): readonly RecentWorkspace[] {
-  const normalizedPath = normalizeWorkspacePath(path);
+  const normalizedPath = normalizeWorkspacePath(workspace.root);
 
   if (normalizedPath === null) {
     return workspaces;
   }
 
   return dedupeRecentWorkspaces([
-    { path: normalizedPath, openedAt },
+    {
+      path: normalizedPath,
+      displayName: createWorkspaceDisplayName(normalizedPath),
+      kind: workspace.kind,
+      lastOpenedAt,
+    },
     ...workspaces,
   ]).slice(0, recentWorkspaceLimit);
 }
@@ -129,7 +195,12 @@ function normalizeRecentWorkspace(value: unknown): RecentWorkspace | null {
       return null;
     }
 
-    return { path, openedAt: "" };
+    return {
+      path,
+      displayName: createWorkspaceDisplayName(path),
+      kind: "plugin-workspace",
+      lastOpenedAt: "",
+    };
   }
 
   if (typeof value !== "object" || value === null) {
@@ -146,12 +217,26 @@ function normalizeRecentWorkspace(value: unknown): RecentWorkspace | null {
     return null;
   }
 
-  const openedAt =
+  const displayName =
+    "displayName" in value &&
+    typeof value.displayName === "string" &&
+    value.displayName.trim().length > 0
+      ? value.displayName.trim()
+      : createWorkspaceDisplayName(path);
+  const kind =
+    "kind" in value && isWorkspaceKind(value.kind)
+      ? value.kind
+      : "plugin-workspace";
+  const legacyOpenedAt =
     "openedAt" in value && typeof value.openedAt === "string"
       ? value.openedAt
       : "";
+  const lastOpenedAt =
+    "lastOpenedAt" in value && typeof value.lastOpenedAt === "string"
+      ? value.lastOpenedAt
+      : legacyOpenedAt;
 
-  return { path, openedAt };
+  return { path, displayName, kind, lastOpenedAt };
 }
 
 /** @returns A deduplicated recent workspace list preserving first occurrence. */
@@ -175,11 +260,35 @@ function dedupeRecentWorkspaces(
 
 /** @returns A non-empty trimmed workspace path, or null for blank input. */
 function normalizeWorkspacePath(path: string): string | null {
-  const normalizedPath = path.trim();
+  const trimmedPath = path.trim();
 
-  if (normalizedPath.length === 0) {
+  if (trimmedPath.length === 0) {
     return null;
   }
 
+  const normalizedPath = trimmedPath.replace(/[\\/]+$/, "");
+
+  if (normalizedPath.length === 0) {
+    return trimmedPath;
+  }
+
   return normalizedPath;
+}
+
+/** @returns A readable display name for the workspace path. */
+function createWorkspaceDisplayName(path: string): string {
+  const normalizedPath = path.replace(/[\\/]+$/, "");
+  const pathParts = normalizedPath.split(/[\\/]/);
+  const lastPart = pathParts[pathParts.length - 1];
+
+  if (lastPart !== undefined && lastPart.length > 0) {
+    return lastPart;
+  }
+
+  return path;
+}
+
+/** @returns True when the stored value is a supported workspace kind. */
+function isWorkspaceKind(value: unknown): value is WorkspaceKind {
+  return value === "plugin-workspace" || value === "spec-skill";
 }

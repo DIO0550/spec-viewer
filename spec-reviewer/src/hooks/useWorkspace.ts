@@ -43,6 +43,7 @@ export type UseWorkspaceOptions = Readonly<{
 
 export type LoadWorkspaceOptions = Readonly<{
   preserveCurrentWorkspace?: boolean;
+  onWorkspaceLoaded?: (workspace: Workspace) => void;
 }>;
 
 export type UseWorkspaceResult = Readonly<{
@@ -112,6 +113,7 @@ export function useWorkspace(
           workspace,
           error: null,
         });
+        loadOptions.onWorkspaceLoaded?.(workspace);
         return true;
       } catch (error) {
         if (requestIdRef.current !== requestId) {

@@ -3,8 +3,10 @@ import { expect, test } from "vitest";
 import {
   readRecentWorkspaces,
   recentWorkspaceLimit,
+  readLastActiveWorkspacePath,
   recordRecentWorkspace,
   removeRecentWorkspace,
+  writeLastActiveWorkspacePath,
   writeRecentWorkspaces,
   type RecentWorkspace,
   type RecentWorkspaceStorage,
@@ -28,19 +30,43 @@ class MemoryStorage implements RecentWorkspaceStorage {
 
 test("recordRecentWorkspaceはtrimしたpathを先頭に追加して重複を除く", () => {
   const currentWorkspaces: readonly RecentWorkspace[] = [
-    { path: "/workspace/alpha", openedAt: "2026-05-01T00:00:00.000Z" },
-    { path: "/workspace/beta", openedAt: "2026-05-02T00:00:00.000Z" },
+    {
+      path: "/workspace/alpha",
+      displayName: "alpha",
+      kind: "plugin-workspace",
+      lastOpenedAt: "2026-05-01T00:00:00.000Z",
+    },
+    {
+      path: "/workspace/beta",
+      displayName: "beta",
+      kind: "spec-skill",
+      lastOpenedAt: "2026-05-02T00:00:00.000Z",
+    },
   ];
 
   const nextWorkspaces = recordRecentWorkspace(
     currentWorkspaces,
-    " /workspace/beta ",
+    {
+      root: " /workspace/beta ",
+      kind: "plugin-workspace",
+      files: [],
+    },
     "2026-05-03T00:00:00.000Z",
   );
 
   expect(nextWorkspaces).toEqual([
-    { path: "/workspace/beta", openedAt: "2026-05-03T00:00:00.000Z" },
-    { path: "/workspace/alpha", openedAt: "2026-05-01T00:00:00.000Z" },
+    {
+      path: "/workspace/beta",
+      displayName: "beta",
+      kind: "plugin-workspace",
+      lastOpenedAt: "2026-05-03T00:00:00.000Z",
+    },
+    {
+      path: "/workspace/alpha",
+      displayName: "alpha",
+      kind: "plugin-workspace",
+      lastOpenedAt: "2026-05-01T00:00:00.000Z",
+    },
   ]);
 });
 
@@ -49,13 +75,19 @@ test("recordRecentWorkspaceは最大件数に切り詰める", () => {
     { length: recentWorkspaceLimit },
     (_, index): RecentWorkspace => ({
       path: `/workspace/${index}`,
-      openedAt: `2026-05-0${index}`,
+      displayName: String(index),
+      kind: "plugin-workspace",
+      lastOpenedAt: `2026-05-0${index}`,
     }),
   );
 
   const nextWorkspaces = recordRecentWorkspace(
     currentWorkspaces,
-    "/workspace/new",
+    {
+      root: "/workspace/new",
+      kind: "plugin-workspace",
+      files: [],
+    },
     "2026-05-05T00:00:00.000Z",
   );
 
@@ -68,12 +100,27 @@ test("recordRecentWorkspaceは最大件数に切り詰める", () => {
 
 test("removeRecentWorkspaceは指定pathだけを削除する", () => {
   const currentWorkspaces: readonly RecentWorkspace[] = [
-    { path: "/workspace/alpha", openedAt: "2026-05-01T00:00:00.000Z" },
-    { path: "/workspace/beta", openedAt: "2026-05-02T00:00:00.000Z" },
+    {
+      path: "/workspace/alpha",
+      displayName: "alpha",
+      kind: "plugin-workspace",
+      lastOpenedAt: "2026-05-01T00:00:00.000Z",
+    },
+    {
+      path: "/workspace/beta",
+      displayName: "beta",
+      kind: "plugin-workspace",
+      lastOpenedAt: "2026-05-02T00:00:00.000Z",
+    },
   ];
 
   expect(removeRecentWorkspace(currentWorkspaces, "/workspace/alpha")).toEqual([
-    { path: "/workspace/beta", openedAt: "2026-05-02T00:00:00.000Z" },
+    {
+      path: "/workspace/beta",
+      displayName: "beta",
+      kind: "plugin-workspace",
+      lastOpenedAt: "2026-05-02T00:00:00.000Z",
+    },
   ]);
 });
 
@@ -91,7 +138,12 @@ test("readRecentWorkspacesは保存済み値を正規化して読み込む", () 
   storage.setItem(
     "spec-reviewer.recent-workspaces",
     JSON.stringify([
-      { path: " /workspace/alpha ", openedAt: "2026-05-01T00:00:00.000Z" },
+      {
+        path: " /workspace/alpha ",
+        displayName: "Alpha Workspace",
+        kind: "spec-skill",
+        lastOpenedAt: "2026-05-01T00:00:00.000Z",
+      },
       "/workspace/beta",
       { path: "/workspace/alpha", openedAt: "older" },
       { path: "", openedAt: "ignored" },
@@ -99,18 +151,41 @@ test("readRecentWorkspacesは保存済み値を正規化して読み込む", () 
   );
 
   expect(readRecentWorkspaces(storage)).toEqual([
-    { path: "/workspace/alpha", openedAt: "2026-05-01T00:00:00.000Z" },
-    { path: "/workspace/beta", openedAt: "" },
+    {
+      path: "/workspace/alpha",
+      displayName: "Alpha Workspace",
+      kind: "spec-skill",
+      lastOpenedAt: "2026-05-01T00:00:00.000Z",
+    },
+    {
+      path: "/workspace/beta",
+      displayName: "beta",
+      kind: "plugin-workspace",
+      lastOpenedAt: "",
+    },
   ]);
 });
 
 test("writeRecentWorkspacesはJSONとして保存する", () => {
   const storage = new MemoryStorage();
   const workspaces: readonly RecentWorkspace[] = [
-    { path: "/workspace/alpha", openedAt: "2026-05-01T00:00:00.000Z" },
+    {
+      path: "/workspace/alpha",
+      displayName: "alpha",
+      kind: "plugin-workspace",
+      lastOpenedAt: "2026-05-01T00:00:00.000Z",
+    },
   ];
 
   writeRecentWorkspaces(workspaces, storage);
 
   expect(readRecentWorkspaces(storage)).toEqual(workspaces);
+});
+
+test("last active workspace pathは保存と読み込みでtrimされる", () => {
+  const storage = new MemoryStorage();
+
+  writeLastActiveWorkspacePath(" /workspace/alpha ", storage);
+
+  expect(readLastActiveWorkspacePath(storage)).toBe("/workspace/alpha");
 });

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import "./App.css";
 import type { AddCommentSubmitInput } from "./components/AddCommentPopover";
@@ -95,8 +95,10 @@ type CommentExportState =
 
 const invalidDroppedDirectoryMessage =
   "ワークスペースフォルダをドロップしてください。ファイルはワークスペースとして開けません。";
-const missingRecentWorkspaceMessage =
-  "最近使ったワークスペースが見つかりません。履歴から削除しました。";
+const missingSavedWorkspaceMessage =
+  "ワークスペースが見つかりません。保存済み一覧から削除しました。";
+const unsupportedSavedWorkspaceMessage =
+  "対応していないワークスペースです。保存済み一覧から削除しました。";
 const idleCommentExportState: CommentExportState = {
   status: "idle",
   operation: null,
@@ -142,6 +144,7 @@ function App() {
     useState<WorkspaceRefreshStatus>(idleRefreshStatus);
   const [commentExportState, setCommentExportState] =
     useState<CommentExportState>(idleCommentExportState);
+  const hasAttemptedStartupRestoreRef = useRef(false);
 
   useEffect(() => {
     setActiveCommentId(null);
@@ -182,11 +185,8 @@ function App() {
       setWorkspaceInput(selectedDirectory);
       const isLoaded = await workspace.load(selectedDirectory, {
         preserveCurrentWorkspace: options.preserveCurrentWorkspace,
+        onWorkspaceLoaded: recentWorkspaces.recordWorkspace,
       });
-
-      if (isLoaded) {
-        recentWorkspaces.recordWorkspace(selectedDirectory);
-      }
 
       return isLoaded;
     },
@@ -277,7 +277,8 @@ function App() {
 
         if (!validation.isDirectory) {
           recentWorkspaces.removeWorkspace(selectedDirectory);
-          setDialogErrorMessage(missingRecentWorkspaceMessage);
+          setDialogErrorMessage(missingSavedWorkspaceMessage);
+          setWorkspaceInput(workspace.workspace?.root ?? "");
           return;
         }
 
@@ -287,19 +288,52 @@ function App() {
 
         if (!isLoaded) {
           recentWorkspaces.removeWorkspace(selectedDirectory);
+          setDialogErrorMessage(unsupportedSavedWorkspaceMessage);
+          setWorkspaceInput(workspace.workspace?.root ?? "");
         }
       } catch (error) {
         recentWorkspaces.removeWorkspace(selectedDirectory);
-        setDialogErrorMessage(normalizeCommandError(error).message);
+        setDialogErrorMessage(
+          `${missingSavedWorkspaceMessage} ${normalizeCommandError(error).message}`,
+        );
+        setWorkspaceInput(workspace.workspace?.root ?? "");
       }
     },
     [
       isBrowsingWorkspace,
       loadWorkspacePath,
       recentWorkspaces.removeWorkspace,
+      workspace.workspace?.root,
       workspace.isLoading,
     ],
   );
+
+  useEffect(() => {
+    if (hasAttemptedStartupRestoreRef.current) {
+      return;
+    }
+
+    if (
+      workspace.workspace !== null ||
+      workspace.isLoading ||
+      isBrowsingWorkspace
+    ) {
+      return;
+    }
+
+    if (recentWorkspaces.lastActiveWorkspacePath === null) {
+      return;
+    }
+
+    hasAttemptedStartupRestoreRef.current = true;
+    void openRecentWorkspacePath(recentWorkspaces.lastActiveWorkspacePath);
+  }, [
+    isBrowsingWorkspace,
+    openRecentWorkspacePath,
+    recentWorkspaces.lastActiveWorkspacePath,
+    workspace.isLoading,
+    workspace.workspace,
+  ]);
 
   const workspaceDrop = useWorkspaceDrop({
     isDisabled: workspace.isLoading || isBrowsingWorkspace,

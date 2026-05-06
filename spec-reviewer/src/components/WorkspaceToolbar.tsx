@@ -160,12 +160,13 @@ export function WorkspaceToolbar({
         >
           <summary
             ref={recentSummaryRef}
-            aria-label={uiText.workspace.recent}
+            aria-label={uiText.workspace.switcher}
             title={uiText.workspace.recent}
             aria-disabled={!hasRecentWorkspaces}
             aria-keyshortcuts="Escape"
           >
             <FolderClock aria-hidden="true" size={16} />
+            <span>{uiText.workspace.switcher}</span>
           </summary>
           <div className="workspace-toolbar__recent-menu">
             {hasRecentWorkspaces ? (
@@ -184,11 +185,22 @@ export function WorkspaceToolbar({
                         type="button"
                         disabled={isBusy}
                         title={recentWorkspace.path}
+                        aria-label={`${recentWorkspace.displayName}を開く`}
                         onClick={() => {
                           onOpenRecentWorkspace?.(recentWorkspace.path);
                         }}
                       >
-                        {recentWorkspace.path}
+                        <span className="workspace-toolbar__recent-name">
+                          {recentWorkspace.displayName}
+                          {recentWorkspace.path === workspacePath ? (
+                            <span className="workspace-toolbar__current-badge">
+                              {uiText.workspace.currentWorkspace}
+                            </span>
+                          ) : null}
+                        </span>
+                        <span className="workspace-toolbar__recent-path">
+                          {recentWorkspace.path}
+                        </span>
                       </button>
                       <button
                         className="icon-button"

@@ -55,10 +55,13 @@ test("useWorkspaceは初期状態を未選択として返す", () => {
 
 test("useWorkspaceは選択したworkspaceを読み込み成功状態にする", async () => {
   const loadWorkspace = vi.fn().mockResolvedValue(workspace);
+  const onWorkspaceLoaded = vi.fn();
   const result = renderHook(() => useWorkspace({ loadWorkspace }));
 
   await act(async () => {
-    await result.current.load("/workspace/spec-reviewer");
+    await result.current.load("/workspace/spec-reviewer", {
+      onWorkspaceLoaded,
+    });
   });
 
   expect(result.current.state).toEqual({
@@ -68,6 +71,7 @@ test("useWorkspaceは選択したworkspaceを読み込み成功状態にする",
     error: null,
   });
   expect(loadWorkspace).toHaveBeenCalledWith("/workspace/spec-reviewer");
+  expect(onWorkspaceLoaded).toHaveBeenCalledWith(workspace);
   result.unmount();
 });
 

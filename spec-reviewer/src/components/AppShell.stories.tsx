@@ -289,6 +289,20 @@ function createShellArgs({
         refreshStatus={{ status: "idle", message: null }}
         canRefresh={selectedSpec !== null && selectedFileKey !== null}
         themeMode="system"
+        recentWorkspaces={[
+          {
+            path: workspacePath,
+            displayName: "spec-reviewer",
+            kind: "plugin-workspace",
+            lastOpenedAt: "2026-05-06T00:00:00.000Z",
+          },
+          {
+            path: "/workspace/legacy-spec-skill",
+            displayName: "legacy-spec-skill",
+            kind: "spec-skill",
+            lastOpenedAt: "2026-05-05T00:00:00.000Z",
+          },
+        ]}
         onInputChange={fn()}
         onBrowse={fn()}
         onLoad={fn()}

@@ -63,11 +63,17 @@ export function OpenWorkspaceEmptyState({
                         type="button"
                         disabled={isOpening}
                         title={recentWorkspace.path}
+                        aria-label={`${recentWorkspace.displayName}を開く`}
                         onClick={() => {
                           onOpenRecentWorkspace?.(recentWorkspace.path);
                         }}
                       >
-                        {recentWorkspace.path}
+                        <span className="workspace-toolbar__recent-name">
+                          {recentWorkspace.displayName}
+                        </span>
+                        <span className="workspace-toolbar__recent-path">
+                          {recentWorkspace.path}
+                        </span>
                       </button>
                       <button
                         className="icon-button"

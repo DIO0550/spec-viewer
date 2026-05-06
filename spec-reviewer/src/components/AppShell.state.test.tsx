@@ -535,13 +535,13 @@ test("WorkspaceToolbarはtheme mode変更を発火する", () => {
   result.unmount();
 });
 
-test("WorkspaceToolbarはrecent workspace操作を発火する", () => {
+test("WorkspaceToolbarは保存済みworkspace操作を発火する", () => {
   const onOpenRecentWorkspace = vi.fn();
   const onRemoveRecentWorkspace = vi.fn();
   const onClearRecentWorkspaces = vi.fn();
   const result = renderComponent(
     <WorkspaceToolbar
-      workspacePath={null}
+      workspacePath="/workspace/current"
       inputValue=""
       isLoading={false}
       isBrowsing={false}
@@ -552,7 +552,9 @@ test("WorkspaceToolbarはrecent workspace操作を発火する", () => {
       recentWorkspaces={[
         {
           path: "/workspace/recent",
-          openedAt: "2026-05-05T00:00:00.000Z",
+          displayName: "recent",
+          kind: "plugin-workspace",
+          lastOpenedAt: "2026-05-05T00:00:00.000Z",
         },
       ]}
       onInputChange={vi.fn()}
@@ -570,7 +572,7 @@ test("WorkspaceToolbarはrecent workspace操作を発火する", () => {
     ".workspace-toolbar__recent-item",
   ) as HTMLButtonElement;
   const removeButton = result.container.querySelector(
-    '[aria-label="/workspace/recentを最近使ったワークスペースから削除"]',
+    '[aria-label="/workspace/recentを一覧から削除"]',
   ) as HTMLButtonElement;
   const clearButton = result.container.querySelector(
     ".workspace-toolbar__recent-clear",
@@ -585,10 +587,12 @@ test("WorkspaceToolbarはrecent workspace操作を発火する", () => {
   expect(onOpenRecentWorkspace).toHaveBeenCalledWith("/workspace/recent");
   expect(onRemoveRecentWorkspace).toHaveBeenCalledWith("/workspace/recent");
   expect(onClearRecentWorkspaces).toHaveBeenCalledOnce();
+  expect(recentItem.textContent).toContain("recent");
+  expect(recentItem.textContent).toContain("/workspace/recent");
   result.unmount();
 });
 
-test("WorkspaceToolbarはEscapeでrecent workspaces menuを閉じる", () => {
+test("WorkspaceToolbarはEscapeで保存済みworkspaces menuを閉じる", () => {
   const result = renderComponent(
     <WorkspaceToolbar
       workspacePath={null}
@@ -602,7 +606,9 @@ test("WorkspaceToolbarはEscapeでrecent workspaces menuを閉じる", () => {
       recentWorkspaces={[
         {
           path: "/workspace/recent",
-          openedAt: "2026-05-05T00:00:00.000Z",
+          displayName: "recent",
+          kind: "plugin-workspace",
+          lastOpenedAt: "2026-05-05T00:00:00.000Z",
         },
       ]}
       onInputChange={vi.fn()}

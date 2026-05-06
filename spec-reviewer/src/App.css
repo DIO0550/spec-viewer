@@ -472,14 +472,18 @@ textarea:disabled {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
+  gap: 6px;
+  width: auto;
   min-width: 34px;
   height: 34px;
   border: 1px solid var(--color-border);
   border-radius: 7px;
+  padding: 0 9px;
   color: var(--color-text);
   background: var(--color-control);
   cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 800;
   list-style: none;
 }
 
@@ -529,11 +533,13 @@ textarea:disabled {
 
 .workspace-toolbar__recent-item,
 .open-workspace-actions__recent-item {
+  display: grid;
   overflow: hidden;
+  gap: 2px;
   min-height: 32px;
   border: 1px solid var(--color-border);
   border-radius: 7px;
-  padding: 0 9px;
+  padding: 6px 9px;
   color: var(--color-text);
   background: var(--color-control);
   font: inherit;
@@ -541,8 +547,37 @@ textarea:disabled {
   font-weight: 750;
   line-height: 1.2;
   text-align: left;
+}
+
+.workspace-toolbar__recent-name,
+.workspace-toolbar__recent-path {
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.workspace-toolbar__recent-name {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+}
+
+.workspace-toolbar__recent-path {
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.workspace-toolbar__current-badge {
+  flex: 0 0 auto;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 1px 5px;
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+  font-size: 0.64rem;
+  font-weight: 850;
 }
 
 .workspace-toolbar__recent-item:hover:not(:disabled),
