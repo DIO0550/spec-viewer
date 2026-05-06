@@ -67,3 +67,4 @@ Completed task files are moved here from the active task groups.
 - [P4.9 Error Boundaries And Loading States](./later-phases/p4-09-error-boundaries-and-loading-states.md)
 - [P5.1 LLM Prompt Export](./later-phases/p5-01-llm-prompt-export.md)
 - [P5.2 Apply With AI Placeholder](./later-phases/p5-02-apply-with-ai-placeholder.md)
+- [P5.3 MCP Feedback Path](./later-phases/p5-03-mcp-feedback-path.md)

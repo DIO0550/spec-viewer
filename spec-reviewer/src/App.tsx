@@ -23,11 +23,13 @@ import { useWorkspace } from "./hooks/useWorkspace";
 import { useWorkspaceDrop } from "./hooks/useWorkspaceDrop";
 import type {
   CommentAnchorDisplayState,
+  CommentExportOperation,
   CommentExportScope,
   CommentId,
   ExportCommentsResponse,
   ExportCommentsTarget,
   GenerateLlmPromptResponse,
+  SpecSkillMcpFeedbackPayload,
 } from "./types/comment";
 import type { SpecFileKey } from "./types/spec";
 import {
@@ -38,6 +40,10 @@ import {
   selectWorkspaceDirectory,
   validateWorkspaceDirectory,
 } from "./lib/tauri";
+import {
+  createSpecSkillMcpFeedbackDryRunPayload,
+  renderSpecSkillMcpFeedbackDryRunPayload,
+} from "./lib/mcpFeedback";
 
 const idleRefreshStatus: WorkspaceRefreshStatus = {
   status: "idle",
@@ -65,17 +71,17 @@ type CommentExportState =
     }>
   | Readonly<{
       status: "saving";
-      operation: CommentExportScope;
+      operation: CommentExportOperation;
       message: string;
     }>
   | Readonly<{
       status: "success";
-      operation: CommentExportScope;
+      operation: CommentExportOperation;
       message: string;
     }>
   | Readonly<{
       status: "error";
-      operation: CommentExportScope;
+      operation: CommentExportOperation;
       message: string;
     }>;
 
@@ -467,6 +473,53 @@ function App() {
     [runLlmPromptCopy, specs.selectedFileKey, specs.selectedSpecId],
   );
 
+  const copyMcpFeedbackPayload = useCallback(async (): Promise<void> => {
+    if (
+      workspace.workspace === null ||
+      specs.selectedSpecId === null ||
+      specs.selectedFileKey === null
+    ) {
+      return;
+    }
+
+    setCommentExportState({
+      status: "saving",
+      operation: "mcpFeedback",
+      message: "Preparing MCP feedback dry-run payload",
+    });
+
+    try {
+      const payload = createSpecSkillMcpFeedbackDryRunPayload({
+        workspacePath: workspace.workspace.root,
+        specId: specs.selectedSpecId,
+        fileKey: specs.selectedFileKey,
+        comments: comments.comments,
+        generatedAt: new Date().toISOString(),
+      });
+
+      await copyTextToClipboard(
+        renderSpecSkillMcpFeedbackDryRunPayload(payload),
+      );
+
+      setCommentExportState({
+        status: "success",
+        operation: "mcpFeedback",
+        message: formatMcpFeedbackCopySuccessMessage(payload),
+      });
+    } catch (error) {
+      setCommentExportState({
+        status: "error",
+        operation: "mcpFeedback",
+        message: normalizeCommandError(error).message,
+      });
+    }
+  }, [
+    comments.comments,
+    specs.selectedFileKey,
+    specs.selectedSpecId,
+    workspace.workspace,
+  ]);
+
   const selectAdjacentFile = useCallback(
     (direction: NavigationDirection): void => {
       const selectedSpec = specs.selectedSpec;
@@ -766,6 +819,9 @@ function App() {
             }}
             onExportComments={exportCommentScope}
             onCopyLlmPrompt={copyLlmPromptScope}
+            onCopyMcpFeedback={() => {
+              void copyMcpFeedbackPayload();
+            }}
           />
         }
       />
@@ -811,6 +867,15 @@ function formatLlmPromptCopySuccessMessage(
   const fileLabel = response.contextFileCount === 1 ? "file" : "files";
 
   return `Copied LLM prompt with ${response.commentCount} ${commentLabel} across ${response.contextFileCount} ${fileLabel}`;
+}
+
+/** @returns A compact success message for copied Spec Skill MCP feedback dry-runs. */
+function formatMcpFeedbackCopySuccessMessage(
+  payload: SpecSkillMcpFeedbackPayload,
+): string {
+  const label = payload.summary.commentCount === 1 ? "comment" : "comments";
+
+  return `Copied dry-run MCP feedback payload for ${payload.summary.commentCount} ${label} to ${payload.interface.toolName}`;
 }
 
 export default App;

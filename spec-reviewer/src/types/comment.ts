@@ -173,6 +173,8 @@ export type ExportCommentsTarget =
 
 export type CommentExportScope = ExportCommentsTarget["scope"];
 
+export type CommentExportOperation = CommentExportScope | "mcpFeedback";
+
 export type ExportCommentsRequest = Readonly<{
   workspacePath: string;
   target: ExportCommentsTarget;
@@ -216,6 +218,46 @@ export type ApplyWithAiPlaceholderState = Readonly<{
   requiresExplicitUserConfirmationBeforeWrite: true;
   markdownWriteSupport: "notConnected";
   explanation: string;
+}>;
+
+export type SpecSkillMcpFeedbackInterface = Readonly<{
+  protocol: "mcp";
+  serverName: "spec-skill";
+  toolName: "spec_skill.feedback.submit";
+  transport: "manual-copy";
+}>;
+
+export type SpecSkillMcpFeedbackComment = Readonly<{
+  id: CommentId;
+  fileKey: SpecFileKey;
+  body: string;
+  status: CommentStatus;
+  resolved: boolean;
+  anchor: CommentAnchor;
+  anchorResolution: CommentAnchorResolution | null;
+  createdAt: IsoDateTimeString;
+  updatedAt: IsoDateTimeString;
+}>;
+
+export type SpecSkillMcpFeedbackPayload = Readonly<{
+  schemaVersion: "spec-reviewer.mcp-feedback.v1";
+  interface: SpecSkillMcpFeedbackInterface;
+  mode: "dryRun";
+  workspacePath: string;
+  target: Extract<ExportCommentsTarget, { scope: "file" }>;
+  generatedAt: IsoDateTimeString;
+  dryRun: Readonly<{
+    callProvider: false;
+    writeMarkdown: false;
+    userVisibleSummary: string;
+  }>;
+  summary: Readonly<{
+    commentCount: number;
+    openCommentCount: number;
+    resolvedCommentCount: number;
+    orphanedCommentCount: number;
+  }>;
+  comments: readonly SpecSkillMcpFeedbackComment[];
 }>;
 
 export type ListCommentsResponse = Readonly<{

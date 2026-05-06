@@ -11,6 +11,7 @@ import type {
   CommentAnchorDisplayState,
   CommentAnchorDisplayStatus,
   CommentDisplayFilter,
+  CommentExportOperation,
   CommentExportScope,
   CommentId,
 } from "../types/comment";
@@ -33,6 +34,7 @@ type Props = Readonly<{
   onReload: () => void;
   onExportComments?: (scope: CommentExportScope) => void;
   onCopyLlmPrompt?: (scope: CommentExportScope) => void;
+  onCopyMcpFeedback?: () => void;
 }>;
 
 type CommentGroups = Readonly<{
@@ -63,7 +65,7 @@ export type CommentExportState =
     }>
   | Readonly<{
       status: "saving" | "success" | "error";
-      operation: CommentExportScope;
+      operation: CommentExportOperation;
       message: string;
     }>;
 
@@ -131,6 +133,7 @@ export function CommentSidebar({
   onReload,
   onExportComments,
   onCopyLlmPrompt,
+  onCopyMcpFeedback,
 }: Props) {
   const [activeFilter, setActiveFilter] =
     useState<CommentDisplayFilter>(defaultDisplayFilter);
@@ -151,6 +154,7 @@ export function CommentSidebar({
           exportState={exportState}
           onFilterChange={setActiveFilter}
           onCopyLlmPrompt={onCopyLlmPrompt}
+          onCopyMcpFeedback={onCopyMcpFeedback}
         />
         <EmptyState
           title="Select a spec file"
@@ -225,6 +229,7 @@ export function CommentSidebar({
           onFilterChange={setActiveFilter}
           onExportComments={onExportComments}
           onCopyLlmPrompt={onCopyLlmPrompt}
+          onCopyMcpFeedback={onCopyMcpFeedback}
         />
         <CommentExportFeedback exportState={exportState} />
         <EmptyState
@@ -272,6 +277,7 @@ export function CommentSidebar({
         onFilterChange={setActiveFilter}
         onExportComments={onExportComments}
         onCopyLlmPrompt={onCopyLlmPrompt}
+        onCopyMcpFeedback={onCopyMcpFeedback}
       />
       <CommentExportFeedback exportState={exportState} />
       <CommentSearchControl
@@ -381,6 +387,7 @@ type HeaderProps = Readonly<{
   onFilterChange: (filter: CommentDisplayFilter) => void;
   onExportComments?: (scope: CommentExportScope) => void;
   onCopyLlmPrompt?: (scope: CommentExportScope) => void;
+  onCopyMcpFeedback?: () => void;
 }>;
 
 /** @returns Sidebar title and total count badges. */
@@ -395,6 +402,7 @@ function CommentSidebarHeader({
   onFilterChange,
   onExportComments,
   onCopyLlmPrompt,
+  onCopyMcpFeedback,
 }: HeaderProps) {
   return (
     <header className="comment-sidebar__header">
@@ -430,11 +438,14 @@ function CommentSidebarHeader({
         </div>
       ) : null}
       {showExportControls &&
-      (onExportComments !== undefined || onCopyLlmPrompt !== undefined) ? (
+      (onExportComments !== undefined ||
+        onCopyLlmPrompt !== undefined ||
+        onCopyMcpFeedback !== undefined) ? (
         <CommentExportControls
           exportState={exportState}
           onExportComments={onExportComments}
           onCopyLlmPrompt={onCopyLlmPrompt}
+          onCopyMcpFeedback={onCopyMcpFeedback}
         />
       ) : null}
     </header>
@@ -445,6 +456,7 @@ type CommentExportControlsProps = Readonly<{
   exportState: CommentExportState;
   onExportComments?: (scope: CommentExportScope) => void;
   onCopyLlmPrompt?: (scope: CommentExportScope) => void;
+  onCopyMcpFeedback?: () => void;
 }>;
 
 const idleCommentExportState: CommentExportState = {
@@ -494,8 +506,11 @@ function CommentExportControls({
   exportState,
   onExportComments,
   onCopyLlmPrompt,
+  onCopyMcpFeedback,
 }: CommentExportControlsProps) {
   const placeholderDescriptionId = useId();
+  const isCopyingMcpFeedback =
+    exportState.status === "saving" && exportState.operation === "mcpFeedback";
 
   return (
     <>
@@ -540,6 +555,18 @@ function CommentExportControls({
                 <span>Prompt {option.label}</span>
               </button>
             ))}
+        {onCopyMcpFeedback === undefined ? null : (
+          <button
+            className="comment-sidebar__export"
+            type="button"
+            aria-label="Copy current file MCP feedback payload"
+            disabled={exportState.status === "saving"}
+            onClick={onCopyMcpFeedback}
+          >
+            <Clipboard aria-hidden="true" size={14} />
+            <span>{isCopyingMcpFeedback ? "Copying" : "MCP Feedback"}</span>
+          </button>
+        )}
         <button
           className="comment-sidebar__export comment-sidebar__export--placeholder"
           type="button"
