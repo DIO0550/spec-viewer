@@ -68,6 +68,7 @@ Completed task files are moved here from the active task groups.
 - [P4.10 Collapsible Sidebar And Japanese UI](./later-phases/p4-10-collapsible-sidebar-and-japanese-ui.md)
 - [P4.11 Resizable Sidebar And Comment Entry UX](./later-phases/p4-11-resizable-sidebar-and-comment-entry-ux.md)
 - [P4.12 Spec-driven-dev File Mapping](./later-phases/p4-12-spec-driven-dev-file-mapping.md)
+- [P4.13 Saved Workspace Switcher](./later-phases/p4-13-saved-workspace-switcher.md)
 - [P5.1 LLM Prompt Export](./later-phases/p5-01-llm-prompt-export.md)
 - [P5.2 Apply With AI Placeholder](./later-phases/p5-02-apply-with-ai-placeholder.md)
 - [P5.3 MCP Feedback Path](./later-phases/p5-03-mcp-feedback-path.md)
