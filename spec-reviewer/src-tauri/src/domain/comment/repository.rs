@@ -30,8 +30,9 @@ impl CommentScope {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub enum CommentStatusFilter {
+    #[default]
     All,
     Open,
     Resolved,
@@ -44,12 +45,6 @@ impl CommentStatusFilter {
             Self::Open => matches!(status, CommentStatus::Open),
             Self::Resolved => matches!(status, CommentStatus::Resolved),
         }
-    }
-}
-
-impl Default for CommentStatusFilter {
-    fn default() -> Self {
-        Self::All
     }
 }
 
