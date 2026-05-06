@@ -2,7 +2,7 @@
 
 use std::{
     collections::{BTreeSet, HashSet},
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 use chrono::{DateTime, Utc};
@@ -19,13 +19,16 @@ use crate::{
             CommentStatus, CommentStatusFilter,
         },
         review_run::{
-            ReviewRunPathValue, ReviewRunRelativePath, UserReviewExecutionTarget, UserReviewRun,
-            UserReviewRunId, UserReviewRunStatus, UserReviewRunTarget, UserReviewSourceFile,
+            ReviewRunBranchName, ReviewRunPathValue, ReviewRunRelativePath,
+            UserReviewExecutionTarget, UserReviewRun, UserReviewRunId, UserReviewRunStatus,
+            UserReviewRunTarget, UserReviewSourceFile,
         },
         spec::{MarkdownBlock, MarkdownBlockSourceRange, SpecFile, SpecFileKey, SpecId, SpecNode},
+        workspace::{WorkspaceLayout, WorkspaceRoot},
     },
     infrastructure::{
         filesystem::safe_relative_spec_path,
+        git::{GitReviewWorktreeError, GitReviewWorktreeService},
         persistence::{
             review_run_paths::{ReviewRunFolderState, ReviewRunPathResolver},
             review_run_schema::{
@@ -108,14 +111,6 @@ impl FilesystemAppUseCases {
         workspace: &LoadWorkspaceResult,
         input: CreateReviewRunInput,
     ) -> Result<CreateReviewRunResult, AppUseCaseError> {
-        if matches!(input.execution_mode(), ReviewRunExecutionMode::Worktree) {
-            return Err(AppUseCaseError::ReviewRunExport {
-                message:
-                    "worktree mode will be enabled by RL.3; use currentWorkspace for this export"
-                        .to_string(),
-            });
-        }
-
         if input.comment_ids().is_empty() {
             return Err(AppUseCaseError::ReviewRunExport {
                 message: "review run requires at least one selected comment".to_string(),
@@ -125,19 +120,9 @@ impl FilesystemAppUseCases {
         let created_at = Utc::now();
         let run_id = create_review_run_id(input.target(), created_at)?;
         let spec_id = input.target().spec_id().clone();
-        let path = ReviewRunPathResolver::new().resolve(
-            workspace.layout(),
-            &spec_id,
-            &run_id,
-            ReviewRunFolderState::Active,
-        )?;
         let files = collect_target_files(self, workspace, input.target())?;
-        let bundle_files =
+        let mut bundle_files =
             collect_bundle_files(self, workspace, &files, input.comment_ids(), created_at)?;
-        let source_files = bundle_files
-            .iter()
-            .map(|file| file.source_file.clone())
-            .collect::<Vec<_>>();
         let included_comment_ids = collect_included_comment_ids(&bundle_files);
         let requested_comment_ids = input
             .comment_ids()
@@ -163,9 +148,54 @@ impl FilesystemAppUseCases {
             });
         }
 
-        let execution_target = UserReviewExecutionTarget::current_workspace(
-            ReviewRunPathValue::new(workspace.layout().root().as_str())?,
-        );
+        let (execution_target, execution_layout) = match input.execution_mode() {
+            ReviewRunExecutionMode::CurrentWorkspace => (
+                UserReviewExecutionTarget::current_workspace(ReviewRunPathValue::new(
+                    workspace.layout().root().as_str(),
+                )?),
+                workspace.layout().clone(),
+            ),
+            ReviewRunExecutionMode::Worktree => {
+                let branch_name = ReviewRunBranchName::for_run(&run_id);
+                let source_paths = bundle_files
+                    .iter()
+                    .map(|file| PathBuf::from(&file.source_path))
+                    .collect::<Vec<_>>();
+                let worktree = GitReviewWorktreeService::new().prepare_worktree(
+                    workspace.layout().root().as_str(),
+                    &source_paths,
+                    &branch_name,
+                )?;
+                let worktree_root = worktree.worktree_path().to_string_lossy().into_owned();
+
+                relocate_bundle_files_to_workspace(
+                    &mut bundle_files,
+                    workspace.layout().root().as_str(),
+                    &worktree_root,
+                )?;
+
+                (
+                    UserReviewExecutionTarget::worktree(
+                        ReviewRunPathValue::new(
+                            worktree.repository_path().to_string_lossy().into_owned(),
+                        )?,
+                        ReviewRunPathValue::new(worktree_root.clone())?,
+                        worktree.branch_name().clone(),
+                    ),
+                    workspace_layout_at_path(workspace.layout(), &worktree_root)?,
+                )
+            }
+        };
+        let path = ReviewRunPathResolver::new().resolve(
+            &execution_layout,
+            &spec_id,
+            &run_id,
+            ReviewRunFolderState::Active,
+        )?;
+        let source_files = bundle_files
+            .iter()
+            .map(|file| file.source_file.clone())
+            .collect::<Vec<_>>();
         let run = UserReviewRun::restore(
             run_id,
             UserReviewRunStatus::Active,
@@ -559,6 +589,35 @@ fn relative_workspace_path(
     ReviewRunRelativePath::new(relative.to_string_lossy()).map_err(AppUseCaseError::from)
 }
 
+fn workspace_layout_at_path(
+    source_layout: &WorkspaceLayout,
+    root_path: &str,
+) -> Result<WorkspaceLayout, AppUseCaseError> {
+    let root =
+        WorkspaceRoot::new(root_path).map_err(|source| AppUseCaseError::ReviewRunExport {
+            message: source.to_string(),
+        })?;
+
+    Ok(WorkspaceLayout::new(root, source_layout.kind()))
+}
+
+fn relocate_bundle_files_to_workspace(
+    files: &mut [ReviewRunBundleFile],
+    current_workspace_path: &str,
+    execution_workspace_path: &str,
+) -> Result<(), AppUseCaseError> {
+    for file in files {
+        let relative_path =
+            relative_workspace_path(current_workspace_path, &file.source_path)?.to_string();
+        file.source_path = Path::new(execution_workspace_path)
+            .join(relative_path)
+            .to_string_lossy()
+            .into_owned();
+    }
+
+    Ok(())
+}
+
 fn context_snapshot_path(
     spec_id: &str,
     file_key: SpecFileKey,
@@ -879,11 +938,20 @@ impl From<crate::infrastructure::persistence::review_run_writer::ReviewRunBundle
     }
 }
 
+impl From<GitReviewWorktreeError> for AppUseCaseError {
+    fn from(source: GitReviewWorktreeError) -> Self {
+        Self::ReviewRunExport {
+            message: source.message(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::{
         env, fs,
         path::{Path, PathBuf},
+        process::Command,
         time::{SystemTime, UNIX_EPOCH},
     };
 
@@ -892,6 +960,7 @@ mod tests {
     use super::*;
     struct TestWorkspace {
         root: PathBuf,
+        worktree_parent: PathBuf,
     }
 
     impl TestWorkspace {
@@ -906,8 +975,17 @@ mod tests {
             ));
             fs::create_dir_all(root.join(".plugin-workspace/.specs/auth/.comments"))
                 .expect("test workspace should be created");
+            let worktree_parent = root.with_file_name(format!(
+                "{}.spec-reviewer-worktrees",
+                root.file_name()
+                    .expect("root should have a name")
+                    .to_string_lossy()
+            ));
 
-            Self { root }
+            Self {
+                root,
+                worktree_parent,
+            }
         }
 
         fn root_path(&self) -> &Path {
@@ -927,6 +1005,10 @@ mod tests {
         fn active_directory(&self) -> PathBuf {
             self.root
                 .join(".plugin-workspace/.specs/auth/user-review/active")
+        }
+
+        fn worktree_parent(&self) -> &Path {
+            &self.worktree_parent
         }
 
         fn write_task_file(&self, contents: &str) {
@@ -969,11 +1051,34 @@ mod tests {
 
             serde_json::from_str(&contents).expect("json should parse")
         }
+
+        fn initialize_git_repo(&self) {
+            self.run_git(["init"]);
+            self.run_git(["config", "user.email", "test@example.com"]);
+            self.run_git(["config", "user.name", "Spec Reviewer Test"]);
+        }
+
+        fn commit_all(&self) {
+            self.run_git(["add", "."]);
+            self.run_git(["commit", "-m", "Initial workspace"]);
+        }
+
+        fn run_git<const N: usize>(&self, arguments: [&str; N]) {
+            let status = Command::new("git")
+                .arg("-C")
+                .arg(&self.root)
+                .args(arguments)
+                .status()
+                .expect("git command should run");
+
+            assert!(status.success(), "git command should succeed");
+        }
     }
 
     impl Drop for TestWorkspace {
         fn drop(&mut self) {
             let _ = fs::remove_dir_all(&self.root);
+            let _ = fs::remove_dir_all(&self.worktree_parent);
         }
     }
 
@@ -985,6 +1090,17 @@ mod tests {
             ),
             vec![CommentId::new(comment_id).expect("comment id should be valid")],
             ReviewRunExecutionMode::CurrentWorkspace,
+        )
+    }
+
+    fn create_worktree_file_run_input(comment_id: &str) -> CreateReviewRunInput {
+        CreateReviewRunInput::new(
+            UserReviewRunTarget::file(
+                SpecId::new("auth").expect("spec id should be valid"),
+                SpecFileKey::Tasks,
+            ),
+            vec![CommentId::new(comment_id).expect("comment id should be valid")],
+            ReviewRunExecutionMode::Worktree,
         )
     }
 
@@ -1053,22 +1169,69 @@ mod tests {
     }
 
     #[test]
-    fn create_review_run_rejects_worktree_mode_before_writing_bundle() {
+    fn create_review_run_writes_worktree_bundle_into_isolated_checkout() {
         let workspace = TestWorkspace::new("worktree-mode");
+        let source_markdown = "# Tasks\n\nClarify checkout task.\n";
+        workspace.write_task_file(source_markdown);
+        workspace.initialize_git_repo();
+        workspace.commit_all();
+        workspace.write_comment_file("cmt_1");
+        let use_cases = FilesystemAppUseCases::default();
+        let loaded_workspace = use_cases
+            .load_workspace(workspace.root_path().to_string_lossy())
+            .expect("workspace should load");
+
+        let result = use_cases
+            .create_review_run(&loaded_workspace, create_worktree_file_run_input("cmt_1"))
+            .expect("worktree review run should be created");
+        let run_directory = PathBuf::from(result.folder_path());
+
+        assert!(run_directory.starts_with(workspace.worktree_parent()));
+        assert!(run_directory.join("manifest.json").is_file());
+        assert!(run_directory.join("instructions.md").is_file());
+        assert!(run_directory.join("context/auth/tasks.md").is_file());
+        assert!(!workspace.active_directory().exists());
+        assert_eq!(
+            source_markdown,
+            fs::read_to_string(workspace.task_file_path()).expect("source should be readable")
+        );
+
+        let manifest = workspace.read_json(&run_directory.join("manifest.json"));
+        assert_eq!("worktree", manifest["executionTarget"]["mode"]);
+        assert_eq!(
+            workspace
+                .root_path()
+                .canonicalize()
+                .expect("workspace root should canonicalize")
+                .to_string_lossy()
+                .as_ref(),
+            manifest["executionTarget"]["repositoryPath"]
+                .as_str()
+                .expect("repository path should be present")
+        );
+        assert!(manifest["executionTarget"]["branchName"]
+            .as_str()
+            .is_some_and(|branch| branch.starts_with("spec-reviewer/")));
+        assert!(manifest["specFolderPath"].as_str().is_some_and(
+            |path| path.starts_with(workspace.worktree_parent().to_string_lossy().as_ref())
+        ));
+
+        let instructions = fs::read_to_string(run_directory.join("instructions.md"))
+            .expect("instructions should be readable");
+        assert!(instructions.contains(&workspace.worktree_parent().to_string_lossy().to_string()));
+        assert!(!instructions.contains(&workspace.task_file_path().to_string_lossy().to_string()));
+    }
+
+    #[test]
+    fn create_review_run_rejects_non_git_worktree_mode_before_writing_bundle() {
+        let workspace = TestWorkspace::new("non-git-worktree-mode");
         workspace.write_task_file("# Tasks\n\nClarify checkout task.\n");
         workspace.write_comment_file("cmt_1");
         let use_cases = FilesystemAppUseCases::default();
         let loaded_workspace = use_cases
             .load_workspace(workspace.root_path().to_string_lossy())
             .expect("workspace should load");
-        let input = CreateReviewRunInput::new(
-            UserReviewRunTarget::file(
-                SpecId::new("auth").expect("spec id should be valid"),
-                SpecFileKey::Tasks,
-            ),
-            vec![CommentId::new("cmt_1").expect("comment id should be valid")],
-            ReviewRunExecutionMode::Worktree,
-        );
+        let input = create_worktree_file_run_input("cmt_1");
 
         let result = use_cases.create_review_run(&loaded_workspace, input);
 
