@@ -118,6 +118,7 @@ function renderReadySidebar(
     onUpdateComment?: (commentId: CommentId, body: string) => void;
     exportState?: CommentExportState;
     onExportComments?: (scope: CommentExportScope) => void;
+    onCopyLlmPrompt?: (scope: CommentExportScope) => void;
   }> = {},
 ): RenderResult {
   return renderComponent(
@@ -155,6 +156,7 @@ function renderReadySidebar(
       onUpdateComment={options.onUpdateComment ?? vi.fn()}
       onReload={vi.fn()}
       onExportComments={options.onExportComments}
+      onCopyLlmPrompt={options.onCopyLlmPrompt}
     />,
   );
 }
@@ -349,6 +351,7 @@ test("CommentSidebarは矢印キーで隣のcomment threadを選択する", () =
 
 test("CommentSidebarはコメントexport操作を発火して状態を表示する", () => {
   const onExportComments = vi.fn();
+  const onCopyLlmPrompt = vi.fn();
   const result = renderReadySidebar({
     exportState: {
       status: "success",
@@ -356,6 +359,7 @@ test("CommentSidebarはコメントexport操作を発火して状態を表示す
       message: "Exported 2 comments to /tmp/tasks-comments.md",
     },
     onExportComments,
+    onCopyLlmPrompt,
   });
   const fileExportButton = result.container.querySelector(
     '[aria-label="Export current file comments"]',
@@ -366,16 +370,21 @@ test("CommentSidebarはコメントexport操作を発火して状態を表示す
   const workspaceExportButton = result.container.querySelector(
     '[aria-label="Export workspace comments"]',
   ) as HTMLButtonElement;
+  const filePromptButton = result.container.querySelector(
+    '[aria-label="Copy file LLM prompt"]',
+  ) as HTMLButtonElement;
 
   act(() => {
     fileExportButton.click();
     specExportButton.click();
     workspaceExportButton.click();
+    filePromptButton.click();
   });
 
   expect(onExportComments).toHaveBeenNthCalledWith(1, "file");
   expect(onExportComments).toHaveBeenNthCalledWith(2, "spec");
   expect(onExportComments).toHaveBeenNthCalledWith(3, "workspace");
+  expect(onCopyLlmPrompt).toHaveBeenCalledWith("file");
   expect(result.container.querySelector('[role="status"]')?.textContent).toBe(
     "Exported 2 comments to /tmp/tasks-comments.md",
   );

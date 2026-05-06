@@ -27,10 +27,12 @@ import type {
   CommentId,
   ExportCommentsResponse,
   ExportCommentsTarget,
+  GenerateLlmPromptResponse,
 } from "./types/comment";
 import type { SpecFileKey } from "./types/spec";
 import {
   exportComments,
+  generateLlmPrompt,
   normalizeCommandError,
   selectCommentExportDestination,
   selectWorkspaceDirectory,
@@ -398,6 +400,73 @@ function App() {
     [runCommentExport, specs.selectedFileKey, specs.selectedSpecId],
   );
 
+  const runLlmPromptCopy = useCallback(
+    async (target: ExportCommentsTarget): Promise<void> => {
+      if (workspace.workspace === null) {
+        return;
+      }
+
+      setCommentExportState({
+        status: "saving",
+        operation: target.scope,
+        message: "Generating LLM prompt",
+      });
+
+      try {
+        const response = await generateLlmPrompt({
+          workspacePath: workspace.workspace.root,
+          target,
+        });
+        await copyTextToClipboard(response.prompt);
+
+        setCommentExportState({
+          status: "success",
+          operation: target.scope,
+          message: formatLlmPromptCopySuccessMessage(response),
+        });
+      } catch (error) {
+        setCommentExportState({
+          status: "error",
+          operation: target.scope,
+          message: normalizeCommandError(error).message,
+        });
+      }
+    },
+    [workspace.workspace],
+  );
+
+  const copyLlmPromptScope = useCallback(
+    (scope: CommentExportScope): void => {
+      if (specs.selectedSpecId === null) {
+        return;
+      }
+
+      if (scope === "workspace") {
+        void runLlmPromptCopy({ scope });
+        return;
+      }
+
+      if (scope === "spec") {
+        void runLlmPromptCopy({
+          scope,
+          specId: specs.selectedSpecId,
+        });
+        return;
+      }
+
+      if (specs.selectedFileKey === null) {
+        return;
+      }
+
+      void runLlmPromptCopy({
+        scope,
+        specId: specs.selectedSpecId,
+        fileKey: specs.selectedFileKey,
+      });
+    },
+    [runLlmPromptCopy, specs.selectedFileKey, specs.selectedSpecId],
+  );
+
   const selectAdjacentFile = useCallback(
     (direction: NavigationDirection): void => {
       const selectedSpec = specs.selectedSpec;
@@ -696,6 +765,7 @@ function App() {
               void comments.reloadComments();
             }}
             onExportComments={exportCommentScope}
+            onCopyLlmPrompt={copyLlmPromptScope}
           />
         }
       />
@@ -722,6 +792,25 @@ function formatCommentExportSuccessMessage(
   const label = response.commentCount === 1 ? "comment" : "comments";
 
   return `Exported ${response.commentCount} ${label} to ${response.destinationPath}`;
+}
+
+/** Copies generated prompt text to the browser clipboard. */
+async function copyTextToClipboard(text: string): Promise<void> {
+  if (navigator.clipboard === undefined) {
+    throw new Error("Clipboard is unavailable in this environment.");
+  }
+
+  await navigator.clipboard.writeText(text);
+}
+
+/** @returns A compact success message for copied LLM prompt bundles. */
+function formatLlmPromptCopySuccessMessage(
+  response: GenerateLlmPromptResponse,
+): string {
+  const commentLabel = response.commentCount === 1 ? "comment" : "comments";
+  const fileLabel = response.contextFileCount === 1 ? "file" : "files";
+
+  return `Copied LLM prompt with ${response.commentCount} ${commentLabel} across ${response.contextFileCount} ${fileLabel}`;
 }
 
 export default App;

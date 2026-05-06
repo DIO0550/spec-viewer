@@ -1,4 +1,4 @@
-import { Download, Search, X } from "lucide-react";
+import { Clipboard, Download, Search, X } from "lucide-react";
 import { useId, useState } from "react";
 
 import type {
@@ -31,6 +31,7 @@ type Props = Readonly<{
   onUpdateComment: (commentId: CommentId, body: string) => void;
   onReload: () => void;
   onExportComments?: (scope: CommentExportScope) => void;
+  onCopyLlmPrompt?: (scope: CommentExportScope) => void;
 }>;
 
 type CommentGroups = Readonly<{
@@ -128,6 +129,7 @@ export function CommentSidebar({
   onUpdateComment,
   onReload,
   onExportComments,
+  onCopyLlmPrompt,
 }: Props) {
   const [activeFilter, setActiveFilter] =
     useState<CommentDisplayFilter>(defaultDisplayFilter);
@@ -147,6 +149,7 @@ export function CommentSidebar({
           showExportControls={false}
           exportState={exportState}
           onFilterChange={setActiveFilter}
+          onCopyLlmPrompt={onCopyLlmPrompt}
         />
         <EmptyState
           title="Select a spec file"
@@ -220,6 +223,7 @@ export function CommentSidebar({
           exportState={exportState}
           onFilterChange={setActiveFilter}
           onExportComments={onExportComments}
+          onCopyLlmPrompt={onCopyLlmPrompt}
         />
         <CommentExportFeedback exportState={exportState} />
         <EmptyState
@@ -266,6 +270,7 @@ export function CommentSidebar({
         exportState={exportState}
         onFilterChange={setActiveFilter}
         onExportComments={onExportComments}
+        onCopyLlmPrompt={onCopyLlmPrompt}
       />
       <CommentExportFeedback exportState={exportState} />
       <CommentSearchControl
@@ -374,6 +379,7 @@ type HeaderProps = Readonly<{
   exportState: CommentExportState;
   onFilterChange: (filter: CommentDisplayFilter) => void;
   onExportComments?: (scope: CommentExportScope) => void;
+  onCopyLlmPrompt?: (scope: CommentExportScope) => void;
 }>;
 
 /** @returns Sidebar title and total count badges. */
@@ -387,6 +393,7 @@ function CommentSidebarHeader({
   exportState,
   onFilterChange,
   onExportComments,
+  onCopyLlmPrompt,
 }: HeaderProps) {
   return (
     <header className="comment-sidebar__header">
@@ -421,10 +428,12 @@ function CommentSidebarHeader({
           ))}
         </div>
       ) : null}
-      {showExportControls && onExportComments !== undefined ? (
+      {showExportControls &&
+      (onExportComments !== undefined || onCopyLlmPrompt !== undefined) ? (
         <CommentExportControls
           exportState={exportState}
           onExportComments={onExportComments}
+          onCopyLlmPrompt={onCopyLlmPrompt}
         />
       ) : null}
     </header>
@@ -433,7 +442,8 @@ function CommentSidebarHeader({
 
 type CommentExportControlsProps = Readonly<{
   exportState: CommentExportState;
-  onExportComments: (scope: CommentExportScope) => void;
+  onExportComments?: (scope: CommentExportScope) => void;
+  onCopyLlmPrompt?: (scope: CommentExportScope) => void;
 }>;
 
 const idleCommentExportState: CommentExportState = {
@@ -468,30 +478,50 @@ const commentExportOptions: readonly Readonly<{
 function CommentExportControls({
   exportState,
   onExportComments,
+  onCopyLlmPrompt,
 }: CommentExportControlsProps) {
   return (
     <div className="comment-sidebar__exports" aria-label="Comment exports">
-      {commentExportOptions.map((option) => {
-        const isSaving =
-          exportState.status === "saving" &&
-          exportState.operation === option.scope;
+      {onExportComments === undefined
+        ? null
+        : commentExportOptions.map((option) => {
+            const isSaving =
+              exportState.status === "saving" &&
+              exportState.operation === option.scope;
 
-        return (
-          <button
-            key={option.scope}
-            className="comment-sidebar__export"
-            type="button"
-            aria-label={option.ariaLabel}
-            disabled={exportState.status === "saving"}
-            onClick={() => {
-              onExportComments(option.scope);
-            }}
-          >
-            <Download aria-hidden="true" size={14} />
-            <span>{isSaving ? "Saving" : option.label}</span>
-          </button>
-        );
-      })}
+            return (
+              <button
+                key={`comments-${option.scope}`}
+                className="comment-sidebar__export"
+                type="button"
+                aria-label={option.ariaLabel}
+                disabled={exportState.status === "saving"}
+                onClick={() => {
+                  onExportComments(option.scope);
+                }}
+              >
+                <Download aria-hidden="true" size={14} />
+                <span>{isSaving ? "Saving" : option.label}</span>
+              </button>
+            );
+          })}
+      {onCopyLlmPrompt === undefined
+        ? null
+        : commentExportOptions.map((option) => (
+            <button
+              key={`prompt-${option.scope}`}
+              className="comment-sidebar__export"
+              type="button"
+              aria-label={`Copy ${option.scope} LLM prompt`}
+              disabled={exportState.status === "saving"}
+              onClick={() => {
+                onCopyLlmPrompt(option.scope);
+              }}
+            >
+              <Clipboard aria-hidden="true" size={14} />
+              <span>Prompt {option.label}</span>
+            </button>
+          ))}
     </div>
   );
 }

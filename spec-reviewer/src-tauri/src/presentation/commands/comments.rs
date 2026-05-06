@@ -8,8 +8,8 @@ use tauri::State;
 
 use crate::{
     app::use_cases::{
-        AnchorResolutionReason, AnchorResolutionStatus, AppUseCaseError, CommentAnchorResolution,
-        CommentAnchorResolutionTarget, ReadSpecFileResult,
+        AnchorResolutionReason, AnchorResolutionStatus, AppMarkdownDocument, AppUseCaseError,
+        CommentAnchorResolution, CommentAnchorResolutionTarget, ReadSpecFileResult,
     },
     domain::{
         comment::{
@@ -74,6 +74,13 @@ pub struct ExportCommentsRequest {
     workspace_path: String,
     target: ExportCommentsTargetRequest,
     destination_path: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GenerateLlmPromptRequest {
+    workspace_path: String,
+    target: ExportCommentsTargetRequest,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -323,6 +330,28 @@ impl DeleteCommentResponse {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GenerateLlmPromptResponse {
+    prompt: String,
+    comment_count: usize,
+    context_file_count: usize,
+}
+
+impl GenerateLlmPromptResponse {
+    pub fn prompt(&self) -> &str {
+        &self.prompt
+    }
+
+    pub fn comment_count(&self) -> usize {
+        self.comment_count
+    }
+
+    pub fn context_file_count(&self) -> usize {
+        self.context_file_count
+    }
+}
+
 #[tauri::command]
 pub fn list_comments(
     state: State<'_, CommandState>,
@@ -446,6 +475,20 @@ pub fn export_comments(
         format: export.format.as_str().to_string(),
         comment_count: export.comment_count,
     })
+}
+
+#[tauri::command]
+pub fn generate_llm_prompt(
+    state: State<'_, CommandState>,
+    request: GenerateLlmPromptRequest,
+) -> CommandResult<GenerateLlmPromptResponse> {
+    let workspace = state
+        .use_cases()
+        .load_workspace(&request.workspace_path)
+        .map_err(CommandError::from)?;
+    let generated_at = Utc::now();
+
+    build_llm_prompt(state.use_cases(), &workspace, &request, generated_at)
 }
 
 impl From<Vec<CommentAnchorResolution>> for ListCommentsResponse {
@@ -589,6 +632,55 @@ struct ExportedCommentFile {
     file_key: SpecFileKey,
     file_label: String,
     comments: Vec<CommentResponse>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct LlmPromptFile {
+    spec_id: String,
+    spec_label: String,
+    file_key: SpecFileKey,
+    file_label: String,
+    markdown_path: String,
+    markdown_contents: Option<String>,
+    unresolved_comments: Vec<CommentResponse>,
+    orphaned_comments: Vec<CommentResponse>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct PromptMarkdownDocument {
+    path: String,
+    contents: Option<String>,
+    blocks: Vec<MarkdownBlock>,
+}
+
+impl PromptMarkdownDocument {
+    fn from_found(document: AppMarkdownDocument) -> Self {
+        Self {
+            path: document.path().to_string(),
+            contents: Some(document.contents().to_string()),
+            blocks: document.blocks().to_vec(),
+        }
+    }
+
+    fn from_missing(path: impl Into<String>) -> Self {
+        Self {
+            path: path.into(),
+            contents: None,
+            blocks: Vec::new(),
+        }
+    }
+
+    fn path(&self) -> &str {
+        &self.path
+    }
+
+    fn contents(&self) -> Option<&str> {
+        self.contents.as_deref()
+    }
+
+    fn blocks(&self) -> &[MarkdownBlock] {
+        &self.blocks
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -741,6 +833,60 @@ fn build_comment_export(
     }
 }
 
+fn build_llm_prompt(
+    use_cases: &crate::app::use_cases::FilesystemAppUseCases,
+    workspace: &crate::app::use_cases::LoadWorkspaceResult,
+    request: &GenerateLlmPromptRequest,
+    generated_at: DateTime<Utc>,
+) -> CommandResult<GenerateLlmPromptResponse> {
+    let files = match &request.target {
+        ExportCommentsTargetRequest::File { spec_id, file_key } => {
+            let file_key = parse_file_key(file_key)?;
+            vec![prompt_file(
+                use_cases,
+                workspace,
+                spec_id,
+                spec_id,
+                file_key,
+                file_key.display_label(),
+            )?]
+        }
+        ExportCommentsTargetRequest::Spec { spec_id } => {
+            let specs = use_cases.list_specs(workspace)?.into_specs();
+            let spec = find_spec_node(&specs, spec_id).ok_or_else(|| {
+                CommandError::invalid_request(format!("unknown spec id: {spec_id}"))
+            })?;
+
+            prompt_files_for_spec(use_cases, workspace, spec)?
+        }
+        ExportCommentsTargetRequest::Workspace => {
+            let specs = use_cases.list_specs(workspace)?.into_specs();
+            specs
+                .iter()
+                .flat_map(|spec| collect_spec_nodes(spec).into_iter())
+                .map(|spec| prompt_files_for_spec(use_cases, workspace, spec))
+                .collect::<CommandResult<Vec<_>>>()?
+                .into_iter()
+                .flatten()
+                .collect()
+        }
+    };
+    let comment_count = count_prompt_comments(&files);
+    let prompt = render_llm_prompt(
+        &request.workspace_path,
+        &request.target,
+        generated_at,
+        &files,
+        comment_count,
+    );
+
+    Ok(GenerateLlmPromptResponse {
+        prompt,
+        comment_count,
+        context_file_count: files.len(),
+    })
+}
+
 fn export_comment_files_for_spec(
     use_cases: &crate::app::use_cases::FilesystemAppUseCases,
     workspace: &crate::app::use_cases::LoadWorkspaceResult,
@@ -750,6 +896,26 @@ fn export_comment_files_for_spec(
         .iter()
         .map(|file| {
             export_comment_file(
+                use_cases,
+                workspace,
+                spec.id(),
+                spec.label(),
+                file.key(),
+                file.display_label(),
+            )
+        })
+        .collect()
+}
+
+fn prompt_files_for_spec(
+    use_cases: &crate::app::use_cases::FilesystemAppUseCases,
+    workspace: &crate::app::use_cases::LoadWorkspaceResult,
+    spec: &SpecNode,
+) -> CommandResult<Vec<LlmPromptFile>> {
+    spec.files()
+        .iter()
+        .map(|file| {
+            prompt_file(
                 use_cases,
                 workspace,
                 spec.id(),
@@ -787,6 +953,49 @@ fn export_comment_file(
     })
 }
 
+fn prompt_file(
+    use_cases: &crate::app::use_cases::FilesystemAppUseCases,
+    workspace: &crate::app::use_cases::LoadWorkspaceResult,
+    spec_id: &str,
+    spec_label: &str,
+    file_key: SpecFileKey,
+    file_label: &str,
+) -> CommandResult<LlmPromptFile> {
+    let document = read_current_markdown_document(use_cases, workspace, spec_id, file_key)?;
+    let resolutions = use_cases
+        .comment_use_cases(workspace)
+        .resolve_comment_anchors(
+            spec_id,
+            file_key,
+            CommentStatusFilter::Open,
+            document.blocks(),
+        )?;
+    let mut unresolved_comments = Vec::new();
+    let mut orphaned_comments = Vec::new();
+
+    for resolution in resolutions.resolutions() {
+        let comment = CommentResponse::from(resolution);
+
+        if is_orphaned_comment(&comment) {
+            orphaned_comments.push(comment);
+            continue;
+        }
+
+        unresolved_comments.push(comment);
+    }
+
+    Ok(LlmPromptFile {
+        spec_id: spec_id.to_string(),
+        spec_label: spec_label.to_string(),
+        file_key,
+        file_label: file_label.to_string(),
+        markdown_path: document.path().to_string(),
+        markdown_contents: document.contents().map(str::to_string),
+        unresolved_comments,
+        orphaned_comments,
+    })
+}
+
 fn find_spec_node<'a>(specs: &'a [SpecNode], spec_id: &str) -> Option<&'a SpecNode> {
     specs.iter().find_map(|spec| {
         if spec.id() == spec_id {
@@ -813,6 +1022,178 @@ fn collect_spec_nodes(spec: &SpecNode) -> Vec<&SpecNode> {
 
 fn count_exported_comments(files: &[ExportedCommentFile]) -> usize {
     files.iter().map(|file| file.comments.len()).sum()
+}
+
+fn count_prompt_comments(files: &[LlmPromptFile]) -> usize {
+    files
+        .iter()
+        .map(|file| file.unresolved_comments.len() + file.orphaned_comments.len())
+        .sum()
+}
+
+fn render_llm_prompt(
+    workspace_path: &str,
+    target: &ExportCommentsTargetRequest,
+    generated_at: DateTime<Utc>,
+    files: &[LlmPromptFile],
+    comment_count: usize,
+) -> String {
+    let mut output = String::new();
+    output.push_str("# Spec Review LLM Prompt\n\n");
+    output.push_str("You are helping review a Markdown specification. Use the Markdown context and unresolved comments below to propose concrete edits, answer open questions, and call out risks. Treat orphaned comments separately because their original anchor no longer resolves cleanly.\n\n");
+    output.push_str("## Export Metadata\n\n");
+    output.push_str(&format!("- Workspace: `{workspace_path}`\n"));
+    output.push_str(&format!("- Scope: `{}`\n", format_prompt_target(target)));
+    output.push_str(&format!("- Generated: `{}`\n", generated_at.to_rfc3339()));
+    output.push_str(&format!("- Context files: `{}`\n", files.len()));
+    output.push_str(&format!("- Unresolved comments: `{comment_count}`\n\n"));
+    render_prompt_context(&mut output, files);
+    render_prompt_comment_section(
+        &mut output,
+        "Unresolved Anchored Comments",
+        files,
+        PromptCommentKind::Anchored,
+    );
+    render_prompt_comment_section(
+        &mut output,
+        "Orphaned Comments",
+        files,
+        PromptCommentKind::Orphaned,
+    );
+
+    output
+}
+
+fn render_prompt_context(output: &mut String, files: &[LlmPromptFile]) {
+    output.push_str("## Markdown Context\n\n");
+
+    if files.is_empty() {
+        output.push_str("No Markdown files were found for this prompt target.\n\n");
+        return;
+    }
+
+    for file in files {
+        output.push_str(&format!(
+            "### {} / {} (`{}`)\n\n",
+            file.spec_label,
+            file.file_label,
+            file.file_key.as_str()
+        ));
+        output.push_str(&format!("- Spec id: `{}`\n", file.spec_id));
+        output.push_str(&format!("- Path: `{}`\n\n", file.markdown_path));
+
+        match &file.markdown_contents {
+            Some(contents) if !contents.trim().is_empty() => {
+                output.push_str("````markdown\n");
+                output.push_str(contents.trim());
+                output.push_str("\n````\n\n");
+            }
+            Some(_) => output.push_str("_This Markdown file is empty._\n\n"),
+            None => output.push_str("_This Markdown file is missing._\n\n"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PromptCommentKind {
+    Anchored,
+    Orphaned,
+}
+
+fn render_prompt_comment_section(
+    output: &mut String,
+    title: &str,
+    files: &[LlmPromptFile],
+    kind: PromptCommentKind,
+) {
+    output.push_str(&format!("## {title}\n\n"));
+    let mut has_comments = false;
+
+    for file in files {
+        let comments = match kind {
+            PromptCommentKind::Anchored => &file.unresolved_comments,
+            PromptCommentKind::Orphaned => &file.orphaned_comments,
+        };
+
+        if comments.is_empty() {
+            continue;
+        }
+
+        has_comments = true;
+        output.push_str(&format!(
+            "### {} / {} (`{}`)\n\n",
+            file.spec_label,
+            file.file_label,
+            file.file_key.as_str()
+        ));
+
+        for comment in comments {
+            output.push_str(&render_prompt_comment(comment, &file.spec_id));
+        }
+    }
+
+    if !has_comments {
+        output.push_str("No comments in this section.\n\n");
+    }
+}
+
+fn render_prompt_comment(comment: &CommentResponse, spec_id: &str) -> String {
+    let mut output = String::new();
+    output.push_str(&format!("#### {}\n\n", comment.id));
+    output.push_str(&format!("- Spec: `{spec_id}`\n"));
+    output.push_str(&format!("- File: `{}`\n", comment.anchor.file_key));
+    output.push_str(&format!(
+        "- Anchor: `{}` block `{}` range `{}..{}`\n",
+        comment.anchor.block_type,
+        comment.anchor.block_index,
+        comment.anchor.char_range.start,
+        comment.anchor.char_range.end
+    ));
+    output.push_str(&format!(
+        "- Anchor resolution: `{}`\n",
+        format_anchor_state(comment.anchor_resolution.as_ref())
+    ));
+
+    if let Some(target) = comment
+        .anchor_resolution
+        .as_ref()
+        .and_then(CommentAnchorResolutionResponse::target)
+    {
+        output.push_str(&format!(
+            "- Resolved target: `{}` block `{}` score `{}`\n",
+            target.block_type(),
+            target.block_index(),
+            target.score()
+        ));
+        output.push_str("- Resolved target snippet:\n\n");
+        output.push_str(&format_blockquote(target.text_snippet()));
+        output.push('\n');
+    }
+
+    output.push_str("- Original anchor snippet:\n\n");
+    output.push_str(&format_blockquote(&comment.anchor.text_snippet));
+    output.push_str("\n- Comment:\n\n");
+    output.push_str(comment.body.trim());
+    output.push_str("\n\n");
+
+    output
+}
+
+fn format_prompt_target(target: &ExportCommentsTargetRequest) -> String {
+    match target {
+        ExportCommentsTargetRequest::File { spec_id, file_key } => {
+            format!("file / {spec_id} / {file_key}")
+        }
+        ExportCommentsTargetRequest::Spec { spec_id } => format!("spec / {spec_id}"),
+        ExportCommentsTargetRequest::Workspace => "workspace".to_string(),
+    }
+}
+
+fn is_orphaned_comment(comment: &CommentResponse) -> bool {
+    comment
+        .anchor_resolution
+        .as_ref()
+        .is_some_and(|resolution| resolution.status() == "orphaned")
 }
 
 fn render_markdown_comment_export(
@@ -979,6 +1360,24 @@ fn write_export_file(path: &str, contents: &str) -> CommandResult<()> {
             message: format!("failed to write comment export {path}: {source}"),
         })
     })
+}
+
+fn read_current_markdown_document(
+    use_cases: &crate::app::use_cases::FilesystemAppUseCases,
+    workspace: &crate::app::use_cases::LoadWorkspaceResult,
+    spec_id: &str,
+    file_key: SpecFileKey,
+) -> CommandResult<PromptMarkdownDocument> {
+    let result = use_cases
+        .read_spec_file(workspace, spec_id, file_key)
+        .map_err(CommandError::from)?;
+
+    match result {
+        ReadSpecFileResult::Found(document) => Ok(PromptMarkdownDocument::from_found(document)),
+        ReadSpecFileResult::Missing(missing) => {
+            Ok(PromptMarkdownDocument::from_missing(missing.path()))
+        }
+    }
 }
 
 fn read_current_markdown_blocks(
@@ -1231,6 +1630,64 @@ mod tests {
             "cmt_json",
             value["specs"][0]["files"][0]["comments"][0]["id"]
         );
+    }
+
+    #[test]
+    fn llm_prompt_includes_markdown_context_and_separates_orphaned_comments() {
+        let anchored_comment = CommentResponse::from(
+            &Comment::new(
+                CommentId::new("cmt_open").expect("id should be valid"),
+                anchor(SpecFileKey::Tasks, BlockType::Paragraph),
+                CommentBody::new("Clarify the acceptance criteria").expect("body should be valid"),
+                timestamp(1),
+                timestamp(1),
+            )
+            .expect("comment should be valid"),
+        );
+        let orphaned_comment = CommentResponse {
+            id: "cmt_orphaned".to_string(),
+            anchor: CommentAnchorResponse::from(&anchor(SpecFileKey::Tasks, BlockType::Paragraph)),
+            body: "Recover this deleted note before asking the LLM.".to_string(),
+            status: "open".to_string(),
+            resolved: false,
+            anchor_resolution: Some(CommentAnchorResolutionResponse {
+                status: "orphaned".to_string(),
+                reason: "deleted_text".to_string(),
+                details: None,
+                target: None,
+            }),
+            created_at: timestamp(1),
+            updated_at: timestamp(1),
+        };
+        let file = LlmPromptFile {
+            spec_id: "review-flow".to_string(),
+            spec_label: "Review Flow".to_string(),
+            file_key: SpecFileKey::Tasks,
+            file_label: "Tasks".to_string(),
+            markdown_path: "/workspace/project/tasks.md".to_string(),
+            markdown_contents: Some("# Tasks\n\n- Ship prompt export".to_string()),
+            unresolved_comments: vec![anchored_comment],
+            orphaned_comments: vec![orphaned_comment],
+        };
+
+        let prompt = render_llm_prompt(
+            "/workspace/project",
+            &ExportCommentsTargetRequest::File {
+                spec_id: "review-flow".to_string(),
+                file_key: "tasks".to_string(),
+            },
+            timestamp(2),
+            &[file],
+            2,
+        );
+
+        assert!(prompt.contains("# Spec Review LLM Prompt"));
+        assert!(prompt.contains("````markdown\n# Tasks\n\n- Ship prompt export\n````"));
+        assert!(prompt.contains("## Unresolved Anchored Comments"));
+        assert!(prompt.contains("#### cmt_open"));
+        assert!(prompt.contains("## Orphaned Comments"));
+        assert!(prompt.contains("#### cmt_orphaned"));
+        assert!(prompt.contains("Anchor resolution: `Orphaned / deleted_text`"));
     }
 
     #[test]

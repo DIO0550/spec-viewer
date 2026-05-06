@@ -179,6 +179,11 @@ export type ExportCommentsRequest = Readonly<{
   destinationPath: string;
 }>;
 
+export type GenerateLlmPromptRequest = Readonly<{
+  workspacePath: string;
+  target: ExportCommentsTarget;
+}>;
+
 export type ListCommentsResponse = Readonly<{
   comments: readonly Comment[];
 }>;
@@ -191,6 +196,12 @@ export type ExportCommentsResponse = Readonly<{
   destinationPath: string;
   format: "markdown" | "json";
   commentCount: number;
+}>;
+
+export type GenerateLlmPromptResponse = Readonly<{
+  prompt: string;
+  commentCount: number;
+  contextFileCount: number;
 }>;
 
 export type CommentCommandPayloads = Readonly<{
@@ -225,5 +236,9 @@ export type CommentCommandPayloads = Readonly<{
   export_comments: Readonly<{
     request: ExportCommentsRequest;
     response: ExportCommentsResponse;
+  }>;
+  generate_llm_prompt: Readonly<{
+    request: GenerateLlmPromptRequest;
+    response: GenerateLlmPromptResponse;
   }>;
 }>;

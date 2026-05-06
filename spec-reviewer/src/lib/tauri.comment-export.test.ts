@@ -2,8 +2,15 @@ import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
 import { expect, test, vi } from "vitest";
 
-import type { ExportCommentsRequest } from "../types/comment";
-import { exportComments, selectCommentExportDestination } from "./tauri";
+import type {
+  ExportCommentsRequest,
+  GenerateLlmPromptRequest,
+} from "../types/comment";
+import {
+  exportComments,
+  generateLlmPrompt,
+  selectCommentExportDestination,
+} from "./tauri";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
@@ -82,6 +89,31 @@ test("exportCommentsはbackend commandへrequestを渡す", async () => {
 
   expect(result).toEqual(response);
   expect(invokeMock).toHaveBeenCalledWith("export_comments", {
+    request,
+  });
+});
+
+test("generateLlmPromptはbackend commandへrequestを渡す", async () => {
+  const request: GenerateLlmPromptRequest = {
+    workspacePath: "/workspace/project",
+    target: {
+      scope: "file",
+      specId: "auth",
+      fileKey: "tasks",
+    },
+  };
+  const response = {
+    prompt: "# Spec Review LLM Prompt",
+    commentCount: 2,
+    contextFileCount: 1,
+  };
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue(response);
+
+  const result = await generateLlmPrompt(request);
+
+  expect(result).toEqual(response);
+  expect(invokeMock).toHaveBeenCalledWith("generate_llm_prompt", {
     request,
   });
 });

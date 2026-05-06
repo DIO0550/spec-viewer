@@ -18,6 +18,8 @@ import type {
   ExportCommentsRequest,
   ExportCommentsResponse,
   ExportCommentsTarget,
+  GenerateLlmPromptRequest,
+  GenerateLlmPromptResponse,
   ListCommentsRequest,
   ListCommentsResponse,
   UpdateCommentRequest,
@@ -182,6 +184,13 @@ export async function exportComments(
   request: ExportCommentsRequest,
 ): Promise<ExportCommentsResponse> {
   return invokeCommand("export_comments", request);
+}
+
+/** @returns A Markdown prompt bundle suitable for copying into an LLM chat. */
+export async function generateLlmPrompt(
+  request: GenerateLlmPromptRequest,
+): Promise<GenerateLlmPromptResponse> {
+  return invokeCommand("generate_llm_prompt", request);
 }
 
 export const commentCommands: CommentCommands = {

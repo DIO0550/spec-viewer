@@ -6,8 +6,8 @@ pub mod presentation;
 
 use presentation::commands::{
     comments::{
-        add_comment, delete_comment, export_comments, list_comments, reopen_comment,
-        resolve_comment, toggle_comment_resolved, update_comment,
+        add_comment, delete_comment, export_comments, generate_llm_prompt, list_comments,
+        reopen_comment, resolve_comment, toggle_comment_resolved, update_comment,
     },
     specs::{list_specs, read_spec_file},
     watch::{start_spec_file_watch, stop_spec_file_watch},
@@ -35,7 +35,8 @@ pub fn run() {
             resolve_comment,
             reopen_comment,
             toggle_comment_resolved,
-            export_comments
+            export_comments,
+            generate_llm_prompt
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
