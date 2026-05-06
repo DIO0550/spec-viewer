@@ -36,16 +36,10 @@ jobs:
             librsvg2-dev \
             libsoup-3.0-dev
 
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
-        with:
-          toolchain: stable
-          components: rustfmt, clippy, llvm-tools-preview
-
-      - name: Cache Rust build
-        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-        with:
-          workspaces: "spec-reviewer/src-tauri -> target"
+      - name: Install Rust components with rustup
+        run: |
+          rustup toolchain install stable --profile minimal --component rustfmt --component clippy --component llvm-tools-preview
+          rustup default stable
 
       - name: cargo fmt
         run: cargo fmt --all -- --check
@@ -54,9 +48,7 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
 
       - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@58e862542551f667fa44c8a2a4a1d64ad477c96a # v2.75.17
-        with:
-          tool: cargo-llvm-cov
+        run: cargo install cargo-llvm-cov --locked
 
       - name: Generate coverage
         if: always()
@@ -113,6 +105,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+      issues: write
       pull-requests: write
     steps:
       - name: Download coverage artifact
@@ -124,7 +117,31 @@ jobs:
 
       - name: Post coverage comment
         continue-on-error: true
-        uses: marocchino/sticky-pull-request-comment@0ea0beb66eb9baf113663a64ec522f60e49231c0 # v3.0.4
-        with:
-          header: backend-coverage
-          path: coverage.md
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMENT_MARKER: "<!-- backend-coverage -->"
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          BODY_FILE=coverage-comment.md
+          {
+            echo "$COMMENT_MARKER"
+            cat coverage.md
+          } > "$BODY_FILE"
+
+          COMMENT_ID="$(
+            gh api "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" \
+              --jq ".[] | select(.body | contains(\"${COMMENT_MARKER}\")) | .id" \
+              | head -n 1
+          )"
+
+          if [ -n "$COMMENT_ID" ]; then
+            gh api \
+              --method PATCH \
+              "repos/${GITHUB_REPOSITORY}/issues/comments/${COMMENT_ID}" \
+              --field body=@"$BODY_FILE"
+          else
+            gh api \
+              --method POST \
+              "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" \
+              --field body=@"$BODY_FILE"
+          fi

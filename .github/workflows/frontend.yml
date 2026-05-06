@@ -26,17 +26,15 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
-        with:
-          version: 10.33.0
-
       - name: Setup Node.js
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: 24
-          cache: pnpm
-          cache-dependency-path: spec-reviewer/pnpm-lock.yaml
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.33.0 --activate
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -67,6 +65,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+      issues: write
       pull-requests: write
     steps:
       - name: Download coverage artifact
@@ -119,7 +118,31 @@ jobs:
 
       - name: Post coverage comment
         continue-on-error: true
-        uses: marocchino/sticky-pull-request-comment@0ea0beb66eb9baf113663a64ec522f60e49231c0 # v3.0.4
-        with:
-          header: frontend-coverage
-          path: coverage.md
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMENT_MARKER: "<!-- frontend-coverage -->"
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          BODY_FILE=coverage-comment.md
+          {
+            echo "$COMMENT_MARKER"
+            cat coverage.md
+          } > "$BODY_FILE"
+
+          COMMENT_ID="$(
+            gh api "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" \
+              --jq ".[] | select(.body | contains(\"${COMMENT_MARKER}\")) | .id" \
+              | head -n 1
+          )"
+
+          if [ -n "$COMMENT_ID" ]; then
+            gh api \
+              --method PATCH \
+              "repos/${GITHUB_REPOSITORY}/issues/comments/${COMMENT_ID}" \
+              --field body=@"$BODY_FILE"
+          else
+            gh api \
+              --method POST \
+              "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" \
+              --field body=@"$BODY_FILE"
+          fi
