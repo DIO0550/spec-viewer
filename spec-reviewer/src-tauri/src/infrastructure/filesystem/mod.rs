@@ -735,6 +735,22 @@ mod tests {
     }
 
     #[test]
+    fn detects_claude_plugin_workspace_layout_from_selected_plugin_workspace_directory() {
+        let workspace = TestWorkspace::new("selected-claude-plugin-workspace");
+        workspace
+            .create_dir(".claude/worktrees/doccom-be/.plugin-workspace/.specs/019-be-doc-comments");
+        let worktree_root = workspace.root().join(".claude/worktrees/doccom-be");
+        let selected_directory = worktree_root.join(".plugin-workspace");
+
+        let layout = FilesystemWorkspaceDetector::new()
+            .detect(selected_directory)
+            .expect("plugin workspace directory should resolve to its worktree root");
+
+        assert_eq!(worktree_root.to_string_lossy(), layout.root().as_str());
+        assert_eq!(WorkspaceKind::PluginWorkspace, layout.kind());
+    }
+
+    #[test]
     fn detects_spec_skill_workspace_layout() {
         let workspace = TestWorkspace::new("spec-skill");
         workspace.create_dir(SPEC_SKILL_FEATURES_DIR);
