@@ -16,10 +16,13 @@ use crate::domain::{
 use crate::infrastructure::persistence::config::{ConfigLoadError, WorkspaceConfigLoader};
 
 const PLUGIN_WORKSPACE_SPECS_DIR: &str = ".plugin-workspace/.specs";
+const PLUGIN_WORKSPACE_DIRECTORY: &str = ".plugin-workspace";
 const PLUGIN_WORKTREE_DIRECTORY: &str = ".plugin-worktree";
 const PLUGIN_WORKTREE_SPECS_DIR: &str = ".specs";
 const CLAUDE_WORKTREES_DIR: &str = ".claude/worktrees";
 const SPEC_SKILL_FEATURES_DIR: &str = ".spec-skill/features";
+const CLAUDE_WORKTREE_SPEC_CONTAINERS: [&str; 2] =
+    [PLUGIN_WORKTREE_DIRECTORY, PLUGIN_WORKSPACE_DIRECTORY];
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct FilesystemWorkspaceDetector {
@@ -81,7 +84,7 @@ impl FilesystemWorkspaceDetector {
             if self
                 .path_checker
                 .directory_exists(workspace_root.join(CLAUDE_WORKTREES_DIR))?
-                && has_plugin_worktree_specs(&workspace_root)?
+                && has_claude_worktree_specs(&workspace_root)?
             {
                 return Ok(Some(workspace_root));
             }
@@ -314,22 +317,22 @@ fn collect_claude_worktree_scan_roots(
         }
 
         let worktree_name = entry.file_name().to_string_lossy().into_owned();
-        let specs_path = entry
-            .path()
-            .join(PLUGIN_WORKTREE_DIRECTORY)
-            .join(PLUGIN_WORKTREE_SPECS_DIR);
 
-        if !directory_exists_for_scan(&specs_path)? {
-            continue;
+        for container in CLAUDE_WORKTREE_SPEC_CONTAINERS {
+            let specs_path = entry.path().join(container).join(PLUGIN_WORKTREE_SPECS_DIR);
+
+            if !directory_exists_for_scan(&specs_path)? {
+                continue;
+            }
+
+            roots.push(SpecScanRoot::worktree(
+                specs_path,
+                format!(
+                    ".claude/worktrees/{worktree_name}/{container}/{PLUGIN_WORKTREE_SPECS_DIR}"
+                ),
+                format!("{worktree_name} ({container})"),
+            ));
         }
-
-        roots.push(SpecScanRoot::worktree(
-            specs_path,
-            format!(
-                ".claude/worktrees/{worktree_name}/{PLUGIN_WORKTREE_DIRECTORY}/{PLUGIN_WORKTREE_SPECS_DIR}"
-            ),
-            format!("{worktree_name} ({PLUGIN_WORKTREE_DIRECTORY})"),
-        ));
     }
 
     roots.sort_by(|left, right| left.id_prefix.cmp(&right.id_prefix));
@@ -377,7 +380,7 @@ fn possible_claude_worktree_collection_roots(directory: &Path) -> Vec<PathBuf> {
     roots
 }
 
-fn has_plugin_worktree_specs(workspace_root: &Path) -> Result<bool, WorkspaceDetectionError> {
+fn has_claude_worktree_specs(workspace_root: &Path) -> Result<bool, WorkspaceDetectionError> {
     let worktrees_root = workspace_root.join(CLAUDE_WORKTREES_DIR);
     let entries = match fs::read_dir(&worktrees_root) {
         Ok(entries) => entries,
@@ -395,20 +398,19 @@ fn has_plugin_worktree_specs(workspace_root: &Path) -> Result<bool, WorkspaceDet
             path: display_path(&worktrees_root),
             source,
         })?;
-        let specs_path = entry
-            .path()
-            .join(PLUGIN_WORKTREE_DIRECTORY)
-            .join(PLUGIN_WORKTREE_SPECS_DIR);
+        for container in CLAUDE_WORKTREE_SPEC_CONTAINERS {
+            let specs_path = entry.path().join(container).join(PLUGIN_WORKTREE_SPECS_DIR);
 
-        match fs::metadata(&specs_path) {
-            Ok(metadata) if metadata.is_dir() => return Ok(true),
-            Ok(_) => {}
-            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
-            Err(source) => {
-                return Err(WorkspaceDetectionError::InspectPath {
-                    path: display_path(&specs_path),
-                    source,
-                });
+            match fs::metadata(&specs_path) {
+                Ok(metadata) if metadata.is_dir() => return Ok(true),
+                Ok(_) => {}
+                Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+                Err(source) => {
+                    return Err(WorkspaceDetectionError::InspectPath {
+                        path: display_path(&specs_path),
+                        source,
+                    });
+                }
             }
         }
     }
@@ -428,13 +430,13 @@ fn is_claude_plugin_worktree_spec_path(relative_spec_path: &Path) -> bool {
             claude,
             worktrees,
             worktree_name,
-            plugin_worktree,
+            plugin_container,
             specs,
             ..
         ] if claude == ".claude"
             && worktrees == "worktrees"
             && !worktree_name.is_empty()
-            && plugin_worktree == PLUGIN_WORKTREE_DIRECTORY
+            && CLAUDE_WORKTREE_SPEC_CONTAINERS.contains(&plugin_container.as_str())
             && specs == PLUGIN_WORKTREE_SPECS_DIR
             && components.len() > 5
     )
@@ -719,6 +721,20 @@ mod tests {
     }
 
     #[test]
+    fn detects_repository_with_claude_plugin_workspace_specs() {
+        let workspace = TestWorkspace::new("claude-plugin-workspace-repository");
+        workspace
+            .create_dir(".claude/worktrees/doccom-be/.plugin-workspace/.specs/019-be-doc-comments");
+
+        let layout = FilesystemWorkspaceDetector::new()
+            .detect(workspace.root())
+            .expect("repository with Claude plugin workspace specs should be detected");
+
+        assert_eq!(workspace.root().to_string_lossy(), layout.root().as_str());
+        assert_eq!(WorkspaceKind::PluginWorkspace, layout.kind());
+    }
+
+    #[test]
     fn detects_spec_skill_workspace_layout() {
         let workspace = TestWorkspace::new("spec-skill");
         workspace.create_dir(SPEC_SKILL_FEATURES_DIR);
@@ -873,10 +889,10 @@ mod tests {
         );
         assert_eq!(
             vec![
-                (SpecFileKey::Exploration, SpecFileStatus::Present),
-                (SpecFileKey::Hearing, SpecFileStatus::Present),
                 (SpecFileKey::Impl, SpecFileStatus::Present),
                 (SpecFileKey::Tasks, SpecFileStatus::Present),
+                (SpecFileKey::Exploration, SpecFileStatus::Present),
+                (SpecFileKey::Hearing, SpecFileStatus::Present),
             ],
             file_statuses(issue)
         );
@@ -921,10 +937,59 @@ mod tests {
         );
         assert_eq!(
             vec![
-                (SpecFileKey::Exploration, SpecFileStatus::Present),
-                (SpecFileKey::Hearing, SpecFileStatus::Present),
                 (SpecFileKey::Impl, SpecFileStatus::Present),
                 (SpecFileKey::Tasks, SpecFileStatus::Present),
+                (SpecFileKey::Exploration, SpecFileStatus::Present),
+                (SpecFileKey::Hearing, SpecFileStatus::Present),
+            ],
+            file_statuses(&worktree.children()[0])
+        );
+    }
+
+    #[test]
+    fn spec_tree_scanner_includes_claude_plugin_workspace_specs_with_source_label() {
+        let workspace = TestWorkspace::new("claude-plugin-workspace-tree");
+        workspace
+            .create_dir(".claude/worktrees/doccom-be/.plugin-workspace/.specs/019-be-doc-comments");
+        workspace.write_file(
+            ".claude/worktrees/doccom-be/.plugin-workspace/.specs/019-be-doc-comments/hearing-notes.md",
+            "",
+        );
+        workspace.write_file(
+            ".claude/worktrees/doccom-be/.plugin-workspace/.specs/019-be-doc-comments/exploration-report.md",
+            "",
+        );
+        workspace.write_file(
+            ".claude/worktrees/doccom-be/.plugin-workspace/.specs/019-be-doc-comments/implementation-plan.md",
+            "",
+        );
+        workspace.write_file(
+            ".claude/worktrees/doccom-be/.plugin-workspace/.specs/019-be-doc-comments/tasks.md",
+            "",
+        );
+        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
+        let config = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
+
+        let tree = FilesystemSpecTreeScanner::new()
+            .scan(&layout, &config)
+            .expect("plugin workspace specs should be scanned");
+
+        let worktree = &tree[0];
+        assert_eq!(
+            ".claude/worktrees/doccom-be/.plugin-workspace/.specs",
+            worktree.id()
+        );
+        assert_eq!("doccom-be (.plugin-workspace)", worktree.label());
+        assert_eq!(
+            vec![".claude/worktrees/doccom-be/.plugin-workspace/.specs/019-be-doc-comments"],
+            node_ids(worktree.children())
+        );
+        assert_eq!(
+            vec![
+                (SpecFileKey::Impl, SpecFileStatus::Present),
+                (SpecFileKey::Tasks, SpecFileStatus::Present),
+                (SpecFileKey::Exploration, SpecFileStatus::Present),
+                (SpecFileKey::Hearing, SpecFileStatus::Present),
             ],
             file_statuses(&worktree.children()[0])
         );
@@ -945,6 +1010,25 @@ mod tests {
             workspace
                 .root()
                 .join(".claude/worktrees/feature-auth/.plugin-worktree/.specs/auth"),
+            path
+        );
+    }
+
+    #[test]
+    fn spec_directory_path_resolves_claude_plugin_workspace_spec_ids() {
+        let workspace = TestWorkspace::new("claude-plugin-workspace-spec-path");
+        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
+
+        let path = spec_directory_path(
+            &layout,
+            ".claude/worktrees/doccom-be/.plugin-workspace/.specs/019-be-doc-comments",
+        )
+        .expect("plugin workspace spec id should resolve");
+
+        assert_eq!(
+            workspace
+                .root()
+                .join(".claude/worktrees/doccom-be/.plugin-workspace/.specs/019-be-doc-comments"),
             path
         );
     }

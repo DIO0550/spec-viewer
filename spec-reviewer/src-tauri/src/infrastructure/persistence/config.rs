@@ -302,10 +302,10 @@ mod tests {
 
         assert_eq!(
             vec![
-                (SpecFileKey::Exploration, "exploration-report.md"),
-                (SpecFileKey::Hearing, "hearing-notes.md"),
                 (SpecFileKey::Impl, "implementation-plan.md"),
                 (SpecFileKey::Tasks, "tasks.md"),
+                (SpecFileKey::Exploration, "exploration-report.md"),
+                (SpecFileKey::Hearing, "hearing-notes.md"),
             ],
             files
         );

@@ -47,7 +47,7 @@ pub enum SpecFileKey {
 }
 
 impl SpecFileKey {
-    pub const DEFAULT_KEYS: [Self; 4] = [Self::Exploration, Self::Hearing, Self::Impl, Self::Tasks];
+    pub const DEFAULT_KEYS: [Self; 4] = [Self::Impl, Self::Tasks, Self::Exploration, Self::Hearing];
     pub const COMPATIBILITY_KEYS: [Self; 3] = [Self::Requirements, Self::Design, Self::Tasks];
 
     pub fn as_str(self) -> &'static str {
@@ -534,10 +534,10 @@ mod tests {
     fn spec_file_key_lists_default_keys_in_tab_order() {
         assert_eq!(
             &[
-                SpecFileKey::Exploration,
-                SpecFileKey::Hearing,
                 SpecFileKey::Impl,
                 SpecFileKey::Tasks,
+                SpecFileKey::Exploration,
+                SpecFileKey::Hearing,
             ],
             SpecFileKey::default_keys()
         );
