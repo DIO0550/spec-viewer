@@ -1293,6 +1293,10 @@ function MarkdownCommentableBlock({
         className="markdown-block-comment-button"
         type="button"
         aria-label="コメント追加"
+        title="コメント追加"
+        onMouseDown={(event) => {
+          event.preventDefault();
+        }}
         onClick={createDraftFromRenderedBlock}
       >
         <MessageSquarePlus aria-hidden="true" size={14} />
@@ -1624,6 +1628,10 @@ function MarkdownListItem({
         className="markdown-block-comment-button markdown-block-comment-button--inline"
         type="button"
         aria-label="コメント追加"
+        title="コメント追加"
+        onMouseDown={(event) => {
+          event.preventDefault();
+        }}
         onClick={createDraftFromListItem}
       >
         <MessageSquarePlus aria-hidden="true" size={14} />

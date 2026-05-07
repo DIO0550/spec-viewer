@@ -2131,20 +2131,33 @@ textarea:disabled {
 
 .markdown-comment-target {
   position: relative;
+  min-width: 0;
+}
+
+.markdown-comment-target > [data-block-type],
+.markdown-rendered li[data-block-type] {
+  padding-inline-end: 2.35rem;
+}
+
+.markdown-comment-target > pre[data-block-type] {
+  padding-inline-end: calc(15px + 2.35rem);
 }
 
 .markdown-block-comment-button {
   position: absolute;
   top: 0.15rem;
-  left: -8px;
+  right: 0.15rem;
+  left: auto;
   z-index: 2;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
+  width: 30px;
+  min-width: 30px;
   min-height: 28px;
   border: 1px solid var(--color-accent-hover);
   border-radius: 7px;
-  padding: 0 8px;
+  padding: 0;
   color: var(--color-text-inverse);
   background: var(--color-accent);
   font-size: 0.74rem;
@@ -2153,7 +2166,7 @@ textarea:disabled {
   opacity: 0;
   pointer-events: none;
   cursor: pointer;
-  transform: translateX(-100%);
+  transform: none;
   transition:
     opacity 120ms ease,
     background-color 120ms ease;
@@ -2174,11 +2187,12 @@ textarea:disabled {
 }
 
 .markdown-block-comment-button--inline {
-  top: 0;
+  top: 0.05rem;
+  right: 0;
 }
 
-.markdown-block-comment-button--inline::after {
-  content: "コメント追加";
+.markdown-block-comment-button span {
+  display: none;
 }
 
 .markdown-rendered input[type="checkbox"] {
