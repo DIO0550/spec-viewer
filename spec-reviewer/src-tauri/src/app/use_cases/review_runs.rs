@@ -29,7 +29,7 @@ use crate::{
         workspace::{WorkspaceLayout, WorkspaceRoot},
     },
     infrastructure::{
-        filesystem::{safe_relative_spec_path, spec_root_path},
+        filesystem::{safe_relative_spec_path, spec_directory_path},
         git::{GitReviewWorktreeError, GitReviewWorktreeService},
         persistence::{
             review_run_paths::{
@@ -1144,10 +1144,7 @@ fn review_run_state_directory(
     spec_id: &SpecId,
     state: ReviewRunFolderState,
 ) -> Result<PathBuf, AppUseCaseError> {
-    let relative_spec_path = safe_relative_spec_path(spec_id.as_str())?;
-
-    Ok(spec_root_path(layout)
-        .join(relative_spec_path)
+    Ok(spec_directory_path(layout, spec_id.as_str())?
         .join(USER_REVIEW_DIRECTORY)
         .join(state.directory_name()))
 }

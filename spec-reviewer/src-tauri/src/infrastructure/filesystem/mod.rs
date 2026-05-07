@@ -16,6 +16,9 @@ use crate::domain::{
 use crate::infrastructure::persistence::config::{ConfigLoadError, WorkspaceConfigLoader};
 
 const PLUGIN_WORKSPACE_SPECS_DIR: &str = ".plugin-workspace/.specs";
+const PLUGIN_WORKTREE_DIRECTORY: &str = ".plugin-worktree";
+const PLUGIN_WORKTREE_SPECS_DIR: &str = ".specs";
+const CLAUDE_WORKTREES_DIR: &str = ".claude/worktrees";
 const SPEC_SKILL_FEATURES_DIR: &str = ".spec-skill/features";
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -43,6 +46,18 @@ impl FilesystemWorkspaceDetector {
                 return create_workspace_layout(directory, WorkspaceKind::PluginWorkspace);
             }
 
+            if is_plugin_worktree_directory(directory)
+                && self
+                    .path_checker
+                    .directory_exists(directory.join(PLUGIN_WORKTREE_SPECS_DIR))?
+            {
+                return create_workspace_layout(directory, WorkspaceKind::PluginWorktree);
+            }
+
+            if let Some(workspace_root) = self.detect_claude_worktree_collection_root(directory)? {
+                return create_workspace_layout(&workspace_root, WorkspaceKind::PluginWorkspace);
+            }
+
             if self
                 .path_checker
                 .directory_exists(directory.join(SPEC_SKILL_FEATURES_DIR))?
@@ -56,6 +71,23 @@ impl FilesystemWorkspaceDetector {
         Err(WorkspaceDetectionError::UnsupportedWorkspace {
             root: display_path(selected_directory),
         })
+    }
+
+    fn detect_claude_worktree_collection_root(
+        &self,
+        directory: &Path,
+    ) -> Result<Option<PathBuf>, WorkspaceDetectionError> {
+        for workspace_root in possible_claude_worktree_collection_roots(directory) {
+            if self
+                .path_checker
+                .directory_exists(workspace_root.join(CLAUDE_WORKTREES_DIR))?
+                && has_plugin_worktree_specs(&workspace_root)?
+            {
+                return Ok(Some(workspace_root));
+            }
+        }
+
+        Ok(None)
     }
 }
 
@@ -72,9 +104,59 @@ impl FilesystemSpecTreeScanner {
         layout: &WorkspaceLayout,
         config: &WorkspaceConfig,
     ) -> Result<Vec<SpecNode>, SpecTreeScanError> {
-        let root = spec_root_path(layout);
+        let mut nodes = Vec::new();
 
-        scan_child_directories(&root, "", config)
+        for root in spec_scan_roots(layout)? {
+            let id = root.parent_id().to_string();
+            let children = scan_child_directories(&root.path, &id, config)?;
+
+            if let Some(label) = root.label {
+                let node =
+                    SpecNode::new(id.clone(), label, Vec::new(), children).map_err(|source| {
+                        SpecTreeScanError::InvalidNode {
+                            id,
+                            path: display_path(&root.path),
+                            source,
+                        }
+                    })?;
+
+                nodes.push(node);
+                continue;
+            }
+
+            nodes.extend(children);
+        }
+
+        Ok(nodes)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct SpecScanRoot {
+    path: PathBuf,
+    id_prefix: String,
+    label: Option<String>,
+}
+
+impl SpecScanRoot {
+    fn primary(path: PathBuf) -> Self {
+        Self {
+            path,
+            id_prefix: String::new(),
+            label: None,
+        }
+    }
+
+    fn worktree(path: PathBuf, id_prefix: String, label: String) -> Self {
+        Self {
+            path,
+            id_prefix,
+            label: Some(label),
+        }
+    }
+
+    fn parent_id(&self) -> &str {
+        &self.id_prefix
     }
 }
 
@@ -165,14 +247,197 @@ pub fn spec_directory_path(
     layout: &WorkspaceLayout,
     spec_id: &str,
 ) -> Result<PathBuf, SafeSpecPathError> {
-    Ok(spec_root_path(layout).join(safe_relative_spec_path(spec_id)?))
+    let relative_spec_path = safe_relative_spec_path(spec_id)?;
+
+    if is_claude_plugin_worktree_spec_path(&relative_spec_path) {
+        return Ok(PathBuf::from(layout.root().as_str()).join(relative_spec_path));
+    }
+
+    Ok(spec_root_path(layout).join(relative_spec_path))
 }
 
 fn spec_root_directory_for_kind(kind: WorkspaceKind) -> &'static str {
     match kind {
         WorkspaceKind::PluginWorkspace => PLUGIN_WORKSPACE_SPECS_DIR,
+        WorkspaceKind::PluginWorktree => PLUGIN_WORKTREE_SPECS_DIR,
         WorkspaceKind::SpecSkill => SPEC_SKILL_FEATURES_DIR,
     }
+}
+
+fn spec_scan_roots(layout: &WorkspaceLayout) -> Result<Vec<SpecScanRoot>, SpecTreeScanError> {
+    let mut roots = Vec::new();
+    let primary_root = spec_root_path(layout);
+
+    if directory_exists_for_scan(&primary_root)? {
+        roots.push(SpecScanRoot::primary(primary_root));
+    }
+
+    if layout.kind() == WorkspaceKind::PluginWorkspace {
+        roots.extend(collect_claude_worktree_scan_roots(Path::new(
+            layout.root().as_str(),
+        ))?);
+    }
+
+    Ok(roots)
+}
+
+fn collect_claude_worktree_scan_roots(
+    workspace_root: &Path,
+) -> Result<Vec<SpecScanRoot>, SpecTreeScanError> {
+    let worktrees_root = workspace_root.join(CLAUDE_WORKTREES_DIR);
+    let entries = match fs::read_dir(&worktrees_root) {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(source) => {
+            return Err(SpecTreeScanError::ReadDirectory {
+                path: display_path(&worktrees_root),
+                source,
+            });
+        }
+    };
+    let mut roots = Vec::new();
+
+    for entry in entries {
+        let entry = entry.map_err(|source| SpecTreeScanError::ReadDirectory {
+            path: display_path(&worktrees_root),
+            source,
+        })?;
+        let file_type = entry
+            .file_type()
+            .map_err(|source| SpecTreeScanError::InspectPath {
+                path: display_path(&entry.path()),
+                source,
+            })?;
+
+        if !file_type.is_dir() {
+            continue;
+        }
+
+        let worktree_name = entry.file_name().to_string_lossy().into_owned();
+        let specs_path = entry
+            .path()
+            .join(PLUGIN_WORKTREE_DIRECTORY)
+            .join(PLUGIN_WORKTREE_SPECS_DIR);
+
+        if !directory_exists_for_scan(&specs_path)? {
+            continue;
+        }
+
+        roots.push(SpecScanRoot::worktree(
+            specs_path,
+            format!(
+                ".claude/worktrees/{worktree_name}/{PLUGIN_WORKTREE_DIRECTORY}/{PLUGIN_WORKTREE_SPECS_DIR}"
+            ),
+            format!("{worktree_name} ({PLUGIN_WORKTREE_DIRECTORY})"),
+        ));
+    }
+
+    roots.sort_by(|left, right| left.id_prefix.cmp(&right.id_prefix));
+
+    Ok(roots)
+}
+
+fn directory_exists_for_scan(path: &Path) -> Result<bool, SpecTreeScanError> {
+    match fs::metadata(path) {
+        Ok(metadata) => Ok(metadata.is_dir()),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
+        Err(source) => Err(SpecTreeScanError::InspectPath {
+            path: display_path(path),
+            source,
+        }),
+    }
+}
+
+fn is_plugin_worktree_directory(path: &Path) -> bool {
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name == PLUGIN_WORKTREE_DIRECTORY)
+}
+
+fn possible_claude_worktree_collection_roots(directory: &Path) -> Vec<PathBuf> {
+    let mut roots = vec![directory.to_path_buf()];
+    let file_name = directory.file_name().and_then(|name| name.to_str());
+
+    if file_name == Some(".claude") {
+        if let Some(parent) = directory.parent() {
+            roots.push(parent.to_path_buf());
+        }
+    }
+
+    if file_name == Some("worktrees") {
+        if let Some(claude_directory) = directory.parent() {
+            if claude_directory.file_name().and_then(|name| name.to_str()) == Some(".claude") {
+                if let Some(parent) = claude_directory.parent() {
+                    roots.push(parent.to_path_buf());
+                }
+            }
+        }
+    }
+
+    roots
+}
+
+fn has_plugin_worktree_specs(workspace_root: &Path) -> Result<bool, WorkspaceDetectionError> {
+    let worktrees_root = workspace_root.join(CLAUDE_WORKTREES_DIR);
+    let entries = match fs::read_dir(&worktrees_root) {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(false),
+        Err(source) => {
+            return Err(WorkspaceDetectionError::InspectPath {
+                path: display_path(&worktrees_root),
+                source,
+            });
+        }
+    };
+
+    for entry in entries {
+        let entry = entry.map_err(|source| WorkspaceDetectionError::InspectPath {
+            path: display_path(&worktrees_root),
+            source,
+        })?;
+        let specs_path = entry
+            .path()
+            .join(PLUGIN_WORKTREE_DIRECTORY)
+            .join(PLUGIN_WORKTREE_SPECS_DIR);
+
+        match fs::metadata(&specs_path) {
+            Ok(metadata) if metadata.is_dir() => return Ok(true),
+            Ok(_) => {}
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Err(source) => {
+                return Err(WorkspaceDetectionError::InspectPath {
+                    path: display_path(&specs_path),
+                    source,
+                });
+            }
+        }
+    }
+
+    Ok(false)
+}
+
+fn is_claude_plugin_worktree_spec_path(relative_spec_path: &Path) -> bool {
+    let components: Vec<String> = relative_spec_path
+        .components()
+        .map(|component| component.as_os_str().to_string_lossy().into_owned())
+        .collect();
+
+    matches!(
+        components.as_slice(),
+        [
+            claude,
+            worktrees,
+            worktree_name,
+            plugin_worktree,
+            specs,
+            ..
+        ] if claude == ".claude"
+            && worktrees == "worktrees"
+            && !worktree_name.is_empty()
+            && plugin_worktree == PLUGIN_WORKTREE_DIRECTORY
+            && specs == PLUGIN_WORKTREE_SPECS_DIR
+            && components.len() > 5
+    )
 }
 
 fn scan_child_directories(
@@ -425,6 +690,35 @@ mod tests {
     }
 
     #[test]
+    fn detects_direct_plugin_worktree_layout() {
+        let workspace = TestWorkspace::new("direct-plugin-worktree");
+        workspace.create_dir(".claude/worktrees/feature-auth/.plugin-worktree/.specs/auth");
+        let selected_directory = workspace
+            .root()
+            .join(".claude/worktrees/feature-auth/.plugin-worktree");
+
+        let layout = FilesystemWorkspaceDetector::new()
+            .detect(&selected_directory)
+            .expect("direct plugin worktree should be detected");
+
+        assert_eq!(selected_directory.to_string_lossy(), layout.root().as_str());
+        assert_eq!(WorkspaceKind::PluginWorktree, layout.kind());
+    }
+
+    #[test]
+    fn detects_repository_with_claude_plugin_worktree_specs() {
+        let workspace = TestWorkspace::new("claude-worktree-repository");
+        workspace.create_dir(".claude/worktrees/feature-auth/.plugin-worktree/.specs/auth");
+
+        let layout = FilesystemWorkspaceDetector::new()
+            .detect(workspace.root())
+            .expect("repository with Claude plugin worktrees should be detected");
+
+        assert_eq!(workspace.root().to_string_lossy(), layout.root().as_str());
+        assert_eq!(WorkspaceKind::PluginWorkspace, layout.kind());
+    }
+
+    #[test]
     fn detects_spec_skill_workspace_layout() {
         let workspace = TestWorkspace::new("spec-skill");
         workspace.create_dir(SPEC_SKILL_FEATURES_DIR);
@@ -585,6 +879,73 @@ mod tests {
                 (SpecFileKey::Tasks, SpecFileStatus::Present),
             ],
             file_statuses(issue)
+        );
+    }
+
+    #[test]
+    fn spec_tree_scanner_includes_claude_plugin_worktree_specs_with_source_label() {
+        let workspace = TestWorkspace::new("claude-worktree-tree");
+        workspace.create_dir(".claude/worktrees/feature-auth/.plugin-worktree/.specs/auth");
+        workspace.write_file(
+            ".claude/worktrees/feature-auth/.plugin-worktree/.specs/auth/hearing-notes.md",
+            "",
+        );
+        workspace.write_file(
+            ".claude/worktrees/feature-auth/.plugin-worktree/.specs/auth/exploration-report.md",
+            "",
+        );
+        workspace.write_file(
+            ".claude/worktrees/feature-auth/.plugin-worktree/.specs/auth/implementation-plan.md",
+            "",
+        );
+        workspace.write_file(
+            ".claude/worktrees/feature-auth/.plugin-worktree/.specs/auth/tasks.md",
+            "",
+        );
+        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
+        let config = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
+
+        let tree = FilesystemSpecTreeScanner::new()
+            .scan(&layout, &config)
+            .expect("worktree specs should be scanned");
+
+        let worktree = &tree[0];
+        assert_eq!(
+            ".claude/worktrees/feature-auth/.plugin-worktree/.specs",
+            worktree.id()
+        );
+        assert_eq!("feature-auth (.plugin-worktree)", worktree.label());
+        assert_eq!(
+            vec![".claude/worktrees/feature-auth/.plugin-worktree/.specs/auth"],
+            node_ids(worktree.children())
+        );
+        assert_eq!(
+            vec![
+                (SpecFileKey::Exploration, SpecFileStatus::Present),
+                (SpecFileKey::Hearing, SpecFileStatus::Present),
+                (SpecFileKey::Impl, SpecFileStatus::Present),
+                (SpecFileKey::Tasks, SpecFileStatus::Present),
+            ],
+            file_statuses(&worktree.children()[0])
+        );
+    }
+
+    #[test]
+    fn spec_directory_path_resolves_claude_plugin_worktree_spec_ids() {
+        let workspace = TestWorkspace::new("claude-worktree-spec-path");
+        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
+
+        let path = spec_directory_path(
+            &layout,
+            ".claude/worktrees/feature-auth/.plugin-worktree/.specs/auth",
+        )
+        .expect("worktree spec id should resolve");
+
+        assert_eq!(
+            workspace
+                .root()
+                .join(".claude/worktrees/feature-auth/.plugin-worktree/.specs/auth"),
+            path
         );
     }
 

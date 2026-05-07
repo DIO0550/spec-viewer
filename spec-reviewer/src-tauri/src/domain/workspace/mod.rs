@@ -44,6 +44,7 @@ impl fmt::Display for WorkspaceRoot {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum WorkspaceKind {
     PluginWorkspace,
+    PluginWorktree,
     SpecSkill,
 }
 
@@ -51,6 +52,7 @@ impl WorkspaceKind {
     pub fn from_identifier(value: &str) -> Result<Self, WorkspaceDomainError> {
         match value {
             "plugin-workspace" => Ok(Self::PluginWorkspace),
+            "plugin-worktree" => Ok(Self::PluginWorktree),
             "spec-skill" => Ok(Self::SpecSkill),
             _ => Err(WorkspaceDomainError::UnsupportedLayout {
                 layout: value.to_string(),
@@ -61,6 +63,7 @@ impl WorkspaceKind {
     pub fn identifier(self) -> &'static str {
         match self {
             Self::PluginWorkspace => "plugin-workspace",
+            Self::PluginWorktree => "plugin-worktree",
             Self::SpecSkill => "spec-skill",
         }
     }
@@ -79,6 +82,10 @@ impl WorkspaceLayout {
 
     pub fn plugin_workspace(root: WorkspaceRoot) -> Self {
         Self::new(root, WorkspaceKind::PluginWorkspace)
+    }
+
+    pub fn plugin_worktree(root: WorkspaceRoot) -> Self {
+        Self::new(root, WorkspaceKind::PluginWorktree)
     }
 
     pub fn spec_skill(root: WorkspaceRoot) -> Self {
@@ -132,6 +139,10 @@ mod tests {
         assert_eq!(
             Ok(WorkspaceKind::PluginWorkspace),
             WorkspaceKind::from_identifier("plugin-workspace")
+        );
+        assert_eq!(
+            Ok(WorkspaceKind::PluginWorktree),
+            WorkspaceKind::from_identifier("plugin-worktree")
         );
         assert_eq!(
             Ok(WorkspaceKind::SpecSkill),

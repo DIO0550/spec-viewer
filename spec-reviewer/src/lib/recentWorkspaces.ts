@@ -290,5 +290,9 @@ function createWorkspaceDisplayName(path: string): string {
 
 /** @returns True when the stored value is a supported workspace kind. */
 function isWorkspaceKind(value: unknown): value is WorkspaceKind {
-  return value === "plugin-workspace" || value === "spec-skill";
+  return (
+    value === "plugin-workspace" ||
+    value === "plugin-worktree" ||
+    value === "spec-skill"
+  );
 }

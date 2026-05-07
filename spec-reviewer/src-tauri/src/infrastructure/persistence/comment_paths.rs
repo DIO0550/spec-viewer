@@ -16,7 +16,7 @@ use thiserror::Error;
 
 use crate::{
     domain::{comment::CommentScope, spec::SpecFileKey, workspace::WorkspaceLayout},
-    infrastructure::filesystem::{safe_relative_spec_path, spec_root_path},
+    infrastructure::filesystem::spec_directory_path,
 };
 
 const COMMENT_STORAGE_DIRECTORY: &str = ".comments";
@@ -35,13 +35,12 @@ impl CommentStoragePathResolver {
         layout: &WorkspaceLayout,
         scope: &CommentScope,
     ) -> Result<CommentStoragePath, CommentStoragePathError> {
-        let relative_spec_path =
-            safe_relative_spec_path(scope.spec_id().as_str()).map_err(|_| {
+        let spec_directory =
+            spec_directory_path(layout, scope.spec_id().as_str()).map_err(|_| {
                 CommentStoragePathError::InvalidSpecId {
                     spec_id: scope.spec_id().as_str().to_string(),
                 }
             })?;
-        let spec_directory = spec_root_path(layout).join(relative_spec_path);
         let comments_directory = spec_directory.join(COMMENT_STORAGE_DIRECTORY);
         let file_path = comments_directory.join(comment_storage_file_name(scope.file_key()));
         let storage_path = CommentStoragePath {

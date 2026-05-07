@@ -19,6 +19,7 @@ use crate::domain::{
 };
 
 const PLUGIN_WORKSPACE_CONFIG_FILE: &str = ".plugin-workspace/config.json";
+const PLUGIN_WORKTREE_CONFIG_FILE: &str = "config.json";
 const SPEC_SKILL_CONFIG_FILE: &str = ".spec-skill/config.json";
 const SPEC_OVERRIDE_CONFIG_FILE: &str = ".spec-reviewer/config.json";
 
@@ -83,6 +84,7 @@ pub fn spec_override_config_file_path(spec_directory: &Path) -> PathBuf {
 fn config_file_name_for_kind(kind: WorkspaceKind) -> &'static str {
     match kind {
         WorkspaceKind::PluginWorkspace => PLUGIN_WORKSPACE_CONFIG_FILE,
+        WorkspaceKind::PluginWorktree => PLUGIN_WORKTREE_CONFIG_FILE,
         WorkspaceKind::SpecSkill => SPEC_SKILL_CONFIG_FILE,
     }
 }
