@@ -47,6 +47,7 @@ export function AddCommentPopover({
   const textareaId = useId();
   const hintId = useId();
   const errorId = useId();
+  const popoverRef = useRef<HTMLElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [body, setBody] = useState("");
   const [validationMessage, setValidationMessage] = useState<string | null>(
@@ -65,6 +66,32 @@ export function AddCommentPopover({
     setValidationMessage(null);
     textareaRef.current?.focus();
   }, [draft]);
+
+  useEffect(() => {
+    const closeWhenClickingOutside = (event: globalThis.MouseEvent): void => {
+      if (isSaving) {
+        return;
+      }
+
+      const target = event.target;
+
+      if (!(target instanceof Node)) {
+        return;
+      }
+
+      if (popoverRef.current?.contains(target)) {
+        return;
+      }
+
+      onCancel();
+    };
+
+    document.addEventListener("mousedown", closeWhenClickingOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", closeWhenClickingOutside);
+    };
+  }, [isSaving, onCancel]);
 
   const submitComment = async (): Promise<void> => {
     if (!isScopeReady) {
@@ -119,6 +146,7 @@ export function AddCommentPopover({
 
   return (
     <aside
+      ref={popoverRef}
       className="add-comment-popover"
       style={style}
       role="dialog"
