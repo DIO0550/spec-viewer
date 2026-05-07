@@ -150,12 +150,16 @@ impl SpecScanRoot {
         }
     }
 
-    fn worktree(path: PathBuf, id_prefix: String, label: String) -> Self {
+    fn source_group(path: PathBuf, id_prefix: String, label: String) -> Self {
         Self {
             path,
             id_prefix,
             label: Some(label),
         }
+    }
+
+    fn worktree(path: PathBuf, id_prefix: String, label: String) -> Self {
+        Self::source_group(path, id_prefix, label)
     }
 
     fn parent_id(&self) -> &str {
@@ -252,6 +256,12 @@ pub fn spec_directory_path(
 ) -> Result<PathBuf, SafeSpecPathError> {
     let relative_spec_path = safe_relative_spec_path(spec_id)?;
 
+    if let Ok(path_under_source_group) =
+        relative_spec_path.strip_prefix(spec_root_directory_for_kind(layout.kind()))
+    {
+        return Ok(spec_root_path(layout).join(path_under_source_group));
+    }
+
     if is_claude_plugin_worktree_spec_path(&relative_spec_path) {
         return Ok(PathBuf::from(layout.root().as_str()).join(relative_spec_path));
     }
@@ -272,7 +282,15 @@ fn spec_scan_roots(layout: &WorkspaceLayout) -> Result<Vec<SpecScanRoot>, SpecTr
     let primary_root = spec_root_path(layout);
 
     if directory_exists_for_scan(&primary_root)? {
-        roots.push(SpecScanRoot::primary(primary_root));
+        if let Some((id_prefix, label)) = primary_source_group_for_kind(layout.kind()) {
+            roots.push(SpecScanRoot::source_group(
+                primary_root,
+                id_prefix.to_string(),
+                label.to_string(),
+            ));
+        } else {
+            roots.push(SpecScanRoot::primary(primary_root));
+        }
     }
 
     if layout.kind() == WorkspaceKind::PluginWorkspace {
@@ -282,6 +300,15 @@ fn spec_scan_roots(layout: &WorkspaceLayout) -> Result<Vec<SpecScanRoot>, SpecTr
     }
 
     Ok(roots)
+}
+
+fn primary_source_group_for_kind(kind: WorkspaceKind) -> Option<(&'static str, &'static str)> {
+    match kind {
+        WorkspaceKind::PluginWorkspace => {
+            Some((PLUGIN_WORKSPACE_SPECS_DIR, "ルート (.plugin-workspace)"))
+        }
+        WorkspaceKind::PluginWorktree | WorkspaceKind::SpecSkill => None,
+    }
 }
 
 fn collect_claude_worktree_scan_roots(
@@ -807,10 +834,23 @@ mod tests {
             .scan(&layout, &config)
             .expect("spec tree should be scanned");
 
-        assert_eq!(vec!["auth", "zeta"], node_ids(&tree));
-        let auth = &tree[0];
+        assert_eq!(vec![PLUGIN_WORKSPACE_SPECS_DIR], node_ids(&tree));
+        let root = &tree[0];
+        assert_eq!("ルート (.plugin-workspace)", root.label());
+        assert_eq!(
+            vec![
+                ".plugin-workspace/.specs/auth",
+                ".plugin-workspace/.specs/zeta"
+            ],
+            node_ids(root.children())
+        );
+
+        let auth = &root.children()[0];
         assert_eq!("auth", auth.label());
-        assert_eq!(vec!["auth/code-review"], node_ids(auth.children()));
+        assert_eq!(
+            vec![".plugin-workspace/.specs/auth/code-review"],
+            node_ids(auth.children())
+        );
         assert_eq!(
             Some(SpecFileStatus::Missing),
             auth.file_for_key(SpecFileKey::Exploration)
@@ -844,7 +884,11 @@ mod tests {
             .scan(&layout, &config)
             .expect("spec tree should be scanned");
 
-        assert_eq!(vec!["visible"], node_ids(&tree));
+        assert_eq!(vec![PLUGIN_WORKSPACE_SPECS_DIR], node_ids(&tree));
+        assert_eq!(
+            vec![".plugin-workspace/.specs/visible"],
+            node_ids(tree[0].children())
+        );
     }
 
     #[test]
@@ -897,10 +941,16 @@ mod tests {
             .scan(&layout, &config)
             .expect("spec-driven-dev tree should be scanned");
 
-        let issue = &tree[0];
-        assert_eq!("021-issue-262", issue.id());
+        let root = &tree[0];
+        assert_eq!(PLUGIN_WORKSPACE_SPECS_DIR, root.id());
+        assert_eq!("ルート (.plugin-workspace)", root.label());
+        let issue = &root.children()[0];
+        assert_eq!(".plugin-workspace/.specs/021-issue-262", issue.id());
         assert_eq!(
-            vec!["021-issue-262/code-review", "021-issue-262/plan-review"],
+            vec![
+                ".plugin-workspace/.specs/021-issue-262/code-review",
+                ".plugin-workspace/.specs/021-issue-262/plan-review"
+            ],
             node_ids(issue.children())
         );
         assert_eq!(
@@ -1050,6 +1100,17 @@ mod tests {
     }
 
     #[test]
+    fn spec_directory_path_resolves_root_plugin_workspace_source_group_spec_ids() {
+        let workspace = TestWorkspace::new("root-plugin-workspace-source-group-spec-path");
+        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
+
+        let path = spec_directory_path(&layout, ".plugin-workspace/.specs/auth")
+            .expect("root source group spec id should resolve");
+
+        assert_eq!(workspace.root().join(".plugin-workspace/.specs/auth"), path);
+    }
+
+    #[test]
     fn spec_tree_scanner_uses_configured_file_mappings() {
         let workspace = TestWorkspace::new("configured-files");
         workspace.create_dir(PLUGIN_WORKSPACE_SPECS_DIR);
@@ -1067,9 +1128,11 @@ mod tests {
             .scan(&layout, &config)
             .expect("spec tree should be scanned");
 
+        let root = &tree[0];
+        let auth = &root.children()[0];
         assert_eq!(
             vec![(SpecFileKey::Hearing, SpecFileStatus::Present)],
-            file_statuses(&tree[0])
+            file_statuses(auth)
         );
     }
 
@@ -1096,10 +1159,11 @@ mod tests {
             .scan(&layout, &config)
             .expect("spec tree should be scanned");
 
-        let auth = &tree[0];
-        let checkout = &tree[1];
+        let root = &tree[0];
+        let auth = &root.children()[0];
+        let checkout = &root.children()[1];
 
-        assert_eq!("auth", auth.id());
+        assert_eq!(".plugin-workspace/.specs/auth", auth.id());
         assert_eq!(
             Some(("auth-tasks.md", SpecFileStatus::Present)),
             auth.file_for_key(SpecFileKey::Tasks)
