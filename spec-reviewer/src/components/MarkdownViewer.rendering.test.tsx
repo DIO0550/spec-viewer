@@ -568,6 +568,55 @@ test("MarkdownViewerはMarkdown内の選択から追加コメントを保存す�
   result.unmount();
 });
 
+test("MarkdownViewerはハイライト内の部分選択をコメント選択クリックとして扱わない", () => {
+  const contents = "A paragraph with selectable text.";
+  const onSelectComment = vi.fn();
+  const result = renderViewer(
+    createReadyState(contents),
+    vi.fn(),
+    vi.fn().mockResolvedValue(true),
+    [
+      createComment({
+        id: "cmt_highlight",
+        blockIndex: 0,
+        text: contents,
+        resolved: false,
+        charRange: {
+          start: 2,
+          end: 11,
+        },
+      }),
+    ],
+    null,
+    onSelectComment,
+  );
+  const paragraph = result.container.querySelector(".markdown-rendered p");
+  const textNode = paragraph?.querySelector(
+    "[data-comment-highlight-range]",
+  )?.firstChild;
+  expect(paragraph).not.toBeNull();
+  expect(textNode).toBeInstanceOf(Text);
+
+  const range = document.createRange();
+  range.setStart(textNode as Text, 0);
+  range.setEnd(textNode as Text, 9);
+  const selection = document.getSelection();
+  expect(selection).not.toBeNull();
+
+  const readySelection = selection as Selection;
+  readySelection.removeAllRanges();
+  readySelection.addRange(range);
+
+  act(() => {
+    paragraph?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+
+  expect(readySelection.toString()).toBe("paragraph");
+  expect(onSelectComment).not.toHaveBeenCalled();
+  readySelection.removeAllRanges();
+  result.unmount();
+});
+
 test("MarkdownViewerはMarkdownブロックのコメントボタンから追加コメントを保存する", async () => {
   const onAddComment = vi.fn().mockResolvedValue(true);
   const result = renderViewer(

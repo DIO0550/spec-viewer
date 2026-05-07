@@ -143,6 +143,28 @@ test("AddCommentPopoverは保存中と保存失敗を表示する", () => {
   result.unmount();
 });
 
+test("AddCommentPopoverは本文スクロール領域とfooter actionsを分けて表示する", () => {
+  const result = renderPopover({
+    draft: {
+      ...draft,
+      anchor: {
+        ...draft.anchor,
+        textSnippet: "long selected text ".repeat(30),
+      },
+    },
+  });
+  const body = result.container.querySelector(".add-comment-popover__body");
+  const actions = result.container.querySelector(
+    ".add-comment-popover__actions",
+  );
+
+  expect(body?.textContent).toContain("long selected text");
+  expect(body?.contains(findTextarea(result.container))).toBe(true);
+  expect(actions?.textContent).toContain("保存");
+  expect(actions?.contains(findTextarea(result.container))).toBe(false);
+  result.unmount();
+});
+
 test("AddCommentPopoverはEscapeでキャンセルする", () => {
   const onCancel = vi.fn();
   const result = renderPopover({ onCancel });

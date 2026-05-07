@@ -2260,6 +2260,7 @@ textarea:disabled {
 
 .markdown-rendered [data-comment-highlight="true"] {
   position: relative;
+  user-select: text;
   border-radius: 7px;
   background:
     linear-gradient(
@@ -2300,6 +2301,7 @@ textarea:disabled {
 }
 
 .markdown-rendered [data-comment-highlight-range="true"] {
+  user-select: text;
   border-radius: 5px;
   padding: 0.05em 0.12em;
   background: color-mix(in srgb, var(--color-accent-soft) 86%, transparent);
@@ -2429,13 +2431,16 @@ textarea:disabled {
 
 .add-comment-popover {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 9px;
   width: min(340px, calc(100vw - 16px));
+  max-height: calc(100dvh - 16px);
   border: 1px solid var(--color-border-strong);
   border-radius: 8px;
   padding: 12px;
   color: var(--color-text);
   background: var(--color-raised);
+  overflow: hidden;
 }
 
 .add-comment-popover__header {
@@ -2485,7 +2490,17 @@ textarea:disabled {
 
 .add-comment-popover__form {
   display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
   gap: 7px;
+  min-height: 0;
+}
+
+.add-comment-popover__body {
+  display: grid;
+  gap: 7px;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
 }
 
 .add-comment-popover__form label {
@@ -2499,6 +2514,7 @@ textarea:disabled {
 .add-comment-popover textarea {
   width: 100%;
   min-height: 104px;
+  max-height: 34dvh;
   resize: vertical;
   border: 1px solid var(--color-border-strong);
   border-radius: 7px;
@@ -2529,6 +2545,9 @@ textarea:disabled {
   flex-wrap: wrap;
   gap: 6px;
   justify-content: flex-end;
+  border-top: 1px solid var(--color-border);
+  padding-top: 8px;
+  background: var(--color-raised);
 }
 
 .add-comment-popover__saving-icon {

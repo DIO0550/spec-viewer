@@ -143,35 +143,37 @@ export function AddCommentPopover({
           <X aria-hidden="true" size={14} />
         </button>
       </header>
-      <blockquote>{draft.anchor.textSnippet}</blockquote>
       <form className="add-comment-popover__form" onSubmit={submitForm}>
-        <label htmlFor={textareaId}>{uiText.sidebar.comments}</label>
-        <textarea
-          id={textareaId}
-          ref={textareaRef}
-          value={body}
-          rows={4}
-          aria-describedby={describedBy}
-          aria-invalid={visibleErrorMessage !== null}
-          placeholder="レビューコメントを書く..."
-          onInput={(event) => {
-            setBody(event.currentTarget.value);
-            setValidationMessage(null);
-          }}
-          onKeyDown={handleTextareaKeyDown}
-          disabled={isSaving}
-        />
-        <p id={hintId} className="add-comment-popover__hint">
-          {formatDraftBlockType(draft.anchor.blockType)}
-          {uiText.commentThread.block} {draft.anchor.blockIndex + 1},{" "}
-          {uiText.commentThread.chars} {draft.anchor.charRange.start}-
-          {draft.anchor.charRange.end}
-        </p>
-        {visibleErrorMessage === null ? null : (
-          <p id={errorId} className="add-comment-popover__error" role="alert">
-            {visibleErrorMessage}
+        <div className="add-comment-popover__body">
+          <blockquote>{draft.anchor.textSnippet}</blockquote>
+          <label htmlFor={textareaId}>{uiText.sidebar.comments}</label>
+          <textarea
+            id={textareaId}
+            ref={textareaRef}
+            value={body}
+            rows={4}
+            aria-describedby={describedBy}
+            aria-invalid={visibleErrorMessage !== null}
+            placeholder="レビューコメントを書く..."
+            onInput={(event) => {
+              setBody(event.currentTarget.value);
+              setValidationMessage(null);
+            }}
+            onKeyDown={handleTextareaKeyDown}
+            disabled={isSaving}
+          />
+          <p id={hintId} className="add-comment-popover__hint">
+            {formatDraftBlockType(draft.anchor.blockType)}
+            {uiText.commentThread.block} {draft.anchor.blockIndex + 1},{" "}
+            {uiText.commentThread.chars} {draft.anchor.charRange.start}-
+            {draft.anchor.charRange.end}
           </p>
-        )}
+          {visibleErrorMessage === null ? null : (
+            <p id={errorId} className="add-comment-popover__error" role="alert">
+              {visibleErrorMessage}
+            </p>
+          )}
+        </div>
         <div className="add-comment-popover__actions">
           <button
             className="button button--secondary"

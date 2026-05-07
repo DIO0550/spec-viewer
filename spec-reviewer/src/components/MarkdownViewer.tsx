@@ -34,6 +34,7 @@ import type {
   CommentAnchorDraft,
   CommentBlockType,
   CommentId,
+  CommentSelectionBounds,
 } from "../types/comment";
 import type { MarkdownBlockMetadata, MarkdownBlockType } from "../types/spec";
 import {
@@ -966,7 +967,8 @@ function createHighlightedBlockMetadata({
     onClick: (event) => {
       if (
         !(event.currentTarget instanceof HTMLElement) ||
-        isInteractiveHighlightTarget(event.target, event.currentTarget)
+        isInteractiveHighlightTarget(event.target, event.currentTarget) ||
+        hasActiveTextSelectionInside(event.currentTarget)
       ) {
         return;
       }
@@ -1010,6 +1012,35 @@ function isInteractiveHighlightTarget(
   );
 
   return interactiveElement !== null && interactiveElement !== currentTarget;
+}
+
+/** @returns true when a click follows text selection inside the highlighted block. */
+function hasActiveTextSelectionInside(element: HTMLElement): boolean {
+  const selection = document.getSelection();
+
+  if (
+    selection === null ||
+    selection.rangeCount === 0 ||
+    selection.isCollapsed
+  ) {
+    return false;
+  }
+
+  const range = selection.getRangeAt(0);
+
+  return (
+    containsSelectionNode(element, range.startContainer) &&
+    containsSelectionNode(element, range.endContainer)
+  );
+}
+
+/** @returns true when a selection endpoint belongs to the target element. */
+function containsSelectionNode(element: HTMLElement, node: Node): boolean {
+  if (node.nodeType === Node.ELEMENT_NODE) {
+    return element.contains(node);
+  }
+
+  return node.parentElement !== null && element.contains(node.parentElement);
 }
 
 /** @returns The rendered Markdown block for a persisted comment anchor. */
@@ -1485,6 +1516,9 @@ function CommentAnchorDraftPopover({
 }
 
 type FloatingKind = "button" | "popover";
+const FLOATING_VIEWPORT_MARGIN = 8;
+const COMMENT_POPOVER_ESTIMATED_HEIGHT = 360;
+const COMMENT_POPOVER_ESTIMATED_WIDTH = 340;
 
 /** @returns Fixed-position style for selection-adjacent UI. */
 function createFloatingStyle(
@@ -1495,15 +1529,43 @@ function createFloatingStyle(
 
   if (kind === "button") {
     return {
-      top: Math.max(8, bounds.top - 44),
-      left: Math.max(8, bounds.left + bounds.width / 2),
+      top: Math.max(FLOATING_VIEWPORT_MARGIN, bounds.top - 44),
+      left: Math.max(FLOATING_VIEWPORT_MARGIN, bounds.left + bounds.width / 2),
     };
   }
 
   return {
-    top: Math.max(8, bounds.top + bounds.height + 10),
-    left: Math.max(8, bounds.left),
+    top: createPopoverTop(bounds),
+    left: createPopoverLeft(bounds),
   };
+}
+
+/** @returns Viewport-clamped top offset for the comment dialog. */
+function createPopoverTop(bounds: CommentSelectionBounds): number {
+  const preferredBelow = bounds.top + bounds.height + 10;
+  const availableBelow =
+    window.innerHeight - preferredBelow - FLOATING_VIEWPORT_MARGIN;
+
+  if (availableBelow >= COMMENT_POPOVER_ESTIMATED_HEIGHT) {
+    return Math.max(FLOATING_VIEWPORT_MARGIN, preferredBelow);
+  }
+
+  const preferredAbove = bounds.top - COMMENT_POPOVER_ESTIMATED_HEIGHT - 10;
+
+  return Math.max(FLOATING_VIEWPORT_MARGIN, preferredAbove);
+}
+
+/** @returns Viewport-clamped left offset for the comment dialog. */
+function createPopoverLeft(bounds: CommentSelectionBounds): number {
+  const maxLeft =
+    window.innerWidth -
+    COMMENT_POPOVER_ESTIMATED_WIDTH -
+    FLOATING_VIEWPORT_MARGIN;
+
+  return Math.max(
+    FLOATING_VIEWPORT_MARGIN,
+    Math.min(bounds.left, Math.max(FLOATING_VIEWPORT_MARGIN, maxLeft)),
+  );
 }
 
 /** Clears the browser selection once a draft has been handled. */
