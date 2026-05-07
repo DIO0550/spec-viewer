@@ -568,6 +568,77 @@ test("MarkdownViewerはMarkdown内の選択から追加コメントを保存す�
   result.unmount();
 });
 
+test("MarkdownViewerはコードブロック内の選択から追加コメントを保存する", async () => {
+  const onAddComment = vi.fn().mockResolvedValue(true);
+  const result = renderViewer(
+    createReadyState(["```ts", "const enabled = true;", "```"].join("\n")),
+    vi.fn(),
+    onAddComment,
+  );
+  const textNode = result.container.querySelector("pre code")?.childNodes[1];
+  expect(textNode).toBeInstanceOf(Text);
+
+  const range = document.createRange();
+  range.setStart(textNode as Text, 1);
+  range.setEnd(textNode as Text, 8);
+  const selection = document.getSelection();
+  expect(selection).not.toBeNull();
+
+  const readySelection = selection as Selection;
+  readySelection.removeAllRanges();
+  readySelection.addRange(range);
+
+  act(() => {
+    document.dispatchEvent(new Event("selectionchange"));
+  });
+
+  const addButton = result.container.querySelector(
+    ".text-selection-comment-button",
+  );
+  expect(addButton?.textContent).toContain("コメント追加");
+
+  act(() => {
+    addButton?.dispatchEvent(
+      new MouseEvent("mousedown", { bubbles: true, cancelable: true }),
+    );
+    (addButton as HTMLButtonElement).click();
+  });
+
+  expect(result.container.textContent).toContain("code blockブロック 1");
+
+  const textarea = result.container.querySelector(
+    "textarea",
+  ) as HTMLTextAreaElement;
+  act(() => {
+    textarea.value = " Keep this example selectable. ";
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  await act(async () => {
+    (
+      Array.from(result.container.querySelectorAll("button")).find((button) =>
+        button.textContent?.includes("保存"),
+      ) as HTMLButtonElement
+    ).click();
+  });
+
+  expect(onAddComment).toHaveBeenCalledWith({
+    anchor: expect.objectContaining({
+      fileKey: "tasks",
+      blockType: "code_block",
+      blockIndex: 0,
+      textSnippet: "enabled",
+      charRange: {
+        start: 6,
+        end: 13,
+      },
+    }),
+    body: "Keep this example selectable.",
+  });
+  expect(result.container.querySelector("textarea")).toBeNull();
+  result.unmount();
+});
+
 test("MarkdownViewerはハイライト内の部分選択をコメント選択クリックとして扱わない", () => {
   const contents = "A paragraph with selectable text.";
   const onSelectComment = vi.fn();

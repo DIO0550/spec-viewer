@@ -180,6 +180,43 @@ test("AddCommentPopoverはEscapeでキャンセルする", () => {
   result.unmount();
 });
 
+test("AddCommentPopoverは範囲外クリックでキャンセルする", () => {
+  const onCancel = vi.fn();
+  const result = renderPopover({ onCancel });
+
+  act(() => {
+    document.body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+  });
+
+  expect(onCancel).toHaveBeenCalledOnce();
+  result.unmount();
+});
+
+test("AddCommentPopoverは内部クリックではキャンセルしない", () => {
+  const onCancel = vi.fn();
+  const result = renderPopover({ onCancel });
+  const textarea = findTextarea(result.container);
+
+  act(() => {
+    textarea.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+  });
+
+  expect(onCancel).not.toHaveBeenCalled();
+  result.unmount();
+});
+
+test("AddCommentPopoverは保存中の範囲外クリックではキャンセルしない", () => {
+  const onCancel = vi.fn();
+  const result = renderPopover({ isSaving: true, onCancel });
+
+  act(() => {
+    document.body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+  });
+
+  expect(onCancel).not.toHaveBeenCalled();
+  result.unmount();
+});
+
 test("AddCommentPopoverはdialog内のbutton focus時もEscapeでキャンセルする", () => {
   const onCancel = vi.fn();
   const result = renderPopover({ onCancel });
