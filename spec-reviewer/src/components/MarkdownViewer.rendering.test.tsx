@@ -740,6 +740,50 @@ test("MarkdownViewerはMarkdownブロックのコメントボタンから追加�
   result.unmount();
 });
 
+test("MarkdownViewerはコードブロックのコメントボタンから追加popoverを開く", () => {
+  const result = renderViewer(
+    createReadyState(["```ts", "const enabled = true;", "```"].join("\n")),
+  );
+  const codeBlock = result.container.querySelector("pre[data-block-type]");
+  const target = codeBlock?.closest(".markdown-comment-target");
+  const addButton = target?.querySelector(
+    ".markdown-block-comment-button",
+  ) as HTMLButtonElement | null;
+
+  expect(codeBlock).not.toBeNull();
+  expect(addButton).not.toBeNull();
+
+  act(() => {
+    addButton?.click();
+  });
+
+  expect(result.container.textContent).toContain("コメント追加");
+  expect(result.container.textContent).toContain("code blockブロック 1");
+  result.unmount();
+});
+
+test("MarkdownViewerはブロックコメント追加popoverを範囲外クリックで閉じる", () => {
+  const result = renderViewer(createReadyState("Close this draft outside."));
+  const addButton = result.container.querySelector(
+    ".markdown-block-comment-button",
+  ) as HTMLButtonElement;
+
+  act(() => {
+    addButton.click();
+  });
+
+  expect(result.container.querySelector("textarea")).not.toBeNull();
+
+  act(() => {
+    document.body.dispatchEvent(
+      new MouseEvent("mousedown", { bubbles: true, cancelable: true }),
+    );
+  });
+
+  expect(result.container.querySelector("textarea")).toBeNull();
+  result.unmount();
+});
+
 test("MarkdownViewerはコメント追加ボタンをキーボードでフォーカスできる", () => {
   const result = renderViewer(createReadyState("Focusable paragraph."));
   const addButton = result.container.querySelector(
