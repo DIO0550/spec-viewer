@@ -324,16 +324,31 @@ test("MarkdownViewerは既存コメントを本文右側のカードとして表
   );
   const activeAnnotation = result.container.querySelector(
     '.markdown-comment-annotation[data-active="true"]',
+  ) as HTMLElement;
+  const activeAnnotationToggle = activeAnnotation.querySelector(
+    ".markdown-comment-annotation__toggle",
   ) as HTMLButtonElement;
 
   expect(annotationCards).toHaveLength(2);
   expect(annotationCards[0]?.textContent).toContain("未解決");
-  expect(annotationCards[0]?.textContent).toContain("cmt_open body");
+  expect(annotationCards[0]?.textContent).not.toContain("cmt_open body");
+  expect(activeAnnotationToggle.getAttribute("aria-expanded")).toBe("false");
   expect(activeAnnotation.textContent).toContain("解決済み");
+  expect(activeAnnotation.textContent).not.toContain("cmt_resolved body");
+
+  act(() => {
+    activeAnnotationToggle.click();
+  });
+
+  const activeAnnotationSelect = activeAnnotation.querySelector(
+    ".markdown-comment-annotation__select",
+  ) as HTMLButtonElement;
+
+  expect(activeAnnotationToggle.getAttribute("aria-expanded")).toBe("true");
   expect(activeAnnotation.textContent).toContain("cmt_resolved body");
 
   act(() => {
-    activeAnnotation.click();
+    activeAnnotationSelect.click();
   });
 
   expect(onSelectComment).toHaveBeenCalledWith("cmt_resolved");

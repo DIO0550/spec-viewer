@@ -11,13 +11,16 @@ import {
   cloneElement,
   isValidElement,
   useEffect,
+  useId,
   useRef,
   useState,
 } from "react";
 import {
   CheckCircle2,
+  ChevronDown,
   MessageSquare,
   MessageSquarePlus,
+  Pencil,
   RefreshCcw,
 } from "lucide-react";
 import ReactMarkdown, { type Components } from "react-markdown";
@@ -1445,28 +1448,53 @@ function CommentAnnotationCard({
   onSelectComment,
 }: CommentAnnotationCardProps) {
   const { comment, anchorDisplayStatus, isActive } = annotation;
+  const [isExpanded, setIsExpanded] = useState(false);
+  const previewId = useId();
   const statusLabel = formatCommentAnnotationStatus(
     comment,
     anchorDisplayStatus,
   );
   const preview = createCommentPreview(comment.body);
+  const toggleExpanded = (event: MouseEvent<HTMLButtonElement>): void => {
+    event.stopPropagation();
+    setIsExpanded((current) => !current);
+  };
   const selectComment = (event: MouseEvent<HTMLButtonElement>): void => {
     event.stopPropagation();
     onSelectComment?.(comment.id);
   };
 
   return (
-    <button
+    <article
       className="markdown-comment-annotation"
-      type="button"
       data-active={isActive ? "true" : "false"}
       data-anchor-display-status={anchorDisplayStatus}
+      data-expanded={isExpanded ? "true" : "false"}
       data-resolved={comment.resolved ? "true" : "false"}
       aria-current={isActive ? "true" : undefined}
-      aria-label={`コメントを確認 ${preview}`}
-      onClick={selectComment}
     >
-      <span className="markdown-comment-annotation__header">
+      <div className="markdown-comment-annotation__header">
+        <button
+          className="markdown-comment-annotation__toggle"
+          type="button"
+          aria-controls={previewId}
+          aria-expanded={isExpanded}
+          aria-label={
+            isExpanded
+              ? `コメントを閉じる ${statusLabel}`
+              : `コメントを開く ${statusLabel}`
+          }
+          title={isExpanded ? "コメントを閉じる" : "コメントを開く"}
+          onClick={toggleExpanded}
+        >
+          {isExpanded ? (
+            <ChevronDown aria-hidden="true" size={14} />
+          ) : comment.resolved ? (
+            <CheckCircle2 aria-hidden="true" size={14} />
+          ) : (
+            <MessageSquare aria-hidden="true" size={14} />
+          )}
+        </button>
         <span className="markdown-comment-annotation__status">
           {comment.resolved ? (
             <CheckCircle2 aria-hidden="true" size={13} />
@@ -1475,9 +1503,24 @@ function CommentAnnotationCard({
           )}
           {statusLabel}
         </span>
-      </span>
-      <span className="markdown-comment-annotation__preview">{preview}</span>
-    </button>
+        {isExpanded ? (
+          <button
+            className="markdown-comment-annotation__select"
+            type="button"
+            aria-label={`コメント編集を開く ${preview}`}
+            title="コメント編集を開く"
+            onClick={selectComment}
+          >
+            <Pencil aria-hidden="true" size={13} />
+          </button>
+        ) : null}
+      </div>
+      {isExpanded ? (
+        <p className="markdown-comment-annotation__preview" id={previewId}>
+          {preview}
+        </p>
+      ) : null}
+    </article>
   );
 }
 
