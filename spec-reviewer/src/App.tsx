@@ -371,6 +371,14 @@ function App() {
     void comments.deleteComment(commentId);
   };
 
+  const selectComment = useCallback(
+    (commentId: CommentId): void => {
+      setActiveCommentId(commentId);
+      sidebarPreference.openSidebar();
+    },
+    [sidebarPreference.openSidebar],
+  );
+
   const updateCommentAnchorDisplayStates = useCallback(
     (nextStates: readonly CommentAnchorDisplayState[]): void => {
       setCommentAnchorDisplayStates(nextStates);
@@ -915,7 +923,7 @@ function App() {
                 void specs.reloadDocument();
               }}
               onAddComment={addComment}
-              onSelectComment={setActiveCommentId}
+              onSelectComment={selectComment}
               onAnchorDisplayStatesChange={updateCommentAnchorDisplayStates}
             />
           )
@@ -927,7 +935,7 @@ function App() {
             exportState={commentExportState}
             activeCommentId={activeCommentId}
             anchorDisplayStates={commentAnchorDisplayStates}
-            onSelectComment={setActiveCommentId}
+            onSelectComment={selectComment}
             onResolveComment={resolveComment}
             onReopenComment={reopenComment}
             onDeleteComment={deleteComment}

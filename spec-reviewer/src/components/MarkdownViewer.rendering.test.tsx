@@ -294,6 +294,55 @@ test("MarkdownViewerはコメント付きブロックを状態別にハイライ
   result.unmount();
 });
 
+test("MarkdownViewerは既存コメントを本文右側のカードとして表示して選択できる", () => {
+  const onSelectComment = vi.fn();
+  const contents = "Existing comments should be visible beside the paragraph.";
+  const comments: readonly Comment[] = [
+    createComment({
+      id: "cmt_open",
+      blockIndex: 0,
+      text: contents,
+      resolved: false,
+    }),
+    createComment({
+      id: "cmt_resolved",
+      blockIndex: 0,
+      text: contents,
+      resolved: true,
+    }),
+  ];
+  const result = renderViewer(
+    createReadyState(contents),
+    vi.fn(),
+    vi.fn().mockResolvedValue(true),
+    comments,
+    "cmt_resolved",
+    onSelectComment,
+  );
+  const annotationCards = result.container.querySelectorAll(
+    ".markdown-comment-annotation",
+  );
+  const activeAnnotation = result.container.querySelector(
+    '.markdown-comment-annotation[data-active="true"]',
+  ) as HTMLButtonElement;
+
+  expect(annotationCards).toHaveLength(2);
+  expect(annotationCards[0]?.textContent).toContain("未解決");
+  expect(annotationCards[0]?.textContent).toContain("cmt_open body");
+  expect(activeAnnotation.textContent).toContain("解決済み");
+  expect(activeAnnotation.textContent).toContain("cmt_resolved body");
+
+  act(() => {
+    activeAnnotation.click();
+  });
+
+  expect(onSelectComment).toHaveBeenCalledWith("cmt_resolved");
+  expect(
+    result.container.querySelector(".markdown-block-comment-button"),
+  ).not.toBeNull();
+  result.unmount();
+});
+
 test("MarkdownViewerはstaleとorphanedのコメントアンカー状態を通知する", () => {
   const onAnchorDisplayStatesChange = vi.fn();
   const contents = "A paragraph with changed anchor text.";

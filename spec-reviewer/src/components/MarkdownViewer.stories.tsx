@@ -61,6 +61,50 @@ const comments: readonly Comment[] = [
   },
 ];
 
+const commentCardComments: readonly Comment[] = [
+  ...comments,
+  {
+    id: "cmt_resolved_card",
+    anchor: {
+      fileKey: "tasks",
+      blockType: "paragraph",
+      blockIndex: 1,
+      textHash: createTextHash(highlightedParagraph),
+      textSnippet: highlightedParagraph,
+      charRange: {
+        start: 0,
+        end: highlightedParagraph.length,
+      },
+    },
+    body: "Resolved note stays visible without making the paragraph feel busy.",
+    status: "resolved",
+    resolved: true,
+    anchorResolution: null,
+    createdAt: "2026-05-07T00:10:00Z",
+    updatedAt: "2026-05-07T00:20:00Z",
+  },
+  {
+    id: "cmt_code_card",
+    anchor: {
+      fileKey: "tasks",
+      blockType: "code_block",
+      blockIndex: 4,
+      textHash: createTextHash('const selectedText = "paragraph fragment";'),
+      textSnippet: "selectedText",
+      charRange: {
+        start: 6,
+        end: 18,
+      },
+    },
+    body: "Code block comments keep the gutter add button available.",
+    status: "open",
+    resolved: false,
+    anchorResolution: null,
+    createdAt: "2026-05-07T00:30:00Z",
+    updatedAt: "2026-05-07T00:30:00Z",
+  },
+];
+
 const meta: Meta<typeof MarkdownViewer> = {
   component: MarkdownViewer,
   args: {
@@ -85,3 +129,10 @@ export default meta;
 type Story = StoryObj<typeof MarkdownViewer>;
 
 export const HighlightedSelectionSurface: Story = {};
+
+export const ExistingCommentCards: Story = {
+  args: {
+    comments: commentCardComments,
+    activeCommentId: "cmt_active_selection",
+  },
+};

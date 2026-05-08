@@ -14,7 +14,12 @@ import {
   useRef,
   useState,
 } from "react";
-import { MessageSquarePlus, RefreshCcw } from "lucide-react";
+import {
+  CheckCircle2,
+  MessageSquare,
+  MessageSquarePlus,
+  RefreshCcw,
+} from "lucide-react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
@@ -86,6 +91,13 @@ type CommentHighlightMode = "block" | "range";
 type IndexedBlock = Readonly<{
   metadata: BlockMetadata;
   rangeHighlights: readonly CommentRangeHighlight[];
+  commentAnnotations: readonly CommentBlockAnnotation[];
+}>;
+
+type CommentBlockAnnotation = Readonly<{
+  comment: Comment;
+  anchorDisplayStatus: CommentAnchorDisplayStatus;
+  isActive: boolean;
 }>;
 
 type CommentRangeHighlight = Readonly<{
@@ -101,6 +113,7 @@ type CommentBlockHighlight = Readonly<{
   selectCommentId: CommentId;
   state: CommentHighlightState;
   rangeHighlights: readonly CommentRangeHighlight[];
+  annotations: readonly CommentBlockAnnotation[];
 }>;
 
 type CommentBlockHighlights = ReadonlyMap<string, CommentBlockHighlight>;
@@ -450,7 +463,11 @@ function MarkdownDocument({
     highlights,
     onSelectComment,
   });
-  const components = createMarkdownComponents(blockIndexer, onCreateBlockDraft);
+  const components = createMarkdownComponents({
+    blockIndexer,
+    onCreateBlockDraft,
+    onSelectComment,
+  });
 
   return (
     <div
@@ -511,6 +528,7 @@ function createBlockIndexer({
           onSelectComment,
         }),
         rangeHighlights: highlight?.rangeHighlights ?? [],
+        commentAnnotations: highlight?.annotations ?? [],
       };
     },
   };
@@ -777,7 +795,33 @@ function createCommentBlockHighlight({
       activeCommentId,
       anchorDisplayStateByCommentId,
     }),
+    annotations: createCommentBlockAnnotations({
+      comments,
+      activeCommentId,
+      anchorDisplayStateByCommentId,
+    }),
   };
+}
+
+/** @returns Right-side annotation card models for comments attached to one block. */
+function createCommentBlockAnnotations({
+  comments,
+  activeCommentId,
+  anchorDisplayStateByCommentId,
+}: Readonly<{
+  comments: readonly Comment[];
+  activeCommentId: CommentId | null;
+  anchorDisplayStateByCommentId: ReadonlyMap<
+    CommentId,
+    CommentAnchorDisplayStatus
+  >;
+}>): readonly CommentBlockAnnotation[] {
+  return comments.map((comment) => ({
+    comment,
+    anchorDisplayStatus:
+      anchorDisplayStateByCommentId.get(comment.id) ?? "exact",
+    isActive: comment.id === activeCommentId,
+  }));
 }
 
 /** @returns The rendered block key that should receive a comment highlight. */
@@ -1141,16 +1185,25 @@ function createBlockKey(blockType: BlockType, blockIndex: number): string {
 }
 
 /** @returns React Markdown component overrides with comment anchor metadata. */
-function createMarkdownComponents(
-  blockIndexer: BlockIndexer,
-  onCreateBlockDraft: CreateBlockCommentDraft,
-): Components {
+function createMarkdownComponents({
+  blockIndexer,
+  onCreateBlockDraft,
+  onSelectComment,
+}: Readonly<{
+  blockIndexer: BlockIndexer;
+  onCreateBlockDraft: CreateBlockCommentDraft;
+  onSelectComment?: (commentId: CommentId) => void;
+}>): Components {
   return {
     h1: ({ node: _node, children, ...props }) => {
       const block = blockIndexer.next("heading");
 
       return (
-        <MarkdownCommentableBlock onCreateBlockDraft={onCreateBlockDraft}>
+        <MarkdownCommentableBlock
+          commentAnnotations={block.commentAnnotations}
+          onCreateBlockDraft={onCreateBlockDraft}
+          onSelectComment={onSelectComment}
+        >
           <h1 {...props} {...block.metadata}>
             {renderRangeHighlightedChildren(children, block.rangeHighlights)}
           </h1>
@@ -1161,7 +1214,11 @@ function createMarkdownComponents(
       const block = blockIndexer.next("heading");
 
       return (
-        <MarkdownCommentableBlock onCreateBlockDraft={onCreateBlockDraft}>
+        <MarkdownCommentableBlock
+          commentAnnotations={block.commentAnnotations}
+          onCreateBlockDraft={onCreateBlockDraft}
+          onSelectComment={onSelectComment}
+        >
           <h2 {...props} {...block.metadata}>
             {renderRangeHighlightedChildren(children, block.rangeHighlights)}
           </h2>
@@ -1172,7 +1229,11 @@ function createMarkdownComponents(
       const block = blockIndexer.next("heading");
 
       return (
-        <MarkdownCommentableBlock onCreateBlockDraft={onCreateBlockDraft}>
+        <MarkdownCommentableBlock
+          commentAnnotations={block.commentAnnotations}
+          onCreateBlockDraft={onCreateBlockDraft}
+          onSelectComment={onSelectComment}
+        >
           <h3 {...props} {...block.metadata}>
             {renderRangeHighlightedChildren(children, block.rangeHighlights)}
           </h3>
@@ -1183,7 +1244,11 @@ function createMarkdownComponents(
       const block = blockIndexer.next("heading");
 
       return (
-        <MarkdownCommentableBlock onCreateBlockDraft={onCreateBlockDraft}>
+        <MarkdownCommentableBlock
+          commentAnnotations={block.commentAnnotations}
+          onCreateBlockDraft={onCreateBlockDraft}
+          onSelectComment={onSelectComment}
+        >
           <h4 {...props} {...block.metadata}>
             {renderRangeHighlightedChildren(children, block.rangeHighlights)}
           </h4>
@@ -1194,7 +1259,11 @@ function createMarkdownComponents(
       const block = blockIndexer.next("heading");
 
       return (
-        <MarkdownCommentableBlock onCreateBlockDraft={onCreateBlockDraft}>
+        <MarkdownCommentableBlock
+          commentAnnotations={block.commentAnnotations}
+          onCreateBlockDraft={onCreateBlockDraft}
+          onSelectComment={onSelectComment}
+        >
           <h5 {...props} {...block.metadata}>
             {renderRangeHighlightedChildren(children, block.rangeHighlights)}
           </h5>
@@ -1205,7 +1274,11 @@ function createMarkdownComponents(
       const block = blockIndexer.next("heading");
 
       return (
-        <MarkdownCommentableBlock onCreateBlockDraft={onCreateBlockDraft}>
+        <MarkdownCommentableBlock
+          commentAnnotations={block.commentAnnotations}
+          onCreateBlockDraft={onCreateBlockDraft}
+          onSelectComment={onSelectComment}
+        >
           <h6 {...props} {...block.metadata}>
             {renderRangeHighlightedChildren(children, block.rangeHighlights)}
           </h6>
@@ -1216,7 +1289,11 @@ function createMarkdownComponents(
       const block = blockIndexer.next("paragraph");
 
       return (
-        <MarkdownCommentableBlock onCreateBlockDraft={onCreateBlockDraft}>
+        <MarkdownCommentableBlock
+          commentAnnotations={block.commentAnnotations}
+          onCreateBlockDraft={onCreateBlockDraft}
+          onSelectComment={onSelectComment}
+        >
           <p {...props} {...block.metadata}>
             {renderRangeHighlightedChildren(children, block.rangeHighlights)}
           </p>
@@ -1230,7 +1307,9 @@ function createMarkdownComponents(
         <MarkdownListItem
           {...props}
           {...block.metadata}
+          commentAnnotations={block.commentAnnotations}
           onCreateBlockDraft={onCreateBlockDraft}
+          onSelectComment={onSelectComment}
         >
           {renderRangeHighlightedChildren(children, block.rangeHighlights)}
         </MarkdownListItem>
@@ -1240,7 +1319,11 @@ function createMarkdownComponents(
       const block = blockIndexer.next("code");
 
       return (
-        <MarkdownCommentableBlock onCreateBlockDraft={onCreateBlockDraft}>
+        <MarkdownCommentableBlock
+          commentAnnotations={block.commentAnnotations}
+          onCreateBlockDraft={onCreateBlockDraft}
+          onSelectComment={onSelectComment}
+        >
           <pre {...props} {...block.metadata}>
             {renderRangeHighlightedChildren(children, block.rangeHighlights)}
           </pre>
@@ -1251,7 +1334,11 @@ function createMarkdownComponents(
       const block = blockIndexer.next("table");
 
       return (
-        <MarkdownCommentableBlock onCreateBlockDraft={onCreateBlockDraft}>
+        <MarkdownCommentableBlock
+          commentAnnotations={block.commentAnnotations}
+          onCreateBlockDraft={onCreateBlockDraft}
+          onSelectComment={onSelectComment}
+        >
           <div className="markdown-rendered__table-scroll" {...block.metadata}>
             <table {...props} />
           </div>
@@ -1265,13 +1352,17 @@ function createMarkdownComponents(
 
 type MarkdownCommentableBlockProps = Readonly<{
   children: ReactElement;
+  commentAnnotations: readonly CommentBlockAnnotation[];
   onCreateBlockDraft: CreateBlockCommentDraft;
+  onSelectComment?: (commentId: CommentId) => void;
 }>;
 
 /** @returns A rendered Markdown block with a gutter comment affordance. */
 function MarkdownCommentableBlock({
   children,
+  commentAnnotations,
   onCreateBlockDraft,
+  onSelectComment,
 }: MarkdownCommentableBlockProps) {
   const createDraftFromRenderedBlock = (
     event: MouseEvent<HTMLButtonElement>,
@@ -1288,7 +1379,12 @@ function MarkdownCommentableBlock({
   };
 
   return (
-    <div className="markdown-comment-target">
+    <div
+      className="markdown-comment-target"
+      data-has-comment-annotations={
+        commentAnnotations.length > 0 ? "true" : undefined
+      }
+    >
       <button
         className="markdown-block-comment-button"
         type="button"
@@ -1303,8 +1399,127 @@ function MarkdownCommentableBlock({
         <span>コメント追加</span>
       </button>
       {children}
+      <CommentAnnotationStack
+        annotations={commentAnnotations}
+        onSelectComment={onSelectComment}
+      />
     </div>
   );
+}
+
+type CommentAnnotationStackProps = Readonly<{
+  annotations: readonly CommentBlockAnnotation[];
+  onSelectComment?: (commentId: CommentId) => void;
+}>;
+
+/** @returns Right-side existing comment cards for one rendered Markdown block. */
+function CommentAnnotationStack({
+  annotations,
+  onSelectComment,
+}: CommentAnnotationStackProps) {
+  if (annotations.length === 0) {
+    return null;
+  }
+
+  return (
+    <aside className="markdown-comment-annotations" aria-label="既存コメント">
+      {annotations.map((annotation) => (
+        <CommentAnnotationCard
+          key={annotation.comment.id}
+          annotation={annotation}
+          onSelectComment={onSelectComment}
+        />
+      ))}
+    </aside>
+  );
+}
+
+type CommentAnnotationCardProps = Readonly<{
+  annotation: CommentBlockAnnotation;
+  onSelectComment?: (commentId: CommentId) => void;
+}>;
+
+/** @returns A compact selectable preview for one existing comment. */
+function CommentAnnotationCard({
+  annotation,
+  onSelectComment,
+}: CommentAnnotationCardProps) {
+  const { comment, anchorDisplayStatus, isActive } = annotation;
+  const statusLabel = formatCommentAnnotationStatus(
+    comment,
+    anchorDisplayStatus,
+  );
+  const preview = createCommentPreview(comment.body);
+  const selectComment = (event: MouseEvent<HTMLButtonElement>): void => {
+    event.stopPropagation();
+    onSelectComment?.(comment.id);
+  };
+
+  return (
+    <button
+      className="markdown-comment-annotation"
+      type="button"
+      data-active={isActive ? "true" : "false"}
+      data-anchor-display-status={anchorDisplayStatus}
+      data-resolved={comment.resolved ? "true" : "false"}
+      aria-current={isActive ? "true" : undefined}
+      aria-label={`コメントを確認 ${preview}`}
+      onClick={selectComment}
+    >
+      <span className="markdown-comment-annotation__header">
+        <span className="markdown-comment-annotation__status">
+          {comment.resolved ? (
+            <CheckCircle2 aria-hidden="true" size={13} />
+          ) : (
+            <MessageSquare aria-hidden="true" size={13} />
+          )}
+          {statusLabel}
+        </span>
+      </span>
+      <span className="markdown-comment-annotation__preview">{preview}</span>
+    </button>
+  );
+}
+
+/** @returns The status label shown inside a block-level annotation card. */
+function formatCommentAnnotationStatus(
+  comment: Comment,
+  anchorDisplayStatus: CommentAnchorDisplayStatus,
+): string {
+  if (anchorDisplayStatus === "moved") {
+    return uiText.sidebar.moved;
+  }
+
+  if (anchorDisplayStatus === "fuzzy") {
+    return uiText.sidebar.fuzzy;
+  }
+
+  if (anchorDisplayStatus === "stale") {
+    return uiText.sidebar.stale;
+  }
+
+  if (anchorDisplayStatus === "orphaned") {
+    return uiText.sidebar.orphaned;
+  }
+
+  return comment.resolved ? uiText.sidebar.resolved : uiText.sidebar.openFilter;
+}
+
+const COMMENT_PREVIEW_MAX_LENGTH = 84;
+
+/** @returns A compact single-line preview for a comment body. */
+function createCommentPreview(body: string): string {
+  const normalizedBody = body.replace(/\s+/g, " ").trim();
+
+  if (normalizedBody.length === 0) {
+    return uiText.commentThread.emptyBody;
+  }
+
+  if (normalizedBody.length <= COMMENT_PREVIEW_MAX_LENGTH) {
+    return normalizedBody;
+  }
+
+  return `${normalizedBody.slice(0, COMMENT_PREVIEW_MAX_LENGTH - 1)}...`;
 }
 
 type RangeRenderCursor = {
@@ -1596,7 +1811,9 @@ type ListItemProps = Omit<ComponentPropsWithoutRef<"li">, keyof BlockMetadata> &
   Readonly<{
     checked?: boolean | null;
     node?: unknown;
+    commentAnnotations: readonly CommentBlockAnnotation[];
     onCreateBlockDraft: CreateBlockCommentDraft;
+    onSelectComment?: (commentId: CommentId) => void;
   }> &
   BlockMetadata;
 
@@ -1604,7 +1821,9 @@ type ListItemProps = Omit<ComponentPropsWithoutRef<"li">, keyof BlockMetadata> &
 function MarkdownListItem({
   checked: _checked,
   node: _node,
+  commentAnnotations,
   onCreateBlockDraft,
+  onSelectComment,
   children,
   ...props
 }: ListItemProps) {
@@ -1637,6 +1856,10 @@ function MarkdownListItem({
         <MessageSquarePlus aria-hidden="true" size={14} />
       </button>
       {children}
+      <CommentAnnotationStack
+        annotations={commentAnnotations}
+        onSelectComment={onSelectComment}
+      />
     </li>
   );
 }
