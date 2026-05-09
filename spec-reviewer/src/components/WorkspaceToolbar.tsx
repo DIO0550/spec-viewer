@@ -101,7 +101,7 @@ export function WorkspaceToolbar({
       }}
     >
       <div className="workspace-toolbar__brand">
-        <span className="workspace-toolbar__title">Spec Viewer</span>
+        <span className="workspace-toolbar__title">Spec Reviewer</span>
         <span
           className="workspace-toolbar__status"
           aria-live="polite"
@@ -185,12 +185,12 @@ export function WorkspaceToolbar({
           <div className="workspace-toolbar__recent-menu">
             {hasRecentWorkspaces ? (
               <>
-                <div
+                <ul
                   className="workspace-toolbar__recent-list"
                   aria-label={uiText.workspace.recent}
                 >
                   {recentWorkspaces.map((recentWorkspace) => (
-                    <div
+                    <li
                       className="workspace-toolbar__recent-row"
                       key={recentWorkspace.path}
                     >
@@ -228,9 +228,9 @@ export function WorkspaceToolbar({
                       >
                         <X aria-hidden="true" size={14} />
                       </button>
-                    </div>
+                    </li>
                   ))}
-                </div>
+                </ul>
                 <button
                   className="button button--ghost workspace-toolbar__recent-clear"
                   type="button"
@@ -265,10 +265,7 @@ export function WorkspaceToolbar({
             <Info aria-hidden="true" size={16} />
             <span>{uiText.workspace.licenses}</span>
           </summary>
-          <div
-            className="workspace-toolbar__licenses-menu"
-            aria-label={uiText.workspace.licensesTitle}
-          >
+          <div className="workspace-toolbar__licenses-menu">
             <header className="workspace-toolbar__licenses-header">
               <h2>{uiText.workspace.licensesTitle}</h2>
               <p>{uiText.workspace.licensesDescription}</p>
