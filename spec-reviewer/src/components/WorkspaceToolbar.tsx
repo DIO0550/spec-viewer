@@ -1,18 +1,6 @@
-import {
-  Folder,
-  FolderOpen,
-  Info,
-  RefreshCw,
-  RotateCcw,
-  SunMoon,
-  Trash2,
-  X,
-} from "lucide-react";
-import { type KeyboardEvent, useRef, useState } from "react";
+import { FolderOpen, RefreshCw, RotateCcw, SunMoon } from "lucide-react";
 
 import type { ThemeMode } from "../hooks/useTheme";
-import type { RecentWorkspace } from "../lib/recentWorkspaces";
-import { thirdPartyLicenses } from "../lib/thirdPartyLicenses";
 import { uiText } from "../lib/uiText";
 
 export type WorkspaceRefreshStatus = Readonly<{
@@ -29,16 +17,12 @@ type Props = Readonly<{
   refreshStatus: WorkspaceRefreshStatus;
   canRefresh: boolean;
   themeMode: ThemeMode;
-  recentWorkspaces?: readonly RecentWorkspace[];
   onInputChange: (nextValue: string) => void;
   onBrowse: () => void;
   onLoad: () => void;
   onRefresh: () => void;
   onReset: () => void;
   onThemeModeChange: (nextThemeMode: ThemeMode) => void;
-  onOpenRecentWorkspace?: (path: string) => void;
-  onRemoveRecentWorkspace?: (path: string) => void;
-  onClearRecentWorkspaces?: () => void;
 }>;
 
 /** @returns Workspace path controls and current workspace status. */
@@ -51,45 +35,15 @@ export function WorkspaceToolbar({
   refreshStatus,
   canRefresh,
   themeMode,
-  recentWorkspaces = [],
   onInputChange,
   onBrowse,
   onLoad,
   onRefresh,
   onReset,
   onThemeModeChange,
-  onOpenRecentWorkspace,
-  onRemoveRecentWorkspace,
-  onClearRecentWorkspaces,
 }: Props) {
   const isBusy = isLoading || isBrowsing;
-  const canLoad = inputValue.trim().length > 0 && !isBusy;
   const isRefreshing = refreshStatus.status === "loading";
-  const hasRecentWorkspaces = recentWorkspaces.length > 0;
-  const recentSummaryRef = useRef<HTMLElement>(null);
-  const licensesSummaryRef = useRef<HTMLElement>(null);
-  const [isRecentMenuOpen, setIsRecentMenuOpen] = useState(false);
-  const [isLicensesMenuOpen, setIsLicensesMenuOpen] = useState(false);
-
-  const closeRecentMenu = (event: KeyboardEvent<HTMLElement>): void => {
-    if (event.key !== "Escape" || !isRecentMenuOpen) {
-      return;
-    }
-
-    event.preventDefault();
-    setIsRecentMenuOpen(false);
-    recentSummaryRef.current?.focus();
-  };
-
-  const closeLicensesMenu = (event: KeyboardEvent<HTMLElement>): void => {
-    if (event.key !== "Escape" || !isLicensesMenuOpen) {
-      return;
-    }
-
-    event.preventDefault();
-    setIsLicensesMenuOpen(false);
-    licensesSummaryRef.current?.focus();
-  };
 
   return (
     <form
@@ -157,145 +111,6 @@ export function WorkspaceToolbar({
           <FolderOpen aria-hidden="true" size={15} />
           {isBrowsing ? uiText.workspace.opening : "開く"}
         </button>
-        <button
-          className="button button--secondary"
-          type="submit"
-          disabled={!canLoad}
-        >
-          <RefreshCw aria-hidden="true" size={15} />
-          {isLoading ? uiText.workspace.loading : uiText.workspace.load}
-        </button>
-        <details
-          className="workspace-toolbar__recent"
-          open={isRecentMenuOpen}
-          onToggle={(event) => {
-            setIsRecentMenuOpen(event.currentTarget.open);
-          }}
-          onKeyDown={closeRecentMenu}
-        >
-          <summary
-            ref={recentSummaryRef}
-            aria-label={uiText.workspace.switcher}
-            title={uiText.workspace.recent}
-            aria-disabled={!hasRecentWorkspaces}
-            aria-keyshortcuts="Escape"
-          >
-            <Folder aria-hidden="true" size={15} />
-            <span>{uiText.workspace.switcher}</span>
-          </summary>
-          <div className="workspace-toolbar__recent-menu">
-            {hasRecentWorkspaces ? (
-              <>
-                <ul
-                  className="workspace-toolbar__recent-list"
-                  aria-label={uiText.workspace.recent}
-                >
-                  {recentWorkspaces.map((recentWorkspace) => (
-                    <li
-                      className="workspace-toolbar__recent-row"
-                      key={recentWorkspace.path}
-                    >
-                      <button
-                        className="workspace-toolbar__recent-item"
-                        type="button"
-                        disabled={isBusy}
-                        title={recentWorkspace.path}
-                        aria-label={`${recentWorkspace.displayName}を開く`}
-                        onClick={() => {
-                          onOpenRecentWorkspace?.(recentWorkspace.path);
-                        }}
-                      >
-                        <span className="workspace-toolbar__recent-name">
-                          {recentWorkspace.displayName}
-                          {recentWorkspace.path === workspacePath ? (
-                            <span className="workspace-toolbar__current-badge">
-                              {uiText.workspace.currentWorkspace}
-                            </span>
-                          ) : null}
-                        </span>
-                        <span className="workspace-toolbar__recent-path">
-                          {recentWorkspace.path}
-                        </span>
-                      </button>
-                      <button
-                        className="icon-button"
-                        type="button"
-                        disabled={isBusy}
-                        aria-label={`${recentWorkspace.path}を${uiText.workspace.removeRecent}`}
-                        title={uiText.workspace.removeRecent}
-                        onClick={() => {
-                          onRemoveRecentWorkspace?.(recentWorkspace.path);
-                        }}
-                      >
-                        <X aria-hidden="true" size={14} />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-                <button
-                  className="button button--ghost workspace-toolbar__recent-clear"
-                  type="button"
-                  disabled={isBusy}
-                  onClick={onClearRecentWorkspaces}
-                >
-                  <Trash2 aria-hidden="true" size={14} />
-                  {uiText.workspace.clearRecent}
-                </button>
-              </>
-            ) : (
-              <span className="workspace-toolbar__recent-empty">
-                {uiText.workspace.noRecent}
-              </span>
-            )}
-          </div>
-        </details>
-        <details
-          className="workspace-toolbar__licenses"
-          open={isLicensesMenuOpen}
-          onToggle={(event) => {
-            setIsLicensesMenuOpen(event.currentTarget.open);
-          }}
-          onKeyDown={closeLicensesMenu}
-        >
-          <summary
-            ref={licensesSummaryRef}
-            aria-label={uiText.workspace.licensesTitle}
-            title={uiText.workspace.licensesTitle}
-            aria-keyshortcuts="Escape"
-          >
-            <Info aria-hidden="true" size={16} />
-            <span>{uiText.workspace.licenses}</span>
-          </summary>
-          <div className="workspace-toolbar__licenses-menu">
-            <header className="workspace-toolbar__licenses-header">
-              <h2>{uiText.workspace.licensesTitle}</h2>
-              <p>{uiText.workspace.licensesDescription}</p>
-            </header>
-            <div className="workspace-toolbar__licenses-list">
-              {thirdPartyLicenses.map((packageLicense) => (
-                <article
-                  className="workspace-toolbar__license-item"
-                  key={packageLicense.name}
-                >
-                  <div className="workspace-toolbar__license-summary">
-                    <strong>{packageLicense.name}</strong>
-                    <span>v{packageLicense.version}</span>
-                  </div>
-                  <div className="workspace-toolbar__license-details">
-                    <span>{packageLicense.license}</span>
-                    <a
-                      href={packageLicense.sourceUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {uiText.workspace.licenseSource}
-                    </a>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-        </details>
         <button
           className="icon-button"
           type="button"

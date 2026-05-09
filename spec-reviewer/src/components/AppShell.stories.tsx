@@ -16,6 +16,7 @@ import { CommentSidebar } from "./CommentSidebar";
 import { MarkdownViewer } from "./MarkdownViewer";
 import { SpecTabs } from "./SpecTabs";
 import { SpecTree } from "./SpecTree";
+import { WorkspaceSidebarSection } from "./WorkspaceSidebarSection";
 import { WorkspaceToolbar } from "./WorkspaceToolbar";
 
 const workspacePath = "/workspace/spec-reviewer";
@@ -279,6 +280,20 @@ function createShellArgs({
     selectedSpec?.files.find((file) => file.key === selectedFileKey) ?? null;
 
   return {
+    isLeftNavigationOpen: true,
+    leftNavigationHeader: (
+      <div className="left-navigation-brand">
+        <span className="left-navigation-brand__mark" aria-hidden="true">
+          S
+        </span>
+        <span className="left-navigation-brand__copy">
+          <strong>Spec Reviewer</strong>
+          <span title={workspaceStatusPath ?? "ワークスペース未選択"}>
+            {workspaceStatusPath ?? "ワークスペース未選択"}
+          </span>
+        </span>
+      </div>
+    ),
     toolbar: (
       <WorkspaceToolbar
         workspacePath={workspaceStatusPath}
@@ -289,20 +304,6 @@ function createShellArgs({
         refreshStatus={{ status: "idle", message: null }}
         canRefresh={selectedSpec !== null && selectedFileKey !== null}
         themeMode="system"
-        recentWorkspaces={[
-          {
-            path: workspacePath,
-            displayName: "spec-reviewer",
-            kind: "plugin-workspace",
-            lastOpenedAt: "2026-05-06T00:00:00.000Z",
-          },
-          {
-            path: "/workspace/legacy-spec-skill",
-            displayName: "legacy-spec-skill",
-            kind: "spec-skill",
-            lastOpenedAt: "2026-05-05T00:00:00.000Z",
-          },
-        ]}
         onInputChange={fn()}
         onBrowse={fn()}
         onLoad={fn()}
@@ -312,12 +313,37 @@ function createShellArgs({
       />
     ),
     sidebar: (
-      <SpecTree
-        state={treeState}
-        selectedSpecId={selectedSpec?.id ?? null}
-        onSelectSpec={fn()}
-        onReload={fn()}
-      />
+      <div className="left-navigation-panel">
+        <WorkspaceSidebarSection
+          currentWorkspacePath={workspaceStatusPath}
+          isOpen={false}
+          isBusy={isWorkspaceLoading}
+          recentWorkspaces={[
+            {
+              path: workspacePath,
+              displayName: "spec-reviewer",
+              kind: "plugin-workspace",
+              lastOpenedAt: "2026-05-06T00:00:00.000Z",
+            },
+            {
+              path: "/workspace/legacy-spec-skill",
+              displayName: "legacy-spec-skill",
+              kind: "spec-skill",
+              lastOpenedAt: "2026-05-05T00:00:00.000Z",
+            },
+          ]}
+          onBrowse={fn()}
+          onToggleOpen={fn()}
+          onOpenWorkspace={fn()}
+          onRemoveWorkspace={fn()}
+        />
+        <SpecTree
+          state={treeState}
+          selectedSpecId={selectedSpec?.id ?? null}
+          onSelectSpec={fn()}
+          onReload={fn()}
+        />
+      </div>
     ),
     tabs: (
       <SpecTabs

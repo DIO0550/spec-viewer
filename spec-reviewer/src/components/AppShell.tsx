@@ -16,6 +16,7 @@ import { uiText } from "../lib/uiText";
 
 type Props = Readonly<{
   toolbar: ReactNode;
+  leftNavigationHeader?: ReactNode;
   sidebar: ReactNode;
   tabs: ReactNode;
   viewer: ReactNode;
@@ -41,6 +42,7 @@ const keyboardResizeStep = 16;
 /** @returns The three-pane application shell for spec review. */
 export function AppShell({
   toolbar,
+  leftNavigationHeader,
   sidebar,
   tabs,
   viewer,
@@ -72,6 +74,17 @@ export function AppShell({
     "--left-navigation-width": `${leftNavigationWidth}px`,
     "--comment-sidebar-width": `${commentsSidebarWidth}px`,
   } as CSSProperties;
+  const leftNavigationHeaderContent = leftNavigationHeader ?? (
+    <div className="left-navigation-brand">
+      <span className="left-navigation-brand__mark" aria-hidden="true">
+        S
+      </span>
+      <span className="left-navigation-brand__copy">
+        <strong>Spec Reviewer</strong>
+        <span>Spec workspace</span>
+      </span>
+    </div>
+  );
 
   const closeLeftNavigation = (): void => {
     onCloseLeftNavigation?.();
@@ -292,20 +305,6 @@ export function AppShell({
 
   return (
     <div className="app-shell">
-      <header className="app-shell__toolbar">
-        <button
-          ref={openLeftNavigationButtonRef}
-          className="icon-button app-shell__left-open"
-          type="button"
-          aria-label={uiText.leftNavigation.open}
-          title={uiText.leftNavigation.open}
-          aria-expanded={isLeftNavigationOpen}
-          onClick={openLeftNavigation}
-        >
-          <PanelLeftOpen aria-hidden="true" size={16} />
-        </button>
-        <div className="app-shell__toolbar-content">{toolbar}</div>
-      </header>
       <div
         ref={bodyRef}
         className="app-shell__body"
@@ -320,16 +319,21 @@ export function AppShell({
           aria-hidden={!isLeftNavigationOpen}
           aria-label={uiText.leftNavigation.list}
         >
-          <button
-            ref={closeLeftNavigationButtonRef}
-            className="icon-button app-shell__left-close"
-            type="button"
-            aria-label={uiText.leftNavigation.close}
-            title={uiText.leftNavigation.close}
-            onClick={closeLeftNavigation}
-          >
-            <PanelLeftClose aria-hidden="true" size={16} />
-          </button>
+          <div className="app-shell__sidebar-masthead">
+            <div className="app-shell__sidebar-brand">
+              {leftNavigationHeaderContent}
+            </div>
+            <button
+              ref={closeLeftNavigationButtonRef}
+              className="icon-button app-shell__left-close"
+              type="button"
+              aria-label={uiText.leftNavigation.close}
+              title={uiText.leftNavigation.close}
+              onClick={closeLeftNavigation}
+            >
+              <PanelLeftClose aria-hidden="true" size={16} />
+            </button>
+          </div>
           <button
             className="app-shell__left-resize"
             type="button"
@@ -352,6 +356,25 @@ export function AppShell({
           {sidebar}
         </aside>
         <main className="app-shell__main">
+          <header
+            className="app-shell__toolbar"
+            data-left-navigation={isLeftNavigationOpen ? "open" : "collapsed"}
+          >
+            {!isLeftNavigationOpen ? (
+              <button
+                ref={openLeftNavigationButtonRef}
+                className="icon-button app-shell__left-open"
+                type="button"
+                aria-label={uiText.leftNavigation.open}
+                title={uiText.leftNavigation.open}
+                aria-expanded={isLeftNavigationOpen}
+                onClick={openLeftNavigation}
+              >
+                <PanelLeftOpen aria-hidden="true" size={16} />
+              </button>
+            ) : null}
+            <div className="app-shell__toolbar-content">{toolbar}</div>
+          </header>
           <div className="app-shell__tabs">{tabs}</div>
           <div className="app-shell__viewer">{viewer}</div>
         </main>

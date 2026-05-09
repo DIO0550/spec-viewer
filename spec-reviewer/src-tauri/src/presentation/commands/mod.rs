@@ -77,6 +77,7 @@ impl From<AppUseCaseError> for CommandError {
             AppUseCaseError::WorkspaceDetection { .. } => "workspaceDetection",
             AppUseCaseError::ConfigLoad { .. } => "configLoad",
             AppUseCaseError::SpecTreeScan { .. } => "specTreeScan",
+            AppUseCaseError::SpecArchive { .. } => "specArchive",
             AppUseCaseError::MarkdownRead { .. } => "markdownRead",
             AppUseCaseError::InvalidSpec { .. } => "invalidSpec",
             AppUseCaseError::InvalidComment { .. } => "invalidComment",
@@ -104,6 +105,19 @@ mod tests {
         assert_eq!("markdownRead", error.code());
         assert_eq!(
             "failed to read spec file: file is not valid UTF-8",
+            error.message()
+        );
+    }
+
+    #[test]
+    fn command_error_maps_archive_failures_to_stable_code() {
+        let error = CommandError::from(AppUseCaseError::SpecArchive {
+            message: "spec directory does not exist".to_string(),
+        });
+
+        assert_eq!("specArchive", error.code());
+        assert_eq!(
+            "failed to archive spec: spec directory does not exist",
             error.message()
         );
     }

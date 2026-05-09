@@ -71,6 +71,7 @@ export type CommentSelectionBounds = Readonly<{
   left: number;
   width: number;
   height: number;
+  commentLaneLeft?: number;
 }>;
 
 export type CommentAnchorDraft = Readonly<{

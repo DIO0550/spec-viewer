@@ -1780,7 +1780,7 @@ function CommentAnchorDraftPopover({
 type FloatingKind = "button" | "popover";
 const FLOATING_VIEWPORT_MARGIN = 8;
 const COMMENT_POPOVER_ESTIMATED_HEIGHT = 360;
-const COMMENT_POPOVER_ESTIMATED_WIDTH = 340;
+const COMMENT_POPOVER_ESTIMATED_WIDTH = 382;
 
 /** @returns Fixed-position style for selection-adjacent UI. */
 function createFloatingStyle(
@@ -1790,9 +1790,26 @@ function createFloatingStyle(
   const bounds = draft.selectionBounds;
 
   if (kind === "button") {
+    const usesCommentLane = bounds.commentLaneLeft !== undefined;
+
     return {
       top: Math.max(FLOATING_VIEWPORT_MARGIN, bounds.top - 44),
-      left: Math.max(FLOATING_VIEWPORT_MARGIN, bounds.left + bounds.width / 2),
+      left: Math.max(
+        FLOATING_VIEWPORT_MARGIN,
+        bounds.commentLaneLeft ?? bounds.left + bounds.width / 2,
+      ),
+      transform: usesCommentLane ? "none" : undefined,
+    };
+  }
+
+  if (bounds.commentLaneLeft !== undefined) {
+    return {
+      top: createPopoverTop(bounds),
+      left: createPopoverLeft({
+        ...bounds,
+        left: bounds.commentLaneLeft,
+        width: 0,
+      }),
     };
   }
 

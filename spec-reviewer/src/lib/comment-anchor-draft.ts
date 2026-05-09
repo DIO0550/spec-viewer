@@ -27,6 +27,8 @@ type CreateCommentAnchorDraftFromBlockOptions = Readonly<{
 const BLOCK_SELECTOR = "[data-block-type][data-block-index]";
 const BACKEND_BLOCK_SELECTOR =
   "[data-block-type][data-block-index][data-comment-block-type][data-text-hash]";
+const COMMENT_TARGET_SELECTOR = ".markdown-comment-target";
+const COMMENT_LANE_WIDTH = 88;
 const MAX_SNIPPET_LENGTH = 160;
 const FNV_32_OFFSET = 0x811c9dc5;
 const FNV_32_PRIME = 0x01000193;
@@ -82,7 +84,7 @@ export function createCommentAnchorDraftFromSelection({
       textSnippet,
       charRange,
     },
-    selectionBounds: createSelectionBounds(range),
+    selectionBounds: createSelectionBounds(range, startBlock),
   };
 }
 
@@ -333,7 +335,10 @@ function getTextOffsetWithinBlock(
 }
 
 /** @returns Viewport bounds for placing the comment affordance. */
-function createSelectionBounds(range: Range): CommentSelectionBounds {
+function createSelectionBounds(
+  range: Range,
+  block: HTMLElement,
+): CommentSelectionBounds {
   const rect = range.getBoundingClientRect();
 
   return {
@@ -341,6 +346,7 @@ function createSelectionBounds(range: Range): CommentSelectionBounds {
     left: rect.left,
     width: rect.width,
     height: rect.height,
+    commentLaneLeft: createCommentLaneLeft(block),
   };
 }
 
@@ -355,7 +361,21 @@ function createBlockSelectionBounds(
     left: rect.left,
     width: rect.width,
     height: rect.height,
+    commentLaneLeft: createCommentLaneLeft(block),
   };
+}
+
+/** @returns The viewport x-coordinate for the left edge of the comment lane. */
+function createCommentLaneLeft(block: HTMLElement): number | undefined {
+  const target = block.closest<HTMLElement>(COMMENT_TARGET_SELECTOR) ?? block;
+
+  const rect = target.getBoundingClientRect();
+
+  if (rect.width <= 0) {
+    return undefined;
+  }
+
+  return rect.right - COMMENT_LANE_WIDTH;
 }
 
 /** @returns Text trimmed and collapsed to single spaces for anchor display. */

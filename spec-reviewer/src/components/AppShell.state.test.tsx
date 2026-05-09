@@ -461,6 +461,61 @@ test("SpecTreeはspec選択イベントを発火する", () => {
   result.unmount();
 });
 
+test("SpecTreeはspec行のアーカイブ操作を発火する", () => {
+  const onArchiveSpec = vi.fn();
+  const result = renderComponent(
+    <SpecTree
+      state={readyTreeState}
+      selectedSpecId={null}
+      onSelectSpec={vi.fn()}
+      onArchiveSpec={onArchiveSpec}
+      onReload={vi.fn()}
+    />,
+  );
+  const button = result.container.querySelector(
+    '[aria-label="Phase 1 Viewerをアーカイブへ移動"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    button.click();
+  });
+
+  expect(onArchiveSpec).toHaveBeenCalledWith("phase-1-viewer");
+  result.unmount();
+});
+
+test("SpecTreeはsource group rootにはアーカイブ操作を表示しない", () => {
+  const sourceGroupTreeState: SpecTreeState = {
+    status: "ready",
+    workspacePath,
+    tree: {
+      specs: [
+        {
+          id: ".plugin-workspace/.specs",
+          label: "ルート",
+          files: [],
+          children: [selectedSpec],
+        },
+      ],
+    },
+    error: null,
+  };
+  const result = renderComponent(
+    <SpecTree
+      state={sourceGroupTreeState}
+      selectedSpecId={null}
+      onSelectSpec={vi.fn()}
+      onArchiveSpec={vi.fn()}
+      onReload={vi.fn()}
+    />,
+  );
+
+  expect(
+    result.container.querySelector('[aria-label="ルートをアーカイブへ移動"]'),
+  ).toBeNull();
+  result.unmount();
+});
+
 test("SpecTreeは読み込み中にskeleton statusを表示する", () => {
   const result = renderComponent(
     <SpecTree
@@ -638,6 +693,40 @@ test("WorkspaceToolbarはopen workspace操作を発火する", () => {
   result.unmount();
 });
 
+test("WorkspaceToolbarはパス入力のsubmitでworkspace読み込みを発火する", () => {
+  const onLoad = vi.fn();
+  const result = renderComponent(
+    <WorkspaceToolbar
+      workspacePath={null}
+      inputValue="/workspace/spec-reviewer"
+      isLoading={false}
+      isBrowsing={false}
+      errorMessage={null}
+      refreshStatus={{ status: "idle", message: null }}
+      canRefresh={false}
+      themeMode="system"
+      onInputChange={vi.fn()}
+      onBrowse={vi.fn()}
+      onLoad={onLoad}
+      onRefresh={vi.fn()}
+      onReset={vi.fn()}
+      onThemeModeChange={vi.fn()}
+    />,
+  );
+  const form = result.container.querySelector(
+    '[aria-label="ワークスペース操作"]',
+  ) as HTMLFormElement;
+
+  act(() => {
+    form.dispatchEvent(
+      new Event("submit", { bubbles: true, cancelable: true }),
+    );
+  });
+
+  expect(onLoad).toHaveBeenCalledOnce();
+  result.unmount();
+});
+
 test("WorkspaceToolbarはcurrent view refresh操作と状態を表示する", () => {
   const onRefresh = vi.fn();
   const result = renderComponent(
@@ -705,160 +794,6 @@ test("WorkspaceToolbarはtheme mode変更を発火する", () => {
   });
 
   expect(onThemeModeChange).toHaveBeenCalledWith("dark");
-  result.unmount();
-});
-
-test("WorkspaceToolbarは保存済みworkspace操作を発火する", () => {
-  const onOpenRecentWorkspace = vi.fn();
-  const onRemoveRecentWorkspace = vi.fn();
-  const onClearRecentWorkspaces = vi.fn();
-  const result = renderComponent(
-    <WorkspaceToolbar
-      workspacePath="/workspace/current"
-      inputValue=""
-      isLoading={false}
-      isBrowsing={false}
-      errorMessage={null}
-      refreshStatus={{ status: "idle", message: null }}
-      canRefresh={false}
-      themeMode="system"
-      recentWorkspaces={[
-        {
-          path: "/workspace/recent",
-          displayName: "recent",
-          kind: "plugin-workspace",
-          lastOpenedAt: "2026-05-05T00:00:00.000Z",
-        },
-      ]}
-      onInputChange={vi.fn()}
-      onBrowse={vi.fn()}
-      onLoad={vi.fn()}
-      onRefresh={vi.fn()}
-      onReset={vi.fn()}
-      onThemeModeChange={vi.fn()}
-      onOpenRecentWorkspace={onOpenRecentWorkspace}
-      onRemoveRecentWorkspace={onRemoveRecentWorkspace}
-      onClearRecentWorkspaces={onClearRecentWorkspaces}
-    />,
-  );
-  const recentItem = result.container.querySelector(
-    ".workspace-toolbar__recent-item",
-  ) as HTMLButtonElement;
-  const removeButton = result.container.querySelector(
-    '[aria-label="/workspace/recentを一覧から削除"]',
-  ) as HTMLButtonElement;
-  const clearButton = result.container.querySelector(
-    ".workspace-toolbar__recent-clear",
-  ) as HTMLButtonElement;
-
-  act(() => {
-    recentItem.click();
-    removeButton.click();
-    clearButton.click();
-  });
-
-  expect(onOpenRecentWorkspace).toHaveBeenCalledWith("/workspace/recent");
-  expect(onRemoveRecentWorkspace).toHaveBeenCalledWith("/workspace/recent");
-  expect(onClearRecentWorkspaces).toHaveBeenCalledOnce();
-  expect(recentItem.textContent).toContain("recent");
-  expect(recentItem.textContent).toContain("/workspace/recent");
-  result.unmount();
-});
-
-test("WorkspaceToolbarはEscapeで保存済みworkspaces menuを閉じる", () => {
-  const result = renderComponent(
-    <WorkspaceToolbar
-      workspacePath={null}
-      inputValue=""
-      isLoading={false}
-      isBrowsing={false}
-      errorMessage={null}
-      refreshStatus={{ status: "idle", message: null }}
-      canRefresh={false}
-      themeMode="system"
-      recentWorkspaces={[
-        {
-          path: "/workspace/recent",
-          displayName: "recent",
-          kind: "plugin-workspace",
-          lastOpenedAt: "2026-05-05T00:00:00.000Z",
-        },
-      ]}
-      onInputChange={vi.fn()}
-      onBrowse={vi.fn()}
-      onLoad={vi.fn()}
-      onRefresh={vi.fn()}
-      onReset={vi.fn()}
-      onThemeModeChange={vi.fn()}
-    />,
-  );
-  const details = result.container.querySelector(
-    ".workspace-toolbar__recent",
-  ) as HTMLDetailsElement;
-  const summary = result.container.querySelector("summary") as HTMLElement;
-
-  act(() => {
-    summary.click();
-  });
-
-  expect(details.open).toBe(true);
-
-  act(() => {
-    details.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
-    );
-  });
-
-  expect(details.open).toBe(false);
-  expect(document.activeElement).toBe(summary);
-  result.unmount();
-});
-
-test("WorkspaceToolbarはライセンスメニューでnpmライセンス情報を表示する", () => {
-  const result = renderComponent(
-    <WorkspaceToolbar
-      workspacePath={null}
-      inputValue=""
-      isLoading={false}
-      isBrowsing={false}
-      errorMessage={null}
-      refreshStatus={{ status: "idle", message: null }}
-      canRefresh={false}
-      themeMode="system"
-      onInputChange={vi.fn()}
-      onBrowse={vi.fn()}
-      onLoad={vi.fn()}
-      onRefresh={vi.fn()}
-      onReset={vi.fn()}
-      onThemeModeChange={vi.fn()}
-    />,
-  );
-  const details = result.container.querySelector(
-    ".workspace-toolbar__licenses",
-  ) as HTMLDetailsElement;
-  const summary = result.container.querySelector(
-    ".workspace-toolbar__licenses summary",
-  ) as HTMLElement;
-
-  act(() => {
-    summary.click();
-  });
-
-  expect(details.open).toBe(true);
-  expect(details.textContent).toContain("サードパーティライセンス");
-  expect(details.textContent).toContain("@tauri-apps/api");
-  expect(details.textContent).toContain("Apache-2.0 OR MIT");
-  expect(details.textContent).toContain("react");
-  expect(details.textContent).toContain("MIT");
-
-  act(() => {
-    details.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
-    );
-  });
-
-  expect(details.open).toBe(false);
-  expect(document.activeElement).toBe(summary);
   result.unmount();
 });
 

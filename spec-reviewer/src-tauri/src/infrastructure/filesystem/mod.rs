@@ -21,6 +21,7 @@ const PLUGIN_WORKTREE_DIRECTORY: &str = ".plugin-worktree";
 const PLUGIN_WORKTREE_SPECS_DIR: &str = ".specs";
 const CLAUDE_WORKTREES_DIR: &str = ".claude/worktrees";
 const SPEC_SKILL_FEATURES_DIR: &str = ".spec-skill/features";
+const SPEC_ARCHIVE_DIRECTORY: &str = ".archive";
 const CLAUDE_WORKTREE_SPEC_CONTAINERS: [&str; 2] =
     [PLUGIN_WORKTREE_DIRECTORY, PLUGIN_WORKSPACE_DIRECTORY];
 
@@ -269,6 +270,128 @@ pub fn spec_directory_path(
     Ok(spec_root_path(layout).join(relative_spec_path))
 }
 
+pub fn archive_spec_directory(
+    layout: &WorkspaceLayout,
+    spec_id: &str,
+) -> Result<PathBuf, SpecArchiveError> {
+    let relative_spec_path = safe_relative_spec_path(spec_id).map_err(SpecArchiveError::from)?;
+    let archive_paths = archive_spec_paths(layout, &relative_spec_path)?;
+
+    if archive_paths.relative_spec_path.as_os_str().is_empty() {
+        return Err(SpecArchiveError::SourceGroupRoot {
+            spec_id: spec_id.to_string(),
+        });
+    }
+
+    let metadata =
+        fs::metadata(&archive_paths.source_path).map_err(|source| match source.kind() {
+            io::ErrorKind::NotFound => SpecArchiveError::MissingSpecDirectory {
+                path: display_path(&archive_paths.source_path),
+            },
+            _ => SpecArchiveError::InspectSpecDirectory {
+                path: display_path(&archive_paths.source_path),
+                source,
+            },
+        })?;
+
+    if !metadata.is_dir() {
+        return Err(SpecArchiveError::NotSpecDirectory {
+            path: display_path(&archive_paths.source_path),
+        });
+    }
+
+    let archive_root = archive_paths.source_root.join(SPEC_ARCHIVE_DIRECTORY);
+    let destination_path =
+        unique_archive_destination(&archive_root, &archive_paths.relative_spec_path);
+    let parent =
+        destination_path
+            .parent()
+            .ok_or_else(|| SpecArchiveError::InvalidArchiveDestination {
+                path: display_path(&destination_path),
+            })?;
+
+    fs::create_dir_all(parent).map_err(|source| SpecArchiveError::CreateArchiveDirectory {
+        path: display_path(parent),
+        source,
+    })?;
+    fs::rename(&archive_paths.source_path, &destination_path).map_err(|source| {
+        SpecArchiveError::MoveSpecDirectory {
+            source_path: display_path(&archive_paths.source_path),
+            archive_path: display_path(&destination_path),
+            source,
+        }
+    })?;
+
+    Ok(destination_path)
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ArchiveSpecPaths {
+    source_path: PathBuf,
+    source_root: PathBuf,
+    relative_spec_path: PathBuf,
+}
+
+fn archive_spec_paths(
+    layout: &WorkspaceLayout,
+    relative_spec_path: &Path,
+) -> Result<ArchiveSpecPaths, SpecArchiveError> {
+    let workspace_root = PathBuf::from(layout.root().as_str());
+
+    if let Some(source_root_relative) = claude_plugin_worktree_source_root(relative_spec_path) {
+        let relative_path = relative_spec_path
+            .strip_prefix(&source_root_relative)
+            .map_err(|_| SpecArchiveError::InvalidArchiveSource {
+                spec_id: display_path(relative_spec_path),
+            })?
+            .to_path_buf();
+
+        return Ok(ArchiveSpecPaths {
+            source_path: workspace_root.join(relative_spec_path),
+            source_root: workspace_root.join(source_root_relative),
+            relative_spec_path: relative_path,
+        });
+    }
+
+    let source_root_relative = Path::new(spec_root_directory_for_kind(layout.kind()));
+    let source_root = workspace_root.join(source_root_relative);
+    let relative_path = relative_spec_path
+        .strip_prefix(source_root_relative)
+        .unwrap_or(relative_spec_path)
+        .to_path_buf();
+
+    Ok(ArchiveSpecPaths {
+        source_path: source_root.join(&relative_path),
+        source_root,
+        relative_spec_path: relative_path,
+    })
+}
+
+fn unique_archive_destination(archive_root: &Path, relative_spec_path: &Path) -> PathBuf {
+    let destination = archive_root.join(relative_spec_path);
+
+    if !destination.exists() {
+        return destination;
+    }
+
+    let Some(parent) = destination.parent() else {
+        return destination;
+    };
+    let Some(file_name) = destination.file_name().and_then(|name| name.to_str()) else {
+        return destination;
+    };
+
+    for index in 1.. {
+        let candidate = parent.join(format!("{file_name}-{index}"));
+
+        if !candidate.exists() {
+            return candidate;
+        }
+    }
+
+    destination
+}
+
 fn spec_root_directory_for_kind(kind: WorkspaceKind) -> &'static str {
     match kind {
         WorkspaceKind::PluginWorkspace => PLUGIN_WORKSPACE_SPECS_DIR,
@@ -304,9 +427,7 @@ fn spec_scan_roots(layout: &WorkspaceLayout) -> Result<Vec<SpecScanRoot>, SpecTr
 
 fn primary_source_group_for_kind(kind: WorkspaceKind) -> Option<(&'static str, &'static str)> {
     match kind {
-        WorkspaceKind::PluginWorkspace => {
-            Some((PLUGIN_WORKSPACE_SPECS_DIR, "ルート (.plugin-workspace)"))
-        }
+        WorkspaceKind::PluginWorkspace => Some((PLUGIN_WORKSPACE_SPECS_DIR, "ルート")),
         WorkspaceKind::PluginWorktree | WorkspaceKind::SpecSkill => None,
     }
 }
@@ -446,10 +567,7 @@ fn has_claude_worktree_specs(workspace_root: &Path) -> Result<bool, WorkspaceDet
 }
 
 fn is_claude_plugin_worktree_spec_path(relative_spec_path: &Path) -> bool {
-    let components: Vec<String> = relative_spec_path
-        .components()
-        .map(|component| component.as_os_str().to_string_lossy().into_owned())
-        .collect();
+    let components = relative_spec_path_components(relative_spec_path);
 
     matches!(
         components.as_slice(),
@@ -467,6 +585,39 @@ fn is_claude_plugin_worktree_spec_path(relative_spec_path: &Path) -> bool {
             && specs == PLUGIN_WORKTREE_SPECS_DIR
             && components.len() > 5
     )
+}
+
+fn claude_plugin_worktree_source_root(relative_spec_path: &Path) -> Option<PathBuf> {
+    let components = relative_spec_path_components(relative_spec_path);
+
+    if !matches!(
+        components.as_slice(),
+        [claude, worktrees, worktree_name, plugin_container, specs, ..]
+            if claude == ".claude"
+                && worktrees == "worktrees"
+                && !worktree_name.is_empty()
+                && CLAUDE_WORKTREE_SPEC_CONTAINERS.contains(&plugin_container.as_str())
+                && specs == PLUGIN_WORKTREE_SPECS_DIR
+    ) {
+        return None;
+    }
+
+    let mut source_root = PathBuf::new();
+
+    for component in components.iter().take(5) {
+        source_root.push(component);
+    }
+
+    Some(source_root)
+}
+
+fn relative_spec_path_components(relative_spec_path: &Path) -> Vec<String> {
+    let components: Vec<String> = relative_spec_path
+        .components()
+        .map(|component| component.as_os_str().to_string_lossy().into_owned())
+        .collect();
+
+    components
 }
 
 fn scan_child_directories(
@@ -625,6 +776,38 @@ pub enum SpecTreeScanError {
 pub enum SafeSpecPathError {
     #[error("spec id is invalid: {spec_id}")]
     InvalidSpecId { spec_id: String },
+}
+
+#[derive(Debug, Error)]
+pub enum SpecArchiveError {
+    #[error("spec id cannot be archived because it is a source group root: {spec_id}")]
+    SourceGroupRoot { spec_id: String },
+    #[error("spec id cannot be archived because it is invalid: {source}")]
+    InvalidSpecId { source: SafeSpecPathError },
+    #[error("spec archive source is invalid: {spec_id}")]
+    InvalidArchiveSource { spec_id: String },
+    #[error("spec directory does not exist: {path}")]
+    MissingSpecDirectory { path: String },
+    #[error("failed to inspect spec directory: {path}")]
+    InspectSpecDirectory { path: String, source: io::Error },
+    #[error("spec path is not a directory: {path}")]
+    NotSpecDirectory { path: String },
+    #[error("spec archive destination is invalid: {path}")]
+    InvalidArchiveDestination { path: String },
+    #[error("failed to create spec archive directory: {path}")]
+    CreateArchiveDirectory { path: String, source: io::Error },
+    #[error("failed to move spec directory from {source_path} to {archive_path}")]
+    MoveSpecDirectory {
+        source_path: String,
+        archive_path: String,
+        source: io::Error,
+    },
+}
+
+impl From<SafeSpecPathError> for SpecArchiveError {
+    fn from(source: SafeSpecPathError) -> Self {
+        Self::InvalidSpecId { source }
+    }
 }
 
 #[cfg(test)]
@@ -836,7 +1019,7 @@ mod tests {
 
         assert_eq!(vec![PLUGIN_WORKSPACE_SPECS_DIR], node_ids(&tree));
         let root = &tree[0];
-        assert_eq!("ルート (.plugin-workspace)", root.label());
+        assert_eq!("ルート", root.label());
         assert_eq!(
             vec![
                 ".plugin-workspace/.specs/auth",
@@ -892,6 +1075,69 @@ mod tests {
     }
 
     #[test]
+    fn archive_spec_directory_moves_plugin_workspace_spec_to_hidden_archive() {
+        let workspace = TestWorkspace::new("archive-plugin-workspace-spec");
+        workspace.create_dir(PLUGIN_WORKSPACE_SPECS_DIR);
+        workspace.write_file(".plugin-workspace/.specs/auth/tasks.md", "# Tasks");
+        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
+
+        let archive_path = archive_spec_directory(&layout, ".plugin-workspace/.specs/auth")
+            .expect("spec should be archived");
+
+        assert_eq!(
+            workspace
+                .root()
+                .join(".plugin-workspace/.specs/.archive/auth"),
+            archive_path
+        );
+        assert!(!workspace
+            .root()
+            .join(".plugin-workspace/.specs/auth")
+            .exists());
+        assert!(workspace
+            .root()
+            .join(".plugin-workspace/.specs/.archive/auth/tasks.md")
+            .exists());
+    }
+
+    #[test]
+    fn archive_spec_directory_uses_suffix_when_archive_destination_exists() {
+        let workspace = TestWorkspace::new("archive-plugin-workspace-spec-conflict");
+        workspace.create_dir(PLUGIN_WORKSPACE_SPECS_DIR);
+        workspace.write_file(".plugin-workspace/.specs/auth/tasks.md", "# New");
+        workspace.write_file(".plugin-workspace/.specs/.archive/auth/tasks.md", "# Old");
+        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
+
+        let archive_path = archive_spec_directory(&layout, ".plugin-workspace/.specs/auth")
+            .expect("spec should be archived with suffix");
+
+        assert_eq!(
+            workspace
+                .root()
+                .join(".plugin-workspace/.specs/.archive/auth-1"),
+            archive_path
+        );
+        assert!(workspace
+            .root()
+            .join(".plugin-workspace/.specs/.archive/auth-1/tasks.md")
+            .exists());
+    }
+
+    #[test]
+    fn archive_spec_directory_rejects_source_group_root() {
+        let workspace = TestWorkspace::new("archive-source-group-root");
+        workspace.create_dir(PLUGIN_WORKSPACE_SPECS_DIR);
+        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
+
+        let result = archive_spec_directory(&layout, ".plugin-workspace/.specs");
+
+        assert!(matches!(
+            result,
+            Err(SpecArchiveError::SourceGroupRoot { .. })
+        ));
+    }
+
+    #[test]
     fn spec_tree_scanner_scans_spec_skill_features_with_compatibility_files() {
         let workspace = TestWorkspace::new("spec-skill-tree");
         workspace.create_dir(SPEC_SKILL_FEATURES_DIR);
@@ -943,7 +1189,7 @@ mod tests {
 
         let root = &tree[0];
         assert_eq!(PLUGIN_WORKSPACE_SPECS_DIR, root.id());
-        assert_eq!("ルート (.plugin-workspace)", root.label());
+        assert_eq!("ルート", root.label());
         let issue = &root.children()[0];
         assert_eq!(".plugin-workspace/.specs/021-issue-262", issue.id());
         assert_eq!(

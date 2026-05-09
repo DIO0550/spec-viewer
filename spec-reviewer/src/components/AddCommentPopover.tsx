@@ -159,10 +159,12 @@ export function AddCommentPopover({
             <MessageSquarePlus aria-hidden="true" size={14} />
             新規コメント
           </span>
-          <h2 id={titleId}>コメント追加</h2>
+          <h2 id={titleId} className="add-comment-popover__title">
+            コメント追加
+          </h2>
         </div>
         <button
-          className="icon-button"
+          className="icon-button add-comment-popover__close-button"
           type="button"
           aria-label="コメント追加をキャンセル"
           onClick={onCancel}
@@ -174,7 +176,9 @@ export function AddCommentPopover({
       <form className="add-comment-popover__form" onSubmit={submitForm}>
         <div className="add-comment-popover__body">
           <blockquote>{draft.anchor.textSnippet}</blockquote>
-          <label htmlFor={textareaId}>{uiText.sidebar.comments}</label>
+          <label className="add-comment-popover__label" htmlFor={textareaId}>
+            {uiText.sidebar.comments}
+          </label>
           <textarea
             id={textareaId}
             ref={textareaRef}

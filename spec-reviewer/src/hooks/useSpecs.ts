@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
+  archiveSpec as defaultArchiveSpec,
   listSpecs as defaultListSpecs,
   normalizeCommandError,
   readSpecFile as defaultReadSpecFile,
@@ -14,6 +15,10 @@ import type {
   SpecNode,
   SpecTree,
 } from "../types/spec";
+
+export type ArchiveSpecCommand = (
+  request: Readonly<{ workspacePath: string; specId: string }>,
+) => Promise<Readonly<{ archivedSpecId: string; archivePath: string }>>;
 
 export type SpecTreeState =
   | Readonly<{
@@ -103,6 +108,7 @@ export type UseSpecsOptions = Readonly<{
   workspacePath: string | null;
   listSpecs?: ListSpecsCommand;
   readSpecFile?: ReadSpecFileCommand;
+  archiveSpec?: ArchiveSpecCommand;
 }>;
 
 export type UseSpecsResult = Readonly<{
@@ -112,6 +118,9 @@ export type UseSpecsResult = Readonly<{
   selectedSpec: SpecNode | null;
   selectedFileKey: SpecFileKey | null;
   selectedFile: SpecFile | null;
+  archivingSpecId: string | null;
+  archiveSpecError: NormalizedCommandError | null;
+  archiveSpec: (specId: string) => Promise<boolean>;
   reloadSpecs: (options?: ReloadSpecsOptions) => Promise<boolean>;
   selectSpec: (specId: string | null) => Promise<void>;
   selectFileKey: (fileKey: SpecFileKey | null) => Promise<void>;
@@ -140,6 +149,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
   const { workspacePath } = options;
   const listSpecs = options.listSpecs ?? defaultListSpecs;
   const readSpecFile = options.readSpecFile ?? defaultReadSpecFile;
+  const archiveSpecCommand = options.archiveSpec ?? defaultArchiveSpec;
   const specTreeRequestIdRef = useRef(0);
   const documentRequestIdRef = useRef(0);
   const [specTreeState, setSpecTreeState] =
@@ -150,6 +160,9 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
   const [selectedFileKey, setSelectedFileKey] = useState<SpecFileKey | null>(
     null,
   );
+  const [archivingSpecId, setArchivingSpecId] = useState<string | null>(null);
+  const [archiveSpecError, setArchiveSpecError] =
+    useState<NormalizedCommandError | null>(null);
   const selectedSpecIdRef = useRef<string | null>(null);
   const selectedFileKeyRef = useRef<SpecFileKey | null>(null);
 
@@ -369,6 +382,28 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
     return await loadDocument(selectedSpecId, selectedFileKey);
   }, [loadDocument, selectedFileKey, selectedSpecId]);
 
+  const archiveSpec = useCallback(
+    async (specId: string): Promise<boolean> => {
+      if (workspacePath === null) {
+        return false;
+      }
+
+      setArchivingSpecId(specId);
+      setArchiveSpecError(null);
+
+      try {
+        await archiveSpecCommand({ workspacePath, specId });
+        return await reloadSpecs({ preserveSelection: true });
+      } catch (error) {
+        setArchiveSpecError(normalizeCommandError(error));
+        return false;
+      } finally {
+        setArchivingSpecId(null);
+      }
+    },
+    [archiveSpecCommand, reloadSpecs, workspacePath],
+  );
+
   return {
     specTreeState,
     documentState,
@@ -376,6 +411,9 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
     selectedSpec,
     selectedFileKey,
     selectedFile,
+    archivingSpecId,
+    archiveSpecError,
+    archiveSpec,
     reloadSpecs,
     selectSpec,
     selectFileKey,

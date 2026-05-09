@@ -1,4 +1,10 @@
-import { ChevronDown, ChevronRight, FileText, RefreshCcw } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  RefreshCcw,
+  Trash2,
+} from "lucide-react";
 import { type KeyboardEvent, useEffect, useState } from "react";
 
 import type { SpecTreeState } from "../hooks/useSpecs";
@@ -14,7 +20,9 @@ const TREE_ITEM_INDENT_STEP = 16;
 type Props = Readonly<{
   state: SpecTreeState;
   selectedSpecId: string | null;
+  archivingSpecId?: string | null;
   onSelectSpec: (specId: string) => void;
+  onArchiveSpec?: (specId: string) => void;
   onReload: () => void;
 }>;
 
@@ -22,7 +30,9 @@ type Props = Readonly<{
 export function SpecTree({
   state,
   selectedSpecId,
+  archivingSpecId = null,
   onSelectSpec,
+  onArchiveSpec,
   onReload,
 }: Props) {
   const [expandedSpecIds, setExpandedSpecIds] = useState<ReadonlySet<string>>(
@@ -147,7 +157,9 @@ export function SpecTree({
             depth={0}
             expandedSpecIds={expandedSpecIds}
             selectedSpecId={selectedSpecId}
+            archivingSpecId={archivingSpecId}
             onSelectSpec={onSelectSpec}
+            onArchiveSpec={onArchiveSpec}
             onToggleExpanded={toggleSpecExpanded}
           />
         ))}
@@ -161,7 +173,9 @@ type SpecTreeItemProps = Readonly<{
   depth: number;
   expandedSpecIds: ReadonlySet<string>;
   selectedSpecId: string | null;
+  archivingSpecId: string | null;
   onSelectSpec: (specId: string) => void;
+  onArchiveSpec?: (specId: string) => void;
   onToggleExpanded: (specId: string) => void;
 }>;
 
@@ -171,12 +185,16 @@ function SpecTreeItem({
   depth,
   expandedSpecIds,
   selectedSpecId,
+  archivingSpecId,
   onSelectSpec,
+  onArchiveSpec,
   onToggleExpanded,
 }: SpecTreeItemProps) {
   const isSelected = selectedSpecId === node.id;
   const hasChildren = node.children.length > 0;
   const isExpanded = expandedSpecIds.has(node.id);
+  const canArchive = onArchiveSpec !== undefined && isArchivableSpecNode(node);
+  const isArchiving = archivingSpecId === node.id;
   const indentation = BASE_TREE_ITEM_INDENT + depth * TREE_ITEM_INDENT_STEP;
 
   return (
@@ -239,6 +257,23 @@ function SpecTreeItem({
           <span className="spec-tree__item-label">{node.label}</span>
           <span className="spec-tree__file-count">{node.files.length}</span>
         </button>
+        {canArchive ? (
+          <button
+            className="icon-button spec-tree__archive"
+            type="button"
+            aria-label={`${node.label}をアーカイブへ移動`}
+            title={uiText.specTree.archive}
+            disabled={archivingSpecId !== null}
+            data-archiving={isArchiving ? "true" : "false"}
+            onClick={() => {
+              onArchiveSpec?.(node.id);
+            }}
+          >
+            <Trash2 aria-hidden="true" size={14} />
+          </button>
+        ) : (
+          <span className="spec-tree__archive-spacer" aria-hidden="true" />
+        )}
       </div>
       {hasChildren && isExpanded ? (
         <div className="spec-tree__list">
@@ -249,7 +284,9 @@ function SpecTreeItem({
               depth={depth + 1}
               expandedSpecIds={expandedSpecIds}
               selectedSpecId={selectedSpecId}
+              archivingSpecId={archivingSpecId}
               onSelectSpec={onSelectSpec}
+              onArchiveSpec={onArchiveSpec}
               onToggleExpanded={onToggleExpanded}
             />
           ))}
@@ -257,6 +294,11 @@ function SpecTreeItem({
       ) : null}
     </div>
   );
+}
+
+/** @returns Whether this tree node represents an archiveable spec directory. */
+function isArchivableSpecNode(node: SpecNode): boolean {
+  return !node.id.endsWith("/.specs");
 }
 
 type TreeItemKeyDownOptions = Readonly<{

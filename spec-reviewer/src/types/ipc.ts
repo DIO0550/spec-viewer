@@ -1,6 +1,8 @@
 import type { CommentCommandPayloads } from "./comment";
 import type { ReviewRunCommandPayloads } from "./reviewRun";
 import type {
+  ArchiveSpecRequest,
+  ArchiveSpecResponse,
   ListSpecsRequest,
   ReadSpecFileRequest,
   SpecDocument,
@@ -24,6 +26,7 @@ export type CommandErrorCode =
   | "workspaceDetection"
   | "configLoad"
   | "specTreeScan"
+  | "specArchive"
   | "markdownRead"
   | "invalidSpec"
   | "invalidComment"
@@ -58,6 +61,10 @@ type WorkspaceCommandPayloads = Readonly<{
   read_spec_file: Readonly<{
     request: ReadSpecFileRequest;
     response: SpecDocument;
+  }>;
+  archive_spec: Readonly<{
+    request: ArchiveSpecRequest;
+    response: ArchiveSpecResponse;
   }>;
   start_spec_file_watch: Readonly<{
     request: StartSpecFileWatchRequest;

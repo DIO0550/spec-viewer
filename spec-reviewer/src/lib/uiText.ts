@@ -135,6 +135,7 @@ export const uiText = {
     noSpecsDescription:
       "このワークスペースには設定済みのSpecファイルがまだありません。",
     refresh: "Specツリーを再読み込み",
+    archive: "Specをアーカイブへ移動",
     tree: "Specツリー",
   },
   markdown: {

@@ -10,15 +10,17 @@ use presentation::commands::{
         reopen_comment, resolve_comment, toggle_comment_resolved, update_comment,
     },
     review_runs::{archive_review_run, create_review_run, list_review_runs},
-    specs::{list_specs, read_spec_file},
+    specs::{archive_spec, list_specs, read_spec_file},
     watch::{start_spec_file_watch, stop_spec_file_watch},
     workspace::{load_workspace, validate_workspace_directory},
     CommandState,
 };
+use presentation::menu::build_application_menu;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .menu(build_application_menu)
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
@@ -28,6 +30,7 @@ pub fn run() {
             validate_workspace_directory,
             list_specs,
             read_spec_file,
+            archive_spec,
             start_spec_file_watch,
             stop_spec_file_watch,
             list_comments,

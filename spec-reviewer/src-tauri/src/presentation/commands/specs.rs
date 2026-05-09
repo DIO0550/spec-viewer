@@ -7,7 +7,8 @@ use tauri::State;
 
 use crate::{
     app::use_cases::{
-        AppMarkdownDocument, AppMissingMarkdownFile, LoadWorkspaceResult, ReadSpecFileResult,
+        AppMarkdownDocument, AppMissingMarkdownFile, ArchiveSpecResult, LoadWorkspaceResult,
+        ReadSpecFileResult,
     },
     domain::spec::{
         MarkdownBlock, MarkdownBlockSourceRange, SpecFile, SpecFileKey, SpecFileStatus, SpecNode,
@@ -28,6 +29,13 @@ pub struct ReadSpecFileRequest {
     workspace_path: String,
     spec_id: String,
     file_key: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ArchiveSpecRequest {
+    workspace_path: String,
+    spec_id: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -109,6 +117,23 @@ pub struct ReadSpecFileResponse {
     contents: Option<String>,
     missing: bool,
     blocks: Vec<MarkdownBlockResponse>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ArchiveSpecResponse {
+    archived_spec_id: String,
+    archive_path: String,
+}
+
+impl ArchiveSpecResponse {
+    pub fn archived_spec_id(&self) -> &str {
+        &self.archived_spec_id
+    }
+
+    pub fn archive_path(&self) -> &str {
+        &self.archive_path
+    }
 }
 
 impl ReadSpecFileResponse {
@@ -209,6 +234,19 @@ pub fn read_spec_file(
     Ok(ReadSpecFileResponse::from(result))
 }
 
+#[tauri::command]
+pub fn archive_spec(
+    state: State<'_, CommandState>,
+    request: ArchiveSpecRequest,
+) -> CommandResult<ArchiveSpecResponse> {
+    let workspace = load_workspace(state.use_cases(), &request.workspace_path)?;
+    let result = state
+        .use_cases()
+        .archive_spec(&workspace, &request.spec_id)?;
+
+    Ok(ArchiveSpecResponse::from(result))
+}
+
 fn load_workspace(
     use_cases: &crate::app::use_cases::FilesystemAppUseCases,
     workspace_path: &str,
@@ -252,6 +290,15 @@ impl From<ReadSpecFileResult> for ReadSpecFileResponse {
         match result {
             ReadSpecFileResult::Found(document) => Self::from(document),
             ReadSpecFileResult::Missing(missing) => Self::from(missing),
+        }
+    }
+}
+
+impl From<ArchiveSpecResult> for ArchiveSpecResponse {
+    fn from(result: ArchiveSpecResult) -> Self {
+        Self {
+            archived_spec_id: result.archived_spec_id().to_string(),
+            archive_path: result.archive_path().to_string(),
         }
     }
 }
@@ -423,5 +470,21 @@ mod tests {
         assert_eq!(None, response.contents());
         assert!(response.missing());
         assert!(response.blocks().is_empty());
+    }
+
+    #[test]
+    fn archive_spec_response_serializes_archive_metadata() {
+        let result = ArchiveSpecResult::new(
+            ".plugin-workspace/.specs/auth",
+            "/workspace/.plugin-workspace/.specs/.archive/auth",
+        );
+
+        let response = ArchiveSpecResponse::from(result);
+
+        assert_eq!(".plugin-workspace/.specs/auth", response.archived_spec_id());
+        assert_eq!(
+            "/workspace/.plugin-workspace/.specs/.archive/auth",
+            response.archive_path()
+        );
     }
 }

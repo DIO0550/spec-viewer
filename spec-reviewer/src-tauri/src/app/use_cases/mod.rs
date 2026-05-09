@@ -17,8 +17,9 @@ use crate::{
     },
     infrastructure::{
         filesystem::{
-            spec_directory_path, FilesystemSpecTreeScanner, FilesystemWorkspaceDetector,
-            SafeSpecPathError, SpecTreeScanError, WorkspaceDetectionError,
+            archive_spec_directory, spec_directory_path, FilesystemSpecTreeScanner,
+            FilesystemWorkspaceDetector, SafeSpecPathError, SpecArchiveError, SpecTreeScanError,
+            WorkspaceDetectionError,
         },
         markdown::{
             FilesystemMarkdownReader, MarkdownDocument, MarkdownReadError, MarkdownReadResult,
@@ -103,6 +104,19 @@ impl FilesystemAppUseCases {
         )?;
 
         plan_file_watch(workspace, &effective_config, spec_id, key)
+    }
+
+    pub fn archive_spec(
+        &self,
+        workspace: &LoadWorkspaceResult,
+        spec_id: &str,
+    ) -> Result<ArchiveSpecResult, AppUseCaseError> {
+        let archive_path = archive_spec_directory(workspace.layout(), spec_id)?;
+
+        Ok(ArchiveSpecResult::new(
+            spec_id,
+            archive_path.to_string_lossy().into_owned(),
+        ))
     }
 }
 
@@ -300,6 +314,29 @@ impl ListSpecsResult {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ArchiveSpecResult {
+    archived_spec_id: String,
+    archive_path: String,
+}
+
+impl ArchiveSpecResult {
+    pub fn new(archived_spec_id: impl Into<String>, archive_path: impl Into<String>) -> Self {
+        Self {
+            archived_spec_id: archived_spec_id.into(),
+            archive_path: archive_path.into(),
+        }
+    }
+
+    pub fn archived_spec_id(&self) -> &str {
+        &self.archived_spec_id
+    }
+
+    pub fn archive_path(&self) -> &str {
+        &self.archive_path
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ReadSpecFileResult {
     Found(AppMarkdownDocument),
     Missing(AppMissingMarkdownFile),
@@ -412,6 +449,8 @@ pub enum AppUseCaseError {
     ConfigLoad { message: String },
     #[error("failed to scan spec tree: {message}")]
     SpecTreeScan { message: String },
+    #[error("failed to archive spec: {message}")]
+    SpecArchive { message: String },
     #[error("failed to read spec file: {message}")]
     MarkdownRead { message: String },
     #[error("invalid spec input: {message}")]
@@ -457,6 +496,14 @@ impl From<SpecTreeScanError> for AppUseCaseError {
 impl From<SafeSpecPathError> for AppUseCaseError {
     fn from(source: SafeSpecPathError) -> Self {
         Self::InvalidSpec {
+            message: source.to_string(),
+        }
+    }
+}
+
+impl From<SpecArchiveError> for AppUseCaseError {
+    fn from(source: SpecArchiveError) -> Self {
+        Self::SpecArchive {
             message: source.to_string(),
         }
     }

@@ -15,10 +15,14 @@
 ## Phase 1 Acceptance
 
 - [ ] User can choose a workspace folder.
+- [ ] Valid opened workspaces are saved automatically.
+- [ ] Last active valid workspace restores on app startup.
+- [ ] User can switch saved workspaces from the toolbar without opening the folder picker.
 - [ ] Invalid workspace shows a helpful error.
 - [ ] Valid workspace with `.plugin-workspace/.specs/` loads successfully.
 - [ ] Valid workspace with `.spec-skill/` loads successfully in compatibility mode.
 - [ ] Spec tree displays directories under `.plugin-workspace/.specs/`.
+- [ ] Left spec navigation is closed by default and can be opened when needed.
 - [ ] Exploration/hearing/impl/tasks tabs resolve filenames from config/defaults.
 - [ ] Requirements/design/tasks tabs remain supported for `.spec-skill` compatibility.
 - [ ] Missing Markdown files do not crash the app.

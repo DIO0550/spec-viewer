@@ -143,6 +143,30 @@ function renderViewer(
   );
 }
 
+function createClientRect({
+  top,
+  left,
+  width,
+  height,
+}: Readonly<{
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+}>): DOMRect {
+  return {
+    top,
+    left,
+    width,
+    height,
+    right: left + width,
+    bottom: top + height,
+    x: left,
+    y: top,
+    toJSON: () => ({}),
+  } as DOMRect;
+}
+
 test("MarkdownViewerはGFM要素を安全なHTMLとして表示する", () => {
   const result = renderViewer(createReadyState(richMarkdown));
 
@@ -562,6 +586,22 @@ test("MarkdownViewerはMarkdown内の選択から追加コメントを保存す�
     vi.fn(),
     onAddComment,
   );
+  const commentTarget = result.container.querySelector(
+    ".markdown-comment-target",
+  ) as HTMLElement;
+  const targetRectSpy = vi
+    .spyOn(commentTarget, "getBoundingClientRect")
+    .mockReturnValue(
+      createClientRect({
+        top: 100,
+        left: 40,
+        width: 600,
+        height: 32,
+      }),
+    );
+  const innerWidthSpy = vi
+    .spyOn(window, "innerWidth", "get")
+    .mockReturnValue(700);
   const textNode = result.container.querySelector(
     ".markdown-rendered p",
   )?.firstChild;
@@ -585,6 +625,8 @@ test("MarkdownViewerはMarkdown内の選択から追加コメントを保存す�
     ".text-selection-comment-button",
   );
   expect(addButton?.textContent).toContain("コメント追加");
+  expect((addButton as HTMLElement).style.left).toBe("552px");
+  expect((addButton as HTMLElement).style.transform).toBe("none");
 
   act(() => {
     addButton?.dispatchEvent(
@@ -597,6 +639,10 @@ test("MarkdownViewerはMarkdown内の選択から追加コメントを保存す�
   expect(result.container.textContent).toContain(
     "paragraphブロック 1, 文字 2-11",
   );
+  expect(
+    (result.container.querySelector(".add-comment-popover") as HTMLElement)
+      .style.left,
+  ).toBe("310px");
 
   const textarea = result.container.querySelector(
     "textarea",
@@ -629,6 +675,8 @@ test("MarkdownViewerはMarkdown内の選択から追加コメントを保存す�
   });
   expect(result.container.querySelector("textarea")).toBeNull();
   expect(document.getSelection()?.rangeCount).toBe(0);
+  innerWidthSpy.mockRestore();
+  targetRectSpy.mockRestore();
   result.unmount();
 });
 

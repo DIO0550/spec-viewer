@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { expect, test, vi } from "vitest";
 
 import {
+  archiveSpec,
   listSpecs,
   loadWorkspace,
   normalizeCommandError,
@@ -102,6 +103,29 @@ test("readSpecFileはread_spec_fileへspecIdとfileKeyを渡す", async () => {
   });
 });
 
+test("archiveSpecはarchive_specへworkspacePathとspecIdを渡す", async () => {
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue({
+    archivedSpecId: ".plugin-workspace/.specs/auth",
+    archivePath: "/workspace/.plugin-workspace/.specs/.archive/auth",
+  });
+
+  const result = await archiveSpec({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: ".plugin-workspace/.specs/auth",
+  });
+
+  expect(result.archivePath).toBe(
+    "/workspace/.plugin-workspace/.specs/.archive/auth",
+  );
+  expect(invokeMock).toHaveBeenCalledWith("archive_spec", {
+    request: {
+      workspacePath: "/workspace/spec-reviewer",
+      specId: ".plugin-workspace/.specs/auth",
+    },
+  });
+});
+
 test("normalizeCommandErrorはCommandError DTOを安定したエラーに変換する", () => {
   const rawError = {
     code: "configLoad",
@@ -113,6 +137,21 @@ test("normalizeCommandErrorはCommandError DTOを安定したエラーに変換�
   expect(result).toEqual({
     code: "configLoad",
     message: "failed to load workspace config",
+    raw: rawError,
+  });
+});
+
+test("normalizeCommandErrorはspec archiveエラーを保持する", () => {
+  const rawError = {
+    code: "specArchive",
+    message: "failed to archive spec",
+  };
+
+  const result = normalizeCommandError(rawError);
+
+  expect(result).toEqual({
+    code: "specArchive",
+    message: "failed to archive spec",
     raw: rawError,
   });
 });

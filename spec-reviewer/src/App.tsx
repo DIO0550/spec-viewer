@@ -56,6 +56,7 @@ import {
   createSpecSkillMcpFeedbackDryRunPayload,
   renderSpecSkillMcpFeedbackDryRunPayload,
 } from "./lib/mcpFeedback";
+import { uiText } from "./lib/uiText";
 
 const idleRefreshStatus: WorkspaceRefreshStatus = {
   status: "idle",
@@ -791,6 +792,8 @@ function App() {
     workspace.workspace !== null &&
     specs.selectedSpecId !== null &&
     specs.selectedFileKey !== null;
+  const leftNavigationSubtitle =
+    workspace.workspacePath ?? uiText.workspace.noWorkspace;
 
   useKeyboardShortcuts({
     isEnabled: true,
@@ -827,6 +830,19 @@ function App() {
         commentsSidebarMinWidth={resizableSidebar.minSidebarWidth}
         commentsSidebarMaxWidth={resizableSidebar.maxSidebarWidth}
         onCommentsSidebarWidthChange={resizableSidebar.resizeSidebarTo}
+        leftNavigationHeader={
+          <div className="left-navigation-brand">
+            <span className="left-navigation-brand__mark" aria-hidden="true">
+              S
+            </span>
+            <span className="left-navigation-brand__copy">
+              <strong>Spec Reviewer</strong>
+              <span title={leftNavigationSubtitle}>
+                {leftNavigationSubtitle}
+              </span>
+            </span>
+          </div>
+        }
         toolbar={
           <WorkspaceToolbar
             workspacePath={workspace.workspacePath}
@@ -837,7 +853,6 @@ function App() {
             refreshStatus={refreshStatus}
             canRefresh={canRefreshCurrentView}
             themeMode={theme.themeMode}
-            recentWorkspaces={recentWorkspaces.recentWorkspaces}
             onInputChange={setWorkspaceInput}
             onBrowse={() => {
               void browseWorkspace();
@@ -848,11 +863,6 @@ function App() {
             }}
             onReset={resetWorkspace}
             onThemeModeChange={theme.setThemeMode}
-            onOpenRecentWorkspace={(path) => {
-              void openRecentWorkspacePath(path);
-            }}
-            onRemoveRecentWorkspace={recentWorkspaces.removeWorkspace}
-            onClearRecentWorkspaces={recentWorkspaces.clearWorkspaces}
           />
         }
         sidebar={
@@ -878,8 +888,12 @@ function App() {
             <SpecTree
               state={specs.specTreeState}
               selectedSpecId={specs.selectedSpecId}
+              archivingSpecId={specs.archivingSpecId}
               onSelectSpec={(specId) => {
                 void specs.selectSpec(specId);
+              }}
+              onArchiveSpec={(specId) => {
+                void specs.archiveSpec(specId);
               }}
               onReload={() => {
                 void specs.reloadSpecs({ preserveSelection: true });

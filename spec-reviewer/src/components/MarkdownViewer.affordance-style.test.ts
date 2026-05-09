@@ -17,13 +17,15 @@ function readCssRule(selector: string): string {
   return match?.groups?.body ?? "";
 }
 
-test("MarkdownViewerのブロックコメントボタンは右端配置のhover導線を保つ", () => {
+test("MarkdownViewerのブロックコメントボタンは右コメントレーン左端のhover導線を保つ", () => {
   const buttonRule = readCssRule(".markdown-block-comment-button");
   const hoverRule = readCssRule(
     ".markdown-comment-target:hover > .markdown-block-comment-button,\n.markdown-comment-target:focus-within > .markdown-block-comment-button,\n.markdown-rendered li:hover > .markdown-block-comment-button,\n.markdown-rendered li:focus-within > .markdown-block-comment-button",
   );
 
-  expect(buttonRule).toContain("right: 0.15rem;");
+  expect(buttonRule).toContain(
+    "right: calc(\n    var(--markdown-comment-lane-width) -\n    var(--markdown-comment-add-button-width)\n  );",
+  );
   expect(buttonRule).toContain("left: auto;");
   expect(buttonRule).toContain("transform: none;");
   expect(buttonRule).toContain("pointer-events: none;");
@@ -32,18 +34,24 @@ test("MarkdownViewerのブロックコメントボタンは右端配置のhover�
 
 test("MarkdownViewerの本文幅は固定上限ではなく利用可能幅に追従する", () => {
   const renderedRule = readCssRule(".markdown-rendered");
+  const targetRule = readCssRule(".markdown-comment-target");
   const annotatedTargetRule = readCssRule(
     '.markdown-comment-target[data-has-comment-annotations="true"]',
   );
-  const blockRule = readCssRule(
-    ".markdown-comment-target > [data-block-type],\n.markdown-rendered li[data-block-type]",
-  );
+  const blockRule = readCssRule(".markdown-comment-target > [data-block-type]");
+  const annotationsRule = readCssRule(".markdown-comment-annotations");
 
+  expect(renderedRule).toContain("--markdown-comment-lane-width: 88px;");
   expect(renderedRule).toContain("width: 100%;");
   expect(renderedRule).toContain("max-width: none;");
+  expect(targetRule).toContain(
+    "grid-template-columns: minmax(0, 1fr) var(--markdown-comment-lane-width);",
+  );
   expect(annotatedTargetRule).toContain(
-    "grid-template-columns: minmax(0, 1fr) max-content;",
+    "grid-template-columns: minmax(0, 1fr) var(--markdown-comment-lane-width);",
   );
   expect(blockRule).toContain("min-width: 0;");
   expect(blockRule).toContain("max-width: none;");
+  expect(annotationsRule).toContain("grid-column: 2;");
+  expect(annotationsRule).toContain("justify-self: end;");
 });

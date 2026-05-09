@@ -25,6 +25,8 @@ import type {
   UpdateCommentRequest,
 } from "../types/comment";
 import type {
+  ArchiveSpecRequest,
+  ArchiveSpecResponse,
   ReadSpecFileRequest,
   SpecDocument,
   SpecTree,
@@ -138,6 +140,13 @@ export async function readSpecFile(
   request: ReadSpecFileRequest,
 ): Promise<SpecDocument> {
   return invokeCommand("read_spec_file", request);
+}
+
+/** @returns Metadata for the spec directory moved into the workspace archive. */
+export async function archiveSpec(
+  request: ArchiveSpecRequest,
+): Promise<ArchiveSpecResponse> {
+  return invokeCommand("archive_spec", request);
 }
 
 /** @returns Backend watcher registration metadata for the selected spec file. */
@@ -316,6 +325,7 @@ function isCommandErrorCode(value: unknown): value is CommandError["code"] {
     value === "workspaceDetection" ||
     value === "configLoad" ||
     value === "specTreeScan" ||
+    value === "specArchive" ||
     value === "markdownRead" ||
     value === "invalidSpec" ||
     value === "invalidComment" ||

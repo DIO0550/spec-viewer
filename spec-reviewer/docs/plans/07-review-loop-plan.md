@@ -181,7 +181,24 @@ spec-reviewer/
         └── review_runs.rs
 ```
 
-Review run folders should be created near the reviewed specs so external AI tools can inspect both review artifacts and source Markdown without special app integration:
+The selected workspace root is the directory that contains `.plugin-workspace/`. For spec-driven-dev workspaces, active specs and archived specs are siblings under `.plugin-workspace/.specs/`:
+
+```text
+<workspace>/.plugin-workspace/
+└── .specs/
+    ├── {nnn}-{feature-name}/
+    │   ├── hearing-notes.md
+    │   ├── exploration-report.md
+    │   ├── implementation-plan.md
+    │   ├── tasks.md
+    │   ├── plan-review/
+    │   ├── code-review/
+    │   └── user-review/
+    └── archive/
+        └── {nnn}-{feature-name}/
+```
+
+Review run folders should be created inside the selected spec folder so external AI tools can inspect both review artifacts and source Markdown without special app integration:
 
 ```text
 <workspace>/.plugin-workspace/.specs/{nnn}-{feature-name}/user-review/
@@ -190,6 +207,17 @@ Review run folders should be created near the reviewed specs so external AI tool
 └── archive/
     └── 2026-05-06T113000Z-file-design/
 ```
+
+The default logical file mapping for spec-driven-dev workspaces should match the actual skill output:
+
+| Logical key | File name |
+| --- | --- |
+| `exploration` | `exploration-report.md` |
+| `hearing` | `hearing-notes.md` |
+| `impl` | `implementation-plan.md` |
+| `tasks` | `tasks.md` |
+
+Do not assume `exploration.md`, `hearing.md`, or `impl.md` for `.plugin-workspace/.specs/` workspaces.
 
 For `.spec-skill` compatibility workspaces, use the corresponding feature folder:
 
@@ -201,10 +229,10 @@ For `.spec-skill` compatibility workspaces, use the corresponding feature folder
 
 Workspace-wide review runs are out of scope for the first version because this workflow is intended to hand one spec-driven-dev feature folder to an implementation AI. File and spec scope are the initial targets.
 
-When worktree isolation is enabled, the review run should be created in a dedicated Git worktree instead of the currently opened workspace:
+When worktree isolation is enabled, the review run should be created in a dedicated Git worktree instead of the currently opened workspace. The implemented default worktree root is a sibling of the selected workspace named `<workspace-name>.spec-reviewer-worktrees`:
 
 ```text
-<workspace-parent>/<workspace-name>-worktrees/
+<workspace-parent>/<workspace-name>.spec-reviewer-worktrees/
 └── <review-run-id>/
     └── .plugin-workspace/.specs/{nnn}-{feature-name}/user-review/
         ├── active/
@@ -219,6 +247,12 @@ spec-reviewer/<review-run-id>
 ```
 
 The app should record the worktree path and branch name, but it should not merge, rebase, delete, or prune worktrees in the first version. Cleanup and merge remain explicit user actions unless a later task adds guarded UI for them.
+
+Important distinction:
+
+- `.plugin-workspace/.specs/archive/{nnn}-{feature-name}/` is the spec-driven-dev archive for an entire completed spec.
+- `{spec-folder}/user-review/archive/<review-run-id>/` is only the archive for completed user review runs inside that spec.
+- Archiving a user review run must not move the whole spec folder into `.plugin-workspace/.specs/archive/`.
 
 Worktree mode should check for uncommitted changes in the target spec files before creating the review run. The first version should block worktree mode when target files are dirty, because the new worktree would be created from committed Git state and could omit the user's latest spec edits. Users can either commit/stash first or use current-workspace mode.
 
@@ -238,26 +272,26 @@ This folder must not be confused with the AI-owned review folders used by spec-d
 ```json
 {
   "schemaVersion": "spec-reviewer.review-run.v1",
-  "id": "2026-05-06T120000Z-file-requirements",
+  "id": "2026-05-06T120000Z-file-impl",
   "status": "active",
   "workspacePath": "/path/to/workspace",
   "target": {
     "scope": "file",
     "specId": "001-checkout-flow",
-    "fileKey": "requirements"
+    "fileKey": "impl"
   },
   "specFolderPath": "/path/to/workspace/.plugin-workspace/.specs/001-checkout-flow",
   "executionTarget": {
     "mode": "worktree",
     "repositoryPath": "/path/to/workspace",
-    "worktreePath": "/path/to/workspace-worktrees/2026-05-06T120000Z-file-requirements",
-    "branchName": "spec-reviewer/2026-05-06T120000Z-file-requirements"
+    "worktreePath": "/path/to/workspace.spec-reviewer-worktrees/2026-05-06T120000Z-file-impl",
+    "branchName": "spec-reviewer/2026-05-06T120000Z-file-impl"
   },
   "sourceFiles": [
     {
       "specId": "001-checkout-flow",
-      "fileKey": "requirements",
-      "relativePath": ".plugin-workspace/.specs/001-checkout-flow/requirements.md"
+      "fileKey": "impl",
+      "relativePath": ".plugin-workspace/.specs/001-checkout-flow/implementation-plan.md"
     }
   ],
   "commentIds": ["cmt_1", "cmt_2"],
@@ -387,7 +421,7 @@ export type ReviewRun = Readonly<{
 ### UI
 
 - Use Japanese UI copy for this workflow.
-- Add a `レビュー作成` action near the existing export controls.
+- Add a visible `レビュー作成` action as the primary AI handoff. Raw export and prompt actions should live in a secondary menu so they do not compete with the main review loop.
 - Let the user choose scope and selected/open comments with Japanese labels.
 - Let the user choose `現在のワークスペース` or `新しいworktree` before creating the run.
 - Show the created active folder path after export with Japanese success/error messages.

@@ -17,6 +17,9 @@
 - [x] Add resizable right sidebar.
 - [x] Clarify comment creation UX from Markdown line/block clicks.
 - [x] Fix spec-driven-dev default Markdown file mapping.
+- [ ] Add saved workspace switcher and startup restore.
+- [ ] Add default-closed collapsible left navigation.
+- [ ] Move download/export actions into a secondary menu.
 
 ## Phase 5: AI integration
 
@@ -160,6 +163,42 @@
 - [x] Confirm a workspace like `.plugin-workspace/.specs/021-issue-262/` loads all four tabs without config overrides.
 - [x] Confirm review-run manifests point at `implementation-plan.md` for logical key `impl`.
 - [x] Keep `.spec-skill` compatibility mappings as `requirements.md`, `design.md`, and `tasks.md`.
+
+### P4.13 Saved Workspace Switcher
+
+- [ ] Save every successfully opened workspace automatically.
+- [ ] Save workspaces opened through folder picker and drag-and-drop.
+- [ ] Persist workspace path, display name, workspace kind, last opened timestamp, and last active workspace.
+- [ ] Restore the last active valid workspace on app startup.
+- [ ] Add a Japanese toolbar switcher for saved workspaces.
+- [ ] Let users switch saved workspaces without opening the OS folder picker.
+- [ ] Keep the current workspace loaded if switching fails.
+- [ ] Let users remove one saved workspace or clear the saved list.
+- [ ] Add tests for auto-save, startup restore, switch success/failure, remove, clear, and dedupe.
+
+### P4.14 Collapsible Left Navigation
+
+- [ ] Add left navigation open/closed state.
+- [ ] Default the left navigation to closed for first-time users.
+- [ ] Persist the user's left navigation preference after manual open/close.
+- [ ] Add draggable left navigation resize with independent width persistence.
+- [ ] Constrain left navigation min/default/max width and restore a sane width on narrow viewports.
+- [ ] Add Japanese open/close controls for the left navigation.
+- [ ] Keep selected workspace/spec/file state when the left navigation is closed.
+- [ ] Expand the Markdown reading pane while the left navigation is closed.
+- [ ] Treat the left navigation as an overlay or drawer on narrow viewports.
+- [ ] Add Escape and focus management behavior.
+- [ ] Add tests for default-closed state, open/close controls, open/width preference persistence, resize constraints, Escape behavior, and layout expansion.
+
+### P4.15 Secondary Export Actions
+
+- [ ] Remove always-visible download/export buttons from the main right-sidebar flow.
+- [ ] Keep raw file/spec/workspace comment export reachable from a secondary menu.
+- [ ] Keep prompt copy/export reachable from a secondary menu.
+- [ ] Keep `レビュー作成` as the visible primary handoff action.
+- [ ] Use Japanese labels that distinguish raw export from user-review creation.
+- [ ] Show export feedback only after an export action is triggered.
+- [ ] Update tests for the new overflow/secondary export placement.
 
 ### P5.1 LLM Prompt Export
 

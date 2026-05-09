@@ -62,6 +62,16 @@ export type ReadSpecFileRequest = Readonly<{
   fileKey: SpecFileKey;
 }>;
 
+export type ArchiveSpecRequest = Readonly<{
+  workspacePath: string;
+  specId: string;
+}>;
+
+export type ArchiveSpecResponse = Readonly<{
+  archivedSpecId: string;
+  archivePath: string;
+}>;
+
 export type SpecDocument = Readonly<{
   key: SpecFileKey;
   path: string;

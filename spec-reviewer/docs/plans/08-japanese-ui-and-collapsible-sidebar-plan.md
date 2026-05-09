@@ -2,13 +2,14 @@
 
 ## Goal
 
-Improve the reviewer workspace so users can hide or resize the right review sidebar when they want more Markdown reading space, make the primary user-facing UI Japanese by default, and make comment creation discoverable.
+Improve the reviewer workspace so users can hide or resize side navigation when they want more Markdown reading space, make the primary user-facing UI Japanese by default, and make comment creation discoverable.
 
 This plan is separate from the user-review filesystem loop. It covers the app shell, comment sidebar, review run panel, workspace controls, empty/loading/error states, and user-facing action labels.
 
 ## Design Direction
 
-- Keep the app as a dense three-pane reviewer layout by default.
+- Keep the app as a Markdown-first reviewer layout by default.
+- Default the left spec navigation to closed; users can open it when they need to switch specs or files.
 - Let the right sidebar collapse to a narrow icon rail or hidden panel.
 - Let the right sidebar be resized by dragging a divider.
 - Preserve review state when the sidebar is closed.
@@ -121,6 +122,15 @@ Tests assert user-visible Japanese copy
 
 ### Sidebar Behavior
 
+- Add an icon button to open the left spec navigation.
+- Add a close button inside the left spec navigation.
+- Default the left spec navigation to closed for first-time app users.
+- Persist the user's left navigation open/closed preference after manual changes.
+- Keep selected workspace, spec, and file state when the left navigation is hidden.
+- Ensure Markdown pane width expands when the left navigation is closed.
+- Add a draggable resize handle between the left navigation and the Markdown pane.
+- Persist the user's left navigation width separately from left navigation open/closed state.
+- Constrain the left navigation width with a comfortable minimum and maximum.
 - Add an icon button to close the right sidebar.
 - Add a visible affordance to reopen the sidebar.
 - Add a draggable resize handle between the Markdown pane and the right sidebar.
@@ -146,7 +156,7 @@ Japanese copy should cover:
 - Comment sidebar labels, filters, search, actions, and status messages.
 - Add/edit/delete/resolve comment flows.
 - User-review run creation, worktree selection, archive, result states.
-- Export/prompt actions that remain visible.
+- Export/prompt actions that remain available from secondary menus.
 - Accessibility labels for icon-only buttons.
 - Inline hints for line/block comment creation.
 
@@ -199,6 +209,10 @@ Technical names should stay English where they are product or developer concepts
 | Area | Current Meaning | Japanese Copy |
 | --- | --- | --- |
 | Sidebar heading | Comments | コメント |
+| Open left navigation | Show spec list | 仕様一覧を開く |
+| Close left navigation | Hide spec list | 仕様一覧を閉じる |
+| Resize left navigation | Resize spec list | 仕様一覧の幅を変更 |
+| Spec list | Feature/spec tree | 仕様一覧 |
 | Close sidebar | Hide right sidebar | サイドバーを閉じる |
 | Reopen sidebar | Show right sidebar | サイドバーを開く |
 | Resize sidebar | Resize right sidebar | サイドバー幅を変更 |
@@ -214,6 +228,8 @@ Technical names should stay English where they are product or developer concepts
 | Create review | User review bundle | レビュー作成 |
 | Active review | Active user review run | 対応中レビュー |
 | Archive review | Archive run | アーカイブへ移動 |
+| More actions | Secondary actions | その他 |
+| Export menu | Raw export actions | エクスポート |
 | Current workspace | Execution target | 現在のワークスペース |
 | New worktree | Execution target | 新しいworktree |
 | Copy folder path | Copy path | フォルダパスをコピー |

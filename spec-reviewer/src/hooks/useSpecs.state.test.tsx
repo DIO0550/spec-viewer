@@ -522,3 +522,34 @@ test("useSpecsはrefresh時に選択中Markdownが削除されたらmissing状�
   });
   result.unmount();
 });
+
+test("useSpecsはspecをアーカイブした後にtreeを再読み込みする", async () => {
+  const listSpecs = vi.fn().mockResolvedValue(populatedTree);
+  const readSpecFile = vi.fn().mockResolvedValue(loadedDocument);
+  const archiveSpec = vi.fn().mockResolvedValue({
+    archivedSpecId: "phase-1-viewer",
+    archivePath: "/workspace/spec-reviewer/.plugin-workspace/.specs/.archive/phase-1-viewer",
+  });
+
+  const result = renderHook(
+    ({ workspacePath }) =>
+      useSpecs({ workspacePath, listSpecs, readSpecFile, archiveSpec }),
+    { workspacePath: "/workspace/spec-reviewer" },
+  );
+
+  await act(async () => {
+    await result.current.reloadSpecs();
+  });
+  listSpecs.mockResolvedValue({ specs: [] });
+  await act(async () => {
+    await result.current.archiveSpec("phase-1-viewer");
+  });
+
+  expect(archiveSpec).toHaveBeenCalledWith({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "phase-1-viewer",
+  });
+  expect(result.current.specTreeState.status).toBe("empty");
+  expect(result.current.selectedSpecId).toBeNull();
+  result.unmount();
+});
