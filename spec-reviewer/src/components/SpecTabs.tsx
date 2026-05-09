@@ -1,3 +1,12 @@
+import {
+  ClipboardList,
+  FileCode2,
+  FileQuestion,
+  FileSearch,
+  FileText,
+  ListChecks,
+  MessageSquareText,
+} from "lucide-react";
 import { type KeyboardEvent, useRef } from "react";
 
 import type { SpecFileKey, SpecNode } from "../types/spec";
@@ -105,7 +114,8 @@ export function SpecTabs({ spec, selectedFileKey, onSelectFile }: Props) {
               handleTabKeyDown(event, index);
             }}
           >
-            <span>{file.label}</span>
+            <SpecFileIcon fileKey={file.key} />
+            <span className="spec-tabs__label">{file.label}</span>
             <span className={`file-status file-status--${file.status}`}>
               {file.status}
             </span>
@@ -113,6 +123,57 @@ export function SpecTabs({ spec, selectedFileKey, onSelectFile }: Props) {
         );
       })}
     </div>
+  );
+}
+
+type SpecFileIconProps = Readonly<{
+  fileKey: SpecFileKey;
+}>;
+
+/** @returns A lucide icon matching the logical spec file role. */
+function SpecFileIcon({ fileKey }: SpecFileIconProps) {
+  if (fileKey === "exploration") {
+    return (
+      <FileSearch className="spec-tabs__icon" aria-hidden="true" size={15} />
+    );
+  }
+
+  if (fileKey === "hearing") {
+    return (
+      <MessageSquareText
+        className="spec-tabs__icon"
+        aria-hidden="true"
+        size={15}
+      />
+    );
+  }
+
+  if (fileKey === "impl") {
+    return (
+      <FileCode2 className="spec-tabs__icon" aria-hidden="true" size={15} />
+    );
+  }
+
+  if (fileKey === "tasks") {
+    return (
+      <ListChecks className="spec-tabs__icon" aria-hidden="true" size={15} />
+    );
+  }
+
+  if (fileKey === "requirements") {
+    return (
+      <ClipboardList className="spec-tabs__icon" aria-hidden="true" size={15} />
+    );
+  }
+
+  if (fileKey === "design") {
+    return (
+      <FileText className="spec-tabs__icon" aria-hidden="true" size={15} />
+    );
+  }
+
+  return (
+    <FileQuestion className="spec-tabs__icon" aria-hidden="true" size={15} />
   );
 }
 

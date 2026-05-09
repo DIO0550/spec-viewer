@@ -1,5 +1,11 @@
+import {
+  ChevronDown,
+  ChevronRight,
+  Folder,
+  FolderOpen,
+  RefreshCcw,
+} from "lucide-react";
 import { type KeyboardEvent, useEffect, useState } from "react";
-import { ChevronDown, ChevronRight, RefreshCcw } from "lucide-react";
 
 import type { SpecTreeState } from "../hooks/useSpecs";
 import { uiText } from "../lib/uiText";
@@ -139,7 +145,7 @@ export function SpecTree({
           <RefreshCcw aria-hidden="true" size={16} />
         </button>
       </div>
-      <ul className="spec-tree__list" role="tree">
+      <div className="spec-tree__list" role="tree">
         {state.tree.specs.map((node) => (
           <SpecTreeItem
             key={node.id}
@@ -151,7 +157,7 @@ export function SpecTree({
             onToggleExpanded={toggleSpecExpanded}
           />
         ))}
-      </ul>
+      </div>
     </nav>
   );
 }
@@ -180,7 +186,7 @@ function SpecTreeItem({
   const indentation = BASE_TREE_ITEM_INDENT + depth * TREE_ITEM_INDENT_STEP;
 
   return (
-    <li>
+    <div className="spec-tree__node" role="none">
       <div
         className="spec-tree__row"
         style={{
@@ -231,12 +237,25 @@ function SpecTreeItem({
             });
           }}
         >
-          <span>{node.label}</span>
+          {isExpanded || isSelected ? (
+            <FolderOpen
+              className="spec-tree__item-icon"
+              aria-hidden="true"
+              size={15}
+            />
+          ) : (
+            <Folder
+              className="spec-tree__item-icon"
+              aria-hidden="true"
+              size={15}
+            />
+          )}
+          <span className="spec-tree__item-label">{node.label}</span>
           <span className="spec-tree__file-count">{node.files.length}</span>
         </button>
       </div>
       {hasChildren && isExpanded ? (
-        <ul className="spec-tree__list" role="group">
+        <div className="spec-tree__list">
           {node.children.map((child) => (
             <SpecTreeItem
               key={child.id}
@@ -248,9 +267,9 @@ function SpecTreeItem({
               onToggleExpanded={onToggleExpanded}
             />
           ))}
-        </ul>
+        </div>
       ) : null}
-    </li>
+    </div>
   );
 }
 

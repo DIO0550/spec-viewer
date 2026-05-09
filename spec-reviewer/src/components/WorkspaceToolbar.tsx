@@ -2,9 +2,9 @@ import {
   FolderClock,
   FolderOpen,
   Info,
-  MonitorCog,
   RefreshCcw,
   RotateCcw,
+  SunMoon,
   Trash2,
   X,
 } from "lucide-react";
@@ -131,7 +131,7 @@ export function WorkspaceToolbar({
       </label>
       <div className="workspace-toolbar__actions">
         <label className="workspace-toolbar__theme" htmlFor="theme-mode">
-          <MonitorCog aria-hidden="true" size={16} />
+          <SunMoon aria-hidden="true" size={16} />
           <span>{uiText.workspace.theme}</span>
           <select
             id="theme-mode"
@@ -147,7 +147,7 @@ export function WorkspaceToolbar({
           </select>
         </label>
         <button
-          className="icon-button icon-button--primary"
+          className="icon-button"
           type="button"
           aria-label={uiText.workspace.openFolder}
           title={uiText.workspace.openFolder}
