@@ -29,3 +29,21 @@ test("MarkdownViewerのブロックコメントボタンは右端配置のhover�
   expect(buttonRule).toContain("pointer-events: none;");
   expect(hoverRule).toContain("pointer-events: auto;");
 });
+
+test("MarkdownViewerの本文幅は固定上限ではなく利用可能幅に追従する", () => {
+  const renderedRule = readCssRule(".markdown-rendered");
+  const annotatedTargetRule = readCssRule(
+    '.markdown-comment-target[data-has-comment-annotations="true"]',
+  );
+  const blockRule = readCssRule(
+    ".markdown-comment-target > [data-block-type],\n.markdown-rendered li[data-block-type]",
+  );
+
+  expect(renderedRule).toContain("width: 100%;");
+  expect(renderedRule).toContain("max-width: none;");
+  expect(annotatedTargetRule).toContain(
+    "grid-template-columns: minmax(0, 1fr) max-content;",
+  );
+  expect(blockRule).toContain("min-width: 0;");
+  expect(blockRule).toContain("max-width: none;");
+});

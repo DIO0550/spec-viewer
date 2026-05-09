@@ -2068,7 +2068,8 @@ textarea:disabled {
 }
 
 .markdown-rendered {
-  max-width: 1110px;
+  width: 100%;
+  max-width: none;
   color: var(--color-text-body);
   line-height: 1.72;
 }
@@ -2138,14 +2139,15 @@ textarea:disabled {
 
 .markdown-comment-target[data-has-comment-annotations="true"] {
   display: grid;
-  grid-template-columns: minmax(0, 860px) max-content;
+  grid-template-columns: minmax(0, 1fr) max-content;
   align-items: start;
   column-gap: 12px;
 }
 
 .markdown-comment-target > [data-block-type],
 .markdown-rendered li[data-block-type] {
-  max-width: 860px;
+  min-width: 0;
+  max-width: none;
   padding-inline-end: 2.35rem;
 }
 
@@ -3183,10 +3185,6 @@ textarea:disabled {
 }
 
 @media (max-width: 920px) {
-  .markdown-rendered {
-    max-width: 860px;
-  }
-
   .markdown-comment-target[data-has-comment-annotations="true"] {
     display: block;
   }
