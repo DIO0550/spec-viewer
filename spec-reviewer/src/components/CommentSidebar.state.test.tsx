@@ -1,5 +1,5 @@
-import { act } from "react";
 import type { ReactNode } from "react";
+import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
@@ -10,7 +10,7 @@ import type {
   CommentExportScope,
   CommentId,
 } from "../types/comment";
-import { CommentSidebar, type CommentExportState } from "./CommentSidebar";
+import { type CommentExportState, CommentSidebar } from "./CommentSidebar";
 
 const anchor: CommentAnchor = {
   fileKey: "tasks",
@@ -120,6 +120,7 @@ function renderReadySidebar(
     onExportComments?: (scope: CommentExportScope) => void;
     onCopyLlmPrompt?: (scope: CommentExportScope) => void;
     onCopyMcpFeedback?: () => void;
+    onReload?: () => void;
   }> = {},
 ): RenderResult {
   return renderComponent(
@@ -155,7 +156,7 @@ function renderReadySidebar(
       onReopenComment={options.onReopenComment ?? vi.fn()}
       onDeleteComment={options.onDeleteComment ?? vi.fn()}
       onUpdateComment={options.onUpdateComment ?? vi.fn()}
-      onReload={vi.fn()}
+      onReload={options.onReload ?? vi.fn()}
       onExportComments={options.onExportComments}
       onCopyLlmPrompt={options.onCopyLlmPrompt}
       onCopyMcpFeedback={options.onCopyMcpFeedback}
@@ -257,6 +258,22 @@ test("CommentSidebarは読み込み中状態をrole statusで表示する", () =
   expect(
     result.container.querySelectorAll(".loading-skeleton__bar").length,
   ).toBeGreaterThan(0);
+  result.unmount();
+});
+
+test("CommentSidebarはヘッダーの再読み込み操作を発火する", () => {
+  const onReload = vi.fn();
+  const result = renderReadySidebar({ onReload });
+  const reloadButton = result.container.querySelector(
+    '[aria-label="コメントを再読み込み"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    reloadButton.click();
+  });
+
+  expect(onReload).toHaveBeenCalledTimes(1);
+
   result.unmount();
 });
 
