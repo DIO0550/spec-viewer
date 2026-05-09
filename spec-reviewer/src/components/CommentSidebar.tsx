@@ -2,6 +2,7 @@ import {
   Clipboard,
   Download,
   MoreHorizontal,
+  RefreshCw,
   Search,
   Sparkles,
   X,
@@ -13,6 +14,7 @@ import type {
   CommentListState,
   CommentMutationState,
 } from "../hooks/useComments";
+import { uiText } from "../lib/uiText";
 import type {
   ApplyWithAiPlaceholderState,
   Comment,
@@ -23,7 +25,6 @@ import type {
   CommentExportScope,
   CommentId,
 } from "../types/comment";
-import { uiText } from "../lib/uiText";
 import { CommandErrorDisplay } from "./CommandErrorDisplay";
 import { CommentThread } from "./CommentThread";
 import { EmptyState } from "./EmptyState";
@@ -164,6 +165,7 @@ export function CommentSidebar({
           showExportControls={false}
           exportState={exportState}
           onFilterChange={setActiveFilter}
+          onReload={onReload}
           onCopyLlmPrompt={onCopyLlmPrompt}
           onCopyMcpFeedback={onCopyMcpFeedback}
         />
@@ -188,6 +190,7 @@ export function CommentSidebar({
           showExportControls={false}
           exportState={exportState}
           onFilterChange={setActiveFilter}
+          onReload={onReload}
         />
         <LoadingSkeleton
           className="comment-sidebar__loading"
@@ -215,6 +218,7 @@ export function CommentSidebar({
           showExportControls={false}
           exportState={exportState}
           onFilterChange={setActiveFilter}
+          onReload={onReload}
         />
         <CommandErrorDisplay
           title={uiText.sidebar.unavailable}
@@ -238,6 +242,7 @@ export function CommentSidebar({
           showExportControls={canExportComments}
           exportState={exportState}
           onFilterChange={setActiveFilter}
+          onReload={onReload}
           onExportComments={onExportComments}
           onCopyLlmPrompt={onCopyLlmPrompt}
           onCopyMcpFeedback={onCopyMcpFeedback}
@@ -287,6 +292,7 @@ export function CommentSidebar({
         showExportControls={canExportComments}
         exportState={exportState}
         onFilterChange={setActiveFilter}
+        onReload={onReload}
         onExportComments={onExportComments}
         onCopyLlmPrompt={onCopyLlmPrompt}
         onCopyMcpFeedback={onCopyMcpFeedback}
@@ -398,6 +404,7 @@ type HeaderProps = Readonly<{
   showExportControls: boolean;
   exportState: CommentExportState;
   onFilterChange: (filter: CommentDisplayFilter) => void;
+  onReload: () => void;
   onExportComments?: (scope: CommentExportScope) => void;
   onCopyLlmPrompt?: (scope: CommentExportScope) => void;
   onCopyMcpFeedback?: () => void;
@@ -413,17 +420,42 @@ function CommentSidebarHeader({
   showExportControls,
   exportState,
   onFilterChange,
+  onReload,
   onExportComments,
   onCopyLlmPrompt,
   onCopyMcpFeedback,
 }: HeaderProps) {
   return (
     <header className="comment-sidebar__header">
-      <div>
-        <h2>{uiText.sidebar.comments}</h2>
-        <p>{uiText.sidebar.description}</p>
+      <div className="comment-sidebar__header-top">
+        <div>
+          <h2>{uiText.sidebar.comments}</h2>
+          <p>{uiText.sidebar.description}</p>
+        </div>
+        <div className="comment-sidebar__header-actions">
+          <button
+            className="icon-button"
+            type="button"
+            aria-label="コメントを再読み込み"
+            title="コメントを再読み込み"
+            onClick={onReload}
+          >
+            <RefreshCw aria-hidden="true" size={14} />
+          </button>
+          {showExportControls &&
+          (onExportComments !== undefined ||
+            onCopyLlmPrompt !== undefined ||
+            onCopyMcpFeedback !== undefined) ? (
+            <CommentExportControls
+              exportState={exportState}
+              onExportComments={onExportComments}
+              onCopyLlmPrompt={onCopyLlmPrompt}
+              onCopyMcpFeedback={onCopyMcpFeedback}
+            />
+          ) : null}
+        </div>
       </div>
-      <div
+      <section
         className="comment-sidebar__summary"
         aria-label={uiText.sidebar.counts}
       >
@@ -435,9 +467,9 @@ function CommentSidebarHeader({
           {uiText.sidebar.resolved}
           <span>{resolvedCount}</span>
         </span>
-      </div>
+      </section>
       {showFilters ? (
-        <div
+        <section
           className="comment-sidebar__filters"
           aria-label={uiText.sidebar.filters}
         >
@@ -456,18 +488,7 @@ function CommentSidebarHeader({
               <span>{filterCounts[option.filter]}</span>
             </button>
           ))}
-        </div>
-      ) : null}
-      {showExportControls &&
-      (onExportComments !== undefined ||
-        onCopyLlmPrompt !== undefined ||
-        onCopyMcpFeedback !== undefined) ? (
-        <CommentExportControls
-          exportState={exportState}
-          onExportComments={onExportComments}
-          onCopyLlmPrompt={onCopyLlmPrompt}
-          onCopyMcpFeedback={onCopyMcpFeedback}
-        />
+        </section>
       ) : null}
     </header>
   );
@@ -545,9 +566,10 @@ function CommentExportControls({
   return (
     <div className="comment-sidebar__secondary-actions">
       <button
-        className="comment-sidebar__secondary-trigger"
+        className="icon-button comment-sidebar__secondary-trigger"
         type="button"
         aria-label={uiText.sidebar.moreActions}
+        title={uiText.sidebar.moreActions}
         aria-controls={menuId}
         aria-expanded={isMenuOpen}
         aria-haspopup="menu"
@@ -555,8 +577,7 @@ function CommentExportControls({
           setIsMenuOpen((currentIsMenuOpen) => !currentIsMenuOpen);
         }}
       >
-        <MoreHorizontal aria-hidden="true" size={15} />
-        <span>{uiText.sidebar.moreActions}</span>
+        <MoreHorizontal aria-hidden="true" size={14} />
       </button>
       {isMenuOpen ? (
         <div
@@ -730,7 +751,7 @@ function CommentSection({
     <section className="comment-sidebar__section" aria-labelledby={id}>
       <div className="comment-sidebar__section-header">
         <h3 id={id}>{title}</h3>
-        <span aria-label={`${title} comment count`}>{comments.length}</span>
+        <span title={`${title} comment count`}>{comments.length}</span>
       </div>
       {comments.length === 0 ? (
         <p className="comment-sidebar__section-empty">{emptyMessage}</p>
@@ -910,7 +931,6 @@ function createCommentFilterCounts(
       anchorDisplayStatusByCommentId.get(comment.id) ?? "exact";
 
     return {
-      ...counts,
       all: counts.all + 1,
       open: comment.resolved ? counts.open : counts.open + 1,
       resolved: comment.resolved ? counts.resolved + 1 : counts.resolved,

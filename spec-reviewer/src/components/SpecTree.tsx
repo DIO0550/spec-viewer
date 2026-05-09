@@ -1,10 +1,4 @@
-import {
-  ChevronDown,
-  ChevronRight,
-  Folder,
-  FolderOpen,
-  RefreshCcw,
-} from "lucide-react";
+import { ChevronDown, ChevronRight, FileText, RefreshCcw } from "lucide-react";
 import { type KeyboardEvent, useEffect, useState } from "react";
 
 import type { SpecTreeState } from "../hooks/useSpecs";
@@ -237,19 +231,11 @@ function SpecTreeItem({
             });
           }}
         >
-          {isExpanded || isSelected ? (
-            <FolderOpen
-              className="spec-tree__item-icon"
-              aria-hidden="true"
-              size={15}
-            />
-          ) : (
-            <Folder
-              className="spec-tree__item-icon"
-              aria-hidden="true"
-              size={15}
-            />
-          )}
+          <FileText
+            className="spec-tree__item-icon"
+            aria-hidden="true"
+            size={14}
+          />
           <span className="spec-tree__item-label">{node.label}</span>
           <span className="spec-tree__file-count">{node.files.length}</span>
         </button>

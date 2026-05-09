@@ -1,8 +1,8 @@
 import {
-  FolderClock,
+  Folder,
   FolderOpen,
   Info,
-  RefreshCcw,
+  RefreshCw,
   RotateCcw,
   SunMoon,
   Trash2,
@@ -147,21 +147,22 @@ export function WorkspaceToolbar({
           </select>
         </label>
         <button
-          className="icon-button"
+          className="button button--primary workspace-toolbar__open-button"
           type="button"
           aria-label={uiText.workspace.openFolder}
           title={uiText.workspace.openFolder}
           disabled={isBusy}
           onClick={onBrowse}
         >
-          <FolderOpen aria-hidden="true" size={16} />
+          <FolderOpen aria-hidden="true" size={15} />
+          {isBrowsing ? uiText.workspace.opening : "開く"}
         </button>
         <button
           className="button button--secondary"
           type="submit"
           disabled={!canLoad}
         >
-          <RefreshCcw aria-hidden="true" size={16} />
+          <RefreshCw aria-hidden="true" size={15} />
           {isLoading ? uiText.workspace.loading : uiText.workspace.load}
         </button>
         <details
@@ -179,7 +180,7 @@ export function WorkspaceToolbar({
             aria-disabled={!hasRecentWorkspaces}
             aria-keyshortcuts="Escape"
           >
-            <FolderClock aria-hidden="true" size={16} />
+            <Folder aria-hidden="true" size={15} />
             <span>{uiText.workspace.switcher}</span>
           </summary>
           <div className="workspace-toolbar__recent-menu">
@@ -303,7 +304,7 @@ export function WorkspaceToolbar({
           disabled={!canRefresh || isBusy || isRefreshing}
           onClick={onRefresh}
         >
-          <RefreshCcw aria-hidden="true" size={16} />
+          <RefreshCw aria-hidden="true" size={15} />
         </button>
         <button
           className="button button--ghost"
@@ -311,7 +312,7 @@ export function WorkspaceToolbar({
           disabled={isBusy && workspacePath === null}
           onClick={onReset}
         >
-          <RotateCcw aria-hidden="true" size={16} />
+          <RotateCcw aria-hidden="true" size={15} />
           {uiText.workspace.reset}
         </button>
       </div>

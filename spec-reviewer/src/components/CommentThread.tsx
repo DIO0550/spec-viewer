@@ -1,19 +1,26 @@
-import { CheckCircle2, Edit3, RotateCcw, Save, Trash2, X } from "lucide-react";
 import {
-  useId,
-  useState,
+  Check,
+  CheckCircle2,
+  Pencil,
+  RotateCcw,
+  Trash2,
+  X,
+} from "lucide-react";
+import {
   type FormEvent,
   type KeyboardEvent,
   type ReactNode,
+  useId,
+  useState,
 } from "react";
 
 import type { CommentMutationState } from "../hooks/useComments";
+import { uiText } from "../lib/uiText";
 import type {
   Comment,
   CommentAnchorDisplayStatus,
   CommentId,
 } from "../types/comment";
-import { uiText } from "../lib/uiText";
 
 const emptyBodyMessage = uiText.commentThread.emptyBody;
 
@@ -162,7 +169,7 @@ export function CommentThread({
             {formatAnchorTitle(comment)}
           </span>
         </button>
-        <div
+        <section
           className="comment-thread__actions"
           aria-label={uiText.commentThread.actions}
         >
@@ -173,7 +180,7 @@ export function CommentThread({
             disabled={isMutatingComment || isEditing}
             onClick={beginEdit}
           >
-            <Edit3 aria-hidden="true" size={16} />
+            <Pencil aria-hidden="true" size={14} />
           </button>
           <button
             className="icon-button"
@@ -187,9 +194,9 @@ export function CommentThread({
             onClick={toggleResolved}
           >
             {isResolved ? (
-              <RotateCcw aria-hidden="true" size={16} />
+              <RotateCcw aria-hidden="true" size={14} />
             ) : (
-              <CheckCircle2 aria-hidden="true" size={16} />
+              <CheckCircle2 aria-hidden="true" size={14} />
             )}
           </button>
           <button
@@ -199,12 +206,12 @@ export function CommentThread({
             disabled={isMutatingComment || isConfirmingDelete}
             onClick={requestDelete}
           >
-            <Trash2 aria-hidden="true" size={16} />
+            <Trash2 aria-hidden="true" size={14} />
           </button>
-        </div>
+        </section>
       </header>
 
-      <div
+      <section
         className="comment-thread__anchor"
         aria-label={uiText.commentThread.anchorDetails}
       >
@@ -236,7 +243,7 @@ export function CommentThread({
             />
           </span>
         )}
-      </div>
+      </section>
 
       {isEditing ? (
         <form className="comment-thread__editor" onSubmit={submitEdit}>
@@ -271,7 +278,7 @@ export function CommentThread({
               aria-label={`${uiText.commentThread.save} ${comment.id}`}
               disabled={isMutatingComment}
             >
-              <Save aria-hidden="true" size={16} />
+              <Check aria-hidden="true" size={14} />
             </button>
             <button
               className="icon-button"
@@ -280,7 +287,7 @@ export function CommentThread({
               disabled={isMutatingComment}
               onClick={cancelEdit}
             >
-              <X aria-hidden="true" size={16} />
+              <X aria-hidden="true" size={14} />
             </button>
           </div>
         </form>

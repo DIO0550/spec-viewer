@@ -1,11 +1,5 @@
+import { ChevronDown, ChevronRight, Folder, FolderOpen, X } from "lucide-react";
 import { useId } from "react";
-import {
-  ChevronDown,
-  ChevronRight,
-  FolderClock,
-  FolderOpen,
-  X,
-} from "lucide-react";
 
 import type { RecentWorkspace } from "../lib/recentWorkspaces";
 import { uiText } from "../lib/uiText";
@@ -75,20 +69,23 @@ export function WorkspaceSidebarSection({
         </button>
       </div>
       <div className="workspace-sidebar-section__current">
-        <span>{uiText.workspace.currentWorkspace}</span>
-        <strong title={currentWorkspacePath ?? uiText.workspace.noWorkspace}>
-          {currentWorkspacePath ?? uiText.workspace.noWorkspace}
-        </strong>
+        <Folder aria-hidden="true" size={14} />
+        <span>
+          <span>{uiText.workspace.currentWorkspace}</span>
+          <strong title={currentWorkspacePath ?? uiText.workspace.noWorkspace}>
+            {currentWorkspacePath ?? uiText.workspace.noWorkspace}
+          </strong>
+        </span>
       </div>
       {isOpen ? (
         <div id={contentId} className="workspace-sidebar-section__content">
           {hasRecentWorkspaces ? (
-            <div
+            <ul
               className="workspace-sidebar-section__list"
               aria-label={uiText.workspace.recent}
             >
               {recentWorkspaces.map((recentWorkspace) => (
-                <div
+                <li
                   className="workspace-sidebar-section__row"
                   key={recentWorkspace.path}
                 >
@@ -108,7 +105,7 @@ export function WorkspaceSidebarSection({
                     }}
                   >
                     <span className="workspace-sidebar-section__name">
-                      <FolderClock aria-hidden="true" size={14} />
+                      <Folder aria-hidden="true" size={14} />
                       {recentWorkspace.displayName}
                     </span>
                     <span className="workspace-sidebar-section__path">
@@ -127,9 +124,9 @@ export function WorkspaceSidebarSection({
                   >
                     <X aria-hidden="true" size={14} />
                   </button>
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
           ) : (
             <p className="workspace-sidebar-section__empty">
               {uiText.workspace.noRecent}
