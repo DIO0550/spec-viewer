@@ -163,7 +163,10 @@ export function MarkdownViewer({
     readonly CommentAnchorDisplayState[]
   >([]);
   const resetKey = createViewerResetKey(state);
-  const selectionFileKey = state.status === "ready" ? state.fileKey : null;
+  const isHtmlDocument =
+    state.status === "ready" && state.document.format === "html";
+  const selectionFileKey =
+    state.status === "ready" && !isHtmlDocument ? state.fileKey : null;
   const readyContents =
     state.status === "ready" ? state.document.contents : null;
   const { selectionDraft, clearSelectionDraft } = useMarkdownTextSelection({
@@ -175,7 +178,7 @@ export function MarkdownViewer({
     setActiveAnchorDraft(null);
   }, [resetKey]);
   useEffect(() => {
-    if (state.status !== "ready" || readyContents === null) {
+    if (state.status !== "ready" || readyContents === null || isHtmlDocument) {
       setAnchorDisplayStates([]);
       onAnchorDisplayStatesChange?.([]);
       return;
@@ -188,7 +191,13 @@ export function MarkdownViewer({
 
     setAnchorDisplayStates(nextStates);
     onAnchorDisplayStatesChange?.(nextStates);
-  }, [comments, onAnchorDisplayStatesChange, readyContents, state.status]);
+  }, [
+    comments,
+    isHtmlDocument,
+    onAnchorDisplayStatesChange,
+    readyContents,
+    state.status,
+  ]);
   useEffect(() => {
     scrollActiveCommentIntoView({
       activeCommentId,
@@ -203,7 +212,7 @@ export function MarkdownViewer({
   };
 
   const createBlockDraft = (block: HTMLElement): void => {
-    if (state.status !== "ready") {
+    if (state.status !== "ready" || state.document.format === "html") {
       return;
     }
 
@@ -362,31 +371,37 @@ export function MarkdownViewer({
           <RefreshCcw aria-hidden="true" size={16} />
         </button>
       </header>
-      <MarkdownDocument
-        contents={contents}
-        blocks={state.document.blocks}
-        renderedRootRef={renderedRootRef}
-        comments={comments}
-        activeCommentId={activeCommentId}
-        anchorDisplayStates={anchorDisplayStates}
-        onSelectComment={onSelectComment}
-        onCreateBlockDraft={createBlockDraft}
-      />
-      <TextSelectionCommentButton
-        draft={selectionDraft}
-        onCreateDraft={(draft) => {
-          setActiveAnchorDraft(draft);
-          clearSelectionDraft();
-        }}
-      />
-      <CommentAnchorDraftPopover
-        draft={activeAnchorDraft}
-        isSaving={isAddingComment}
-        errorMessage={addCommentErrorMessage}
-        isScopeReady={isCommentScopeReady}
-        onSubmit={addComment}
-        onCancel={closeAnchorDraft}
-      />
+      {state.document.format === "html" ? (
+        <HtmlDocument contents={contents} />
+      ) : (
+        <>
+          <MarkdownDocument
+            contents={contents}
+            blocks={state.document.blocks}
+            renderedRootRef={renderedRootRef}
+            comments={comments}
+            activeCommentId={activeCommentId}
+            anchorDisplayStates={anchorDisplayStates}
+            onSelectComment={onSelectComment}
+            onCreateBlockDraft={createBlockDraft}
+          />
+          <TextSelectionCommentButton
+            draft={selectionDraft}
+            onCreateDraft={(draft) => {
+              setActiveAnchorDraft(draft);
+              clearSelectionDraft();
+            }}
+          />
+          <CommentAnchorDraftPopover
+            draft={activeAnchorDraft}
+            isSaving={isAddingComment}
+            errorMessage={addCommentErrorMessage}
+            isScopeReady={isCommentScopeReady}
+            onSubmit={addComment}
+            onCancel={closeAnchorDraft}
+          />
+        </>
+      )}
     </article>
   );
 }
@@ -486,6 +501,22 @@ function MarkdownDocument({
         {contents}
       </ReactMarkdown>
     </div>
+  );
+}
+
+type HtmlDocumentProps = Readonly<{
+  contents: string;
+}>;
+
+/** @returns Sandboxed HTML preview for non-Markdown spec files. */
+function HtmlDocument({ contents }: HtmlDocumentProps) {
+  return (
+    <iframe
+      className="html-rendered"
+      title={uiText.markdown.renderedHtmlDocument}
+      sandbox=""
+      srcDoc={contents}
+    />
   );
 }
 

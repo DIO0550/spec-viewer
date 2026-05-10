@@ -11,7 +11,8 @@ use crate::{
         ReadSpecFileResult,
     },
     domain::spec::{
-        MarkdownBlock, MarkdownBlockSourceRange, SpecFile, SpecFileKey, SpecFileStatus, SpecNode,
+        MarkdownBlock, MarkdownBlockSourceRange, SpecDocumentFormat, SpecFile, SpecFileKey,
+        SpecFileStatus, SpecNode,
     },
 };
 
@@ -84,6 +85,7 @@ pub struct SpecFileResponse {
     label: String,
     file_name: String,
     status: String,
+    format: String,
     config_source: String,
 }
 
@@ -104,6 +106,10 @@ impl SpecFileResponse {
         &self.status
     }
 
+    pub fn format(&self) -> &str {
+        &self.format
+    }
+
     pub fn config_source(&self) -> &str {
         &self.config_source
     }
@@ -113,6 +119,7 @@ impl SpecFileResponse {
 #[serde(rename_all = "camelCase")]
 pub struct ReadSpecFileResponse {
     key: String,
+    format: String,
     path: String,
     contents: Option<String>,
     missing: bool,
@@ -139,6 +146,10 @@ impl ArchiveSpecResponse {
 impl ReadSpecFileResponse {
     pub fn key(&self) -> &str {
         &self.key
+    }
+
+    pub fn format(&self) -> &str {
+        &self.format
     }
 
     pub fn path(&self) -> &str {
@@ -280,6 +291,7 @@ impl From<&SpecFile> for SpecFileResponse {
             label: file.display_label().to_string(),
             file_name: file.file_name().to_string(),
             status: status_label(file.status()).to_string(),
+            format: format_label(file.format()).to_string(),
             config_source: file.config_source().as_str().to_string(),
         }
     }
@@ -307,6 +319,7 @@ impl From<AppMarkdownDocument> for ReadSpecFileResponse {
     fn from(document: AppMarkdownDocument) -> Self {
         Self {
             key: document.key().as_str().to_string(),
+            format: format_label(document.format()).to_string(),
             path: document.path().to_string(),
             contents: Some(document.contents().to_string()),
             missing: false,
@@ -323,6 +336,7 @@ impl From<AppMissingMarkdownFile> for ReadSpecFileResponse {
     fn from(missing: AppMissingMarkdownFile) -> Self {
         Self {
             key: missing.key().as_str().to_string(),
+            format: format_label(missing.format()).to_string(),
             path: missing.path().to_string(),
             contents: None,
             missing: true,
@@ -359,6 +373,10 @@ fn status_label(status: SpecFileStatus) -> &'static str {
         SpecFileStatus::Present => "present",
         SpecFileStatus::Missing => "missing",
     }
+}
+
+fn format_label(format: SpecDocumentFormat) -> &'static str {
+    format.as_str()
 }
 
 fn create_block_text_snippet(text: &str) -> String {
@@ -410,6 +428,7 @@ mod tests {
             response.specs()[0].files()[0].file_name()
         );
         assert_eq!("present", response.specs()[0].files()[0].status());
+        assert_eq!("markdown", response.specs()[0].files()[0].format());
         assert_eq!(
             "workspaceConfig",
             response.specs()[0].files()[0].config_source()
@@ -442,6 +461,7 @@ mod tests {
         let response = ReadSpecFileResponse::from(ReadSpecFileResult::Found(document));
 
         assert_eq!("tasks", response.key());
+        assert_eq!("markdown", response.format());
         assert_eq!("/workspace/auth/tasks.md", response.path());
         assert_eq!(Some("# Tasks"), response.contents());
         assert!(!response.missing());
@@ -466,6 +486,7 @@ mod tests {
         let response = ReadSpecFileResponse::from(ReadSpecFileResult::Missing(missing));
 
         assert_eq!("design", response.key());
+        assert_eq!("markdown", response.format());
         assert_eq!("/workspace/auth/design.md", response.path());
         assert_eq!(None, response.contents());
         assert!(response.missing());
@@ -486,5 +507,22 @@ mod tests {
             "/workspace/.plugin-workspace/.specs/.archive/auth",
             response.archive_path()
         );
+    }
+
+    #[test]
+    fn read_spec_file_response_serializes_html_document_format() {
+        let document = AppMarkdownDocument::with_format_and_blocks(
+            SpecFileKey::Tasks,
+            SpecDocumentFormat::Html,
+            "/workspace/auth/tasks.html",
+            "<h1>Tasks</h1>",
+            Vec::new(),
+        );
+
+        let response = ReadSpecFileResponse::from(ReadSpecFileResult::Found(document));
+
+        assert_eq!("html", response.format());
+        assert_eq!("/workspace/auth/tasks.html", response.path());
+        assert!(response.blocks().is_empty());
     }
 }

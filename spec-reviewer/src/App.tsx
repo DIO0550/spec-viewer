@@ -121,10 +121,13 @@ function App() {
   const sidebarPreference = useSidebarPreference();
   const resizableSidebar = useResizableSidebar();
   const specs = useSpecs({ workspacePath: workspace.workspace?.root ?? null });
+  const isHtmlDocument =
+    specs.documentState.status === "ready" &&
+    specs.documentState.document.format === "html";
   const comments = useComments({
     workspacePath: workspace.workspace?.root ?? null,
     specId: specs.selectedSpecId,
-    fileKey: specs.selectedFileKey,
+    fileKey: isHtmlDocument ? null : specs.selectedFileKey,
     statusFilter: "all",
   });
   const [reviewRunTargetScope, setReviewRunTargetScope] =

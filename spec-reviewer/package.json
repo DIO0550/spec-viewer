@@ -1,7 +1,7 @@
 {
   "name": "spec-viewer",
   "private": true,
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Desktop reviewer for Spec Skill Markdown workspaces.",
   "author": "DIO0550",
   "license": "UNLICENSED",

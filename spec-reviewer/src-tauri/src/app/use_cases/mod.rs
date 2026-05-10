@@ -11,7 +11,7 @@ use crate::{
     app::services::file_watching::{plan_file_watch, FileWatchPlan},
     domain::{
         comment::{CommentDomainError, CommentRepositoryError},
-        spec::{MarkdownBlock, SpecDomainError},
+        spec::{MarkdownBlock, SpecDocumentFormat, SpecDomainError},
         spec::{SpecFileKey, SpecNode},
         workspace::{WorkspaceConfig, WorkspaceLayout},
     },
@@ -360,6 +360,7 @@ impl From<MarkdownReadResult> for ReadSpecFileResult {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AppMarkdownDocument {
     key: SpecFileKey,
+    format: SpecDocumentFormat,
     path: String,
     contents: String,
     blocks: Vec<MarkdownBlock>,
@@ -367,7 +368,13 @@ pub struct AppMarkdownDocument {
 
 impl AppMarkdownDocument {
     pub fn new(key: SpecFileKey, path: impl Into<String>, contents: impl Into<String>) -> Self {
-        Self::with_blocks(key, path, contents, Vec::new())
+        Self::with_format_and_blocks(
+            key,
+            SpecDocumentFormat::Markdown,
+            path,
+            contents,
+            Vec::new(),
+        )
     }
 
     pub fn with_blocks(
@@ -376,8 +383,19 @@ impl AppMarkdownDocument {
         contents: impl Into<String>,
         blocks: Vec<MarkdownBlock>,
     ) -> Self {
+        Self::with_format_and_blocks(key, SpecDocumentFormat::Markdown, path, contents, blocks)
+    }
+
+    pub fn with_format_and_blocks(
+        key: SpecFileKey,
+        format: SpecDocumentFormat,
+        path: impl Into<String>,
+        contents: impl Into<String>,
+        blocks: Vec<MarkdownBlock>,
+    ) -> Self {
         Self {
             key,
+            format,
             path: path.into(),
             contents: contents.into(),
             blocks,
@@ -386,6 +404,10 @@ impl AppMarkdownDocument {
 
     pub fn key(&self) -> SpecFileKey {
         self.key
+    }
+
+    pub fn format(&self) -> SpecDocumentFormat {
+        self.format
     }
 
     pub fn path(&self) -> &str {
@@ -403,8 +425,9 @@ impl AppMarkdownDocument {
 
 impl From<MarkdownDocument> for AppMarkdownDocument {
     fn from(document: MarkdownDocument) -> Self {
-        Self::with_blocks(
+        Self::with_format_and_blocks(
             document.key(),
+            document.format(),
             document.path().to_string(),
             document.contents().to_string(),
             document.blocks().to_vec(),
@@ -415,19 +438,33 @@ impl From<MarkdownDocument> for AppMarkdownDocument {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AppMissingMarkdownFile {
     key: SpecFileKey,
+    format: SpecDocumentFormat,
     path: String,
 }
 
 impl AppMissingMarkdownFile {
     pub fn new(key: SpecFileKey, path: impl Into<String>) -> Self {
+        Self::with_format(key, SpecDocumentFormat::Markdown, path)
+    }
+
+    pub fn with_format(
+        key: SpecFileKey,
+        format: SpecDocumentFormat,
+        path: impl Into<String>,
+    ) -> Self {
         Self {
             key,
+            format,
             path: path.into(),
         }
     }
 
     pub fn key(&self) -> SpecFileKey {
         self.key
+    }
+
+    pub fn format(&self) -> SpecDocumentFormat {
+        self.format
     }
 
     pub fn path(&self) -> &str {
@@ -437,7 +474,7 @@ impl AppMissingMarkdownFile {
 
 impl From<MissingMarkdownFile> for AppMissingMarkdownFile {
     fn from(missing: MissingMarkdownFile) -> Self {
-        Self::new(missing.key(), missing.path().to_string())
+        Self::with_format(missing.key(), missing.format(), missing.path().to_string())
     }
 }
 

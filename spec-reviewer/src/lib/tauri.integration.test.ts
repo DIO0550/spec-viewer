@@ -69,6 +69,7 @@ test("readSpecFileはread_spec_fileへspecIdとfileKeyを渡す", async () => {
   invokeMock.mockReset();
   invokeMock.mockResolvedValue({
     key: "tasks",
+    format: "markdown",
     path: "/workspace/spec-reviewer/.plugin-workspace/specs/auth/tasks.md",
     contents: "# Tasks",
     missing: false,
@@ -93,6 +94,7 @@ test("readSpecFileはread_spec_fileへspecIdとfileKeyを渡す", async () => {
   });
 
   expect(result.contents).toBe("# Tasks");
+  expect(result.format).toBe("markdown");
   expect(result.blocks[0]?.textHash).toBe("sha256:abc12345");
   expect(invokeMock).toHaveBeenCalledWith("read_spec_file", {
     request: {

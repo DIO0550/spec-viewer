@@ -118,7 +118,7 @@ export function clearStoredRecentWorkspaces(
   }
 }
 
-/** @returns A recent list with the path moved to the front. */
+/** @returns A recent list with existing paths updated in place. */
 export function recordRecentWorkspace(
   workspaces: readonly RecentWorkspace[],
   workspace: Workspace,
@@ -130,13 +130,24 @@ export function recordRecentWorkspace(
     return workspaces;
   }
 
+  const recentWorkspace = {
+    path: normalizedPath,
+    displayName: createWorkspaceDisplayName(normalizedPath),
+    kind: workspace.kind,
+    lastOpenedAt,
+  };
+  const existingIndex = workspaces.findIndex(
+    (currentWorkspace) => currentWorkspace.path === normalizedPath,
+  );
+
+  if (existingIndex >= 0) {
+    return workspaces.map((currentWorkspace, index) =>
+      index === existingIndex ? recentWorkspace : currentWorkspace,
+    );
+  }
+
   return dedupeRecentWorkspaces([
-    {
-      path: normalizedPath,
-      displayName: createWorkspaceDisplayName(normalizedPath),
-      kind: workspace.kind,
-      lastOpenedAt,
-    },
+    recentWorkspace,
     ...workspaces,
   ]).slice(0, recentWorkspaceLimit);
 }

@@ -2159,6 +2159,14 @@ textarea:disabled {
   line-height: 1.72;
 }
 
+.html-rendered {
+  width: 100%;
+  min-height: min(72dvh, 860px);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-raised);
+}
+
 .markdown-rendered > :first-child {
   margin-top: 0;
 }

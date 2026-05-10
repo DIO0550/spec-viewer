@@ -8,7 +8,7 @@ use std::{
 use thiserror::Error;
 
 use crate::domain::{
-    spec::{SpecDomainError, SpecFile, SpecFileStatus, SpecNode},
+    spec::{SpecDocumentFormat, SpecDomainError, SpecFile, SpecFileStatus, SpecNode},
     workspace::{
         WorkspaceConfig, WorkspaceDomainError, WorkspaceKind, WorkspaceLayout, WorkspaceRoot,
     },
@@ -691,13 +691,14 @@ fn scan_spec_files(
         .iter()
         .map(|mapping| {
             let file_path = directory.join(mapping.file_name());
-            let status = spec_file_status(&file_path)?;
+            let resolved_file = resolve_spec_file_for_scan(&file_path)?;
 
-            SpecFile::with_config_source(
+            SpecFile::with_resolved_format(
                 mapping.key(),
                 mapping.file_name(),
-                status,
+                resolved_file.status,
                 mapping.source(),
+                resolved_file.format,
             )
             .map_err(|source| SpecTreeScanError::InvalidFile {
                 path: display_path(&file_path),
@@ -705,6 +706,56 @@ fn scan_spec_files(
             })
         })
         .collect()
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct ScannedSpecFile {
+    status: SpecFileStatus,
+    format: SpecDocumentFormat,
+}
+
+fn resolve_spec_file_for_scan(path: &Path) -> Result<ScannedSpecFile, SpecTreeScanError> {
+    let preferred_format = SpecDocumentFormat::from_file_name(&display_path(path));
+
+    if spec_file_status(path)? == SpecFileStatus::Present {
+        return Ok(ScannedSpecFile {
+            status: SpecFileStatus::Present,
+            format: preferred_format,
+        });
+    }
+
+    let Some(html_fallback_path) = html_fallback_path(path) else {
+        return Ok(ScannedSpecFile {
+            status: SpecFileStatus::Missing,
+            format: preferred_format,
+        });
+    };
+
+    let fallback_status = spec_file_status(&html_fallback_path)?;
+
+    if fallback_status == SpecFileStatus::Present {
+        return Ok(ScannedSpecFile {
+            status: SpecFileStatus::Present,
+            format: SpecDocumentFormat::Html,
+        });
+    }
+
+    Ok(ScannedSpecFile {
+        status: SpecFileStatus::Missing,
+        format: preferred_format,
+    })
+}
+
+fn html_fallback_path(path: &Path) -> Option<PathBuf> {
+    if !path
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("md"))
+    {
+        return None;
+    }
+
+    Some(path.with_extension("html"))
 }
 
 fn config_for_spec_directory(
@@ -1072,6 +1123,27 @@ mod tests {
             vec![".plugin-workspace/.specs/visible"],
             node_ids(tree[0].children())
         );
+    }
+
+    #[test]
+    fn spec_tree_scanner_marks_html_fallback_as_present() {
+        let workspace = TestWorkspace::new("html-fallback-tree");
+        workspace.create_dir(PLUGIN_WORKSPACE_SPECS_DIR);
+        workspace.write_file(".plugin-workspace/.specs/auth/tasks.html", "");
+        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
+        let config = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
+
+        let tree = FilesystemSpecTreeScanner::new()
+            .scan(&layout, &config)
+            .expect("spec tree should be scanned");
+
+        let tasks = tree[0].children()[0]
+            .file_for_key(SpecFileKey::Tasks)
+            .expect("tasks mapping should exist");
+
+        assert_eq!("tasks.md", tasks.file_name());
+        assert_eq!(SpecFileStatus::Present, tasks.status());
+        assert_eq!(SpecDocumentFormat::Html, tasks.format());
     }
 
     #[test]

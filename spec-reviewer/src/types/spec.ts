@@ -7,6 +7,7 @@ export type SpecFileKey =
   | "design";
 
 export type SpecFileStatus = "present" | "missing";
+export type SpecDocumentFormat = "markdown" | "html";
 export type ConfigSource = "default" | "workspaceConfig" | "specOverride";
 
 export type SpecFile = Readonly<{
@@ -14,6 +15,7 @@ export type SpecFile = Readonly<{
   label: string;
   fileName: string;
   status: SpecFileStatus;
+  format?: SpecDocumentFormat;
   configSource?: ConfigSource;
 }>;
 
@@ -74,6 +76,7 @@ export type ArchiveSpecResponse = Readonly<{
 
 export type SpecDocument = Readonly<{
   key: SpecFileKey;
+  format?: SpecDocumentFormat;
   path: string;
   contents: string | null;
   missing: boolean;

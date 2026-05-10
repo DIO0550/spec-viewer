@@ -117,11 +117,38 @@ impl SpecFileStatus {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum SpecDocumentFormat {
+    Markdown,
+    Html,
+}
+
+impl SpecDocumentFormat {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Markdown => "markdown",
+            Self::Html => "html",
+        }
+    }
+
+    pub fn from_file_name(file_name: &str) -> Self {
+        if file_name
+            .rsplit_once('.')
+            .is_some_and(|(_, extension)| extension.eq_ignore_ascii_case("html"))
+        {
+            return Self::Html;
+        }
+
+        Self::Markdown
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpecFile {
     key: SpecFileKey,
     file_name: String,
     status: SpecFileStatus,
+    format: SpecDocumentFormat,
     config_source: WorkspaceConfigSource,
 }
 
@@ -156,8 +183,22 @@ impl SpecFile {
             key,
             file_name: trimmed.to_string(),
             status,
+            format: SpecDocumentFormat::from_file_name(trimmed),
             config_source,
         })
+    }
+
+    pub fn with_resolved_format(
+        key: SpecFileKey,
+        file_name: impl Into<String>,
+        status: SpecFileStatus,
+        config_source: WorkspaceConfigSource,
+        format: SpecDocumentFormat,
+    ) -> Result<Self, SpecDomainError> {
+        let mut file = Self::with_config_source(key, file_name, status, config_source)?;
+        file.format = format;
+
+        Ok(file)
     }
 
     pub fn present(
@@ -188,6 +229,10 @@ impl SpecFile {
 
     pub fn status(&self) -> SpecFileStatus {
         self.status
+    }
+
+    pub fn format(&self) -> SpecDocumentFormat {
+        self.format
     }
 
     pub fn config_source(&self) -> WorkspaceConfigSource {

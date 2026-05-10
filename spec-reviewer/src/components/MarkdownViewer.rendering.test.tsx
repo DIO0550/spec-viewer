@@ -62,9 +62,11 @@ function renderComponent(component: ReactNode): RenderResult {
 function createReadyState(
   contents: string | null,
   blocks: readonly MarkdownBlockMetadata[] = [],
+  format: SpecDocument["format"] = "markdown",
 ): SpecDocumentState {
   const document: SpecDocument = {
     key: "tasks",
+    format,
     path: "/workspace/spec-reviewer/docs/plans/tasks.md",
     contents,
     missing: false,
@@ -186,6 +188,23 @@ test("MarkdownViewerはGFM要素を安全なHTMLとして表示する", () => {
     "https://example.com/docs",
   );
   expect(result.container.querySelector("script")).toBeNull();
+  result.unmount();
+});
+
+test("MarkdownViewerはHTML文書をsandbox iframeで閲覧表示する", () => {
+  const result = renderViewer(
+    createReadyState("<h1>Preview</h1><p>HTML body</p>", [], "html"),
+  );
+  const iframe = result.container.querySelector(
+    ".html-rendered",
+  ) as HTMLIFrameElement | null;
+
+  expect(iframe?.getAttribute("sandbox")).toBe("");
+  expect(iframe?.getAttribute("srcdoc")).toBe(
+    "<h1>Preview</h1><p>HTML body</p>",
+  );
+  expect(result.container.querySelector(".markdown-rendered")).toBeNull();
+  expect(result.container.querySelector(".markdown-block-comment-button")).toBeNull();
   result.unmount();
 });
 

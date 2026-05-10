@@ -150,5 +150,6 @@ export const uiText = {
     emptyTitle: "ファイルは空です",
     reload: "Markdownを再読み込み",
     renderedDocument: "レンダリング済みMarkdownドキュメント",
+    renderedHtmlDocument: "レンダリング済みHTMLドキュメント",
   },
 } as const;

@@ -28,7 +28,7 @@ class MemoryStorage implements RecentWorkspaceStorage {
   }
 }
 
-test("recordRecentWorkspaceはtrimしたpathを先頭に追加して重複を除く", () => {
+test("recordRecentWorkspaceは既存pathの位置を保ったまま内容を更新する", () => {
   const currentWorkspaces: readonly RecentWorkspace[] = [
     {
       path: "/workspace/alpha",
@@ -56,16 +56,16 @@ test("recordRecentWorkspaceはtrimしたpathを先頭に追加して重複を除
 
   expect(nextWorkspaces).toEqual([
     {
-      path: "/workspace/beta",
-      displayName: "beta",
-      kind: "plugin-workspace",
-      lastOpenedAt: "2026-05-03T00:00:00.000Z",
-    },
-    {
       path: "/workspace/alpha",
       displayName: "alpha",
       kind: "plugin-workspace",
       lastOpenedAt: "2026-05-01T00:00:00.000Z",
+    },
+    {
+      path: "/workspace/beta",
+      displayName: "beta",
+      kind: "plugin-workspace",
+      lastOpenedAt: "2026-05-03T00:00:00.000Z",
     },
   ]);
 });
