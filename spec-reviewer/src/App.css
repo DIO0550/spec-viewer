@@ -2602,6 +2602,7 @@ textarea:disabled {
   user-select: text;
   border-radius: 5px;
   padding: 0.05em 0.12em;
+  color: inherit;
   background: color-mix(in srgb, var(--color-accent-soft) 86%, transparent);
   box-shadow: inset 0 0 0 1px
     color-mix(in srgb, var(--color-accent) 32%, transparent);
@@ -2705,10 +2706,11 @@ textarea:disabled {
 .text-selection-comment-button,
 .add-comment-popover {
   position: fixed;
-  z-index: 20;
+  z-index: 50;
 }
 
 .text-selection-comment-button {
+  z-index: 20;
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -2728,6 +2730,7 @@ textarea:disabled {
 }
 
 .add-comment-popover {
+  z-index: 50;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   width: min(382px, calc(100vw - 20px));
@@ -2738,6 +2741,25 @@ textarea:disabled {
   background: var(--color-raised);
   box-shadow: 0 18px 44px rgba(17, 18, 22, 0.18);
   overflow: hidden;
+}
+
+.markdown-viewer[data-comment-dialog-open="true"] .markdown-block-comment-button,
+.markdown-viewer[data-comment-dialog-open="true"]
+  .markdown-comment-target:hover
+  > .markdown-block-comment-button,
+.markdown-viewer[data-comment-dialog-open="true"]
+  .markdown-comment-target:focus-within
+  > .markdown-block-comment-button,
+.markdown-viewer[data-comment-dialog-open="true"]
+  .markdown-rendered
+  li:hover
+  > .markdown-block-comment-button,
+.markdown-viewer[data-comment-dialog-open="true"]
+  .markdown-rendered
+  li:focus-within
+  > .markdown-block-comment-button {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .add-comment-popover__header {

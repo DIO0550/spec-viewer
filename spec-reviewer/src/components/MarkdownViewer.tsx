@@ -2,6 +2,8 @@ import {
   type ComponentPropsWithoutRef,
   type AriaRole,
   type CSSProperties,
+  type FormEvent,
+  type KeyboardEvent,
   type KeyboardEventHandler,
   type MouseEvent,
   type MouseEventHandler,
@@ -18,10 +20,13 @@ import {
 import {
   CheckCircle2,
   ChevronDown,
+  LoaderCircle,
   MessageSquare,
   MessageSquarePlus,
   Pencil,
   RefreshCcw,
+  Send,
+  X,
 } from "lucide-react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
@@ -81,6 +86,8 @@ type BlockIndexer = Readonly<{
 
 type CreateBlockCommentDraft = (block: HTMLElement) => void;
 
+type RequestCommentEdit = (input: CommentEditDraft) => void;
+
 type CommentHighlightState =
   | "open"
   | "resolved"
@@ -111,6 +118,11 @@ type CommentRangeHighlight = Readonly<{
   end: number;
 }>;
 
+type CommentEditDraft = Readonly<{
+  comment: Comment;
+  selectionBounds: CommentSelectionBounds;
+}>;
+
 type CommentBlockHighlight = Readonly<{
   commentIds: readonly CommentId[];
   selectCommentId: CommentId;
@@ -131,9 +143,12 @@ type Props = Readonly<{
   activeCommentId?: CommentId | null;
   isAddingComment?: boolean;
   addCommentErrorMessage?: string | null;
+  isUpdatingComment?: boolean;
+  updateCommentErrorMessage?: string | null;
   isCommentScopeReady?: boolean;
   onReload: () => void;
   onAddComment?: (input: AddCommentSubmitInput) => Promise<boolean>;
+  onUpdateComment?: (commentId: CommentId, body: string) => Promise<boolean>;
   onSelectComment?: (commentId: CommentId) => void;
   onAnchorDisplayStatesChange?: (
     states: readonly CommentAnchorDisplayState[],
@@ -149,9 +164,12 @@ export function MarkdownViewer({
   activeCommentId = null,
   isAddingComment = false,
   addCommentErrorMessage = null,
+  isUpdatingComment = false,
+  updateCommentErrorMessage = null,
   isCommentScopeReady = true,
   onReload,
   onAddComment,
+  onUpdateComment,
   onSelectComment,
   onAnchorDisplayStatesChange,
 }: Props) {
@@ -159,6 +177,8 @@ export function MarkdownViewer({
   const renderedRootRef = useRef<HTMLDivElement>(null);
   const [activeAnchorDraft, setActiveAnchorDraft] =
     useState<CommentAnchorDraft | null>(null);
+  const [activeEditDraft, setActiveEditDraft] =
+    useState<CommentEditDraft | null>(null);
   const [anchorDisplayStates, setAnchorDisplayStates] = useState<
     readonly CommentAnchorDisplayState[]
   >([]);
@@ -176,6 +196,7 @@ export function MarkdownViewer({
   useViewerReset(panelRef, resetKey, state.status !== "idle");
   useEffect(() => {
     setActiveAnchorDraft(null);
+    setActiveEditDraft(null);
   }, [resetKey]);
   useEffect(() => {
     if (state.status !== "ready" || readyContents === null || isHtmlDocument) {
@@ -211,6 +232,17 @@ export function MarkdownViewer({
     clearBrowserSelection();
   };
 
+  const closeEditDraft = (): void => {
+    setActiveEditDraft(null);
+  };
+
+  const requestCommentEdit = (draft: CommentEditDraft): void => {
+    setActiveAnchorDraft(null);
+    clearSelectionDraft();
+    clearBrowserSelection();
+    setActiveEditDraft(draft);
+  };
+
   const createBlockDraft = (block: HTMLElement): void => {
     if (state.status !== "ready" || state.document.format === "html") {
       return;
@@ -239,6 +271,23 @@ export function MarkdownViewer({
 
     if (wasSaved) {
       closeAnchorDraft();
+    }
+
+    return wasSaved;
+  };
+
+  const updateComment = async (
+    commentId: CommentId,
+    body: string,
+  ): Promise<boolean> => {
+    if (onUpdateComment === undefined) {
+      return false;
+    }
+
+    const wasSaved = await onUpdateComment(commentId, body);
+
+    if (wasSaved) {
+      closeEditDraft();
     }
 
     return wasSaved;
@@ -352,6 +401,11 @@ export function MarkdownViewer({
       ref={panelRef}
       id="markdown-viewer-panel"
       className="markdown-viewer"
+      data-comment-dialog-open={
+        activeAnchorDraft !== null || activeEditDraft !== null
+          ? "true"
+          : undefined
+      }
       role="tabpanel"
       tabIndex={-1}
     >
@@ -383,6 +437,7 @@ export function MarkdownViewer({
             activeCommentId={activeCommentId}
             anchorDisplayStates={anchorDisplayStates}
             onSelectComment={onSelectComment}
+            onRequestCommentEdit={requestCommentEdit}
             onCreateBlockDraft={createBlockDraft}
           />
           <TextSelectionCommentButton
@@ -399,6 +454,13 @@ export function MarkdownViewer({
             isScopeReady={isCommentScopeReady}
             onSubmit={addComment}
             onCancel={closeAnchorDraft}
+          />
+          <CommentEditPopover
+            draft={activeEditDraft}
+            isSaving={isUpdatingComment}
+            errorMessage={updateCommentErrorMessage}
+            onSubmit={updateComment}
+            onCancel={closeEditDraft}
           />
         </>
       )}
@@ -455,6 +517,7 @@ type MarkdownDocumentProps = Readonly<{
   activeCommentId: CommentId | null;
   anchorDisplayStates: readonly CommentAnchorDisplayState[];
   onSelectComment?: (commentId: CommentId) => void;
+  onRequestCommentEdit?: RequestCommentEdit;
   onCreateBlockDraft: CreateBlockCommentDraft;
 }>;
 
@@ -467,6 +530,7 @@ function MarkdownDocument({
   activeCommentId,
   anchorDisplayStates,
   onSelectComment,
+  onRequestCommentEdit,
   onCreateBlockDraft,
 }: MarkdownDocumentProps) {
   const anchorDisplayStateByCommentId =
@@ -485,6 +549,7 @@ function MarkdownDocument({
     blockIndexer,
     onCreateBlockDraft,
     onSelectComment,
+    onRequestCommentEdit,
   });
 
   return (
@@ -1223,10 +1288,12 @@ function createMarkdownComponents({
   blockIndexer,
   onCreateBlockDraft,
   onSelectComment,
+  onRequestCommentEdit,
 }: Readonly<{
   blockIndexer: BlockIndexer;
   onCreateBlockDraft: CreateBlockCommentDraft;
   onSelectComment?: (commentId: CommentId) => void;
+  onRequestCommentEdit?: RequestCommentEdit;
 }>): Components {
   return {
     h1: ({ node: _node, children, ...props }) => {
@@ -1237,6 +1304,7 @@ function createMarkdownComponents({
           commentAnnotations={block.commentAnnotations}
           onCreateBlockDraft={onCreateBlockDraft}
           onSelectComment={onSelectComment}
+          onRequestCommentEdit={onRequestCommentEdit}
         >
           <h1 {...props} {...block.metadata}>
             {renderRangeHighlightedChildren(children, block.rangeHighlights)}
@@ -1252,6 +1320,7 @@ function createMarkdownComponents({
           commentAnnotations={block.commentAnnotations}
           onCreateBlockDraft={onCreateBlockDraft}
           onSelectComment={onSelectComment}
+          onRequestCommentEdit={onRequestCommentEdit}
         >
           <h2 {...props} {...block.metadata}>
             {renderRangeHighlightedChildren(children, block.rangeHighlights)}
@@ -1267,6 +1336,7 @@ function createMarkdownComponents({
           commentAnnotations={block.commentAnnotations}
           onCreateBlockDraft={onCreateBlockDraft}
           onSelectComment={onSelectComment}
+          onRequestCommentEdit={onRequestCommentEdit}
         >
           <h3 {...props} {...block.metadata}>
             {renderRangeHighlightedChildren(children, block.rangeHighlights)}
@@ -1282,6 +1352,7 @@ function createMarkdownComponents({
           commentAnnotations={block.commentAnnotations}
           onCreateBlockDraft={onCreateBlockDraft}
           onSelectComment={onSelectComment}
+          onRequestCommentEdit={onRequestCommentEdit}
         >
           <h4 {...props} {...block.metadata}>
             {renderRangeHighlightedChildren(children, block.rangeHighlights)}
@@ -1297,6 +1368,7 @@ function createMarkdownComponents({
           commentAnnotations={block.commentAnnotations}
           onCreateBlockDraft={onCreateBlockDraft}
           onSelectComment={onSelectComment}
+          onRequestCommentEdit={onRequestCommentEdit}
         >
           <h5 {...props} {...block.metadata}>
             {renderRangeHighlightedChildren(children, block.rangeHighlights)}
@@ -1312,6 +1384,7 @@ function createMarkdownComponents({
           commentAnnotations={block.commentAnnotations}
           onCreateBlockDraft={onCreateBlockDraft}
           onSelectComment={onSelectComment}
+          onRequestCommentEdit={onRequestCommentEdit}
         >
           <h6 {...props} {...block.metadata}>
             {renderRangeHighlightedChildren(children, block.rangeHighlights)}
@@ -1327,6 +1400,7 @@ function createMarkdownComponents({
           commentAnnotations={block.commentAnnotations}
           onCreateBlockDraft={onCreateBlockDraft}
           onSelectComment={onSelectComment}
+          onRequestCommentEdit={onRequestCommentEdit}
         >
           <p {...props} {...block.metadata}>
             {renderRangeHighlightedChildren(children, block.rangeHighlights)}
@@ -1344,6 +1418,7 @@ function createMarkdownComponents({
           commentAnnotations={block.commentAnnotations}
           onCreateBlockDraft={onCreateBlockDraft}
           onSelectComment={onSelectComment}
+          onRequestCommentEdit={onRequestCommentEdit}
         >
           {renderRangeHighlightedChildren(children, block.rangeHighlights)}
         </MarkdownListItem>
@@ -1357,6 +1432,7 @@ function createMarkdownComponents({
           commentAnnotations={block.commentAnnotations}
           onCreateBlockDraft={onCreateBlockDraft}
           onSelectComment={onSelectComment}
+          onRequestCommentEdit={onRequestCommentEdit}
         >
           <pre {...props} {...block.metadata}>
             {renderRangeHighlightedChildren(children, block.rangeHighlights)}
@@ -1372,6 +1448,7 @@ function createMarkdownComponents({
           commentAnnotations={block.commentAnnotations}
           onCreateBlockDraft={onCreateBlockDraft}
           onSelectComment={onSelectComment}
+          onRequestCommentEdit={onRequestCommentEdit}
         >
           <div className="markdown-rendered__table-scroll" {...block.metadata}>
             <table {...props} />
@@ -1389,6 +1466,7 @@ type MarkdownCommentableBlockProps = Readonly<{
   commentAnnotations: readonly CommentBlockAnnotation[];
   onCreateBlockDraft: CreateBlockCommentDraft;
   onSelectComment?: (commentId: CommentId) => void;
+  onRequestCommentEdit?: RequestCommentEdit;
 }>;
 
 /** @returns A rendered Markdown block with a gutter comment affordance. */
@@ -1397,6 +1475,7 @@ function MarkdownCommentableBlock({
   commentAnnotations,
   onCreateBlockDraft,
   onSelectComment,
+  onRequestCommentEdit,
 }: MarkdownCommentableBlockProps) {
   const createDraftFromRenderedBlock = (
     event: MouseEvent<HTMLButtonElement>,
@@ -1436,6 +1515,7 @@ function MarkdownCommentableBlock({
       <CommentAnnotationStack
         annotations={commentAnnotations}
         onSelectComment={onSelectComment}
+        onRequestCommentEdit={onRequestCommentEdit}
       />
     </div>
   );
@@ -1444,12 +1524,14 @@ function MarkdownCommentableBlock({
 type CommentAnnotationStackProps = Readonly<{
   annotations: readonly CommentBlockAnnotation[];
   onSelectComment?: (commentId: CommentId) => void;
+  onRequestCommentEdit?: RequestCommentEdit;
 }>;
 
 /** @returns Right-side existing comment cards for one rendered Markdown block. */
 function CommentAnnotationStack({
   annotations,
   onSelectComment,
+  onRequestCommentEdit,
 }: CommentAnnotationStackProps) {
   if (annotations.length === 0) {
     return null;
@@ -1462,6 +1544,7 @@ function CommentAnnotationStack({
           key={annotation.comment.id}
           annotation={annotation}
           onSelectComment={onSelectComment}
+          onRequestCommentEdit={onRequestCommentEdit}
         />
       ))}
     </aside>
@@ -1471,12 +1554,14 @@ function CommentAnnotationStack({
 type CommentAnnotationCardProps = Readonly<{
   annotation: CommentBlockAnnotation;
   onSelectComment?: (commentId: CommentId) => void;
+  onRequestCommentEdit?: RequestCommentEdit;
 }>;
 
 /** @returns A compact selectable preview for one existing comment. */
 function CommentAnnotationCard({
   annotation,
   onSelectComment,
+  onRequestCommentEdit,
 }: CommentAnnotationCardProps) {
   const { comment, anchorDisplayStatus, isActive } = annotation;
   const [isExpanded, setIsExpanded] = useState(false);
@@ -1492,6 +1577,15 @@ function CommentAnnotationCard({
   };
   const selectComment = (event: MouseEvent<HTMLButtonElement>): void => {
     event.stopPropagation();
+
+    if (onRequestCommentEdit !== undefined) {
+      onRequestCommentEdit({
+        comment,
+        selectionBounds: createSelectionBoundsFromElement(event.currentTarget),
+      });
+      return;
+    }
+
     onSelectComment?.(comment.id);
   };
 
@@ -1808,6 +1902,223 @@ function CommentAnchorDraftPopover({
   );
 }
 
+type CommentEditPopoverProps = Readonly<{
+  draft: CommentEditDraft | null;
+  isSaving: boolean;
+  errorMessage: string | null;
+  onSubmit: (commentId: CommentId, body: string) => Promise<boolean>;
+  onCancel: () => void;
+}>;
+
+const emptyEditBodyMessage = uiText.commentThread.emptyBody;
+const failedUpdateMessage =
+  "コメントを更新できませんでした。再試行してください。";
+
+/** @returns Human-readable block type text for the edit anchor preview. */
+function formatEditBlockType(blockType: string): string {
+  return blockType.replace(/_/g, " ");
+}
+
+/** @returns A floating form for editing an existing Markdown comment. */
+function CommentEditPopover({
+  draft,
+  isSaving,
+  errorMessage,
+  onSubmit,
+  onCancel,
+}: CommentEditPopoverProps) {
+  const titleId = useId();
+  const textareaId = useId();
+  const hintId = useId();
+  const errorId = useId();
+  const popoverRef = useRef<HTMLElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [body, setBody] = useState(draft?.comment.body ?? "");
+  const [validationMessage, setValidationMessage] = useState<string | null>(
+    null,
+  );
+  const trimmedBody = body.trim();
+  const isSubmitDisabled = isSaving || trimmedBody.length === 0;
+  const visibleErrorMessage = validationMessage ?? errorMessage;
+  const describedBy =
+    visibleErrorMessage === null ? hintId : `${hintId} ${errorId}`;
+
+  useEffect(() => {
+    setBody(draft?.comment.body ?? "");
+    setValidationMessage(null);
+    textareaRef.current?.focus();
+  }, [draft]);
+
+  useEffect(() => {
+    const closeWhenClickingOutside = (event: globalThis.MouseEvent): void => {
+      if (draft === null) {
+        return;
+      }
+
+      if (isSaving) {
+        return;
+      }
+
+      const target = event.target;
+
+      if (!(target instanceof Node)) {
+        return;
+      }
+
+      if (popoverRef.current?.contains(target)) {
+        return;
+      }
+
+      onCancel();
+    };
+
+    document.addEventListener("mousedown", closeWhenClickingOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", closeWhenClickingOutside);
+    };
+  }, [draft, isSaving, onCancel]);
+
+  if (draft === null) {
+    return null;
+  }
+
+  const submitComment = async (): Promise<void> => {
+    if (trimmedBody.length === 0) {
+      setValidationMessage(emptyEditBodyMessage);
+      return;
+    }
+
+    setValidationMessage(null);
+    const wasSaved = await onSubmit(draft.comment.id, trimmedBody);
+
+    if (!wasSaved) {
+      setValidationMessage(failedUpdateMessage);
+    }
+  };
+
+  const submitForm = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    void submitComment();
+  };
+
+  const handleTextareaKeyDown = (
+    event: KeyboardEvent<HTMLTextAreaElement>,
+  ): void => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      onCancel();
+      return;
+    }
+
+    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+      event.preventDefault();
+      void submitComment();
+    }
+  };
+
+  const handleDialogKeyDown = (event: KeyboardEvent<HTMLElement>): void => {
+    if (event.defaultPrevented || event.key !== "Escape" || isSaving) {
+      return;
+    }
+
+    event.preventDefault();
+    onCancel();
+  };
+
+  return (
+    <aside
+      ref={popoverRef}
+      className="add-comment-popover add-comment-popover--edit"
+      style={createFloatingPopoverStyle(draft.selectionBounds)}
+      role="dialog"
+      aria-labelledby={titleId}
+      onKeyDown={handleDialogKeyDown}
+    >
+      <header className="add-comment-popover__header">
+        <div>
+          <span className="add-comment-popover__eyebrow">
+            <Pencil aria-hidden="true" size={14} />
+            既存コメント
+          </span>
+          <h2 id={titleId} className="add-comment-popover__title">
+            コメント編集
+          </h2>
+        </div>
+        <button
+          className="icon-button add-comment-popover__close-button"
+          type="button"
+          aria-label="コメント編集をキャンセル"
+          onClick={onCancel}
+          disabled={isSaving}
+        >
+          <X aria-hidden="true" size={14} />
+        </button>
+      </header>
+      <form className="add-comment-popover__form" onSubmit={submitForm}>
+        <div className="add-comment-popover__body">
+          <blockquote>{draft.comment.anchor.textSnippet}</blockquote>
+          <label className="add-comment-popover__label" htmlFor={textareaId}>
+            {uiText.sidebar.comments}
+          </label>
+          <textarea
+            id={textareaId}
+            ref={textareaRef}
+            value={body}
+            rows={4}
+            aria-describedby={describedBy}
+            aria-invalid={visibleErrorMessage !== null}
+            placeholder="レビューコメントを書く..."
+            onInput={(event) => {
+              setBody(event.currentTarget.value);
+              setValidationMessage(null);
+            }}
+            onKeyDown={handleTextareaKeyDown}
+            disabled={isSaving}
+          />
+          <p id={hintId} className="add-comment-popover__hint">
+            {formatEditBlockType(draft.comment.anchor.blockType)}
+            {uiText.commentThread.block} {draft.comment.anchor.blockIndex + 1},{" "}
+            {uiText.commentThread.chars} {draft.comment.anchor.charRange.start}-
+            {draft.comment.anchor.charRange.end}
+          </p>
+          {visibleErrorMessage === null ? null : (
+            <p id={errorId} className="add-comment-popover__error" role="alert">
+              {visibleErrorMessage}
+            </p>
+          )}
+        </div>
+        <div className="add-comment-popover__actions">
+          <button
+            className="button button--secondary"
+            type="button"
+            onClick={onCancel}
+            disabled={isSaving}
+          >
+            {uiText.commentThread.cancel}
+          </button>
+          <button
+            className="button button--primary"
+            type="submit"
+            disabled={isSubmitDisabled}
+          >
+            {isSaving ? (
+              <LoaderCircle
+                className="add-comment-popover__saving-icon"
+                aria-hidden="true"
+                size={15}
+              />
+            ) : (
+              <Send aria-hidden="true" size={15} />
+            )}
+            {uiText.commentThread.save}
+          </button>
+        </div>
+      </form>
+    </aside>
+  );
+}
+
 type FloatingKind = "button" | "popover";
 const FLOATING_VIEWPORT_MARGIN = 8;
 const COMMENT_POPOVER_ESTIMATED_HEIGHT = 360;
@@ -1834,16 +2145,20 @@ function createFloatingStyle(
   }
 
   if (bounds.commentLaneLeft !== undefined) {
-    return {
-      top: createPopoverTop(bounds),
-      left: createPopoverLeft({
-        ...bounds,
-        left: bounds.commentLaneLeft,
-        width: 0,
-      }),
-    };
+    return createFloatingPopoverStyle({
+      ...bounds,
+      left: bounds.commentLaneLeft,
+      width: 0,
+    });
   }
 
+  return createFloatingPopoverStyle(bounds);
+}
+
+/** @returns Fixed-position style for a floating comment dialog. */
+function createFloatingPopoverStyle(
+  bounds: CommentSelectionBounds,
+): CSSProperties {
   return {
     top: createPopoverTop(bounds),
     left: createPopoverLeft(bounds),
@@ -1878,6 +2193,20 @@ function createPopoverLeft(bounds: CommentSelectionBounds): number {
   );
 }
 
+/** @returns Viewport bounds for anchoring an edit dialog to a clicked control. */
+function createSelectionBoundsFromElement(
+  element: HTMLElement,
+): CommentSelectionBounds {
+  const rect = element.getBoundingClientRect();
+
+  return {
+    top: rect.top,
+    left: rect.left,
+    width: rect.width,
+    height: rect.height,
+  };
+}
+
 /** Clears the browser selection once a draft has been handled. */
 function clearBrowserSelection(): void {
   document.getSelection()?.removeAllRanges();
@@ -1905,6 +2234,7 @@ type ListItemProps = Omit<ComponentPropsWithoutRef<"li">, keyof BlockMetadata> &
     commentAnnotations: readonly CommentBlockAnnotation[];
     onCreateBlockDraft: CreateBlockCommentDraft;
     onSelectComment?: (commentId: CommentId) => void;
+    onRequestCommentEdit?: RequestCommentEdit;
   }> &
   BlockMetadata;
 
@@ -1915,6 +2245,7 @@ function MarkdownListItem({
   commentAnnotations,
   onCreateBlockDraft,
   onSelectComment,
+  onRequestCommentEdit,
   children,
   ...props
 }: ListItemProps) {
@@ -1950,6 +2281,7 @@ function MarkdownListItem({
       <CommentAnnotationStack
         annotations={commentAnnotations}
         onSelectComment={onSelectComment}
+        onRequestCommentEdit={onRequestCommentEdit}
       />
     </li>
   );

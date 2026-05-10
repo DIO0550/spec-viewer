@@ -55,3 +55,22 @@ test("MarkdownViewerの本文幅は固定上限ではなく利用可能幅に追
   expect(annotationsRule).toContain("grid-column: 2;");
   expect(annotationsRule).toContain("justify-self: end;");
 });
+
+test("MarkdownViewerの範囲コメントハイライトは強調テキストの色を反転させない", () => {
+  const rangeRule = readCssRule(
+    '.markdown-rendered [data-comment-highlight-range="true"]',
+  );
+
+  expect(rangeRule).toContain("color: inherit;");
+});
+
+test("MarkdownViewerのコメントダイアログはhoverの追加ボタンより前面に出る", () => {
+  const popoverRule = readCssRule(".add-comment-popover");
+  const dialogOpenRule = readCssRule(
+    '.markdown-viewer[data-comment-dialog-open="true"] .markdown-block-comment-button,\n.markdown-viewer[data-comment-dialog-open="true"]\n  .markdown-comment-target:hover\n  > .markdown-block-comment-button,\n.markdown-viewer[data-comment-dialog-open="true"]\n  .markdown-comment-target:focus-within\n  > .markdown-block-comment-button,\n.markdown-viewer[data-comment-dialog-open="true"]\n  .markdown-rendered\n  li:hover\n  > .markdown-block-comment-button,\n.markdown-viewer[data-comment-dialog-open="true"]\n  .markdown-rendered\n  li:focus-within\n  > .markdown-block-comment-button',
+  );
+
+  expect(popoverRule).toContain("z-index: 50;");
+  expect(dialogOpenRule).toContain("opacity: 0;");
+  expect(dialogOpenRule).toContain("pointer-events: none;");
+});

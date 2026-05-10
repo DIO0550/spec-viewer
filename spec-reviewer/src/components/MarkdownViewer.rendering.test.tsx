@@ -130,6 +130,7 @@ function renderViewer(
   comments: readonly Comment[] = [],
   activeCommentId: string | null = null,
   onSelectComment = vi.fn(),
+  onUpdateComment = vi.fn().mockResolvedValue(true),
 ): RenderResult {
   return renderComponent(
     <MarkdownViewer
@@ -140,6 +141,7 @@ function renderViewer(
       activeCommentId={activeCommentId}
       onReload={onReload}
       onAddComment={onAddComment}
+      onUpdateComment={onUpdateComment}
       onSelectComment={onSelectComment}
     />,
   );
@@ -337,8 +339,9 @@ test("MarkdownViewerはコメント付きブロックを状態別にハイライ
   result.unmount();
 });
 
-test("MarkdownViewerは既存コメントを本文右側のカードとして表示して選択できる", () => {
+test("MarkdownViewerは既存コメントを本文右側のカードから編集できる", async () => {
   const onSelectComment = vi.fn();
+  const onUpdateComment = vi.fn().mockResolvedValue(true);
   const contents = "Existing comments should be visible beside the paragraph.";
   const comments: readonly Comment[] = [
     createComment({
@@ -361,6 +364,7 @@ test("MarkdownViewerは既存コメントを本文右側のカードとして表
     comments,
     "cmt_resolved",
     onSelectComment,
+    onUpdateComment,
   );
   const annotationCards = result.container.querySelectorAll(
     ".markdown-comment-annotation",
@@ -394,7 +398,34 @@ test("MarkdownViewerは既存コメントを本文右側のカードとして表
     activeAnnotationSelect.click();
   });
 
-  expect(onSelectComment).toHaveBeenCalledWith("cmt_resolved");
+  expect(onSelectComment).not.toHaveBeenCalled();
+  expect(result.container.textContent).toContain("コメント編集");
+
+  const editor = result.container.querySelector(
+    ".add-comment-popover textarea",
+  ) as HTMLTextAreaElement;
+
+  expect(editor.value).toBe("cmt_resolved body");
+
+  await act(async () => {
+    editor.value = "Updated inline comment body";
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  const saveButton = Array.from(
+    result.container.querySelectorAll<HTMLButtonElement>(
+      ".add-comment-popover__actions button",
+    ),
+  )[1] as HTMLButtonElement;
+
+  await act(async () => {
+    saveButton.click();
+  });
+
+  expect(onUpdateComment).toHaveBeenCalledWith(
+    "cmt_resolved",
+    "Updated inline comment body",
+  );
   expect(
     result.container.querySelector(".markdown-block-comment-button"),
   ).not.toBeNull();

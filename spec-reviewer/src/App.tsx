@@ -363,8 +363,13 @@ function App() {
     void comments.reopenComment(commentId);
   };
 
-  const updateComment = (commentId: CommentId, body: string): void => {
-    void comments.updateComment({ commentId, body });
+  const updateComment = async (
+    commentId: CommentId,
+    body: string,
+  ): Promise<boolean> => {
+    const updatedComment = await comments.updateComment({ commentId, body });
+
+    return updatedComment !== null;
   };
 
   const deleteComment = (commentId: CommentId): void => {
@@ -788,9 +793,17 @@ function App() {
     comments.mutationState.operation === "add"
       ? comments.mutationState.error.message
       : null;
+  const updateCommentErrorMessage =
+    comments.mutationState.status === "error" &&
+    comments.mutationState.operation === "update"
+      ? comments.mutationState.error.message
+      : null;
   const isAddingComment =
     comments.mutationState.status === "saving" &&
     comments.mutationState.operation === "add";
+  const isUpdatingComment =
+    comments.mutationState.status === "saving" &&
+    comments.mutationState.operation === "update";
   const isCommentScopeReady =
     workspace.workspace !== null &&
     specs.selectedSpecId !== null &&
@@ -935,11 +948,14 @@ function App() {
               activeCommentId={activeCommentId}
               isAddingComment={isAddingComment}
               addCommentErrorMessage={addCommentErrorMessage}
+              isUpdatingComment={isUpdatingComment}
+              updateCommentErrorMessage={updateCommentErrorMessage}
               isCommentScopeReady={isCommentScopeReady}
               onReload={() => {
                 void specs.reloadDocument();
               }}
               onAddComment={addComment}
+              onUpdateComment={updateComment}
               onSelectComment={selectComment}
               onAnchorDisplayStatesChange={updateCommentAnchorDisplayStates}
             />
