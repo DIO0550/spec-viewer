@@ -90,3 +90,21 @@ test("MarkdownViewerは巨大Markdownでsyntax highlightを無効にする", () 
   expect(codeBlock?.classList.contains("hljs")).toBe(false);
   result.unmount();
 });
+
+test("MarkdownViewerは非ASCIIの実バイト数が大きいMarkdownでsyntax highlightを無効にする", () => {
+  const oversizedCode = ["```ts", `const value = "${"あ".repeat(70_000)}";`, "```"].join(
+    "\n",
+  );
+  const result = renderComponent(
+    <MarkdownViewer
+      state={createReadyState(oversizedCode)}
+      selectedSpecLabel="Phase 1 Viewer"
+      selectedFileLabel="Tasks"
+      onReload={vi.fn()}
+    />,
+  );
+  const codeBlock = result.container.querySelector("pre code");
+
+  expect(codeBlock?.classList.contains("hljs")).toBe(false);
+  result.unmount();
+});

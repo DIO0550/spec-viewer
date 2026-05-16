@@ -242,14 +242,11 @@ export function MarkdownViewer({
     }
 
     firstReadableResetKeyRef.current = resetKey;
-    recordPerformancePoint(
-      correlationId ?? resetKey,
-      "document.firstReadable",
-      {
-        bytes: readyContents.length,
-        syntaxHighlight: readyContents.length <= SYNTAX_HIGHLIGHT_MAX_BYTES,
-      },
-    );
+    const byteLength = getUtf8ByteLength(readyContents);
+    recordPerformancePoint(correlationId ?? resetKey, "document.firstReadable", {
+      bytes: byteLength,
+      syntaxHighlight: byteLength <= SYNTAX_HIGHLIGHT_MAX_BYTES,
+    });
     onFirstReadable?.();
   }, [correlationId, onFirstReadable, readyContents, resetKey, state.status]);
   useEffect(() => {
@@ -873,7 +870,8 @@ function MarkdownDocument({
     onSelectComment,
     onRequestCommentEdit,
   });
-  const shouldHighlightSyntax = contents.length <= syntaxHighlightMaxBytes;
+  const shouldHighlightSyntax =
+    getUtf8ByteLength(contents) <= syntaxHighlightMaxBytes;
   const rehypePlugins = shouldHighlightSyntax ? [rehypeHighlight] : [];
 
   return (
@@ -2662,6 +2660,11 @@ function createSelectionBoundsFromElement(
 /** Clears the browser selection once a draft has been handled. */
 function clearBrowserSelection(): void {
   document.getSelection()?.removeAllRanges();
+}
+
+/** @returns The UTF-8 byte length matching persisted Markdown file size semantics. */
+function getUtf8ByteLength(value: string): number {
+  return new TextEncoder().encode(value).byteLength;
 }
 
 type LinkProps = ComponentPropsWithoutRef<"a">;
