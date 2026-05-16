@@ -372,23 +372,37 @@ pub fn list_comments(
     let end_span = performance_context
         .as_ref()
         .map(|context| start_span(context, "command.list_comments"));
-    let current_blocks = state
-        .use_cases()
-        .read_spec_blocks_cached(&workspace, &request.spec_id, file_key)
-        .map_err(CommandError::from)?;
-    let resolutions = state
-        .use_cases()
-        .comment_use_cases(&workspace)
-        .resolve_comment_anchors(&request.spec_id, file_key, status_filter, &current_blocks)?;
+    let result = (|| {
+        let current_blocks = state
+            .use_cases()
+            .read_spec_blocks_cached(&workspace, &request.spec_id, file_key)
+            .map_err(CommandError::from)?;
+        let resolutions = state
+            .use_cases()
+            .comment_use_cases(&workspace)
+            .resolve_comment_anchors(&request.spec_id, file_key, status_filter, &current_blocks)?;
+
+        Ok::<_, CommandError>((current_blocks.len(), resolutions))
+    })();
+
     if let (Some(context), Some(end_span)) = (performance_context.as_ref(), end_span) {
         let mut metadata = std::collections::BTreeMap::new();
         metadata.insert("spec_id", request.spec_id.clone());
         metadata.insert("file_key", request.file_key.clone());
-        metadata.insert("block_count", current_blocks.len().to_string());
-        metadata.insert("comment_count", resolutions.resolutions().len().to_string());
+        match &result {
+            Ok((block_count, resolutions)) => {
+                metadata.insert("block_count", block_count.to_string());
+                metadata.insert("comment_count", resolutions.resolutions().len().to_string());
+            }
+            Err(error) => {
+                metadata.insert("error", "true".to_string());
+                metadata.insert("error_code", error.code().to_string());
+            }
+        }
         emit_span(context, end_span(metadata));
     }
 
+    let (_block_count, resolutions) = result?;
     Ok(ListCommentsResponse::from(resolutions.into_resolutions()))
 }
 
