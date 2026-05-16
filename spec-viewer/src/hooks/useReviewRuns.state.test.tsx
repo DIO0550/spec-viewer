@@ -1,7 +1,8 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 
+import { configurePerformanceLoggerForTest } from "../lib/performance";
 import { createReviewRunCommandTestDouble } from "../lib/review-run-command-test-double";
 import type { ReviewRunCommands } from "../lib/tauri";
 import type { ReviewRun } from "../types/reviewRun";
@@ -172,6 +173,39 @@ test("useReviewRunsは対象が揃うとactive run一覧を読み込む", async 
     },
   ]);
   result.unmount();
+});
+
+test("useReviewRunsは一覧読み込み失敗時もperformance spanを記録する", async () => {
+  configurePerformanceLoggerForTest(true);
+  const debugSpy = vi.spyOn(console, "debug").mockImplementation(() => undefined);
+  const double = createReviewRunCommandTestDouble();
+  const commands: ReviewRunCommands = {
+    ...double.commands,
+    listReviewRuns: vi.fn().mockRejectedValue("review runs load failed"),
+  };
+  const result = renderUseReviewRuns({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "auth",
+    fileKey: "tasks",
+    targetScope: "file",
+    commands,
+  });
+
+  await flushAsyncEffects();
+
+  expect(debugSpy).toHaveBeenCalledWith(
+    "[spec-viewer:perf]",
+    expect.objectContaining({
+      type: "span",
+      phase: "reviewRuns.list",
+      metadata: expect.objectContaining({
+        error: true,
+      }),
+    }),
+  );
+  result.unmount();
+  debugSpy.mockRestore();
+  configurePerformanceLoggerForTest(null);
 });
 
 test("useReviewRunsは作成したactive runを一覧の先頭に追加する", async () => {

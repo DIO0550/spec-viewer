@@ -205,15 +205,16 @@ export function useReviewRuns(
       error: null,
     });
 
+    const correlationId =
+      options.correlationId ??
+      createPerformanceCorrelationId("review-runs-list");
+    const endSpan = startPerformanceSpan(correlationId, "reviewRuns.list", {
+      targetScope: target.scope,
+      specId: target.specId,
+      fileKey: target.scope === "file" ? target.fileKey : null,
+    });
+
     try {
-      const correlationId =
-        options.correlationId ??
-        createPerformanceCorrelationId("review-runs-list");
-      const endSpan = startPerformanceSpan(correlationId, "reviewRuns.list", {
-        targetScope: target.scope,
-        specId: target.specId,
-        fileKey: target.scope === "file" ? target.fileKey : null,
-      });
       const response = await commands.listReviewRuns({
         workspacePath: options.workspacePath,
         target,
@@ -242,6 +243,10 @@ export function useReviewRuns(
       );
       return true;
     } catch (error) {
+      endSpan({
+        error: true,
+      });
+
       if (listRequestIdRef.current !== requestId) {
         return false;
       }
