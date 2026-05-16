@@ -198,15 +198,15 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
       error: null,
     });
 
+    const correlationId =
+      options.correlationId ?? createPerformanceCorrelationId("comments-list");
+    const endSpan = startPerformanceSpan(correlationId, "comments.list", {
+      specId: activeScope.specId,
+      fileKey: activeScope.fileKey,
+      statusFilter,
+    });
+
     try {
-      const correlationId =
-        options.correlationId ??
-        createPerformanceCorrelationId("comments-list");
-      const endSpan = startPerformanceSpan(correlationId, "comments.list", {
-        specId: activeScope.specId,
-        fileKey: activeScope.fileKey,
-        statusFilter,
-      });
       const response = await commands.listComments(
         createListCommentsRequest(
           activeScope,
@@ -227,6 +227,10 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
       );
       return true;
     } catch (error) {
+      endSpan({
+        error: true,
+      });
+
       if (listRequestIdRef.current !== requestId) {
         return false;
       }
