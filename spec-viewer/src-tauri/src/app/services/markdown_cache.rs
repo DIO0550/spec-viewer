@@ -47,17 +47,24 @@ pub struct CachedMarkdownDocument {
     contents: String,
     blocks: Vec<MarkdownBlock>,
     stamp: FileStamp,
+    size_bytes: usize,
+    last_accessed: u64,
 }
 
 impl CachedMarkdownDocument {
-    fn from_document(document: MarkdownDocument, stamp: FileStamp) -> Self {
+    fn from_document(document: MarkdownDocument, stamp: FileStamp, last_accessed: u64) -> Self {
+        let contents = document.contents().to_string();
+        let size_bytes = contents.len();
+
         Self {
             key: document.key(),
             format: document.format(),
             path: document.path().to_string(),
-            contents: document.contents().to_string(),
+            contents,
             blocks: document.blocks().to_vec(),
             stamp,
+            size_bytes,
+            last_accessed,
         }
     }
 
@@ -66,10 +73,19 @@ impl CachedMarkdownDocument {
     }
 }
 
+#[derive(Debug, Default)]
+struct MarkdownCacheStore {
+    documents: HashMap<MarkdownCacheKey, CachedMarkdownDocument>,
+    next_access_id: u64,
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct MarkdownDocumentCache {
-    entries: Arc<RwLock<HashMap<MarkdownCacheKey, CachedMarkdownDocument>>>,
+    entries: Arc<RwLock<MarkdownCacheStore>>,
 }
+
+const MAX_CACHE_ENTRY_COUNT: usize = 32;
+const MAX_CACHE_TOTAL_BYTES: usize = 16 * 1024 * 1024;
 
 impl MarkdownDocumentCache {
     pub fn new() -> Self {
@@ -81,10 +97,12 @@ impl MarkdownDocumentCache {
         key: &MarkdownCacheKey,
         current_stamp: &FileStamp,
     ) -> Option<CachedMarkdownDocument> {
-        let entries = self.entries.read().ok()?;
-        let document = entries.get(key)?;
+        let mut store = self.entries.write().ok()?;
+        let next_access_id = store.next_access_id();
+        let document = store.documents.get_mut(key)?;
 
         if document.stamp == *current_stamp {
+            document.last_accessed = next_access_id;
             return Some(document.clone());
         }
 
@@ -92,8 +110,9 @@ impl MarkdownDocumentCache {
     }
 
     pub fn insert(&self, key: MarkdownCacheKey, document: CachedMarkdownDocument) {
-        if let Ok(mut entries) = self.entries.write() {
-            entries.insert(key, document);
+        if let Ok(mut store) = self.entries.write() {
+            store.documents.insert(key, document);
+            store.evict_over_limit();
         }
     }
 
@@ -101,8 +120,8 @@ impl MarkdownDocumentCache {
         let canonical_path =
             fs::canonicalize(document_path).unwrap_or_else(|_| document_path.into());
 
-        if let Ok(mut entries) = self.entries.write() {
-            entries.retain(|key, _document| {
+        if let Ok(mut store) = self.entries.write() {
+            store.documents.retain(|key, _document| {
                 key.document_path() != document_path && key.document_path() != canonical_path
             });
         }
@@ -112,8 +131,8 @@ impl MarkdownDocumentCache {
         let canonical_root =
             fs::canonicalize(workspace_root).unwrap_or_else(|_| workspace_root.into());
 
-        if let Ok(mut entries) = self.entries.write() {
-            entries.retain(|key, _document| {
+        if let Ok(mut store) = self.entries.write() {
+            store.documents.retain(|key, _document| {
                 key.workspace_root != workspace_root && key.workspace_root != canonical_root
             });
         }
@@ -150,14 +169,59 @@ impl MarkdownDocumentCache {
         let result = reader.read(layout, config, spec_id, key)?;
 
         if let MarkdownReadResult::Found(document) = result {
-            self.insert(
-                cache_key,
-                CachedMarkdownDocument::from_document(document.clone(), stamp),
+            let cached_document = CachedMarkdownDocument::from_document(
+                document.clone(),
+                stamp,
+                self.next_access_id(),
             );
+            self.insert(cache_key, cached_document);
             return Ok(MarkdownReadResult::Found(document));
         }
 
         Ok(result)
+    }
+}
+
+impl MarkdownDocumentCache {
+    fn next_access_id(&self) -> u64 {
+        if let Ok(mut store) = self.entries.write() {
+            return store.next_access_id();
+        }
+
+        0
+    }
+}
+
+impl MarkdownCacheStore {
+    fn next_access_id(&mut self) -> u64 {
+        self.next_access_id = self.next_access_id.saturating_add(1);
+        self.next_access_id
+    }
+
+    fn evict_over_limit(&mut self) {
+        while self.documents.len() > MAX_CACHE_ENTRY_COUNT
+            || self.total_size_bytes() > MAX_CACHE_TOTAL_BYTES
+        {
+            let Some(oldest_key) = self.oldest_key() else {
+                return;
+            };
+
+            self.documents.remove(&oldest_key);
+        }
+    }
+
+    fn total_size_bytes(&self) -> usize {
+        self.documents
+            .values()
+            .map(|document| document.size_bytes)
+            .sum()
+    }
+
+    fn oldest_key(&self) -> Option<MarkdownCacheKey> {
+        self.documents
+            .iter()
+            .min_by_key(|(_key, document)| document.last_accessed)
+            .map(|(key, _document)| key.clone())
     }
 }
 
@@ -300,7 +364,7 @@ mod tests {
         cache.invalidate_path(document_path.as_path());
 
         let entries = cache.entries.read().expect("cache lock should be readable");
-        assert!(entries.is_empty());
+        assert!(entries.documents.is_empty());
     }
 
     #[test]
@@ -318,6 +382,31 @@ mod tests {
         cache.clear_workspace(workspace.root.as_path());
 
         let entries = cache.entries.read().expect("cache lock should be readable");
-        assert!(entries.is_empty());
+        assert!(entries.documents.is_empty());
+    }
+
+    #[test]
+    fn cache_evicts_old_entries_when_count_limit_is_exceeded() {
+        let workspace = TestWorkspace::new("count-limit");
+        let cache = MarkdownDocumentCache::new();
+        let reader = FilesystemMarkdownReader::new();
+        let layout = workspace.layout();
+        let config = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
+
+        for index in 0..=MAX_CACHE_ENTRY_COUNT {
+            let spec_id = format!("auth-{index}");
+            fs::create_dir_all(workspace.path(&format!(".plugin-workspace/.specs/{spec_id}")))
+                .expect("spec directory should be created");
+            workspace.write(
+                &format!(".plugin-workspace/.specs/{spec_id}/tasks.md"),
+                "# Tasks",
+            );
+            cache
+                .read_spec_file(&reader, &layout, &config, &spec_id, SpecFileKey::Tasks)
+                .expect("read should populate cache");
+        }
+
+        let entries = cache.entries.read().expect("cache lock should be readable");
+        assert_eq!(MAX_CACHE_ENTRY_COUNT, entries.documents.len());
     }
 }
