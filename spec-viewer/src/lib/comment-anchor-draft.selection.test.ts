@@ -62,6 +62,39 @@ test("Markdownブロック内の選択からコメントアンカードラフト
   });
 });
 
+test("Markdownブロック内のコメントUIは選択アンカー文字列に含めない", () => {
+  const root = createRenderedRoot(
+    [
+      '<ul><li data-block-type="list-item" data-block-index="2">',
+      '<button class="markdown-block-comment-button"><span>コメント追加</span></button>',
+      '<span>Alpha beta gamma</span>',
+      '<aside class="markdown-comment-annotations">Unrelated comment body</aside>',
+      "</li></ul>",
+    ].join(""),
+  );
+  const textNode = root.querySelector("li > span")?.firstChild;
+  expect(textNode).toBeInstanceOf(Text);
+
+  const selection = selectText(textNode as Text, 6, 10);
+  const draft = createCommentAnchorDraftFromSelection({
+    selection,
+    renderedRoot: root,
+    fileKey: "tasks",
+  });
+
+  expect(draft?.anchor).toEqual({
+    fileKey: "tasks",
+    blockType: "list_item",
+    blockIndex: 2,
+    textHash: createTextHash("Alpha beta gamma"),
+    textSnippet: "beta",
+    charRange: {
+      start: 6,
+      end: 10,
+    },
+  });
+});
+
 test("backendメタデータ付きMarkdownブロックではbackend hashをアンカーに使う", () => {
   const root = createRenderedRoot(
     [

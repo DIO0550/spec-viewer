@@ -14,6 +14,10 @@ import {
   normalizeCommandError,
   type CommentCommands,
 } from "../lib/tauri";
+import {
+  createPerformanceCorrelationId,
+  startPerformanceSpan,
+} from "../lib/performance";
 import type {
   AddCommentRequest,
   Comment,
@@ -114,6 +118,7 @@ export type UseCommentsOptions = Readonly<{
   specId: string | null;
   fileKey: SpecFileKey | null;
   statusFilter?: CommentStatusFilter | null;
+  correlationId?: string | null;
   commands?: CommentCommands;
 }>;
 
@@ -194,9 +199,24 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
     });
 
     try {
+      const correlationId =
+        options.correlationId ??
+        createPerformanceCorrelationId("comments-list");
+      const endSpan = startPerformanceSpan(correlationId, "comments.list", {
+        specId: activeScope.specId,
+        fileKey: activeScope.fileKey,
+        statusFilter,
+      });
       const response = await commands.listComments(
-        createListCommentsRequest(activeScope, statusFilter),
+        createListCommentsRequest(
+          activeScope,
+          statusFilter,
+          options.correlationId ?? null,
+        ),
       );
+      endSpan({
+        commentCount: response.comments.length,
+      });
 
       if (listRequestIdRef.current !== requestId) {
         return false;
@@ -220,7 +240,7 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
       });
       return false;
     }
-  }, [commands, scope, statusFilter]);
+  }, [commands, options.correlationId, scope, statusFilter]);
 
   useEffect(() => {
     mutationRequestIdRef.current += 1;
@@ -513,10 +533,20 @@ function createLoadedListState(
 function createListCommentsRequest(
   scope: CommentScope,
   statusFilter: CommentStatusFilter,
+  correlationId: string | null,
 ): ListCommentsRequest {
-  return {
+  const request: ListCommentsRequest = {
     ...scope,
     statusFilter,
+  };
+
+  if (correlationId === null) {
+    return request;
+  }
+
+  return {
+    ...request,
+    correlationId,
   };
 }
 

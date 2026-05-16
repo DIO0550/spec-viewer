@@ -29,6 +29,7 @@ test("MarkdownViewerのブロックコメントボタンは右コメントレー
   expect(buttonRule).toContain("left: auto;");
   expect(buttonRule).toContain("transform: none;");
   expect(buttonRule).toContain("pointer-events: none;");
+  expect(buttonRule).toContain("user-select: none;");
   expect(hoverRule).toContain("pointer-events: auto;");
 });
 
@@ -56,21 +57,50 @@ test("MarkdownViewerの本文幅は固定上限ではなく利用可能幅に追
   expect(annotationsRule).toContain("justify-self: end;");
 });
 
-test("MarkdownViewerの範囲コメントハイライトは強調テキストの色を反転させない", () => {
+test("MarkdownViewerのヘッダーはスクロール中もリロード操作できる", () => {
+  const headerRule = readCssRule(".markdown-viewer__header");
+
+  expect(headerRule).toContain("position: sticky;");
+  expect(headerRule).toContain("top: 0;");
+  expect(headerRule).toContain("z-index: 12;");
+});
+
+test("MarkdownViewerのコメント付き本文は背景色や枠線を変えない", () => {
+  const blockRule = readCssRule('.markdown-rendered [data-comment-highlight="true"]');
   const rangeRule = readCssRule(
     '.markdown-rendered [data-comment-highlight-range="true"]',
   );
+  const activeStateRule = readCssRule(
+    '.markdown-rendered [data-comment-highlight-state="active"]',
+  );
+  const codeBlockRule = readCssRule(
+    '.markdown-rendered pre[data-comment-highlight="true"]',
+  );
 
+  expect(blockRule).toContain("scroll-margin: 88px;");
+  expect(blockRule).not.toContain("background:");
+  expect(blockRule).not.toContain("box-shadow:");
   expect(rangeRule).toContain("color: inherit;");
+  expect(rangeRule).not.toContain("background:");
+  expect(rangeRule).not.toContain("box-shadow:");
+  expect(rangeRule).not.toContain("padding:");
+  expect(activeStateRule).toBe("");
+  expect(codeBlockRule).toBe("");
 });
 
 test("MarkdownViewerのコメントダイアログはhoverの追加ボタンより前面に出る", () => {
   const popoverRule = readCssRule(".add-comment-popover");
   const dialogOpenRule = readCssRule(
-    '.markdown-viewer[data-comment-dialog-open="true"] .markdown-block-comment-button,\n.markdown-viewer[data-comment-dialog-open="true"]\n  .markdown-comment-target:hover\n  > .markdown-block-comment-button,\n.markdown-viewer[data-comment-dialog-open="true"]\n  .markdown-comment-target:focus-within\n  > .markdown-block-comment-button,\n.markdown-viewer[data-comment-dialog-open="true"]\n  .markdown-rendered\n  li:hover\n  > .markdown-block-comment-button,\n.markdown-viewer[data-comment-dialog-open="true"]\n  .markdown-rendered\n  li:focus-within\n  > .markdown-block-comment-button',
+    '.markdown-viewer[data-comment-dialog-open="true"] .text-selection-comment-button,\n.markdown-viewer[data-comment-dialog-open="true"] .markdown-block-comment-button,\n.markdown-viewer[data-comment-dialog-open="true"]\n  .markdown-comment-target:hover\n  > .markdown-block-comment-button,\n.markdown-viewer[data-comment-dialog-open="true"]\n  .markdown-comment-target:focus-within\n  > .markdown-block-comment-button,\n.markdown-viewer[data-comment-dialog-open="true"]\n  .markdown-rendered\n  li:hover\n  > .markdown-block-comment-button,\n.markdown-viewer[data-comment-dialog-open="true"]\n  .markdown-rendered\n  li:focus-within\n  > .markdown-block-comment-button',
   );
 
   expect(popoverRule).toContain("z-index: 50;");
   expect(dialogOpenRule).toContain("opacity: 0;");
   expect(dialogOpenRule).toContain("pointer-events: none;");
+});
+
+test("MarkdownViewerの右コメントカードは本文テキスト選択に混ざらない", () => {
+  const annotationsRule = readCssRule(".markdown-comment-annotations");
+
+  expect(annotationsRule).toContain("user-select: none;");
 });

@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::{
+    app::services::performance::{emit_span, start_span, PerformanceContext},
     app::use_cases::{
         AppUseCaseError, ArchiveReviewRunInput, CreateReviewRunInput, ListReviewRunsInput,
         ReviewRunExecutionMode, ReviewRunListProblem, ReviewRunListProblemState,
@@ -54,6 +55,7 @@ pub struct CreateReviewRunResponse {
 pub struct ListReviewRunsRequest {
     workspace_path: String,
     target: ReviewRunTargetRequest,
+    correlation_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -174,10 +176,24 @@ pub fn list_review_runs(
         .use_cases()
         .load_workspace(&request.workspace_path)
         .map_err(CommandError::from)?;
+    let performance_context = request
+        .correlation_id
+        .as_ref()
+        .map(|correlation_id| PerformanceContext::new(correlation_id, "list_review_runs"));
+    let end_span = performance_context
+        .as_ref()
+        .map(|context| start_span(context, "command.list_review_runs"));
     let result = state.use_cases().list_review_runs(
         &workspace,
         ListReviewRunsInput::new(request.target.into_domain()?),
     )?;
+    if let (Some(context), Some(end_span)) = (performance_context.as_ref(), end_span) {
+        let mut metadata = std::collections::BTreeMap::new();
+        metadata.insert("active_count", result.active().len().to_string());
+        metadata.insert("archived_count", result.archived().len().to_string());
+        metadata.insert("problem_count", result.problems().len().to_string());
+        emit_span(context, end_span(metadata));
+    }
 
     Ok(ListReviewRunsResponse {
         active: result

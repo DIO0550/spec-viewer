@@ -39,13 +39,40 @@ export function useMarkdownTextSelection({
       setSelectionDraft(nextDraft);
     };
 
-    document.addEventListener("selectionchange", updateSelectionDraft);
+    const clearInvalidSelectionDraft = (): void => {
+      const selection = document.getSelection();
+
+      if (
+        selection === null ||
+        renderedRootRef.current === null ||
+        selection.rangeCount === 0
+      ) {
+        setSelectionDraft(null);
+        return;
+      }
+
+      const range = selection.getRangeAt(0);
+
+      if (
+        range.collapsed ||
+        !isRangeEndpointInsideRoot(range, renderedRootRef.current)
+      ) {
+        setSelectionDraft(null);
+      }
+    };
+
+    document.addEventListener("selectionchange", clearInvalidSelectionDraft);
     window.addEventListener("mouseup", updateSelectionDraft);
+    window.addEventListener("touchend", updateSelectionDraft);
     window.addEventListener("keyup", updateSelectionDraft);
 
     return () => {
-      document.removeEventListener("selectionchange", updateSelectionDraft);
+      document.removeEventListener(
+        "selectionchange",
+        clearInvalidSelectionDraft,
+      );
       window.removeEventListener("mouseup", updateSelectionDraft);
+      window.removeEventListener("touchend", updateSelectionDraft);
       window.removeEventListener("keyup", updateSelectionDraft);
     };
   }, [fileKey, renderedRootRef]);
@@ -56,4 +83,24 @@ export function useMarkdownTextSelection({
       setSelectionDraft(null);
     },
   };
+}
+
+/** @returns true when both range endpoints are inside the rendered Markdown root. */
+function isRangeEndpointInsideRoot(
+  range: Range,
+  renderedRoot: HTMLElement,
+): boolean {
+  return (
+    containsSelectionNode(renderedRoot, range.startContainer) &&
+    containsSelectionNode(renderedRoot, range.endContainer)
+  );
+}
+
+/** @returns true when the node or its parent element belongs to the root. */
+function containsSelectionNode(root: HTMLElement, node: Node): boolean {
+  if (node.nodeType === Node.ELEMENT_NODE) {
+    return root.contains(node);
+  }
+
+  return node.parentElement !== null && root.contains(node.parentElement);
 }

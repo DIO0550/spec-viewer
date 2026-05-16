@@ -124,11 +124,14 @@ function App() {
   const isHtmlDocument =
     specs.documentState.status === "ready" &&
     specs.documentState.document.format === "html";
+  const [isDocumentReadable, setIsDocumentReadable] = useState(false);
   const comments = useComments({
     workspacePath: workspace.workspace?.root ?? null,
     specId: specs.selectedSpecId,
-    fileKey: isHtmlDocument ? null : specs.selectedFileKey,
+    fileKey:
+      isHtmlDocument || !isDocumentReadable ? null : specs.selectedFileKey,
     statusFilter: "all",
+    correlationId: specs.documentState.correlationId ?? null,
   });
   const [reviewRunTargetScope, setReviewRunTargetScope] =
     useState<ReviewRunTargetScope>("file");
@@ -136,9 +139,10 @@ function App() {
     useState<ReviewRunExecutionMode>("currentWorkspace");
   const reviewRuns = useReviewRuns({
     workspacePath: workspace.workspace?.root ?? null,
-    specId: specs.selectedSpecId,
-    fileKey: specs.selectedFileKey,
+    specId: isDocumentReadable ? specs.selectedSpecId : null,
+    fileKey: isDocumentReadable ? specs.selectedFileKey : null,
     targetScope: reviewRunTargetScope,
+    correlationId: specs.documentState.correlationId ?? null,
   });
   const [workspaceInput, setWorkspaceInput] = useState("");
   const [activeCommentId, setActiveCommentId] = useState<CommentId | null>(
@@ -157,6 +161,15 @@ function App() {
   const [commentExportState, setCommentExportState] =
     useState<CommentExportState>(idleCommentExportState);
   const hasAttemptedStartupRestoreRef = useRef(false);
+
+  useEffect(() => {
+    setIsDocumentReadable(false);
+  }, [
+    specs.documentState.status,
+    specs.selectedFileKey,
+    specs.selectedSpecId,
+    workspace.workspace?.root,
+  ]);
 
   useEffect(() => {
     setActiveCommentId(null);
@@ -406,7 +419,6 @@ function App() {
     }
 
     setActiveCommentId(addedComment.id);
-    await comments.reloadComments();
     return true;
   };
 
@@ -807,7 +819,8 @@ function App() {
   const isCommentScopeReady =
     workspace.workspace !== null &&
     specs.selectedSpecId !== null &&
-    specs.selectedFileKey !== null;
+    specs.selectedFileKey !== null &&
+    isDocumentReadable;
   const leftNavigationSubtitle =
     workspace.workspacePath ?? uiText.workspace.noWorkspace;
 
@@ -958,6 +971,9 @@ function App() {
               onUpdateComment={updateComment}
               onSelectComment={selectComment}
               onAnchorDisplayStatesChange={updateCommentAnchorDisplayStates}
+              onFirstReadable={() => {
+                setIsDocumentReadable(true);
+              }}
             />
           )
         }

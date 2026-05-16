@@ -5,7 +5,11 @@ import { expect, test, vi } from "vitest";
 
 import type { SpecDocumentState } from "../hooks/useSpecs";
 import { createTextHash } from "../lib/comment-anchor-draft";
-import type { Comment, CommentAnchorResolution } from "../types/comment";
+import type {
+  Comment,
+  CommentAnchorResolution,
+  CommentBlockType,
+} from "../types/comment";
 import type { MarkdownBlockMetadata, SpecDocument } from "../types/spec";
 import { MarkdownViewer } from "./MarkdownViewer";
 
@@ -93,6 +97,7 @@ function createComment({
     start: 0,
     end: text.length,
   },
+  blockType = "paragraph",
 }: Readonly<{
   id: string;
   blockIndex: number;
@@ -103,12 +108,13 @@ function createComment({
     start: number;
     end: number;
   }>;
+  blockType?: CommentBlockType;
 }>): Comment {
   return {
     id,
     anchor: {
       fileKey: "tasks",
-      blockType: "paragraph",
+      blockType,
       blockIndex,
       textHash: createTextHash(text),
       textSnippet: text,
@@ -282,7 +288,7 @@ test("MarkdownViewerはbackend block metadataをコメントアンカー用data�
   result.unmount();
 });
 
-test("MarkdownViewerはコメント付きブロックを状態別にハイライトして選択できる", () => {
+test("MarkdownViewerはコメント付きブロックを状態別にハイライトする", () => {
   const onSelectComment = vi.fn();
   const contents = [
     "## Highlight Plan",
@@ -331,11 +337,87 @@ test("MarkdownViewerはコメント付きブロックを状態別にハイライ
     "Resolved comments should stay quieter.",
   );
 
+  expect(activeBlock.getAttribute("role")).toBeNull();
+  expect(activeBlock.getAttribute("tabindex")).toBeNull();
+  result.unmount();
+});
+
+test("MarkdownViewerはリスト項目の本文より前にコメントボタンを置かない", () => {
+  const result = renderViewer(createReadyState("- Selectable list text"));
+  const listItem = result.container.querySelector(
+    '.markdown-rendered li[data-block-type="list-item"]',
+  );
+  const blockCommentButton = listItem?.querySelector(
+    ".markdown-block-comment-button",
+  );
+
+  expect(blockCommentButton?.previousSibling).toBeInstanceOf(Text);
+  expect(blockCommentButton?.previousSibling?.textContent).toContain(
+    "Selectable list text",
+  );
+  expect(listItem?.textContent).toContain("Selectable list text");
+  result.unmount();
+});
+
+test("MarkdownViewerは段落本文より前にコメントボタンを置かない", () => {
+  const result = renderViewer(createReadyState("Selectable paragraph text."));
+  const target = result.container.querySelector(".markdown-comment-target");
+  const paragraph = target?.querySelector("p");
+  const blockCommentButton = target?.querySelector(
+    ".markdown-block-comment-button",
+  );
+
+  expect(paragraph?.textContent).toBe("Selectable paragraph text.");
+  expect(blockCommentButton?.previousElementSibling).toBe(paragraph);
+  result.unmount();
+});
+
+test("MarkdownViewerは現在のMarkdown文書を検索して一致箇所を移動できる", () => {
+  const result = renderViewer(
+    createReadyState(["Alpha beta alpha.", "", "Gamma Alpha"].join("\n")),
+  );
+  const searchInput = result.container.querySelector(
+    '[aria-label="文書検索"]',
+  ) as HTMLInputElement;
+
   act(() => {
-    activeBlock.click();
+    searchInput.value = "alpha";
+    searchInput.dispatchEvent(new Event("input", { bubbles: true }));
   });
 
-  expect(onSelectComment).toHaveBeenCalledWith("cmt_open");
+  const nextButton = result.container.querySelector(
+    '[aria-label="次の一致へ"]',
+  ) as HTMLButtonElement;
+
+  expect(result.container.querySelectorAll("[data-document-search-match]")).toHaveLength(3);
+  expect(result.container.textContent).toContain("1/3");
+  expect(
+    result.container.querySelector(
+      '[data-document-search-match-active="true"]',
+    )?.textContent,
+  ).toBe("Alpha");
+
+  act(() => {
+    nextButton.click();
+  });
+
+  expect(result.container.textContent).toContain("2/3");
+  expect(
+    result.container.querySelector(
+      '[data-document-search-match-active="true"]',
+    )?.textContent,
+  ).toBe("alpha");
+
+  const clearButton = result.container.querySelector(
+    '[aria-label="文書検索をクリア"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    clearButton.click();
+  });
+
+  expect(searchInput.value).toBe("");
+  expect(result.container.querySelectorAll("[data-document-search-match]")).toHaveLength(0);
   result.unmount();
 });
 
@@ -527,6 +609,80 @@ test("MarkdownViewerはexact解決済みアンカーの選択範囲をハイラ�
   result.unmount();
 });
 
+test("MarkdownViewerはインラインコード内のコメント範囲に背景色を重ねない", () => {
+  const contents = "A paragraph with `inlineCode` and selectable text.";
+  const comments: readonly Comment[] = [
+    createComment({
+      id: "cmt_inline_code",
+      blockIndex: 0,
+      text: contents,
+      resolved: false,
+      charRange: {
+        start: contents.indexOf("inlineCode"),
+        end: contents.indexOf("inlineCode") + "inlineCode".length,
+      },
+      anchorResolution: {
+        status: "resolved",
+        reason: "exact_match",
+        details: null,
+        target: {
+          blockType: "paragraph",
+          blockIndex: 0,
+          textHash: createTextHash(contents),
+          textSnippet: contents,
+          sourceRange: null,
+          score: 100,
+        },
+      },
+    }),
+  ];
+  const result = renderViewer(
+    createReadyState(contents),
+    vi.fn(),
+    vi.fn().mockResolvedValue(true),
+    comments,
+  );
+  const inlineCode = result.container.querySelector(".markdown-rendered p code");
+
+  expect(inlineCode?.textContent).toBe("inlineCode");
+  expect(
+    inlineCode?.querySelector("[data-comment-highlight-range]"),
+  ).toBeNull();
+  result.unmount();
+});
+
+test("MarkdownViewerはコードブロックコメントを範囲色ではなくブロック目印で示す", () => {
+  const code = "const enabled = true;";
+  const contents = ["```ts", code, "```"].join("\n");
+  const comments: readonly Comment[] = [
+    createComment({
+      id: "cmt_code",
+      blockIndex: 0,
+      text: code,
+      resolved: false,
+      blockType: "code_block",
+      charRange: {
+        start: code.indexOf("enabled"),
+        end: code.indexOf("enabled") + "enabled".length,
+      },
+    }),
+  ];
+  const result = renderViewer(
+    createReadyState(contents),
+    vi.fn(),
+    vi.fn().mockResolvedValue(true),
+    comments,
+  );
+  const codeBlock = result.container.querySelector(".markdown-rendered pre");
+
+  expect(codeBlock?.getAttribute("data-comment-highlight")).toBe("true");
+  expect(codeBlock?.getAttribute("data-comment-highlight-mode")).toBe("block");
+  expect(
+    codeBlock?.querySelector("[data-comment-highlight-range]"),
+  ).toBeNull();
+  result.unmount();
+});
+
 test("MarkdownViewerはmoved/fuzzy/orphaned解決結果をtarget blockへ反映する", () => {
   const onAnchorDisplayStatesChange = vi.fn();
   const contents = [
@@ -671,6 +827,14 @@ test("MarkdownViewerはMarkdown内の選択から追加コメントを保存す�
     document.dispatchEvent(new Event("selectionchange"));
   });
 
+  expect(
+    result.container.querySelector(".text-selection-comment-button"),
+  ).toBeNull();
+
+  act(() => {
+    window.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+  });
+
   const addButton = result.container.querySelector(
     ".text-selection-comment-button",
   );
@@ -752,6 +916,14 @@ test("MarkdownViewerはコードブロック内の選択から追加コメント
 
   act(() => {
     document.dispatchEvent(new Event("selectionchange"));
+  });
+
+  expect(
+    result.container.querySelector(".text-selection-comment-button"),
+  ).toBeNull();
+
+  act(() => {
+    window.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
   });
 
   const addButton = result.container.querySelector(

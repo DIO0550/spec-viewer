@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::{
+    app::services::performance::{emit_span, start_span, PerformanceContext},
     app::use_cases::{
         AnchorResolutionReason, AnchorResolutionStatus, AppMarkdownDocument, AppUseCaseError,
         CommentAnchorResolution, CommentAnchorResolutionTarget, ReadSpecFileResult,
@@ -29,6 +30,7 @@ pub struct ListCommentsRequest {
     spec_id: String,
     file_key: String,
     status_filter: Option<String>,
+    correlation_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -363,12 +365,29 @@ pub fn list_comments(
         .use_cases()
         .load_workspace(&request.workspace_path)
         .map_err(CommandError::from)?;
-    let current_blocks =
-        read_current_markdown_blocks(state.use_cases(), &workspace, &request.spec_id, file_key)?;
+    let performance_context = request
+        .correlation_id
+        .as_ref()
+        .map(|correlation_id| PerformanceContext::new(correlation_id, "list_comments"));
+    let end_span = performance_context
+        .as_ref()
+        .map(|context| start_span(context, "command.list_comments"));
+    let current_blocks = state
+        .use_cases()
+        .read_spec_blocks_cached(&workspace, &request.spec_id, file_key)
+        .map_err(CommandError::from)?;
     let resolutions = state
         .use_cases()
         .comment_use_cases(&workspace)
         .resolve_comment_anchors(&request.spec_id, file_key, status_filter, &current_blocks)?;
+    if let (Some(context), Some(end_span)) = (performance_context.as_ref(), end_span) {
+        let mut metadata = std::collections::BTreeMap::new();
+        metadata.insert("spec_id", request.spec_id.clone());
+        metadata.insert("file_key", request.file_key.clone());
+        metadata.insert("block_count", current_blocks.len().to_string());
+        metadata.insert("comment_count", resolutions.resolutions().len().to_string());
+        emit_span(context, end_span(metadata));
+    }
 
     Ok(ListCommentsResponse::from(resolutions.into_resolutions()))
 }
@@ -1369,7 +1388,7 @@ fn read_current_markdown_document(
     file_key: SpecFileKey,
 ) -> CommandResult<PromptMarkdownDocument> {
     let result = use_cases
-        .read_spec_file(workspace, spec_id, file_key)
+        .read_spec_file_cached(workspace, spec_id, file_key)
         .map_err(CommandError::from)?;
 
     match result {
@@ -1387,7 +1406,7 @@ fn read_current_markdown_blocks(
     file_key: SpecFileKey,
 ) -> CommandResult<Vec<MarkdownBlock>> {
     let result = use_cases
-        .read_spec_file(workspace, spec_id, file_key)
+        .read_spec_file_cached(workspace, spec_id, file_key)
         .map_err(CommandError::from)?;
 
     match result {

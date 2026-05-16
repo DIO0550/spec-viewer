@@ -14,17 +14,21 @@ import {
   isValidElement,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
 import {
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   ChevronDown,
   LoaderCircle,
   MessageSquare,
   MessageSquarePlus,
   Pencil,
   RefreshCcw,
+  Search,
   Send,
   X,
 } from "lucide-react";
@@ -39,6 +43,7 @@ import {
   createTextHash,
 } from "../lib/comment-anchor-draft";
 import { uiText } from "../lib/uiText";
+import { recordPerformancePoint } from "../lib/performance";
 import type {
   Comment,
   CommentAnchor,
@@ -104,6 +109,11 @@ type IndexedBlock = Readonly<{
   commentAnnotations: readonly CommentBlockAnnotation[];
 }>;
 
+type BackendBlockMatch = Readonly<{
+  block: MarkdownBlockMetadata;
+  index: number;
+}>;
+
 type CommentBlockAnnotation = Readonly<{
   comment: Comment;
   anchorDisplayStatus: CommentAnchorDisplayStatus;
@@ -117,6 +127,12 @@ type CommentRangeHighlight = Readonly<{
   start: number;
   end: number;
 }>;
+
+type DocumentSearchCursor = {
+  query: string;
+  activeIndex: number;
+  matchIndex: number;
+};
 
 type CommentEditDraft = Readonly<{
   comment: Comment;
@@ -134,6 +150,7 @@ type CommentBlockHighlight = Readonly<{
 type CommentBlockHighlights = ReadonlyMap<string, CommentBlockHighlight>;
 
 const emptyComments: readonly Comment[] = [];
+const SYNTAX_HIGHLIGHT_MAX_BYTES = 200_000;
 
 type Props = Readonly<{
   state: SpecDocumentState;
@@ -153,6 +170,7 @@ type Props = Readonly<{
   onAnchorDisplayStatesChange?: (
     states: readonly CommentAnchorDisplayState[],
   ) => void;
+  onFirstReadable?: () => void;
 }>;
 
 /** @returns The Markdown viewer shell with document loading states. */
@@ -172,6 +190,7 @@ export function MarkdownViewer({
   onUpdateComment,
   onSelectComment,
   onAnchorDisplayStatesChange,
+  onFirstReadable,
 }: Props) {
   const panelRef = useRef<HTMLElement>(null);
   const renderedRootRef = useRef<HTMLDivElement>(null);
@@ -182,13 +201,23 @@ export function MarkdownViewer({
   const [anchorDisplayStates, setAnchorDisplayStates] = useState<
     readonly CommentAnchorDisplayState[]
   >([]);
+  const [documentSearchQuery, setDocumentSearchQuery] = useState("");
+  const [activeDocumentSearchIndex, setActiveDocumentSearchIndex] = useState(0);
+  const [documentSearchMatchCount, setDocumentSearchMatchCount] = useState(0);
   const resetKey = createViewerResetKey(state);
   const isHtmlDocument =
     state.status === "ready" && state.document.format === "html";
+  const normalizedDocumentSearchQuery =
+    normalizeDocumentSearchQuery(documentSearchQuery);
   const selectionFileKey =
     state.status === "ready" && !isHtmlDocument ? state.fileKey : null;
   const readyContents =
     state.status === "ready" ? state.document.contents : null;
+  const correlationId =
+    state.status === "ready" || state.status === "missing"
+      ? state.correlationId
+      : undefined;
+  const firstReadableResetKeyRef = useRef<string | null>(null);
   const { selectionDraft, clearSelectionDraft } = useMarkdownTextSelection({
     renderedRootRef,
     fileKey: selectionFileKey,
@@ -197,11 +226,43 @@ export function MarkdownViewer({
   useEffect(() => {
     setActiveAnchorDraft(null);
     setActiveEditDraft(null);
-  }, [resetKey]);
+    setAnchorDisplayStates([]);
+    onAnchorDisplayStatesChange?.([]);
+    setDocumentSearchQuery("");
+    setActiveDocumentSearchIndex(0);
+    setDocumentSearchMatchCount(0);
+  }, [onAnchorDisplayStatesChange, resetKey]);
+  useLayoutEffect(() => {
+    if (state.status !== "ready" || readyContents === null) {
+      return;
+    }
+
+    if (firstReadableResetKeyRef.current === resetKey) {
+      return;
+    }
+
+    firstReadableResetKeyRef.current = resetKey;
+    recordPerformancePoint(
+      correlationId ?? resetKey,
+      "document.firstReadable",
+      {
+        bytes: readyContents.length,
+        syntaxHighlight: readyContents.length <= SYNTAX_HIGHLIGHT_MAX_BYTES,
+      },
+    );
+    onFirstReadable?.();
+  }, [correlationId, onFirstReadable, readyContents, resetKey, state.status]);
+  useEffect(() => {
+    setActiveDocumentSearchIndex(0);
+  }, [normalizedDocumentSearchQuery]);
   useEffect(() => {
     if (state.status !== "ready" || readyContents === null || isHtmlDocument) {
       setAnchorDisplayStates([]);
       onAnchorDisplayStatesChange?.([]);
+      return;
+    }
+
+    if (renderedRootRef.current === null) {
       return;
     }
 
@@ -226,6 +287,28 @@ export function MarkdownViewer({
       renderedRoot: renderedRootRef.current,
     });
   }, [activeCommentId, anchorDisplayStates, comments]);
+  useEffect(() => {
+    const nextMatchCount = countRenderedDocumentSearchMatches({
+      renderedRoot: renderedRootRef.current,
+      searchQuery: normalizedDocumentSearchQuery,
+    });
+
+    setDocumentSearchMatchCount(nextMatchCount);
+    setActiveDocumentSearchIndex((currentIndex) =>
+      clampDocumentSearchIndex(currentIndex, nextMatchCount),
+    );
+  }, [normalizedDocumentSearchQuery, readyContents, activeDocumentSearchIndex]);
+  useEffect(() => {
+    scrollActiveDocumentSearchMatchIntoView({
+      renderedRoot: renderedRootRef.current,
+      searchQuery: normalizedDocumentSearchQuery,
+      matchCount: documentSearchMatchCount,
+    });
+  }, [
+    normalizedDocumentSearchQuery,
+    documentSearchMatchCount,
+    activeDocumentSearchIndex,
+  ]);
 
   const closeAnchorDraft = (): void => {
     setActiveAnchorDraft(null);
@@ -291,6 +374,22 @@ export function MarkdownViewer({
     }
 
     return wasSaved;
+  };
+
+  const goToPreviousDocumentSearchMatch = (): void => {
+    setActiveDocumentSearchIndex((currentIndex) =>
+      getPreviousDocumentSearchIndex(currentIndex, documentSearchMatchCount),
+    );
+  };
+
+  const goToNextDocumentSearchMatch = (): void => {
+    setActiveDocumentSearchIndex((currentIndex) =>
+      getNextDocumentSearchIndex(currentIndex, documentSearchMatchCount),
+    );
+  };
+
+  const clearDocumentSearch = (): void => {
+    setDocumentSearchQuery("");
   };
 
   if (state.status === "idle") {
@@ -415,15 +514,27 @@ export function MarkdownViewer({
           <h1>{selectedFileLabel ?? state.fileKey}</h1>
           <p className="markdown-viewer__path">{state.document.path}</p>
         </div>
-        <button
-          className="icon-button"
-          type="button"
-          aria-label={uiText.markdown.reload}
-          title={uiText.markdown.reload}
-          onClick={onReload}
-        >
-          <RefreshCcw aria-hidden="true" size={16} />
-        </button>
+        <div className="markdown-viewer__actions">
+          <DocumentSearchControl
+            query={documentSearchQuery}
+            matchCount={documentSearchMatchCount}
+            activeMatchIndex={activeDocumentSearchIndex}
+            disabled={state.document.format === "html"}
+            onQueryChange={setDocumentSearchQuery}
+            onPrevious={goToPreviousDocumentSearchMatch}
+            onNext={goToNextDocumentSearchMatch}
+            onClear={clearDocumentSearch}
+          />
+          <button
+            className="icon-button"
+            type="button"
+            aria-label={uiText.markdown.reload}
+            title={uiText.markdown.reload}
+            onClick={onReload}
+          >
+            <RefreshCcw aria-hidden="true" size={16} />
+          </button>
+        </div>
       </header>
       {state.document.format === "html" ? (
         <HtmlDocument contents={contents} />
@@ -436,6 +547,9 @@ export function MarkdownViewer({
             comments={comments}
             activeCommentId={activeCommentId}
             anchorDisplayStates={anchorDisplayStates}
+            documentSearchQuery={normalizedDocumentSearchQuery}
+            activeDocumentSearchIndex={activeDocumentSearchIndex}
+            syntaxHighlightMaxBytes={SYNTAX_HIGHLIGHT_MAX_BYTES}
             onSelectComment={onSelectComment}
             onRequestCommentEdit={requestCommentEdit}
             onCreateBlockDraft={createBlockDraft}
@@ -499,6 +613,7 @@ function useViewerReset(
 /** @returns A stable key for viewer content state transitions. */
 function createViewerResetKey(state: SpecDocumentState): string {
   const path = state.document?.path ?? "";
+  const contentsLength = state.document?.contents?.length ?? 0;
 
   return [
     state.status,
@@ -506,7 +621,204 @@ function createViewerResetKey(state: SpecDocumentState): string {
     state.specId ?? "",
     state.fileKey ?? "",
     path,
+    String(contentsLength),
   ].join(":");
+}
+
+type DocumentSearchControlProps = Readonly<{
+  query: string;
+  matchCount: number;
+  activeMatchIndex: number;
+  disabled: boolean;
+  onQueryChange: (query: string) => void;
+  onPrevious: () => void;
+  onNext: () => void;
+  onClear: () => void;
+}>;
+
+/** @returns Sticky document search controls for the current Markdown file. */
+function DocumentSearchControl({
+  query,
+  matchCount,
+  activeMatchIndex,
+  disabled,
+  onQueryChange,
+  onPrevious,
+  onNext,
+  onClear,
+}: DocumentSearchControlProps) {
+  const inputId = useId();
+  const normalizedQuery = normalizeDocumentSearchQuery(query);
+  const hasQuery = normalizedQuery.length > 0;
+  const hasMatches = matchCount > 0;
+  const statusText = formatDocumentSearchStatus({
+    hasQuery,
+    matchCount,
+    activeMatchIndex,
+  });
+  const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
+    if (event.key !== "Enter" || !hasMatches) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (event.shiftKey) {
+      onPrevious();
+      return;
+    }
+
+    onNext();
+  };
+
+  return (
+    <div className="markdown-document-search">
+      <label className="markdown-document-search__label" htmlFor={inputId}>
+        <Search aria-hidden="true" size={14} />
+        {uiText.markdown.search}
+      </label>
+      <div className="markdown-document-search__field">
+        <input
+          id={inputId}
+          aria-label={uiText.markdown.search}
+          type="search"
+          value={query}
+          disabled={disabled}
+          placeholder={uiText.markdown.searchPlaceholder}
+          onInput={(event) => {
+            onQueryChange(event.currentTarget.value);
+          }}
+          onKeyDown={handleInputKeyDown}
+        />
+        {query.length === 0 ? null : (
+          <button
+            className="icon-button markdown-document-search__clear"
+            type="button"
+            aria-label={uiText.markdown.clearSearch}
+            title={uiText.markdown.clearSearch}
+            onClick={onClear}
+          >
+            <X aria-hidden="true" size={13} />
+          </button>
+        )}
+      </div>
+      <span className="markdown-document-search__count" aria-live="polite">
+        {statusText}
+      </span>
+      <div className="markdown-document-search__navigation">
+        <button
+          className="icon-button"
+          type="button"
+          aria-label={uiText.markdown.previousSearchMatch}
+          title={uiText.markdown.previousSearchMatch}
+          disabled={!hasMatches}
+          onClick={onPrevious}
+        >
+          <ChevronLeft aria-hidden="true" size={14} />
+        </button>
+        <button
+          className="icon-button"
+          type="button"
+          aria-label={uiText.markdown.nextSearchMatch}
+          title={uiText.markdown.nextSearchMatch}
+          disabled={!hasMatches}
+          onClick={onNext}
+        >
+          <ChevronRight aria-hidden="true" size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** @returns Normalized document search query used for matching. */
+function normalizeDocumentSearchQuery(query: string): string {
+  return query.trim().toLocaleLowerCase();
+}
+
+/** @returns Search status text shown next to document search controls. */
+function formatDocumentSearchStatus({
+  hasQuery,
+  matchCount,
+  activeMatchIndex,
+}: Readonly<{
+  hasQuery: boolean;
+  matchCount: number;
+  activeMatchIndex: number;
+}>): string {
+  if (!hasQuery || matchCount === 0) {
+    return "0件";
+  }
+
+  return `${activeMatchIndex + 1}/${matchCount}`;
+}
+
+/** @returns Number of rendered search matches currently in the document. */
+function countRenderedDocumentSearchMatches({
+  renderedRoot,
+  searchQuery,
+}: Readonly<{
+  renderedRoot: HTMLElement | null;
+  searchQuery: string;
+}>): number {
+  if (renderedRoot === null || searchQuery.length === 0) {
+    return 0;
+  }
+
+  return renderedRoot.querySelectorAll("[data-document-search-match]").length;
+}
+
+/** @returns Active search index constrained to the available match count. */
+function clampDocumentSearchIndex(index: number, matchCount: number): number {
+  if (matchCount <= 0) {
+    return 0;
+  }
+
+  return Math.min(index, matchCount - 1);
+}
+
+/** @returns Previous wrapped document search index. */
+function getPreviousDocumentSearchIndex(
+  currentIndex: number,
+  matchCount: number,
+): number {
+  if (matchCount <= 0) {
+    return 0;
+  }
+
+  return (currentIndex + matchCount - 1) % matchCount;
+}
+
+/** @returns Next wrapped document search index. */
+function getNextDocumentSearchIndex(
+  currentIndex: number,
+  matchCount: number,
+): number {
+  if (matchCount <= 0) {
+    return 0;
+  }
+
+  return (currentIndex + 1) % matchCount;
+}
+
+/** Scrolls the active document search match into view when available. */
+function scrollActiveDocumentSearchMatchIntoView({
+  renderedRoot,
+  searchQuery,
+  matchCount,
+}: Readonly<{
+  renderedRoot: HTMLElement | null;
+  searchQuery: string;
+  matchCount: number;
+}>): void {
+  if (renderedRoot === null || searchQuery.length === 0 || matchCount === 0) {
+    return;
+  }
+
+  const activeMatch = renderedRoot.querySelector<HTMLElement>(
+    '[data-document-search-match-active="true"]',
+  );
+  activeMatch?.scrollIntoView?.({ block: "center", inline: "nearest" });
 }
 
 type MarkdownDocumentProps = Readonly<{
@@ -516,6 +828,9 @@ type MarkdownDocumentProps = Readonly<{
   comments: readonly Comment[];
   activeCommentId: CommentId | null;
   anchorDisplayStates: readonly CommentAnchorDisplayState[];
+  documentSearchQuery: string;
+  activeDocumentSearchIndex: number;
+  syntaxHighlightMaxBytes: number;
   onSelectComment?: (commentId: CommentId) => void;
   onRequestCommentEdit?: RequestCommentEdit;
   onCreateBlockDraft: CreateBlockCommentDraft;
@@ -529,6 +844,9 @@ function MarkdownDocument({
   comments,
   activeCommentId,
   anchorDisplayStates,
+  documentSearchQuery,
+  activeDocumentSearchIndex,
+  syntaxHighlightMaxBytes,
   onSelectComment,
   onRequestCommentEdit,
   onCreateBlockDraft,
@@ -543,14 +861,20 @@ function MarkdownDocument({
   const blockIndexer = createBlockIndexer({
     blocks,
     highlights,
-    onSelectComment,
+  });
+  const documentSearchCursor = createDocumentSearchCursor({
+    query: documentSearchQuery,
+    activeIndex: activeDocumentSearchIndex,
   });
   const components = createMarkdownComponents({
     blockIndexer,
+    documentSearchCursor,
     onCreateBlockDraft,
     onSelectComment,
     onRequestCommentEdit,
   });
+  const shouldHighlightSyntax = contents.length <= syntaxHighlightMaxBytes;
+  const rehypePlugins = shouldHighlightSyntax ? [rehypeHighlight] : [];
 
   return (
     <div
@@ -560,7 +884,7 @@ function MarkdownDocument({
     >
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeHighlight]}
+        rehypePlugins={rehypePlugins}
         components={components}
       >
         {contents}
@@ -589,22 +913,21 @@ function HtmlDocument({ contents }: HtmlDocumentProps) {
 function createBlockIndexer({
   blocks,
   highlights,
-  onSelectComment,
 }: Readonly<{
   blocks: readonly MarkdownBlockMetadata[];
   highlights: CommentBlockHighlights;
-  onSelectComment?: (commentId: CommentId) => void;
 }>): BlockIndexer {
   let fallbackBlockIndex = 0;
   let backendBlockCursor = 0;
 
   return {
     next: (blockType: BlockType): IndexedBlock => {
-      const backendBlock = findNextBackendBlock({
+      const backendBlockMatch = findNextBackendBlockWithIndex({
         blocks,
         blockType,
         startIndex: backendBlockCursor,
       });
+      const backendBlock = backendBlockMatch?.block ?? null;
       const currentBlockIndex = backendBlock?.blockIndex ?? fallbackBlockIndex;
       const metadata: BlockMetadata = {
         "data-block-type": blockType,
@@ -616,15 +939,14 @@ function createBlockIndexer({
 
       fallbackBlockIndex += 1;
 
-      if (backendBlock !== null) {
-        backendBlockCursor = blocks.indexOf(backendBlock) + 1;
+      if (backendBlockMatch !== null) {
+        backendBlockCursor = backendBlockMatch.index + 1;
       }
 
       return {
         metadata: createHighlightedBlockMetadata({
           metadata: attachBackendBlockMetadata(metadata, backendBlock),
           highlight,
-          onSelectComment,
         }),
         rangeHighlights: highlight?.rangeHighlights ?? [],
         commentAnnotations: highlight?.annotations ?? [],
@@ -633,8 +955,8 @@ function createBlockIndexer({
   };
 }
 
-/** @returns The next backend block that can describe this rendered block. */
-function findNextBackendBlock({
+/** @returns The next backend block and index that can describe this rendered block. */
+function findNextBackendBlockWithIndex({
   blocks,
   blockType,
   startIndex,
@@ -642,12 +964,12 @@ function findNextBackendBlock({
   blocks: readonly MarkdownBlockMetadata[];
   blockType: BlockType;
   startIndex: number;
-}>): MarkdownBlockMetadata | null {
+}>): BackendBlockMatch | null {
   for (let index = startIndex; index < blocks.length; index += 1) {
     const block = blocks[index];
 
     if (mapMarkdownBlockTypeToBlockType(block.blockType) === blockType) {
-      return block;
+      return { block, index };
     }
   }
 
@@ -692,10 +1014,7 @@ function createCommentAnchorDisplayStates({
   renderedRoot: HTMLElement | null;
 }>): readonly CommentAnchorDisplayState[] {
   if (renderedRoot === null) {
-    return comments.map((comment) => ({
-      commentId: comment.id,
-      status: "orphaned",
-    }));
+    return [];
   }
 
   return comments.map((comment) => {
@@ -1066,6 +1385,10 @@ function isReliableRangeHighlight({
     return false;
   }
 
+  if (comment.anchor.blockType === "code_block") {
+    return false;
+  }
+
   return comment.anchor.charRange.end > comment.anchor.charRange.start;
 }
 
@@ -1078,11 +1401,9 @@ function selectExactRangeState(comment: Comment): CommentHighlightState {
 function createHighlightedBlockMetadata({
   metadata,
   highlight,
-  onSelectComment,
 }: Readonly<{
   metadata: BlockMetadata;
   highlight: CommentBlockHighlight | undefined;
-  onSelectComment?: (commentId: CommentId) => void;
 }>): BlockMetadata {
   if (highlight === undefined) {
     return metadata;
@@ -1099,34 +1420,7 @@ function createHighlightedBlockMetadata({
     "data-comment-ids": highlight.commentIds.join(" "),
   };
 
-  if (onSelectComment === undefined) {
-    return highlightedMetadata;
-  }
-
-  return {
-    ...highlightedMetadata,
-    role: "button",
-    tabIndex: 0,
-    onClick: (event) => {
-      if (
-        !(event.currentTarget instanceof HTMLElement) ||
-        isInteractiveHighlightTarget(event.target, event.currentTarget) ||
-        hasActiveTextSelectionInside(event.currentTarget)
-      ) {
-        return;
-      }
-
-      onSelectComment(highlight.selectCommentId);
-    },
-    onKeyDown: (event) => {
-      if (event.key !== "Enter" && event.key !== " ") {
-        return;
-      }
-
-      event.preventDefault();
-      onSelectComment(highlight.selectCommentId);
-    },
-  };
+  return highlightedMetadata;
 }
 
 /** @returns An accessible description for a highlighted Markdown block. */
@@ -1139,51 +1433,6 @@ function createHighlightAriaLabel(
       : `${highlight.commentIds.length}件のコメント`;
 
   return `${countLabel}があるMarkdownブロック`;
-}
-
-/** @returns true when a click originated from an interactive child element. */
-function isInteractiveHighlightTarget(
-  target: EventTarget,
-  currentTarget: HTMLElement,
-): boolean {
-  if (!(target instanceof Element)) {
-    return false;
-  }
-
-  const interactiveElement = target.closest(
-    'a, button, input, textarea, select, summary, [contenteditable="true"]',
-  );
-
-  return interactiveElement !== null && interactiveElement !== currentTarget;
-}
-
-/** @returns true when a click follows text selection inside the highlighted block. */
-function hasActiveTextSelectionInside(element: HTMLElement): boolean {
-  const selection = document.getSelection();
-
-  if (
-    selection === null ||
-    selection.rangeCount === 0 ||
-    selection.isCollapsed
-  ) {
-    return false;
-  }
-
-  const range = selection.getRangeAt(0);
-
-  return (
-    containsSelectionNode(element, range.startContainer) &&
-    containsSelectionNode(element, range.endContainer)
-  );
-}
-
-/** @returns true when a selection endpoint belongs to the target element. */
-function containsSelectionNode(element: HTMLElement, node: Node): boolean {
-  if (node.nodeType === Node.ELEMENT_NODE) {
-    return element.contains(node);
-  }
-
-  return node.parentElement !== null && element.contains(node.parentElement);
 }
 
 /** @returns The rendered Markdown block for a persisted comment anchor. */
@@ -1286,11 +1535,13 @@ function createBlockKey(blockType: BlockType, blockIndex: number): string {
 /** @returns React Markdown component overrides with comment anchor metadata. */
 function createMarkdownComponents({
   blockIndexer,
+  documentSearchCursor,
   onCreateBlockDraft,
   onSelectComment,
   onRequestCommentEdit,
 }: Readonly<{
   blockIndexer: BlockIndexer;
+  documentSearchCursor: DocumentSearchCursor | null;
   onCreateBlockDraft: CreateBlockCommentDraft;
   onSelectComment?: (commentId: CommentId) => void;
   onRequestCommentEdit?: RequestCommentEdit;
@@ -1307,7 +1558,11 @@ function createMarkdownComponents({
           onRequestCommentEdit={onRequestCommentEdit}
         >
           <h1 {...props} {...block.metadata}>
-            {renderRangeHighlightedChildren(children, block.rangeHighlights)}
+            {renderMarkdownTextChildren({
+              children,
+              rangeHighlights: block.rangeHighlights,
+              documentSearchCursor,
+            })}
           </h1>
         </MarkdownCommentableBlock>
       );
@@ -1323,7 +1578,11 @@ function createMarkdownComponents({
           onRequestCommentEdit={onRequestCommentEdit}
         >
           <h2 {...props} {...block.metadata}>
-            {renderRangeHighlightedChildren(children, block.rangeHighlights)}
+            {renderMarkdownTextChildren({
+              children,
+              rangeHighlights: block.rangeHighlights,
+              documentSearchCursor,
+            })}
           </h2>
         </MarkdownCommentableBlock>
       );
@@ -1339,7 +1598,11 @@ function createMarkdownComponents({
           onRequestCommentEdit={onRequestCommentEdit}
         >
           <h3 {...props} {...block.metadata}>
-            {renderRangeHighlightedChildren(children, block.rangeHighlights)}
+            {renderMarkdownTextChildren({
+              children,
+              rangeHighlights: block.rangeHighlights,
+              documentSearchCursor,
+            })}
           </h3>
         </MarkdownCommentableBlock>
       );
@@ -1355,7 +1618,11 @@ function createMarkdownComponents({
           onRequestCommentEdit={onRequestCommentEdit}
         >
           <h4 {...props} {...block.metadata}>
-            {renderRangeHighlightedChildren(children, block.rangeHighlights)}
+            {renderMarkdownTextChildren({
+              children,
+              rangeHighlights: block.rangeHighlights,
+              documentSearchCursor,
+            })}
           </h4>
         </MarkdownCommentableBlock>
       );
@@ -1371,7 +1638,11 @@ function createMarkdownComponents({
           onRequestCommentEdit={onRequestCommentEdit}
         >
           <h5 {...props} {...block.metadata}>
-            {renderRangeHighlightedChildren(children, block.rangeHighlights)}
+            {renderMarkdownTextChildren({
+              children,
+              rangeHighlights: block.rangeHighlights,
+              documentSearchCursor,
+            })}
           </h5>
         </MarkdownCommentableBlock>
       );
@@ -1387,7 +1658,11 @@ function createMarkdownComponents({
           onRequestCommentEdit={onRequestCommentEdit}
         >
           <h6 {...props} {...block.metadata}>
-            {renderRangeHighlightedChildren(children, block.rangeHighlights)}
+            {renderMarkdownTextChildren({
+              children,
+              rangeHighlights: block.rangeHighlights,
+              documentSearchCursor,
+            })}
           </h6>
         </MarkdownCommentableBlock>
       );
@@ -1403,7 +1678,11 @@ function createMarkdownComponents({
           onRequestCommentEdit={onRequestCommentEdit}
         >
           <p {...props} {...block.metadata}>
-            {renderRangeHighlightedChildren(children, block.rangeHighlights)}
+            {renderMarkdownTextChildren({
+              children,
+              rangeHighlights: block.rangeHighlights,
+              documentSearchCursor,
+            })}
           </p>
         </MarkdownCommentableBlock>
       );
@@ -1420,7 +1699,11 @@ function createMarkdownComponents({
           onSelectComment={onSelectComment}
           onRequestCommentEdit={onRequestCommentEdit}
         >
-          {renderRangeHighlightedChildren(children, block.rangeHighlights)}
+          {renderMarkdownTextChildren({
+            children,
+            rangeHighlights: block.rangeHighlights,
+            documentSearchCursor,
+          })}
         </MarkdownListItem>
       );
     },
@@ -1435,12 +1718,16 @@ function createMarkdownComponents({
           onRequestCommentEdit={onRequestCommentEdit}
         >
           <pre {...props} {...block.metadata}>
-            {renderRangeHighlightedChildren(children, block.rangeHighlights)}
+            {renderMarkdownTextChildren({
+              children,
+              rangeHighlights: block.rangeHighlights,
+              documentSearchCursor,
+            })}
           </pre>
         </MarkdownCommentableBlock>
       );
     },
-    table: ({ node: _node, ...props }) => {
+    table: ({ node: _node, children, ...props }) => {
       const block = blockIndexer.next("table");
 
       return (
@@ -1451,7 +1738,13 @@ function createMarkdownComponents({
           onRequestCommentEdit={onRequestCommentEdit}
         >
           <div className="markdown-rendered__table-scroll" {...block.metadata}>
-            <table {...props} />
+            <table {...props}>
+              {renderMarkdownTextChildren({
+                children,
+                rangeHighlights: block.rangeHighlights,
+                documentSearchCursor,
+              })}
+            </table>
           </div>
         </MarkdownCommentableBlock>
       );
@@ -1498,6 +1791,7 @@ function MarkdownCommentableBlock({
         commentAnnotations.length > 0 ? "true" : undefined
       }
     >
+      {children}
       <button
         className="markdown-block-comment-button"
         type="button"
@@ -1511,7 +1805,6 @@ function MarkdownCommentableBlock({
         <MessageSquarePlus aria-hidden="true" size={14} />
         <span>コメント追加</span>
       </button>
-      {children}
       <CommentAnnotationStack
         annotations={commentAnnotations}
         onSelectComment={onSelectComment}
@@ -1690,6 +1983,50 @@ function createCommentPreview(body: string): string {
   return `${normalizedBody.slice(0, COMMENT_PREVIEW_MAX_LENGTH - 1)}...`;
 }
 
+/** @returns A render-scoped cursor for document search matches. */
+function createDocumentSearchCursor({
+  query,
+  activeIndex,
+}: Readonly<{
+  query: string;
+  activeIndex: number;
+}>): DocumentSearchCursor | null {
+  if (query.length === 0) {
+    return null;
+  }
+
+  return {
+    query,
+    activeIndex,
+    matchIndex: 0,
+  };
+}
+
+/** @returns Markdown children with comment and document search highlights. */
+function renderMarkdownTextChildren({
+  children,
+  rangeHighlights,
+  documentSearchCursor,
+}: Readonly<{
+  children: ReactNode;
+  rangeHighlights: readonly CommentRangeHighlight[];
+  documentSearchCursor: DocumentSearchCursor | null;
+}>): ReactNode {
+  const commentHighlightedChildren = renderRangeHighlightedChildren(
+    children,
+    rangeHighlights,
+  );
+
+  if (documentSearchCursor === null) {
+    return commentHighlightedChildren;
+  }
+
+  return renderDocumentSearchHighlightedNode(
+    commentHighlightedChildren,
+    documentSearchCursor,
+  );
+}
+
 type RangeRenderCursor = {
   position: number;
   keyIndex: number;
@@ -1741,6 +2078,12 @@ function renderRangeHighlightedNode(
     return childElement;
   }
 
+  if (isCodeElement(childElement)) {
+    advanceRangeCursorByNodeText(childElement.props.children, cursor);
+
+    return childElement;
+  }
+
   return cloneElement(
     childElement,
     undefined,
@@ -1750,6 +2093,39 @@ function renderRangeHighlightedNode(
       cursor,
     ),
   );
+}
+
+/** @returns True when a Markdown descendant should keep its code styling intact. */
+function isCodeElement(
+  element: ReactElement<{ children?: ReactNode }>,
+): boolean {
+  return element.type === "code" || element.type === "pre";
+}
+
+/** Advances the range cursor over unhighlighted descendants. */
+function advanceRangeCursorByNodeText(
+  node: ReactNode,
+  cursor: RangeRenderCursor,
+): void {
+  if (typeof node === "string" || typeof node === "number") {
+    cursor.position += String(node).length;
+
+    return;
+  }
+
+  if (Array.isArray(node)) {
+    node.forEach((child) => {
+      advanceRangeCursorByNodeText(child, cursor);
+    });
+
+    return;
+  }
+
+  if (!isValidElement<{ children?: ReactNode }>(node)) {
+    return;
+  }
+
+  advanceRangeCursorByNodeText(node.props.children, cursor);
 }
 
 /** @returns Text split into plain and highlighted range segments. */
@@ -1800,6 +2176,82 @@ function renderRangeHighlightedText(
   }
 
   cursor.position = absoluteEnd;
+
+  if (parts.length === 0) {
+    return text;
+  }
+
+  return parts;
+}
+
+/** @returns One React node with document search mark elements inserted. */
+function renderDocumentSearchHighlightedNode(
+  node: ReactNode,
+  cursor: DocumentSearchCursor,
+): ReactNode {
+  if (typeof node === "string" || typeof node === "number") {
+    return renderDocumentSearchHighlightedText(String(node), cursor);
+  }
+
+  if (Array.isArray(node)) {
+    return node.map((child) =>
+      renderDocumentSearchHighlightedNode(child, cursor),
+    );
+  }
+
+  if (!isValidElement<{ children?: ReactNode }>(node)) {
+    return node;
+  }
+
+  const childElement = node as ReactElement<{ children?: ReactNode }>;
+
+  if (childElement.props.children === undefined) {
+    return childElement;
+  }
+
+  return cloneElement(
+    childElement,
+    undefined,
+    renderDocumentSearchHighlightedNode(childElement.props.children, cursor),
+  );
+}
+
+/** @returns Text split into plain and document search match segments. */
+function renderDocumentSearchHighlightedText(
+  text: string,
+  cursor: DocumentSearchCursor,
+): ReactNode {
+  const parts: ReactNode[] = [];
+  const lowerText = text.toLocaleLowerCase();
+  let localOffset = 0;
+  let matchStart = lowerText.indexOf(cursor.query);
+
+  while (matchStart >= 0) {
+    const matchEnd = matchStart + cursor.query.length;
+
+    if (matchStart > localOffset) {
+      parts.push(text.slice(localOffset, matchStart));
+    }
+
+    const isActive = cursor.matchIndex === cursor.activeIndex;
+    parts.push(
+      <mark
+        className="markdown-document-search__match"
+        key={`document-search-${cursor.matchIndex}`}
+        data-document-search-match="true"
+        data-document-search-match-active={isActive ? "true" : undefined}
+      >
+        {text.slice(matchStart, matchEnd)}
+      </mark>,
+    );
+    cursor.matchIndex += 1;
+    localOffset = matchEnd;
+    matchStart = lowerText.indexOf(cursor.query, localOffset);
+  }
+
+  if (localOffset < text.length) {
+    parts.push(text.slice(localOffset));
+  }
 
   if (parts.length === 0) {
     return text;
@@ -2265,6 +2717,7 @@ function MarkdownListItem({
 
   return (
     <li {...props}>
+      {children}
       <button
         className="markdown-block-comment-button markdown-block-comment-button--inline"
         type="button"
@@ -2277,7 +2730,6 @@ function MarkdownListItem({
       >
         <MessageSquarePlus aria-hidden="true" size={14} />
       </button>
-      {children}
       <CommentAnnotationStack
         annotations={commentAnnotations}
         onSelectComment={onSelectComment}

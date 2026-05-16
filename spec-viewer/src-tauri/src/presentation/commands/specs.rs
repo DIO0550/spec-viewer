@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::{
+    app::services::performance::{emit_span, start_span, PerformanceContext},
     app::use_cases::{
         AppMarkdownDocument, AppMissingMarkdownFile, ArchiveSpecResult, LoadWorkspaceResult,
         ReadSpecFileResult,
@@ -30,6 +31,7 @@ pub struct ReadSpecFileRequest {
     workspace_path: String,
     spec_id: String,
     file_key: String,
+    correlation_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -238,9 +240,23 @@ pub fn read_spec_file(
         CommandError::invalid_request(format!("unsupported file key: {}", request.file_key))
     })?;
     let workspace = load_workspace(state.use_cases(), &request.workspace_path)?;
+    let performance_context = request
+        .correlation_id
+        .as_ref()
+        .map(|correlation_id| PerformanceContext::new(correlation_id, "read_spec_file"));
+    let end_span = performance_context
+        .as_ref()
+        .map(|context| start_span(context, "command.read_spec_file"));
     let result = state
         .use_cases()
-        .read_spec_file(&workspace, &request.spec_id, key)?;
+        .read_spec_file_cached(&workspace, &request.spec_id, key)?;
+
+    if let (Some(context), Some(end_span)) = (performance_context.as_ref(), end_span) {
+        let mut metadata = std::collections::BTreeMap::new();
+        metadata.insert("spec_id", request.spec_id.clone());
+        metadata.insert("file_key", request.file_key.clone());
+        emit_span(context, end_span(metadata));
+    }
 
     Ok(ReadSpecFileResponse::from(result))
 }

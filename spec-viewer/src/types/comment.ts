@@ -127,6 +127,7 @@ export type ListCommentsRequest = Readonly<{
   specId: string;
   fileKey: SpecFileKey;
   statusFilter?: CommentStatusFilter | null;
+  correlationId?: string;
 }>;
 
 export type AddCommentRequest = Readonly<{

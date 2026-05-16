@@ -6,6 +6,10 @@ import {
   normalizeCommandError,
   readSpecFile as defaultReadSpecFile,
 } from "../lib/tauri";
+import {
+  createPerformanceCorrelationId,
+  startPerformanceSpan,
+} from "../lib/performance";
 import type { NormalizedCommandError } from "../types/ipc";
 import type {
   ReadSpecFileRequest,
@@ -58,6 +62,7 @@ export type SpecDocumentState =
       workspacePath: string | null;
       specId: string | null;
       fileKey: SpecFileKey | null;
+      correlationId?: string;
       document: null;
       error: null;
     }>
@@ -66,6 +71,7 @@ export type SpecDocumentState =
       workspacePath: string;
       specId: string;
       fileKey: SpecFileKey;
+      correlationId?: string;
       document: null;
       error: null;
     }>
@@ -74,6 +80,7 @@ export type SpecDocumentState =
       workspacePath: string;
       specId: string;
       fileKey: SpecFileKey;
+      correlationId?: string;
       document: SpecDocument;
       error: null;
     }>
@@ -82,6 +89,7 @@ export type SpecDocumentState =
       workspacePath: string;
       specId: string;
       fileKey: SpecFileKey;
+      correlationId?: string;
       document: SpecDocument;
       error: null;
     }>
@@ -90,6 +98,7 @@ export type SpecDocumentState =
       workspacePath: string;
       specId: string;
       fileKey: SpecFileKey;
+      correlationId?: string;
       document: null;
       error: NormalizedCommandError;
     }>;
@@ -188,14 +197,21 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
 
       const activeWorkspacePath = workspacePath;
       const requestId = documentRequestIdRef.current + 1;
+      const correlationId = createPerformanceCorrelationId("document-read");
       documentRequestIdRef.current = requestId;
       setDocumentState({
         status: "loading",
         workspacePath: activeWorkspacePath,
         specId,
         fileKey,
+        correlationId,
         document: null,
         error: null,
+      });
+
+      const endSpan = startPerformanceSpan(correlationId, "document.read", {
+        specId,
+        fileKey,
       });
 
       try {
@@ -203,6 +219,12 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
           workspacePath: activeWorkspacePath,
           specId,
           fileKey,
+          correlationId,
+        });
+        endSpan({
+          bytes: document.contents?.length ?? 0,
+          blockCount: document.blocks.length,
+          missing: document.missing,
         });
 
         if (documentRequestIdRef.current !== requestId) {
@@ -214,11 +236,16 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
           workspacePath: activeWorkspacePath,
           specId,
           fileKey,
+          correlationId,
           document,
           error: null,
         });
         return true;
       } catch (error) {
+        endSpan({
+          error: true,
+        });
+
         if (documentRequestIdRef.current !== requestId) {
           return false;
         }
@@ -228,6 +255,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
           workspacePath: activeWorkspacePath,
           specId,
           fileKey,
+          correlationId,
           document: null,
           error: normalizeCommandError(error),
         });

@@ -96,6 +96,7 @@ export type CreateReviewRunResponse = Readonly<{
 export type ListReviewRunsRequest = Readonly<{
   workspacePath: string;
   target: ReviewRunTarget;
+  correlationId?: string;
 }>;
 
 export type ListReviewRunsResponse = Readonly<{
