@@ -15,7 +15,7 @@ The app is private/unpublished in package metadata. Create GitHub releases from 
 
 ## Build Commands
 
-Use these commands from `spec-reviewer/`:
+Use these commands from `spec-viewer/`:
 
 ```bash
 pnpm install

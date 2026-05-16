@@ -10,7 +10,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/DIO0550/spec-viewer.git",
-    "directory": "spec-reviewer"
+    "directory": "spec-viewer"
   },
   "scripts": {
     "dev": "vite --host 0.0.0.0",

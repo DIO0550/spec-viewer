@@ -2,7 +2,7 @@
 
 ## Scope
 
-This repository contains the `spec-reviewer` Tauri application and supporting planning documents. Keep new implementation work inside `spec-reviewer/` unless the change is clearly about repository tooling or the dev container.
+This repository contains the `spec-viewer` Tauri application and supporting planning documents. Keep new implementation work inside `spec-viewer/` unless the change is clearly about repository tooling or the dev container.
 
 ## Repository Structure
 
@@ -10,10 +10,10 @@ This repository contains the `spec-reviewer` Tauri application and supporting pl
 .
 ├── AGENTS.md
 ├── README.md
-├── spec-reviewer-plan.md
+├── spec-viewer-plan.md
 ├── md-viewer-app Design.html
 ├── .devcontainer/
-└── spec-reviewer/
+└── spec-viewer/
     ├── docs/
     │   ├── design/
     │   └── plans/
@@ -38,19 +38,19 @@ This repository contains the `spec-reviewer` Tauri application and supporting pl
 
 ## Frontend File Placement
 
-- Put reusable React UI in `spec-reviewer/src/components/`.
-- Put React hooks in `spec-reviewer/src/hooks/`.
-- Put Tauri IPC wrappers and frontend utilities in `spec-reviewer/src/lib/`.
-- Put shared TypeScript shapes in `spec-reviewer/src/types/`.
-- Put global CSS and theme-level styles in `spec-reviewer/src/styles/`.
-- Keep `spec-reviewer/src/App.tsx` focused on top-level composition and routing/state wiring.
+- Put reusable React UI in `spec-viewer/src/components/`.
+- Put React hooks in `spec-viewer/src/hooks/`.
+- Put Tauri IPC wrappers and frontend utilities in `spec-viewer/src/lib/`.
+- Put shared TypeScript shapes in `spec-viewer/src/types/`.
+- Put global CSS and theme-level styles in `spec-viewer/src/styles/`.
+- Keep `spec-viewer/src/App.tsx` focused on top-level composition and routing/state wiring.
 
 ## Rust File Placement
 
 Use a lightweight DDD structure for the Rust/Tauri backend:
 
 ```text
-spec-reviewer/src-tauri/src/
+spec-viewer/src-tauri/src/
 ├── app/
 │   ├── mod.rs
 │   ├── services/
@@ -82,8 +82,8 @@ spec-reviewer/src-tauri/src/
 - Put filesystem access under `infrastructure/filesystem/`.
 - Put Markdown parsing/hash implementation under `infrastructure/markdown/`.
 - Put JSON comment storage and config loading under `infrastructure/persistence/`.
-- Keep `spec-reviewer/src-tauri/src/lib.rs` focused on plugin setup, dependency wiring, and command registration.
-- Keep `spec-reviewer/src-tauri/src/main.rs` as the thin executable entrypoint.
+- Keep `spec-viewer/src-tauri/src/lib.rs` focused on plugin setup, dependency wiring, and command registration.
+- Keep `spec-viewer/src-tauri/src/main.rs` as the thin executable entrypoint.
 
 Dependency direction should be:
 
@@ -98,29 +98,29 @@ Do not put Tauri types, filesystem paths, or JSON serialization details into dom
 
 ## Documentation Placement
 
-- Put design-source notes in `spec-reviewer/docs/design/`.
-- Put implementation plans and task breakdowns in `spec-reviewer/docs/plans/`.
-- Keep the root `spec-reviewer-plan.md` as historical/source planning context.
+- Put design-source notes in `spec-viewer/docs/design/`.
+- Put implementation plans and task breakdowns in `spec-viewer/docs/plans/`.
+- Keep the root `spec-viewer-plan.md` as historical/source planning context.
 
 ## Task File Workflow
 
-- Active task files live under `spec-reviewer/docs/plans/tasks/<group>/`.
-- Completed task files must be moved to `spec-reviewer/docs/plans/tasks/done/<group>/`.
+- Active task files live under `spec-viewer/docs/plans/tasks/<group>/`.
+- Completed task files must be moved to `spec-viewer/docs/plans/tasks/done/<group>/`.
 - Before moving a task file to `done/`, mark its checklist items as complete and add a short completion note with the implementation commit or PR when available.
 - Preserve the original task filename when moving it so history remains easy to follow.
 - Update the source group's `README.md` so completed tasks no longer appear as active work.
-- Update `spec-reviewer/docs/plans/tasks/done/README.md` with a link to the moved task.
+- Update `spec-viewer/docs/plans/tasks/done/README.md` with a link to the moved task.
 - Do not delete completed task files; moving them is the record that the task is finished.
 
 ## Generated Files
 
 Do not commit generated output from:
 
-- `spec-reviewer/node_modules/`
-- `spec-reviewer/dist/`
-- `spec-reviewer/storybook-static/`
-- `spec-reviewer/src-tauri/target/`
-- `spec-reviewer/src-tauri/gen/`
+- `spec-viewer/node_modules/`
+- `spec-viewer/dist/`
+- `spec-viewer/storybook-static/`
+- `spec-viewer/src-tauri/target/`
+- `spec-viewer/src-tauri/gen/`
 
 ## TypeScript 開発ルール
 
