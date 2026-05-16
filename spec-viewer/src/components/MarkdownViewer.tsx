@@ -295,7 +295,7 @@ export function MarkdownViewer({
     setActiveDocumentSearchIndex((currentIndex) =>
       clampDocumentSearchIndex(currentIndex, nextMatchCount),
     );
-  }, [normalizedDocumentSearchQuery, readyContents, activeDocumentSearchIndex]);
+  }, [normalizedDocumentSearchQuery, readyContents]);
   useEffect(() => {
     scrollActiveDocumentSearchMatchIntoView({
       renderedRoot: renderedRootRef.current,

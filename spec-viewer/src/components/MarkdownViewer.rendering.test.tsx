@@ -388,6 +388,9 @@ test("MarkdownViewerは現在のMarkdown文書を検索して一致箇所を移�
   const nextButton = result.container.querySelector(
     '[aria-label="次の一致へ"]',
   ) as HTMLButtonElement;
+  const renderedDocument = result.container.querySelector(
+    ".markdown-rendered",
+  ) as HTMLDivElement;
 
   expect(result.container.querySelectorAll("[data-document-search-match]")).toHaveLength(3);
   expect(result.container.textContent).toContain("1/3");
@@ -397,10 +400,12 @@ test("MarkdownViewerは現在のMarkdown文書を検索して一致箇所を移�
     )?.textContent,
   ).toBe("Alpha");
 
+  const queryAllSpy = vi.spyOn(renderedDocument, "querySelectorAll");
   act(() => {
     nextButton.click();
   });
 
+  expect(queryAllSpy).not.toHaveBeenCalled();
   expect(result.container.textContent).toContain("2/3");
   expect(
     result.container.querySelector(
@@ -416,6 +421,7 @@ test("MarkdownViewerは現在のMarkdown文書を検索して一致箇所を移�
     clearButton.click();
   });
 
+  queryAllSpy.mockRestore();
   expect(searchInput.value).toBe("");
   expect(result.container.querySelectorAll("[data-document-search-match]")).toHaveLength(0);
   result.unmount();
