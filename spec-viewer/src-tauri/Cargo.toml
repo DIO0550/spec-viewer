@@ -1,0 +1,36 @@
+[package]
+name = "spec-viewer"
+version = "0.1.4"
+description = "Desktop reviewer for Spec Skill Markdown workspaces."
+authors = ["DIO0550"]
+edition = "2021"
+license = "UNLICENSED"
+publish = false
+repository = "https://github.com/DIO0550/spec-viewer"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "spec_reviewer_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+tauri-plugin-window-state = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri-plugin-dialog = "2"
+pulldown-cmark = "0.13.3"
+sha2 = "0.11.0"
+uuid = { version = "1.23.1", features = ["v4", "serde"] }
+chrono = { version = "0.4.44", features = ["serde"] }
+thiserror = "2.0.18"
+anyhow = "1.0.102"
+notify = "8"
