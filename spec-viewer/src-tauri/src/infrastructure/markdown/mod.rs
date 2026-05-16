@@ -40,7 +40,7 @@ impl FilesystemMarkdownReader {
         let resolved_path = resolve_spec_document_path(layout, config, spec_id, key)?;
         let file_path = resolved_path.path();
 
-        let contents = match fs::read(&file_path) {
+        let contents = match fs::read(file_path) {
             Ok(contents) => contents,
             Err(error) if error.kind() == io::ErrorKind::NotFound => {
                 return Ok(MarkdownReadResult::Missing(MissingMarkdownFile {
@@ -51,7 +51,7 @@ impl FilesystemMarkdownReader {
             }
             Err(source) => {
                 return Err(MarkdownReadError::UnreadableFile {
-                    path: display_path(&file_path),
+                    path: display_path(file_path),
                     source,
                 });
             }
@@ -59,7 +59,7 @@ impl FilesystemMarkdownReader {
 
         let contents =
             String::from_utf8(contents).map_err(|source| MarkdownReadError::InvalidUtf8 {
-                path: display_path(&file_path),
+                path: display_path(file_path),
                 source,
             })?;
 
