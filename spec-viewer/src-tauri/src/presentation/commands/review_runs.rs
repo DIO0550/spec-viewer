@@ -183,18 +183,31 @@ pub fn list_review_runs(
     let end_span = performance_context
         .as_ref()
         .map(|context| start_span(context, "command.list_review_runs"));
-    let result = state.use_cases().list_review_runs(
-        &workspace,
-        ListReviewRunsInput::new(request.target.into_domain()?),
-    )?;
+    let result = (|| {
+        let target = request.target.into_domain()?;
+        let result = state
+            .use_cases()
+            .list_review_runs(&workspace, ListReviewRunsInput::new(target))?;
+
+        Ok::<_, CommandError>(result)
+    })();
     if let (Some(context), Some(end_span)) = (performance_context.as_ref(), end_span) {
         let mut metadata = std::collections::BTreeMap::new();
-        metadata.insert("active_count", result.active().len().to_string());
-        metadata.insert("archived_count", result.archived().len().to_string());
-        metadata.insert("problem_count", result.problems().len().to_string());
+        match &result {
+            Ok(result) => {
+                metadata.insert("active_count", result.active().len().to_string());
+                metadata.insert("archived_count", result.archived().len().to_string());
+                metadata.insert("problem_count", result.problems().len().to_string());
+            }
+            Err(error) => {
+                metadata.insert("error", "true".to_string());
+                metadata.insert("error_code", error.code().to_string());
+            }
+        }
         emit_span(context, end_span(metadata));
     }
 
+    let result = result?;
     Ok(ListReviewRunsResponse {
         active: result
             .active()
