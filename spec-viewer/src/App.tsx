@@ -129,7 +129,8 @@ function App() {
   );
   const currentDocumentKey = createDocumentReadableKey(specs.documentState);
   const isDocumentReadable =
-    currentDocumentKey !== null && readableDocumentKey === currentDocumentKey;
+    specs.documentState.status === "missing" ||
+    (currentDocumentKey !== null && readableDocumentKey === currentDocumentKey);
   const comments = useComments({
     workspacePath: workspace.workspace?.root ?? null,
     specId: specs.selectedSpecId,
