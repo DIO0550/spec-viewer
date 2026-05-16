@@ -124,7 +124,12 @@ function App() {
   const isHtmlDocument =
     specs.documentState.status === "ready" &&
     specs.documentState.document.format === "html";
-  const [isDocumentReadable, setIsDocumentReadable] = useState(false);
+  const [readableDocumentKey, setReadableDocumentKey] = useState<string | null>(
+    null,
+  );
+  const currentDocumentKey = createDocumentReadableKey(specs.documentState);
+  const isDocumentReadable =
+    currentDocumentKey !== null && readableDocumentKey === currentDocumentKey;
   const comments = useComments({
     workspacePath: workspace.workspace?.root ?? null,
     specId: specs.selectedSpecId,
@@ -161,15 +166,6 @@ function App() {
   const [commentExportState, setCommentExportState] =
     useState<CommentExportState>(idleCommentExportState);
   const hasAttemptedStartupRestoreRef = useRef(false);
-
-  useEffect(() => {
-    setIsDocumentReadable(false);
-  }, [
-    specs.documentState.status,
-    specs.selectedFileKey,
-    specs.selectedSpecId,
-    workspace.workspace?.root,
-  ]);
 
   useEffect(() => {
     setActiveCommentId(null);
@@ -972,7 +968,7 @@ function App() {
               onSelectComment={selectComment}
               onAnchorDisplayStatesChange={updateCommentAnchorDisplayStates}
               onFirstReadable={() => {
-                setIsDocumentReadable(true);
+                setReadableDocumentKey(currentDocumentKey);
               }}
             />
           )
@@ -1048,6 +1044,22 @@ function formatCommentExportSuccessMessage(
 /** @returns The number of unresolved comments in the active sidebar list. */
 function countOpenComments(comments: readonly { status: string }[]): number {
   return comments.filter((comment) => comment.status === "open").length;
+}
+
+/** @returns A stable identity for the document load that must become readable. */
+function createDocumentReadableKey(
+  state: ReturnType<typeof useSpecs>["documentState"],
+): string | null {
+  if (state.status !== "ready") {
+    return null;
+  }
+
+  return [
+    state.workspacePath,
+    state.specId,
+    state.fileKey,
+    state.correlationId ?? "no-correlation",
+  ].join("\u0000");
 }
 
 /** Copies generated prompt text to the browser clipboard. */
