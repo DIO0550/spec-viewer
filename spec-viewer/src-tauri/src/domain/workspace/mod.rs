@@ -7,8 +7,8 @@ use thiserror::Error;
 mod config;
 
 pub use config::{
-    SpecConfigOverride, WorkspaceConfig, WorkspaceConfigError, WorkspaceConfigSource,
-    WorkspaceFileMapping,
+    default_scan_excluded_directory_names, SpecConfigOverride, WorkspaceConfig,
+    WorkspaceConfigError, WorkspaceConfigSource, WorkspaceFileMapping,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

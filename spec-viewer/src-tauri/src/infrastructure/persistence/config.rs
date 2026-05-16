@@ -13,8 +13,9 @@ use thiserror::Error;
 use crate::domain::{
     spec::{SpecDomainError, SpecFileKey},
     workspace::{
-        SpecConfigOverride, WorkspaceConfig, WorkspaceConfigError, WorkspaceConfigSource,
-        WorkspaceFileMapping, WorkspaceKind, WorkspaceLayout,
+        default_scan_excluded_directory_names, SpecConfigOverride, WorkspaceConfig,
+        WorkspaceConfigError, WorkspaceConfigSource, WorkspaceFileMapping, WorkspaceKind,
+        WorkspaceLayout,
     },
 };
 
@@ -120,7 +121,13 @@ fn parse_workspace_config(
         files.push(mapping);
     }
 
-    WorkspaceConfig::new(files).map_err(|source| ConfigLoadError::InvalidFileMapping {
+    WorkspaceConfig::with_scan_excluded_directory_names(
+        files,
+        raw_config
+            .scan_excluded_directory_names
+            .unwrap_or_else(default_scan_excluded_directory_names),
+    )
+    .map_err(|source| ConfigLoadError::InvalidFileMapping {
         path: display_path(path),
         source,
     })
@@ -165,6 +172,8 @@ fn parse_spec_config_override(
 struct RawWorkspaceConfig {
     #[serde(default)]
     files: BTreeMap<String, String>,
+    #[serde(rename = "scanExcludedDirectoryNames")]
+    scan_excluded_directory_names: Option<Vec<String>>,
 }
 
 #[derive(Debug, Error)]
@@ -422,6 +431,50 @@ mod tests {
                 .file_for_key(SpecFileKey::Tasks)
                 .map(WorkspaceFileMapping::file_name)
         );
+    }
+
+    #[test]
+    fn config_loader_uses_default_scan_exclusions_when_field_is_missing() {
+        let workspace = TestWorkspace::new("scan-defaults");
+        workspace.write_config(
+            PLUGIN_WORKSPACE_CONFIG_FILE,
+            r#"{
+                "files": {
+                    "tasks": "tasks.md"
+                }
+            }"#,
+        );
+        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
+
+        let config = WorkspaceConfigLoader::new()
+            .load(&layout)
+            .expect("config should load");
+
+        assert_eq!(
+            vec!["plan-review".to_string(), "user-review".to_string()],
+            config.scan_excluded_directory_names()
+        );
+    }
+
+    #[test]
+    fn config_loader_allows_empty_scan_exclusions() {
+        let workspace = TestWorkspace::new("scan-empty");
+        workspace.write_config(
+            PLUGIN_WORKSPACE_CONFIG_FILE,
+            r#"{
+                "scanExcludedDirectoryNames": [],
+                "files": {
+                    "tasks": "tasks.md"
+                }
+            }"#,
+        );
+        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
+
+        let config = WorkspaceConfigLoader::new()
+            .load(&layout)
+            .expect("config should load");
+
+        assert!(config.scan_excluded_directory_names().is_empty());
     }
 
     #[test]

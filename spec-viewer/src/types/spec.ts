@@ -62,6 +62,7 @@ export type ReadSpecFileRequest = Readonly<{
   workspacePath: string;
   specId: string;
   fileKey: SpecFileKey;
+  correlationId?: string;
 }>;
 
 export type ArchiveSpecRequest = Readonly<{

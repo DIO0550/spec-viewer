@@ -285,6 +285,7 @@ test("useSpecsはspec tree読み込み後に最初のspecとfileを選択してM
     workspacePath: "/workspace/spec-reviewer",
     specId: "phase-1-viewer",
     fileKey: "tasks",
+    correlationId: expect.any(String),
   });
   result.unmount();
 });
@@ -327,18 +328,21 @@ test("useSpecsは選択したspec fileのMarkdownを読み込む", async () => {
     await result.current.selectFileKey("tasks");
   });
 
-  expect(result.current.documentState).toEqual({
-    status: "ready",
-    workspacePath: "/workspace/spec-reviewer",
-    specId: "phase-1-viewer",
-    fileKey: "tasks",
-    document: loadedDocument,
-    error: null,
-  });
+  expect(result.current.documentState).toEqual(
+    expect.objectContaining({
+      status: "ready",
+      workspacePath: "/workspace/spec-reviewer",
+      specId: "phase-1-viewer",
+      fileKey: "tasks",
+      document: loadedDocument,
+      error: null,
+    }),
+  );
   expect(readSpecFile).toHaveBeenCalledWith({
     workspacePath: "/workspace/spec-reviewer",
     specId: "phase-1-viewer",
     fileKey: "tasks",
+    correlationId: expect.any(String),
   });
   result.unmount();
 });
@@ -362,14 +366,16 @@ test("useSpecsはmissing Markdownをmissing状態として返す", async () => {
     await result.current.selectFileKey("impl");
   });
 
-  expect(result.current.documentState).toEqual({
-    status: "missing",
-    workspacePath: "/workspace/spec-reviewer",
-    specId: "phase-1-viewer",
-    fileKey: "impl",
-    document: missingDocument,
-    error: null,
-  });
+  expect(result.current.documentState).toEqual(
+    expect.objectContaining({
+      status: "missing",
+      workspacePath: "/workspace/spec-reviewer",
+      specId: "phase-1-viewer",
+      fileKey: "impl",
+      document: missingDocument,
+      error: null,
+    }),
+  );
   result.unmount();
 });
 
@@ -390,14 +396,16 @@ test("useSpecsはspec選択時に最初のfileを選択してMarkdownを読み�
   });
 
   expect(result.current.selectedFileKey).toBe("design");
-  expect(result.current.documentState).toEqual({
-    status: "ready",
-    workspacePath: "/workspace/spec-reviewer",
-    specId: "phase-child",
-    fileKey: "design",
-    document: designDocument,
-    error: null,
-  });
+  expect(result.current.documentState).toEqual(
+    expect.objectContaining({
+      status: "ready",
+      workspacePath: "/workspace/spec-reviewer",
+      specId: "phase-child",
+      fileKey: "design",
+      document: designDocument,
+      error: null,
+    }),
+  );
   result.unmount();
 });
 
@@ -447,14 +455,16 @@ test("useSpecsはspec tree再読み込み時に選択中のspecとfileを保持�
 
   expect(result.current.selectedSpecId).toBe("phase-child");
   expect(result.current.selectedFileKey).toBe("design");
-  expect(result.current.documentState).toEqual({
-    status: "ready",
-    workspacePath: "/workspace/spec-reviewer",
-    specId: "phase-child",
-    fileKey: "design",
-    document: designDocument,
-    error: null,
-  });
+  expect(result.current.documentState).toEqual(
+    expect.objectContaining({
+      status: "ready",
+      workspacePath: "/workspace/spec-reviewer",
+      specId: "phase-child",
+      fileKey: "design",
+      document: designDocument,
+      error: null,
+    }),
+  );
   result.unmount();
 });
 
@@ -481,14 +491,16 @@ test("useSpecsはrefresh時に選択中fileが消えたら同じspecの先頭fil
 
   expect(result.current.selectedSpecId).toBe("phase-refresh");
   expect(result.current.selectedFileKey).toBe("design");
-  expect(result.current.documentState).toEqual({
-    status: "ready",
-    workspacePath: "/workspace/spec-reviewer",
-    specId: "phase-refresh",
-    fileKey: "design",
-    document: designDocument,
-    error: null,
-  });
+  expect(result.current.documentState).toEqual(
+    expect.objectContaining({
+      status: "ready",
+      workspacePath: "/workspace/spec-reviewer",
+      specId: "phase-refresh",
+      fileKey: "design",
+      document: designDocument,
+      error: null,
+    }),
+  );
   result.unmount();
 });
 
@@ -512,14 +524,16 @@ test("useSpecsはrefresh時に選択中Markdownが削除されたらmissing状�
 
   expect(result.current.selectedSpecId).toBe("phase-1-viewer");
   expect(result.current.selectedFileKey).toBe("tasks");
-  expect(result.current.documentState).toEqual({
-    status: "missing",
-    workspacePath: "/workspace/spec-reviewer",
-    specId: "phase-1-viewer",
-    fileKey: "tasks",
-    document: missingTasksDocument,
-    error: null,
-  });
+  expect(result.current.documentState).toEqual(
+    expect.objectContaining({
+      status: "missing",
+      workspacePath: "/workspace/spec-reviewer",
+      specId: "phase-1-viewer",
+      fileKey: "tasks",
+      document: missingTasksDocument,
+      error: null,
+    }),
+  );
   result.unmount();
 });
 
@@ -528,7 +542,8 @@ test("useSpecsはspecをアーカイブした後にtreeを再読み込みする"
   const readSpecFile = vi.fn().mockResolvedValue(loadedDocument);
   const archiveSpec = vi.fn().mockResolvedValue({
     archivedSpecId: "phase-1-viewer",
-    archivePath: "/workspace/spec-reviewer/.plugin-workspace/.specs/.archive/phase-1-viewer",
+    archivePath:
+      "/workspace/spec-reviewer/.plugin-workspace/.specs/.archive/phase-1-viewer",
   });
 
   const result = renderHook(

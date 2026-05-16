@@ -124,11 +124,20 @@ function App() {
   const isHtmlDocument =
     specs.documentState.status === "ready" &&
     specs.documentState.document.format === "html";
+  const [readableDocumentKey, setReadableDocumentKey] = useState<string | null>(
+    null,
+  );
+  const currentDocumentKey = createDocumentReadableKey(specs.documentState);
+  const isDocumentReadable =
+    specs.documentState.status === "missing" ||
+    (currentDocumentKey !== null && readableDocumentKey === currentDocumentKey);
   const comments = useComments({
     workspacePath: workspace.workspace?.root ?? null,
     specId: specs.selectedSpecId,
-    fileKey: isHtmlDocument ? null : specs.selectedFileKey,
+    fileKey:
+      isHtmlDocument || !isDocumentReadable ? null : specs.selectedFileKey,
     statusFilter: "all",
+    correlationId: specs.documentState.correlationId ?? null,
   });
   const [reviewRunTargetScope, setReviewRunTargetScope] =
     useState<ReviewRunTargetScope>("file");
@@ -136,9 +145,10 @@ function App() {
     useState<ReviewRunExecutionMode>("currentWorkspace");
   const reviewRuns = useReviewRuns({
     workspacePath: workspace.workspace?.root ?? null,
-    specId: specs.selectedSpecId,
-    fileKey: specs.selectedFileKey,
+    specId: isDocumentReadable ? specs.selectedSpecId : null,
+    fileKey: isDocumentReadable ? specs.selectedFileKey : null,
     targetScope: reviewRunTargetScope,
+    correlationId: specs.documentState.correlationId ?? null,
   });
   const [workspaceInput, setWorkspaceInput] = useState("");
   const [activeCommentId, setActiveCommentId] = useState<CommentId | null>(
@@ -406,7 +416,6 @@ function App() {
     }
 
     setActiveCommentId(addedComment.id);
-    await comments.reloadComments();
     return true;
   };
 
@@ -807,7 +816,8 @@ function App() {
   const isCommentScopeReady =
     workspace.workspace !== null &&
     specs.selectedSpecId !== null &&
-    specs.selectedFileKey !== null;
+    specs.selectedFileKey !== null &&
+    isDocumentReadable;
   const leftNavigationSubtitle =
     workspace.workspacePath ?? uiText.workspace.noWorkspace;
 
@@ -958,6 +968,9 @@ function App() {
               onUpdateComment={updateComment}
               onSelectComment={selectComment}
               onAnchorDisplayStatesChange={updateCommentAnchorDisplayStates}
+              onFirstReadable={() => {
+                setReadableDocumentKey(currentDocumentKey);
+              }}
             />
           )
         }
@@ -1032,6 +1045,22 @@ function formatCommentExportSuccessMessage(
 /** @returns The number of unresolved comments in the active sidebar list. */
 function countOpenComments(comments: readonly { status: string }[]): number {
   return comments.filter((comment) => comment.status === "open").length;
+}
+
+/** @returns A stable identity for the document load that must become readable. */
+function createDocumentReadableKey(
+  state: ReturnType<typeof useSpecs>["documentState"],
+): string | null {
+  if (state.status !== "ready") {
+    return null;
+  }
+
+  return [
+    state.workspacePath,
+    state.specId,
+    state.fileKey,
+    state.correlationId ?? "no-correlation",
+  ].join("\u0000");
 }
 
 /** Copies generated prompt text to the browser clipboard. */

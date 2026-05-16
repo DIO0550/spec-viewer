@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
 import { createCommentCommandTestDouble } from "../lib/comment-command-test-double";
+import { configurePerformanceLoggerForTest } from "../lib/performance";
 import type { CommentCommands } from "../lib/tauri";
 import type {
   Comment,
@@ -251,6 +252,36 @@ test("useCommentsは読み込み失敗をerror状態として返す", async () =
     },
   });
   result.unmount();
+});
+
+test("useCommentsは読み込み失敗時もperformance spanを記録する", async () => {
+  configurePerformanceLoggerForTest(true);
+  const debugSpy = vi.spyOn(console, "debug").mockImplementation(() => undefined);
+  const commands = createCommands({
+    listComments: vi.fn().mockRejectedValue("comment load failed"),
+  });
+  const result = renderUseComments({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "phase-2-comments",
+    fileKey: "tasks",
+    commands,
+  });
+
+  await flushAsyncEffects();
+
+  expect(debugSpy).toHaveBeenCalledWith(
+    "[spec-viewer:perf]",
+    expect.objectContaining({
+      type: "span",
+      phase: "comments.list",
+      metadata: expect.objectContaining({
+        error: true,
+      }),
+    }),
+  );
+  result.unmount();
+  debugSpy.mockRestore();
+  configurePerformanceLoggerForTest(null);
 });
 
 test("useCommentsはscope変更時にリセットして再読み込みする", async () => {

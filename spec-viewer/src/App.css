@@ -652,6 +652,7 @@ textarea:disabled {
 
 .workspace-toolbar__field input:focus-visible,
 .workspace-toolbar__theme select:focus-visible,
+.markdown-document-search__field input:focus-visible,
 .button:focus-visible,
 .icon-button:focus-visible,
 .spec-tree__item:focus-visible,
@@ -2095,6 +2096,9 @@ textarea:disabled {
 }
 
 .markdown-viewer__header {
+  position: sticky;
+  top: 0;
+  z-index: 12;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -2102,17 +2106,105 @@ textarea:disabled {
   max-width: none;
   border-bottom: 1px solid var(--color-border);
   margin-bottom: 20px;
-  padding-bottom: 16px;
+  padding: 0 0 16px;
+  background:
+    linear-gradient(
+      180deg,
+      var(--color-raised) 0%,
+      color-mix(in srgb, var(--color-raised) 94%, transparent) 76%,
+      transparent 100%
+    );
 }
 
 .markdown-viewer__header > div {
   min-width: 0;
 }
 
-.markdown-viewer__header > .icon-button {
+.markdown-viewer__actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.markdown-viewer__actions > .icon-button {
   width: 34px;
   height: 34px;
   min-height: 34px;
+}
+
+.markdown-document-search {
+  display: grid;
+  grid-template-columns: minmax(150px, 220px) auto auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.markdown-document-search__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  border: 0;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.markdown-document-search__field {
+  position: relative;
+  min-width: 0;
+}
+
+.markdown-document-search__field input {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 7px;
+  padding: 0 34px 0 11px;
+  color: var(--color-text);
+  background: var(--color-control);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.markdown-document-search__field input:disabled {
+  color: var(--color-text-muted);
+  background: var(--color-control-disabled);
+}
+
+.markdown-document-search__clear {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  width: 26px;
+  height: 26px;
+  min-height: 26px;
+  transform: translateY(-50%);
+}
+
+.markdown-document-search__count {
+  min-width: 3.6ch;
+  color: var(--color-text-muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.markdown-document-search__navigation {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.markdown-document-search__navigation .icon-button {
+  width: 30px;
+  height: 30px;
+  min-height: 30px;
 }
 
 .markdown-viewer__header h1 {
@@ -2282,6 +2374,7 @@ textarea:disabled {
   pointer-events: none;
   cursor: pointer;
   transform: none;
+  user-select: none;
   transition:
     opacity 120ms ease,
     background-color 120ms ease;
@@ -2320,6 +2413,7 @@ textarea:disabled {
   gap: 6px;
   min-width: 0;
   margin: 0 0 1rem;
+  user-select: none;
 }
 
 .markdown-comment-annotation {
@@ -2558,149 +2652,27 @@ textarea:disabled {
 
 .markdown-rendered [data-comment-highlight="true"] {
   position: relative;
-  user-select: text;
-  border-radius: 7px;
-  background:
-    linear-gradient(
-      90deg,
-      color-mix(in srgb, var(--color-accent) 22%, transparent),
-      transparent 7px
-    ),
-    color-mix(in srgb, var(--color-accent-soft) 70%, transparent);
-  box-shadow: inset 0 0 0 1px
-    color-mix(in srgb, var(--color-accent) 30%, transparent);
   scroll-margin: 88px;
-  transition:
-    background-color 120ms ease,
-    box-shadow 120ms ease;
-}
-
-.markdown-rendered [data-comment-highlight="true"][role="button"] {
-  cursor: pointer;
-}
-
-.markdown-rendered [data-comment-highlight="true"][role="button"]:hover {
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 48%, transparent),
-    0 0 0 2px var(--color-focus-glow);
-}
-
-.markdown-rendered
-  [data-comment-highlight="true"][data-comment-highlight-mode="range"] {
-  background:
-    linear-gradient(
-      90deg,
-      color-mix(in srgb, var(--color-accent) 24%, transparent),
-      transparent 7px
-    ),
-    transparent;
-  box-shadow: inset 7px 0 0
-    color-mix(in srgb, var(--color-accent) 26%, transparent);
 }
 
 .markdown-rendered [data-comment-highlight-range="true"] {
-  user-select: text;
-  border-radius: 5px;
-  padding: 0.05em 0.12em;
   color: inherit;
-  background: color-mix(in srgb, var(--color-accent-soft) 86%, transparent);
-  box-shadow: inset 0 0 0 1px
-    color-mix(in srgb, var(--color-accent) 32%, transparent);
 }
 
-.markdown-rendered [data-comment-highlight-state="active"] {
-  background:
-    linear-gradient(90deg, var(--color-accent), var(--color-accent) 7px),
-    var(--color-accent-softer);
+.markdown-document-search__match {
+  border-radius: 4px;
+  padding: 0.02em 0.08em;
+  color: inherit;
+  background: color-mix(in srgb, var(--color-warning-soft) 86%, transparent);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--color-warning) 32%, transparent);
+}
+
+.markdown-document-search__match[data-document-search-match-active="true"] {
+  background: color-mix(in srgb, var(--color-warning) 34%, transparent);
   box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 56%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--color-warning) 58%, transparent),
     0 0 0 2px var(--color-focus-glow);
-}
-
-.markdown-rendered [data-comment-highlight-state="resolved"] {
-  background:
-    linear-gradient(
-      90deg,
-      color-mix(in srgb, var(--color-muted-pill-strong) 25%, transparent),
-      transparent 7px
-    ),
-    color-mix(in srgb, var(--color-muted-pill) 70%, transparent);
-  box-shadow: inset 0 0 0 1px
-    color-mix(in srgb, var(--color-muted-pill-strong) 24%, transparent);
-}
-
-.markdown-rendered [data-comment-highlight-state="stale"] {
-  background:
-    linear-gradient(
-      90deg,
-      color-mix(in srgb, var(--color-warning) 32%, transparent),
-      transparent 7px
-    ),
-    color-mix(in srgb, var(--color-warning-soft) 72%, transparent);
-  box-shadow: inset 0 0 0 1px
-    color-mix(in srgb, var(--color-warning) 34%, transparent);
-}
-
-.markdown-rendered [data-comment-highlight-state="moved"] {
-  background:
-    linear-gradient(
-      90deg,
-      color-mix(in srgb, var(--color-info) 34%, transparent),
-      transparent 7px
-    ),
-    color-mix(in srgb, var(--color-info-soft) 74%, transparent);
-  box-shadow: inset 0 0 0 1px
-    color-mix(in srgb, var(--color-info) 36%, transparent);
-}
-
-.markdown-rendered [data-comment-highlight-state="fuzzy"] {
-  background:
-    linear-gradient(
-      90deg,
-      color-mix(in srgb, var(--color-purple) 32%, transparent),
-      transparent 7px
-    ),
-    color-mix(in srgb, var(--color-purple-soft) 72%, transparent);
-  box-shadow: inset 0 0 0 1px
-    color-mix(in srgb, var(--color-purple) 34%, transparent);
-}
-
-.markdown-rendered
-  [data-comment-highlight-range="true"][data-comment-highlight-state="active"] {
-  background: var(--color-accent-soft);
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 52%, transparent),
-    0 0 0 2px var(--color-focus-glow);
-}
-
-.markdown-rendered
-  [data-comment-highlight-range="true"][data-comment-highlight-state="resolved"] {
-  background: color-mix(in srgb, var(--color-muted-pill) 78%, transparent);
-  box-shadow: inset 0 0 0 1px
-    color-mix(in srgb, var(--color-muted-pill-strong) 24%, transparent);
-}
-
-.markdown-rendered pre[data-comment-highlight="true"] {
-  background: var(--color-code-block);
-}
-
-.markdown-rendered pre[data-comment-highlight-state="open"],
-.markdown-rendered pre[data-comment-highlight-state="resolved"],
-.markdown-rendered pre[data-comment-highlight-state="stale"],
-.markdown-rendered pre[data-comment-highlight-state="moved"],
-.markdown-rendered pre[data-comment-highlight-state="fuzzy"] {
-  box-shadow:
-    inset 7px 0 0 color-mix(in srgb, var(--color-accent-ring) 78%, transparent),
-    inset 0 0 0 1px
-    color-mix(in srgb, var(--color-code-block-text) 14%, transparent);
-}
-
-.markdown-rendered pre[data-comment-highlight-state="active"] {
-  box-shadow:
-    inset 7px 0 0 var(--color-accent-ring),
-    0 0 0 2px var(--color-focus-glow),
-    inset 0 0 0 1px
-    color-mix(in srgb, var(--color-code-block-text) 18%, transparent);
 }
 
 .text-selection-comment-button,
@@ -2743,6 +2715,7 @@ textarea:disabled {
   overflow: hidden;
 }
 
+.markdown-viewer[data-comment-dialog-open="true"] .text-selection-comment-button,
 .markdown-viewer[data-comment-dialog-open="true"] .markdown-block-comment-button,
 .markdown-viewer[data-comment-dialog-open="true"]
   .markdown-comment-target:hover
@@ -3323,8 +3296,19 @@ textarea:disabled {
 
   .markdown-viewer__header {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr);
     align-items: start;
+  }
+
+  .markdown-viewer__actions {
+    width: 100%;
+    align-items: stretch;
+    justify-content: space-between;
+  }
+
+  .markdown-document-search {
+    flex: 1 1 auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
   }
 }
 

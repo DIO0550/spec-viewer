@@ -80,10 +80,18 @@ impl WorkspaceFileMapping {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkspaceConfig {
     files: Vec<WorkspaceFileMapping>,
+    scan_excluded_directory_names: Vec<String>,
 }
 
 impl WorkspaceConfig {
     pub fn new(files: Vec<WorkspaceFileMapping>) -> Result<Self, WorkspaceConfigError> {
+        Self::with_scan_excluded_directory_names(files, default_scan_excluded_directory_names())
+    }
+
+    pub fn with_scan_excluded_directory_names(
+        files: Vec<WorkspaceFileMapping>,
+        scan_excluded_directory_names: Vec<String>,
+    ) -> Result<Self, WorkspaceConfigError> {
         let mut seen_keys = HashSet::new();
 
         for file in &files {
@@ -92,7 +100,12 @@ impl WorkspaceConfig {
             }
         }
 
-        Ok(Self { files })
+        Ok(Self {
+            files,
+            scan_excluded_directory_names: validate_scan_excluded_directory_names(
+                scan_excluded_directory_names,
+            )?,
+        })
     }
 
     pub fn default_for(kind: WorkspaceKind) -> Self {
@@ -131,11 +144,29 @@ impl WorkspaceConfig {
             }
         }
 
-        Self { files }
+        Self {
+            files,
+            scan_excluded_directory_names: user_config.scan_excluded_directory_names,
+        }
     }
 
     pub fn merge_spec_override(&self, spec_override: &SpecConfigOverride) -> Self {
-        self.merge_user_config(spec_override.config.clone())
+        let mut files = self.files.clone();
+
+        for override_file in spec_override.config.files.clone() {
+            match files
+                .iter()
+                .position(|default_file| default_file.key() == override_file.key())
+            {
+                Some(index) => files[index] = override_file,
+                None => files.push(override_file),
+            }
+        }
+
+        Self {
+            files,
+            scan_excluded_directory_names: self.scan_excluded_directory_names.clone(),
+        }
     }
 
     pub fn files(&self) -> &[WorkspaceFileMapping] {
@@ -144,6 +175,10 @@ impl WorkspaceConfig {
 
     pub fn file_for_key(&self, key: SpecFileKey) -> Option<&WorkspaceFileMapping> {
         self.files.iter().find(|file| file.key() == key)
+    }
+
+    pub fn scan_excluded_directory_names(&self) -> &[String] {
+        &self.scan_excluded_directory_names
     }
 
     fn from_default_keys(
@@ -191,6 +226,12 @@ pub enum WorkspaceConfigError {
     MissingFileName { key: SpecFileKey },
     #[error("unsafe file name for workspace config key {key}: {file_name}")]
     UnsafeFileName { key: SpecFileKey, file_name: String },
+    #[error("unsafe scan excluded directory name in workspace config: {name}")]
+    UnsafeScanExcludedDirectoryName { name: String },
+}
+
+pub fn default_scan_excluded_directory_names() -> Vec<String> {
+    vec!["plan-review".to_string(), "user-review".to_string()]
 }
 
 fn plugin_workspace_default_file_name(key: SpecFileKey) -> &'static str {
@@ -202,6 +243,31 @@ fn plugin_workspace_default_file_name(key: SpecFileKey) -> &'static str {
         SpecFileKey::Requirements => "requirements.md",
         SpecFileKey::Design => "design.md",
     }
+}
+
+fn validate_scan_excluded_directory_names(
+    names: Vec<String>,
+) -> Result<Vec<String>, WorkspaceConfigError> {
+    let mut normalized = Vec::with_capacity(names.len());
+
+    for name in names {
+        let trimmed = name.trim();
+
+        if trimmed.is_empty()
+            || trimmed.contains('/')
+            || trimmed.contains('\\')
+            || trimmed.contains('\0')
+            || Path::new(trimmed)
+                .components()
+                .any(|component| !matches!(component, Component::Normal(_)))
+        {
+            return Err(WorkspaceConfigError::UnsafeScanExcludedDirectoryName { name });
+        }
+
+        normalized.push(trimmed.to_string());
+    }
+
+    Ok(normalized)
 }
 
 fn spec_skill_default_file_name(key: SpecFileKey) -> &'static str {
@@ -269,6 +335,10 @@ mod tests {
             ],
             files
         );
+        assert_eq!(
+            vec!["plan-review".to_string(), "user-review".to_string()],
+            config.scan_excluded_directory_names()
+        );
     }
 
     #[test]
@@ -289,6 +359,31 @@ mod tests {
             ],
             files
         );
+    }
+
+    #[test]
+    fn workspace_config_accepts_empty_scan_exclusions_to_restore_recursive_scan() {
+        let config = WorkspaceConfig::with_scan_excluded_directory_names(
+            vec![mapping(SpecFileKey::Tasks, "tasks.md").expect("mapping should be valid")],
+            Vec::new(),
+        )
+        .expect("empty scan exclusions should be valid");
+
+        assert!(config.scan_excluded_directory_names().is_empty());
+    }
+
+    #[test]
+    fn workspace_config_rejects_nested_scan_exclusion_names() {
+        let result = WorkspaceConfig::with_scan_excluded_directory_names(
+            vec![mapping(SpecFileKey::Tasks, "tasks.md").expect("mapping should be valid")],
+            vec!["plan-review/nested".to_string()],
+        );
+
+        assert!(matches!(
+            result,
+            Err(WorkspaceConfigError::UnsafeScanExcludedDirectoryName { name })
+                if name == "plan-review/nested"
+        ));
     }
 
     #[test]

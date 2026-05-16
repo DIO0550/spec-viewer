@@ -5,6 +5,10 @@ import {
   reviewRunCommands as defaultReviewRunCommands,
   type ReviewRunCommands,
 } from "../lib/tauri";
+import {
+  createPerformanceCorrelationId,
+  startPerformanceSpan,
+} from "../lib/performance";
 import type { CommentId } from "../types/comment";
 import type { NormalizedCommandError } from "../types/ipc";
 import type {
@@ -119,6 +123,7 @@ export type UseReviewRunsOptions = Readonly<{
   specId: string | null;
   fileKey: SpecFileKey | null;
   targetScope: ReviewRunTargetScope;
+  correlationId?: string | null;
   commands?: ReviewRunCommands;
 }>;
 
@@ -200,10 +205,28 @@ export function useReviewRuns(
       error: null,
     });
 
+    const correlationId =
+      options.correlationId ??
+      createPerformanceCorrelationId("review-runs-list");
+    const endSpan = startPerformanceSpan(correlationId, "reviewRuns.list", {
+      targetScope: target.scope,
+      specId: target.specId,
+      fileKey: target.scope === "file" ? target.fileKey : null,
+    });
+
     try {
       const response = await commands.listReviewRuns({
         workspacePath: options.workspacePath,
         target,
+        ...(options.correlationId === undefined ||
+        options.correlationId === null
+          ? {}
+          : { correlationId }),
+      });
+      endSpan({
+        activeCount: response.active.length,
+        archivedCount: response.archived.length,
+        problemCount: response.problems.length,
       });
 
       if (listRequestIdRef.current !== requestId) {
@@ -220,6 +243,10 @@ export function useReviewRuns(
       );
       return true;
     } catch (error) {
+      endSpan({
+        error: true,
+      });
+
       if (listRequestIdRef.current !== requestId) {
         return false;
       }
@@ -234,7 +261,7 @@ export function useReviewRuns(
       });
       return false;
     }
-  }, [commands, options.workspacePath, target]);
+  }, [commands, options.correlationId, options.workspacePath, target]);
 
   useEffect(() => {
     createRequestIdRef.current += 1;

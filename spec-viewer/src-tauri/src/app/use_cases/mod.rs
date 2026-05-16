@@ -8,7 +8,10 @@ use std::path::Path;
 use thiserror::Error;
 
 use crate::{
-    app::services::file_watching::{plan_file_watch, FileWatchPlan},
+    app::services::{
+        file_watching::{plan_file_watch, FileWatchPlan},
+        markdown_cache::MarkdownDocumentCache,
+    },
     domain::{
         comment::{CommentDomainError, CommentRepositoryError},
         spec::{MarkdownBlock, SpecDocumentFormat, SpecDomainError},
@@ -54,6 +57,7 @@ pub struct AppUseCases<Detector, ConfigLoader, SpecTreeScanner, MarkdownReader> 
     config_loader: ConfigLoader,
     spec_tree_scanner: SpecTreeScanner,
     markdown_reader: MarkdownReader,
+    markdown_cache: MarkdownDocumentCache,
 }
 
 impl<Detector, ConfigLoader, SpecTreeScanner, MarkdownReader>
@@ -70,6 +74,7 @@ impl<Detector, ConfigLoader, SpecTreeScanner, MarkdownReader>
             config_loader,
             spec_tree_scanner,
             markdown_reader,
+            markdown_cache: MarkdownDocumentCache::new(),
         }
     }
 }
@@ -88,6 +93,10 @@ impl Default for FilesystemAppUseCases {
 impl FilesystemAppUseCases {
     pub fn comment_use_cases(&self, workspace: &LoadWorkspaceResult) -> FilesystemCommentUseCases {
         FilesystemCommentUseCases::for_workspace(workspace)
+    }
+
+    pub fn markdown_cache(&self) -> &MarkdownDocumentCache {
+        &self.markdown_cache
     }
 
     pub fn plan_file_watch(
@@ -117,6 +126,43 @@ impl FilesystemAppUseCases {
             spec_id,
             archive_path.to_string_lossy().into_owned(),
         ))
+    }
+
+    pub fn read_spec_file_cached(
+        &self,
+        workspace: &LoadWorkspaceResult,
+        spec_id: &str,
+        key: SpecFileKey,
+    ) -> Result<ReadSpecFileResult, AppUseCaseError> {
+        let effective_config = spec_config_for_directory(
+            &self.config_loader,
+            workspace.layout(),
+            workspace.config(),
+            spec_id,
+        )?;
+
+        self.markdown_cache
+            .read_spec_file(
+                &self.markdown_reader,
+                workspace.layout(),
+                &effective_config,
+                spec_id,
+                key,
+            )
+            .map(ReadSpecFileResult::from)
+            .map_err(AppUseCaseError::from)
+    }
+
+    pub fn read_spec_blocks_cached(
+        &self,
+        workspace: &LoadWorkspaceResult,
+        spec_id: &str,
+        key: SpecFileKey,
+    ) -> Result<Vec<MarkdownBlock>, AppUseCaseError> {
+        match self.read_spec_file_cached(workspace, spec_id, key)? {
+            ReadSpecFileResult::Found(document) => Ok(document.blocks().to_vec()),
+            ReadSpecFileResult::Missing(_) => Ok(Vec::new()),
+        }
     }
 }
 

@@ -8,6 +8,7 @@ use tauri::{AppHandle, Emitter, State};
 use crate::{
     app::services::file_watching::{
         FileWatchChange, FileWatchFailure, FileWatchNotification, FileWatchRegistration,
+        FileWatchTargetKind,
     },
     domain::spec::SpecFileKey,
 };
@@ -83,9 +84,11 @@ pub fn start_spec_file_watch(
         .use_cases()
         .plan_file_watch(&workspace, &request.spec_id, file_key)
         .map_err(CommandError::from)?;
+    let use_cases = state.use_cases().clone();
     let registration = state
         .file_watch_manager()
         .replace_watch(plan, move |notification| {
+            invalidate_markdown_cache(&use_cases, &notification);
             emit_file_watch_notification(&app_handle, notification);
         })
         .map_err(|error| CommandError::file_watch(error.to_string()))?;
@@ -117,6 +120,22 @@ fn emit_file_watch_notification(app_handle: &AppHandle, notification: FileWatchN
                 SpecFileWatchErrorEvent::from(error),
             );
         }
+    }
+}
+
+fn invalidate_markdown_cache(
+    use_cases: &crate::app::use_cases::FilesystemAppUseCases,
+    notification: &FileWatchNotification,
+) {
+    let FileWatchNotification::Changed(change) = notification else {
+        return;
+    };
+
+    match change.kind() {
+        FileWatchTargetKind::Markdown => use_cases.markdown_cache().invalidate_path(change.path()),
+        FileWatchTargetKind::Config => use_cases
+            .markdown_cache()
+            .clear_workspace(Path::new(change.scope().workspace_path())),
     }
 }
 

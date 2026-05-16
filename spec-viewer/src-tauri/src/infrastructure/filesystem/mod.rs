@@ -638,7 +638,7 @@ fn scan_child_directories(
         })?;
         let file_name = entry.file_name().to_string_lossy().into_owned();
 
-        if is_hidden_name(&file_name) {
+        if is_hidden_name(&file_name) || is_scan_excluded_name(&file_name, config) {
             continue;
         }
 
@@ -660,6 +660,13 @@ fn scan_child_directories(
         .into_iter()
         .map(|(label, path)| scan_spec_directory(&path, parent_id, &label, config))
         .collect()
+}
+
+fn is_scan_excluded_name(file_name: &str, config: &WorkspaceConfig) -> bool {
+    config
+        .scan_excluded_directory_names()
+        .iter()
+        .any(|excluded_name| excluded_name == file_name)
 }
 
 fn scan_spec_directory(
@@ -1126,6 +1133,52 @@ mod tests {
     }
 
     #[test]
+    fn spec_tree_scanner_excludes_review_directories_by_default() {
+        let workspace = TestWorkspace::new("scan-exclusions");
+        workspace.create_dir(PLUGIN_WORKSPACE_SPECS_DIR);
+        workspace.create_dir(".plugin-workspace/.specs/auth/plan-review");
+        workspace.create_dir(".plugin-workspace/.specs/auth/user-review");
+        workspace.create_dir(".plugin-workspace/.specs/auth/child");
+        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
+        let config = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
+
+        let tree = FilesystemSpecTreeScanner::new()
+            .scan(&layout, &config)
+            .expect("spec tree should be scanned");
+
+        let auth = &tree[0].children()[0];
+        assert_eq!(
+            vec![".plugin-workspace/.specs/auth/child"],
+            node_ids(auth.children())
+        );
+    }
+
+    #[test]
+    fn spec_tree_scanner_allows_config_to_restore_review_directories() {
+        let workspace = TestWorkspace::new("scan-exclusions-disabled");
+        workspace.create_dir(PLUGIN_WORKSPACE_SPECS_DIR);
+        workspace.create_dir(".plugin-workspace/.specs/auth/plan-review");
+        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
+        let config = WorkspaceConfig::with_scan_excluded_directory_names(
+            WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace)
+                .files()
+                .to_vec(),
+            Vec::new(),
+        )
+        .expect("empty scan exclusion config should be valid");
+
+        let tree = FilesystemSpecTreeScanner::new()
+            .scan(&layout, &config)
+            .expect("spec tree should be scanned");
+
+        let auth = &tree[0].children()[0];
+        assert_eq!(
+            vec![".plugin-workspace/.specs/auth/plan-review"],
+            node_ids(auth.children())
+        );
+    }
+
+    #[test]
     fn spec_tree_scanner_marks_html_fallback_as_present() {
         let workspace = TestWorkspace::new("html-fallback-tree");
         workspace.create_dir(PLUGIN_WORKSPACE_SPECS_DIR);
@@ -1265,10 +1318,7 @@ mod tests {
         let issue = &root.children()[0];
         assert_eq!(".plugin-workspace/.specs/021-issue-262", issue.id());
         assert_eq!(
-            vec![
-                ".plugin-workspace/.specs/021-issue-262/code-review",
-                ".plugin-workspace/.specs/021-issue-262/plan-review"
-            ],
+            vec![".plugin-workspace/.specs/021-issue-262/code-review"],
             node_ids(issue.children())
         );
         assert_eq!(
