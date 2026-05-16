@@ -249,16 +249,21 @@ pub fn read_spec_file(
         .map(|context| start_span(context, "command.read_spec_file"));
     let result = state
         .use_cases()
-        .read_spec_file_cached(&workspace, &request.spec_id, key)?;
+        .read_spec_file_cached(&workspace, &request.spec_id, key)
+        .map_err(CommandError::from);
 
     if let (Some(context), Some(end_span)) = (performance_context.as_ref(), end_span) {
         let mut metadata = std::collections::BTreeMap::new();
         metadata.insert("spec_id", request.spec_id.clone());
         metadata.insert("file_key", request.file_key.clone());
+        if let Err(error) = &result {
+            metadata.insert("error", "true".to_string());
+            metadata.insert("error_code", error.code().to_string());
+        }
         emit_span(context, end_span(metadata));
     }
 
-    Ok(ReadSpecFileResponse::from(result))
+    Ok(ReadSpecFileResponse::from(result?))
 }
 
 #[tauri::command]
