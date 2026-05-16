@@ -234,6 +234,7 @@ export function MarkdownViewer({
   }, [onAnchorDisplayStatesChange, resetKey]);
   useLayoutEffect(() => {
     if (state.status !== "ready" || readyContents === null) {
+      firstReadableResetKeyRef.current = null;
       return;
     }
 

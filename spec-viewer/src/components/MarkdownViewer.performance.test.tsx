@@ -11,6 +11,7 @@ const workspacePath = "/workspace/spec-reviewer";
 
 type RenderResult = Readonly<{
   container: HTMLDivElement;
+  rerender: (component: ReactNode) => void;
   unmount: () => void;
 }>;
 
@@ -25,12 +26,29 @@ function renderComponent(component: ReactNode): RenderResult {
 
   return {
     container,
+    rerender: (nextComponent: ReactNode) => {
+      act(() => {
+        root.render(nextComponent);
+      });
+    },
     unmount: () => {
       act(() => {
         root.unmount();
       });
       container.remove();
     },
+  };
+}
+
+function createLoadingState(): SpecDocumentState {
+  return {
+    status: "loading",
+    workspacePath,
+    specId: "phase-1-viewer",
+    fileKey: "tasks",
+    correlationId: "cid-loading",
+    document: null,
+    error: null,
   };
 }
 
@@ -68,6 +86,41 @@ test("MarkdownViewerは初回本文表示後にfirst readableを通知する", (
   );
 
   expect(onFirstReadable).toHaveBeenCalledTimes(1);
+  result.unmount();
+});
+
+test("MarkdownViewerはloadingを挟んだ同一文書の再表示でもfirst readableを再通知する", () => {
+  const onFirstReadable = vi.fn();
+  const result = renderComponent(
+    <MarkdownViewer
+      state={createReadyState("# Tasks")}
+      selectedSpecLabel="Phase 1 Viewer"
+      selectedFileLabel="Tasks"
+      onReload={vi.fn()}
+      onFirstReadable={onFirstReadable}
+    />,
+  );
+
+  result.rerender(
+    <MarkdownViewer
+      state={createLoadingState()}
+      selectedSpecLabel="Phase 1 Viewer"
+      selectedFileLabel="Tasks"
+      onReload={vi.fn()}
+      onFirstReadable={onFirstReadable}
+    />,
+  );
+  result.rerender(
+    <MarkdownViewer
+      state={createReadyState("# Tasks")}
+      selectedSpecLabel="Phase 1 Viewer"
+      selectedFileLabel="Tasks"
+      onReload={vi.fn()}
+      onFirstReadable={onFirstReadable}
+    />,
+  );
+
+  expect(onFirstReadable).toHaveBeenCalledTimes(2);
   result.unmount();
 });
 
