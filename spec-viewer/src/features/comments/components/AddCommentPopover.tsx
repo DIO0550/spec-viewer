@@ -5,17 +5,20 @@ import {
   type KeyboardEvent,
   useEffect,
   useId,
+  useReducer,
   useRef,
   useState,
 } from "react";
 
 import { uiText } from "@/shared/lib/uiText";
-import type { CommentAnchor, CommentAnchorDraft } from "@/features/comments/types/comment";
-
-export type AddCommentSubmitInput = Readonly<{
-  anchor: CommentAnchor;
-  body: string;
-}>;
+import {
+  CommentBody,
+  type CommentBodyValidationError,
+} from "@/features/comments/lib/comment-body";
+import type {
+  AddCommentSubmitInput,
+  CommentAnchorDraft,
+} from "@/features/comments/types/comment";
 
 type Props = Readonly<{
   draft: CommentAnchorDraft;
@@ -33,6 +36,43 @@ const emptyBodyMessage = "保存するコメントを入力してください。
 const failedSaveMessage =
   "コメントを保存できませんでした。再試行してください。";
 
+type CommentBodyFormState = Readonly<{
+  body: CommentBody;
+  error: CommentBodyValidationError | null;
+}>;
+
+type CommentBodyFormAction =
+  | Readonly<{
+      type: "body_updated";
+      value: string;
+    }>
+  | Readonly<{
+      type: "submit_attempted";
+    }>;
+
+/** @returns Initial add-comment body form state. */
+function createCommentBodyFormState(): CommentBodyFormState {
+  return { body: CommentBody.create(), error: null };
+}
+
+/** @returns Next add-comment body form state for the requested action. */
+function reduceCommentBodyForm(
+  state: CommentBodyFormState,
+  action: CommentBodyFormAction,
+): CommentBodyFormState {
+  if (action.type === "body_updated") {
+    return {
+      body: CommentBody.update(state.body, action.value),
+      error: null,
+    };
+  }
+
+  return {
+    ...state,
+    error: CommentBody.validate(state.body),
+  };
+}
+
 /** @returns A floating form for saving a comment from a Markdown selection. */
 export function AddCommentPopover({
   draft,
@@ -49,23 +89,28 @@ export function AddCommentPopover({
   const errorId = useId();
   const popoverRef = useRef<HTMLElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [body, setBody] = useState("");
-  const [validationMessage, setValidationMessage] = useState<string | null>(
+  const [commentBodyFormState, dispatchCommentBodyForm] = useReducer(
+    reduceCommentBodyForm,
+    undefined,
+    createCommentBodyFormState,
+  );
+  const [submitErrorMessage, setSubmitErrorMessage] = useState<string | null>(
     null,
   );
-  const trimmedBody = body.trim();
-  const isSubmitDisabled =
-    isSaving || !isScopeReady || trimmedBody.length === 0;
+  const isBodyEmpty = CommentBody.isEmpty(commentBodyFormState.body);
+  const isSubmitDisabled = isSaving || !isScopeReady || isBodyEmpty;
   const scopeMessage = isScopeReady ? null : missingScopeMessage;
-  const visibleErrorMessage = scopeMessage ?? validationMessage ?? errorMessage;
+  const visibleErrorMessage =
+    scopeMessage ??
+    formatCommentBodyValidationError(commentBodyFormState.error) ??
+    submitErrorMessage ??
+    errorMessage;
   const describedBy =
     visibleErrorMessage === null ? hintId : `${hintId} ${errorId}`;
 
   useEffect(() => {
-    setBody("");
-    setValidationMessage(null);
     textareaRef.current?.focus();
-  }, [draft]);
+  }, []);
 
   useEffect(() => {
     const closeWhenClickingOutside = (event: globalThis.MouseEvent): void => {
@@ -95,23 +140,24 @@ export function AddCommentPopover({
 
   const submitComment = async (): Promise<void> => {
     if (!isScopeReady) {
-      setValidationMessage(missingScopeMessage);
       return;
     }
 
-    if (trimmedBody.length === 0) {
-      setValidationMessage(emptyBodyMessage);
+    const validationError = CommentBody.validate(commentBodyFormState.body);
+    dispatchCommentBodyForm({ type: "submit_attempted" });
+
+    if (validationError !== null) {
       return;
     }
 
-    setValidationMessage(null);
+    setSubmitErrorMessage(null);
     const wasSaved = await onSubmit({
       anchor: draft.anchor,
-      body: trimmedBody,
+      body: CommentBody.getTrimmedValue(commentBodyFormState.body),
     });
 
     if (!wasSaved) {
-      setValidationMessage(failedSaveMessage);
+      setSubmitErrorMessage(failedSaveMessage);
     }
   };
 
@@ -182,14 +228,17 @@ export function AddCommentPopover({
           <textarea
             id={textareaId}
             ref={textareaRef}
-            value={body}
+            value={commentBodyFormState.body.value}
             rows={4}
             aria-describedby={describedBy}
             aria-invalid={visibleErrorMessage !== null}
             placeholder="レビューコメントを書く..."
             onInput={(event) => {
-              setBody(event.currentTarget.value);
-              setValidationMessage(null);
+              dispatchCommentBodyForm({
+                type: "body_updated",
+                value: event.currentTarget.value,
+              });
+              setSubmitErrorMessage(null);
             }}
             onKeyDown={handleTextareaKeyDown}
             disabled={isSaving}
@@ -240,4 +289,15 @@ export function AddCommentPopover({
 /** @returns Human-readable block type text for the anchor preview. */
 function formatDraftBlockType(blockType: string): string {
   return blockType.replace(/_/g, " ");
+}
+
+/** @returns Display message for a comment body validation error. */
+function formatCommentBodyValidationError(
+  error: CommentBodyValidationError | null,
+): string | null {
+  if (error === "empty_body") {
+    return emptyBodyMessage;
+  }
+
+  return null;
 }

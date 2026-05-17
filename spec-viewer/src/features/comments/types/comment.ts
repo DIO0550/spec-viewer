@@ -79,6 +79,11 @@ export type CommentAnchorDraft = Readonly<{
   selectionBounds: CommentSelectionBounds;
 }>;
 
+export type AddCommentSubmitInput = Readonly<{
+  anchor: CommentAnchor;
+  body: string;
+}>;
+
 export type CommentAnchorResolutionTarget = Readonly<{
   blockType: CommentBlockType;
   blockIndex: number;
