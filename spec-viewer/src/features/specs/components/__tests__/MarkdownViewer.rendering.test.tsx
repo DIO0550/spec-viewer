@@ -1080,6 +1080,58 @@ test("MarkdownViewerはMarkdownブロックのコメントボタンから追加�
   result.unmount();
 });
 
+test("MarkdownViewerは別ブロックのコメントdraftへ切り替えると追加popoverを初期化する", async () => {
+  const result = renderViewer(
+    createReadyState(["First paragraph.", "", "Second paragraph."].join("\n")),
+  );
+  const addButtons = result.container.querySelectorAll(
+    ".markdown-block-comment-button",
+  );
+
+  act(() => {
+    (addButtons[0] as HTMLButtonElement).click();
+  });
+
+  const firstTextarea = result.container.querySelector(
+    ".add-comment-popover textarea",
+  ) as HTMLTextAreaElement;
+  act(() => {
+    firstTextarea.value = "   ";
+    firstTextarea.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  await act(async () => {
+    firstTextarea.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Enter",
+        ctrlKey: true,
+        bubbles: true,
+      }),
+    );
+  });
+
+  expect(result.container.textContent).toContain(
+    "保存するコメントを入力してください。",
+  );
+
+  const refreshedAddButtons = result.container.querySelectorAll(
+    ".markdown-block-comment-button",
+  );
+  act(() => {
+    (refreshedAddButtons[1] as HTMLButtonElement).click();
+  });
+
+  const nextTextarea = result.container.querySelector(
+    ".add-comment-popover textarea",
+  ) as HTMLTextAreaElement;
+  expect(nextTextarea.value).toBe("");
+  expect(result.container.textContent).toContain("paragraphブロック 2");
+  expect(result.container.textContent).not.toContain(
+    "保存するコメントを入力してください。",
+  );
+  result.unmount();
+});
+
 test("MarkdownViewerはコードブロックのコメントボタンから追加popoverを開く", () => {
   const result = renderViewer(
     createReadyState(["```ts", "const enabled = true;", "```"].join("\n")),

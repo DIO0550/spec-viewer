@@ -53,12 +53,10 @@ import type {
   CommentBlockType,
   CommentId,
   CommentSelectionBounds,
+  AddCommentSubmitInput,
 } from "@/features/comments/types/comment";
 import type { MarkdownBlockMetadata, MarkdownBlockType } from "@/features/specs/types/spec";
-import {
-  AddCommentPopover,
-  type AddCommentSubmitInput,
-} from "@/features/comments/components/AddCommentPopover";
+import { AddCommentPopover } from "@/features/comments/components/AddCommentPopover";
 import { CommandErrorDisplay } from "@/shared/ui/CommandErrorDisplay";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { LoadingSkeleton } from "@/shared/ui/LoadingSkeleton";
@@ -2339,9 +2337,11 @@ function CommentAnchorDraftPopover({
   }
 
   const style = createFloatingStyle(draft, "popover");
+  const draftKey = createCommentAnchorDraftKey(draft);
 
   return (
     <AddCommentPopover
+      key={draftKey}
       draft={draft}
       style={style}
       isSaving={isSaving}
@@ -2351,6 +2351,20 @@ function CommentAnchorDraftPopover({
       onCancel={onCancel}
     />
   );
+}
+
+/** @returns Stable identity for remounting the add-comment form when target changes. */
+function createCommentAnchorDraftKey(draft: CommentAnchorDraft): string {
+  const { anchor } = draft;
+
+  return [
+    anchor.fileKey,
+    anchor.blockType,
+    anchor.blockIndex,
+    anchor.textHash,
+    anchor.charRange.start,
+    anchor.charRange.end,
+  ].join(":");
 }
 
 type CommentEditPopoverProps = Readonly<{
