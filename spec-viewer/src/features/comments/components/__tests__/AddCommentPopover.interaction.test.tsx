@@ -344,6 +344,90 @@ test("AddCommentPopoverはCtrl Enterで保存する", async () => {
   result.unmount();
 });
 
+test("AddCommentPopoverはMeta Enterで保存する", async () => {
+  const onSubmit = vi.fn().mockResolvedValue(true);
+  const result = renderPopover({ onSubmit });
+  const textarea = findTextarea(result.container);
+
+  act(() => {
+    textarea.value = "Keyboard submit";
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  await act(async () => {
+    textarea.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Enter",
+        metaKey: true,
+        bubbles: true,
+      }),
+    );
+  });
+
+  expect(onSubmit).toHaveBeenCalledWith({
+    anchor: draft.anchor,
+    body: "Keyboard submit",
+  });
+  result.unmount();
+});
+
+test("AddCommentPopoverは保存中のCtrl Enterで保存しない", async () => {
+  const container = document.createElement("div");
+  document.body.append(container);
+  const root = createRoot(container);
+  const onSubmit = vi.fn().mockResolvedValue(true);
+
+  act(() => {
+    root.render(
+      <AddCommentPopover
+        draft={draft}
+        style={{ top: 10, left: 20 }}
+        isSaving={false}
+        errorMessage={null}
+        isScopeReady={true}
+        onSubmit={onSubmit}
+        onCancel={vi.fn()}
+      />,
+    );
+  });
+
+  const textarea = findTextarea(container);
+  act(() => {
+    textarea.value = "Saving should block shortcut";
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  act(() => {
+    root.render(
+      <AddCommentPopover
+        draft={draft}
+        style={{ top: 10, left: 20 }}
+        isSaving={true}
+        errorMessage={null}
+        isScopeReady={true}
+        onSubmit={onSubmit}
+        onCancel={vi.fn()}
+      />,
+    );
+  });
+
+  await act(async () => {
+    findTextarea(container).dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Enter",
+        ctrlKey: true,
+        bubbles: true,
+      }),
+    );
+  });
+
+  expect(onSubmit).not.toHaveBeenCalled();
+  act(() => {
+    root.unmount();
+  });
+  container.remove();
+});
+
 test("AddCommentPopoverはkey変更remountで本文とvalidation errorを初期化する", async () => {
   const container = document.createElement("div");
   document.body.append(container);
