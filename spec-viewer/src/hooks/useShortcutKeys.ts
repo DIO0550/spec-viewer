@@ -68,7 +68,20 @@ function matchesModifiers<TElement extends HTMLElement>(
   event: KeyboardEvent<TElement>,
   modifiers: readonly ShortcutModifier[],
 ): boolean {
-  return modifiers.every((modifier) => matchesModifier(event, modifier));
+  if (!modifiers.every((modifier) => matchesModifier(event, modifier))) {
+    return false;
+  }
+
+  const modifierStates = [
+    { modifier: "ctrl", isPressed: event.ctrlKey },
+    { modifier: "meta", isPressed: event.metaKey },
+    { modifier: "alt", isPressed: event.altKey },
+    { modifier: "shift", isPressed: event.shiftKey },
+  ] as const;
+
+  return modifierStates.every(({ modifier, isPressed }) =>
+    isModifierAllowed(modifier, modifiers, isPressed),
+  );
 }
 
 function matchesModifier<TElement extends HTMLElement>(
@@ -92,4 +105,20 @@ function matchesModifier<TElement extends HTMLElement>(
   }
 
   return event.shiftKey;
+}
+
+function isModifierAllowed(
+  modifier: Exclude<ShortcutModifier, "ctrlOrMeta">,
+  modifiers: readonly ShortcutModifier[],
+  isPressed: boolean,
+): boolean {
+  if (!isPressed) {
+    return true;
+  }
+
+  if (modifier === "ctrl" || modifier === "meta") {
+    return modifiers.includes(modifier) || modifiers.includes("ctrlOrMeta");
+  }
+
+  return modifiers.includes(modifier);
 }

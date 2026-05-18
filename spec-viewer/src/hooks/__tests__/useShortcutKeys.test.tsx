@@ -3,7 +3,10 @@ import type { ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
-import { useShortcutKeys } from "@/hooks/useShortcutKeys";
+import {
+  type ShortcutModifier,
+  useShortcutKeys,
+} from "@/hooks/useShortcutKeys";
 
 type RenderResult = Readonly<{
   container: HTMLDivElement;
@@ -35,12 +38,14 @@ type ShortcutHarnessProps = Readonly<{
   alternateMatch?: () => void;
   shortcutKey?: string;
   eventKey?: string;
-  modifiers?: readonly ["ctrlOrMeta"];
+  modifiers?: readonly ShortcutModifier[];
   isEnabled?: boolean;
   preventDefault?: boolean;
   respectDefaultPrevented?: boolean;
   ctrlKey?: boolean;
   metaKey?: boolean;
+  altKey?: boolean;
+  shiftKey?: boolean;
   isDefaultPreventedBeforeDispatch?: boolean;
 }>;
 
@@ -55,6 +60,8 @@ function ShortcutHarness({
   respectDefaultPrevented,
   ctrlKey = false,
   metaKey = false,
+  altKey = false,
+  shiftKey = false,
   isDefaultPreventedBeforeDispatch = false,
 }: ShortcutHarnessProps) {
   const { handleKeyDown } = useShortcutKeys<HTMLButtonElement>({
@@ -81,6 +88,8 @@ function ShortcutHarness({
       data-event-key={eventKey}
       data-ctrl-key={String(ctrlKey)}
       data-meta-key={String(metaKey)}
+      data-alt-key={String(altKey)}
+      data-shift-key={String(shiftKey)}
       data-default-prevented={String(isDefaultPreventedBeforeDispatch)}
     >
       Dispatch shortcut
@@ -94,6 +103,8 @@ function dispatchHarnessKeyDown(container: ParentNode): KeyboardEvent {
     key: button.dataset.eventKey,
     ctrlKey: button.dataset.ctrlKey === "true",
     metaKey: button.dataset.metaKey === "true",
+    altKey: button.dataset.altKey === "true",
+    shiftKey: button.dataset.shiftKey === "true",
     bubbles: true,
     cancelable: true,
   });
@@ -150,6 +161,31 @@ test.each([
     dispatchHarnessKeyDown(result.container);
 
     expect(onMatch).toHaveBeenCalledOnce();
+    result.unmount();
+  },
+);
+
+test.each([
+  ["Shift+Ctrl+Enter", true, false, false, true],
+  ["Alt+Meta+Enter", false, true, true, false],
+] as const)(
+  "useShortcutKeysはctrlOrMeta modifierで余分な%sに一致しない",
+  (_label, ctrlKey, metaKey, altKey, shiftKey) => {
+    const onMatch = vi.fn();
+    const result = renderComponent(
+      <ShortcutHarness
+        onMatch={onMatch}
+        modifiers={["ctrlOrMeta"]}
+        ctrlKey={ctrlKey}
+        metaKey={metaKey}
+        altKey={altKey}
+        shiftKey={shiftKey}
+      />,
+    );
+
+    dispatchHarnessKeyDown(result.container);
+
+    expect(onMatch).not.toHaveBeenCalled();
     result.unmount();
   },
 );
