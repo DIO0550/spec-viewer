@@ -1,4 +1,4 @@
-import { act } from "react";
+import { act, createRef } from "react";
 import type { ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
@@ -139,6 +139,19 @@ test("CommentPopoverはonKeyDownをasideへ渡す", () => {
 
   expect(onKeyDown).toHaveBeenCalledOnce();
   result.unmount();
+});
+
+test("CommentPopoverは外部refへaside要素を渡す", () => {
+  const popoverRef = createRef<HTMLElement>();
+  const result = renderComponent(
+    <CommentPopover ref={popoverRef} onClose={vi.fn()}>
+      <button type="button">Inside action</button>
+    </CommentPopover>,
+  );
+
+  expect(popoverRef.current?.tagName).toBe("ASIDE");
+  result.unmount();
+  expect(popoverRef.current).toBeNull();
 });
 
 test("CommentPopoverはisDismissDisabled=trueでは外部mousedownでonCloseを呼ばない", () => {
