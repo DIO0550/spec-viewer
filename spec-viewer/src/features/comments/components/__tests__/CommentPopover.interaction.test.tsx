@@ -70,6 +70,18 @@ test("CommentPopoverはasideへclassNameとstyleとroleとariaを渡す", () => 
   result.unmount();
 });
 
+test("CommentPopoverはclassNameとstyleを省略してasideを描画する", () => {
+  const result = renderComponent(
+    <CommentPopover onClose={vi.fn()}>
+      <span>Content</span>
+    </CommentPopover>,
+  );
+
+  expect(result.container.firstElementChild?.tagName).toBe("ASIDE");
+  expect(result.container.textContent).toContain("Content");
+  result.unmount();
+});
+
 test("CommentPopoverは外部mousedownでonCloseを呼ぶ", () => {
   const onClose = vi.fn();
   const result = renderPopover({ onClose });
