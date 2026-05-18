@@ -3,7 +3,6 @@ import { type RefObject, useEffect } from "react";
 type UseOutsideMouseDownOptions<TElement extends HTMLElement> = Readonly<{
   layerRef: RefObject<TElement | null>;
   isEnabled?: boolean;
-  isDisabled?: boolean;
   onOutsideMouseDown: () => void;
 }>;
 
@@ -11,7 +10,6 @@ type UseOutsideMouseDownOptions<TElement extends HTMLElement> = Readonly<{
 export function useOutsideMouseDown<TElement extends HTMLElement>({
   layerRef,
   isEnabled = true,
-  isDisabled = false,
   onOutsideMouseDown,
 }: UseOutsideMouseDownOptions<TElement>): void {
   useEffect(() => {
@@ -22,10 +20,6 @@ export function useOutsideMouseDown<TElement extends HTMLElement>({
     const dismissWhenClickingOutside = (
       event: globalThis.MouseEvent,
     ): void => {
-      if (isDisabled) {
-        return;
-      }
-
       const target = event.target;
       const layer = layerRef.current;
 
@@ -45,5 +39,5 @@ export function useOutsideMouseDown<TElement extends HTMLElement>({
     return () => {
       document.removeEventListener("mousedown", dismissWhenClickingOutside);
     };
-  }, [isDisabled, isEnabled, layerRef, onOutsideMouseDown]);
+  }, [isEnabled, layerRef, onOutsideMouseDown]);
 }

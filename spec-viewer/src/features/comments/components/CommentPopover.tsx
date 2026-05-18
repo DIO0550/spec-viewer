@@ -29,7 +29,7 @@ export function CommentPopover({
 
   useOutsideMouseDown({
     layerRef: popoverRef,
-    isDisabled: isDismissDisabled,
+    isEnabled: !isDismissDisabled,
     onOutsideMouseDown: onClose,
   });
 

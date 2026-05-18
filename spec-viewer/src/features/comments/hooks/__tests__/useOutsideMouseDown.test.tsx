@@ -32,14 +32,12 @@ function renderComponent(component: ReactNode): RenderResult {
 
 type OutsideMouseDownHarnessProps = Readonly<{
   onOutsideMouseDown: () => void;
-  isDisabled?: boolean;
   isEnabled?: boolean;
   isLayerRendered?: boolean;
 }>;
 
 function OutsideMouseDownHarness({
   onOutsideMouseDown,
-  isDisabled = false,
   isEnabled = true,
   isLayerRendered = true,
 }: OutsideMouseDownHarnessProps) {
@@ -47,7 +45,6 @@ function OutsideMouseDownHarness({
 
   useOutsideMouseDown({
     layerRef,
-    isDisabled,
     isEnabled,
     onOutsideMouseDown,
   });
@@ -102,12 +99,12 @@ test("useOutsideMouseDownは内部mousedownではcallbackを呼ばない", () =>
   result.unmount();
 });
 
-test("useOutsideMouseDownはisDisabled=trueでは外部mousedownを無視する", () => {
+test("useOutsideMouseDownはisEnabled=falseでは外部mousedownを無視する", () => {
   const onOutsideMouseDown = vi.fn();
   const result = renderComponent(
     <OutsideMouseDownHarness
       onOutsideMouseDown={onOutsideMouseDown}
-      isDisabled={true}
+      isEnabled={false}
     />,
   );
 
