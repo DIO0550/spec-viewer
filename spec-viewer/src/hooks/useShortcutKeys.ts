@@ -8,7 +8,7 @@ export type ShortcutKeyBinding<TElement extends HTMLElement> = Readonly<{
   isEnabled?: boolean;
   preventDefault?: boolean;
   respectDefaultPrevented?: boolean;
-  onMatch: (event: KeyboardEvent<TElement>) => void | Promise<void>;
+  onMatch: (event: KeyboardEvent<TElement>) => void;
 }>;
 
 export type UseShortcutKeysOptions<TElement extends HTMLElement> = Readonly<{
@@ -36,7 +36,7 @@ export function useShortcutKeys<TElement extends HTMLElement>({
       event.preventDefault();
     }
 
-    void matchedShortcut.onMatch(event);
+    matchedShortcut.onMatch(event);
   };
 
   return { handleKeyDown };

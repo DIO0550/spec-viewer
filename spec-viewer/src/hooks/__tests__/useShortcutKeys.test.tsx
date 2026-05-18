@@ -34,7 +34,7 @@ function renderComponent(component: ReactNode): RenderResult {
 }
 
 type ShortcutHarnessProps = Readonly<{
-  onMatch: () => void | Promise<void>;
+  onMatch: () => void;
   alternateMatch?: () => void;
   shortcutKey?: string;
   eventKey?: string;

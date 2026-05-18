@@ -157,7 +157,9 @@ export function AddCommentPopover({
           modifiers: ["ctrlOrMeta"],
           isEnabled: !isSaving,
           preventDefault: true,
-          onMatch: () => submitComment(),
+          onMatch: () => {
+            void submitComment();
+          },
         },
       ],
     });
