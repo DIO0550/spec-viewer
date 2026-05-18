@@ -1,4 +1,4 @@
-import { type KeyboardEvent, useCallback } from "react";
+import { type KeyboardEvent } from "react";
 
 export type ShortcutModifier = "ctrl" | "meta" | "ctrlOrMeta" | "alt" | "shift";
 
@@ -23,24 +23,21 @@ export type UseShortcutKeysResult<TElement extends HTMLElement> = Readonly<{
 export function useShortcutKeys<TElement extends HTMLElement>({
   shortcuts,
 }: UseShortcutKeysOptions<TElement>): UseShortcutKeysResult<TElement> {
-  const handleKeyDown = useCallback(
-    (event: KeyboardEvent<TElement>): void => {
-      const matchedShortcut = shortcuts.find((shortcut) =>
-        matchesShortcut(event, shortcut),
-      );
+  const handleKeyDown = (event: KeyboardEvent<TElement>): void => {
+    const matchedShortcut = shortcuts.find((shortcut) =>
+      matchesShortcut(event, shortcut),
+    );
 
-      if (matchedShortcut === undefined) {
-        return;
-      }
+    if (matchedShortcut === undefined) {
+      return;
+    }
 
-      if (matchedShortcut.preventDefault === true) {
-        event.preventDefault();
-      }
+    if (matchedShortcut.preventDefault === true) {
+      event.preventDefault();
+    }
 
-      void matchedShortcut.onMatch(event);
-    },
-    [shortcuts],
-  );
+    void matchedShortcut.onMatch(event);
+  };
 
   return { handleKeyDown };
 }
