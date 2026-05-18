@@ -12,19 +12,18 @@ export type ShortcutKeyBinding<TElement extends HTMLElement> = Readonly<{
   onMatch: (event: KeyboardEvent<TElement>) => void;
 }>;
 
-export type UseShortcutKeysOptions<TElement extends HTMLElement> = Readonly<{
-  shortcuts: readonly ShortcutKeyBinding<TElement>[];
-}>;
+export type CreateShortcutKeyHandlerOptions<TElement extends HTMLElement> =
+  Readonly<{
+    shortcuts: readonly ShortcutKeyBinding<TElement>[];
+  }>;
 
-export type UseShortcutKeysResult<TElement extends HTMLElement> = Readonly<{
-  handleKeyDown: (event: KeyboardEvent<TElement>) => void;
-}>;
-
-/** @returns A React keydown handler that runs the first matching shortcut. */
-export function useShortcutKeys<TElement extends HTMLElement>({
+/** @returns A keydown handler that runs the first matching shortcut. */
+export function createShortcutKeyHandler<TElement extends HTMLElement>({
   shortcuts,
-}: UseShortcutKeysOptions<TElement>): UseShortcutKeysResult<TElement> {
-  const handleKeyDown = (event: KeyboardEvent<TElement>): void => {
+}: CreateShortcutKeyHandlerOptions<TElement>): (
+  event: KeyboardEvent<TElement>,
+) => void {
+  return (event: KeyboardEvent<TElement>): void => {
     const matchedShortcut = shortcuts.find((shortcut) =>
       matchesShortcut(event, shortcut),
     );
@@ -39,8 +38,6 @@ export function useShortcutKeys<TElement extends HTMLElement>({
 
     matchedShortcut.onMatch(event);
   };
-
-  return { handleKeyDown };
 }
 
 function matchesShortcut<TElement extends HTMLElement>(

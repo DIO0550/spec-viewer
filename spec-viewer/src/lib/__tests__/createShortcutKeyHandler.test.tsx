@@ -4,9 +4,9 @@ import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
 import {
+  createShortcutKeyHandler,
   type ShortcutModifier,
-  useShortcutKeys,
-} from "@/hooks/useShortcutKeys";
+} from "@/lib/createShortcutKeyHandler";
 
 type RenderResult = Readonly<{
   container: HTMLDivElement;
@@ -66,7 +66,7 @@ function ShortcutHarness({
   shiftKey = false,
   isDefaultPreventedBeforeDispatch = false,
 }: ShortcutHarnessProps) {
-  const { handleKeyDown } = useShortcutKeys<HTMLButtonElement>({
+  const handleKeyDown = createShortcutKeyHandler<HTMLButtonElement>({
     shortcuts: [
       {
         key: shortcutKey,
@@ -123,7 +123,7 @@ function dispatchHarnessKeyDown(container: ParentNode): KeyboardEvent {
   return event;
 }
 
-test("useShortcutKeysはkeyが一致したbindingのonMatchを呼ぶ", () => {
+test("createShortcutKeyHandlerはkeyが一致したbindingのonMatchを呼ぶ", () => {
   const onMatch = vi.fn();
   const result = renderComponent(<ShortcutHarness onMatch={onMatch} />);
 
@@ -133,7 +133,7 @@ test("useShortcutKeysはkeyが一致したbindingのonMatchを呼ぶ", () => {
   result.unmount();
 });
 
-test("useShortcutKeysはkeyが一致しないbindingのonMatchを呼ばない", () => {
+test("createShortcutKeyHandlerはkeyが一致しないbindingのonMatchを呼ばない", () => {
   const onMatch = vi.fn();
   const result = renderComponent(
     <ShortcutHarness onMatch={onMatch} eventKey="Escape" />,
@@ -149,7 +149,7 @@ test.each([
   ["Ctrl+Enter", true, false],
   ["Meta+Enter", false, true],
 ] as const)(
-  "useShortcutKeysはctrlOrMeta modifierで%sに一致する",
+  "createShortcutKeyHandlerはctrlOrMeta modifierで%sに一致する",
   (_label, ctrlKey, metaKey) => {
     const onMatch = vi.fn();
     const result = renderComponent(
@@ -172,7 +172,7 @@ test.each([
   ["Shift+Ctrl+Enter", true, false, false, true],
   ["Alt+Meta+Enter", false, true, true, false],
 ] as const)(
-  "useShortcutKeysはctrlOrMeta modifierで余分な%sに一致しない",
+  "createShortcutKeyHandlerはctrlOrMeta modifierで余分な%sに一致しない",
   (_label, ctrlKey, metaKey, altKey, shiftKey) => {
     const onMatch = vi.fn();
     const result = renderComponent(
@@ -193,7 +193,7 @@ test.each([
   },
 );
 
-test("useShortcutKeysはallowsAdditionalModifiers=trueなら余分なmodifierを許容する", () => {
+test("createShortcutKeyHandlerはallowsAdditionalModifiers=trueなら余分なmodifierを許容する", () => {
   const onMatch = vi.fn();
   const result = renderComponent(
     <ShortcutHarness
@@ -211,7 +211,7 @@ test("useShortcutKeysはallowsAdditionalModifiers=trueなら余分なmodifierを
   result.unmount();
 });
 
-test("useShortcutKeysはisEnabled=falseのbindingを実行しない", () => {
+test("createShortcutKeyHandlerはisEnabled=falseのbindingを実行しない", () => {
   const onMatch = vi.fn();
   const result = renderComponent(
     <ShortcutHarness onMatch={onMatch} isEnabled={false} />,
@@ -223,7 +223,7 @@ test("useShortcutKeysはisEnabled=falseのbindingを実行しない", () => {
   result.unmount();
 });
 
-test("useShortcutKeysはpreventDefault=trueでevent.preventDefaultを呼ぶ", () => {
+test("createShortcutKeyHandlerはpreventDefault=trueでevent.preventDefaultを呼ぶ", () => {
   const onMatch = vi.fn();
   const result = renderComponent(
     <ShortcutHarness onMatch={onMatch} preventDefault={true} />,
@@ -236,7 +236,7 @@ test("useShortcutKeysはpreventDefault=trueでevent.preventDefaultを呼ぶ", ()
   result.unmount();
 });
 
-test("useShortcutKeysはdefaultPreventedのkeydownを既定では無視する", () => {
+test("createShortcutKeyHandlerはdefaultPreventedのkeydownを既定では無視する", () => {
   const onMatch = vi.fn();
   const result = renderComponent(
     <ShortcutHarness
@@ -251,7 +251,7 @@ test("useShortcutKeysはdefaultPreventedのkeydownを既定では無視する", 
   result.unmount();
 });
 
-test("useShortcutKeysはrespectDefaultPrevented=falseならdefaultPrevented後も処理する", () => {
+test("createShortcutKeyHandlerはrespectDefaultPrevented=falseならdefaultPrevented後も処理する", () => {
   const onMatch = vi.fn();
   const result = renderComponent(
     <ShortcutHarness
@@ -267,7 +267,7 @@ test("useShortcutKeysはrespectDefaultPrevented=falseならdefaultPrevented後�
   result.unmount();
 });
 
-test("useShortcutKeysは複数bindingが一致したとき最初の一致だけ実行する", () => {
+test("createShortcutKeyHandlerは複数bindingが一致したとき最初の一致だけ実行する", () => {
   const onMatch = vi.fn();
   const alternateMatch = vi.fn();
   const result = renderComponent(

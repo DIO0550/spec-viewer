@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 
-import { useShortcutKeys } from "@/hooks/useShortcutKeys";
+import { createShortcutKeyHandler } from "@/lib/createShortcutKeyHandler";
 import { uiText } from "@/shared/lib/uiText";
 import {
   CommentBody,
@@ -141,8 +141,8 @@ export function AddCommentPopover({
     void submitComment();
   };
 
-  const { handleKeyDown: handleTextareaKeyDown } =
-    useShortcutKeys<HTMLTextAreaElement>({
+  const handleTextareaKeyDown =
+    createShortcutKeyHandler<HTMLTextAreaElement>({
       shortcuts: [
         {
           key: "Enter",
@@ -157,7 +157,7 @@ export function AddCommentPopover({
       ],
     });
 
-  const { handleKeyDown: handleDialogKeyDown } = useShortcutKeys<HTMLElement>({
+  const handleDialogKeyDown = createShortcutKeyHandler<HTMLElement>({
     shortcuts: [
       {
         key: "Escape",
