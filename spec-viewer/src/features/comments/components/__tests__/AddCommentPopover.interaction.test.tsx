@@ -371,6 +371,53 @@ test("AddCommentPopoverはMeta Enterで保存する", async () => {
   result.unmount();
 });
 
+test("AddCommentPopoverは追加modifierつきCtrl Enterで保存する", async () => {
+  const onSubmit = vi.fn().mockResolvedValue(true);
+  const result = renderPopover({ onSubmit });
+  const textarea = findTextarea(result.container);
+
+  act(() => {
+    textarea.value = "Keyboard submit";
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  await act(async () => {
+    textarea.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Enter",
+        ctrlKey: true,
+        shiftKey: true,
+        bubbles: true,
+      }),
+    );
+  });
+
+  expect(onSubmit).toHaveBeenCalledWith({
+    anchor: draft.anchor,
+    body: "Keyboard submit",
+  });
+  result.unmount();
+});
+
+test("AddCommentPopoverは追加modifierつきEscapeでキャンセルする", () => {
+  const onCancel = vi.fn();
+  const result = renderPopover({ onCancel });
+  const textarea = findTextarea(result.container);
+
+  act(() => {
+    textarea.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Escape",
+        shiftKey: true,
+        bubbles: true,
+      }),
+    );
+  });
+
+  expect(onCancel).toHaveBeenCalledOnce();
+  result.unmount();
+});
+
 test("AddCommentPopoverは保存中のCtrl Enterで保存しない", async () => {
   const container = document.createElement("div");
   document.body.append(container);

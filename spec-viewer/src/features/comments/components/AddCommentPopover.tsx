@@ -147,6 +147,7 @@ export function AddCommentPopover({
         {
           key: "Enter",
           modifiers: ["ctrlOrMeta"],
+          allowsAdditionalModifiers: true,
           isEnabled: !isSaving,
           preventDefault: true,
           onMatch: () => {
@@ -160,6 +161,7 @@ export function AddCommentPopover({
     shortcuts: [
       {
         key: "Escape",
+        allowsAdditionalModifiers: true,
         isEnabled: !isSaving,
         preventDefault: true,
         onMatch: () => {

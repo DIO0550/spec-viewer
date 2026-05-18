@@ -5,6 +5,7 @@ export type ShortcutModifier = "ctrl" | "meta" | "ctrlOrMeta" | "alt" | "shift";
 export type ShortcutKeyBinding<TElement extends HTMLElement> = Readonly<{
   key: string;
   modifiers?: readonly ShortcutModifier[];
+  allowsAdditionalModifiers?: boolean;
   isEnabled?: boolean;
   preventDefault?: boolean;
   respectDefaultPrevented?: boolean;
@@ -58,15 +59,30 @@ function matchesShortcut<TElement extends HTMLElement>(
     return false;
   }
 
-  return matchesModifiers(event, shortcut.modifiers ?? []);
+  return matchesModifiers({
+    event,
+    modifiers: shortcut.modifiers ?? [],
+    allowsAdditionalModifiers: shortcut.allowsAdditionalModifiers === true,
+  });
 }
 
-function matchesModifiers<TElement extends HTMLElement>(
-  event: KeyboardEvent<TElement>,
-  modifiers: readonly ShortcutModifier[],
-): boolean {
+type MatchesModifiersInput<TElement extends HTMLElement> = Readonly<{
+  event: KeyboardEvent<TElement>;
+  modifiers: readonly ShortcutModifier[];
+  allowsAdditionalModifiers: boolean;
+}>;
+
+function matchesModifiers<TElement extends HTMLElement>({
+  event,
+  modifiers,
+  allowsAdditionalModifiers,
+}: MatchesModifiersInput<TElement>): boolean {
   if (!modifiers.every((modifier) => matchesModifier(event, modifier))) {
     return false;
+  }
+
+  if (allowsAdditionalModifiers) {
+    return true;
   }
 
   const modifierStates = [

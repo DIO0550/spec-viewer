@@ -39,6 +39,7 @@ type ShortcutHarnessProps = Readonly<{
   shortcutKey?: string;
   eventKey?: string;
   modifiers?: readonly ShortcutModifier[];
+  allowsAdditionalModifiers?: boolean;
   isEnabled?: boolean;
   preventDefault?: boolean;
   respectDefaultPrevented?: boolean;
@@ -55,6 +56,7 @@ function ShortcutHarness({
   shortcutKey = "Enter",
   eventKey = "Enter",
   modifiers,
+  allowsAdditionalModifiers,
   isEnabled,
   preventDefault,
   respectDefaultPrevented,
@@ -69,6 +71,7 @@ function ShortcutHarness({
       {
         key: shortcutKey,
         modifiers,
+        allowsAdditionalModifiers,
         isEnabled,
         preventDefault,
         respectDefaultPrevented,
@@ -189,6 +192,24 @@ test.each([
     result.unmount();
   },
 );
+
+test("useShortcutKeysはallowsAdditionalModifiers=trueなら余分なmodifierを許容する", () => {
+  const onMatch = vi.fn();
+  const result = renderComponent(
+    <ShortcutHarness
+      onMatch={onMatch}
+      modifiers={["ctrlOrMeta"]}
+      allowsAdditionalModifiers={true}
+      ctrlKey={true}
+      shiftKey={true}
+    />,
+  );
+
+  dispatchHarnessKeyDown(result.container);
+
+  expect(onMatch).toHaveBeenCalledOnce();
+  result.unmount();
+});
 
 test("useShortcutKeysはisEnabled=falseのbindingを実行しない", () => {
   const onMatch = vi.fn();
