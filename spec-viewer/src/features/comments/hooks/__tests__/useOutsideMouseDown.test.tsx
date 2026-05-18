@@ -177,6 +177,7 @@ test("useOutsideMouseDownはtargetがNodeでなければcallbackを呼ばない"
 
 test("useOutsideMouseDownはunmount後のdocument eventでcallbackを呼ばない", () => {
   const onOutsideMouseDown = vi.fn();
+  const removeEventListener = vi.spyOn(document, "removeEventListener");
   const result = renderComponent(
     <OutsideMouseDownHarness onOutsideMouseDown={onOutsideMouseDown} />,
   );
@@ -184,5 +185,10 @@ test("useOutsideMouseDownはunmount後のdocument eventでcallbackを呼ばな�
   result.unmount();
   dispatchDocumentMouseDown();
 
+  expect(removeEventListener).toHaveBeenCalledWith(
+    "mousedown",
+    expect.any(Function),
+  );
   expect(onOutsideMouseDown).not.toHaveBeenCalled();
+  removeEventListener.mockRestore();
 });
