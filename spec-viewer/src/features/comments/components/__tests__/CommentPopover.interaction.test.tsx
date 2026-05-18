@@ -122,6 +122,25 @@ test("CommentPopoverはEscapeではonCloseを呼ばない", () => {
   result.unmount();
 });
 
+test("CommentPopoverはonKeyDownをasideへ渡す", () => {
+  const onKeyDown = vi.fn();
+  const result = renderComponent(
+    <CommentPopover onClose={vi.fn()} onKeyDown={onKeyDown}>
+      <button type="button">Inside action</button>
+    </CommentPopover>,
+  );
+  const popover = result.container.querySelector("aside") as HTMLElement;
+
+  act(() => {
+    popover.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+  });
+
+  expect(onKeyDown).toHaveBeenCalledOnce();
+  result.unmount();
+});
+
 test("CommentPopoverはisDismissDisabled=trueでは外部mousedownでonCloseを呼ばない", () => {
   const onClose = vi.fn();
   const result = renderPopover({ onClose, isDismissDisabled: true });
