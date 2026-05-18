@@ -145,14 +145,6 @@ export function AddCommentPopover({
     useShortcutKeys<HTMLTextAreaElement>({
       shortcuts: [
         {
-          key: "Escape",
-          isEnabled: !isSaving,
-          preventDefault: true,
-          onMatch: () => {
-            onCancel();
-          },
-        },
-        {
           key: "Enter",
           modifiers: ["ctrlOrMeta"],
           isEnabled: !isSaving,
