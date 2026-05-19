@@ -18,6 +18,7 @@ import {
   createPerformanceCorrelationId,
   startPerformanceSpan,
 } from "@/shared/lib/performance";
+import { CommentScope } from "@/features/comments/domain/commentScope";
 import type {
   AddCommentRequest,
   Comment,
@@ -31,12 +32,6 @@ import type {
 } from "@/features/comments/types/comment";
 import type { NormalizedCommandError } from "@/shared/types/ipc";
 import type { SpecFileKey } from "@/features/specs/types/spec";
-
-export type CommentScope = Readonly<{
-  workspacePath: string;
-  specId: string;
-  fileKey: SpecFileKey;
-}>;
 
 export type CommentListState =
   | Readonly<{
@@ -155,7 +150,7 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
   const commands = options.commands ?? defaultCommentCommands;
   const scope = useMemo(
     () =>
-      createCommentScope({
+      CommentScope.create({
         workspacePath: options.workspacePath,
         specId: options.specId,
         fileKey: options.fileKey,
@@ -441,12 +436,6 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
   };
 }
 
-type CreateCommentScopeOptions = Readonly<{
-  workspacePath: string | null;
-  specId: string | null;
-  fileKey: SpecFileKey | null;
-}>;
-
 type RunCommentMutationOptions<Result> = Readonly<{
   scope: CommentScope | null;
   scopeKey: string;
@@ -475,25 +464,6 @@ type UpdateCommentsForCurrentScopeOptions = Readonly<{
   setListState: Dispatch<SetStateAction<CommentListState>>;
   transform: (comments: readonly Comment[]) => readonly Comment[];
 }>;
-
-/** @returns Complete comment scope, or null when the selected file is incomplete. */
-function createCommentScope(
-  options: CreateCommentScopeOptions,
-): CommentScope | null {
-  if (
-    options.workspacePath === null ||
-    options.specId === null ||
-    options.fileKey === null
-  ) {
-    return null;
-  }
-
-  return {
-    workspacePath: options.workspacePath,
-    specId: options.specId,
-    fileKey: options.fileKey,
-  };
-}
 
 /** @returns Idle comment list state for an incomplete scope. */
 function createIdleListState(
