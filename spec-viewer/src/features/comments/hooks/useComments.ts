@@ -19,12 +19,12 @@ import {
   startPerformanceSpan,
 } from "@/shared/lib/performance";
 import { CommentScope } from "@/features/comments/domain/commentScope";
+import { CommentStatusFilter } from "@/features/comments/types/comment";
 import type {
   AddCommentRequest,
   Comment,
   CommentAnchor,
   CommentId,
-  CommentStatusFilter,
   CommentStatusRequest,
   DeleteCommentResponse,
   ListCommentsRequest,
@@ -135,7 +135,7 @@ export type UseCommentsResult = Readonly<{
   toggleCommentResolved: (commentId: CommentId) => Promise<Comment | null>;
 }>;
 
-const defaultStatusFilter: CommentStatusFilter = "all";
+const defaultStatusFilter: CommentStatusFilter = CommentStatusFilter.All;
 
 const initialMutationState: CommentMutationState = {
   status: "idle",
@@ -146,7 +146,8 @@ const initialMutationState: CommentMutationState = {
 
 /** @returns Comment loading and mutation state for the selected spec file. */
 export function useComments(options: UseCommentsOptions): UseCommentsResult {
-  const statusFilter = options.statusFilter ?? defaultStatusFilter;
+  const statusFilter =
+    CommentStatusFilter.parse(options.statusFilter) ?? defaultStatusFilter;
   const commands = options.commands ?? defaultCommentCommands;
   const scope = useMemo(
     () =>
@@ -511,7 +512,7 @@ function createListCommentsRequest(
 ): ListCommentsRequest {
   const request: ListCommentsRequest = {
     ...scope,
-    statusFilter,
+    statusFilter: CommentStatusFilter.toString(statusFilter),
   };
 
   if (correlationId === null) {
@@ -761,9 +762,5 @@ function shouldDisplayComment(
   comment: Comment,
   statusFilter: CommentStatusFilter,
 ): boolean {
-  if (statusFilter === "all") {
-    return true;
-  }
-
-  return comment.status === statusFilter;
+  return CommentStatusFilter.matches(statusFilter, comment.status);
 }

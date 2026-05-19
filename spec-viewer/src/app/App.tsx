@@ -16,6 +16,7 @@ import {
   type GenerateLlmPromptResponse,
   type SpecSkillMcpFeedbackPayload,
 } from "@/features/comments";
+import { CommentStatusFilter } from "@/features/comments/types/comment";
 import {
   useKeyboardShortcuts,
   useLeftNavigationPreference,
@@ -138,7 +139,7 @@ function App() {
     specId: specs.selectedSpecId,
     fileKey:
       isHtmlDocument || !isDocumentReadable ? null : specs.selectedFileKey,
-    statusFilter: "all",
+    statusFilter: CommentStatusFilter.All,
     correlationId: specs.documentState.correlationId ?? null,
   });
   const [reviewRunTargetScope, setReviewRunTargetScope] =
