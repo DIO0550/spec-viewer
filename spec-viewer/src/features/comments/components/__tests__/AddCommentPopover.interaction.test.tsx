@@ -475,6 +475,53 @@ test("AddCommentPopoverは保存中のCtrl Enterで保存しない", async () =>
   container.remove();
 });
 
+test("AddCommentPopoverは保存中のEscapeでキャンセルしない", () => {
+  const container = document.createElement("div");
+  document.body.append(container);
+  const root = createRoot(container);
+  const onCancel = vi.fn();
+
+  act(() => {
+    root.render(
+      <AddCommentPopover
+        draft={draft}
+        style={{ top: 10, left: 20 }}
+        isSaving={false}
+        errorMessage={null}
+        isScopeReady={true}
+        onSubmit={vi.fn().mockResolvedValue(true)}
+        onCancel={onCancel}
+      />,
+    );
+  });
+
+  act(() => {
+    root.render(
+      <AddCommentPopover
+        draft={draft}
+        style={{ top: 10, left: 20 }}
+        isSaving={true}
+        errorMessage={null}
+        isScopeReady={true}
+        onSubmit={vi.fn().mockResolvedValue(true)}
+        onCancel={onCancel}
+      />,
+    );
+  });
+
+  act(() => {
+    findTextarea(container).dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+  });
+
+  expect(onCancel).not.toHaveBeenCalled();
+  act(() => {
+    root.unmount();
+  });
+  container.remove();
+});
+
 test("AddCommentPopoverはkey変更remountで本文とvalidation errorを初期化する", async () => {
   const container = document.createElement("div");
   document.body.append(container);
