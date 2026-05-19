@@ -2,7 +2,6 @@ import { LoaderCircle, MessageSquarePlus, Send, X } from "lucide-react";
 import {
   type CSSProperties,
   type FormEvent,
-  type KeyboardEvent,
   useEffect,
   useId,
   useReducer,
@@ -10,6 +9,7 @@ import {
   useState,
 } from "react";
 
+import { createShortcutKeyHandler } from "@/lib/createShortcutKeyHandler";
 import { uiText } from "@/shared/lib/uiText";
 import {
   CommentBody,
@@ -19,6 +19,7 @@ import type {
   AddCommentSubmitInput,
   CommentAnchorDraft,
 } from "@/features/comments/types/comment";
+import { CommentPopover } from "@/features/comments/components/CommentPopover";
 
 type Props = Readonly<{
   draft: CommentAnchorDraft;
@@ -87,7 +88,6 @@ export function AddCommentPopover({
   const textareaId = useId();
   const hintId = useId();
   const errorId = useId();
-  const popoverRef = useRef<HTMLElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [commentBodyFormState, dispatchCommentBodyForm] = useReducer(
     reduceCommentBodyForm,
@@ -98,7 +98,8 @@ export function AddCommentPopover({
     null,
   );
   const isBodyEmpty = CommentBody.isEmpty(commentBodyFormState.body);
-  const isSubmitDisabled = isSaving || !isScopeReady || isBodyEmpty;
+  const canSubmit = isScopeReady && !isBodyEmpty;
+  const isSubmitDisabled = isSaving || !canSubmit;
   const scopeMessage = isScopeReady ? null : missingScopeMessage;
   const visibleErrorMessage =
     scopeMessage ??
@@ -111,32 +112,6 @@ export function AddCommentPopover({
   useEffect(() => {
     textareaRef.current?.focus();
   }, []);
-
-  useEffect(() => {
-    const closeWhenClickingOutside = (event: globalThis.MouseEvent): void => {
-      if (isSaving) {
-        return;
-      }
-
-      const target = event.target;
-
-      if (!(target instanceof Node)) {
-        return;
-      }
-
-      if (popoverRef.current?.contains(target)) {
-        return;
-      }
-
-      onCancel();
-    };
-
-    document.addEventListener("mousedown", closeWhenClickingOutside);
-
-    return () => {
-      document.removeEventListener("mousedown", closeWhenClickingOutside);
-    };
-  }, [isSaving, onCancel]);
 
   const submitComment = async (): Promise<void> => {
     if (!isScopeReady) {
@@ -166,38 +141,45 @@ export function AddCommentPopover({
     void submitComment();
   };
 
-  const handleTextareaKeyDown = (
-    event: KeyboardEvent<HTMLTextAreaElement>,
-  ): void => {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      onCancel();
-      return;
-    }
+  const handleTextareaKeyDown =
+    createShortcutKeyHandler<HTMLTextAreaElement>({
+      shortcuts: [
+        {
+          key: "Enter",
+          modifiers: ["ctrlOrMeta"],
+          allowsAdditionalModifiers: true,
+          isEnabled: !isSaving,
+          preventDefault: true,
+          onMatch: () => {
+            void submitComment();
+          },
+        },
+      ],
+    });
 
-    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-      event.preventDefault();
-      void submitComment();
-    }
-  };
-
-  const handleDialogKeyDown = (event: KeyboardEvent<HTMLElement>): void => {
-    if (event.defaultPrevented || event.key !== "Escape" || isSaving) {
-      return;
-    }
-
-    event.preventDefault();
-    onCancel();
-  };
+  const handleDialogKeyDown = createShortcutKeyHandler<HTMLElement>({
+    shortcuts: [
+      {
+        key: "Escape",
+        allowsAdditionalModifiers: true,
+        isEnabled: !isSaving,
+        preventDefault: true,
+        onMatch: () => {
+          onCancel();
+        },
+      },
+    ],
+  });
 
   return (
-    <aside
-      ref={popoverRef}
+    <CommentPopover
       className="add-comment-popover"
       style={style}
       role="dialog"
       aria-labelledby={titleId}
       onKeyDown={handleDialogKeyDown}
+      isDismissDisabled={isSaving}
+      onClose={onCancel}
     >
       <header className="add-comment-popover__header">
         <div>
@@ -282,7 +264,7 @@ export function AddCommentPopover({
           </button>
         </div>
       </form>
-    </aside>
+    </CommentPopover>
   );
 }
 
