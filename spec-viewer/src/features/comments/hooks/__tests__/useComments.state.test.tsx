@@ -10,6 +10,8 @@ import type {
   CommentAnchor,
   ListCommentsResponse,
 } from "@/features/comments/types/comment";
+import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
+import type { CommentStatusFilter as CommentStatusFilterType } from "@/features/comments/domain/commentStatusFilter";
 import type { SpecFileKey } from "@/features/specs/types/spec";
 import { useComments } from "@/features/comments/hooks/useComments";
 
@@ -60,6 +62,7 @@ type HookProps = Readonly<{
   workspacePath: string | null;
   specId: string | null;
   fileKey: SpecFileKey | null;
+  statusFilter?: CommentStatusFilterType | null;
   commands: CommentCommands;
 }>;
 
@@ -113,12 +116,12 @@ function renderHook<Props, Result>(
 
 function renderUseComments(props: HookProps) {
   return renderHook(
-    ({ workspacePath, specId, fileKey, commands }) =>
+    ({ workspacePath, specId, fileKey, statusFilter, commands }) =>
       useComments({
         workspacePath,
         specId,
         fileKey,
-        statusFilter: "all",
+        statusFilter,
         commands,
       }),
     props,
@@ -201,6 +204,64 @@ test("useCommentsはscopeが揃うとコメント一覧を読み込む", async (
 
   expect(result.current.listState.status).toBe("ready");
   expect(result.current.comments).toEqual([firstComment]);
+  expect(double.calls.listComments).toEqual([
+    {
+      workspacePath: "/workspace/spec-reviewer",
+      specId: "phase-2-comments",
+      fileKey: "tasks",
+      statusFilter: "all",
+    },
+  ]);
+  result.unmount();
+});
+
+test.each([
+  [CommentStatusFilter.Open, "open"],
+  [CommentStatusFilter.Resolved, "resolved"],
+] as const)(
+  "useCommentsは%s filterを文字列payloadとして一覧requestへ渡す",
+  async (statusFilter, expectedStatusFilter) => {
+    const double = createCommentCommandTestDouble();
+    const result = renderUseComments({
+      workspacePath: "/workspace/spec-reviewer",
+      specId: "phase-2-comments",
+      fileKey: "tasks",
+      statusFilter,
+      commands: double.commands,
+    });
+
+    await flushAsyncEffects();
+
+    expect(double.calls.listComments).toEqual([
+      {
+        workspacePath: "/workspace/spec-reviewer",
+        specId: "phase-2-comments",
+        fileKey: "tasks",
+        statusFilter: expectedStatusFilter,
+      },
+    ]);
+    result.unmount();
+  },
+);
+
+test("useCommentsは不正なstatusFilter入力をallとして一覧requestへ渡す", async () => {
+  const double = createCommentCommandTestDouble();
+  const result = renderHook(
+    ({ commands }: Readonly<{ commands: CommentCommands }>) =>
+      useComments({
+        workspacePath: "/workspace/spec-reviewer",
+        specId: "phase-2-comments",
+        fileKey: "tasks",
+        statusFilter: "closed" as CommentStatusFilterType,
+        commands,
+      }),
+    {
+      commands: double.commands,
+    },
+  );
+
+  await flushAsyncEffects();
+
   expect(double.calls.listComments).toEqual([
     {
       workspacePath: "/workspace/spec-reviewer",

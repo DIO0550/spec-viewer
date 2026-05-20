@@ -11,7 +11,7 @@ import type {
   CommentExportOperation,
   CommentDisplayFilter,
   CommentDisplayState,
-  CommentStatusFilter,
+  CommentStatusFilter as CommentStatusFilterType,
   ListCommentsResponse,
   SpecSkillMcpFeedbackPayload,
 } from "@/features/comments/types/comment";
@@ -35,9 +35,10 @@ test("comment command payloadsはP2.8 DTOと一致する", () => {
 });
 
 test("comment view modelは状態フィルターとorphan表示状態を共有できる", () => {
-  expectTypeOf<CommentStatusFilter>().toEqualTypeOf<
+  expectTypeOf<CommentStatusFilterType>().toEqualTypeOf<
     "all" | "open" | "resolved"
   >();
+  expectTypeOf<CommentStatusFilterType>().toMatchTypeOf<CommentDisplayFilter>();
   expectTypeOf<CommentDisplayFilter>().toEqualTypeOf<
     "all" | "open" | "resolved" | "moved" | "fuzzy" | "stale" | "orphaned"
   >();

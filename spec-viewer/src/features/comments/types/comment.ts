@@ -1,4 +1,13 @@
 import type { SpecFileKey } from "@/features/specs/types/spec";
+import type {
+  CommentStatus,
+  CommentStatusFilter,
+} from "@/features/comments/domain/commentStatusFilter";
+
+export type {
+  CommentStatus,
+  CommentStatusFilter,
+} from "@/features/comments/domain/commentStatusFilter";
 
 export type CommentId = string;
 
@@ -14,10 +23,6 @@ export type CommentBlockType =
   | "thematic_break"
   | "html"
   | "other";
-
-export type CommentStatus = "open" | "resolved";
-
-export type CommentStatusFilter = "all" | CommentStatus;
 
 export type CommentDisplayFilter =
   | CommentStatusFilter
