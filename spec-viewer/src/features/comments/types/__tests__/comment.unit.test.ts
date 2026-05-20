@@ -21,6 +21,11 @@ import type {
   ReviewRunManifest,
   ReviewRunStatusDocument,
 } from "@/features/review-runs/types/reviewRun";
+import type { Comment as DomainComment } from "@/features/comments/domain/comment";
+
+test("types/commentのCommentはdomain Commentの互換exportとして扱える", () => {
+  expectTypeOf<Comment>().toEqualTypeOf<DomainComment>();
+});
 
 test("comment command payloadsはP2.8 DTOと一致する", () => {
   expectTypeOf<
