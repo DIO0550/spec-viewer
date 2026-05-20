@@ -1,4 +1,5 @@
 import type { SpecFileKey } from "@/features/specs/types/spec";
+import type { Comment as DomainComment } from "@/features/comments/domain/comment";
 import type {
   CommentStatus,
   CommentStatusFilter,
@@ -108,16 +109,7 @@ export type CommentAnchorResolution = Readonly<{
   target: CommentAnchorResolutionTarget | null;
 }>;
 
-export type Comment = Readonly<{
-  id: CommentId;
-  anchor: CommentAnchor;
-  body: string;
-  status: CommentStatus;
-  resolved: boolean;
-  anchorResolution?: CommentAnchorResolution | null;
-  createdAt: IsoDateTimeString;
-  updatedAt: IsoDateTimeString;
-}>;
+export type Comment = DomainComment;
 
 export type CommentViewModel = Readonly<{
   comment: Comment;
