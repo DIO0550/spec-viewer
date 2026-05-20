@@ -1,4 +1,5 @@
 export { AddCommentPopover } from "@/features/comments/components/AddCommentPopover";
+export { Comment } from "@/features/comments/domain/comment";
 export { CommentSidebar } from "@/features/comments/components/CommentSidebar";
 export { CommentThread } from "./components/CommentThread";
 export {
@@ -12,7 +13,6 @@ export {
 } from "./lib/mcpFeedback";
 export type {
   AddCommentSubmitInput,
-  Comment,
   CommentAnchor,
   CommentAnchorDisplayState,
   CommentExportOperation,
