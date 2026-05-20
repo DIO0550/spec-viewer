@@ -8,10 +8,10 @@ import type { CommentCommands } from "@/shared/api/tauri";
 import type {
   Comment,
   CommentAnchor,
-  CommentStatusFilter,
   ListCommentsResponse,
 } from "@/features/comments/types/comment";
-import { CommentStatusFilter as CommentStatusFilterValue } from "@/features/comments/types/comment";
+import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
+import type { CommentStatusFilter as CommentStatusFilterType } from "@/features/comments/domain/commentStatusFilter";
 import type { SpecFileKey } from "@/features/specs/types/spec";
 import { useComments } from "@/features/comments/hooks/useComments";
 
@@ -62,7 +62,7 @@ type HookProps = Readonly<{
   workspacePath: string | null;
   specId: string | null;
   fileKey: SpecFileKey | null;
-  statusFilter?: CommentStatusFilter | null;
+  statusFilter?: CommentStatusFilterType | null;
   commands: CommentCommands;
 }>;
 
@@ -216,8 +216,8 @@ test("useCommentsはscopeが揃うとコメント一覧を読み込む", async (
 });
 
 test.each([
-  [CommentStatusFilterValue.Open, "open"],
-  [CommentStatusFilterValue.Resolved, "resolved"],
+  [CommentStatusFilter.Open, "open"],
+  [CommentStatusFilter.Resolved, "resolved"],
 ] as const)(
   "useCommentsは%s filterを文字列payloadとして一覧requestへ渡す",
   async (statusFilter, expectedStatusFilter) => {
@@ -252,7 +252,7 @@ test("useCommentsは不正なstatusFilter入力をallとして一覧requestへ�
         workspacePath: "/workspace/spec-reviewer",
         specId: "phase-2-comments",
         fileKey: "tasks",
-        statusFilter: "closed" as CommentStatusFilter,
+        statusFilter: "closed" as CommentStatusFilterType,
         commands,
       }),
     {

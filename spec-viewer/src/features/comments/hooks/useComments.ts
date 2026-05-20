@@ -19,7 +19,7 @@ import {
   startPerformanceSpan,
 } from "@/shared/lib/performance";
 import { CommentScope } from "@/features/comments/domain/commentScope";
-import { CommentStatusFilter } from "@/features/comments/types/comment";
+import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import type {
   AddCommentRequest,
   Comment,

@@ -16,7 +16,7 @@ import {
   type GenerateLlmPromptResponse,
   type SpecSkillMcpFeedbackPayload,
 } from "@/features/comments";
-import { CommentStatusFilter } from "@/features/comments/types/comment";
+import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import {
   useKeyboardShortcuts,
   useLeftNavigationPreference,
