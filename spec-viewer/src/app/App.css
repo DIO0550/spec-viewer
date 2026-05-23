@@ -2100,7 +2100,7 @@ textarea:disabled {
   height: 100%;
   min-height: 100%;
   overflow: hidden;
-  padding-bottom: 24px;
+  padding: 0;
 }
 
 .markdown-viewer--center {
@@ -2127,6 +2127,12 @@ textarea:disabled {
       color-mix(in srgb, var(--color-raised) 94%, transparent) 76%,
       transparent 100%
     );
+}
+
+.markdown-viewer--html .markdown-viewer__header {
+  flex: 0 0 auto;
+  margin-bottom: 0;
+  padding: 12px 14px;
 }
 
 .markdown-viewer__header > div {
@@ -2296,7 +2302,10 @@ textarea:disabled {
   min-height: 0;
   height: auto;
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  border-radius: 0;
   background: var(--color-raised);
 }
 
@@ -3333,6 +3342,10 @@ textarea:disabled {
 
   .markdown-viewer {
     padding: 18px 16px 36px;
+  }
+
+  .markdown-viewer--html {
+    padding: 0;
   }
 
   .markdown-viewer__header {
