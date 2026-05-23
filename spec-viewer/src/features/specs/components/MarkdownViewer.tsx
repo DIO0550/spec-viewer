@@ -511,16 +511,18 @@ export function MarkdownViewer({
           <p className="markdown-viewer__path">{state.document.path}</p>
         </div>
         <div className="markdown-viewer__actions">
-          <DocumentSearchControl
-            query={documentSearchQuery}
-            matchCount={documentSearchMatchCount}
-            activeMatchIndex={activeDocumentSearchIndex}
-            disabled={state.document.format === "html"}
-            onQueryChange={setDocumentSearchQuery}
-            onPrevious={goToPreviousDocumentSearchMatch}
-            onNext={goToNextDocumentSearchMatch}
-            onClear={clearDocumentSearch}
-          />
+          {isHtmlDocument ? null : (
+            <DocumentSearchControl
+              query={documentSearchQuery}
+              matchCount={documentSearchMatchCount}
+              activeMatchIndex={activeDocumentSearchIndex}
+              disabled={false}
+              onQueryChange={setDocumentSearchQuery}
+              onPrevious={goToPreviousDocumentSearchMatch}
+              onNext={goToNextDocumentSearchMatch}
+              onClear={clearDocumentSearch}
+            />
+          )}
           <button
             className="icon-button"
             type="button"

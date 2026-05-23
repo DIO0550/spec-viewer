@@ -38,6 +38,34 @@ const readyState: SpecDocumentState = {
   error: null,
 };
 
+const techReferenceHtmlContents = [
+  "<!doctype html>",
+  "<html>",
+  "<body>",
+  "<main>",
+  "<h1>Tech Reference</h1>",
+  "<p>API surfaces, schema notes, and integration hints stay readable as HTML.</p>",
+  "</main>",
+  "</body>",
+  "</html>",
+].join("");
+
+const techReferenceHtmlState: SpecDocumentState = {
+  status: "ready",
+  workspacePath,
+  specId: "tech-reference-tab",
+  fileKey: "tech-reference",
+  document: {
+    key: "tech-reference",
+    format: "html",
+    path: "/workspace/spec-reviewer/.plugin-workspace/.specs/tech-reference-tab/tech-reference.html",
+    contents: techReferenceHtmlContents,
+    missing: false,
+    blocks: [],
+  },
+  error: null,
+};
+
 const highlightedParagraph =
   "Users can select only this paragraph fragment without activating the highlight.";
 
@@ -137,5 +165,15 @@ export const ExistingCommentCards: Story = {
   args: {
     comments: commentCardComments,
     activeCommentId: commentId("cmt_active_selection"),
+  },
+};
+
+export const TechReferenceHtmlPreview: Story = {
+  args: {
+    state: techReferenceHtmlState,
+    selectedSpecLabel: "Tech Reference Tab",
+    selectedFileLabel: "Tech Reference",
+    comments: [],
+    activeCommentId: null,
   },
 };

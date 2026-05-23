@@ -217,6 +217,7 @@ test("MarkdownViewerはHTML文書をsandbox iframeで閲覧表示する", () => 
   );
   expect(result.container.querySelector(".markdown-rendered")).toBeNull();
   expect(result.container.querySelector(".markdown-block-comment-button")).toBeNull();
+  expect(result.container.querySelector(".markdown-document-search")).toBeNull();
   result.unmount();
 });
 
