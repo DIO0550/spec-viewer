@@ -240,6 +240,7 @@ fn plugin_workspace_default_file_name(key: SpecFileKey) -> &'static str {
         SpecFileKey::Hearing => "hearing-notes.md",
         SpecFileKey::Impl => "implementation-plan.md",
         SpecFileKey::Tasks => "tasks.md",
+        SpecFileKey::TechReference => "tech-reference.html",
         SpecFileKey::Requirements => "requirements.md",
         SpecFileKey::Design => "design.md",
     }
@@ -275,6 +276,7 @@ fn spec_skill_default_file_name(key: SpecFileKey) -> &'static str {
         SpecFileKey::Requirements => "requirements.md",
         SpecFileKey::Design => "design.md",
         SpecFileKey::Tasks => "tasks.md",
+        SpecFileKey::TechReference => "tech-reference.html",
         SpecFileKey::Exploration => "exploration-report.md",
         SpecFileKey::Hearing => "hearing-notes.md",
         SpecFileKey::Impl => "implementation-plan.md",
@@ -330,6 +332,7 @@ mod tests {
             vec![
                 (SpecFileKey::Impl, "implementation-plan.md"),
                 (SpecFileKey::Tasks, "tasks.md"),
+                (SpecFileKey::TechReference, "tech-reference.html"),
                 (SpecFileKey::Exploration, "exploration-report.md"),
                 (SpecFileKey::Hearing, "hearing-notes.md"),
             ],
@@ -407,6 +410,7 @@ mod tests {
             vec![
                 (SpecFileKey::Impl, "implementation-plan.md"),
                 (SpecFileKey::Tasks, "tasks.md"),
+                (SpecFileKey::TechReference, "tech-reference.html"),
                 (SpecFileKey::Exploration, "exploration-report.md"),
                 (SpecFileKey::Hearing, "interview.md"),
                 (SpecFileKey::Design, "design.md"),

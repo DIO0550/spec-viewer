@@ -8,12 +8,15 @@ use std::{
 use thiserror::Error;
 
 use crate::domain::{
-    spec::{SpecDocumentFormat, SpecDomainError, SpecFile, SpecFileStatus, SpecNode},
+    spec::{SpecDocumentFormat, SpecDomainError, SpecFile, SpecFileKey, SpecFileStatus, SpecNode},
     workspace::{
         WorkspaceConfig, WorkspaceDomainError, WorkspaceKind, WorkspaceLayout, WorkspaceRoot,
     },
 };
 use crate::infrastructure::persistence::config::{ConfigLoadError, WorkspaceConfigLoader};
+use crate::infrastructure::spec_file_resolution::{
+    spec_file_path_candidates, SpecFilePathCandidate,
+};
 
 const PLUGIN_WORKSPACE_SPECS_DIR: &str = ".plugin-workspace/.specs";
 const PLUGIN_WORKSPACE_DIRECTORY: &str = ".plugin-workspace";
@@ -698,7 +701,7 @@ fn scan_spec_files(
         .iter()
         .map(|mapping| {
             let file_path = directory.join(mapping.file_name());
-            let resolved_file = resolve_spec_file_for_scan(&file_path)?;
+            let resolved_file = resolve_spec_file_for_scan(mapping.key(), &file_path)?;
 
             SpecFile::with_resolved_format(
                 mapping.key(),
@@ -721,48 +724,29 @@ struct ScannedSpecFile {
     format: SpecDocumentFormat,
 }
 
-fn resolve_spec_file_for_scan(path: &Path) -> Result<ScannedSpecFile, SpecTreeScanError> {
-    let preferred_format = SpecDocumentFormat::from_file_name(&display_path(path));
+fn resolve_spec_file_for_scan(
+    key: SpecFileKey,
+    configured_path: &Path,
+) -> Result<ScannedSpecFile, SpecTreeScanError> {
+    let candidates = spec_file_path_candidates(key, configured_path);
+    let preferred_format = candidates
+        .first()
+        .map(SpecFilePathCandidate::format)
+        .unwrap_or_else(|| SpecDocumentFormat::from_file_name(&display_path(configured_path)));
 
-    if spec_file_status(path)? == SpecFileStatus::Present {
-        return Ok(ScannedSpecFile {
-            status: SpecFileStatus::Present,
-            format: preferred_format,
-        });
-    }
-
-    let Some(html_fallback_path) = html_fallback_path(path) else {
-        return Ok(ScannedSpecFile {
-            status: SpecFileStatus::Missing,
-            format: preferred_format,
-        });
-    };
-
-    let fallback_status = spec_file_status(&html_fallback_path)?;
-
-    if fallback_status == SpecFileStatus::Present {
-        return Ok(ScannedSpecFile {
-            status: SpecFileStatus::Present,
-            format: SpecDocumentFormat::Html,
-        });
+    for candidate in &candidates {
+        if spec_file_status(candidate.path())? == SpecFileStatus::Present {
+            return Ok(ScannedSpecFile {
+                status: SpecFileStatus::Present,
+                format: candidate.format(),
+            });
+        }
     }
 
     Ok(ScannedSpecFile {
         status: SpecFileStatus::Missing,
         format: preferred_format,
     })
-}
-
-fn html_fallback_path(path: &Path) -> Option<PathBuf> {
-    if !path
-        .extension()
-        .and_then(|extension| extension.to_str())
-        .is_some_and(|extension| extension.eq_ignore_ascii_case("md"))
-    {
-        return None;
-    }
-
-    Some(path.with_extension("html"))
 }
 
 fn config_for_spec_directory(
@@ -878,7 +862,7 @@ mod tests {
 
     use super::*;
     use crate::domain::{
-        spec::{SpecFileKey, SpecFileStatus},
+        spec::{SpecDocumentFormat, SpecFileKey, SpecFileStatus},
         workspace::{WorkspaceFileMapping, WorkspaceRoot},
     };
 
@@ -1113,6 +1097,50 @@ mod tests {
     }
 
     #[test]
+    fn spec_tree_scanner_reports_tech_reference_html_when_both_candidates_exist() {
+        let workspace = TestWorkspace::new("tech-reference-html-first");
+        workspace.create_dir(PLUGIN_WORKSPACE_SPECS_DIR);
+        workspace.write_file(
+            ".plugin-workspace/.specs/auth/tech-reference.html",
+            "<h1>Tech</h1>",
+        );
+        workspace.write_file(".plugin-workspace/.specs/auth/tech-reference.md", "# Tech");
+        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
+        let config = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
+
+        let tree = FilesystemSpecTreeScanner::new()
+            .scan(&layout, &config)
+            .expect("spec tree should be scanned");
+
+        let auth = &tree[0].children()[0];
+        let tech_reference = auth
+            .file_for_key(SpecFileKey::TechReference)
+            .expect("tech reference file should be configured");
+        assert_eq!(SpecFileStatus::Present, tech_reference.status());
+        assert_eq!(SpecDocumentFormat::Html, tech_reference.format());
+        assert_eq!("tech-reference.html", tech_reference.file_name());
+    }
+
+    #[test]
+    fn spec_tree_scanner_reports_missing_tech_reference_as_html() {
+        let workspace = TestWorkspace::new("tech-reference-missing");
+        workspace.create_dir(".plugin-workspace/.specs/auth");
+        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
+        let config = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
+
+        let tree = FilesystemSpecTreeScanner::new()
+            .scan(&layout, &config)
+            .expect("spec tree should be scanned");
+
+        let auth = &tree[0].children()[0];
+        let tech_reference = auth
+            .file_for_key(SpecFileKey::TechReference)
+            .expect("tech reference file should be configured");
+        assert_eq!(SpecFileStatus::Missing, tech_reference.status());
+        assert_eq!(SpecDocumentFormat::Html, tech_reference.format());
+    }
+
+    #[test]
     fn spec_tree_scanner_ignores_hidden_directories() {
         let workspace = TestWorkspace::new("hidden");
         workspace.create_dir(PLUGIN_WORKSPACE_SPECS_DIR);
@@ -1325,6 +1353,7 @@ mod tests {
             vec![
                 (SpecFileKey::Impl, SpecFileStatus::Present),
                 (SpecFileKey::Tasks, SpecFileStatus::Present),
+                (SpecFileKey::TechReference, SpecFileStatus::Missing),
                 (SpecFileKey::Exploration, SpecFileStatus::Present),
                 (SpecFileKey::Hearing, SpecFileStatus::Present),
             ],
@@ -1373,6 +1402,7 @@ mod tests {
             vec![
                 (SpecFileKey::Impl, SpecFileStatus::Present),
                 (SpecFileKey::Tasks, SpecFileStatus::Present),
+                (SpecFileKey::TechReference, SpecFileStatus::Missing),
                 (SpecFileKey::Exploration, SpecFileStatus::Present),
                 (SpecFileKey::Hearing, SpecFileStatus::Present),
             ],
@@ -1422,6 +1452,7 @@ mod tests {
             vec![
                 (SpecFileKey::Impl, SpecFileStatus::Present),
                 (SpecFileKey::Tasks, SpecFileStatus::Present),
+                (SpecFileKey::TechReference, SpecFileStatus::Missing),
                 (SpecFileKey::Exploration, SpecFileStatus::Present),
                 (SpecFileKey::Hearing, SpecFileStatus::Present),
             ],
