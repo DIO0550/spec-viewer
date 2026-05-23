@@ -2207,6 +2207,29 @@ textarea:disabled {
   min-height: 30px;
 }
 
+.html-zoom-control {
+  display: inline-grid;
+  grid-template-columns: 30px minmax(4.2ch, auto) 30px;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+
+.html-zoom-control .icon-button {
+  width: 30px;
+  height: 30px;
+  min-height: 30px;
+}
+
+.html-zoom-control__value {
+  color: var(--color-text-muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+}
+
 .markdown-viewer__header h1 {
   margin: 2px 0;
   font-size: 1.28rem;
@@ -2252,8 +2275,11 @@ textarea:disabled {
 }
 
 .html-rendered {
+  display: block;
   width: 100%;
-  min-height: min(72dvh, 860px);
+  max-width: 100%;
+  min-width: 0;
+  height: min(72dvh, 860px);
   border: 1px solid var(--color-border);
   border-radius: 8px;
   background: var(--color-raised);

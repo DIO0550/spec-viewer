@@ -212,12 +212,46 @@ test("MarkdownViewerはHTML文書をsandbox iframeで閲覧表示する", () => 
   ) as HTMLIFrameElement | null;
 
   expect(iframe?.getAttribute("sandbox")).toBe("");
-  expect(iframe?.getAttribute("srcdoc")).toBe(
+  expect(iframe?.getAttribute("srcdoc")).toContain(
+    '<meta name="viewport" content="width=device-width, initial-scale=1" />',
+  );
+  expect(iframe?.getAttribute("srcdoc")).toContain(
+    "--spec-viewer-html-zoom: 1;",
+  );
+  expect(iframe?.getAttribute("srcdoc")).toContain(
     "<h1>Preview</h1><p>HTML body</p>",
   );
   expect(result.container.querySelector(".markdown-rendered")).toBeNull();
   expect(result.container.querySelector(".markdown-block-comment-button")).toBeNull();
   expect(result.container.querySelector(".markdown-document-search")).toBeNull();
+  result.unmount();
+});
+
+test("MarkdownViewerはHTML文書の拡大率を変更できる", () => {
+  const result = renderViewer(
+    createReadyState("<h1>Preview</h1><p>HTML body</p>", [], "html"),
+  );
+  const zoomInButton = result.container.querySelector(
+    '[aria-label="HTMLを拡大"]',
+  ) as HTMLButtonElement;
+  const zoomOutput = result.container.querySelector(
+    '[aria-label="HTML拡大率"]',
+  );
+
+  expect(zoomOutput?.textContent).toBe("100%");
+
+  act(() => {
+    zoomInButton.click();
+  });
+
+  const iframe = result.container.querySelector(
+    ".html-rendered",
+  ) as HTMLIFrameElement | null;
+
+  expect(zoomOutput?.textContent).toBe("110%");
+  expect(iframe?.getAttribute("srcdoc")).toContain(
+    "--spec-viewer-html-zoom: 1.1;",
+  );
   result.unmount();
 });
 
