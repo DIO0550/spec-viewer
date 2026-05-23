@@ -4,10 +4,13 @@ import { expect, test, vi } from "vitest";
 
 import { configurePerformanceLoggerForTest } from "@/shared/lib/performance";
 import { createReviewRunCommandTestDouble } from "@/features/review-runs/testing/review-run-command-test-double";
+import { CommentId } from "@/features/comments/types/comment";
 import type { ReviewRunCommands } from "@/shared/api/tauri";
 import type { ReviewRun } from "@/features/review-runs/types/reviewRun";
 import type { SpecFileKey } from "@/features/specs/types/spec";
 import { useReviewRuns, type ReviewRunTargetScope } from "@/features/review-runs/hooks/useReviewRuns";
+
+const commentId = CommentId.fromString;
 
 const activeRun: ReviewRun = {
   id: "2026-05-06T120000Z-file-tasks-abcdef12",
@@ -230,7 +233,7 @@ test("useReviewRunsは作成したactive runを一覧の先頭に追加する", 
   await flushAsyncEffects();
   await act(async () => {
     await result.current.createReviewRun({
-      commentIds: ["cmt_1"],
+      commentIds: [commentId("cmt_1")],
       executionMode: "currentWorkspace",
     });
   });

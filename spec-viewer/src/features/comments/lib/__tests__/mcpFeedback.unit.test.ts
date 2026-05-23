@@ -3,9 +3,12 @@ import { expect, test } from "vitest";
 import { createSpecSkillMcpFeedbackDryRunPayload } from "@/features/comments/lib/mcpFeedback";
 import { renderSpecSkillMcpFeedbackDryRunPayload } from "@/features/comments/lib/mcpFeedback";
 import type { Comment } from "@/features/comments/types/comment";
+import { CommentId } from "@/features/comments/types/comment";
+
+const commentId = CommentId.fromString;
 
 const anchoredComment: Comment = {
-  id: "cmt_open",
+  id: commentId("cmt_open"),
   anchor: {
     fileKey: "tasks",
     blockType: "paragraph",
@@ -32,7 +35,7 @@ const anchoredComment: Comment = {
 
 const orphanedComment: Comment = {
   ...anchoredComment,
-  id: "cmt_orphaned",
+  id: commentId("cmt_orphaned"),
   body: "Carry orphaned comments into the Spec Skill feedback path.",
   status: "resolved",
   resolved: true,

@@ -6,6 +6,9 @@ import type {
   Comment as CompatComment,
   CommentAnchor,
 } from "@/features/comments/types/comment";
+import { CommentId } from "@/features/comments/types/comment";
+
+const commentId = CommentId.fromString;
 
 const anchor: CommentAnchor = {
   fileKey: "tasks",
@@ -20,7 +23,7 @@ const anchor: CommentAnchor = {
 };
 
 const openComment: Comment = {
-  id: "cmt_1",
+  id: commentId("cmt_1"),
   anchor,
   body: "Clarify this task",
   status: "open",
@@ -31,7 +34,7 @@ const openComment: Comment = {
 
 const secondOpenComment: Comment = {
   ...openComment,
-  id: "cmt_2",
+  id: commentId("cmt_2"),
   body: "Add acceptance criteria",
   createdAt: "2026-05-05T10:05:00Z",
   updatedAt: "2026-05-05T10:05:00Z",
@@ -347,7 +350,7 @@ test("Comment.upsertOptimisticToggleは対象idがない場合に元配列を返
   expect(
     Comment.upsertOptimisticToggle(
       comments,
-      "cmt_missing",
+      commentId("cmt_missing"),
       CommentStatusFilter.All,
     ),
   ).toBe(comments);

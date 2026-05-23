@@ -1,16 +1,18 @@
 import type { SpecFileKey } from "@/features/specs/types/spec";
 import type { Comment as DomainComment } from "@/features/comments/domain/comment";
+import { CommentId as CommentIdValue } from "@/features/comments/types/commentId";
+import type { CommentId as BrandedCommentId } from "@/features/comments/types/commentId";
 import type {
   CommentStatus,
   CommentStatusFilter,
 } from "@/features/comments/domain/commentStatusFilter";
 
+export type CommentId = BrandedCommentId;
+export const CommentId = CommentIdValue;
 export type {
   CommentStatus,
   CommentStatusFilter,
 } from "@/features/comments/domain/commentStatusFilter";
-
-export type CommentId = string;
 
 export type IsoDateTimeString = string;
 
