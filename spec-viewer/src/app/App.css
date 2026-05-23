@@ -572,6 +572,10 @@ textarea:disabled {
     var(--color-raised);
 }
 
+.app-shell__viewer:has(.markdown-viewer--html) {
+  overflow: hidden;
+}
+
 .workspace-toolbar {
   display: grid;
   grid-template-columns: minmax(190px, 260px) minmax(220px, 1fr) auto;
@@ -2090,6 +2094,15 @@ textarea:disabled {
   padding: 24px 28px 48px;
 }
 
+.markdown-viewer--html {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 100%;
+  overflow: hidden;
+  padding-bottom: 24px;
+}
+
 .markdown-viewer--center {
   display: grid;
   place-items: center;
@@ -2276,10 +2289,12 @@ textarea:disabled {
 
 .html-rendered {
   display: block;
+  flex: 1 1 min(72dvh, 860px);
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  height: min(72dvh, 860px);
+  min-height: 0;
+  height: auto;
   border: 1px solid var(--color-border);
   border-radius: 8px;
   background: var(--color-raised);

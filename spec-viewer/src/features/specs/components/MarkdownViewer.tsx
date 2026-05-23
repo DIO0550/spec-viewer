@@ -517,7 +517,11 @@ export function MarkdownViewer({
     <article
       ref={panelRef}
       id="markdown-viewer-panel"
-      className="markdown-viewer"
+      className={
+        state.document.format === "html"
+          ? "markdown-viewer markdown-viewer--html"
+          : "markdown-viewer"
+      }
       data-comment-dialog-open={
         activeAnchorDraft !== null || activeEditDraft !== null
           ? "true"

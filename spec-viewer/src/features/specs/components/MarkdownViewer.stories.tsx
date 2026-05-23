@@ -174,6 +174,14 @@ export const ExistingCommentCards: Story = {
 };
 
 export const TechReferenceHtmlPreview: Story = {
+  parameters: {
+    layout: "fullscreen",
+  },
+  render: (args) => (
+    <div className="app-shell__viewer" style={{ height: "100dvh" }}>
+      <MarkdownViewer {...args} />
+    </div>
+  ),
   args: {
     state: techReferenceHtmlState,
     selectedSpecLabel: "Tech Reference Tab",

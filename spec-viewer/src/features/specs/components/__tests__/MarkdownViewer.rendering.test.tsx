@@ -221,6 +221,9 @@ test("MarkdownViewerはHTML文書をsandbox iframeで閲覧表示する", () => 
   expect(iframe?.getAttribute("srcdoc")).toContain(
     "<h1>Preview</h1><p>HTML body</p>",
   );
+  expect(
+    result.container.querySelector(".markdown-viewer--html"),
+  ).not.toBeNull();
   expect(result.container.querySelector(".markdown-rendered")).toBeNull();
   expect(result.container.querySelector(".markdown-block-comment-button")).toBeNull();
   expect(result.container.querySelector(".markdown-document-search")).toBeNull();
