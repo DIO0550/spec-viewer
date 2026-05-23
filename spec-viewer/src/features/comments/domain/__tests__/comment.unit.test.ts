@@ -1,7 +1,8 @@
 import { expect, expectTypeOf, test } from "vitest";
 
 import { Comment } from "@/features/comments/domain/comment";
-import type { Comment as CommentType } from "@/features/comments/domain/comment";
+import type { Comment as DomainComment } from "@/features/comments/domain/comment";
+import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import type {
   Comment as CompatComment,
   CommentAnchor,
@@ -19,7 +20,7 @@ const anchor: CommentAnchor = {
   },
 };
 
-const openComment: CommentType = {
+const openComment: DomainComment = {
   id: "cmt_1",
   anchor,
   body: "Clarify this task",
@@ -27,6 +28,14 @@ const openComment: CommentType = {
   resolved: false,
   createdAt: "2026-05-05T10:00:00Z",
   updatedAt: "2026-05-05T10:00:00Z",
+};
+
+const secondOpenComment: DomainComment = {
+  ...openComment,
+  id: "cmt_2",
+  body: "Add acceptance criteria",
+  createdAt: "2026-05-05T10:05:00Z",
+  updatedAt: "2026-05-05T10:05:00Z",
 };
 
 const movedAnchorResolution = {
@@ -58,7 +67,7 @@ const fuzzyAnchorResolution = {
 } as const;
 
 test("domain Commentと互換exportのCommentは同じ型として扱える", () => {
-  expectTypeOf<CommentType>().toEqualTypeOf<CompatComment>();
+  expectTypeOf<DomainComment>().toEqualTypeOf<CompatComment>();
 });
 
 test("Comment.createは既存のコメントshapeを維持する", () => {
@@ -81,7 +90,7 @@ test("Comment.resolveはstatusとresolvedを解決済みへ同期する", () => 
 });
 
 test("Comment.reopenはstatusとresolvedを未解決へ同期する", () => {
-  const resolvedComment: CommentType = {
+  const resolvedComment: DomainComment = {
     ...openComment,
     status: "resolved",
     resolved: true,
@@ -107,19 +116,16 @@ test.each([
     },
     openComment,
   ],
-] as const)(
-  "Comment.toggleResolvedはstatusとresolvedを同期して反転する",
-  (comment, expectedComment) => {
-    expect(Comment.toggleResolved(comment)).toEqual(expectedComment);
-  },
-);
+] as const)("Comment.toggleResolvedはstatusとresolvedを同期して反転する", (comment, expectedComment) => {
+  expect(Comment.toggleResolved(comment)).toEqual(expectedComment);
+});
 
 test("Comment.preserveAnchorResolutionはnextにresolutionがある場合nextを優先する", () => {
-  const currentComment: CommentType = {
+  const currentComment: DomainComment = {
     ...openComment,
     anchorResolution: movedAnchorResolution,
   };
-  const nextComment: CommentType = {
+  const nextComment: DomainComment = {
     ...openComment,
     anchorResolution: fuzzyAnchorResolution,
   };
@@ -132,19 +138,218 @@ test("Comment.preserveAnchorResolutionはnextにresolutionがある場合nextを
 test.each([
   [{ ...openComment }, movedAnchorResolution],
   [{ ...openComment, anchorResolution: null }, movedAnchorResolution],
-] as const)(
-  "Comment.preserveAnchorResolutionはnextのresolutionがない場合currentの値を維持する",
-  (nextComment, expectedAnchorResolution) => {
-    const currentComment: CommentType = {
-      ...openComment,
-      anchorResolution: expectedAnchorResolution,
-    };
+] as const)("Comment.preserveAnchorResolutionはnextのresolutionがない場合currentの値を維持する", (nextComment, expectedAnchorResolution) => {
+  const currentComment: DomainComment = {
+    ...openComment,
+    anchorResolution: expectedAnchorResolution,
+  };
 
-    expect(
-      Comment.preserveAnchorResolution(currentComment, nextComment),
-    ).toEqual({
+  expect(Comment.preserveAnchorResolution(currentComment, nextComment)).toEqual(
+    {
       ...nextComment,
       anchorResolution: expectedAnchorResolution,
-    });
-  },
-);
+    },
+  );
+});
+
+test.each([
+  [openComment, CommentStatusFilter.All, true],
+  [openComment, CommentStatusFilter.Open, true],
+  [openComment, CommentStatusFilter.Resolved, false],
+  [
+    { ...openComment, status: "resolved", resolved: true },
+    CommentStatusFilter.Open,
+    false,
+  ],
+] as const)("Comment.shouldDisplayはstatus filterに一致するコメントのみtrueにする", (comment, statusFilter, expectedResult) => {
+  expect(Comment.shouldDisplay(comment, statusFilter)).toBe(expectedResult);
+});
+
+test("Comment.appendDisplayableは表示対象コメントを末尾に追加する", () => {
+  expect(
+    Comment.appendDisplayable(
+      [openComment],
+      secondOpenComment,
+      CommentStatusFilter.Open,
+    ),
+  ).toEqual([openComment, secondOpenComment]);
+});
+
+test("Comment.appendDisplayableはfilter対象外なら元配列を返す", () => {
+  const comments = [openComment] as const;
+  const resolvedComment: DomainComment = {
+    ...secondOpenComment,
+    status: "resolved",
+    resolved: true,
+  };
+
+  expect(
+    Comment.appendDisplayable(
+      comments,
+      resolvedComment,
+      CommentStatusFilter.Open,
+    ),
+  ).toBe(comments);
+});
+
+test("Comment.appendDisplayableは重複idなら元配列を返す", () => {
+  const comments = [openComment] as const;
+  const updatedComment: DomainComment = {
+    ...openComment,
+    body: "Updated body",
+  };
+
+  expect(
+    Comment.appendDisplayable(
+      comments,
+      updatedComment,
+      CommentStatusFilter.All,
+    ),
+  ).toBe(comments);
+});
+
+test("Comment.upsertDisplayableは既存コメントを同じ位置で置換する", () => {
+  const updatedComment: DomainComment = {
+    ...openComment,
+    body: "Updated body",
+    updatedAt: "2026-05-05T10:15:00Z",
+  };
+
+  expect(
+    Comment.upsertDisplayable(
+      [openComment, secondOpenComment],
+      updatedComment,
+      CommentStatusFilter.All,
+    ),
+  ).toEqual([updatedComment, secondOpenComment]);
+});
+
+test("Comment.upsertDisplayableは新規表示対象コメントを末尾に追加する", () => {
+  expect(
+    Comment.upsertDisplayable(
+      [openComment],
+      secondOpenComment,
+      CommentStatusFilter.Open,
+    ),
+  ).toEqual([openComment, secondOpenComment]);
+});
+
+test("Comment.upsertDisplayableはfilter対象外になった既存コメントを削除する", () => {
+  const resolvedComment: DomainComment = {
+    ...openComment,
+    status: "resolved",
+    resolved: true,
+  };
+
+  expect(
+    Comment.upsertDisplayable(
+      [openComment, secondOpenComment],
+      resolvedComment,
+      CommentStatusFilter.Open,
+    ),
+  ).toEqual([secondOpenComment]);
+});
+
+test("Comment.upsertDisplayableはfilter対象外かつ未存在のコメントを追加しない", () => {
+  const comments = [openComment] as const;
+  const resolvedComment: DomainComment = {
+    ...secondOpenComment,
+    status: "resolved",
+    resolved: true,
+  };
+
+  expect(
+    Comment.upsertDisplayable(
+      comments,
+      resolvedComment,
+      CommentStatusFilter.Open,
+    ),
+  ).toEqual(comments);
+});
+
+test("Comment.upsertDisplayableはcommand resultで省略されたanchor resolutionを維持する", () => {
+  const currentComment: DomainComment = {
+    ...openComment,
+    anchorResolution: movedAnchorResolution,
+  };
+  const nextComment: DomainComment = {
+    ...openComment,
+    body: "Updated body",
+    updatedAt: "2026-05-05T10:15:00Z",
+  };
+
+  expect(
+    Comment.upsertDisplayable(
+      [currentComment],
+      nextComment,
+      CommentStatusFilter.All,
+    ),
+  ).toEqual([
+    {
+      ...nextComment,
+      anchorResolution: movedAnchorResolution,
+    },
+  ]);
+});
+
+test("Comment.upsertDisplayableはanchor resolutionがnullでも既存仕様として維持する", () => {
+  const currentComment: DomainComment = {
+    ...openComment,
+    anchorResolution: movedAnchorResolution,
+  };
+  const nextComment: DomainComment = {
+    ...openComment,
+    anchorResolution: null,
+  };
+
+  expect(
+    Comment.upsertDisplayable(
+      [currentComment],
+      nextComment,
+      CommentStatusFilter.All,
+    ),
+  ).toEqual([
+    {
+      ...nextComment,
+      anchorResolution: movedAnchorResolution,
+    },
+  ]);
+});
+
+test("Comment.upsertOptimisticToggleは既存コメントのresolved stateを反転する", () => {
+  expect(
+    Comment.upsertOptimisticToggle(
+      [openComment],
+      openComment.id,
+      CommentStatusFilter.All,
+    ),
+  ).toEqual([
+    {
+      ...openComment,
+      status: "resolved",
+      resolved: true,
+    },
+  ]);
+});
+
+test("Comment.upsertOptimisticToggleはfilter適用後に非表示のコメントを除外する", () => {
+  expect(
+    Comment.upsertOptimisticToggle(
+      [openComment, secondOpenComment],
+      openComment.id,
+      CommentStatusFilter.Open,
+    ),
+  ).toEqual([secondOpenComment]);
+});
+
+test("Comment.upsertOptimisticToggleは対象idがない場合に元配列を返す", () => {
+  const comments = [openComment] as const;
+
+  expect(
+    Comment.upsertOptimisticToggle(
+      comments,
+      "cmt_missing",
+      CommentStatusFilter.All,
+    ),
+  ).toBe(comments);
+});
