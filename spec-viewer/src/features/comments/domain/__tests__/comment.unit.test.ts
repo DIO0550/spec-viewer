@@ -1,7 +1,6 @@
 import { expect, expectTypeOf, test } from "vitest";
 
 import { Comment } from "@/features/comments/domain/comment";
-import type { Comment as DomainComment } from "@/features/comments/domain/comment";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import type {
   Comment as CompatComment,
@@ -20,7 +19,7 @@ const anchor: CommentAnchor = {
   },
 };
 
-const openComment: DomainComment = {
+const openComment: Comment = {
   id: "cmt_1",
   anchor,
   body: "Clarify this task",
@@ -30,7 +29,7 @@ const openComment: DomainComment = {
   updatedAt: "2026-05-05T10:00:00Z",
 };
 
-const secondOpenComment: DomainComment = {
+const secondOpenComment: Comment = {
   ...openComment,
   id: "cmt_2",
   body: "Add acceptance criteria",
@@ -67,7 +66,7 @@ const fuzzyAnchorResolution = {
 } as const;
 
 test("domain Commentと互換exportのCommentは同じ型として扱える", () => {
-  expectTypeOf<DomainComment>().toEqualTypeOf<CompatComment>();
+  expectTypeOf<Comment>().toEqualTypeOf<CompatComment>();
 });
 
 test("Comment.createは既存のコメントshapeを維持する", () => {
@@ -90,7 +89,7 @@ test("Comment.resolveはstatusとresolvedを解決済みへ同期する", () => 
 });
 
 test("Comment.reopenはstatusとresolvedを未解決へ同期する", () => {
-  const resolvedComment: DomainComment = {
+  const resolvedComment: Comment = {
     ...openComment,
     status: "resolved",
     resolved: true,
@@ -121,11 +120,11 @@ test.each([
 });
 
 test("Comment.preserveAnchorResolutionはnextにresolutionがある場合nextを優先する", () => {
-  const currentComment: DomainComment = {
+  const currentComment: Comment = {
     ...openComment,
     anchorResolution: movedAnchorResolution,
   };
-  const nextComment: DomainComment = {
+  const nextComment: Comment = {
     ...openComment,
     anchorResolution: fuzzyAnchorResolution,
   };
@@ -139,7 +138,7 @@ test.each([
   [{ ...openComment }, movedAnchorResolution],
   [{ ...openComment, anchorResolution: null }, movedAnchorResolution],
 ] as const)("Comment.preserveAnchorResolutionはnextのresolutionがない場合currentの値を維持する", (nextComment, expectedAnchorResolution) => {
-  const currentComment: DomainComment = {
+  const currentComment: Comment = {
     ...openComment,
     anchorResolution: expectedAnchorResolution,
   };
@@ -177,7 +176,7 @@ test("Comment.appendDisplayableは表示対象コメントを末尾に追加す�
 
 test("Comment.appendDisplayableはfilter対象外なら元配列を返す", () => {
   const comments = [openComment] as const;
-  const resolvedComment: DomainComment = {
+  const resolvedComment: Comment = {
     ...secondOpenComment,
     status: "resolved",
     resolved: true,
@@ -194,7 +193,7 @@ test("Comment.appendDisplayableはfilter対象外なら元配列を返す", () =
 
 test("Comment.appendDisplayableは重複idなら元配列を返す", () => {
   const comments = [openComment] as const;
-  const updatedComment: DomainComment = {
+  const updatedComment: Comment = {
     ...openComment,
     body: "Updated body",
   };
@@ -209,7 +208,7 @@ test("Comment.appendDisplayableは重複idなら元配列を返す", () => {
 });
 
 test("Comment.upsertDisplayableは既存コメントを同じ位置で置換する", () => {
-  const updatedComment: DomainComment = {
+  const updatedComment: Comment = {
     ...openComment,
     body: "Updated body",
     updatedAt: "2026-05-05T10:15:00Z",
@@ -235,7 +234,7 @@ test("Comment.upsertDisplayableは新規表示対象コメントを末尾に追�
 });
 
 test("Comment.upsertDisplayableはfilter対象外になった既存コメントを削除する", () => {
-  const resolvedComment: DomainComment = {
+  const resolvedComment: Comment = {
     ...openComment,
     status: "resolved",
     resolved: true,
@@ -252,7 +251,7 @@ test("Comment.upsertDisplayableはfilter対象外になった既存コメント�
 
 test("Comment.upsertDisplayableはfilter対象外かつ未存在のコメントを追加しない", () => {
   const comments = [openComment] as const;
-  const resolvedComment: DomainComment = {
+  const resolvedComment: Comment = {
     ...secondOpenComment,
     status: "resolved",
     resolved: true,
@@ -268,11 +267,11 @@ test("Comment.upsertDisplayableはfilter対象外かつ未存在のコメント�
 });
 
 test("Comment.upsertDisplayableはcommand resultで省略されたanchor resolutionを維持する", () => {
-  const currentComment: DomainComment = {
+  const currentComment: Comment = {
     ...openComment,
     anchorResolution: movedAnchorResolution,
   };
-  const nextComment: DomainComment = {
+  const nextComment: Comment = {
     ...openComment,
     body: "Updated body",
     updatedAt: "2026-05-05T10:15:00Z",
@@ -293,11 +292,11 @@ test("Comment.upsertDisplayableはcommand resultで省略されたanchor resolut
 });
 
 test("Comment.upsertDisplayableはanchor resolutionがnullでも既存仕様として維持する", () => {
-  const currentComment: DomainComment = {
+  const currentComment: Comment = {
     ...openComment,
     anchorResolution: movedAnchorResolution,
   };
-  const nextComment: DomainComment = {
+  const nextComment: Comment = {
     ...openComment,
     anchorResolution: null,
   };
