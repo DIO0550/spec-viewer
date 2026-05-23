@@ -75,7 +75,10 @@ function createReadyState(
   const document: SpecDocument = {
     key: "tasks",
     format,
-    path: "/workspace/spec-reviewer/docs/plans/tasks.md",
+    path:
+      format === "html"
+        ? "/workspace/spec-reviewer/docs/plans/tasks.html"
+        : "/workspace/spec-reviewer/docs/plans/tasks.md",
     contents,
     missing: false,
     blocks,
@@ -205,7 +208,11 @@ test("MarkdownViewerはGFM要素を安全なHTMLとして表示する", () => {
 
 test("MarkdownViewerはHTML文書をsandbox iframeで閲覧表示する", () => {
   const result = renderViewer(
-    createReadyState("<h1>Preview</h1><p>HTML body</p>", [], "html"),
+    createReadyState(
+      '<nav><a href="#overview">Overview</a><a href="tasks.html#preview">Preview</a></nav><h1 id="overview">Overview</h1><h2 id="preview">Preview</h2><p>HTML body</p>',
+      [],
+      "html",
+    ),
   );
   const iframe = result.container.querySelector(
     ".html-rendered",
@@ -216,10 +223,16 @@ test("MarkdownViewerはHTML文書をsandbox iframeで閲覧表示する", () => 
     '<meta name="viewport" content="width=device-width, initial-scale=1" />',
   );
   expect(iframe?.getAttribute("srcdoc")).toContain(
+    '<base href="about:srcdoc" />',
+  );
+  expect(iframe?.getAttribute("srcdoc")).toContain(
     "--spec-viewer-html-zoom: 1;",
   );
   expect(iframe?.getAttribute("srcdoc")).toContain(
-    "<h1>Preview</h1><p>HTML body</p>",
+    '<nav><a href="#overview">Overview</a><a href="#preview">Preview</a></nav><h1 id="overview">Overview</h1><h2 id="preview">Preview</h2><p>HTML body</p>',
+  );
+  expect(iframe?.getAttribute("srcdoc")).not.toContain(
+    'href="tasks.html#preview"',
   );
   expect(
     result.container.querySelector(".markdown-viewer--html"),
