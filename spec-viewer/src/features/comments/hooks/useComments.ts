@@ -18,10 +18,7 @@ import {
   createPerformanceCorrelationId,
   startPerformanceSpan,
 } from "@/shared/lib/performance";
-import {
-  Comment,
-  type Comment as CommentType,
-} from "@/features/comments/domain/comment";
+import { Comment } from "@/features/comments/domain/comment";
 import { CommentScope } from "@/features/comments/domain/commentScope";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import type {
@@ -55,7 +52,7 @@ export type CommentListState =
       status: "ready";
       scope: CommentScope;
       statusFilter: CommentStatusFilter;
-      comments: readonly CommentType[];
+      comments: readonly Comment[];
       error: null;
     }>
   | Readonly<{
@@ -123,19 +120,19 @@ export type UseCommentsOptions = Readonly<{
 export type UseCommentsResult = Readonly<{
   listState: CommentListState;
   mutationState: CommentMutationState;
-  comments: readonly CommentType[];
+  comments: readonly Comment[];
   isLoading: boolean;
   isSaving: boolean;
   isEmpty: boolean;
   error: NormalizedCommandError | null;
   mutationError: NormalizedCommandError | null;
   reloadComments: () => Promise<boolean>;
-  addComment: (input: AddCommentInput) => Promise<CommentType | null>;
-  updateComment: (input: UpdateCommentInput) => Promise<CommentType | null>;
+  addComment: (input: AddCommentInput) => Promise<Comment | null>;
+  updateComment: (input: UpdateCommentInput) => Promise<Comment | null>;
   deleteComment: (commentId: CommentId) => Promise<boolean>;
-  resolveComment: (commentId: CommentId) => Promise<CommentType | null>;
-  reopenComment: (commentId: CommentId) => Promise<CommentType | null>;
-  toggleCommentResolved: (commentId: CommentId) => Promise<CommentType | null>;
+  resolveComment: (commentId: CommentId) => Promise<Comment | null>;
+  reopenComment: (commentId: CommentId) => Promise<Comment | null>;
+  toggleCommentResolved: (commentId: CommentId) => Promise<Comment | null>;
 }>;
 
 const defaultStatusFilter: CommentStatusFilter = CommentStatusFilter.All;
@@ -165,7 +162,7 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
   const listRequestIdRef = useRef(0);
   const mutationRequestIdRef = useRef(0);
   const activeScopeKeyRef = useRef(scopeKey);
-  const commentsRef = useRef<readonly CommentType[]>([]);
+  const commentsRef = useRef<readonly Comment[]>([]);
   const [listState, setListState] = useState<CommentListState>(
     createIdleListState(statusFilter),
   );
@@ -252,7 +249,7 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
   }, [reloadComments]);
 
   const addComment = useCallback(
-    async (input: AddCommentInput): Promise<CommentType | null> =>
+    async (input: AddCommentInput): Promise<Comment | null> =>
       runCommentMutation({
         scope,
         scopeKey,
@@ -276,7 +273,7 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
             statusFilter,
             setListState,
             transform: (comments) =>
-              appendDisplayableComment(comments, comment, statusFilter),
+              Comment.appendDisplayable(comments, comment, statusFilter),
           });
         },
       }),
@@ -284,7 +281,7 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
   );
 
   const updateComment = useCallback(
-    async (input: UpdateCommentInput): Promise<CommentType | null> =>
+    async (input: UpdateCommentInput): Promise<Comment | null> =>
       runCommentMutation({
         scope,
         scopeKey,
@@ -306,7 +303,7 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
             statusFilter,
             setListState,
             transform: (comments) =>
-              upsertDisplayableComment(comments, comment, statusFilter),
+              Comment.upsertDisplayable(comments, comment, statusFilter),
           });
         },
       }),
@@ -347,7 +344,7 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
   );
 
   const resolveComment = useCallback(
-    async (commentId: CommentId): Promise<CommentType | null> =>
+    async (commentId: CommentId): Promise<Comment | null> =>
       runStatusMutation({
         scope,
         scopeKey,
@@ -365,7 +362,7 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
   );
 
   const reopenComment = useCallback(
-    async (commentId: CommentId): Promise<CommentType | null> =>
+    async (commentId: CommentId): Promise<Comment | null> =>
       runStatusMutation({
         scope,
         scopeKey,
@@ -383,7 +380,7 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
   );
 
   const toggleCommentResolved = useCallback(
-    async (commentId: CommentId): Promise<CommentType | null> => {
+    async (commentId: CommentId): Promise<Comment | null> => {
       const previousComments = commentsRef.current;
 
       updateCommentsForCurrentScope({
@@ -391,7 +388,7 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
         statusFilter,
         setListState,
         transform: (comments) =>
-          upsertOptimisticToggle(comments, commentId, statusFilter),
+          Comment.upsertOptimisticToggle(comments, commentId, statusFilter),
       });
 
       return runStatusMutation({
@@ -454,7 +451,7 @@ type RunCommentMutationOptions<Result> = Readonly<{
 }>;
 
 type RunStatusMutationOptions = Omit<
-  RunCommentMutationOptions<CommentType>,
+  RunCommentMutationOptions<Comment>,
   "applySuccess"
 > &
   Readonly<{
@@ -466,7 +463,7 @@ type UpdateCommentsForCurrentScopeOptions = Readonly<{
   scope: CommentScope | null;
   statusFilter: CommentStatusFilter;
   setListState: Dispatch<SetStateAction<CommentListState>>;
-  transform: (comments: readonly CommentType[]) => readonly CommentType[];
+  transform: (comments: readonly Comment[]) => readonly Comment[];
 }>;
 
 /** @returns Idle comment list state for an incomplete scope. */
@@ -486,7 +483,7 @@ function createIdleListState(
 function createLoadedListState(
   scope: CommentScope,
   statusFilter: CommentStatusFilter,
-  comments: readonly CommentType[],
+  comments: readonly Comment[],
 ): CommentListState {
   if (comments.length === 0) {
     return {
@@ -598,7 +595,7 @@ async function runCommentMutation<Result>(
 /** @returns Updated comment from a resolve/reopen/toggle command. */
 async function runStatusMutation(
   options: RunStatusMutationOptions,
-): Promise<CommentType | null> {
+): Promise<Comment | null> {
   return runCommentMutation({
     ...options,
     applySuccess: (comment) => {
@@ -607,7 +604,7 @@ async function runStatusMutation(
         statusFilter: options.statusFilter,
         setListState: options.setListState,
         transform: (comments) =>
-          upsertDisplayableComment(comments, comment, options.statusFilter),
+          Comment.upsertDisplayable(comments, comment, options.statusFilter),
       });
     },
   });
@@ -660,87 +657,4 @@ function setCommentsForScope(
       nextComments,
     );
   });
-}
-
-/** @returns Comments with a displayable comment appended once. */
-function appendDisplayableComment(
-  comments: readonly CommentType[],
-  comment: CommentType,
-  statusFilter: CommentStatusFilter,
-): readonly CommentType[] {
-  if (!shouldDisplayComment(comment, statusFilter)) {
-    return comments;
-  }
-
-  if (comments.some((currentComment) => currentComment.id === comment.id)) {
-    return comments;
-  }
-
-  return [...comments, comment];
-}
-
-/** @returns Comments with the given displayable comment inserted or replaced. */
-function upsertDisplayableComment(
-  comments: readonly CommentType[],
-  comment: CommentType,
-  statusFilter: CommentStatusFilter,
-): readonly CommentType[] {
-  const commentWithResolution = preserveAnchorResolution(comments, comment);
-  const withoutComment = comments.filter(
-    (currentComment) => currentComment.id !== commentWithResolution.id,
-  );
-
-  if (!shouldDisplayComment(commentWithResolution, statusFilter)) {
-    return withoutComment;
-  }
-
-  const replaceIndex = comments.findIndex(
-    (currentComment) => currentComment.id === commentWithResolution.id,
-  );
-
-  if (replaceIndex < 0) {
-    return [...comments, commentWithResolution];
-  }
-
-  return comments.map((currentComment) =>
-    currentComment.id === commentWithResolution.id
-      ? commentWithResolution
-      : currentComment,
-  );
-}
-
-/** @returns A command result with existing resolution metadata retained when omitted. */
-function preserveAnchorResolution(
-  comments: readonly CommentType[],
-  comment: CommentType,
-): CommentType {
-  const currentComment = comments.find(
-    (candidate) => candidate.id === comment.id,
-  );
-  return Comment.preserveAnchorResolution(currentComment, comment);
-}
-
-/** @returns Comments after toggling one comment locally. */
-function upsertOptimisticToggle(
-  comments: readonly CommentType[],
-  commentId: CommentId,
-  statusFilter: CommentStatusFilter,
-): readonly CommentType[] {
-  const currentComment = comments.find((comment) => comment.id === commentId);
-
-  if (currentComment === undefined) {
-    return comments;
-  }
-
-  const nextComment = Comment.toggleResolved(currentComment);
-
-  return upsertDisplayableComment(comments, nextComment, statusFilter);
-}
-
-/** @returns True when the current status filter should include the comment. */
-function shouldDisplayComment(
-  comment: CommentType,
-  statusFilter: CommentStatusFilter,
-): boolean {
-  return CommentStatusFilter.matches(statusFilter, comment.status);
 }

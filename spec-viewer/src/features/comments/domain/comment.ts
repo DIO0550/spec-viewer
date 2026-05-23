@@ -1,4 +1,8 @@
-import type { CommentStatus } from "@/features/comments/domain/commentStatusFilter";
+import {
+  CommentStatusFilter,
+  type CommentStatus,
+  type CommentStatusFilter as CommentStatusFilterType,
+} from "@/features/comments/domain/commentStatusFilter";
 import type {
   CommentAnchor,
   CommentAnchorResolution,
@@ -66,5 +70,97 @@ export const Comment = {
     }
 
     return { ...next, anchorResolution: current.anchorResolution };
+  },
+  /**
+   * @param comment - Comment to evaluate
+   * @param statusFilter - Active status filter
+   * @returns True when the filter should include the comment.
+   */
+  shouldDisplay(
+    comment: Comment,
+    statusFilter: CommentStatusFilterType,
+  ): boolean {
+    return CommentStatusFilter.matches(statusFilter, comment.status);
+  },
+  /**
+   * @param comments - Current visible comments
+   * @param comment - Comment to append when displayable
+   * @param statusFilter - Active status filter
+   * @returns Comments with the displayable comment appended once.
+   */
+  appendDisplayable(
+    comments: readonly Comment[],
+    comment: Comment,
+    statusFilter: CommentStatusFilterType,
+  ): readonly Comment[] {
+    if (!Comment.shouldDisplay(comment, statusFilter)) {
+      return comments;
+    }
+
+    if (comments.some((currentComment) => currentComment.id === comment.id)) {
+      return comments;
+    }
+
+    return [...comments, comment];
+  },
+  /**
+   * @param comments - Current visible comments
+   * @param comment - Incoming command result
+   * @param statusFilter - Active status filter
+   * @returns Comments with the comment inserted, replaced, or removed by filter.
+   */
+  upsertDisplayable(
+    comments: readonly Comment[],
+    comment: Comment,
+    statusFilter: CommentStatusFilterType,
+  ): readonly Comment[] {
+    const commentWithResolution = Comment.preserveAnchorResolution(
+      comments.find((candidate) => candidate.id === comment.id),
+      comment,
+    );
+    const withoutComment = comments.filter(
+      (currentComment) => currentComment.id !== commentWithResolution.id,
+    );
+
+    if (!Comment.shouldDisplay(commentWithResolution, statusFilter)) {
+      return withoutComment;
+    }
+
+    const replaceIndex = comments.findIndex(
+      (currentComment) => currentComment.id === commentWithResolution.id,
+    );
+
+    if (replaceIndex < 0) {
+      return [...comments, commentWithResolution];
+    }
+
+    return comments.map((currentComment) =>
+      currentComment.id === commentWithResolution.id
+        ? commentWithResolution
+        : currentComment,
+    );
+  },
+  /**
+   * @param comments - Current visible comments
+   * @param commentId - Comment id to toggle locally
+   * @param statusFilter - Active status filter
+   * @returns Comments after an optimistic resolved-state toggle.
+   */
+  upsertOptimisticToggle(
+    comments: readonly Comment[],
+    commentId: CommentId,
+    statusFilter: CommentStatusFilterType,
+  ): readonly Comment[] {
+    const currentComment = comments.find((comment) => comment.id === commentId);
+
+    if (currentComment === undefined) {
+      return comments;
+    }
+
+    return Comment.upsertDisplayable(
+      comments,
+      Comment.toggleResolved(currentComment),
+      statusFilter,
+    );
   },
 } as const;
