@@ -567,7 +567,11 @@ export function MarkdownViewer({
         </div>
       </header>
       {state.document.format === "html" ? (
-        <HtmlDocument contents={contents} zoomPercent={htmlZoomPercent} />
+        <HtmlDocument
+          contents={contents}
+          path={state.document.path}
+          zoomPercent={htmlZoomPercent}
+        />
       ) : (
         <>
           <MarkdownDocument
@@ -973,31 +977,50 @@ function MarkdownDocument({
 
 type HtmlDocumentProps = Readonly<{
   contents: string;
+  path: string;
   zoomPercent: number;
 }>;
 
 /** @returns Sandboxed HTML preview for non-Markdown spec files. */
-function HtmlDocument({ contents, zoomPercent }: HtmlDocumentProps) {
+function HtmlDocument({ contents, path, zoomPercent }: HtmlDocumentProps) {
   return (
     <iframe
       className="html-rendered"
       title={uiText.markdown.renderedHtmlDocument}
       sandbox=""
-      srcDoc={createHtmlPreviewDocument(contents, zoomPercent)}
+      srcDoc={createHtmlPreviewDocument({
+        contents,
+        sourcePath: path,
+        zoomPercent,
+      })}
     />
   );
 }
 
+type CreateHtmlPreviewDocumentInput = Readonly<{
+  contents: string;
+  sourcePath: string;
+  zoomPercent: number;
+}>;
+
 /** @returns HTML contents with viewer-controlled viewport and zoom styles. */
-function createHtmlPreviewDocument(contents: string, zoomPercent: number): string {
+function createHtmlPreviewDocument({
+  contents,
+  sourcePath,
+  zoomPercent,
+}: CreateHtmlPreviewDocumentInput): string {
+  const normalizedContents = rewriteSameDocumentHtmlLinks(
+    removeHtmlBaseElements(contents),
+    sourcePath,
+  );
   const previewHead = createHtmlPreviewHead(zoomPercent);
 
-  if (/<\/head>/i.test(contents)) {
-    return contents.replace(/<\/head>/i, `${previewHead}</head>`);
+  if (/<\/head>/i.test(normalizedContents)) {
+    return normalizedContents.replace(/<\/head>/i, `${previewHead}</head>`);
   }
 
-  if (/<html(?:\s[^>]*)?>/i.test(contents)) {
-    return contents.replace(
+  if (/<html(?:\s[^>]*)?>/i.test(normalizedContents)) {
+    return normalizedContents.replace(
       /<html(?:\s[^>]*)?>/i,
       (htmlTag) => `${htmlTag}<head>${previewHead}</head>`,
     );
@@ -1010,10 +1033,67 @@ function createHtmlPreviewDocument(contents: string, zoomPercent: number): strin
     previewHead,
     "</head>",
     "<body>",
-    contents,
+    normalizedContents,
     "</body>",
     "</html>",
   ].join("");
+}
+
+/** @returns HTML contents with document-provided base tags removed. */
+function removeHtmlBaseElements(contents: string): string {
+  return contents.replace(/<base\b[^>]*>/gi, "");
+}
+
+/** @returns HTML contents with same-file hash links rewritten for srcdoc navigation. */
+function rewriteSameDocumentHtmlLinks(
+  contents: string,
+  sourcePath: string,
+): string {
+  const sourceFileName = getPathFileName(sourcePath);
+
+  return contents.replace(
+    /\bhref=(["'])([^"']+)["']/gi,
+    (attribute, quote: string, href: string) => {
+      const hashIndex = href.indexOf("#");
+
+      if (hashIndex < 0) {
+        return attribute;
+      }
+
+      const hrefPath = href.slice(0, hashIndex);
+      const hrefHash = href.slice(hashIndex);
+
+      if (!isSameDocumentHtmlLinkPath(hrefPath, sourceFileName)) {
+        return attribute;
+      }
+
+      return `href=${quote}${hrefHash}${quote}`;
+    },
+  );
+}
+
+/** @returns Whether a link path points at the current srcdoc document. */
+function isSameDocumentHtmlLinkPath(
+  hrefPath: string,
+  sourceFileName: string,
+): boolean {
+  if (hrefPath.length === 0) {
+    return true;
+  }
+
+  if (hrefPath === "." || hrefPath === "./") {
+    return true;
+  }
+
+  return getPathFileName(hrefPath) === sourceFileName;
+}
+
+/** @returns The final path segment from a slash-delimited path. */
+function getPathFileName(path: string): string {
+  const normalizedPath = path.split(/[?#]/, 1)[0] ?? "";
+  const pathSegments = normalizedPath.split("/").filter(Boolean);
+
+  return pathSegments[pathSegments.length - 1] ?? normalizedPath;
 }
 
 /** @returns Meta and CSS that make arbitrary HTML previews fit the iframe. */
@@ -1022,6 +1102,7 @@ function createHtmlPreviewHead(zoomPercent: number): string {
 
   return [
     '<meta name="viewport" content="width=device-width, initial-scale=1" />',
+    '<base href="about:srcdoc" />',
     '<style id="spec-viewer-html-preview-style">',
     ":root {",
     `  --spec-viewer-html-zoom: ${formatHtmlZoomScale(zoomScale)};`,
