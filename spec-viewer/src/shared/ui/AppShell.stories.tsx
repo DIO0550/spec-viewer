@@ -7,6 +7,7 @@ import {
   createTextHash,
   type Comment,
 } from "@/features/comments";
+import { CommentId } from "@/features/comments/types/comment";
 import type {
   SpecDocumentState,
   SpecTreeState,
@@ -20,6 +21,7 @@ import { WorkspaceSidebarSection, WorkspaceToolbar } from "@/features/workspace"
 import { AppShell } from "@/shared/ui/AppShell";
 
 const workspacePath = "/workspace/spec-reviewer";
+const commentId = CommentId.fromString;
 
 const sampleSpec: SpecNode = {
   id: "phase-1-viewer",
@@ -110,7 +112,7 @@ const readyDocumentState: SpecDocumentState = {
 
 const sampleComments: readonly Comment[] = [
   {
-    id: "cmt_story_open",
+    id: commentId("cmt_story_open"),
     anchor: {
       fileKey: "tasks",
       blockType: "list_item",
@@ -129,7 +131,7 @@ const sampleComments: readonly Comment[] = [
     updatedAt: "2026-05-05T10:15:00Z",
   },
   {
-    id: "cmt_story_resolved",
+    id: commentId("cmt_story_resolved"),
     anchor: {
       fileKey: "tasks",
       blockType: "heading",
@@ -358,7 +360,7 @@ function createShellArgs({
         selectedSpecLabel={selectedSpec?.label ?? null}
         selectedFileLabel={selectedFile?.label ?? null}
         comments={sampleComments}
-        activeCommentId="cmt_story_open"
+        activeCommentId={commentId("cmt_story_open")}
         onReload={fn()}
         onSelectComment={fn()}
       />
@@ -382,7 +384,7 @@ function createShellArgs({
           commentId: null,
           error: null,
         }}
-        activeCommentId="cmt_story_open"
+        activeCommentId={commentId("cmt_story_open")}
         onSelectComment={fn()}
         onResolveComment={fn()}
         onReopenComment={fn()}

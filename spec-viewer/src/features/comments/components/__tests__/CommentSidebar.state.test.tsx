@@ -10,7 +10,10 @@ import type {
   CommentExportScope,
   CommentId,
 } from "@/features/comments/types/comment";
+import { CommentId as CommentIdValue } from "@/features/comments/types/comment";
 import { type CommentExportState, CommentSidebar } from "@/features/comments/components/CommentSidebar";
+
+const commentId = CommentIdValue.fromString;
 
 const anchor: CommentAnchor = {
   fileKey: "tasks",
@@ -25,7 +28,7 @@ const anchor: CommentAnchor = {
 };
 
 const openComment: Comment = {
-  id: "cmt_open",
+  id: commentId("cmt_open"),
   anchor,
   body: "Clarify what counts as an active comment highlight.",
   status: "open",
@@ -36,7 +39,7 @@ const openComment: Comment = {
 
 const resolvedComment: Comment = {
   ...openComment,
-  id: "cmt_resolved",
+  id: commentId("cmt_resolved"),
   body: "This acceptance item is covered.",
   status: "resolved",
   resolved: true,
@@ -46,7 +49,7 @@ const resolvedComment: Comment = {
 
 const fuzzyComment: Comment = {
   ...openComment,
-  id: "cmt_fuzzy",
+  id: commentId("cmt_fuzzy"),
   body: "Re-check this moved paragraph before final review.",
   createdAt: "2026-05-05T12:00:00Z",
   updatedAt: "2026-05-05T12:15:00Z",
@@ -54,7 +57,7 @@ const fuzzyComment: Comment = {
 
 const staleComment: Comment = {
   ...openComment,
-  id: "cmt_stale",
+  id: commentId("cmt_stale"),
   body: "Original snippet changed after this comment was created.",
   createdAt: "2026-05-05T13:00:00Z",
   updatedAt: "2026-05-05T13:15:00Z",
@@ -62,7 +65,7 @@ const staleComment: Comment = {
 
 const orphanedComment: Comment = {
   ...openComment,
-  id: "cmt_orphaned",
+  id: commentId("cmt_orphaned"),
   body: "This anchor can no longer be found in the document.",
   createdAt: "2026-05-05T14:00:00Z",
   updatedAt: "2026-05-05T14:15:00Z",
@@ -70,7 +73,7 @@ const orphanedComment: Comment = {
 
 const overviewComment: Comment = {
   ...openComment,
-  id: "cmt_overview",
+  id: commentId("cmt_overview"),
   anchor: {
     ...anchor,
     fileKey: "design",
@@ -554,7 +557,7 @@ test("CommentSidebarはexport失敗をalertで表示する", () => {
 });
 
 test("CommentSidebarは選択中コメントをaria-currentで表現する", () => {
-  const result = renderReadySidebar({ activeCommentId: "cmt_open" });
+  const result = renderReadySidebar({ activeCommentId: commentId("cmt_open") });
   const activeButton = result.container.querySelector(
     '[aria-current="true"]',
   ) as HTMLButtonElement;
@@ -570,11 +573,11 @@ test("CommentSidebarはreconciliationのアンカー状態を表示する", () =
   const result = renderReadySidebar({
     anchorDisplayStates: [
       {
-        commentId: "cmt_open",
+        commentId: commentId("cmt_open"),
         status: "moved",
       },
       {
-        commentId: "cmt_resolved",
+        commentId: commentId("cmt_resolved"),
         status: "orphaned",
       },
     ],
@@ -612,15 +615,15 @@ test("CommentSidebarはアンカー状態フィルターの件数と空状態を
     comments: [openComment, fuzzyComment, staleComment, orphanedComment],
     anchorDisplayStates: [
       {
-        commentId: "cmt_fuzzy",
+        commentId: commentId("cmt_fuzzy"),
         status: "fuzzy",
       },
       {
-        commentId: "cmt_stale",
+        commentId: commentId("cmt_stale"),
         status: "stale",
       },
       {
-        commentId: "cmt_orphaned",
+        commentId: commentId("cmt_orphaned"),
         status: "orphaned",
       },
     ],
@@ -697,7 +700,7 @@ test("CommentSidebarはfile keyとorphaned snippetと状態ラベルを検索対
     comments: [openComment, resolvedComment, overviewComment, orphanedComment],
     anchorDisplayStates: [
       {
-        commentId: "cmt_overview",
+        commentId: commentId("cmt_overview"),
         status: "orphaned",
       },
     ],

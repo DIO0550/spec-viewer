@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { expect, test, vi } from "vitest";
 
 import type { Comment, CommentStatusRequest } from "@/features/comments/types/comment";
+import { CommentId } from "@/features/comments/types/comment";
 import { resolveComment, reopenComment, toggleCommentResolved } from "@/shared/api/tauri";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -9,9 +10,10 @@ vi.mock("@tauri-apps/api/core", () => ({
 }));
 
 const invokeMock = vi.mocked(invoke);
+const commentId = CommentId.fromString;
 
 const comment: Comment = {
-  id: "cmt_1",
+  id: commentId("cmt_1"),
   anchor: {
     fileKey: "tasks",
     blockType: "paragraph",
@@ -34,7 +36,7 @@ const statusRequest: CommentStatusRequest = {
   workspacePath: "/workspace/spec-reviewer",
   specId: "auth",
   fileKey: "tasks",
-  commentId: "cmt_1",
+  commentId: commentId("cmt_1"),
 };
 
 test.each([

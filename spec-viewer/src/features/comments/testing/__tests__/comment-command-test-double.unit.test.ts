@@ -4,7 +4,10 @@ import type {
   DeleteCommentRequest,
   ListCommentsRequest,
 } from "@/features/comments/types/comment";
+import { CommentId } from "@/features/comments/types/comment";
 import { createCommentCommandTestDouble } from "@/features/comments/testing/comment-command-test-double";
+
+const commentId = CommentId.fromString;
 
 const listRequest: ListCommentsRequest = {
   workspacePath: "/workspace/spec-reviewer",
@@ -17,7 +20,7 @@ const deleteRequest: DeleteCommentRequest = {
   workspacePath: "/workspace/spec-reviewer",
   specId: "auth",
   fileKey: "tasks",
-  commentId: "cmt_1",
+  commentId: commentId("cmt_1"),
 };
 
 test("createCommentCommandTestDoubleは呼び出し履歴をtyped wrapper単位で保持する", async () => {

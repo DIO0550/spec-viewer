@@ -4,7 +4,10 @@ import { fn } from "storybook/test";
 import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
 import { createTextHash } from "@/features/comments/lib/comment-anchor-draft";
 import type { Comment } from "@/features/comments/types/comment";
+import { CommentId } from "@/features/comments/types/comment";
 import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
+
+const commentId = CommentId.fromString;
 
 const workspacePath = "/workspace/spec-reviewer";
 const markdownContents = [
@@ -40,7 +43,7 @@ const highlightedParagraph =
 
 const comments: readonly Comment[] = [
   {
-    id: "cmt_active_selection",
+    id: commentId("cmt_active_selection"),
     anchor: {
       fileKey: "tasks",
       blockType: "paragraph",
@@ -64,7 +67,7 @@ const comments: readonly Comment[] = [
 const commentCardComments: readonly Comment[] = [
   ...comments,
   {
-    id: "cmt_resolved_card",
+    id: commentId("cmt_resolved_card"),
     anchor: {
       fileKey: "tasks",
       blockType: "paragraph",
@@ -84,7 +87,7 @@ const commentCardComments: readonly Comment[] = [
     updatedAt: "2026-05-07T00:20:00Z",
   },
   {
-    id: "cmt_code_card",
+    id: commentId("cmt_code_card"),
     anchor: {
       fileKey: "tasks",
       blockType: "code_block",
@@ -112,7 +115,7 @@ const meta: Meta<typeof MarkdownViewer> = {
     selectedSpecLabel: "Later Phases",
     selectedFileLabel: "Tasks",
     comments,
-    activeCommentId: "cmt_active_selection",
+    activeCommentId: commentId("cmt_active_selection"),
     onReload: fn(),
     onSelectComment: fn(),
     onAddComment: fn(),
@@ -133,6 +136,6 @@ export const HighlightedSelectionSurface: Story = {};
 export const ExistingCommentCards: Story = {
   args: {
     comments: commentCardComments,
-    activeCommentId: "cmt_active_selection",
+    activeCommentId: commentId("cmt_active_selection"),
   },
 };

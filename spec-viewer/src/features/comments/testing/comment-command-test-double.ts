@@ -1,6 +1,7 @@
 import type {
   AddCommentRequest,
   Comment,
+  CommentId,
   CommentStatusRequest,
   DeleteCommentRequest,
   DeleteCommentResponse,
@@ -8,7 +9,10 @@ import type {
   ListCommentsResponse,
   UpdateCommentRequest,
 } from "@/features/comments/types/comment";
+import { CommentId as CommentIdValue } from "@/features/comments/types/comment";
 import type { CommentCommands } from "@/shared/api/tauri";
+
+const commentId: (value: string) => CommentId = CommentIdValue.fromString;
 
 export type CommentCommandTestDoubleResponses = Readonly<{
   listComments?: ListCommentsResponse;
@@ -36,7 +40,7 @@ export type CommentCommandTestDouble = Readonly<{
 }>;
 
 const defaultComment: Comment = {
-  id: "cmt_test",
+  id: commentId("cmt_test"),
   anchor: {
     fileKey: "tasks",
     blockType: "paragraph",

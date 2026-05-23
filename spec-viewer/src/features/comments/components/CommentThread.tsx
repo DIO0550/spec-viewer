@@ -21,6 +21,7 @@ import type {
   CommentAnchorDisplayStatus,
   CommentId,
 } from "@/features/comments/types/comment";
+import { CommentId as CommentIdValue } from "@/features/comments/types/comment";
 
 const emptyBodyMessage = uiText.commentThread.emptyBody;
 
@@ -128,7 +129,7 @@ export function CommentThread({
 
     event.preventDefault();
     nextButton.focus();
-    onSelectComment(nextCommentId as CommentId);
+    onSelectComment(CommentIdValue.fromString(nextCommentId));
   };
 
   return (

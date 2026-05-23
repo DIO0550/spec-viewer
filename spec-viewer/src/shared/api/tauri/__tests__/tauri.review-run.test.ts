@@ -15,12 +15,14 @@ import {
   listReviewRuns,
   normalizeCommandError,
 } from "@/shared/api/tauri";
+import { CommentId } from "@/features/comments/types/comment";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
 }));
 
 const invokeMock = vi.mocked(invoke);
+const commentId = CommentId.fromString;
 
 const request: CreateReviewRunRequest = {
   workspacePath: "/workspace/spec-reviewer",
@@ -29,7 +31,7 @@ const request: CreateReviewRunRequest = {
     specId: "auth",
     fileKey: "tasks",
   },
-  commentIds: ["cmt_1"],
+  commentIds: [commentId("cmt_1")],
   executionMode: "currentWorkspace",
 };
 

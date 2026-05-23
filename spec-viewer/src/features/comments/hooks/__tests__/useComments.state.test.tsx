@@ -10,10 +10,13 @@ import type {
   CommentAnchor,
   ListCommentsResponse,
 } from "@/features/comments/types/comment";
+import { CommentId } from "@/features/comments/types/comment";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import type { CommentStatusFilter as CommentStatusFilterType } from "@/features/comments/domain/commentStatusFilter";
 import type { SpecFileKey } from "@/features/specs/types/spec";
 import { useComments } from "@/features/comments/hooks/useComments";
+
+const commentId = CommentId.fromString;
 
 const anchor: CommentAnchor = {
   fileKey: "tasks",
@@ -28,7 +31,7 @@ const anchor: CommentAnchor = {
 };
 
 const firstComment: Comment = {
-  id: "cmt_1",
+  id: commentId("cmt_1"),
   anchor,
   body: "Clarify this task",
   status: "open",
@@ -39,7 +42,7 @@ const firstComment: Comment = {
 
 const secondComment: Comment = {
   ...firstComment,
-  id: "cmt_2",
+  id: commentId("cmt_2"),
   body: "Add acceptance criteria",
   createdAt: "2026-05-05T10:05:00Z",
   updatedAt: "2026-05-05T10:05:00Z",
@@ -433,7 +436,7 @@ test("useCommentsはコメント本文を更新して一覧へ反映する", asy
   await flushAsyncEffects();
   await act(async () => {
     await result.current.updateComment({
-      commentId: "cmt_1",
+      commentId: commentId("cmt_1"),
       body: "Updated body",
     });
   });
@@ -457,7 +460,7 @@ test("useCommentsはコメント削除後に一覧を再取得する", async () 
 
   await flushAsyncEffects();
   await act(async () => {
-    await result.current.deleteComment("cmt_1");
+    await result.current.deleteComment(commentId("cmt_1"));
   });
 
   expect(result.current.comments).toEqual([secondComment]);
@@ -476,12 +479,12 @@ test("useCommentsはresolveとreopenを一覧へ反映する", async () => {
 
   await flushAsyncEffects();
   await act(async () => {
-    await result.current.resolveComment("cmt_1");
+    await result.current.resolveComment(commentId("cmt_1"));
   });
   expect(result.current.comments).toEqual([resolvedComment]);
 
   await act(async () => {
-    await result.current.reopenComment("cmt_1");
+    await result.current.reopenComment(commentId("cmt_1"));
   });
   expect(result.current.comments).toEqual([firstComment]);
   result.unmount();
@@ -503,7 +506,7 @@ test("useCommentsはresolve toggleを楽観更新して成功結果で確定す�
 
   let togglePromise: Promise<Comment | null> = Promise.resolve(null);
   act(() => {
-    togglePromise = result.current.toggleCommentResolved("cmt_1");
+    togglePromise = result.current.toggleCommentResolved(commentId("cmt_1"));
   });
 
   expect(result.current.comments).toEqual([optimisticResolvedComment]);
@@ -534,7 +537,7 @@ test("useCommentsはresolve toggle失敗時に楽観更新を巻き戻す", asyn
 
   let togglePromise: Promise<Comment | null> = Promise.resolve(null);
   act(() => {
-    togglePromise = result.current.toggleCommentResolved("cmt_1");
+    togglePromise = result.current.toggleCommentResolved(commentId("cmt_1"));
   });
 
   expect(result.current.comments).toEqual([optimisticResolvedComment]);
@@ -548,7 +551,7 @@ test("useCommentsはresolve toggle失敗時に楽観更新を巻き戻す", asyn
   expect(result.current.mutationState).toEqual({
     status: "error",
     operation: "toggle",
-    commentId: "cmt_1",
+    commentId: commentId("cmt_1"),
     error: {
       code: "unknown",
       message: "toggle failed",

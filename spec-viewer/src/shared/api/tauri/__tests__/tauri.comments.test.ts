@@ -8,6 +8,7 @@ import type {
   ListCommentsRequest,
   UpdateCommentRequest,
 } from "@/features/comments/types/comment";
+import { CommentId } from "@/features/comments/types/comment";
 import {
   addComment,
   commentCommands,
@@ -21,9 +22,10 @@ vi.mock("@tauri-apps/api/core", () => ({
 }));
 
 const invokeMock = vi.mocked(invoke);
+const commentId = CommentId.fromString;
 
 const comment: Comment = {
-  id: "cmt_1",
+  id: commentId("cmt_1"),
   anchor: {
     fileKey: "tasks",
     blockType: "paragraph",
@@ -60,7 +62,7 @@ const updateRequest: UpdateCommentRequest = {
   workspacePath: "/workspace/spec-reviewer",
   specId: "auth",
   fileKey: "tasks",
-  commentId: "cmt_1",
+  commentId: commentId("cmt_1"),
   body: "Clarify token expiry",
 };
 
@@ -68,7 +70,7 @@ const deleteRequest: DeleteCommentRequest = {
   workspacePath: "/workspace/spec-reviewer",
   specId: "auth",
   fileKey: "tasks",
-  commentId: "cmt_1",
+  commentId: commentId("cmt_1"),
 };
 
 test("listCommentsはlist_commentsへフィルター付きrequestを渡す", async () => {

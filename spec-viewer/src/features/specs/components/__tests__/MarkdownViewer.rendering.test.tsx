@@ -9,9 +9,13 @@ import type {
   Comment,
   CommentAnchorResolution,
   CommentBlockType,
+  CommentId,
 } from "@/features/comments/types/comment";
+import { CommentId as CommentIdValue } from "@/features/comments/types/comment";
 import type { MarkdownBlockMetadata, SpecDocument } from "@/features/specs/types/spec";
 import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
+
+const commentId = CommentIdValue.fromString;
 
 const workspacePath = "/workspace/spec-reviewer";
 const selectedSpecLabel = "Phase 1 Viewer";
@@ -111,7 +115,7 @@ function createComment({
   blockType?: CommentBlockType;
 }>): Comment {
   return {
-    id,
+    id: commentId(id),
     anchor: {
       fileKey: "tasks",
       blockType,
@@ -134,7 +138,7 @@ function renderViewer(
   onReload = vi.fn(),
   onAddComment = vi.fn().mockResolvedValue(true),
   comments: readonly Comment[] = [],
-  activeCommentId: string | null = null,
+  activeCommentId: CommentId | null = null,
   onSelectComment = vi.fn(),
   onUpdateComment = vi.fn().mockResolvedValue(true),
 ): RenderResult {
@@ -316,7 +320,7 @@ test("MarkdownViewerはコメント付きブロックを状態別にハイライ
     vi.fn(),
     vi.fn().mockResolvedValue(true),
     comments,
-    "cmt_open",
+    commentId("cmt_open"),
     onSelectComment,
   );
   const highlightedBlocks = result.container.querySelectorAll(
@@ -450,7 +454,7 @@ test("MarkdownViewerは既存コメントを本文右側のカードから編集
     vi.fn(),
     vi.fn().mockResolvedValue(true),
     comments,
-    "cmt_resolved",
+    commentId("cmt_resolved"),
     onSelectComment,
     onUpdateComment,
   );
@@ -511,7 +515,7 @@ test("MarkdownViewerは既存コメントを本文右側のカードから編集
   });
 
   expect(onUpdateComment).toHaveBeenCalledWith(
-    "cmt_resolved",
+    commentId("cmt_resolved"),
     "Updated inline comment body",
   );
   expect(
