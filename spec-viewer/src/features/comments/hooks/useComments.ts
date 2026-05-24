@@ -4,9 +4,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type Dispatch,
-  type MutableRefObject,
-  type SetStateAction,
 } from "react";
 
 import {
@@ -36,36 +33,26 @@ import type { SpecFileKey } from "@/features/specs/types/spec";
 export type CommentListState =
   | Readonly<{
       status: "idle";
-      scope: null;
-      statusFilter: CommentStatusFilter;
       comments: readonly [];
       error: null;
     }>
   | Readonly<{
       status: "loading";
-      scope: CommentScope;
-      statusFilter: CommentStatusFilter;
       comments: readonly [];
       error: null;
     }>
   | Readonly<{
       status: "ready";
-      scope: CommentScope;
-      statusFilter: CommentStatusFilter;
       comments: readonly Comment[];
       error: null;
     }>
   | Readonly<{
       status: "empty";
-      scope: CommentScope;
-      statusFilter: CommentStatusFilter;
       comments: readonly [];
       error: null;
     }>
   | Readonly<{
       status: "error";
-      scope: CommentScope;
-      statusFilter: CommentStatusFilter;
       comments: readonly [];
       error: NormalizedCommandError;
     }>;
@@ -162,34 +149,128 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
   const listRequestIdRef = useRef(0);
   const mutationRequestIdRef = useRef(0);
   const activeScopeKeyRef = useRef(scopeKey);
-  const commentsRef = useRef<readonly Comment[]>([]);
   const [listState, setListState] = useState<CommentListState>(
-    createIdleListState(statusFilter),
+    createIdleListState(),
   );
   const [mutationState, setMutationState] =
     useState<CommentMutationState>(initialMutationState);
 
   activeScopeKeyRef.current = scopeKey;
 
-  useEffect(() => {
-    commentsRef.current = listState.comments;
-  }, [listState.comments]);
+  const isLatestMutationRequest = useCallback(
+    (requestId: number): boolean => mutationRequestIdRef.current === requestId,
+    [],
+  );
+  const isLatestListRequest = useCallback(
+    (requestId: number): boolean => listRequestIdRef.current === requestId,
+    [],
+  );
+  const isSameScopeResult = useCallback(
+    (expectedScopeKey: string): boolean =>
+      activeScopeKeyRef.current === expectedScopeKey,
+    [],
+  );
+  const canApplyMutationResult = useCallback(
+    (token: AsyncMutationToken): boolean =>
+      isLatestMutationRequest(token.requestId) &&
+      isSameScopeResult(token.scopeKey),
+    [isLatestMutationRequest, isSameScopeResult],
+  );
+  const updateCurrentScopeComments = useCallback(
+    (transform: CommentListTransform): void => {
+      setListState((currentState) => {
+        if (currentState.status !== "ready" && currentState.status !== "empty") {
+          return currentState;
+        }
+
+        return createLoadedListState(transform(currentState.comments));
+      });
+    },
+    [],
+  );
+  const runCommentMutation = useCallback(
+    async <Result,>(
+      request: CommentMutationRequest<Result>,
+    ): Promise<Result | null> => {
+      if (scope === null) {
+        return null;
+      }
+
+      const activeScope = scope;
+      const activeScopeKey = scopeKey;
+      const requestId = mutationRequestIdRef.current + 1;
+      mutationRequestIdRef.current = requestId;
+      setMutationState({
+        status: "saving",
+        operation: request.operation,
+        commentId: request.commentId,
+        error: null,
+      });
+
+      try {
+        const result = await request.run(activeScope);
+
+        if (
+          !canApplyMutationResult({
+            requestId,
+            scopeKey: activeScopeKey,
+          })
+        ) {
+          return null;
+        }
+
+        request.applySuccess?.(result);
+        setMutationState(initialMutationState);
+        return result;
+      } catch (error) {
+        if (
+          !canApplyMutationResult({
+            requestId,
+            scopeKey: activeScopeKey,
+          })
+        ) {
+          return null;
+        }
+
+        request.applyFailure?.();
+        setMutationState({
+          status: "error",
+          operation: request.operation,
+          commentId: request.commentId,
+          error: normalizeCommandError(error),
+        });
+        return null;
+      }
+    },
+    [canApplyMutationResult, scope, scopeKey],
+  );
+  const runStatusMutation = useCallback(
+    async (request: StatusCommentMutationRequest): Promise<Comment | null> =>
+      runCommentMutation({
+        ...request,
+        applySuccess: (comment) => {
+          updateCurrentScopeComments((comments) =>
+            Comment.upsertDisplayable(comments, comment, statusFilter),
+          );
+        },
+      }),
+    [runCommentMutation, statusFilter, updateCurrentScopeComments],
+  );
 
   const reloadComments = useCallback(async (): Promise<boolean> => {
     const activeScope = scope;
 
     if (activeScope === null) {
       listRequestIdRef.current += 1;
-      setListState(createIdleListState(statusFilter));
+      setListState(createIdleListState());
       return true;
     }
 
     const requestId = listRequestIdRef.current + 1;
+    const requestScopeKey = scopeKey;
     listRequestIdRef.current = requestId;
     setListState({
       status: "loading",
-      scope: activeScope,
-      statusFilter,
       comments: [],
       error: null,
     });
@@ -214,33 +295,43 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
         commentCount: response.comments.length,
       });
 
-      if (listRequestIdRef.current !== requestId) {
+      if (
+        !isLatestListRequest(requestId) ||
+        !isSameScopeResult(requestScopeKey)
+      ) {
         return false;
       }
 
-      setListState(
-        createLoadedListState(activeScope, statusFilter, response.comments),
-      );
+      setListState(createLoadedListState(response.comments));
       return true;
     } catch (error) {
       endSpan({
         error: true,
       });
 
-      if (listRequestIdRef.current !== requestId) {
+      if (
+        !isLatestListRequest(requestId) ||
+        !isSameScopeResult(requestScopeKey)
+      ) {
         return false;
       }
 
       setListState({
         status: "error",
-        scope: activeScope,
-        statusFilter,
         comments: [],
         error: normalizeCommandError(error),
       });
       return false;
     }
-  }, [commands, options.correlationId, scope, statusFilter]);
+  }, [
+    commands,
+    isLatestListRequest,
+    isSameScopeResult,
+    options.correlationId,
+    scope,
+    scopeKey,
+    statusFilter,
+  ]);
 
   useEffect(() => {
     mutationRequestIdRef.current += 1;
@@ -251,13 +342,8 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
   const addComment = useCallback(
     async (input: AddCommentInput): Promise<Comment | null> =>
       runCommentMutation({
-        scope,
-        scopeKey,
-        activeScopeKeyRef,
-        mutationRequestIdRef,
         operation: "add",
         commentId: null,
-        setMutationState,
         run: async (activeScope) => {
           const request: AddCommentRequest = {
             workspacePath: activeScope.workspacePath,
@@ -268,28 +354,19 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
           return commands.addComment(request);
         },
         applySuccess: (comment) => {
-          updateCommentsForCurrentScope({
-            scope,
-            statusFilter,
-            setListState,
-            transform: (comments) =>
-              Comment.appendDisplayable(comments, comment, statusFilter),
-          });
+          updateCurrentScopeComments((comments) =>
+            Comment.appendDisplayable(comments, comment, statusFilter),
+          );
         },
       }),
-    [commands, scope, scopeKey, statusFilter],
+    [commands, runCommentMutation, statusFilter, updateCurrentScopeComments],
   );
 
   const updateComment = useCallback(
     async (input: UpdateCommentInput): Promise<Comment | null> =>
       runCommentMutation({
-        scope,
-        scopeKey,
-        activeScopeKeyRef,
-        mutationRequestIdRef,
         operation: "update",
         commentId: input.commentId,
-        setMutationState,
         run: async (activeScope) => {
           const request: UpdateCommentRequest = {
             ...createStatusRequest(activeScope, input.commentId),
@@ -298,38 +375,25 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
           return commands.updateComment(request);
         },
         applySuccess: (comment) => {
-          updateCommentsForCurrentScope({
-            scope,
-            statusFilter,
-            setListState,
-            transform: (comments) =>
-              Comment.upsertDisplayable(comments, comment, statusFilter),
-          });
+          updateCurrentScopeComments((comments) =>
+            Comment.upsertDisplayable(comments, comment, statusFilter),
+          );
         },
       }),
-    [commands, scope, scopeKey, statusFilter],
+    [commands, runCommentMutation, statusFilter, updateCurrentScopeComments],
   );
 
   const deleteComment = useCallback(
     async (commentId: CommentId): Promise<boolean> => {
       const response = await runCommentMutation<DeleteCommentResponse>({
-        scope,
-        scopeKey,
-        activeScopeKeyRef,
-        mutationRequestIdRef,
         operation: "delete",
         commentId,
-        setMutationState,
         run: (activeScope) =>
           commands.deleteComment(createStatusRequest(activeScope, commentId)),
         applySuccess: () => {
-          updateCommentsForCurrentScope({
-            scope,
-            statusFilter,
-            setListState,
-            transform: (comments) =>
-              comments.filter((comment) => comment.id !== commentId),
-          });
+          updateCurrentScopeComments((comments) =>
+            comments.filter((comment) => comment.id !== commentId),
+          );
         },
       });
 
@@ -340,82 +404,58 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
       await reloadComments();
       return true;
     },
-    [commands, reloadComments, scope, scopeKey, statusFilter],
+    [commands, reloadComments, runCommentMutation, updateCurrentScopeComments],
   );
 
   const resolveComment = useCallback(
     async (commentId: CommentId): Promise<Comment | null> =>
       runStatusMutation({
-        scope,
-        scopeKey,
-        activeScopeKeyRef,
-        mutationRequestIdRef,
         operation: "resolve",
         commentId,
-        setMutationState,
-        statusFilter,
-        setListState,
         run: (activeScope) =>
           commands.resolveComment(createStatusRequest(activeScope, commentId)),
       }),
-    [commands, scope, scopeKey, statusFilter],
+    [commands, runStatusMutation],
   );
 
   const reopenComment = useCallback(
     async (commentId: CommentId): Promise<Comment | null> =>
       runStatusMutation({
-        scope,
-        scopeKey,
-        activeScopeKeyRef,
-        mutationRequestIdRef,
         operation: "reopen",
         commentId,
-        setMutationState,
-        statusFilter,
-        setListState,
         run: (activeScope) =>
           commands.reopenComment(createStatusRequest(activeScope, commentId)),
       }),
-    [commands, scope, scopeKey, statusFilter],
+    [commands, runStatusMutation],
   );
 
   const toggleCommentResolved = useCallback(
     async (commentId: CommentId): Promise<Comment | null> => {
-      const previousComments = commentsRef.current;
+      const previousComments = listState.comments;
 
-      updateCommentsForCurrentScope({
-        scope,
-        statusFilter,
-        setListState,
-        transform: (comments) =>
-          Comment.upsertOptimisticToggle(comments, commentId, statusFilter),
-      });
+      updateCurrentScopeComments((comments) =>
+        Comment.upsertOptimisticToggle(comments, commentId, statusFilter),
+      );
 
       return runStatusMutation({
-        scope,
-        scopeKey,
-        activeScopeKeyRef,
-        mutationRequestIdRef,
         operation: "toggle",
         commentId,
-        setMutationState,
-        statusFilter,
-        setListState,
         run: (activeScope) =>
           commands.toggleCommentResolved(
             createStatusRequest(activeScope, commentId),
           ),
         applyFailure: () => {
-          updateCommentsForCurrentScope({
-            scope,
-            statusFilter,
-            setListState,
-            transform: () => previousComments,
-          });
+          updateCurrentScopeComments(() => previousComments);
         },
       });
     },
-    [commands, scope, scopeKey, statusFilter],
+    [
+      commands,
+      listState.comments,
+      runStatusMutation,
+      statusFilter,
+      updateCurrentScopeComments,
+    ],
   );
 
   return {
@@ -437,59 +477,42 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
   };
 }
 
-type RunCommentMutationOptions<Result> = Readonly<{
-  scope: CommentScope | null;
-  scopeKey: string;
-  activeScopeKeyRef: MutableRefObject<string>;
-  mutationRequestIdRef: MutableRefObject<number>;
+type CommentMutationRequest<Result> = Readonly<{
   operation: CommentMutationOperation;
   commentId: CommentId | null;
-  setMutationState: Dispatch<SetStateAction<CommentMutationState>>;
   run: (scope: CommentScope) => Promise<Result>;
   applySuccess?: (result: Result) => void;
   applyFailure?: () => void;
 }>;
 
-type RunStatusMutationOptions = Omit<
-  RunCommentMutationOptions<Comment>,
+type StatusCommentMutationRequest = Omit<
+  CommentMutationRequest<Comment>,
   "applySuccess"
-> &
-  Readonly<{
-    statusFilter: CommentStatusFilter;
-    setListState: Dispatch<SetStateAction<CommentListState>>;
-  }>;
+>;
 
-type UpdateCommentsForCurrentScopeOptions = Readonly<{
-  scope: CommentScope | null;
-  statusFilter: CommentStatusFilter;
-  setListState: Dispatch<SetStateAction<CommentListState>>;
-  transform: (comments: readonly Comment[]) => readonly Comment[];
+type AsyncMutationToken = Readonly<{
+  requestId: number;
+  scopeKey: string;
 }>;
 
+type CommentListTransform = (
+  comments: readonly Comment[],
+) => readonly Comment[];
+
 /** @returns Idle comment list state for an incomplete scope. */
-function createIdleListState(
-  statusFilter: CommentStatusFilter,
-): CommentListState {
+function createIdleListState(): CommentListState {
   return {
     status: "idle",
-    scope: null,
-    statusFilter,
     comments: [],
     error: null,
   };
 }
 
 /** @returns Loaded comment list state, using empty when no comments are present. */
-function createLoadedListState(
-  scope: CommentScope,
-  statusFilter: CommentStatusFilter,
-  comments: readonly Comment[],
-): CommentListState {
+function createLoadedListState(comments: readonly Comment[]): CommentListState {
   if (comments.length === 0) {
     return {
       status: "empty",
-      scope,
-      statusFilter,
       comments: [],
       error: null,
     };
@@ -497,8 +520,6 @@ function createLoadedListState(
 
   return {
     status: "ready",
-    scope,
-    statusFilter,
     comments,
     error: null,
   };
@@ -546,115 +567,4 @@ function createScopeKey(
   }
 
   return `${scope.workspacePath}:${scope.specId}:${scope.fileKey}:${statusFilter}`;
-}
-
-/** @returns Mutation result, or null when scope is absent or the command fails. */
-async function runCommentMutation<Result>(
-  options: RunCommentMutationOptions<Result>,
-): Promise<Result | null> {
-  if (options.scope === null) {
-    return null;
-  }
-
-  const activeScope = options.scope;
-  const requestId = options.mutationRequestIdRef.current + 1;
-  options.mutationRequestIdRef.current = requestId;
-  options.setMutationState({
-    status: "saving",
-    operation: options.operation,
-    commentId: options.commentId,
-    error: null,
-  });
-
-  try {
-    const result = await options.run(activeScope);
-
-    if (!isActiveMutation(options, requestId)) {
-      return result;
-    }
-
-    options.applySuccess?.(result);
-    options.setMutationState(initialMutationState);
-    return result;
-  } catch (error) {
-    if (!isActiveMutation(options, requestId)) {
-      return null;
-    }
-
-    options.applyFailure?.();
-    options.setMutationState({
-      status: "error",
-      operation: options.operation,
-      commentId: options.commentId,
-      error: normalizeCommandError(error),
-    });
-    return null;
-  }
-}
-
-/** @returns Updated comment from a resolve/reopen/toggle command. */
-async function runStatusMutation(
-  options: RunStatusMutationOptions,
-): Promise<Comment | null> {
-  return runCommentMutation({
-    ...options,
-    applySuccess: (comment) => {
-      updateCommentsForCurrentScope({
-        scope: options.scope,
-        statusFilter: options.statusFilter,
-        setListState: options.setListState,
-        transform: (comments) =>
-          Comment.upsertDisplayable(comments, comment, options.statusFilter),
-      });
-    },
-  });
-}
-
-/** @returns True while the mutation still belongs to the latest selected scope. */
-function isActiveMutation<Result>(
-  options: RunCommentMutationOptions<Result>,
-  requestId: number,
-): boolean {
-  return (
-    options.mutationRequestIdRef.current === requestId &&
-    options.activeScopeKeyRef.current === options.scopeKey
-  );
-}
-
-/** Updates comments only when the list currently belongs to the same scope. */
-function updateCommentsForCurrentScope(
-  options: UpdateCommentsForCurrentScopeOptions,
-): void {
-  if (options.scope === null) {
-    return;
-  }
-
-  setCommentsForScope({
-    ...options,
-    scope: options.scope,
-  });
-}
-
-/** Applies an immutable comment list transform for a matching scope. */
-function setCommentsForScope(
-  options: UpdateCommentsForCurrentScopeOptions &
-    Readonly<{ scope: CommentScope }>,
-): void {
-  options.setListState((currentState) => {
-    if (
-      currentState.scope === null ||
-      currentState.scope.workspacePath !== options.scope.workspacePath ||
-      currentState.scope.specId !== options.scope.specId ||
-      currentState.scope.fileKey !== options.scope.fileKey
-    ) {
-      return currentState;
-    }
-
-    const nextComments = options.transform(currentState.comments);
-    return createLoadedListState(
-      options.scope,
-      options.statusFilter,
-      nextComments,
-    );
-  });
 }

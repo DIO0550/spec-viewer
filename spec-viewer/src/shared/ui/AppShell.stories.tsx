@@ -369,12 +369,6 @@ function createShellArgs({
       <CommentSidebar
         listState={{
           status: "ready",
-          scope: {
-            workspacePath,
-            specId: sampleSpec.id,
-            fileKey: "tasks",
-          },
-          statusFilter: "all",
           comments: sampleComments,
           error: null,
         }}

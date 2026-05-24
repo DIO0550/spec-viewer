@@ -130,12 +130,6 @@ function renderReadySidebar(
     <CommentSidebar
       listState={{
         status: "ready",
-        scope: {
-          workspacePath: "/workspace/spec-reviewer",
-          specId: "phase-2-comments",
-          fileKey: "tasks",
-        },
-        statusFilter: "all",
         comments: options.comments ?? [openComment, resolvedComment],
         error: null,
       }}
@@ -179,12 +173,6 @@ function renderEmptySidebar(
     <CommentSidebar
       listState={{
         status: "empty",
-        scope: {
-          workspacePath: "/workspace/spec-reviewer",
-          specId: "phase-2-comments",
-          fileKey: "tasks",
-        },
-        statusFilter: "all",
         comments: [],
         error: null,
       }}
@@ -230,12 +218,6 @@ test("CommentSidebarは読み込み中状態をrole statusで表示する", () =
     <CommentSidebar
       listState={{
         status: "loading",
-        scope: {
-          workspacePath: "/workspace/spec-reviewer",
-          specId: "phase-2-comments",
-          fileKey: "tasks",
-        },
-        statusFilter: "all",
         comments: [],
         error: null,
       }}
@@ -285,8 +267,6 @@ test("CommentSidebarは未選択scopeでは空の案内を表示する", () => {
     <CommentSidebar
       listState={{
         status: "idle",
-        scope: null,
-        statusFilter: "all",
         comments: [],
         error: null,
       }}
@@ -316,12 +296,6 @@ test("CommentSidebarは読み込み失敗をalertで表示して再読み込み�
     <CommentSidebar
       listState={{
         status: "error",
-        scope: {
-          workspacePath: "/workspace/spec-reviewer",
-          specId: "phase-2-comments",
-          fileKey: "tasks",
-        },
-        statusFilter: "all",
         comments: [],
         error: {
           code: "commentRepository",
