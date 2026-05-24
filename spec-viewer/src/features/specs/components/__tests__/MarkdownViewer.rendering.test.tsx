@@ -75,7 +75,10 @@ function createReadyState(
   const document: SpecDocument = {
     key: "tasks",
     format,
-    path: "/workspace/spec-reviewer/docs/plans/tasks.md",
+    path:
+      format === "html"
+        ? "/workspace/spec-reviewer/docs/plans/tasks.html"
+        : "/workspace/spec-reviewer/docs/plans/tasks.md",
     contents,
     missing: false,
     blocks,
@@ -205,18 +208,66 @@ test("MarkdownViewerはGFM要素を安全なHTMLとして表示する", () => {
 
 test("MarkdownViewerはHTML文書をsandbox iframeで閲覧表示する", () => {
   const result = renderViewer(
-    createReadyState("<h1>Preview</h1><p>HTML body</p>", [], "html"),
+    createReadyState(
+      '<nav><a href="#overview">Overview</a><a href="tasks.html#preview">Preview</a></nav><h1 id="overview">Overview</h1><h2 id="preview">Preview</h2><p>HTML body</p>',
+      [],
+      "html",
+    ),
   );
   const iframe = result.container.querySelector(
     ".html-rendered",
   ) as HTMLIFrameElement | null;
 
   expect(iframe?.getAttribute("sandbox")).toBe("");
-  expect(iframe?.getAttribute("srcdoc")).toBe(
-    "<h1>Preview</h1><p>HTML body</p>",
+  expect(iframe?.getAttribute("srcdoc")).toContain(
+    '<meta name="viewport" content="width=device-width, initial-scale=1" />',
   );
+  expect(iframe?.getAttribute("srcdoc")).toContain(
+    '<base href="about:srcdoc" />',
+  );
+  expect(iframe?.getAttribute("srcdoc")).toContain(
+    "--spec-viewer-html-zoom: 1;",
+  );
+  expect(iframe?.getAttribute("srcdoc")).toContain(
+    '<nav><a href="#overview">Overview</a><a href="#preview">Preview</a></nav><h1 id="overview">Overview</h1><h2 id="preview">Preview</h2><p>HTML body</p>',
+  );
+  expect(iframe?.getAttribute("srcdoc")).not.toContain(
+    'href="tasks.html#preview"',
+  );
+  expect(
+    result.container.querySelector(".markdown-viewer--html"),
+  ).not.toBeNull();
   expect(result.container.querySelector(".markdown-rendered")).toBeNull();
   expect(result.container.querySelector(".markdown-block-comment-button")).toBeNull();
+  expect(result.container.querySelector(".markdown-document-search")).toBeNull();
+  result.unmount();
+});
+
+test("MarkdownViewerはHTML文書の拡大率を変更できる", () => {
+  const result = renderViewer(
+    createReadyState("<h1>Preview</h1><p>HTML body</p>", [], "html"),
+  );
+  const zoomInButton = result.container.querySelector(
+    '[aria-label="HTMLを拡大"]',
+  ) as HTMLButtonElement;
+  const zoomOutput = result.container.querySelector(
+    '[aria-label="HTML拡大率"]',
+  );
+
+  expect(zoomOutput?.textContent).toBe("100%");
+
+  act(() => {
+    zoomInButton.click();
+  });
+
+  const iframe = result.container.querySelector(
+    ".html-rendered",
+  ) as HTMLIFrameElement | null;
+
+  expect(zoomOutput?.textContent).toBe("110%");
+  expect(iframe?.getAttribute("srcdoc")).toContain(
+    "--spec-viewer-html-zoom: 1.1;",
+  );
   result.unmount();
 });
 

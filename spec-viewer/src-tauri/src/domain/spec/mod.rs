@@ -42,12 +42,19 @@ pub enum SpecFileKey {
     Hearing,
     Impl,
     Tasks,
+    TechReference,
     Requirements,
     Design,
 }
 
 impl SpecFileKey {
-    pub const DEFAULT_KEYS: [Self; 4] = [Self::Impl, Self::Tasks, Self::Exploration, Self::Hearing];
+    pub const DEFAULT_KEYS: [Self; 5] = [
+        Self::Impl,
+        Self::Tasks,
+        Self::TechReference,
+        Self::Exploration,
+        Self::Hearing,
+    ];
     pub const COMPATIBILITY_KEYS: [Self; 3] = [Self::Requirements, Self::Design, Self::Tasks];
 
     pub fn as_str(self) -> &'static str {
@@ -56,6 +63,7 @@ impl SpecFileKey {
             Self::Hearing => "hearing",
             Self::Impl => "impl",
             Self::Tasks => "tasks",
+            Self::TechReference => "tech-reference",
             Self::Requirements => "requirements",
             Self::Design => "design",
         }
@@ -67,6 +75,7 @@ impl SpecFileKey {
             Self::Hearing => "Hearing",
             Self::Impl => "Implementation",
             Self::Tasks => "Tasks",
+            Self::TechReference => "Tech Reference",
             Self::Requirements => "Requirements",
             Self::Design => "Design",
         }
@@ -96,6 +105,7 @@ impl FromStr for SpecFileKey {
             "hearing" => Ok(Self::Hearing),
             "impl" => Ok(Self::Impl),
             "tasks" => Ok(Self::Tasks),
+            "tech-reference" => Ok(Self::TechReference),
             "requirements" => Ok(Self::Requirements),
             "design" => Ok(Self::Design),
             _ => Err(SpecDomainError::UnsupportedFileKey {
@@ -581,6 +591,7 @@ mod tests {
             &[
                 SpecFileKey::Impl,
                 SpecFileKey::Tasks,
+                SpecFileKey::TechReference,
                 SpecFileKey::Exploration,
                 SpecFileKey::Hearing,
             ],
@@ -606,6 +617,8 @@ mod tests {
         assert_eq!("Exploration", SpecFileKey::Exploration.display_label());
         assert_eq!("impl", SpecFileKey::Impl.as_str());
         assert_eq!("Implementation", SpecFileKey::Impl.display_label());
+        assert_eq!("tech-reference", SpecFileKey::TechReference.as_str());
+        assert_eq!("Tech Reference", SpecFileKey::TechReference.display_label());
     }
 
     #[test]
@@ -615,6 +628,10 @@ mod tests {
             SpecFileKey::from_str("requirements")
         );
         assert_eq!(Ok(SpecFileKey::Design), SpecFileKey::from_str("design"));
+        assert_eq!(
+            Ok(SpecFileKey::TechReference),
+            SpecFileKey::from_str("tech-reference")
+        );
     }
 
     #[test]

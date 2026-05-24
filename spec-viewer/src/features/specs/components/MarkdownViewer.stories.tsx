@@ -38,6 +38,42 @@ const readyState: SpecDocumentState = {
   error: null,
 };
 
+const techReferenceHtmlContents = [
+  "<!doctype html>",
+  "<html>",
+  "<body>",
+  "<main>",
+  '<h1 id="overview">Tech Reference</h1>',
+  '<nav><a href="#overview">Overview</a> <a href="#schema-notes">Schema notes</a></nav>',
+  "<p>API surfaces, schema notes, and integration hints stay readable as HTML.</p>",
+  "<pre>GET /v1/specs/{workspaceId}/tech-reference?include=api,schema,integration,wide-reference-column</pre>",
+  "<table>",
+  "<thead><tr><th>Surface</th><th>Reference</th><th>Notes</th></tr></thead>",
+  "<tbody><tr><td>IPC</td><td>read_spec_document</td><td>HTML preview keeps wide technical content inside the viewer.</td></tr></tbody>",
+  "</table>",
+  '<h2 id="schema-notes">Schema notes</h2>',
+  "<p>Table of contents links stay inside the sandboxed HTML preview.</p>",
+  "</main>",
+  "</body>",
+  "</html>",
+].join("");
+
+const techReferenceHtmlState: SpecDocumentState = {
+  status: "ready",
+  workspacePath,
+  specId: "tech-reference-tab",
+  fileKey: "tech-reference",
+  document: {
+    key: "tech-reference",
+    format: "html",
+    path: "/workspace/spec-reviewer/.plugin-workspace/.specs/tech-reference-tab/tech-reference.html",
+    contents: techReferenceHtmlContents,
+    missing: false,
+    blocks: [],
+  },
+  error: null,
+};
+
 const highlightedParagraph =
   "Users can select only this paragraph fragment without activating the highlight.";
 
@@ -137,5 +173,23 @@ export const ExistingCommentCards: Story = {
   args: {
     comments: commentCardComments,
     activeCommentId: commentId("cmt_active_selection"),
+  },
+};
+
+export const TechReferenceHtmlPreview: Story = {
+  parameters: {
+    layout: "fullscreen",
+  },
+  render: (args) => (
+    <div className="app-shell__viewer" style={{ height: "100dvh" }}>
+      <MarkdownViewer {...args} />
+    </div>
+  ),
+  args: {
+    state: techReferenceHtmlState,
+    selectedSpecLabel: "Tech Reference Tab",
+    selectedFileLabel: "Tech Reference",
+    comments: [],
+    activeCommentId: null,
   },
 };

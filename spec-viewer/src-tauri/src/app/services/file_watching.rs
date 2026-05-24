@@ -173,11 +173,24 @@ pub fn plan_file_watch(
         resolved_document_path.path().to_path_buf(),
     )];
 
-    if resolved_document_path.path() != resolved_document_path.preferred_path() {
-        targets.push(FileWatchTarget::optional(
-            FileWatchTargetKind::Markdown,
-            resolved_document_path.preferred_path().to_path_buf(),
-        ));
+    let selected_candidate_index = resolved_document_path
+        .candidate_paths()
+        .iter()
+        .position(|candidate_path| candidate_path == resolved_document_path.path())
+        .unwrap_or(0);
+    let optional_candidate_paths = if resolved_document_path.path().is_file() {
+        &resolved_document_path.candidate_paths()[..selected_candidate_index]
+    } else {
+        resolved_document_path.candidate_paths()
+    };
+
+    for candidate_path in optional_candidate_paths {
+        if candidate_path.as_path() != resolved_document_path.path() {
+            targets.push(FileWatchTarget::optional(
+                FileWatchTargetKind::Markdown,
+                candidate_path.to_path_buf(),
+            ));
+        }
     }
 
     targets.extend([
@@ -615,6 +628,10 @@ mod tests {
             fs::write(path, contents).expect("test file should be written");
         }
 
+        fn create_dir(&self, path: &str) {
+            fs::create_dir_all(self.root.join(path)).expect("test directory should be created");
+        }
+
         fn workspace(&self) -> LoadWorkspaceResult {
             let root = WorkspaceRoot::new(self.root.to_string_lossy())
                 .expect("test workspace root should be valid");
@@ -684,6 +701,84 @@ mod tests {
         assert_eq!(2, markdown_targets.len());
         assert!(markdown_targets[0].ends_with("auth/tasks.html"));
         assert!(markdown_targets[1].ends_with("auth/tasks.md"));
+    }
+
+    #[test]
+    fn plan_file_watch_skips_lower_priority_html_fallback_when_markdown_is_active() {
+        let workspace = TestWorkspace::new("markdown-active");
+        workspace.write_file(".plugin-workspace/.specs/auth/tasks.md", "# Tasks");
+        workspace.write_file(".plugin-workspace/.specs/auth/tasks.html", "<h1>Tasks</h1>");
+        let loaded_workspace = workspace.workspace();
+
+        let plan = plan_file_watch(
+            &loaded_workspace,
+            loaded_workspace.config(),
+            "auth",
+            SpecFileKey::Tasks,
+        )
+        .expect("watch plan should be created");
+
+        let markdown_targets: Vec<&Path> = plan
+            .targets()
+            .iter()
+            .filter(|target| target.kind() == FileWatchTargetKind::Markdown)
+            .map(FileWatchTarget::path)
+            .collect();
+
+        assert_eq!(1, markdown_targets.len());
+        assert!(markdown_targets[0].ends_with("auth/tasks.md"));
+    }
+
+    #[test]
+    fn plan_file_watch_tracks_both_missing_tech_reference_candidates() {
+        let workspace = TestWorkspace::new("tech-reference-missing");
+        workspace.create_dir(".plugin-workspace/.specs/auth");
+        let loaded_workspace = workspace.workspace();
+
+        let plan = plan_file_watch(
+            &loaded_workspace,
+            loaded_workspace.config(),
+            "auth",
+            SpecFileKey::TechReference,
+        )
+        .expect("watch plan should be created");
+
+        let markdown_targets: Vec<&Path> = plan
+            .targets()
+            .iter()
+            .filter(|target| target.kind() == FileWatchTargetKind::Markdown)
+            .map(FileWatchTarget::path)
+            .collect();
+
+        assert_eq!(2, markdown_targets.len());
+        assert!(markdown_targets[0].ends_with("auth/tech-reference.html"));
+        assert!(markdown_targets[1].ends_with("auth/tech-reference.md"));
+    }
+
+    #[test]
+    fn plan_file_watch_tracks_preferred_html_when_tech_reference_markdown_is_active() {
+        let workspace = TestWorkspace::new("tech-reference-markdown-fallback");
+        workspace.write_file(".plugin-workspace/.specs/auth/tech-reference.md", "# Tech");
+        let loaded_workspace = workspace.workspace();
+
+        let plan = plan_file_watch(
+            &loaded_workspace,
+            loaded_workspace.config(),
+            "auth",
+            SpecFileKey::TechReference,
+        )
+        .expect("watch plan should be created");
+
+        let markdown_targets: Vec<&Path> = plan
+            .targets()
+            .iter()
+            .filter(|target| target.kind() == FileWatchTargetKind::Markdown)
+            .map(FileWatchTarget::path)
+            .collect();
+
+        assert_eq!(2, markdown_targets.len());
+        assert!(markdown_targets[0].ends_with("auth/tech-reference.md"));
+        assert!(markdown_targets[1].ends_with("auth/tech-reference.html"));
     }
 
     #[test]

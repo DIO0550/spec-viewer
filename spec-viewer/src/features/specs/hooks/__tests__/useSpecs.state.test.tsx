@@ -116,6 +116,49 @@ const tasksAndDesignTree: SpecTree = {
   ],
 };
 
+const fiveTabTree: SpecTree = {
+  specs: [
+    {
+      id: "tech-reference-tab",
+      label: "Tech Reference Tab",
+      files: [
+        {
+          key: "impl",
+          label: "Implementation",
+          fileName: "implementation-plan.md",
+          status: "present",
+        },
+        {
+          key: "tasks",
+          label: "Tasks",
+          fileName: "tasks.md",
+          status: "present",
+        },
+        {
+          key: "tech-reference",
+          label: "Tech Reference",
+          fileName: "tech-reference.html",
+          status: "missing",
+          format: "html",
+        },
+        {
+          key: "exploration",
+          label: "Exploration",
+          fileName: "exploration-report.md",
+          status: "present",
+        },
+        {
+          key: "hearing",
+          label: "Hearing",
+          fileName: "hearing-notes.md",
+          status: "present",
+        },
+      ],
+      children: [],
+    },
+  ],
+};
+
 const renamedTasksTree: SpecTree = {
   specs: [
     {
@@ -181,6 +224,15 @@ const designDocument: SpecDocument = {
   path: "/workspace/spec-reviewer/.plugin-workspace/specs/phase-child/design.md",
   contents: "# Design",
   missing: false,
+  blocks: [],
+};
+
+const techReferenceDocument: SpecDocument = {
+  key: "tech-reference",
+  format: "html",
+  path: "/workspace/spec-reviewer/.plugin-workspace/.specs/tech-reference-tab/tech-reference.html",
+  contents: null,
+  missing: true,
   blocks: [],
 };
 
@@ -498,6 +550,43 @@ test("useSpecsはrefresh時に選択中fileが消えたら同じspecの先頭fil
       specId: "phase-refresh",
       fileKey: "design",
       document: designDocument,
+      error: null,
+    }),
+  );
+  result.unmount();
+});
+
+test("useSpecsは5タブ構成でも選択中のTech Referenceをrefresh後に保持する", async () => {
+  const listSpecs = vi.fn().mockResolvedValue(fiveTabTree);
+  const readSpecFile = vi
+    .fn()
+    .mockResolvedValueOnce(missingDocument)
+    .mockResolvedValue(techReferenceDocument);
+
+  const result = renderHook(
+    ({ workspacePath }) => useSpecs({ workspacePath, listSpecs, readSpecFile }),
+    { workspacePath: "/workspace/spec-reviewer" },
+  );
+
+  await act(async () => {
+    await result.current.reloadSpecs();
+  });
+  await act(async () => {
+    await result.current.selectFileKey("tech-reference");
+  });
+  await act(async () => {
+    await result.current.reloadSpecs({ preserveSelection: true });
+  });
+
+  expect(result.current.selectedSpecId).toBe("tech-reference-tab");
+  expect(result.current.selectedFileKey).toBe("tech-reference");
+  expect(result.current.documentState).toEqual(
+    expect.objectContaining({
+      status: "missing",
+      workspacePath: "/workspace/spec-reviewer",
+      specId: "tech-reference-tab",
+      fileKey: "tech-reference",
+      document: techReferenceDocument,
       error: null,
     }),
   );

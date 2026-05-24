@@ -3,6 +3,7 @@ export type SpecFileKey =
   | "hearing"
   | "impl"
   | "tasks"
+  | "tech-reference"
   | "requirements"
   | "design";
 

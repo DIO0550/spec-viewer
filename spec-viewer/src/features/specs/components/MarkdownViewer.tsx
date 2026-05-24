@@ -31,6 +31,8 @@ import {
   Search,
   Send,
   X,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
@@ -149,6 +151,10 @@ type CommentBlockHighlights = ReadonlyMap<string, CommentBlockHighlight>;
 
 const emptyComments: readonly Comment[] = [];
 const SYNTAX_HIGHLIGHT_MAX_BYTES = 200_000;
+const HTML_ZOOM_DEFAULT_PERCENT = 100;
+const HTML_ZOOM_MIN_PERCENT = 50;
+const HTML_ZOOM_MAX_PERCENT = 160;
+const HTML_ZOOM_STEP_PERCENT = 10;
 
 type Props = Readonly<{
   state: SpecDocumentState;
@@ -202,6 +208,9 @@ export function MarkdownViewer({
   const [documentSearchQuery, setDocumentSearchQuery] = useState("");
   const [activeDocumentSearchIndex, setActiveDocumentSearchIndex] = useState(0);
   const [documentSearchMatchCount, setDocumentSearchMatchCount] = useState(0);
+  const [htmlZoomPercent, setHtmlZoomPercent] = useState(
+    HTML_ZOOM_DEFAULT_PERCENT,
+  );
   const resetKey = createViewerResetKey(state);
   const isHtmlDocument =
     state.status === "ready" && state.document.format === "html";
@@ -229,6 +238,7 @@ export function MarkdownViewer({
     setDocumentSearchQuery("");
     setActiveDocumentSearchIndex(0);
     setDocumentSearchMatchCount(0);
+    setHtmlZoomPercent(HTML_ZOOM_DEFAULT_PERCENT);
   }, [onAnchorDisplayStatesChange, resetKey]);
   useLayoutEffect(() => {
     if (state.status !== "ready" || readyContents === null) {
@@ -388,6 +398,18 @@ export function MarkdownViewer({
     setDocumentSearchQuery("");
   };
 
+  const decreaseHtmlZoom = (): void => {
+    setHtmlZoomPercent((currentZoomPercent) =>
+      clampHtmlZoomPercent(currentZoomPercent - HTML_ZOOM_STEP_PERCENT),
+    );
+  };
+
+  const increaseHtmlZoom = (): void => {
+    setHtmlZoomPercent((currentZoomPercent) =>
+      clampHtmlZoomPercent(currentZoomPercent + HTML_ZOOM_STEP_PERCENT),
+    );
+  };
+
   if (state.status === "idle") {
     return (
       <section
@@ -495,7 +517,11 @@ export function MarkdownViewer({
     <article
       ref={panelRef}
       id="markdown-viewer-panel"
-      className="markdown-viewer"
+      className={
+        state.document.format === "html"
+          ? "markdown-viewer markdown-viewer--html"
+          : "markdown-viewer"
+      }
       data-comment-dialog-open={
         activeAnchorDraft !== null || activeEditDraft !== null
           ? "true"
@@ -511,16 +537,24 @@ export function MarkdownViewer({
           <p className="markdown-viewer__path">{state.document.path}</p>
         </div>
         <div className="markdown-viewer__actions">
-          <DocumentSearchControl
-            query={documentSearchQuery}
-            matchCount={documentSearchMatchCount}
-            activeMatchIndex={activeDocumentSearchIndex}
-            disabled={state.document.format === "html"}
-            onQueryChange={setDocumentSearchQuery}
-            onPrevious={goToPreviousDocumentSearchMatch}
-            onNext={goToNextDocumentSearchMatch}
-            onClear={clearDocumentSearch}
-          />
+          {isHtmlDocument ? (
+            <HtmlZoomControl
+              zoomPercent={htmlZoomPercent}
+              onDecrease={decreaseHtmlZoom}
+              onIncrease={increaseHtmlZoom}
+            />
+          ) : (
+            <DocumentSearchControl
+              query={documentSearchQuery}
+              matchCount={documentSearchMatchCount}
+              activeMatchIndex={activeDocumentSearchIndex}
+              disabled={false}
+              onQueryChange={setDocumentSearchQuery}
+              onPrevious={goToPreviousDocumentSearchMatch}
+              onNext={goToNextDocumentSearchMatch}
+              onClear={clearDocumentSearch}
+            />
+          )}
           <button
             className="icon-button"
             type="button"
@@ -533,7 +567,11 @@ export function MarkdownViewer({
         </div>
       </header>
       {state.document.format === "html" ? (
-        <HtmlDocument contents={contents} />
+        <HtmlDocument
+          contents={contents}
+          path={state.document.path}
+          zoomPercent={htmlZoomPercent}
+        />
       ) : (
         <>
           <MarkdownDocument
@@ -631,6 +669,53 @@ type DocumentSearchControlProps = Readonly<{
   onNext: () => void;
   onClear: () => void;
 }>;
+
+type HtmlZoomControlProps = Readonly<{
+  zoomPercent: number;
+  onDecrease: () => void;
+  onIncrease: () => void;
+}>;
+
+/** @returns Zoom controls for sandboxed HTML document previews. */
+function HtmlZoomControl({
+  zoomPercent,
+  onDecrease,
+  onIncrease,
+}: HtmlZoomControlProps) {
+  return (
+    <div
+      className="html-zoom-control"
+      aria-label={uiText.markdown.htmlZoomControls}
+    >
+      <button
+        className="icon-button"
+        type="button"
+        aria-label={uiText.markdown.decreaseHtmlZoom}
+        title={uiText.markdown.decreaseHtmlZoom}
+        disabled={zoomPercent <= HTML_ZOOM_MIN_PERCENT}
+        onClick={onDecrease}
+      >
+        <ZoomOut aria-hidden="true" size={15} />
+      </button>
+      <output
+        className="html-zoom-control__value"
+        aria-label={uiText.markdown.htmlZoomPercent}
+      >
+        {formatHtmlZoomPercent(zoomPercent)}
+      </output>
+      <button
+        className="icon-button"
+        type="button"
+        aria-label={uiText.markdown.increaseHtmlZoom}
+        title={uiText.markdown.increaseHtmlZoom}
+        disabled={zoomPercent >= HTML_ZOOM_MAX_PERCENT}
+        onClick={onIncrease}
+      >
+        <ZoomIn aria-hidden="true" size={15} />
+      </button>
+    </div>
+  );
+}
 
 /** @returns Sticky document search controls for the current Markdown file. */
 function DocumentSearchControl({
@@ -892,18 +977,174 @@ function MarkdownDocument({
 
 type HtmlDocumentProps = Readonly<{
   contents: string;
+  path: string;
+  zoomPercent: number;
 }>;
 
 /** @returns Sandboxed HTML preview for non-Markdown spec files. */
-function HtmlDocument({ contents }: HtmlDocumentProps) {
+function HtmlDocument({ contents, path, zoomPercent }: HtmlDocumentProps) {
   return (
     <iframe
       className="html-rendered"
       title={uiText.markdown.renderedHtmlDocument}
       sandbox=""
-      srcDoc={contents}
+      srcDoc={createHtmlPreviewDocument({
+        contents,
+        sourcePath: path,
+        zoomPercent,
+      })}
     />
   );
+}
+
+type CreateHtmlPreviewDocumentInput = Readonly<{
+  contents: string;
+  sourcePath: string;
+  zoomPercent: number;
+}>;
+
+/** @returns HTML contents with viewer-controlled viewport and zoom styles. */
+function createHtmlPreviewDocument({
+  contents,
+  sourcePath,
+  zoomPercent,
+}: CreateHtmlPreviewDocumentInput): string {
+  const normalizedContents = rewriteSameDocumentHtmlLinks(
+    removeHtmlBaseElements(contents),
+    sourcePath,
+  );
+  const previewHead = createHtmlPreviewHead(zoomPercent);
+
+  if (/<\/head>/i.test(normalizedContents)) {
+    return normalizedContents.replace(/<\/head>/i, `${previewHead}</head>`);
+  }
+
+  if (/<html(?:\s[^>]*)?>/i.test(normalizedContents)) {
+    return normalizedContents.replace(
+      /<html(?:\s[^>]*)?>/i,
+      (htmlTag) => `${htmlTag}<head>${previewHead}</head>`,
+    );
+  }
+
+  return [
+    "<!doctype html>",
+    "<html>",
+    "<head>",
+    previewHead,
+    "</head>",
+    "<body>",
+    normalizedContents,
+    "</body>",
+    "</html>",
+  ].join("");
+}
+
+/** @returns HTML contents with document-provided base tags removed. */
+function removeHtmlBaseElements(contents: string): string {
+  return contents.replace(/<base\b[^>]*>/gi, "");
+}
+
+/** @returns HTML contents with same-file hash links rewritten for srcdoc navigation. */
+function rewriteSameDocumentHtmlLinks(
+  contents: string,
+  sourcePath: string,
+): string {
+  const sourceFileName = getPathFileName(sourcePath);
+
+  return contents.replace(
+    /\bhref=(["'])([^"']+)["']/gi,
+    (attribute, quote: string, href: string) => {
+      const hashIndex = href.indexOf("#");
+
+      if (hashIndex < 0) {
+        return attribute;
+      }
+
+      const hrefPath = href.slice(0, hashIndex);
+      const hrefHash = href.slice(hashIndex);
+
+      if (!isSameDocumentHtmlLinkPath(hrefPath, sourceFileName)) {
+        return attribute;
+      }
+
+      return `href=${quote}${hrefHash}${quote}`;
+    },
+  );
+}
+
+/** @returns Whether a link path points at the current srcdoc document. */
+function isSameDocumentHtmlLinkPath(
+  hrefPath: string,
+  sourceFileName: string,
+): boolean {
+  if (hrefPath.length === 0) {
+    return true;
+  }
+
+  if (hrefPath === "." || hrefPath === "./") {
+    return true;
+  }
+
+  return getPathFileName(hrefPath) === sourceFileName;
+}
+
+/** @returns The final path segment from a slash-delimited path. */
+function getPathFileName(path: string): string {
+  const normalizedPath = path.split(/[?#]/, 1)[0] ?? "";
+  const pathSegments = normalizedPath.split("/").filter(Boolean);
+
+  return pathSegments[pathSegments.length - 1] ?? normalizedPath;
+}
+
+/** @returns Meta and CSS that make arbitrary HTML previews fit the iframe. */
+function createHtmlPreviewHead(zoomPercent: number): string {
+  const zoomScale = zoomPercent / 100;
+
+  return [
+    '<meta name="viewport" content="width=device-width, initial-scale=1" />',
+    '<base href="about:srcdoc" />',
+    '<style id="spec-viewer-html-preview-style">',
+    ":root {",
+    `  --spec-viewer-html-zoom: ${formatHtmlZoomScale(zoomScale)};`,
+    "}",
+    "* { box-sizing: border-box; }",
+    "html { width: 100%; min-width: 0; }",
+    "body { width: 100%; max-width: 100%; min-width: 0; margin: 0; overflow-wrap: anywhere; }",
+    "img, video, canvas, svg { max-width: 100%; height: auto; }",
+    "iframe, object, embed { max-width: 100%; }",
+    "pre { max-width: 100%; overflow: auto; white-space: pre-wrap; }",
+    "table { max-width: 100%; }",
+    "@supports (zoom: 1) {",
+    "  body { zoom: var(--spec-viewer-html-zoom); }",
+    "}",
+    "@supports not (zoom: 1) {",
+    "  body {",
+    "    width: calc(100% / var(--spec-viewer-html-zoom));",
+    "    max-width: calc(100% / var(--spec-viewer-html-zoom));",
+    "    transform: scale(var(--spec-viewer-html-zoom));",
+    "    transform-origin: top left;",
+    "  }",
+    "}",
+    "</style>",
+  ].join("");
+}
+
+/** @returns A zoom percentage clamped to the supported HTML preview range. */
+function clampHtmlZoomPercent(zoomPercent: number): number {
+  return Math.min(
+    HTML_ZOOM_MAX_PERCENT,
+    Math.max(HTML_ZOOM_MIN_PERCENT, zoomPercent),
+  );
+}
+
+/** @returns A user-facing zoom percentage label. */
+function formatHtmlZoomPercent(zoomPercent: number): string {
+  return `${zoomPercent}%`;
+}
+
+/** @returns A compact CSS number for the HTML preview zoom scale. */
+function formatHtmlZoomScale(zoomScale: number): string {
+  return Number(zoomScale.toFixed(2)).toString();
 }
 
 /** @returns A sequential block indexer scoped to one Markdown render. */

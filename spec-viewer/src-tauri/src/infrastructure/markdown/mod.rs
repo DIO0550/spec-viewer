@@ -17,7 +17,10 @@ use crate::{
         spec::{MarkdownBlock, SpecDocumentFormat, SpecFileKey},
         workspace::{WorkspaceConfig, WorkspaceLayout},
     },
-    infrastructure::filesystem::spec_directory_path,
+    infrastructure::{
+        filesystem::spec_directory_path,
+        spec_file_resolution::{spec_file_path_candidates, SpecFilePathCandidate},
+    },
 };
 
 use self::parser::{parse_markdown_blocks, MarkdownParseError};
@@ -168,6 +171,7 @@ pub struct ResolvedSpecDocumentPath {
     preferred_path: PathBuf,
     path: PathBuf,
     format: SpecDocumentFormat,
+    candidate_paths: Vec<PathBuf>,
 }
 
 impl ResolvedSpecDocumentPath {
@@ -181,6 +185,10 @@ impl ResolvedSpecDocumentPath {
 
     pub fn format(&self) -> SpecDocumentFormat {
         self.format
+    }
+
+    pub fn candidate_paths(&self) -> &[PathBuf] {
+        &self.candidate_paths
     }
 }
 
@@ -229,43 +237,31 @@ pub fn resolve_spec_document_path(
         spec_directory_path(layout, spec_id).map_err(|_| MarkdownReadError::InvalidSpecId {
             spec_id: spec_id.to_string(),
         })?;
-    let preferred_path = spec_directory.join(mapping.file_name());
+    let configured_path = spec_directory.join(mapping.file_name());
+    let candidates = spec_file_path_candidates(key, &configured_path);
+    let preferred = candidates
+        .first()
+        .ok_or(MarkdownReadError::MissingFileMapping { key })?;
 
-    ensure_within_workspace(layout, &preferred_path)?;
-
-    let preferred_format = SpecDocumentFormat::from_file_name(mapping.file_name());
-
-    if preferred_format == SpecDocumentFormat::Html || file_exists(&preferred_path)? {
-        return Ok(ResolvedSpecDocumentPath {
-            preferred_path: preferred_path.clone(),
-            path: preferred_path,
-            format: preferred_format,
-        });
+    for candidate in &candidates {
+        ensure_within_workspace(layout, candidate.path())?;
     }
 
-    let Some(html_fallback_path) = html_fallback_path(&preferred_path) else {
-        return Ok(ResolvedSpecDocumentPath {
-            preferred_path: preferred_path.clone(),
-            path: preferred_path,
-            format: SpecDocumentFormat::Markdown,
-        });
-    };
-
-    ensure_within_workspace(layout, &html_fallback_path)?;
-
-    if file_exists(&html_fallback_path)? {
-        return Ok(ResolvedSpecDocumentPath {
-            preferred_path,
-            path: html_fallback_path,
-            format: SpecDocumentFormat::Html,
-        });
+    for candidate in &candidates {
+        if file_exists(candidate.path())? {
+            return Ok(resolved_spec_document_path(
+                candidate,
+                preferred,
+                &candidates,
+            ));
+        }
     }
 
-    Ok(ResolvedSpecDocumentPath {
-        preferred_path: preferred_path.clone(),
-        path: preferred_path,
-        format: SpecDocumentFormat::Markdown,
-    })
+    Ok(resolved_spec_document_path(
+        preferred,
+        preferred,
+        &candidates,
+    ))
 }
 
 fn file_exists(path: &Path) -> Result<bool, MarkdownReadError> {
@@ -279,16 +275,20 @@ fn file_exists(path: &Path) -> Result<bool, MarkdownReadError> {
     }
 }
 
-fn html_fallback_path(preferred_path: &Path) -> Option<PathBuf> {
-    if !preferred_path
-        .extension()
-        .and_then(|extension| extension.to_str())
-        .is_some_and(|extension| extension.eq_ignore_ascii_case("md"))
-    {
-        return None;
+fn resolved_spec_document_path(
+    selected: &SpecFilePathCandidate,
+    preferred: &SpecFilePathCandidate,
+    candidates: &[SpecFilePathCandidate],
+) -> ResolvedSpecDocumentPath {
+    ResolvedSpecDocumentPath {
+        preferred_path: preferred.path().to_path_buf(),
+        path: selected.path().to_path_buf(),
+        format: selected.format(),
+        candidate_paths: candidates
+            .iter()
+            .map(|candidate| candidate.path().to_path_buf())
+            .collect(),
     }
-
-    Some(preferred_path.with_extension("html"))
 }
 
 fn ensure_within_workspace(
@@ -512,6 +512,119 @@ mod tests {
                 assert_eq!("# Markdown", document.contents());
             }
             MarkdownReadResult::Missing(_) => panic!("expected markdown document"),
+        }
+    }
+
+    #[test]
+    fn reads_tech_reference_html_when_both_html_and_markdown_exist() {
+        let workspace = TestWorkspace::new("tech-reference-html-first");
+        workspace.write_file(
+            ".plugin-workspace/.specs/auth/tech-reference.html",
+            "<h1>Tech</h1>",
+        );
+        workspace.write_file(".plugin-workspace/.specs/auth/tech-reference.md", "# Tech");
+
+        let result = FilesystemMarkdownReader::new()
+            .read(
+                &workspace.layout(),
+                &WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace),
+                "auth",
+                SpecFileKey::TechReference,
+            )
+            .expect("tech reference should be readable");
+
+        match result {
+            MarkdownReadResult::Found(document) => {
+                assert_eq!(SpecDocumentFormat::Html, document.format());
+                assert!(document.path().ends_with("auth/tech-reference.html"));
+                assert_eq!("<h1>Tech</h1>", document.contents());
+                assert!(document.blocks().is_empty());
+            }
+            MarkdownReadResult::Missing(_) => panic!("expected tech reference html document"),
+        }
+    }
+
+    #[test]
+    fn reads_tech_reference_markdown_when_html_is_absent() {
+        let workspace = TestWorkspace::new("tech-reference-markdown-fallback");
+        workspace.write_file(".plugin-workspace/.specs/auth/tech-reference.md", "# Tech");
+
+        let result = FilesystemMarkdownReader::new()
+            .read(
+                &workspace.layout(),
+                &WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace),
+                "auth",
+                SpecFileKey::TechReference,
+            )
+            .expect("tech reference markdown fallback should be readable");
+
+        match result {
+            MarkdownReadResult::Found(document) => {
+                assert_eq!(SpecDocumentFormat::Markdown, document.format());
+                assert!(document.path().ends_with("auth/tech-reference.md"));
+                assert_eq!("# Tech", document.contents());
+                assert_eq!(1, document.blocks().len());
+            }
+            MarkdownReadResult::Missing(_) => panic!("expected tech reference markdown document"),
+        }
+    }
+
+    #[test]
+    fn returns_missing_html_result_for_absent_tech_reference() {
+        let workspace = TestWorkspace::new("tech-reference-missing");
+        workspace.create_dir(".plugin-workspace/.specs/auth");
+
+        let result = FilesystemMarkdownReader::new()
+            .read(
+                &workspace.layout(),
+                &WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace),
+                "auth",
+                SpecFileKey::TechReference,
+            )
+            .expect("missing tech reference should be a UI-friendly result");
+
+        match result {
+            MarkdownReadResult::Found(_) => panic!("expected missing tech reference result"),
+            MarkdownReadResult::Missing(missing) => {
+                assert_eq!(SpecFileKey::TechReference, missing.key());
+                assert_eq!(SpecDocumentFormat::Html, missing.format());
+                assert!(missing.path().ends_with("auth/tech-reference.html"));
+            }
+        }
+    }
+
+    #[test]
+    fn reads_tech_reference_override_html_before_same_stem_markdown() {
+        let workspace = TestWorkspace::new("tech-reference-override");
+        workspace.write_file(
+            ".plugin-workspace/.specs/auth/guide.html",
+            "<h1>Guide HTML</h1>",
+        );
+        workspace.write_file(".plugin-workspace/.specs/auth/guide.md", "# Guide Markdown");
+        let config =
+            WorkspaceConfig::new(vec![crate::domain::workspace::WorkspaceFileMapping::new(
+                SpecFileKey::TechReference,
+                "guide.md",
+            )
+            .expect("mapping should be valid")])
+            .expect("config should be valid");
+
+        let result = FilesystemMarkdownReader::new()
+            .read(
+                &workspace.layout(),
+                &config,
+                "auth",
+                SpecFileKey::TechReference,
+            )
+            .expect("tech reference override should be readable");
+
+        match result {
+            MarkdownReadResult::Found(document) => {
+                assert_eq!(SpecDocumentFormat::Html, document.format());
+                assert!(document.path().ends_with("auth/guide.html"));
+                assert_eq!("<h1>Guide HTML</h1>", document.contents());
+            }
+            MarkdownReadResult::Missing(_) => panic!("expected tech reference html document"),
         }
     }
 

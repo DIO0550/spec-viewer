@@ -31,6 +31,28 @@ const implFile: SpecFile = {
   status: "missing",
 };
 
+const techReferenceFile: SpecFile = {
+  key: "tech-reference",
+  label: "Tech Reference",
+  fileName: "tech-reference.html",
+  status: "missing",
+  format: "html",
+};
+
+const explorationFile: SpecFile = {
+  key: "exploration",
+  label: "Exploration",
+  fileName: "exploration-report.md",
+  status: "present",
+};
+
+const hearingFile: SpecFile = {
+  key: "hearing",
+  label: "Hearing",
+  fileName: "hearing-notes.md",
+  status: "present",
+};
+
 const selectedSpec: SpecNode = {
   id: "phase-1-viewer",
   label: "Phase 1 Viewer",
@@ -182,6 +204,39 @@ test("AppShellはtoolbar、tree、tabs、viewer、comment sidebarを表示する
   expect(
     result.container.querySelector('[aria-label="コメントサイドバー"]'),
   ).not.toBeNull();
+  result.unmount();
+});
+
+test("SpecTabsはbackendの5タブ順をそのまま表示する", () => {
+  const result = renderComponent(
+    <SpecTabs
+      spec={{
+        id: "tech-reference-tab",
+        label: "Tech Reference Tab",
+        files: [
+          implFile,
+          taskFile,
+          techReferenceFile,
+          explorationFile,
+          hearingFile,
+        ],
+        children: [],
+      }}
+      selectedFileKey="tech-reference"
+      onSelectFile={vi.fn()}
+    />,
+  );
+  const labels = Array.from(
+    result.container.querySelectorAll(".spec-tabs__label"),
+  ).map((element) => element.textContent);
+
+  expect(labels).toEqual([
+    "Implementation",
+    "Tasks",
+    "Tech Reference",
+    "Exploration",
+    "Hearing",
+  ]);
   result.unmount();
 });
 
