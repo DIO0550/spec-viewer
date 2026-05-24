@@ -173,8 +173,19 @@ pub fn plan_file_watch(
         resolved_document_path.path().to_path_buf(),
     )];
 
-    for candidate_path in resolved_document_path.candidate_paths() {
-        if candidate_path != resolved_document_path.path() {
+    let selected_candidate_index = resolved_document_path
+        .candidate_paths()
+        .iter()
+        .position(|candidate_path| candidate_path == resolved_document_path.path())
+        .unwrap_or(0);
+    let optional_candidate_paths = if resolved_document_path.path().is_file() {
+        &resolved_document_path.candidate_paths()[..selected_candidate_index]
+    } else {
+        resolved_document_path.candidate_paths()
+    };
+
+    for candidate_path in optional_candidate_paths {
+        if candidate_path.as_path() != resolved_document_path.path() {
             targets.push(FileWatchTarget::optional(
                 FileWatchTargetKind::Markdown,
                 candidate_path.to_path_buf(),
@@ -690,6 +701,32 @@ mod tests {
         assert_eq!(2, markdown_targets.len());
         assert!(markdown_targets[0].ends_with("auth/tasks.html"));
         assert!(markdown_targets[1].ends_with("auth/tasks.md"));
+    }
+
+    #[test]
+    fn plan_file_watch_skips_lower_priority_html_fallback_when_markdown_is_active() {
+        let workspace = TestWorkspace::new("markdown-active");
+        workspace.write_file(".plugin-workspace/.specs/auth/tasks.md", "# Tasks");
+        workspace.write_file(".plugin-workspace/.specs/auth/tasks.html", "<h1>Tasks</h1>");
+        let loaded_workspace = workspace.workspace();
+
+        let plan = plan_file_watch(
+            &loaded_workspace,
+            loaded_workspace.config(),
+            "auth",
+            SpecFileKey::Tasks,
+        )
+        .expect("watch plan should be created");
+
+        let markdown_targets: Vec<&Path> = plan
+            .targets()
+            .iter()
+            .filter(|target| target.kind() == FileWatchTargetKind::Markdown)
+            .map(FileWatchTarget::path)
+            .collect();
+
+        assert_eq!(1, markdown_targets.len());
+        assert!(markdown_targets[0].ends_with("auth/tasks.md"));
     }
 
     #[test]
