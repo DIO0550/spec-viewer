@@ -424,6 +424,86 @@ test("useCommentsはコメント追加中のsaving状態と追加後の一覧を
   result.unmount();
 });
 
+test("useCommentsはloading中のコメント追加成功を古い一覧responseで上書きしない", async () => {
+  const listDeferred = createDeferred<ListCommentsResponse>();
+  const addDeferred = createDeferred<Comment>();
+  const commands = createCommands({
+    listComments: vi.fn().mockReturnValue(listDeferred.promise),
+    addComment: vi.fn().mockReturnValue(addDeferred.promise),
+  });
+  const result = renderUseComments({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "phase-2-comments",
+    fileKey: "tasks",
+    commands,
+  });
+
+  await flushAsyncEffects();
+  expect(result.current.listState.status).toBe("loading");
+
+  let addPromise: Promise<Comment | null> = Promise.resolve(null);
+  act(() => {
+    addPromise = result.current.addComment({
+      anchor: secondComment.anchor,
+      body: secondComment.body,
+    });
+  });
+
+  addDeferred.resolve(secondComment);
+  await act(async () => {
+    await expect(addPromise).resolves.toEqual(secondComment);
+  });
+
+  expect(result.current.comments).toEqual([secondComment]);
+  expect(result.current.listState.status).toBe("ready");
+
+  listDeferred.resolve({ comments: [firstComment] });
+  await flushAsyncEffects();
+
+  expect(result.current.comments).toEqual([secondComment]);
+  result.unmount();
+});
+
+test("useCommentsはscope変更後に完了したコメント追加を現在の一覧へ反映しない", async () => {
+  const addDeferred = createDeferred<Comment>();
+  const commands = createCommands({
+    addComment: vi.fn().mockReturnValue(addDeferred.promise),
+  });
+  const result = renderUseComments({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "phase-2-comments",
+    fileKey: "tasks",
+    commands,
+  });
+
+  await flushAsyncEffects();
+
+  let addPromise: Promise<Comment | null> = Promise.resolve(null);
+  act(() => {
+    addPromise = result.current.addComment({
+      anchor: secondComment.anchor,
+      body: secondComment.body,
+    });
+  });
+
+  result.rerender({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "phase-2-comments",
+    fileKey: "design",
+    commands,
+  });
+  await flushAsyncEffects();
+
+  addDeferred.resolve(secondComment);
+  await act(async () => {
+    await expect(addPromise).resolves.toBeNull();
+  });
+
+  expect(result.current.comments).toEqual([firstComment]);
+  expect(result.current.mutationState.status).toBe("idle");
+  result.unmount();
+});
+
 test("useCommentsはコメント本文を更新して一覧へ反映する", async () => {
   const commands = createCommands();
   const result = renderUseComments({
@@ -558,5 +638,42 @@ test("useCommentsはresolve toggle失敗時に楽観更新を巻き戻す", asyn
       raw: "toggle failed",
     },
   });
+  result.unmount();
+});
+
+test("useCommentsはscope変更後に失敗したmutation errorを表示しない", async () => {
+  const toggleDeferred = createDeferred<Comment>();
+  const commands = createCommands({
+    toggleCommentResolved: vi.fn().mockReturnValue(toggleDeferred.promise),
+  });
+  const result = renderUseComments({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "phase-2-comments",
+    fileKey: "tasks",
+    commands,
+  });
+
+  await flushAsyncEffects();
+
+  let togglePromise: Promise<Comment | null> = Promise.resolve(null);
+  act(() => {
+    togglePromise = result.current.toggleCommentResolved(commentId("cmt_1"));
+  });
+
+  result.rerender({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "phase-2-comments",
+    fileKey: "design",
+    commands,
+  });
+  await flushAsyncEffects();
+
+  toggleDeferred.reject("toggle failed");
+  await act(async () => {
+    await expect(togglePromise).resolves.toBeNull();
+  });
+
+  expect(result.current.comments).toEqual([firstComment]);
+  expect(result.current.mutationState.status).toBe("idle");
   result.unmount();
 });
