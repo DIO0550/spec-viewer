@@ -179,11 +179,20 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
   const updateCurrentScopeComments = useCallback(
     (transform: CommentListTransform): void => {
       setListState((currentState) => {
-        if (currentState.status !== "ready" && currentState.status !== "empty") {
+        if (currentState.status === "idle") {
           return currentState;
         }
 
-        return createLoadedListState(transform(currentState.comments));
+        const nextComments = transform(currentState.comments);
+
+        if (
+          currentState.status === "loading" &&
+          nextComments !== currentState.comments
+        ) {
+          listRequestIdRef.current += 1;
+        }
+
+        return createLoadedListState(nextComments);
       });
     },
     [],

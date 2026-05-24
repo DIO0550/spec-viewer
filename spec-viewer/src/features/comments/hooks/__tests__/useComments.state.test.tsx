@@ -424,6 +424,46 @@ test("useCommentsはコメント追加中のsaving状態と追加後の一覧を
   result.unmount();
 });
 
+test("useCommentsはloading中のコメント追加成功を古い一覧responseで上書きしない", async () => {
+  const listDeferred = createDeferred<ListCommentsResponse>();
+  const addDeferred = createDeferred<Comment>();
+  const commands = createCommands({
+    listComments: vi.fn().mockReturnValue(listDeferred.promise),
+    addComment: vi.fn().mockReturnValue(addDeferred.promise),
+  });
+  const result = renderUseComments({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "phase-2-comments",
+    fileKey: "tasks",
+    commands,
+  });
+
+  await flushAsyncEffects();
+  expect(result.current.listState.status).toBe("loading");
+
+  let addPromise: Promise<Comment | null> = Promise.resolve(null);
+  act(() => {
+    addPromise = result.current.addComment({
+      anchor: secondComment.anchor,
+      body: secondComment.body,
+    });
+  });
+
+  addDeferred.resolve(secondComment);
+  await act(async () => {
+    await expect(addPromise).resolves.toEqual(secondComment);
+  });
+
+  expect(result.current.comments).toEqual([secondComment]);
+  expect(result.current.listState.status).toBe("ready");
+
+  listDeferred.resolve({ comments: [firstComment] });
+  await flushAsyncEffects();
+
+  expect(result.current.comments).toEqual([secondComment]);
+  result.unmount();
+});
+
 test("useCommentsはscope変更後に完了したコメント追加を現在の一覧へ反映しない", async () => {
   const addDeferred = createDeferred<Comment>();
   const commands = createCommands({
