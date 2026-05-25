@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   commentCommands as defaultCommentCommands,
@@ -15,18 +9,24 @@ import {
   createPerformanceCorrelationId,
   startPerformanceSpan,
 } from "@/shared/lib/performance";
-import { Comment } from "@/features/comments/domain/comment";
+import { Comments } from "@/features/comments/domain/comments";
 import { CommentScope } from "@/features/comments/domain/commentScope";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
+import {
+  addComment as addCommentViaGateway,
+  deleteComment as deleteCommentViaGateway,
+  listComments as listCommentsViaGateway,
+  reopenComment as reopenCommentViaGateway,
+  resolveComment as resolveCommentViaGateway,
+  toggleCommentResolved as toggleCommentResolvedViaGateway,
+  updateComment as updateCommentViaGateway,
+} from "@/features/comments/infra/commentGateway";
 import type {
-  AddCommentRequest,
   CommentAnchor,
   CommentId,
-  CommentStatusRequest,
   DeleteCommentResponse,
-  ListCommentsRequest,
-  UpdateCommentRequest,
 } from "@/features/comments/types/comment";
+import type { Comment } from "@/features/comments/types/comment";
 import type { NormalizedCommandError } from "@/shared/types/ipc";
 import type { SpecFileKey } from "@/features/specs/types/spec";
 
@@ -198,7 +198,7 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
     [],
   );
   const runCommentMutation = useCallback(
-    async <Result,>(
+    async <Result>(
       request: CommentMutationRequest<Result>,
     ): Promise<Result | null> => {
       if (scope === null) {
@@ -259,7 +259,7 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
         ...request,
         applySuccess: (comment) => {
           updateCurrentScopeComments((comments) =>
-            Comment.upsertDisplayable(comments, comment, statusFilter),
+            Comments.upsertDisplayable(comments, comment, statusFilter),
           );
         },
       }),
@@ -293,12 +293,11 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
     });
 
     try {
-      const response = await commands.listComments(
-        createListCommentsRequest(
-          activeScope,
-          statusFilter,
-          options.correlationId ?? null,
-        ),
+      const response = await listCommentsViaGateway(
+        commands,
+        activeScope,
+        statusFilter,
+        options.correlationId ?? null,
       );
       endSpan({
         commentCount: response.comments.length,
@@ -353,18 +352,14 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
       runCommentMutation({
         operation: "add",
         commentId: null,
-        run: async (activeScope) => {
-          const request: AddCommentRequest = {
-            workspacePath: activeScope.workspacePath,
-            specId: activeScope.specId,
+        run: (activeScope) =>
+          addCommentViaGateway(commands, activeScope, {
             anchor: input.anchor,
             body: input.body,
-          };
-          return commands.addComment(request);
-        },
+          }),
         applySuccess: (comment) => {
           updateCurrentScopeComments((comments) =>
-            Comment.appendDisplayable(comments, comment, statusFilter),
+            Comments.appendDisplayable(comments, comment, statusFilter),
           );
         },
       }),
@@ -376,16 +371,14 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
       runCommentMutation({
         operation: "update",
         commentId: input.commentId,
-        run: async (activeScope) => {
-          const request: UpdateCommentRequest = {
-            ...createStatusRequest(activeScope, input.commentId),
+        run: (activeScope) =>
+          updateCommentViaGateway(commands, activeScope, {
+            commentId: input.commentId,
             body: input.body,
-          };
-          return commands.updateComment(request);
-        },
+          }),
         applySuccess: (comment) => {
           updateCurrentScopeComments((comments) =>
-            Comment.upsertDisplayable(comments, comment, statusFilter),
+            Comments.upsertDisplayable(comments, comment, statusFilter),
           );
         },
       }),
@@ -398,7 +391,7 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
         operation: "delete",
         commentId,
         run: (activeScope) =>
-          commands.deleteComment(createStatusRequest(activeScope, commentId)),
+          deleteCommentViaGateway(commands, activeScope, commentId),
         applySuccess: () => {
           updateCurrentScopeComments((comments) =>
             comments.filter((comment) => comment.id !== commentId),
@@ -422,7 +415,7 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
         operation: "resolve",
         commentId,
         run: (activeScope) =>
-          commands.resolveComment(createStatusRequest(activeScope, commentId)),
+          resolveCommentViaGateway(commands, activeScope, commentId),
       }),
     [commands, runStatusMutation],
   );
@@ -433,7 +426,7 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
         operation: "reopen",
         commentId,
         run: (activeScope) =>
-          commands.reopenComment(createStatusRequest(activeScope, commentId)),
+          reopenCommentViaGateway(commands, activeScope, commentId),
       }),
     [commands, runStatusMutation],
   );
@@ -443,16 +436,14 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
       const previousComments = listState.comments;
 
       updateCurrentScopeComments((comments) =>
-        Comment.upsertOptimisticToggle(comments, commentId, statusFilter),
+        Comments.upsertOptimisticToggle(comments, commentId, statusFilter),
       );
 
       return runStatusMutation({
         operation: "toggle",
         commentId,
         run: (activeScope) =>
-          commands.toggleCommentResolved(
-            createStatusRequest(activeScope, commentId),
-          ),
+          toggleCommentResolvedViaGateway(commands, activeScope, commentId),
         applyFailure: () => {
           updateCurrentScopeComments(() => previousComments);
         },
@@ -531,38 +522,6 @@ function createLoadedListState(comments: readonly Comment[]): CommentListState {
     status: "ready",
     comments,
     error: null,
-  };
-}
-
-/** @returns IPC list request for the selected comment scope. */
-function createListCommentsRequest(
-  scope: CommentScope,
-  statusFilter: CommentStatusFilter,
-  correlationId: string | null,
-): ListCommentsRequest {
-  const request: ListCommentsRequest = {
-    ...scope,
-    statusFilter: CommentStatusFilter.toString(statusFilter),
-  };
-
-  if (correlationId === null) {
-    return request;
-  }
-
-  return {
-    ...request,
-    correlationId,
-  };
-}
-
-/** @returns IPC status request for commands targeting one comment. */
-function createStatusRequest(
-  scope: CommentScope,
-  commentId: CommentId,
-): CommentStatusRequest {
-  return {
-    ...scope,
-    commentId,
   };
 }
 

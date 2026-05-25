@@ -3,6 +3,7 @@ import {
   type CommentStatus,
   type CommentStatusFilter as CommentStatusFilterType,
 } from "@/features/comments/domain/commentStatusFilter";
+import { Comments } from "@/features/comments/domain/comments";
 import type {
   CommentAnchor,
   CommentAnchorResolution,
@@ -93,15 +94,7 @@ export const Comment = {
     comment: Comment,
     statusFilter: CommentStatusFilterType,
   ): readonly Comment[] {
-    if (!Comment.shouldDisplay(comment, statusFilter)) {
-      return comments;
-    }
-
-    if (comments.some((currentComment) => currentComment.id === comment.id)) {
-      return comments;
-    }
-
-    return [...comments, comment];
+    return Comments.appendDisplayable(comments, comment, statusFilter);
   },
   /**
    * @param comments - Current visible comments
@@ -114,31 +107,7 @@ export const Comment = {
     comment: Comment,
     statusFilter: CommentStatusFilterType,
   ): readonly Comment[] {
-    const commentWithResolution = Comment.preserveAnchorResolution(
-      comments.find((candidate) => candidate.id === comment.id),
-      comment,
-    );
-    const withoutComment = comments.filter(
-      (currentComment) => currentComment.id !== commentWithResolution.id,
-    );
-
-    if (!Comment.shouldDisplay(commentWithResolution, statusFilter)) {
-      return withoutComment;
-    }
-
-    const replaceIndex = comments.findIndex(
-      (currentComment) => currentComment.id === commentWithResolution.id,
-    );
-
-    if (replaceIndex < 0) {
-      return [...comments, commentWithResolution];
-    }
-
-    return comments.map((currentComment) =>
-      currentComment.id === commentWithResolution.id
-        ? commentWithResolution
-        : currentComment,
-    );
+    return Comments.upsertDisplayable(comments, comment, statusFilter);
   },
   /**
    * @param comments - Current visible comments
@@ -151,16 +120,6 @@ export const Comment = {
     commentId: CommentId,
     statusFilter: CommentStatusFilterType,
   ): readonly Comment[] {
-    const currentComment = comments.find((comment) => comment.id === commentId);
-
-    if (currentComment === undefined) {
-      return comments;
-    }
-
-    return Comment.upsertDisplayable(
-      comments,
-      Comment.toggleResolved(currentComment),
-      statusFilter,
-    );
+    return Comments.upsertOptimisticToggle(comments, commentId, statusFilter);
   },
 } as const;
