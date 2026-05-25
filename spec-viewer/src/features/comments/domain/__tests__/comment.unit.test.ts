@@ -1,6 +1,7 @@
 import { expect, expectTypeOf, test } from "vitest";
 
 import { Comment } from "@/features/comments/domain/comment";
+import { Comments } from "@/features/comments/domain/comments";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import type {
   Comment as CompatComment,
@@ -177,6 +178,22 @@ test("Comment.appendDisplayableは表示対象コメントを末尾に追加す�
   ).toEqual([openComment, secondOpenComment]);
 });
 
+test("Comment.appendDisplayableはCommentsと同じ結果を返す", () => {
+  expect(
+    Comment.appendDisplayable(
+      [openComment],
+      secondOpenComment,
+      CommentStatusFilter.Open,
+    ),
+  ).toEqual(
+    Comments.appendDisplayable(
+      [openComment],
+      secondOpenComment,
+      CommentStatusFilter.Open,
+    ),
+  );
+});
+
 test("Comment.appendDisplayableはfilter対象外なら元配列を返す", () => {
   const comments = [openComment] as const;
   const resolvedComment: Comment = {
@@ -224,6 +241,28 @@ test("Comment.upsertDisplayableは既存コメントを同じ位置で置換す�
       CommentStatusFilter.All,
     ),
   ).toEqual([updatedComment, secondOpenComment]);
+});
+
+test("Comment.upsertDisplayableはCommentsと同じ結果を返す", () => {
+  const updatedComment: Comment = {
+    ...openComment,
+    body: "Updated body",
+    updatedAt: "2026-05-05T10:15:00Z",
+  };
+
+  expect(
+    Comment.upsertDisplayable(
+      [openComment, secondOpenComment],
+      updatedComment,
+      CommentStatusFilter.All,
+    ),
+  ).toEqual(
+    Comments.upsertDisplayable(
+      [openComment, secondOpenComment],
+      updatedComment,
+      CommentStatusFilter.All,
+    ),
+  );
 });
 
 test("Comment.upsertDisplayableは新規表示対象コメントを末尾に追加する", () => {
@@ -332,6 +371,22 @@ test("Comment.upsertOptimisticToggleは既存コメントのresolved stateを反
       resolved: true,
     },
   ]);
+});
+
+test("Comment.upsertOptimisticToggleはCommentsと同じ結果を返す", () => {
+  expect(
+    Comment.upsertOptimisticToggle(
+      [openComment],
+      openComment.id,
+      CommentStatusFilter.All,
+    ),
+  ).toEqual(
+    Comments.upsertOptimisticToggle(
+      [openComment],
+      openComment.id,
+      CommentStatusFilter.All,
+    ),
+  );
 });
 
 test("Comment.upsertOptimisticToggleはfilter適用後に非表示のコメントを除外する", () => {

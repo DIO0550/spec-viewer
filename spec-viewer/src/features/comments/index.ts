@@ -1,5 +1,6 @@
 export { AddCommentPopover } from "@/features/comments/components/AddCommentPopover";
 export { Comment } from "@/features/comments/domain/comment";
+export { Comments } from "@/features/comments/domain/comments";
 export { CommentSidebar } from "@/features/comments/components/CommentSidebar";
 export { CommentThread } from "./components/CommentThread";
 export {
