@@ -422,15 +422,15 @@ export function useCommentMutations(
 
   const toggleCommentResolved = useCallback(
     async (commentId: CommentId): Promise<Comment | null> => {
-      const previousComments = currentComments;
-      updateCurrentScopeComments((comments) =>
-        Comments.upsertOptimisticToggle(comments, commentId, statusFilter),
-      );
-
       const token = beginOperation("toggle", commentId);
       if (token === null || scope === null) {
         return null;
       }
+
+      const previousComments = currentComments;
+      updateCurrentScopeComments((comments) =>
+        Comments.upsertOptimisticToggle(comments, commentId, statusFilter),
+      );
 
       try {
         const comment = await toggleCommentResolvedViaGateway(

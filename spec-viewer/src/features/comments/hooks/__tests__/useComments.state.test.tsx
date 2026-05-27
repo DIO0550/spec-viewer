@@ -14,6 +14,7 @@ import { CommentId } from "@/features/comments/types/comment";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import type { CommentStatusFilter as CommentStatusFilterType } from "@/features/comments/domain/commentStatusFilter";
 import type { SpecFileKey } from "@/features/specs/types/spec";
+import { useCommentMutations } from "@/features/comments/hooks/useCommentMutations";
 import { useComments } from "@/features/comments/hooks/useComments";
 
 const commentId = CommentId.fromString;
@@ -675,6 +676,40 @@ test("useCommentsはresolve toggleを楽観更新して成功結果で確定す�
 
   expect(result.current.comments).toEqual([resolvedComment]);
   expect(result.current.mutationState.status).toBe("idle");
+  result.unmount();
+});
+
+test("useCommentMutationsはscope未選択時にtoggleの楽観更新を行わない", async () => {
+  const updateCurrentScopeComments = vi.fn();
+  const reloadComments = vi.fn().mockResolvedValue(true);
+  const commands = createCommands({
+    toggleCommentResolved: vi.fn().mockResolvedValue(resolvedComment),
+  });
+  const result = renderHook(
+    () =>
+      useCommentMutations({
+        scope: null,
+        scopeKey: "no-scope",
+        statusFilter: CommentStatusFilter.All,
+        commands,
+        currentComments: [firstComment],
+        updateCurrentScopeComments,
+        reloadComments,
+      }),
+    undefined,
+  );
+
+  let toggleResult: Comment | null = resolvedComment;
+  await act(async () => {
+    toggleResult = await result.current.toggleCommentResolved(
+      commentId("cmt_1"),
+    );
+  });
+
+  expect(toggleResult).toBeNull();
+  expect(result.current.operationState.status).toBe("idle");
+  expect(updateCurrentScopeComments).not.toHaveBeenCalled();
+  expect(commands.toggleCommentResolved).not.toHaveBeenCalled();
   result.unmount();
 });
 
