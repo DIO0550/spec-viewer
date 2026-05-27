@@ -26,7 +26,6 @@ import type { SpecFileKey } from "@/features/specs/types/spec";
 
 export type {
   AddCommentInput,
-  CommentListTransform,
   CommentMutationOperation,
   CommentMutationState,
   UpdateCommentInput,
