@@ -14,6 +14,7 @@ import { CommentId } from "@/features/comments/types/comment";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import type { CommentStatusFilter as CommentStatusFilterType } from "@/features/comments/domain/commentStatusFilter";
 import type { SpecFileKey } from "@/features/specs/types/spec";
+import { useCommentMutations } from "@/features/comments/hooks/useCommentMutations";
 import { useComments } from "@/features/comments/hooks/useComments";
 
 const commentId = CommentId.fromString;
@@ -221,31 +222,28 @@ test("useCommentsはscopeが揃うとコメント一覧を読み込む", async (
 test.each([
   [CommentStatusFilter.Open, "open"],
   [CommentStatusFilter.Resolved, "resolved"],
-] as const)(
-  "useCommentsは%s filterを文字列payloadとして一覧requestへ渡す",
-  async (statusFilter, expectedStatusFilter) => {
-    const double = createCommentCommandTestDouble();
-    const result = renderUseComments({
+] as const)("useCommentsは%s filterを文字列payloadとして一覧requestへ渡す", async (statusFilter, expectedStatusFilter) => {
+  const double = createCommentCommandTestDouble();
+  const result = renderUseComments({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "phase-2-comments",
+    fileKey: "tasks",
+    statusFilter,
+    commands: double.commands,
+  });
+
+  await flushAsyncEffects();
+
+  expect(double.calls.listComments).toEqual([
+    {
       workspacePath: "/workspace/spec-reviewer",
       specId: "phase-2-comments",
       fileKey: "tasks",
-      statusFilter,
-      commands: double.commands,
-    });
-
-    await flushAsyncEffects();
-
-    expect(double.calls.listComments).toEqual([
-      {
-        workspacePath: "/workspace/spec-reviewer",
-        specId: "phase-2-comments",
-        fileKey: "tasks",
-        statusFilter: expectedStatusFilter,
-      },
-    ]);
-    result.unmount();
-  },
-);
+      statusFilter: expectedStatusFilter,
+    },
+  ]);
+  result.unmount();
+});
 
 test("useCommentsは不正なstatusFilter入力をallとして一覧requestへ渡す", async () => {
   const double = createCommentCommandTestDouble();
@@ -320,7 +318,9 @@ test("useCommentsは読み込み失敗をerror状態として返す", async () =
 
 test("useCommentsは読み込み失敗時もperformance spanを記録する", async () => {
   configurePerformanceLoggerForTest(true);
-  const debugSpy = vi.spyOn(console, "debug").mockImplementation(() => undefined);
+  const debugSpy = vi
+    .spyOn(console, "debug")
+    .mockImplementation(() => undefined);
   const commands = createCommands({
     listComments: vi.fn().mockRejectedValue("comment load failed"),
   });
@@ -525,6 +525,58 @@ test("useCommentsはコメント本文を更新して一覧へ反映する", asy
   result.unmount();
 });
 
+test("useCommentsは同一scopeで古いmutation完了を現在の一覧へ反映しない", async () => {
+  const updateDeferred = createDeferred<Comment>();
+  const resolveDeferred = createDeferred<Comment>();
+  const commands = createCommands({
+    updateComment: vi.fn().mockReturnValue(updateDeferred.promise),
+    resolveComment: vi.fn().mockReturnValue(resolveDeferred.promise),
+  });
+  const result = renderUseComments({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "phase-2-comments",
+    fileKey: "tasks",
+    commands,
+  });
+
+  await flushAsyncEffects();
+
+  let updatePromise: Promise<Comment | null> = Promise.resolve(null);
+  act(() => {
+    updatePromise = result.current.updateComment({
+      commentId: commentId("cmt_1"),
+      body: "Updated body",
+    });
+  });
+  expect(result.current.mutationState.operation).toBe("update");
+
+  let resolvePromise: Promise<Comment | null> = Promise.resolve(null);
+  act(() => {
+    resolvePromise = result.current.resolveComment(commentId("cmt_1"));
+  });
+  expect(result.current.mutationState.operation).toBe("resolve");
+
+  resolveDeferred.resolve(resolvedComment);
+  await act(async () => {
+    await expect(resolvePromise).resolves.toEqual(resolvedComment);
+  });
+  expect(result.current.comments).toEqual([resolvedComment]);
+  expect(result.current.mutationState.status).toBe("idle");
+
+  updateDeferred.resolve({
+    ...firstComment,
+    body: "Updated body",
+    updatedAt: "2026-05-05T10:15:00Z",
+  });
+  await act(async () => {
+    await expect(updatePromise).resolves.toBeNull();
+  });
+
+  expect(result.current.comments).toEqual([resolvedComment]);
+  expect(result.current.mutationState.status).toBe("idle");
+  result.unmount();
+});
+
 test("useCommentsはコメント削除後に一覧を再取得する", async () => {
   const listComments = vi
     .fn()
@@ -545,6 +597,32 @@ test("useCommentsはコメント削除後に一覧を再取得する", async () 
 
   expect(result.current.comments).toEqual([secondComment]);
   expect(listComments).toHaveBeenCalledTimes(2);
+  result.unmount();
+});
+
+test("useCommentsは削除未成立なら一覧を維持してsaving状態を解除する", async () => {
+  const listComments = vi.fn().mockResolvedValue({ comments: [firstComment] });
+  const commands = createCommands({
+    deleteComment: vi.fn().mockResolvedValue({ deleted: false }),
+    listComments,
+  });
+  const result = renderUseComments({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "phase-2-comments",
+    fileKey: "tasks",
+    commands,
+  });
+
+  await flushAsyncEffects();
+  let deleteResult = true;
+  await act(async () => {
+    deleteResult = await result.current.deleteComment(commentId("cmt_1"));
+  });
+
+  expect(deleteResult).toBe(false);
+  expect(result.current.comments).toEqual([firstComment]);
+  expect(result.current.mutationState.status).toBe("idle");
+  expect(listComments).toHaveBeenCalledTimes(1);
   result.unmount();
 });
 
@@ -601,6 +679,89 @@ test("useCommentsはresolve toggleを楽観更新して成功結果で確定す�
   result.unmount();
 });
 
+test("useCommentMutationsはscope未選択時にtoggleの楽観更新を行わない", async () => {
+  const updateCurrentScopeComments = vi.fn();
+  const reloadComments = vi.fn().mockResolvedValue(true);
+  const commands = createCommands({
+    toggleCommentResolved: vi.fn().mockResolvedValue(resolvedComment),
+  });
+  const result = renderHook(
+    () =>
+      useCommentMutations({
+        scope: null,
+        scopeKey: "no-scope",
+        statusFilter: CommentStatusFilter.All,
+        commands,
+        currentComments: [firstComment],
+        updateCurrentScopeComments,
+        reloadComments,
+      }),
+    undefined,
+  );
+
+  let toggleResult: Comment | null = resolvedComment;
+  await act(async () => {
+    toggleResult = await result.current.toggleCommentResolved(
+      commentId("cmt_1"),
+    );
+  });
+
+  expect(toggleResult).toBeNull();
+  expect(result.current.operationState.status).toBe("idle");
+  expect(updateCurrentScopeComments).not.toHaveBeenCalled();
+  expect(commands.toggleCommentResolved).not.toHaveBeenCalled();
+  result.unmount();
+});
+
+test("useCommentMutationsはreloadComments変更時に進行中mutationを無効化する", async () => {
+  const addDeferred = createDeferred<Comment>();
+  const commands = createCommands({
+    addComment: vi.fn().mockReturnValue(addDeferred.promise),
+  });
+  const updateCurrentScopeComments = vi.fn();
+  const firstReloadComments = vi.fn().mockResolvedValue(true);
+  const secondReloadComments = vi.fn().mockResolvedValue(true);
+  const result = renderHook(
+    ({
+      reloadComments,
+    }: Readonly<{ reloadComments: () => Promise<boolean> }>) =>
+      useCommentMutations({
+        scope: {
+          workspacePath: "/workspace/spec-reviewer",
+          specId: "phase-2-comments",
+          fileKey: "tasks",
+        },
+        scopeKey: "/workspace/spec-reviewer:phase-2-comments:tasks",
+        statusFilter: CommentStatusFilter.All,
+        commands,
+        currentComments: [],
+        updateCurrentScopeComments,
+        reloadComments,
+      }),
+    { reloadComments: firstReloadComments },
+  );
+
+  let addPromise: Promise<Comment | null> = Promise.resolve(null);
+  act(() => {
+    addPromise = result.current.addComment({
+      anchor: secondComment.anchor,
+      body: secondComment.body,
+    });
+  });
+  expect(result.current.operationState.status).toBe("saving");
+
+  result.rerender({ reloadComments: secondReloadComments });
+
+  expect(result.current.operationState.status).toBe("idle");
+
+  addDeferred.resolve(secondComment);
+  await act(async () => {
+    await expect(addPromise).resolves.toBeNull();
+  });
+  expect(updateCurrentScopeComments).not.toHaveBeenCalled();
+  result.unmount();
+});
+
 test("useCommentsはresolve toggle失敗時に楽観更新を巻き戻す", async () => {
   const toggleDeferred = createDeferred<Comment>();
   const commands = createCommands({
@@ -643,7 +804,12 @@ test("useCommentsはresolve toggle失敗時に楽観更新を巻き戻す", asyn
 
 test("useCommentsはscope変更後に失敗したmutation errorを表示しない", async () => {
   const toggleDeferred = createDeferred<Comment>();
+  const listComments = vi
+    .fn()
+    .mockResolvedValueOnce({ comments: [firstComment] })
+    .mockResolvedValueOnce({ comments: [secondComment] });
   const commands = createCommands({
+    listComments,
     toggleCommentResolved: vi.fn().mockReturnValue(toggleDeferred.promise),
   });
   const result = renderUseComments({
@@ -673,7 +839,7 @@ test("useCommentsはscope変更後に失敗したmutation errorを表示しな�
     await expect(togglePromise).resolves.toBeNull();
   });
 
-  expect(result.current.comments).toEqual([firstComment]);
+  expect(result.current.comments).toEqual([secondComment]);
   expect(result.current.mutationState.status).toBe("idle");
   result.unmount();
 });
