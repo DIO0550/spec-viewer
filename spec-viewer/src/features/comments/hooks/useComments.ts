@@ -29,8 +29,6 @@ export type {
   CommentListTransform,
   CommentMutationOperation,
   CommentMutationState,
-  CommentOperationKind,
-  CommentOperationState,
   UpdateCommentInput,
 } from "@/features/comments/hooks/useCommentMutations";
 
