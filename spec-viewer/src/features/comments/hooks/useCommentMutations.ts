@@ -483,12 +483,12 @@ export function useCommentMutations(
 }
 
 /**
- * @param state - Current operation state.
+ * @param _state - Current operation state.
  * @param event - Operation lifecycle event.
  * @returns Next operation state.
  */
 function commentOperationReducer(
-  state: CommentOperationState,
+  _state: CommentOperationState,
   event: CommentOperationEvent,
 ): CommentOperationState {
   switch (event.type) {
@@ -510,8 +510,19 @@ function commentOperationReducer(
         error: event.error,
       };
     default:
-      return state;
+      return assertNever(event);
   }
+}
+
+/**
+ * @param value - Value that should have been narrowed to never.
+ * @returns Never returns because exhaustive handling failed.
+ * @throws Error when an unhandled union member reaches runtime.
+ */
+function assertNever(value: never): never {
+  throw new Error(
+    `Unhandled comment operation event: ${JSON.stringify(value)}`,
+  );
 }
 
 /**
