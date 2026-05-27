@@ -194,7 +194,7 @@ export function useCommentMutations(
   useEffect(() => {
     operationRequestIdRef.current += 1;
     dispatchOperation({ type: "operationInvalidated" });
-  }, [scopeKey]);
+  }, [reloadComments, scopeKey]);
 
   const addComment = useCallback(
     async (input: AddCommentInput): Promise<Comment | null> => {

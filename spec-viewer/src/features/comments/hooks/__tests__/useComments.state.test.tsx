@@ -713,6 +713,55 @@ test("useCommentMutationsはscope未選択時にtoggleの楽観更新を行わ�
   result.unmount();
 });
 
+test("useCommentMutationsはreloadComments変更時に進行中mutationを無効化する", async () => {
+  const addDeferred = createDeferred<Comment>();
+  const commands = createCommands({
+    addComment: vi.fn().mockReturnValue(addDeferred.promise),
+  });
+  const updateCurrentScopeComments = vi.fn();
+  const firstReloadComments = vi.fn().mockResolvedValue(true);
+  const secondReloadComments = vi.fn().mockResolvedValue(true);
+  const result = renderHook(
+    ({
+      reloadComments,
+    }: Readonly<{ reloadComments: () => Promise<boolean> }>) =>
+      useCommentMutations({
+        scope: {
+          workspacePath: "/workspace/spec-reviewer",
+          specId: "phase-2-comments",
+          fileKey: "tasks",
+        },
+        scopeKey: "/workspace/spec-reviewer:phase-2-comments:tasks",
+        statusFilter: CommentStatusFilter.All,
+        commands,
+        currentComments: [],
+        updateCurrentScopeComments,
+        reloadComments,
+      }),
+    { reloadComments: firstReloadComments },
+  );
+
+  let addPromise: Promise<Comment | null> = Promise.resolve(null);
+  act(() => {
+    addPromise = result.current.addComment({
+      anchor: secondComment.anchor,
+      body: secondComment.body,
+    });
+  });
+  expect(result.current.operationState.status).toBe("saving");
+
+  result.rerender({ reloadComments: secondReloadComments });
+
+  expect(result.current.operationState.status).toBe("idle");
+
+  addDeferred.resolve(secondComment);
+  await act(async () => {
+    await expect(addPromise).resolves.toBeNull();
+  });
+  expect(updateCurrentScopeComments).not.toHaveBeenCalled();
+  result.unmount();
+});
+
 test("useCommentsはresolve toggle失敗時に楽観更新を巻き戻す", async () => {
   const toggleDeferred = createDeferred<Comment>();
   const commands = createCommands({
