@@ -20,6 +20,7 @@ import {
   normalizeCommandError,
   type CommentCommands,
 } from "@/shared/api/tauri";
+import type { CommentListTransform } from "@/features/comments/hooks/useCommentList";
 import type { NormalizedCommandError } from "@/shared/types/ipc";
 
 export type CommentOperationKind =
@@ -62,10 +63,6 @@ export type UpdateCommentInput = Readonly<{
   commentId: CommentId;
   body: string;
 }>;
-
-export type CommentListTransform = (
-  comments: readonly Comment[],
-) => readonly Comment[];
 
 export type UseCommentMutationsOptions = Readonly<{
   scope: CommentScope | null;
