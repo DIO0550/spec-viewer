@@ -245,6 +245,10 @@ export function MarkdownViewer({
     renderedRootRef,
     fileKey: selectionFileKey,
   });
+  const visibleViewerComments = useMemo(
+    () => comments.filter(isVisibleInMarkdownViewer),
+    [comments],
+  );
   useViewerReset(panelRef, resetKey, state.status !== "idle");
   useEffect(() => {
     setActiveAnchorDraft(null);
@@ -305,10 +309,10 @@ export function MarkdownViewer({
   useEffect(() => {
     scrollActiveCommentIntoView({
       activeCommentId,
-      comments,
+      comments: visibleViewerComments,
       renderedRoot: renderedRootRef.current,
     });
-  }, [activeCommentId, anchorDisplayStates, comments]);
+  }, [activeCommentId, anchorDisplayStates, visibleViewerComments]);
   useEffect(() => {
     const nextMatchCount = countRenderedDocumentSearchMatches({
       renderedRoot: renderedRootRef.current,
@@ -336,14 +340,14 @@ export function MarkdownViewer({
       return;
     }
 
-    const isCommentStillVisible = comments.some(
+    const isCommentStillVisible = visibleViewerComments.some(
       (comment) => comment.id === activeEditDraft.comment.id,
     );
 
     if (!isCommentStillVisible) {
       setActiveEditDraft(null);
     }
-  }, [activeEditDraft, comments]);
+  }, [activeEditDraft, visibleViewerComments]);
 
   const closeAnchorDraft = (): void => {
     setActiveAnchorDraft(null);
@@ -470,8 +474,8 @@ export function MarkdownViewer({
   };
 
   const visibleEditDraft = useMemo(
-    () => createVisibleCommentEditDraft(activeEditDraft, comments),
-    [activeEditDraft, comments],
+    () => createVisibleCommentEditDraft(activeEditDraft, visibleViewerComments),
+    [activeEditDraft, visibleViewerComments],
   );
 
   if (state.status === "idle") {
@@ -642,7 +646,7 @@ export function MarkdownViewer({
             contents={contents}
             blocks={state.document.blocks}
             renderedRootRef={renderedRootRef}
-            comments={comments}
+            comments={visibleViewerComments}
             activeCommentId={activeCommentId}
             anchorDisplayStates={anchorDisplayStates}
             documentSearchQuery={normalizedDocumentSearchQuery}
@@ -2673,6 +2677,11 @@ function createCommentAnchorDraftKey(draft: CommentAnchorDraft): string {
     anchor.charRange.start,
     anchor.charRange.end,
   ].join(":");
+}
+
+/** @returns Whether the comment should be rendered in the left Markdown viewer. */
+function isVisibleInMarkdownViewer(comment: Comment): boolean {
+  return !comment.resolved;
 }
 
 /** @returns The latest editable draft for a still-visible comment. */
