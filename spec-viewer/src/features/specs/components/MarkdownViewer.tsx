@@ -2769,6 +2769,7 @@ function CommentEditPopover({
   const errorId = useId();
   const popoverRef = useRef<HTMLElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const previousDraftCommentIdRef = useRef<CommentId | null>(null);
   const [body, setBody] = useState(draft?.comment.body ?? "");
   const [validationMessage, setValidationMessage] = useState<string | null>(
     null,
@@ -2797,6 +2798,13 @@ function CommentEditPopover({
     visibleErrorMessage === null ? hintId : `${hintId} ${errorId}`;
 
   useEffect(() => {
+    const nextDraftCommentId = draft?.comment.id ?? null;
+
+    if (previousDraftCommentIdRef.current === nextDraftCommentId) {
+      return;
+    }
+
+    previousDraftCommentIdRef.current = nextDraftCommentId;
     setBody(draft?.comment.body ?? "");
     setValidationMessage(null);
     setIsConfirmingDelete(false);

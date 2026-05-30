@@ -720,36 +720,40 @@ test("MarkdownViewerはコメント解決後に左ビューの表示から外す
 
 test("MarkdownViewerは親ビュー再描画後も編集中の本文を維持する", async () => {
   const contents = "Existing comments should keep draft edits during rerender.";
-  const comments: readonly Comment[] = [
+  const createDraftComment = (): Comment =>
     createComment({
       id: "cmt_draft",
       blockIndex: 0,
       text: contents,
       resolved: false,
-    }),
-  ];
-  const result = renderViewer(
-    createReadyState(contents),
-    vi.fn(),
-    vi.fn().mockResolvedValue(true),
-    comments,
-    commentId("cmt_draft"),
+    });
+  const renderMarkdownViewer = (comments: readonly Comment[]): ReactNode => (
+    <MarkdownViewer
+      state={createReadyState(contents)}
+      selectedSpecLabel={selectedSpecLabel}
+      selectedFileLabel={selectedFileLabel}
+      comments={comments}
+      activeCommentId={commentId("cmt_draft")}
+      onReload={vi.fn()}
+      onAddComment={vi.fn().mockResolvedValue(true)}
+      onUpdateComment={vi.fn().mockResolvedValue(true)}
+      operationState={idleOperationState}
+      onResolveComment={vi.fn().mockResolvedValue(true)}
+      onReopenComment={vi.fn().mockResolvedValue(true)}
+      onDeleteComment={vi.fn().mockResolvedValue(true)}
+      onSelectComment={vi.fn()}
+    />
   );
+  const result = renderComponent(renderMarkdownViewer([createDraftComment()]));
   const popover = openFirstCommentEditPopover(result.container);
   const editor = popover.querySelector("textarea") as HTMLTextAreaElement;
-  const searchInput = result.container.querySelector(
-    '[aria-label="文書検索"]',
-  ) as HTMLInputElement;
 
   await act(async () => {
     editor.value = "Draft body in progress";
     editor.dispatchEvent(new Event("input", { bubbles: true }));
   });
 
-  act(() => {
-    searchInput.value = "comments";
-    searchInput.dispatchEvent(new Event("input", { bubbles: true }));
-  });
+  result.rerender(renderMarkdownViewer([createDraftComment()]));
 
   expect(editor.value).toBe("Draft body in progress");
   result.unmount();
