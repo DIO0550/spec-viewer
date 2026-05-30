@@ -387,6 +387,32 @@ function App() {
     return updatedComment !== null;
   };
 
+  const resolveInlineComment = async (
+    commentId: CommentId,
+  ): Promise<boolean> => {
+    const resolvedComment = await comments.resolveComment(commentId);
+
+    return resolvedComment !== null;
+  };
+
+  const reopenInlineComment = async (
+    commentId: CommentId,
+  ): Promise<boolean> => {
+    const reopenedComment = await comments.reopenComment(commentId);
+
+    return reopenedComment !== null;
+  };
+
+  const deleteInlineComment = async (
+    commentId: CommentId,
+  ): Promise<boolean> => {
+    if (commentId === activeCommentId) {
+      setActiveCommentId(null);
+    }
+
+    return comments.deleteComment(commentId);
+  };
+
   const deleteComment = (commentId: CommentId): void => {
     if (commentId === activeCommentId) {
       setActiveCommentId(null);
@@ -805,9 +831,6 @@ function App() {
   const addCommentErrorMessage =
     CommentOperationFailedState.errorFor(comments.operationState, "add")
       ?.message ?? null;
-  const updateCommentErrorMessage =
-    CommentOperationFailedState.errorFor(comments.operationState, "update")
-      ?.message ?? null;
   const isAddingComment = CommentOperationSavingState.matchesOperation(
     comments.operationState,
     "add",
@@ -962,13 +985,16 @@ function App() {
               isAddingComment={isAddingComment}
               addCommentErrorMessage={addCommentErrorMessage}
               isUpdatingComment={isUpdatingComment}
-              updateCommentErrorMessage={updateCommentErrorMessage}
+              operationState={comments.operationState}
               isCommentScopeReady={isCommentScopeReady}
               onReload={() => {
                 void specs.reloadDocument();
               }}
               onAddComment={addComment}
               onUpdateComment={updateComment}
+              onResolveComment={resolveInlineComment}
+              onReopenComment={reopenInlineComment}
+              onDeleteComment={deleteInlineComment}
               onSelectComment={selectComment}
               onAnchorDisplayStatesChange={updateCommentAnchorDisplayStates}
               onFirstReadable={() => {
