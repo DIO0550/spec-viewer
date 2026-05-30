@@ -15,6 +15,7 @@ import {
   useEffect,
   useId,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -28,8 +29,10 @@ import {
   MessageSquarePlus,
   Pencil,
   RefreshCcw,
+  RotateCcw,
   Search,
   Send,
+  Trash2,
   X,
   ZoomIn,
   ZoomOut,
@@ -44,6 +47,12 @@ import {
   createCommentAnchorDraftFromBlock,
   createTextHash,
 } from "@/features/comments/lib/comment-anchor-draft";
+import {
+  CommentOperationIdleState,
+  CommentOperationSavingState,
+  type CommentOperationKind,
+  type CommentOperationState,
+} from "@/features/comments/domain/commentOperation";
 import { uiText } from "@/shared/lib/uiText";
 import { recordPerformancePoint } from "@/shared/lib/performance";
 import type {
@@ -155,6 +164,7 @@ const HTML_ZOOM_DEFAULT_PERCENT = 100;
 const HTML_ZOOM_MIN_PERCENT = 50;
 const HTML_ZOOM_MAX_PERCENT = 160;
 const HTML_ZOOM_STEP_PERCENT = 10;
+const idleCommentOperationState = CommentOperationIdleState.create();
 
 type Props = Readonly<{
   state: SpecDocumentState;
@@ -165,11 +175,14 @@ type Props = Readonly<{
   isAddingComment?: boolean;
   addCommentErrorMessage?: string | null;
   isUpdatingComment?: boolean;
-  updateCommentErrorMessage?: string | null;
+  operationState?: CommentOperationState;
   isCommentScopeReady?: boolean;
   onReload: () => void;
   onAddComment?: (input: AddCommentSubmitInput) => Promise<boolean>;
   onUpdateComment?: (commentId: CommentId, body: string) => Promise<boolean>;
+  onResolveComment?: (commentId: CommentId) => Promise<boolean>;
+  onReopenComment?: (commentId: CommentId) => Promise<boolean>;
+  onDeleteComment?: (commentId: CommentId) => Promise<boolean>;
   onSelectComment?: (commentId: CommentId) => void;
   onAnchorDisplayStatesChange?: (
     states: readonly CommentAnchorDisplayState[],
@@ -187,11 +200,14 @@ export function MarkdownViewer({
   isAddingComment = false,
   addCommentErrorMessage = null,
   isUpdatingComment = false,
-  updateCommentErrorMessage = null,
+  operationState = idleCommentOperationState,
   isCommentScopeReady = true,
   onReload,
   onAddComment,
   onUpdateComment,
+  onResolveComment,
+  onReopenComment,
+  onDeleteComment,
   onSelectComment,
   onAnchorDisplayStatesChange,
   onFirstReadable,
@@ -229,6 +245,10 @@ export function MarkdownViewer({
     renderedRootRef,
     fileKey: selectionFileKey,
   });
+  const visibleViewerComments = useMemo(
+    () => comments.filter(isVisibleInMarkdownViewer),
+    [comments],
+  );
   useViewerReset(panelRef, resetKey, state.status !== "idle");
   useEffect(() => {
     setActiveAnchorDraft(null);
@@ -289,10 +309,10 @@ export function MarkdownViewer({
   useEffect(() => {
     scrollActiveCommentIntoView({
       activeCommentId,
-      comments,
+      comments: visibleViewerComments,
       renderedRoot: renderedRootRef.current,
     });
-  }, [activeCommentId, anchorDisplayStates, comments]);
+  }, [activeCommentId, anchorDisplayStates, visibleViewerComments]);
   useEffect(() => {
     const nextMatchCount = countRenderedDocumentSearchMatches({
       renderedRoot: renderedRootRef.current,
@@ -315,6 +335,19 @@ export function MarkdownViewer({
     documentSearchMatchCount,
     activeDocumentSearchIndex,
   ]);
+  useEffect(() => {
+    if (activeEditDraft === null) {
+      return;
+    }
+
+    const isCommentStillVisible = visibleViewerComments.some(
+      (comment) => comment.id === activeEditDraft.comment.id,
+    );
+
+    if (!isCommentStillVisible) {
+      setActiveEditDraft(null);
+    }
+  }, [activeEditDraft, visibleViewerComments]);
 
   const closeAnchorDraft = (): void => {
     setActiveAnchorDraft(null);
@@ -382,6 +415,36 @@ export function MarkdownViewer({
     return wasSaved;
   };
 
+  const resolveComment = async (commentId: CommentId): Promise<boolean> => {
+    if (onResolveComment === undefined) {
+      return false;
+    }
+
+    return onResolveComment(commentId);
+  };
+
+  const reopenComment = async (commentId: CommentId): Promise<boolean> => {
+    if (onReopenComment === undefined) {
+      return false;
+    }
+
+    return onReopenComment(commentId);
+  };
+
+  const deleteComment = async (commentId: CommentId): Promise<boolean> => {
+    if (onDeleteComment === undefined) {
+      return false;
+    }
+
+    const wasDeleted = await onDeleteComment(commentId);
+
+    if (wasDeleted) {
+      closeEditDraft();
+    }
+
+    return wasDeleted;
+  };
+
   const goToPreviousDocumentSearchMatch = (): void => {
     setActiveDocumentSearchIndex((currentIndex) =>
       getPreviousDocumentSearchIndex(currentIndex, documentSearchMatchCount),
@@ -409,6 +472,11 @@ export function MarkdownViewer({
       clampHtmlZoomPercent(currentZoomPercent + HTML_ZOOM_STEP_PERCENT),
     );
   };
+
+  const visibleEditDraft = useMemo(
+    () => createVisibleCommentEditDraft(activeEditDraft, visibleViewerComments),
+    [activeEditDraft, visibleViewerComments],
+  );
 
   if (state.status === "idle") {
     return (
@@ -578,7 +646,7 @@ export function MarkdownViewer({
             contents={contents}
             blocks={state.document.blocks}
             renderedRootRef={renderedRootRef}
-            comments={comments}
+            comments={visibleViewerComments}
             activeCommentId={activeCommentId}
             anchorDisplayStates={anchorDisplayStates}
             documentSearchQuery={normalizedDocumentSearchQuery}
@@ -604,10 +672,13 @@ export function MarkdownViewer({
             onCancel={closeAnchorDraft}
           />
           <CommentEditPopover
-            draft={activeEditDraft}
+            draft={visibleEditDraft}
             isSaving={isUpdatingComment}
-            errorMessage={updateCommentErrorMessage}
+            operationState={operationState}
             onSubmit={updateComment}
+            onResolveComment={resolveComment}
+            onReopenComment={reopenComment}
+            onDeleteComment={deleteComment}
             onCancel={closeEditDraft}
           />
         </>
@@ -2608,17 +2679,73 @@ function createCommentAnchorDraftKey(draft: CommentAnchorDraft): string {
   ].join(":");
 }
 
+/** @returns Whether the comment should be rendered in the left Markdown viewer. */
+function isVisibleInMarkdownViewer(comment: Comment): boolean {
+  return !comment.resolved;
+}
+
+/** @returns The latest editable draft for a still-visible comment. */
+function createVisibleCommentEditDraft(
+  draft: CommentEditDraft | null,
+  comments: readonly Comment[],
+): CommentEditDraft | null {
+  if (draft === null) {
+    return null;
+  }
+
+  const currentComment = comments.find(
+    (comment) => comment.id === draft.comment.id,
+  );
+
+  if (currentComment === undefined) {
+    return null;
+  }
+
+  return {
+    ...draft,
+    comment: currentComment,
+  };
+}
+
 type CommentEditPopoverProps = Readonly<{
   draft: CommentEditDraft | null;
   isSaving: boolean;
-  errorMessage: string | null;
+  operationState: CommentOperationState;
   onSubmit: (commentId: CommentId, body: string) => Promise<boolean>;
+  onResolveComment: (commentId: CommentId) => Promise<boolean>;
+  onReopenComment: (commentId: CommentId) => Promise<boolean>;
+  onDeleteComment: (commentId: CommentId) => Promise<boolean>;
   onCancel: () => void;
 }>;
 
 const emptyEditBodyMessage = uiText.commentThread.emptyBody;
 const failedUpdateMessage =
   "コメントを更新できませんでした。再試行してください。";
+const failedStatusActionMessage =
+  "コメントの状態を変更できませんでした。再試行してください。";
+const failedDeleteMessage =
+  "コメントを削除できませんでした。再試行してください。";
+
+/** @returns Operation error message scoped to one comment and selected operations. */
+function getCommentOperationErrorMessage(
+  operationState: CommentOperationState,
+  commentId: CommentId,
+  operations: readonly CommentOperationKind[],
+): string | null {
+  if (operationState.status !== "error") {
+    return null;
+  }
+
+  if (operationState.commentId !== commentId) {
+    return null;
+  }
+
+  if (!operations.includes(operationState.operation)) {
+    return null;
+  }
+
+  return operationState.error.message;
+}
 
 /** @returns Human-readable block type text for the edit anchor preview. */
 function formatEditBlockType(blockType: string): string {
@@ -2629,8 +2756,11 @@ function formatEditBlockType(blockType: string): string {
 function CommentEditPopover({
   draft,
   isSaving,
-  errorMessage,
+  operationState,
   onSubmit,
+  onResolveComment,
+  onReopenComment,
+  onDeleteComment,
   onCancel,
 }: CommentEditPopoverProps) {
   const titleId = useId();
@@ -2639,19 +2769,45 @@ function CommentEditPopover({
   const errorId = useId();
   const popoverRef = useRef<HTMLElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const previousDraftCommentIdRef = useRef<CommentId | null>(null);
   const [body, setBody] = useState(draft?.comment.body ?? "");
   const [validationMessage, setValidationMessage] = useState<string | null>(
     null,
   );
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const trimmedBody = body.trim();
-  const isSubmitDisabled = isSaving || trimmedBody.length === 0;
-  const visibleErrorMessage = validationMessage ?? errorMessage;
+  const commentId = draft?.comment.id ?? null;
+  const isOperatingComment =
+    commentId === null
+      ? false
+      : CommentOperationSavingState.isForComment(operationState, commentId);
+  const isBusy = isSaving || isOperatingComment;
+  const scopedOperationErrorMessage =
+    commentId === null
+      ? null
+      : getCommentOperationErrorMessage(operationState, commentId, [
+          "update",
+          "resolve",
+          "reopen",
+          "delete",
+        ]);
+  const visibleErrorMessage =
+    validationMessage ?? scopedOperationErrorMessage;
+  const isSubmitDisabled = isBusy || trimmedBody.length === 0;
   const describedBy =
     visibleErrorMessage === null ? hintId : `${hintId} ${errorId}`;
 
   useEffect(() => {
+    const nextDraftCommentId = draft?.comment.id ?? null;
+
+    if (previousDraftCommentIdRef.current === nextDraftCommentId) {
+      return;
+    }
+
+    previousDraftCommentIdRef.current = nextDraftCommentId;
     setBody(draft?.comment.body ?? "");
     setValidationMessage(null);
+    setIsConfirmingDelete(false);
     textareaRef.current?.focus();
   }, [draft]);
 
@@ -2661,7 +2817,7 @@ function CommentEditPopover({
         return;
       }
 
-      if (isSaving) {
+      if (isBusy) {
         return;
       }
 
@@ -2683,7 +2839,7 @@ function CommentEditPopover({
     return () => {
       document.removeEventListener("mousedown", closeWhenClickingOutside);
     };
-  }, [draft, isSaving, onCancel]);
+  }, [draft, isBusy, onCancel]);
 
   if (draft === null) {
     return null;
@@ -2703,6 +2859,36 @@ function CommentEditPopover({
     }
   };
 
+  const toggleResolved = async (): Promise<void> => {
+    setValidationMessage(null);
+    const wasChanged = draft.comment.resolved
+      ? await onReopenComment(draft.comment.id)
+      : await onResolveComment(draft.comment.id);
+
+    if (!wasChanged) {
+      setValidationMessage(failedStatusActionMessage);
+    }
+  };
+
+  const requestDelete = (): void => {
+    setValidationMessage(null);
+    setIsConfirmingDelete(true);
+  };
+
+  const cancelDelete = (): void => {
+    setValidationMessage(null);
+    setIsConfirmingDelete(false);
+  };
+
+  const confirmDelete = async (): Promise<void> => {
+    setValidationMessage(null);
+    const wasDeleted = await onDeleteComment(draft.comment.id);
+
+    if (!wasDeleted) {
+      setValidationMessage(failedDeleteMessage);
+    }
+  };
+
   const submitForm = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
     void submitComment();
@@ -2711,6 +2897,10 @@ function CommentEditPopover({
   const handleTextareaKeyDown = (
     event: KeyboardEvent<HTMLTextAreaElement>,
   ): void => {
+    if (isBusy) {
+      return;
+    }
+
     if (event.key === "Escape") {
       event.preventDefault();
       onCancel();
@@ -2724,13 +2914,17 @@ function CommentEditPopover({
   };
 
   const handleDialogKeyDown = (event: KeyboardEvent<HTMLElement>): void => {
-    if (event.defaultPrevented || event.key !== "Escape" || isSaving) {
+    if (event.defaultPrevented || event.key !== "Escape" || isBusy) {
       return;
     }
 
     event.preventDefault();
     onCancel();
   };
+
+  const statusActionLabel = draft.comment.resolved
+    ? uiText.commentThread.reopen
+    : uiText.commentThread.resolve;
 
   return (
     <aside
@@ -2756,7 +2950,7 @@ function CommentEditPopover({
           type="button"
           aria-label="コメント編集をキャンセル"
           onClick={onCancel}
-          disabled={isSaving}
+          disabled={isBusy}
         >
           <X aria-hidden="true" size={14} />
         </button>
@@ -2780,7 +2974,7 @@ function CommentEditPopover({
               setValidationMessage(null);
             }}
             onKeyDown={handleTextareaKeyDown}
-            disabled={isSaving}
+            disabled={isBusy}
           />
           <p id={hintId} className="add-comment-popover__hint">
             {formatEditBlockType(draft.comment.anchor.blockType)}
@@ -2793,13 +2987,66 @@ function CommentEditPopover({
               {visibleErrorMessage}
             </p>
           )}
+          {isConfirmingDelete ? (
+            <div className="add-comment-popover__confirm" role="alert">
+              <p>{uiText.commentThread.confirmDelete}</p>
+              <div className="add-comment-popover__confirm-actions">
+                <button
+                  className="button button--danger"
+                  type="button"
+                  aria-label={`${uiText.commentThread.confirmDeleteAction} ${draft.comment.id}`}
+                  disabled={isBusy}
+                  onClick={() => {
+                    void confirmDelete();
+                  }}
+                >
+                  {uiText.commentThread.delete}
+                </button>
+                <button
+                  className="button button--secondary"
+                  type="button"
+                  aria-label={`${uiText.commentThread.cancelDeleteAction} ${draft.comment.id}`}
+                  disabled={isBusy}
+                  onClick={cancelDelete}
+                >
+                  {uiText.commentThread.cancel}
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </div>
+        <div className="add-comment-popover__status-actions">
+          <button
+            className="button button--secondary"
+            type="button"
+            disabled={isBusy}
+            onClick={() => {
+              void toggleResolved();
+            }}
+          >
+            {draft.comment.resolved ? (
+              <RotateCcw aria-hidden="true" size={15} />
+            ) : (
+              <CheckCircle2 aria-hidden="true" size={15} />
+            )}
+            {statusActionLabel}
+          </button>
+          <button
+            className="button button--danger"
+            type="button"
+            disabled={isBusy || isConfirmingDelete}
+            onClick={requestDelete}
+          >
+            <Trash2 aria-hidden="true" size={15} />
+            {uiText.commentThread.delete}
+          </button>
         </div>
         <div className="add-comment-popover__actions">
           <button
             className="button button--secondary"
             type="button"
             onClick={onCancel}
-            disabled={isSaving}
+            disabled={isBusy}
           >
             {uiText.commentThread.cancel}
           </button>

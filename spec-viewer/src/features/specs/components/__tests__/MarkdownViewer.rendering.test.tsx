@@ -4,6 +4,13 @@ import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
 import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
+import {
+  CommentOperationFailedState,
+  CommentOperationIdleState,
+  CommentOperationSavingState,
+  type CommentOperationKind,
+  type CommentOperationState,
+} from "@/features/comments/domain/commentOperation";
 import { createTextHash } from "@/features/comments/lib/comment-anchor-draft";
 import type {
   Comment,
@@ -20,6 +27,7 @@ const commentId = CommentIdValue.fromString;
 const workspacePath = "/workspace/spec-reviewer";
 const selectedSpecLabel = "Phase 1 Viewer";
 const selectedFileLabel = "Tasks";
+const idleOperationState = CommentOperationIdleState.create();
 
 const richMarkdown = [
   "## Rendering Plan",
@@ -44,6 +52,7 @@ const richMarkdown = [
 
 type RenderResult = Readonly<{
   container: HTMLDivElement;
+  rerender: (component: ReactNode) => void;
   unmount: () => void;
 }>;
 
@@ -58,6 +67,11 @@ function renderComponent(component: ReactNode): RenderResult {
 
   return {
     container,
+    rerender: (nextComponent) => {
+      act(() => {
+        root.render(nextComponent);
+      });
+    },
     unmount: () => {
       act(() => {
         root.unmount();
@@ -144,6 +158,10 @@ function renderViewer(
   activeCommentId: CommentId | null = null,
   onSelectComment = vi.fn(),
   onUpdateComment = vi.fn().mockResolvedValue(true),
+  operationState: CommentOperationState = idleOperationState,
+  onResolveComment = vi.fn().mockResolvedValue(true),
+  onReopenComment = vi.fn().mockResolvedValue(true),
+  onDeleteComment = vi.fn().mockResolvedValue(true),
 ): RenderResult {
   return renderComponent(
     <MarkdownViewer
@@ -155,6 +173,10 @@ function renderViewer(
       onReload={onReload}
       onAddComment={onAddComment}
       onUpdateComment={onUpdateComment}
+      operationState={operationState}
+      onResolveComment={onResolveComment}
+      onReopenComment={onReopenComment}
+      onDeleteComment={onDeleteComment}
       onSelectComment={onSelectComment}
     />,
   );
@@ -182,6 +204,41 @@ function createClientRect({
     y: top,
     toJSON: () => ({}),
   } as DOMRect;
+}
+
+function createOperationErrorState(
+  operation: CommentOperationKind,
+  targetCommentId: CommentId,
+  message: string,
+): CommentOperationState {
+  return CommentOperationFailedState.create(operation, targetCommentId, {
+    code: "unknown",
+    message,
+    raw: null,
+  });
+}
+
+function openFirstCommentEditPopover(container: HTMLElement): HTMLElement {
+  const annotation = container.querySelector(
+    ".markdown-comment-annotation",
+  ) as HTMLElement;
+  const toggle = annotation.querySelector(
+    ".markdown-comment-annotation__toggle",
+  ) as HTMLButtonElement;
+
+  act(() => {
+    toggle.click();
+  });
+
+  const select = annotation.querySelector(
+    ".markdown-comment-annotation__select",
+  ) as HTMLButtonElement;
+
+  act(() => {
+    select.click();
+  });
+
+  return container.querySelector(".add-comment-popover") as HTMLElement;
 }
 
 test("MarkdownViewerはGFM要素を安全なHTMLとして表示する", () => {
@@ -384,13 +441,11 @@ test("MarkdownViewerはコメント付きブロックを状態別にハイライ
     '[data-comment-highlight-state="resolved"]',
   );
 
-  expect(highlightedBlocks).toHaveLength(2);
+  expect(highlightedBlocks).toHaveLength(1);
   expect(activeBlock.textContent).toContain(
     "Open comments should remain prominent.",
   );
-  expect(resolvedBlock?.textContent).toContain(
-    "Resolved comments should stay quieter.",
-  );
+  expect(resolvedBlock).toBeNull();
 
   expect(activeBlock.getAttribute("role")).toBeNull();
   expect(activeBlock.getAttribute("tabindex")).toBeNull();
@@ -505,7 +560,7 @@ test("MarkdownViewerは既存コメントを本文右側のカードから編集
     vi.fn(),
     vi.fn().mockResolvedValue(true),
     comments,
-    commentId("cmt_resolved"),
+    commentId("cmt_open"),
     onSelectComment,
     onUpdateComment,
   );
@@ -519,12 +574,12 @@ test("MarkdownViewerは既存コメントを本文右側のカードから編集
     ".markdown-comment-annotation__toggle",
   ) as HTMLButtonElement;
 
-  expect(annotationCards).toHaveLength(2);
+  expect(annotationCards).toHaveLength(1);
   expect(annotationCards[0]?.textContent).toContain("未解決");
   expect(annotationCards[0]?.textContent).not.toContain("cmt_open body");
   expect(activeAnnotationToggle.getAttribute("aria-expanded")).toBe("false");
-  expect(activeAnnotation.textContent).toContain("解決済み");
-  expect(activeAnnotation.textContent).not.toContain("cmt_resolved body");
+  expect(result.container.textContent).not.toContain("解決済み");
+  expect(result.container.textContent).not.toContain("cmt_resolved body");
 
   act(() => {
     activeAnnotationToggle.click();
@@ -535,7 +590,7 @@ test("MarkdownViewerは既存コメントを本文右側のカードから編集
   ) as HTMLButtonElement;
 
   expect(activeAnnotationToggle.getAttribute("aria-expanded")).toBe("true");
-  expect(activeAnnotation.textContent).toContain("cmt_resolved body");
+  expect(activeAnnotation.textContent).toContain("cmt_open body");
 
   act(() => {
     activeAnnotationSelect.click();
@@ -548,7 +603,7 @@ test("MarkdownViewerは既存コメントを本文右側のカードから編集
     ".add-comment-popover textarea",
   ) as HTMLTextAreaElement;
 
-  expect(editor.value).toBe("cmt_resolved body");
+  expect(editor.value).toBe("cmt_open body");
 
   await act(async () => {
     editor.value = "Updated inline comment body";
@@ -566,12 +621,335 @@ test("MarkdownViewerは既存コメントを本文右側のカードから編集
   });
 
   expect(onUpdateComment).toHaveBeenCalledWith(
-    commentId("cmt_resolved"),
+    commentId("cmt_open"),
     "Updated inline comment body",
   );
   expect(
     result.container.querySelector(".markdown-block-comment-button"),
   ).not.toBeNull();
+  result.unmount();
+});
+
+test("MarkdownViewerは編集ポップオーバーから未解決コメントを解決できる", async () => {
+  const onResolveComment = vi.fn().mockResolvedValue(true);
+  const contents = "Existing comments should be visible beside the paragraph.";
+  const comments: readonly Comment[] = [
+    createComment({
+      id: "cmt_open",
+      blockIndex: 0,
+      text: contents,
+      resolved: false,
+    }),
+  ];
+  const result = renderViewer(
+    createReadyState(contents),
+    vi.fn(),
+    vi.fn().mockResolvedValue(true),
+    comments,
+    commentId("cmt_open"),
+    vi.fn(),
+    vi.fn().mockResolvedValue(true),
+    idleOperationState,
+    onResolveComment,
+  );
+  const popover = openFirstCommentEditPopover(result.container);
+  const resolveButton = Array.from(
+    popover.querySelectorAll<HTMLButtonElement>("button"),
+  ).find((button) =>
+    button.textContent?.includes("解決する"),
+  ) as HTMLButtonElement;
+
+  await act(async () => {
+    resolveButton.click();
+  });
+
+  expect(onResolveComment).toHaveBeenCalledWith(commentId("cmt_open"));
+  result.unmount();
+});
+
+test("MarkdownViewerはコメント解決後に左ビューの表示から外す", async () => {
+  const onResolveComment = vi.fn().mockResolvedValue(true);
+  const contents = "Resolved comments should disappear from the viewer.";
+  const openComment = createComment({
+    id: "cmt_open",
+    blockIndex: 0,
+    text: contents,
+    resolved: false,
+  });
+  const resolvedComment = createComment({
+    id: "cmt_open",
+    blockIndex: 0,
+    text: contents,
+    resolved: true,
+  });
+  const renderMarkdownViewer = (comments: readonly Comment[]): ReactNode => (
+    <MarkdownViewer
+      state={createReadyState(contents)}
+      selectedSpecLabel={selectedSpecLabel}
+      selectedFileLabel={selectedFileLabel}
+      comments={comments}
+      activeCommentId={commentId("cmt_open")}
+      onReload={vi.fn()}
+      onAddComment={vi.fn().mockResolvedValue(true)}
+      onUpdateComment={vi.fn().mockResolvedValue(true)}
+      operationState={idleOperationState}
+      onResolveComment={onResolveComment}
+      onReopenComment={vi.fn().mockResolvedValue(true)}
+      onDeleteComment={vi.fn().mockResolvedValue(true)}
+      onSelectComment={vi.fn()}
+    />
+  );
+  const result = renderComponent(renderMarkdownViewer([openComment]));
+  const popover = openFirstCommentEditPopover(result.container);
+  const resolveButton = Array.from(
+    popover.querySelectorAll<HTMLButtonElement>("button"),
+  ).find((button) =>
+    button.textContent?.includes("解決する"),
+  ) as HTMLButtonElement;
+
+  await act(async () => {
+    resolveButton.click();
+  });
+
+  result.rerender(renderMarkdownViewer([resolvedComment]));
+
+  expect(result.container.querySelectorAll(".markdown-comment-annotation")).toHaveLength(0);
+  expect(result.container.querySelector(".add-comment-popover")).toBeNull();
+  result.unmount();
+});
+
+test("MarkdownViewerは親ビュー再描画後も編集中の本文を維持する", async () => {
+  const contents = "Existing comments should keep draft edits during rerender.";
+  const createDraftComment = (): Comment =>
+    createComment({
+      id: "cmt_draft",
+      blockIndex: 0,
+      text: contents,
+      resolved: false,
+    });
+  const renderMarkdownViewer = (comments: readonly Comment[]): ReactNode => (
+    <MarkdownViewer
+      state={createReadyState(contents)}
+      selectedSpecLabel={selectedSpecLabel}
+      selectedFileLabel={selectedFileLabel}
+      comments={comments}
+      activeCommentId={commentId("cmt_draft")}
+      onReload={vi.fn()}
+      onAddComment={vi.fn().mockResolvedValue(true)}
+      onUpdateComment={vi.fn().mockResolvedValue(true)}
+      operationState={idleOperationState}
+      onResolveComment={vi.fn().mockResolvedValue(true)}
+      onReopenComment={vi.fn().mockResolvedValue(true)}
+      onDeleteComment={vi.fn().mockResolvedValue(true)}
+      onSelectComment={vi.fn()}
+    />
+  );
+  const result = renderComponent(renderMarkdownViewer([createDraftComment()]));
+  const popover = openFirstCommentEditPopover(result.container);
+  const editor = popover.querySelector("textarea") as HTMLTextAreaElement;
+
+  await act(async () => {
+    editor.value = "Draft body in progress";
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  result.rerender(renderMarkdownViewer([createDraftComment()]));
+
+  expect(editor.value).toBe("Draft body in progress");
+  result.unmount();
+});
+
+test("MarkdownViewerは初期表示の解決済みコメントを左ビューから非表示にする", () => {
+  const contents = "Resolved comments should be visible beside the paragraph.";
+  const comments: readonly Comment[] = [
+    createComment({
+      id: "cmt_resolved",
+      blockIndex: 0,
+      text: contents,
+      resolved: true,
+    }),
+  ];
+  const result = renderViewer(
+    createReadyState(contents),
+    vi.fn(),
+    vi.fn().mockResolvedValue(true),
+    comments,
+    commentId("cmt_resolved"),
+    vi.fn(),
+    vi.fn().mockResolvedValue(true),
+    idleOperationState,
+    vi.fn().mockResolvedValue(true),
+    vi.fn().mockResolvedValue(true),
+  );
+
+  expect(result.container.querySelectorAll(".markdown-comment-annotation")).toHaveLength(0);
+  expect(result.container.querySelector("[data-comment-highlight]")).toBeNull();
+  expect(result.container.textContent).not.toContain("解決済み");
+  result.unmount();
+});
+
+test("MarkdownViewerは編集ポップオーバーの削除初回クリックで確認UIだけを表示する", () => {
+  const onDeleteComment = vi.fn().mockResolvedValue(true);
+  const contents = "Delete confirmation should protect inline comments.";
+  const comments: readonly Comment[] = [
+    createComment({
+      id: "cmt_delete",
+      blockIndex: 0,
+      text: contents,
+      resolved: false,
+    }),
+  ];
+  const result = renderViewer(
+    createReadyState(contents),
+    vi.fn(),
+    vi.fn().mockResolvedValue(true),
+    comments,
+    commentId("cmt_delete"),
+    vi.fn(),
+    vi.fn().mockResolvedValue(true),
+    idleOperationState,
+    vi.fn().mockResolvedValue(true),
+    vi.fn().mockResolvedValue(true),
+    onDeleteComment,
+  );
+  const popover = openFirstCommentEditPopover(result.container);
+  const requestDeleteButton = Array.from(
+    popover.querySelectorAll<HTMLButtonElement>("button"),
+  ).find((button) => button.textContent === "削除") as HTMLButtonElement;
+
+  act(() => {
+    requestDeleteButton.click();
+  });
+
+  expect(onDeleteComment).not.toHaveBeenCalled();
+  expect(popover.textContent).toContain("このコメントを完全に削除しますか？");
+  result.unmount();
+});
+
+test("MarkdownViewerは編集ポップオーバーの削除確認後にコメントを削除できる", async () => {
+  const onDeleteComment = vi.fn().mockResolvedValue(true);
+  const contents = "Delete confirmation should call delete after confirmation.";
+  const comments: readonly Comment[] = [
+    createComment({
+      id: "cmt_delete",
+      blockIndex: 0,
+      text: contents,
+      resolved: false,
+    }),
+  ];
+  const result = renderViewer(
+    createReadyState(contents),
+    vi.fn(),
+    vi.fn().mockResolvedValue(true),
+    comments,
+    commentId("cmt_delete"),
+    vi.fn(),
+    vi.fn().mockResolvedValue(true),
+    idleOperationState,
+    vi.fn().mockResolvedValue(true),
+    vi.fn().mockResolvedValue(true),
+    onDeleteComment,
+  );
+  const popover = openFirstCommentEditPopover(result.container);
+  const requestDeleteButton = Array.from(
+    popover.querySelectorAll<HTMLButtonElement>("button"),
+  ).find((button) => button.textContent === "削除") as HTMLButtonElement;
+
+  act(() => {
+    requestDeleteButton.click();
+  });
+
+  const confirmDeleteButton = popover.querySelector(
+    '[aria-label="コメント削除を確定 cmt_delete"]',
+  ) as HTMLButtonElement;
+
+  await act(async () => {
+    confirmDeleteButton.click();
+  });
+
+  expect(onDeleteComment).toHaveBeenCalledWith(commentId("cmt_delete"));
+  result.unmount();
+});
+
+test("MarkdownViewerは対象コメントの操作中に編集ポップオーバーの操作を無効化する", () => {
+  const contents = "Busy comments should disable inline edit actions.";
+  const comments: readonly Comment[] = [
+    createComment({
+      id: "cmt_busy",
+      blockIndex: 0,
+      text: contents,
+      resolved: false,
+    }),
+  ];
+  const operationState = CommentOperationSavingState.create(
+    "resolve",
+    commentId("cmt_busy"),
+  );
+  const result = renderViewer(
+    createReadyState(contents),
+    vi.fn(),
+    vi.fn().mockResolvedValue(true),
+    comments,
+    commentId("cmt_busy"),
+    vi.fn(),
+    vi.fn().mockResolvedValue(true),
+    operationState,
+  );
+  const popover = openFirstCommentEditPopover(result.container);
+  const textarea = popover.querySelector("textarea") as HTMLTextAreaElement;
+  const closeButton = popover.querySelector(
+    '[aria-label="コメント編集をキャンセル"]',
+  ) as HTMLButtonElement;
+  const statusButton = Array.from(
+    popover.querySelectorAll<HTMLButtonElement>("button"),
+  ).find((button) =>
+    button.textContent?.includes("解決する"),
+  ) as HTMLButtonElement;
+  const deleteButton = Array.from(
+    popover.querySelectorAll<HTMLButtonElement>("button"),
+  ).find((button) => button.textContent === "削除") as HTMLButtonElement;
+  const saveButton = Array.from(
+    popover.querySelectorAll<HTMLButtonElement>("button"),
+  ).find((button) =>
+    button.textContent?.includes("保存"),
+  ) as HTMLButtonElement;
+
+  expect(textarea.disabled).toBe(true);
+  expect(closeButton.disabled).toBe(true);
+  expect(statusButton.disabled).toBe(true);
+  expect(deleteButton.disabled).toBe(true);
+  expect(saveButton.disabled).toBe(true);
+  result.unmount();
+});
+
+test("MarkdownViewerは対象コメントの操作エラーを編集ポップオーバーに表示する", () => {
+  const contents = "Failed delete should surface in the inline edit popover.";
+  const comments: readonly Comment[] = [
+    createComment({
+      id: "cmt_error",
+      blockIndex: 0,
+      text: contents,
+      resolved: false,
+    }),
+  ];
+  const operationState = createOperationErrorState(
+    "delete",
+    commentId("cmt_error"),
+    "削除に失敗しました。",
+  );
+  const result = renderViewer(
+    createReadyState(contents),
+    vi.fn(),
+    vi.fn().mockResolvedValue(true),
+    comments,
+    commentId("cmt_error"),
+    vi.fn(),
+    vi.fn().mockResolvedValue(true),
+    operationState,
+  );
+  const popover = openFirstCommentEditPopover(result.container);
+
+  expect(popover.textContent).toContain("削除に失敗しました。");
   result.unmount();
 });
 

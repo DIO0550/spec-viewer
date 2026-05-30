@@ -2848,7 +2848,7 @@ textarea:disabled {
 
 .add-comment-popover__form {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr) auto auto;
   min-height: 0;
 }
 
@@ -2893,6 +2893,45 @@ textarea:disabled {
 
 .add-comment-popover__error {
   color: var(--color-danger);
+  font-weight: 750;
+}
+
+.add-comment-popover__confirm {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--color-danger-border);
+  border-radius: 7px;
+  padding: 9px;
+  background: var(--color-danger-soft);
+}
+
+.add-comment-popover__confirm p {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.add-comment-popover__confirm-actions,
+.add-comment-popover__status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.add-comment-popover__status-actions {
+  border-top: 1px solid var(--color-border);
+  padding: 10px 14px 0;
+  background: color-mix(in srgb, var(--color-panel) 72%, transparent);
+}
+
+.add-comment-popover__confirm-actions .button,
+.add-comment-popover__status-actions .button {
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: 0.8rem;
   font-weight: 750;
 }
 
