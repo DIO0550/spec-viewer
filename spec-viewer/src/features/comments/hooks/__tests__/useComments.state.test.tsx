@@ -14,7 +14,7 @@ import { CommentId } from "@/features/comments/types/comment";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import type { CommentStatusFilter as CommentStatusFilterType } from "@/features/comments/domain/commentStatusFilter";
 import type { SpecFileKey } from "@/features/specs/types/spec";
-import { useCommentMutations } from "@/features/comments/hooks/useCommentMutations";
+import { useCommentOperations } from "@/features/comments/hooks/useCommentOperations";
 import { useComments } from "@/features/comments/hooks/useComments";
 
 const commentId = CommentId.fromString;
@@ -407,7 +407,7 @@ test("useCommentsはコメント追加中のsaving状態と追加後の一覧を
     });
   });
 
-  expect(result.current.mutationState).toEqual({
+  expect(result.current.operationState).toEqual({
     status: "saving",
     operation: "add",
     commentId: null,
@@ -420,7 +420,7 @@ test("useCommentsはコメント追加中のsaving状態と追加後の一覧を
   });
 
   expect(result.current.comments).toEqual([firstComment, secondComment]);
-  expect(result.current.mutationState.status).toBe("idle");
+  expect(result.current.operationState.status).toBe("idle");
   result.unmount();
 });
 
@@ -500,7 +500,7 @@ test("useCommentsはscope変更後に完了したコメント追加を現在の�
   });
 
   expect(result.current.comments).toEqual([firstComment]);
-  expect(result.current.mutationState.status).toBe("idle");
+  expect(result.current.operationState.status).toBe("idle");
   result.unmount();
 });
 
@@ -525,7 +525,7 @@ test("useCommentsはコメント本文を更新して一覧へ反映する", asy
   result.unmount();
 });
 
-test("useCommentsは同一scopeで古いmutation完了を現在の一覧へ反映しない", async () => {
+test("useCommentsは同一scopeで古いoperation完了を現在の一覧へ反映しない", async () => {
   const updateDeferred = createDeferred<Comment>();
   const resolveDeferred = createDeferred<Comment>();
   const commands = createCommands({
@@ -548,20 +548,20 @@ test("useCommentsは同一scopeで古いmutation完了を現在の一覧へ反�
       body: "Updated body",
     });
   });
-  expect(result.current.mutationState.operation).toBe("update");
+  expect(result.current.operationState.operation).toBe("update");
 
   let resolvePromise: Promise<Comment | null> = Promise.resolve(null);
   act(() => {
     resolvePromise = result.current.resolveComment(commentId("cmt_1"));
   });
-  expect(result.current.mutationState.operation).toBe("resolve");
+  expect(result.current.operationState.operation).toBe("resolve");
 
   resolveDeferred.resolve(resolvedComment);
   await act(async () => {
     await expect(resolvePromise).resolves.toEqual(resolvedComment);
   });
   expect(result.current.comments).toEqual([resolvedComment]);
-  expect(result.current.mutationState.status).toBe("idle");
+  expect(result.current.operationState.status).toBe("idle");
 
   updateDeferred.resolve({
     ...firstComment,
@@ -573,7 +573,7 @@ test("useCommentsは同一scopeで古いmutation完了を現在の一覧へ反�
   });
 
   expect(result.current.comments).toEqual([resolvedComment]);
-  expect(result.current.mutationState.status).toBe("idle");
+  expect(result.current.operationState.status).toBe("idle");
   result.unmount();
 });
 
@@ -621,7 +621,7 @@ test("useCommentsは削除未成立なら一覧を維持してsaving状態を解
 
   expect(deleteResult).toBe(false);
   expect(result.current.comments).toEqual([firstComment]);
-  expect(result.current.mutationState.status).toBe("idle");
+  expect(result.current.operationState.status).toBe("idle");
   expect(listComments).toHaveBeenCalledTimes(1);
   result.unmount();
 });
@@ -675,11 +675,11 @@ test("useCommentsはresolve toggleを楽観更新して成功結果で確定す�
   });
 
   expect(result.current.comments).toEqual([resolvedComment]);
-  expect(result.current.mutationState.status).toBe("idle");
+  expect(result.current.operationState.status).toBe("idle");
   result.unmount();
 });
 
-test("useCommentMutationsはscope未選択時にtoggleの楽観更新を行わない", async () => {
+test("useCommentOperationsはscope未選択時にtoggleの楽観更新を行わない", async () => {
   const updateCurrentScopeComments = vi.fn();
   const reloadComments = vi.fn().mockResolvedValue(true);
   const commands = createCommands({
@@ -687,7 +687,7 @@ test("useCommentMutationsはscope未選択時にtoggleの楽観更新を行わ�
   });
   const result = renderHook(
     () =>
-      useCommentMutations({
+      useCommentOperations({
         scope: null,
         scopeKey: "no-scope",
         statusFilter: CommentStatusFilter.All,
@@ -713,7 +713,7 @@ test("useCommentMutationsはscope未選択時にtoggleの楽観更新を行わ�
   result.unmount();
 });
 
-test("useCommentMutationsはreloadComments変更時に進行中mutationを無効化する", async () => {
+test("useCommentOperationsはreloadComments変更時に進行中operationを無効化する", async () => {
   const addDeferred = createDeferred<Comment>();
   const commands = createCommands({
     addComment: vi.fn().mockReturnValue(addDeferred.promise),
@@ -725,7 +725,7 @@ test("useCommentMutationsはreloadComments変更時に進行中mutationを無効
     ({
       reloadComments,
     }: Readonly<{ reloadComments: () => Promise<boolean> }>) =>
-      useCommentMutations({
+      useCommentOperations({
         scope: {
           workspacePath: "/workspace/spec-reviewer",
           specId: "phase-2-comments",
@@ -789,7 +789,7 @@ test("useCommentsはresolve toggle失敗時に楽観更新を巻き戻す", asyn
   });
 
   expect(result.current.comments).toEqual([firstComment]);
-  expect(result.current.mutationState).toEqual({
+  expect(result.current.operationState).toEqual({
     status: "error",
     operation: "toggle",
     commentId: commentId("cmt_1"),
@@ -802,7 +802,7 @@ test("useCommentsはresolve toggle失敗時に楽観更新を巻き戻す", asyn
   result.unmount();
 });
 
-test("useCommentsはscope変更後に失敗したmutation errorを表示しない", async () => {
+test("useCommentsはscope変更後に失敗したoperation errorを表示しない", async () => {
   const toggleDeferred = createDeferred<Comment>();
   const listComments = vi
     .fn()
@@ -840,6 +840,6 @@ test("useCommentsはscope変更後に失敗したmutation errorを表示しな�
   });
 
   expect(result.current.comments).toEqual([secondComment]);
-  expect(result.current.mutationState.status).toBe("idle");
+  expect(result.current.operationState.status).toBe("idle");
   result.unmount();
 });

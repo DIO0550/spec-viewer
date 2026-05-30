@@ -1,0 +1,115 @@
+import { expect, test, vi } from "vitest";
+
+import {
+  CommentOperationFailedState,
+  CommentOperationIdleState,
+  CommentOperationSavingState,
+} from "@/features/comments/domain/commentOperation";
+import { createUseCommentsResult } from "@/features/comments/hooks/createUseCommentsResult";
+import type { UseCommentOperationsResult } from "@/features/comments/hooks/useCommentOperations";
+import type {
+  CommentListState,
+  UseCommentsResult,
+} from "@/features/comments/hooks/useComments";
+import type { Comment, CommentAnchor } from "@/features/comments/types/comment";
+import { CommentId } from "@/features/comments/types/comment";
+import type { NormalizedCommandError } from "@/shared/types/ipc";
+
+const commentId = CommentId.fromString;
+
+const anchor: CommentAnchor = {
+  fileKey: "tasks",
+  blockType: "paragraph",
+  blockIndex: 0,
+  textHash: "sha256:first",
+  textSnippet: "Clarify this task",
+  charRange: {
+    start: 0,
+    end: 18,
+  },
+};
+
+const comment: Comment = {
+  id: commentId("cmt_1"),
+  anchor,
+  body: "Clarify this task",
+  status: "open",
+  resolved: false,
+  createdAt: "2026-05-05T10:00:00Z",
+  updatedAt: "2026-05-05T10:00:00Z",
+};
+
+const commandError: NormalizedCommandError = {
+  code: "commentRepository",
+  message: "Comment operation failed.",
+  raw: "Comment operation failed.",
+};
+
+function createCommentOperations(
+  operationState: UseCommentOperationsResult["operationState"] = CommentOperationIdleState.create(),
+): UseCommentOperationsResult {
+  return {
+    operationState,
+    addComment: vi.fn(),
+    updateComment: vi.fn(),
+    deleteComment: vi.fn(),
+    resolveComment: vi.fn(),
+    reopenComment: vi.fn(),
+    toggleCommentResolved: vi.fn(),
+  };
+}
+
+test("createUseCommentsResultはlistStateとコメント操作結果からhook公開APIを組み立てる", () => {
+  const reloadComments = vi.fn();
+  const listState: CommentListState = {
+    status: "ready",
+    comments: [comment],
+    error: null,
+  };
+  const commentOperations = createCommentOperations(
+    CommentOperationSavingState.create("add", null),
+  );
+
+  const result = createUseCommentsResult({
+    listState,
+    commentOperations,
+    reloadComments,
+  });
+
+  expect(result).toMatchObject<Partial<UseCommentsResult>>({
+    listState,
+    operationState: commentOperations.operationState,
+    comments: [comment],
+    isLoading: false,
+    isSaving: true,
+    isEmpty: false,
+    error: null,
+    operationError: null,
+    reloadComments,
+    addComment: commentOperations.addComment,
+    updateComment: commentOperations.updateComment,
+    deleteComment: commentOperations.deleteComment,
+    resolveComment: commentOperations.resolveComment,
+    reopenComment: commentOperations.reopenComment,
+    toggleCommentResolved: commentOperations.toggleCommentResolved,
+  });
+});
+
+test("createUseCommentsResultはoperation失敗時のエラーをoperationErrorとして公開する", () => {
+  const listState: CommentListState = {
+    status: "ready",
+    comments: [comment],
+    error: null,
+  };
+  const commentOperations = createCommentOperations(
+    CommentOperationFailedState.create("update", comment.id, commandError),
+  );
+
+  const result = createUseCommentsResult({
+    listState,
+    commentOperations,
+    reloadComments: vi.fn(),
+  });
+
+  expect(result.operationError).toBe(commandError);
+});

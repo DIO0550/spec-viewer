@@ -1572,7 +1572,7 @@ textarea:disabled {
   font-weight: 700;
 }
 
-.comment-sidebar__mutation-error {
+.comment-sidebar__operation-error {
   margin: 0;
   border: 1px solid var(--color-danger-border);
   border-radius: 7px;

@@ -10,10 +10,11 @@ import {
 import type { ReactNode } from "react";
 import { useId, useState } from "react";
 
-import type {
-  CommentListState,
-  CommentMutationState,
-} from "@/features/comments/hooks/useComments";
+import {
+  CommentOperationFailedState,
+  type CommentOperationState,
+} from "@/features/comments/domain/commentOperation";
+import type { CommentListState } from "@/features/comments/hooks/useComments";
 import { uiText } from "@/shared/lib/uiText";
 import type {
   ApplyWithAiPlaceholderState,
@@ -32,7 +33,7 @@ import { LoadingSkeleton } from "@/shared/ui/LoadingSkeleton";
 
 type Props = Readonly<{
   listState: CommentListState;
-  mutationState: CommentMutationState;
+  operationState: CommentOperationState;
   exportState?: CommentExportState;
   activeCommentId: CommentId | null;
   anchorDisplayStates?: readonly CommentAnchorDisplayState[];
@@ -132,7 +133,7 @@ const commentFilterOptions: readonly CommentFilterOption[] = [
 /** @returns The right-side comment review surface for the active spec file. */
 export function CommentSidebar({
   listState,
-  mutationState,
+  operationState,
   exportState = idleCommentExportState,
   activeCommentId,
   anchorDisplayStates = [],
@@ -308,7 +309,7 @@ export function CommentSidebar({
           setSearchQuery("");
         }}
       />
-      <MutationErrorMessage mutationState={mutationState} />
+      <OperationErrorMessage operationState={operationState} />
       {searchedComments.length === 0 ? (
         <FilteredEmptyState
           activeFilter={activeFilter}
@@ -324,7 +325,7 @@ export function CommentSidebar({
             activeCommentId={activeCommentId}
             anchorDisplayStatusByCommentId={anchorDisplayStatusByCommentId}
             searchQuery={normalizedSearchQuery}
-            mutationState={mutationState}
+            operationState={operationState}
             emptyMessage={sectionModel.emptyMessage}
             onSelectComment={onSelectComment}
             onResolveComment={onResolveComment}
@@ -695,19 +696,21 @@ function CommentExportFeedback({ exportState }: CommentExportFeedbackProps) {
   );
 }
 
-type MutationErrorMessageProps = Readonly<{
-  mutationState: CommentMutationState;
+type OperationErrorMessageProps = Readonly<{
+  operationState: CommentOperationState;
 }>;
 
-/** @returns A compact mutation error, or null when the latest mutation succeeded. */
-function MutationErrorMessage({ mutationState }: MutationErrorMessageProps) {
-  if (mutationState.status !== "error") {
+/** @returns A compact operation error, or null when the latest operation succeeded. */
+function OperationErrorMessage({ operationState }: OperationErrorMessageProps) {
+  const operationError = CommentOperationFailedState.errorOf(operationState);
+
+  if (operationError === null) {
     return null;
   }
 
   return (
-    <p className="comment-sidebar__mutation-error" role="alert">
-      {mutationState.error.message}
+    <p className="comment-sidebar__operation-error" role="alert">
+      {operationError.message}
     </p>
   );
 }
@@ -722,7 +725,7 @@ type SectionProps = Readonly<{
     CommentAnchorDisplayStatus
   >;
   searchQuery: string;
-  mutationState: CommentMutationState;
+  operationState: CommentOperationState;
   emptyMessage: string;
   onSelectComment: (commentId: CommentId) => void;
   onResolveComment: (commentId: CommentId) => void;
@@ -739,7 +742,7 @@ function CommentSection({
   activeCommentId,
   anchorDisplayStatusByCommentId,
   searchQuery,
-  mutationState,
+  operationState,
   emptyMessage,
   onSelectComment,
   onResolveComment,
@@ -766,7 +769,7 @@ function CommentSection({
                   anchorDisplayStatusByCommentId.get(comment.id) ?? "exact"
                 }
                 searchQuery={searchQuery}
-                mutationState={mutationState}
+                operationState={operationState}
                 onSelectComment={onSelectComment}
                 onResolveComment={onResolveComment}
                 onReopenComment={onReopenComment}

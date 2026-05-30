@@ -11,7 +11,10 @@ import type {
   CommentId,
 } from "@/features/comments/types/comment";
 import { CommentId as CommentIdValue } from "@/features/comments/types/comment";
-import { type CommentExportState, CommentSidebar } from "@/features/comments/components/CommentSidebar";
+import {
+  type CommentExportState,
+  CommentSidebar,
+} from "@/features/comments/components/CommentSidebar";
 
 const commentId = CommentIdValue.fromString;
 
@@ -133,7 +136,7 @@ function renderReadySidebar(
         comments: options.comments ?? [openComment, resolvedComment],
         error: null,
       }}
-      mutationState={{
+      operationState={{
         status: "idle",
         operation: null,
         commentId: null,
@@ -176,7 +179,7 @@ function renderEmptySidebar(
         comments: [],
         error: null,
       }}
-      mutationState={{
+      operationState={{
         status: "idle",
         operation: null,
         commentId: null,
@@ -221,7 +224,7 @@ test("CommentSidebarは読み込み中状態をrole statusで表示する", () =
         comments: [],
         error: null,
       }}
-      mutationState={{
+      operationState={{
         status: "idle",
         operation: null,
         commentId: null,
@@ -270,7 +273,7 @@ test("CommentSidebarは未選択scopeでは空の案内を表示する", () => {
         comments: [],
         error: null,
       }}
-      mutationState={{
+      operationState={{
         status: "idle",
         operation: null,
         commentId: null,
@@ -303,7 +306,7 @@ test("CommentSidebarは読み込み失敗をalertで表示して再読み込み�
           raw: "Comment store could not be read.",
         },
       }}
-      mutationState={{
+      operationState={{
         status: "idle",
         operation: null,
         commentId: null,

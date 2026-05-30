@@ -17,7 +17,10 @@ import type {
   SpecTreeData as SpecTreeShape,
 } from "@/features/specs";
 import { MarkdownViewer, SpecTabs, SpecTree } from "@/features/specs";
-import { WorkspaceSidebarSection, WorkspaceToolbar } from "@/features/workspace";
+import {
+  WorkspaceSidebarSection,
+  WorkspaceToolbar,
+} from "@/features/workspace";
 import { AppShell } from "@/shared/ui/AppShell";
 
 const workspacePath = "/workspace/spec-reviewer";
@@ -372,7 +375,7 @@ function createShellArgs({
           comments: sampleComments,
           error: null,
         }}
-        mutationState={{
+        operationState={{
           status: "idle",
           operation: null,
           commentId: null,

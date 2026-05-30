@@ -11,14 +11,15 @@ import {
 } from "@/shared/lib/performance";
 import { CommentScope } from "@/features/comments/domain/commentScope";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
+import type { CommentOperationState } from "@/features/comments/domain/commentOperation";
 import { listComments as listCommentsViaGateway } from "@/features/comments/infra/commentGateway";
+import { createUseCommentsResult } from "@/features/comments/hooks/createUseCommentsResult";
 import {
-  useCommentMutations,
+  useCommentOperations,
   type AddCommentInput,
   type CommentListTransform,
-  type CommentMutationState,
   type UpdateCommentInput,
-} from "@/features/comments/hooks/useCommentMutations";
+} from "@/features/comments/hooks/useCommentOperations";
 import type { CommentId } from "@/features/comments/types/comment";
 import type { Comment } from "@/features/comments/types/comment";
 import type { NormalizedCommandError } from "@/shared/types/ipc";
@@ -26,10 +27,12 @@ import type { SpecFileKey } from "@/features/specs/types/spec";
 
 export type {
   AddCommentInput,
-  CommentMutationOperation,
-  CommentMutationState,
   UpdateCommentInput,
-} from "@/features/comments/hooks/useCommentMutations";
+} from "@/features/comments/hooks/useCommentOperations";
+export {
+  type CommentOperationKind,
+  type CommentOperationState,
+} from "@/features/comments/domain/commentOperation";
 
 export type CommentListState =
   | Readonly<{
@@ -69,13 +72,13 @@ export type UseCommentsOptions = Readonly<{
 
 export type UseCommentsResult = Readonly<{
   listState: CommentListState;
-  mutationState: CommentMutationState;
+  operationState: CommentOperationState;
   comments: readonly Comment[];
   isLoading: boolean;
   isSaving: boolean;
   isEmpty: boolean;
   error: NormalizedCommandError | null;
-  mutationError: NormalizedCommandError | null;
+  operationError: NormalizedCommandError | null;
   reloadComments: () => Promise<boolean>;
   addComment: (input: AddCommentInput) => Promise<Comment | null>;
   updateComment: (input: UpdateCommentInput) => Promise<Comment | null>;
@@ -87,7 +90,7 @@ export type UseCommentsResult = Readonly<{
 
 const defaultStatusFilter: CommentStatusFilter = CommentStatusFilter.All;
 
-/** @returns Comment loading and mutation state for the selected spec file. */
+/** @returns Comment loading and operation state for the selected spec file. */
 export function useComments(options: UseCommentsOptions): UseCommentsResult {
   const statusFilter =
     CommentStatusFilter.parse(options.statusFilter) ?? defaultStatusFilter;
@@ -220,7 +223,7 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
     void reloadComments();
   }, [reloadComments]);
 
-  const commentOperations = useCommentMutations({
+  const commentOperations = useCommentOperations({
     scope,
     scopeKey,
     statusFilter,
@@ -230,23 +233,11 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
     reloadComments,
   });
 
-  return {
+  return createUseCommentsResult({
     listState,
-    mutationState: commentOperations.operationState,
-    comments: listState.comments,
-    isLoading: listState.status === "loading",
-    isSaving: commentOperations.operationState.status === "saving",
-    isEmpty: listState.status === "empty",
-    error: listState.error,
-    mutationError: commentOperations.operationState.error,
+    commentOperations,
     reloadComments,
-    addComment: commentOperations.addComment,
-    updateComment: commentOperations.updateComment,
-    deleteComment: commentOperations.deleteComment,
-    resolveComment: commentOperations.resolveComment,
-    reopenComment: commentOperations.reopenComment,
-    toggleCommentResolved: commentOperations.toggleCommentResolved,
-  };
+  });
 }
 
 /** @returns Idle comment list state for an incomplete scope. */
@@ -275,7 +266,7 @@ function createLoadedListState(comments: readonly Comment[]): CommentListState {
   };
 }
 
-/** @returns Scope identity for stale mutation guards. */
+/** @returns Scope identity for stale operation guards. */
 function createScopeKey(
   scope: CommentScope | null,
   statusFilter: CommentStatusFilter,
