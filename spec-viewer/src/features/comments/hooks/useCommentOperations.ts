@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
 
+import {
+  CommentOperationFailedState,
+  CommentOperationIdleState,
+  CommentOperationSavingState,
+  type CommentOperationKind,
+  type CommentOperationState,
+} from "@/features/comments/domain/commentOperation";
 import { Comments } from "@/features/comments/domain/comments";
 import type { CommentScope } from "@/features/comments/domain/commentScope";
 import type { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
@@ -22,37 +29,6 @@ import {
 } from "@/shared/api/tauri";
 import type { NormalizedCommandError } from "@/shared/types/ipc";
 
-export type CommentOperationKind =
-  | "add"
-  | "update"
-  | "delete"
-  | "resolve"
-  | "reopen"
-  | "toggle";
-
-export type CommentOperationState =
-  | Readonly<{
-      status: "idle";
-      operation: null;
-      commentId: null;
-      error: null;
-    }>
-  | Readonly<{
-      status: "saving";
-      operation: CommentOperationKind;
-      commentId: CommentId | null;
-      error: null;
-    }>
-  | Readonly<{
-      status: "error";
-      operation: CommentOperationKind;
-      commentId: CommentId | null;
-      error: NormalizedCommandError;
-    }>;
-
-export type CommentMutationOperation = CommentOperationKind;
-export type CommentMutationState = CommentOperationState;
-
 export type AddCommentInput = Readonly<{
   anchor: CommentAnchor;
   body: string;
@@ -67,7 +43,7 @@ export type CommentListTransform = (
   comments: readonly Comment[],
 ) => readonly Comment[];
 
-export type UseCommentMutationsOptions = Readonly<{
+export type UseCommentOperationsOptions = Readonly<{
   scope: CommentScope | null;
   scopeKey: string;
   statusFilter: CommentStatusFilter;
@@ -77,7 +53,7 @@ export type UseCommentMutationsOptions = Readonly<{
   reloadComments: () => Promise<boolean>;
 }>;
 
-export type UseCommentMutationsResult = Readonly<{
+export type UseCommentOperationsResult = Readonly<{
   operationState: CommentOperationState;
   addComment: (input: AddCommentInput) => Promise<Comment | null>;
   updateComment: (input: UpdateCommentInput) => Promise<Comment | null>;
@@ -107,20 +83,16 @@ type AsyncOperationToken = Readonly<{
   scopeKey: string;
 }>;
 
-const initialOperationState: CommentOperationState = {
-  status: "idle",
-  operation: null,
-  commentId: null,
-  error: null,
-};
+const initialOperationState: CommentOperationState =
+  CommentOperationIdleState.create();
 
 /**
  * @param options - Active comment scope, command boundary, and list callbacks.
- * @returns Comment operation state and mutation callbacks for the active scope.
+ * @returns Comment operation state and operation callbacks for the active scope.
  */
-export function useCommentMutations(
-  options: UseCommentMutationsOptions,
-): UseCommentMutationsResult {
+export function useCommentOperations(
+  options: UseCommentOperationsOptions,
+): UseCommentOperationsResult {
   const {
     commands,
     currentComments,
@@ -493,22 +465,19 @@ function commentOperationReducer(
 ): CommentOperationState {
   switch (event.type) {
     case "operationStarted":
-      return {
-        status: "saving",
-        operation: event.operation,
-        commentId: event.commentId,
-        error: null,
-      };
+      return CommentOperationSavingState.create(
+        event.operation,
+        event.commentId,
+      );
     case "operationSucceeded":
     case "operationInvalidated":
       return initialOperationState;
     case "operationFailed":
-      return {
-        status: "error",
-        operation: event.operation,
-        commentId: event.commentId,
-        error: event.error,
-      };
+      return CommentOperationFailedState.create(
+        event.operation,
+        event.commentId,
+        event.error,
+      );
     default:
       return assertNever(event);
   }

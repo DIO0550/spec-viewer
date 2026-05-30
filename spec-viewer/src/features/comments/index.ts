@@ -4,9 +4,13 @@ export { Comments } from "@/features/comments/domain/comments";
 export { CommentSidebar } from "@/features/comments/components/CommentSidebar";
 export { CommentThread } from "./components/CommentThread";
 export {
-  useComments,
-  type CommentMutationState,
-} from "./hooks/useComments";
+  CommentOperationFailedState,
+  CommentOperationIdleState,
+  CommentOperationSavingState,
+  type CommentOperationKind,
+  type CommentOperationState,
+} from "./domain/commentOperation";
+export { useComments } from "./hooks/useComments";
 export { createTextHash } from "./lib/comment-anchor-draft";
 export {
   createSpecSkillMcpFeedbackDryRunPayload,

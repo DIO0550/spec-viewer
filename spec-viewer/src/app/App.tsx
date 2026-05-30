@@ -3,6 +3,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
 import {
   CommentSidebar,
+  CommentOperationFailedState,
+  CommentOperationSavingState,
   createSpecSkillMcpFeedbackDryRunPayload,
   renderSpecSkillMcpFeedbackDryRunPayload,
   useComments,
@@ -801,21 +803,19 @@ function App() {
   const shouldShowOpenWorkspacePrompt =
     workspace.workspace === null && !workspace.isLoading;
   const addCommentErrorMessage =
-    comments.mutationState.status === "error" &&
-    comments.mutationState.operation === "add"
-      ? comments.mutationState.error.message
-      : null;
+    CommentOperationFailedState.errorFor(comments.operationState, "add")
+      ?.message ?? null;
   const updateCommentErrorMessage =
-    comments.mutationState.status === "error" &&
-    comments.mutationState.operation === "update"
-      ? comments.mutationState.error.message
-      : null;
-  const isAddingComment =
-    comments.mutationState.status === "saving" &&
-    comments.mutationState.operation === "add";
-  const isUpdatingComment =
-    comments.mutationState.status === "saving" &&
-    comments.mutationState.operation === "update";
+    CommentOperationFailedState.errorFor(comments.operationState, "update")
+      ?.message ?? null;
+  const isAddingComment = CommentOperationSavingState.matchesOperation(
+    comments.operationState,
+    "add",
+  );
+  const isUpdatingComment = CommentOperationSavingState.matchesOperation(
+    comments.operationState,
+    "update",
+  );
   const isCommentScopeReady =
     workspace.workspace !== null &&
     specs.selectedSpecId !== null &&
@@ -980,7 +980,7 @@ function App() {
         comments={
           <CommentSidebar
             listState={comments.listState}
-            mutationState={comments.mutationState}
+            operationState={comments.operationState}
             exportState={commentExportState}
             activeCommentId={activeCommentId}
             anchorDisplayStates={commentAnchorDisplayStates}

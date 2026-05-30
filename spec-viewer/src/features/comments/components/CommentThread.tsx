@@ -14,7 +14,10 @@ import {
   useState,
 } from "react";
 
-import type { CommentMutationState } from "@/features/comments/hooks/useComments";
+import {
+  CommentOperationSavingState,
+  type CommentOperationState,
+} from "@/features/comments/domain/commentOperation";
 import { uiText } from "@/shared/lib/uiText";
 import type {
   Comment,
@@ -30,7 +33,7 @@ type Props = Readonly<{
   isActive: boolean;
   anchorDisplayStatus: CommentAnchorDisplayStatus;
   searchQuery?: string;
-  mutationState: CommentMutationState;
+  operationState: CommentOperationState;
   onSelectComment: (commentId: CommentId) => void;
   onUpdateComment: (commentId: CommentId, body: string) => void;
   onResolveComment: (commentId: CommentId) => void;
@@ -44,7 +47,7 @@ export function CommentThread({
   isActive,
   anchorDisplayStatus,
   searchQuery = "",
-  mutationState,
+  operationState,
   onSelectComment,
   onUpdateComment,
   onResolveComment,
@@ -60,8 +63,10 @@ export function CommentThread({
   const titleId = useId();
   const bodyId = useId();
   const validationId = useId();
-  const isMutatingComment =
-    mutationState.status === "saving" && mutationState.commentId === comment.id;
+  const isOperatingComment = CommentOperationSavingState.isForComment(
+    operationState,
+    comment.id,
+  );
   const isResolved = comment.resolved;
   const anchorStatusLabel = formatAnchorDisplayStatus(anchorDisplayStatus);
 
@@ -178,7 +183,7 @@ export function CommentThread({
             className="icon-button"
             type="button"
             aria-label={`${uiText.commentThread.edit} ${comment.id}`}
-            disabled={isMutatingComment || isEditing}
+            disabled={isOperatingComment || isEditing}
             onClick={beginEdit}
           >
             <Pencil aria-hidden="true" size={14} />
@@ -191,7 +196,7 @@ export function CommentThread({
                 ? uiText.commentThread.reopen
                 : uiText.commentThread.resolve
             } ${comment.id}`}
-            disabled={isMutatingComment}
+            disabled={isOperatingComment}
             onClick={toggleResolved}
           >
             {isResolved ? (
@@ -204,7 +209,7 @@ export function CommentThread({
             className="icon-button icon-button--danger"
             type="button"
             aria-label={`${uiText.commentThread.delete} ${comment.id}`}
-            disabled={isMutatingComment || isConfirmingDelete}
+            disabled={isOperatingComment || isConfirmingDelete}
             onClick={requestDelete}
           >
             <Trash2 aria-hidden="true" size={14} />
@@ -277,7 +282,7 @@ export function CommentThread({
               className="icon-button"
               type="submit"
               aria-label={`${uiText.commentThread.save} ${comment.id}`}
-              disabled={isMutatingComment}
+              disabled={isOperatingComment}
             >
               <Check aria-hidden="true" size={14} />
             </button>
@@ -285,7 +290,7 @@ export function CommentThread({
               className="icon-button"
               type="button"
               aria-label={`${uiText.commentThread.cancel} ${comment.id}`}
-              disabled={isMutatingComment}
+              disabled={isOperatingComment}
               onClick={cancelEdit}
             >
               <X aria-hidden="true" size={14} />
@@ -306,7 +311,7 @@ export function CommentThread({
               className="button button--danger"
               type="button"
               aria-label={`${uiText.commentThread.confirmDeleteAction} ${comment.id}`}
-              disabled={isMutatingComment}
+              disabled={isOperatingComment}
               onClick={confirmDelete}
             >
               {uiText.commentThread.delete}
@@ -315,7 +320,7 @@ export function CommentThread({
               className="button button--secondary"
               type="button"
               aria-label={`${uiText.commentThread.cancelDeleteAction} ${comment.id}`}
-              disabled={isMutatingComment}
+              disabled={isOperatingComment}
               onClick={() => {
                 setIsConfirmingDelete(false);
               }}
