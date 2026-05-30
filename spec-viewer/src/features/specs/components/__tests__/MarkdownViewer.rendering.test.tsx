@@ -52,6 +52,7 @@ const richMarkdown = [
 
 type RenderResult = Readonly<{
   container: HTMLDivElement;
+  rerender: (component: ReactNode) => void;
   unmount: () => void;
 }>;
 
@@ -66,6 +67,11 @@ function renderComponent(component: ReactNode): RenderResult {
 
   return {
     container,
+    rerender: (nextComponent) => {
+      act(() => {
+        root.render(nextComponent);
+      });
+    },
     unmount: () => {
       act(() => {
         root.unmount();
@@ -435,13 +441,11 @@ test("MarkdownViewerはコメント付きブロックを状態別にハイライ
     '[data-comment-highlight-state="resolved"]',
   );
 
-  expect(highlightedBlocks).toHaveLength(2);
+  expect(highlightedBlocks).toHaveLength(1);
   expect(activeBlock.textContent).toContain(
     "Open comments should remain prominent.",
   );
-  expect(resolvedBlock?.textContent).toContain(
-    "Resolved comments should stay quieter.",
-  );
+  expect(resolvedBlock).toBeNull();
 
   expect(activeBlock.getAttribute("role")).toBeNull();
   expect(activeBlock.getAttribute("tabindex")).toBeNull();
@@ -556,7 +560,7 @@ test("MarkdownViewerは既存コメントを本文右側のカードから編集
     vi.fn(),
     vi.fn().mockResolvedValue(true),
     comments,
-    commentId("cmt_resolved"),
+    commentId("cmt_open"),
     onSelectComment,
     onUpdateComment,
   );
@@ -570,12 +574,12 @@ test("MarkdownViewerは既存コメントを本文右側のカードから編集
     ".markdown-comment-annotation__toggle",
   ) as HTMLButtonElement;
 
-  expect(annotationCards).toHaveLength(2);
+  expect(annotationCards).toHaveLength(1);
   expect(annotationCards[0]?.textContent).toContain("未解決");
   expect(annotationCards[0]?.textContent).not.toContain("cmt_open body");
   expect(activeAnnotationToggle.getAttribute("aria-expanded")).toBe("false");
-  expect(activeAnnotation.textContent).toContain("解決済み");
-  expect(activeAnnotation.textContent).not.toContain("cmt_resolved body");
+  expect(result.container.textContent).not.toContain("解決済み");
+  expect(result.container.textContent).not.toContain("cmt_resolved body");
 
   act(() => {
     activeAnnotationToggle.click();
@@ -586,7 +590,7 @@ test("MarkdownViewerは既存コメントを本文右側のカードから編集
   ) as HTMLButtonElement;
 
   expect(activeAnnotationToggle.getAttribute("aria-expanded")).toBe("true");
-  expect(activeAnnotation.textContent).toContain("cmt_resolved body");
+  expect(activeAnnotation.textContent).toContain("cmt_open body");
 
   act(() => {
     activeAnnotationSelect.click();
@@ -599,7 +603,7 @@ test("MarkdownViewerは既存コメントを本文右側のカードから編集
     ".add-comment-popover textarea",
   ) as HTMLTextAreaElement;
 
-  expect(editor.value).toBe("cmt_resolved body");
+  expect(editor.value).toBe("cmt_open body");
 
   await act(async () => {
     editor.value = "Updated inline comment body";
@@ -617,7 +621,7 @@ test("MarkdownViewerは既存コメントを本文右側のカードから編集
   });
 
   expect(onUpdateComment).toHaveBeenCalledWith(
-    commentId("cmt_resolved"),
+    commentId("cmt_open"),
     "Updated inline comment body",
   );
   expect(
@@ -663,6 +667,57 @@ test("MarkdownViewerは編集ポップオーバーから未解決コメントを
   result.unmount();
 });
 
+test("MarkdownViewerはコメント解決後に左ビューの表示から外す", async () => {
+  const onResolveComment = vi.fn().mockResolvedValue(true);
+  const contents = "Resolved comments should disappear from the viewer.";
+  const openComment = createComment({
+    id: "cmt_open",
+    blockIndex: 0,
+    text: contents,
+    resolved: false,
+  });
+  const resolvedComment = createComment({
+    id: "cmt_open",
+    blockIndex: 0,
+    text: contents,
+    resolved: true,
+  });
+  const renderMarkdownViewer = (comments: readonly Comment[]): ReactNode => (
+    <MarkdownViewer
+      state={createReadyState(contents)}
+      selectedSpecLabel={selectedSpecLabel}
+      selectedFileLabel={selectedFileLabel}
+      comments={comments}
+      activeCommentId={commentId("cmt_open")}
+      onReload={vi.fn()}
+      onAddComment={vi.fn().mockResolvedValue(true)}
+      onUpdateComment={vi.fn().mockResolvedValue(true)}
+      operationState={idleOperationState}
+      onResolveComment={onResolveComment}
+      onReopenComment={vi.fn().mockResolvedValue(true)}
+      onDeleteComment={vi.fn().mockResolvedValue(true)}
+      onSelectComment={vi.fn()}
+    />
+  );
+  const result = renderComponent(renderMarkdownViewer([openComment]));
+  const popover = openFirstCommentEditPopover(result.container);
+  const resolveButton = Array.from(
+    popover.querySelectorAll<HTMLButtonElement>("button"),
+  ).find((button) =>
+    button.textContent?.includes("解決する"),
+  ) as HTMLButtonElement;
+
+  await act(async () => {
+    resolveButton.click();
+  });
+
+  result.rerender(renderMarkdownViewer([resolvedComment]));
+
+  expect(result.container.querySelectorAll(".markdown-comment-annotation")).toHaveLength(0);
+  expect(result.container.querySelector(".add-comment-popover")).toBeNull();
+  result.unmount();
+});
+
 test("MarkdownViewerは親ビュー再描画後も編集中の本文を維持する", async () => {
   const contents = "Existing comments should keep draft edits during rerender.";
   const comments: readonly Comment[] = [
@@ -700,8 +755,7 @@ test("MarkdownViewerは親ビュー再描画後も編集中の本文を維持す
   result.unmount();
 });
 
-test("MarkdownViewerは編集ポップオーバーから解決済みコメントを再オープンできる", async () => {
-  const onReopenComment = vi.fn().mockResolvedValue(true);
+test("MarkdownViewerは初期表示の解決済みコメントを左ビューから非表示にする", () => {
   const contents = "Resolved comments should be visible beside the paragraph.";
   const comments: readonly Comment[] = [
     createComment({
@@ -721,20 +775,12 @@ test("MarkdownViewerは編集ポップオーバーから解決済みコメント
     vi.fn().mockResolvedValue(true),
     idleOperationState,
     vi.fn().mockResolvedValue(true),
-    onReopenComment,
+    vi.fn().mockResolvedValue(true),
   );
-  const popover = openFirstCommentEditPopover(result.container);
-  const reopenButton = Array.from(
-    popover.querySelectorAll<HTMLButtonElement>("button"),
-  ).find((button) =>
-    button.textContent?.includes("再オープン"),
-  ) as HTMLButtonElement;
 
-  await act(async () => {
-    reopenButton.click();
-  });
-
-  expect(onReopenComment).toHaveBeenCalledWith(commentId("cmt_resolved"));
+  expect(result.container.querySelectorAll(".markdown-comment-annotation")).toHaveLength(0);
+  expect(result.container.querySelector("[data-comment-highlight]")).toBeNull();
+  expect(result.container.textContent).not.toContain("解決済み");
   result.unmount();
 });
 
