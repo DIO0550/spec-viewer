@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import "./App.css";
 import {
@@ -19,6 +19,7 @@ import {
   type SpecSkillMcpFeedbackPayload,
 } from "@/features/comments";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
+import { CommentScope } from "@/features/comments/domain/commentScope";
 import {
   useKeyboardShortcuts,
   useLeftNavigationPreference,
@@ -136,11 +137,24 @@ function App() {
   const isDocumentReadable =
     specs.documentState.status === "missing" ||
     (currentDocumentKey !== null && readableDocumentKey === currentDocumentKey);
+  const commentScope = useMemo(
+    () =>
+      CommentScope.create({
+        workspacePath: workspace.workspace?.root ?? null,
+        specId: specs.selectedSpecId,
+        fileKey:
+          isHtmlDocument || !isDocumentReadable ? null : specs.selectedFileKey,
+      }),
+    [
+      isDocumentReadable,
+      isHtmlDocument,
+      specs.selectedFileKey,
+      specs.selectedSpecId,
+      workspace.workspace?.root,
+    ],
+  );
   const comments = useComments({
-    workspacePath: workspace.workspace?.root ?? null,
-    specId: specs.selectedSpecId,
-    fileKey:
-      isHtmlDocument || !isDocumentReadable ? null : specs.selectedFileKey,
+    scope: commentScope,
     statusFilter: CommentStatusFilter.All,
     correlationId: specs.documentState.correlationId ?? null,
   });

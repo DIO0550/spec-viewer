@@ -12,7 +12,7 @@ import type {
 } from "@/features/comments/types/comment";
 import { CommentId } from "@/features/comments/types/comment";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
-import type { SpecFileKey } from "@/features/specs/types/spec";
+import type { CommentScope } from "@/features/comments/domain/commentScope";
 import { useCommentOperations } from "@/features/comments/hooks/useCommentOperations";
 import { useComments } from "@/features/comments/hooks/useComments";
 
@@ -61,10 +61,19 @@ const optimisticResolvedComment: Comment = {
   resolved: true,
 };
 
+const tasksScope: CommentScope = {
+  workspacePath: "/workspace/spec-reviewer",
+  specId: "phase-2-comments",
+  fileKey: "tasks",
+};
+
+const designScope: CommentScope = {
+  ...tasksScope,
+  fileKey: "design",
+};
+
 type HookProps = Readonly<{
-  workspacePath: string | null;
-  specId: string | null;
-  fileKey: SpecFileKey | null;
+  scope: CommentScope | null;
   statusFilter?: CommentStatusFilter;
   commands: CommentCommands;
 }>;
@@ -119,11 +128,9 @@ function renderHook<Props, Result>(
 
 function renderUseComments(props: HookProps) {
   return renderHook(
-    ({ workspacePath, specId, fileKey, statusFilter, commands }) =>
+    ({ scope, statusFilter, commands }) =>
       useComments({
-        workspacePath,
-        specId,
-        fileKey,
+        scope,
         statusFilter,
         commands,
       }),
@@ -178,9 +185,7 @@ function createCommands(
 test("useCommentsはscope未選択ならidleでコメントを読み込まない", async () => {
   const double = createCommentCommandTestDouble();
   const result = renderUseComments({
-    workspacePath: null,
-    specId: "phase-2-comments",
-    fileKey: "tasks",
+    scope: null,
     commands: double.commands,
   });
 
@@ -197,9 +202,7 @@ test("useCommentsはscopeが揃うとコメント一覧を読み込む", async (
     listComments: { comments: [firstComment] },
   });
   const result = renderUseComments({
-    workspacePath: "/workspace/spec-reviewer",
-    specId: "phase-2-comments",
-    fileKey: "tasks",
+    scope: tasksScope,
     commands: double.commands,
   });
 
@@ -224,9 +227,7 @@ test.each([
 ] as const)("useCommentsは%s filterを文字列payloadとして一覧requestへ渡す", async (statusFilter, expectedStatusFilter) => {
   const double = createCommentCommandTestDouble();
   const result = renderUseComments({
-    workspacePath: "/workspace/spec-reviewer",
-    specId: "phase-2-comments",
-    fileKey: "tasks",
+    scope: tasksScope,
     statusFilter,
     commands: double.commands,
   });
@@ -249,9 +250,7 @@ test("useCommentsは空のコメント一覧をempty状態として返す", asyn
     listComments: { comments: [] },
   });
   const result = renderUseComments({
-    workspacePath: "/workspace/spec-reviewer",
-    specId: "phase-2-comments",
-    fileKey: "tasks",
+    scope: tasksScope,
     commands: double.commands,
   });
 
@@ -267,9 +266,7 @@ test("useCommentsは読み込み失敗をerror状態として返す", async () =
     listComments: vi.fn().mockRejectedValue("comment load failed"),
   });
   const result = renderUseComments({
-    workspacePath: "/workspace/spec-reviewer",
-    specId: "phase-2-comments",
-    fileKey: "tasks",
+    scope: tasksScope,
     commands,
   });
 
@@ -295,9 +292,7 @@ test("useCommentsは読み込み失敗時もperformance spanを記録する", as
     listComments: vi.fn().mockRejectedValue("comment load failed"),
   });
   const result = renderUseComments({
-    workspacePath: "/workspace/spec-reviewer",
-    specId: "phase-2-comments",
-    fileKey: "tasks",
+    scope: tasksScope,
     commands,
   });
 
@@ -325,17 +320,13 @@ test("useCommentsはscope変更時にリセットして再読み込みする", a
     .mockResolvedValueOnce({ comments: [firstComment] })
     .mockReturnValueOnce(secondLoad.promise);
   const result = renderUseComments({
-    workspacePath: "/workspace/spec-reviewer",
-    specId: "phase-2-comments",
-    fileKey: "tasks",
+    scope: tasksScope,
     commands: createCommands({ listComments }),
   });
 
   await flushAsyncEffects();
   result.rerender({
-    workspacePath: "/workspace/spec-reviewer",
-    specId: "phase-2-comments",
-    fileKey: "design",
+    scope: designScope,
     commands: createCommands({ listComments }),
   });
 
@@ -361,9 +352,7 @@ test("useCommentsはコメント追加中のsaving状態と追加後の一覧を
     addComment: vi.fn().mockReturnValue(addDeferred.promise),
   });
   const result = renderUseComments({
-    workspacePath: "/workspace/spec-reviewer",
-    specId: "phase-2-comments",
-    fileKey: "tasks",
+    scope: tasksScope,
     commands,
   });
 
@@ -402,9 +391,7 @@ test("useCommentsはloading中のコメント追加成功を古い一覧response
     addComment: vi.fn().mockReturnValue(addDeferred.promise),
   });
   const result = renderUseComments({
-    workspacePath: "/workspace/spec-reviewer",
-    specId: "phase-2-comments",
-    fileKey: "tasks",
+    scope: tasksScope,
     commands,
   });
 
@@ -440,9 +427,7 @@ test("useCommentsはscope変更後に完了したコメント追加を現在の�
     addComment: vi.fn().mockReturnValue(addDeferred.promise),
   });
   const result = renderUseComments({
-    workspacePath: "/workspace/spec-reviewer",
-    specId: "phase-2-comments",
-    fileKey: "tasks",
+    scope: tasksScope,
     commands,
   });
 
@@ -457,9 +442,7 @@ test("useCommentsはscope変更後に完了したコメント追加を現在の�
   });
 
   result.rerender({
-    workspacePath: "/workspace/spec-reviewer",
-    specId: "phase-2-comments",
-    fileKey: "design",
+    scope: designScope,
     commands,
   });
   await flushAsyncEffects();
@@ -477,9 +460,7 @@ test("useCommentsはscope変更後に完了したコメント追加を現在の�
 test("useCommentsはコメント本文を更新して一覧へ反映する", async () => {
   const commands = createCommands();
   const result = renderUseComments({
-    workspacePath: "/workspace/spec-reviewer",
-    specId: "phase-2-comments",
-    fileKey: "tasks",
+    scope: tasksScope,
     commands,
   });
 
@@ -503,9 +484,7 @@ test("useCommentsは同一scopeで古いoperation完了を現在の一覧へ反�
     resolveComment: vi.fn().mockReturnValue(resolveDeferred.promise),
   });
   const result = renderUseComments({
-    workspacePath: "/workspace/spec-reviewer",
-    specId: "phase-2-comments",
-    fileKey: "tasks",
+    scope: tasksScope,
     commands,
   });
 
@@ -554,9 +533,7 @@ test("useCommentsはコメント削除後に一覧を再取得する", async () 
     .mockResolvedValueOnce({ comments: [secondComment] });
   const commands = createCommands({ listComments });
   const result = renderUseComments({
-    workspacePath: "/workspace/spec-reviewer",
-    specId: "phase-2-comments",
-    fileKey: "tasks",
+    scope: tasksScope,
     commands,
   });
 
@@ -577,9 +554,7 @@ test("useCommentsは削除未成立なら一覧を維持してsaving状態を解
     listComments,
   });
   const result = renderUseComments({
-    workspacePath: "/workspace/spec-reviewer",
-    specId: "phase-2-comments",
-    fileKey: "tasks",
+    scope: tasksScope,
     commands,
   });
 
@@ -599,9 +574,7 @@ test("useCommentsは削除未成立なら一覧を維持してsaving状態を解
 test("useCommentsはresolveとreopenを一覧へ反映する", async () => {
   const commands = createCommands();
   const result = renderUseComments({
-    workspacePath: "/workspace/spec-reviewer",
-    specId: "phase-2-comments",
-    fileKey: "tasks",
+    scope: tasksScope,
     commands,
   });
 
@@ -624,9 +597,7 @@ test("useCommentsはresolve toggleを楽観更新して成功結果で確定す�
     toggleCommentResolved: vi.fn().mockReturnValue(toggleDeferred.promise),
   });
   const result = renderUseComments({
-    workspacePath: "/workspace/spec-reviewer",
-    specId: "phase-2-comments",
-    fileKey: "tasks",
+    scope: tasksScope,
     commands,
   });
 
@@ -738,9 +709,7 @@ test("useCommentsはresolve toggle失敗時に楽観更新を巻き戻す", asyn
     toggleCommentResolved: vi.fn().mockReturnValue(toggleDeferred.promise),
   });
   const result = renderUseComments({
-    workspacePath: "/workspace/spec-reviewer",
-    specId: "phase-2-comments",
-    fileKey: "tasks",
+    scope: tasksScope,
     commands,
   });
 
@@ -783,9 +752,7 @@ test("useCommentsはscope変更後に失敗したoperation errorを表示しな�
     toggleCommentResolved: vi.fn().mockReturnValue(toggleDeferred.promise),
   });
   const result = renderUseComments({
-    workspacePath: "/workspace/spec-reviewer",
-    specId: "phase-2-comments",
-    fileKey: "tasks",
+    scope: tasksScope,
     commands,
   });
 
@@ -797,9 +764,7 @@ test("useCommentsはscope変更後に失敗したoperation errorを表示しな�
   });
 
   result.rerender({
-    workspacePath: "/workspace/spec-reviewer",
-    specId: "phase-2-comments",
-    fileKey: "design",
+    scope: designScope,
     commands,
   });
   await flushAsyncEffects();

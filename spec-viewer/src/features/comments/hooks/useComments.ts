@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   commentCommands as defaultCommentCommands,
@@ -9,7 +9,7 @@ import {
   createPerformanceCorrelationId,
   startPerformanceSpan,
 } from "@/shared/lib/performance";
-import { CommentScope } from "@/features/comments/domain/commentScope";
+import type { CommentScope } from "@/features/comments/domain/commentScope";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import type { CommentOperationState } from "@/features/comments/domain/commentOperation";
 import { listComments as listCommentsViaGateway } from "@/features/comments/infra/commentGateway";
@@ -23,7 +23,6 @@ import {
 import type { CommentId } from "@/features/comments/types/comment";
 import type { Comment } from "@/features/comments/types/comment";
 import type { NormalizedCommandError } from "@/shared/types/ipc";
-import type { SpecFileKey } from "@/features/specs/types/spec";
 
 export type {
   AddCommentInput,
@@ -62,9 +61,7 @@ export type CommentListState =
     }>;
 
 export type UseCommentsOptions = Readonly<{
-  workspacePath: string | null;
-  specId: string | null;
-  fileKey: SpecFileKey | null;
+  scope: CommentScope | null;
   statusFilter?: CommentStatusFilter;
   correlationId?: string | null;
   commands?: CommentCommands;
@@ -94,20 +91,9 @@ const defaultStatusFilter: CommentStatusFilter = CommentStatusFilter.All;
 export function useComments({
   commands = defaultCommentCommands,
   correlationId = null,
-  fileKey,
-  specId,
+  scope,
   statusFilter = defaultStatusFilter,
-  workspacePath,
 }: UseCommentsOptions): UseCommentsResult {
-  const scope = useMemo(
-    () =>
-      CommentScope.create({
-        workspacePath,
-        specId,
-        fileKey,
-      }),
-    [fileKey, specId, workspacePath],
-  );
   const scopeKey = createScopeKey(scope, statusFilter);
   const listRequestIdRef = useRef(0);
   const activeListScopeKeyRef = useRef(scopeKey);
