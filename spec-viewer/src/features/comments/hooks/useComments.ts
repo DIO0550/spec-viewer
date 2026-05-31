@@ -234,9 +234,9 @@ export function useComments({
 
 /** @returns Active list correlation ID, creating one when none was provided. */
 function createListCorrelationId(
-  correlationId: UseCommentsOptions["correlationId"],
+  correlationId: string | null,
 ): string {
-  if (correlationId === null || correlationId === undefined) {
+  if (correlationId === null) {
     return createPerformanceCorrelationId("comments-list");
   }
 
