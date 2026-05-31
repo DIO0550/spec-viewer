@@ -65,7 +65,7 @@ export type UseCommentsOptions = Readonly<{
   workspacePath: string | null;
   specId: string | null;
   fileKey: SpecFileKey | null;
-  statusFilter?: CommentStatusFilter | null;
+  statusFilter?: CommentStatusFilter;
   correlationId?: string | null;
   commands?: CommentCommands;
 }>;
@@ -91,18 +91,22 @@ export type UseCommentsResult = Readonly<{
 const defaultStatusFilter: CommentStatusFilter = CommentStatusFilter.All;
 
 /** @returns Comment loading and operation state for the selected spec file. */
-export function useComments(options: UseCommentsOptions): UseCommentsResult {
-  const statusFilter =
-    CommentStatusFilter.parse(options.statusFilter) ?? defaultStatusFilter;
-  const commands = options.commands ?? defaultCommentCommands;
+export function useComments({
+  commands = defaultCommentCommands,
+  correlationId = null,
+  fileKey,
+  specId,
+  statusFilter = defaultStatusFilter,
+  workspacePath,
+}: UseCommentsOptions): UseCommentsResult {
   const scope = useMemo(
     () =>
       CommentScope.create({
-        workspacePath: options.workspacePath,
-        specId: options.specId,
-        fileKey: options.fileKey,
+        workspacePath,
+        specId,
+        fileKey,
       }),
-    [options.fileKey, options.specId, options.workspacePath],
+    [fileKey, specId, workspacePath],
   );
   const scopeKey = createScopeKey(scope, statusFilter);
   const listRequestIdRef = useRef(0);
@@ -162,20 +166,22 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
       error: null,
     });
 
-    const correlationId =
-      options.correlationId ?? createPerformanceCorrelationId("comments-list");
-    const endSpan = startPerformanceSpan(correlationId, "comments.list", {
-      specId: activeScope.specId,
-      fileKey: activeScope.fileKey,
-      statusFilter,
-    });
+    const endSpan = startPerformanceSpan(
+      createListCorrelationId(correlationId),
+      "comments.list",
+      {
+        specId: activeScope.specId,
+        fileKey: activeScope.fileKey,
+        statusFilter,
+      },
+    );
 
     try {
       const response = await listCommentsViaGateway(
         commands,
         activeScope,
         statusFilter,
-        options.correlationId ?? null,
+        correlationId,
       );
       endSpan({
         commentCount: response.comments.length,
@@ -211,9 +217,9 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
     }
   }, [
     commands,
+    correlationId,
     isLatestListRequest,
     isSameListScopeResult,
-    options.correlationId,
     scope,
     scopeKey,
     statusFilter,
@@ -238,6 +244,17 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
     commentOperations,
     reloadComments,
   });
+}
+
+/** @returns Active list correlation ID, creating one when none was provided. */
+function createListCorrelationId(
+  correlationId: UseCommentsOptions["correlationId"],
+): string {
+  if (correlationId === null || correlationId === undefined) {
+    return createPerformanceCorrelationId("comments-list");
+  }
+
+  return correlationId;
 }
 
 /** @returns Idle comment list state for an incomplete scope. */

@@ -12,7 +12,6 @@ import type {
 } from "@/features/comments/types/comment";
 import { CommentId } from "@/features/comments/types/comment";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
-import type { CommentStatusFilter as CommentStatusFilterType } from "@/features/comments/domain/commentStatusFilter";
 import type { SpecFileKey } from "@/features/specs/types/spec";
 import { useCommentOperations } from "@/features/comments/hooks/useCommentOperations";
 import { useComments } from "@/features/comments/hooks/useComments";
@@ -66,7 +65,7 @@ type HookProps = Readonly<{
   workspacePath: string | null;
   specId: string | null;
   fileKey: SpecFileKey | null;
-  statusFilter?: CommentStatusFilterType | null;
+  statusFilter?: CommentStatusFilter;
   commands: CommentCommands;
 }>;
 
@@ -240,35 +239,6 @@ test.each([
       specId: "phase-2-comments",
       fileKey: "tasks",
       statusFilter: expectedStatusFilter,
-    },
-  ]);
-  result.unmount();
-});
-
-test("useCommentsは不正なstatusFilter入力をallとして一覧requestへ渡す", async () => {
-  const double = createCommentCommandTestDouble();
-  const result = renderHook(
-    ({ commands }: Readonly<{ commands: CommentCommands }>) =>
-      useComments({
-        workspacePath: "/workspace/spec-reviewer",
-        specId: "phase-2-comments",
-        fileKey: "tasks",
-        statusFilter: "closed" as CommentStatusFilterType,
-        commands,
-      }),
-    {
-      commands: double.commands,
-    },
-  );
-
-  await flushAsyncEffects();
-
-  expect(double.calls.listComments).toEqual([
-    {
-      workspacePath: "/workspace/spec-reviewer",
-      specId: "phase-2-comments",
-      fileKey: "tasks",
-      statusFilter: "all",
     },
   ]);
   result.unmount();
