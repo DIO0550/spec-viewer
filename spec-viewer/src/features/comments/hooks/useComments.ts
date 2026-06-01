@@ -6,7 +6,7 @@ import {
   type CommentCommands,
 } from "@/shared/api/tauri";
 import {
-  createPerformanceCorrelationId,
+  resolvePerformanceCorrelationId,
   startPerformanceSpan,
 } from "@/shared/lib/performance";
 import type { CommentScope } from "@/features/comments/domain/commentScope";
@@ -153,7 +153,7 @@ export function useComments({
     });
 
     const endSpan = startPerformanceSpan(
-      createListCorrelationId(correlationId),
+      resolvePerformanceCorrelationId(correlationId, "comments-list"),
       "comments.list",
       {
         specId: activeScope.specId,
@@ -230,17 +230,6 @@ export function useComments({
     commentOperations,
     reloadComments,
   });
-}
-
-/** @returns Active list correlation ID, creating one when none was provided. */
-function createListCorrelationId(
-  correlationId: string | null,
-): string {
-  if (correlationId === null) {
-    return createPerformanceCorrelationId("comments-list");
-  }
-
-  return correlationId;
 }
 
 /** @returns Idle comment list state for an incomplete scope. */
