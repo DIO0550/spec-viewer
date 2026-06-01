@@ -11,6 +11,10 @@ import {
 } from "@/shared/lib/performance";
 import type { CommentScope } from "@/features/comments/domain/commentScope";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
+import {
+  CommentListState,
+  type CommentListState as CommentListStateType,
+} from "@/features/comments/domain/commentListState";
 import type { CommentOperationState } from "@/features/comments/domain/commentOperation";
 import { listComments as listCommentsViaGateway } from "@/features/comments/infra/commentGateway";
 import { createUseCommentsResult } from "@/features/comments/hooks/createUseCommentsResult";
@@ -24,6 +28,7 @@ import type { CommentId } from "@/features/comments/types/comment";
 import type { Comment } from "@/features/comments/types/comment";
 import type { NormalizedCommandError } from "@/shared/types/ipc";
 
+export type { CommentListState } from "@/features/comments/domain/commentListState";
 export type {
   AddCommentInput,
   UpdateCommentInput,
@@ -33,33 +38,6 @@ export {
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
 
-export type CommentListState =
-  | Readonly<{
-      status: "idle";
-      comments: readonly [];
-      error: null;
-    }>
-  | Readonly<{
-      status: "loading";
-      comments: readonly [];
-      error: null;
-    }>
-  | Readonly<{
-      status: "ready";
-      comments: readonly Comment[];
-      error: null;
-    }>
-  | Readonly<{
-      status: "empty";
-      comments: readonly [];
-      error: null;
-    }>
-  | Readonly<{
-      status: "error";
-      comments: readonly [];
-      error: NormalizedCommandError;
-    }>;
-
 export type UseCommentsOptions = Readonly<{
   scope: CommentScope | null;
   statusFilter?: CommentStatusFilter;
@@ -68,7 +46,7 @@ export type UseCommentsOptions = Readonly<{
 }>;
 
 export type UseCommentsResult = Readonly<{
-  listState: CommentListState;
+  listState: CommentListStateType;
   operationState: CommentOperationState;
   comments: readonly Comment[];
   isLoading: boolean;
@@ -97,8 +75,8 @@ export function useComments({
   const scopeKey = createScopeKey(scope, statusFilter);
   const listRequestIdRef = useRef(0);
   const activeListScopeKeyRef = useRef(scopeKey);
-  const [listState, setListState] = useState<CommentListState>(
-    createIdleListState(),
+  const [listState, setListState] = useState<CommentListStateType>(
+    CommentListState.idle(),
   );
 
   activeListScopeKeyRef.current = scopeKey;
@@ -115,20 +93,13 @@ export function useComments({
   const updateCurrentScopeComments = useCallback(
     (transform: CommentListTransform): void => {
       setListState((currentState) => {
-        if (currentState.status === "idle") {
-          return currentState;
-        }
+        const result = CommentListState.applyTransform(currentState, transform);
 
-        const nextComments = transform(currentState.comments);
-
-        if (
-          currentState.status === "loading" &&
-          nextComments !== currentState.comments
-        ) {
+        if (result.invalidatesRequest) {
           listRequestIdRef.current += 1;
         }
 
-        return createLoadedListState(nextComments);
+        return result.state;
       });
     },
     [],
@@ -139,18 +110,14 @@ export function useComments({
 
     if (activeScope === null) {
       listRequestIdRef.current += 1;
-      setListState(createIdleListState());
+      setListState(CommentListState.idle());
       return true;
     }
 
     const requestId = listRequestIdRef.current + 1;
     const requestScopeKey = scopeKey;
     listRequestIdRef.current = requestId;
-    setListState({
-      status: "loading",
-      comments: [],
-      error: null,
-    });
+    setListState(CommentListState.loading());
 
     const endSpan = startPerformanceSpan(
       resolvePerformanceCorrelationId(correlationId, "comments-list"),
@@ -180,7 +147,7 @@ export function useComments({
         return false;
       }
 
-      setListState(createLoadedListState(response.comments));
+      setListState(CommentListState.loaded(response.comments));
       return true;
     } catch (error) {
       endSpan({
@@ -194,11 +161,7 @@ export function useComments({
         return false;
       }
 
-      setListState({
-        status: "error",
-        comments: [],
-        error: normalizeCommandError(error),
-      });
+      setListState(CommentListState.error(normalizeCommandError(error)));
       return false;
     }
   }, [
@@ -230,32 +193,6 @@ export function useComments({
     commentOperations,
     reloadComments,
   });
-}
-
-/** @returns Idle comment list state for an incomplete scope. */
-function createIdleListState(): CommentListState {
-  return {
-    status: "idle",
-    comments: [],
-    error: null,
-  };
-}
-
-/** @returns Loaded comment list state, using empty when no comments are present. */
-function createLoadedListState(comments: readonly Comment[]): CommentListState {
-  if (comments.length === 0) {
-    return {
-      status: "empty",
-      comments: [],
-      error: null,
-    };
-  }
-
-  return {
-    status: "ready",
-    comments,
-    error: null,
-  };
 }
 
 /** @returns Scope identity for stale operation guards. */

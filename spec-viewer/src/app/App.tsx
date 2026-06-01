@@ -20,6 +20,7 @@ import {
 } from "@/features/comments";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import { CommentScope } from "@/features/comments/domain/commentScope";
+import { CommentListState } from "@/features/comments/domain/commentListState";
 import {
   useKeyboardShortcuts,
   useLeftNavigationPreference,
@@ -200,10 +201,7 @@ function App() {
   }, [specs.selectedFileKey, specs.selectedSpecId, workspace.workspace?.root]);
 
   useEffect(() => {
-    if (
-      comments.listState.status !== "ready" &&
-      comments.listState.status !== "empty"
-    ) {
+    if (!CommentListState.isLoaded(comments.listState)) {
       return;
     }
 
@@ -214,7 +212,7 @@ function App() {
     if (activeCommentId !== null && !hasActiveComment) {
       setActiveCommentId(null);
     }
-  }, [activeCommentId, comments.comments, comments.listState.status]);
+  }, [activeCommentId, comments.comments, comments.listState]);
 
   const loadWorkspacePath = useCallback(
     async (
