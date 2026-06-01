@@ -40,6 +40,18 @@ export function createPerformanceCorrelationId(prefix: string): string {
   return `${normalizedPrefix}-${timestamp}-${random}`;
 }
 
+/** @returns Provided correlation id, or a generated one when absent. */
+export function resolvePerformanceCorrelationId(
+  correlationId: string | null | undefined,
+  prefix: string,
+): string {
+  if (correlationId === null || correlationId === undefined) {
+    return createPerformanceCorrelationId(prefix);
+  }
+
+  return correlationId;
+}
+
 /** @returns A callback that ends and records one performance span. */
 export function startPerformanceSpan(
   correlationId: string,
@@ -156,7 +168,7 @@ function mergeMetadata(
   }
 
   return {
-    ...(initialMetadata ?? {}),
-    ...(endMetadata ?? {}),
+    ...initialMetadata,
+    ...endMetadata,
   };
 }

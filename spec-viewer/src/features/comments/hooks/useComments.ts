@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   commentCommands as defaultCommentCommands,
@@ -6,10 +6,10 @@ import {
   type CommentCommands,
 } from "@/shared/api/tauri";
 import {
-  createPerformanceCorrelationId,
+  resolvePerformanceCorrelationId,
   startPerformanceSpan,
 } from "@/shared/lib/performance";
-import { CommentScope } from "@/features/comments/domain/commentScope";
+import type { CommentScope } from "@/features/comments/domain/commentScope";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import type { CommentOperationState } from "@/features/comments/domain/commentOperation";
 import { listComments as listCommentsViaGateway } from "@/features/comments/infra/commentGateway";
@@ -23,7 +23,6 @@ import {
 import type { CommentId } from "@/features/comments/types/comment";
 import type { Comment } from "@/features/comments/types/comment";
 import type { NormalizedCommandError } from "@/shared/types/ipc";
-import type { SpecFileKey } from "@/features/specs/types/spec";
 
 export type {
   AddCommentInput,
@@ -62,10 +61,8 @@ export type CommentListState =
     }>;
 
 export type UseCommentsOptions = Readonly<{
-  workspacePath: string | null;
-  specId: string | null;
-  fileKey: SpecFileKey | null;
-  statusFilter?: CommentStatusFilter | null;
+  scope: CommentScope | null;
+  statusFilter?: CommentStatusFilter;
   correlationId?: string | null;
   commands?: CommentCommands;
 }>;
@@ -91,19 +88,12 @@ export type UseCommentsResult = Readonly<{
 const defaultStatusFilter: CommentStatusFilter = CommentStatusFilter.All;
 
 /** @returns Comment loading and operation state for the selected spec file. */
-export function useComments(options: UseCommentsOptions): UseCommentsResult {
-  const statusFilter =
-    CommentStatusFilter.parse(options.statusFilter) ?? defaultStatusFilter;
-  const commands = options.commands ?? defaultCommentCommands;
-  const scope = useMemo(
-    () =>
-      CommentScope.create({
-        workspacePath: options.workspacePath,
-        specId: options.specId,
-        fileKey: options.fileKey,
-      }),
-    [options.fileKey, options.specId, options.workspacePath],
-  );
+export function useComments({
+  commands = defaultCommentCommands,
+  correlationId = null,
+  scope,
+  statusFilter = defaultStatusFilter,
+}: UseCommentsOptions): UseCommentsResult {
   const scopeKey = createScopeKey(scope, statusFilter);
   const listRequestIdRef = useRef(0);
   const activeListScopeKeyRef = useRef(scopeKey);
@@ -162,20 +152,22 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
       error: null,
     });
 
-    const correlationId =
-      options.correlationId ?? createPerformanceCorrelationId("comments-list");
-    const endSpan = startPerformanceSpan(correlationId, "comments.list", {
-      specId: activeScope.specId,
-      fileKey: activeScope.fileKey,
-      statusFilter,
-    });
+    const endSpan = startPerformanceSpan(
+      resolvePerformanceCorrelationId(correlationId, "comments-list"),
+      "comments.list",
+      {
+        specId: activeScope.specId,
+        fileKey: activeScope.fileKey,
+        statusFilter,
+      },
+    );
 
     try {
       const response = await listCommentsViaGateway(
         commands,
         activeScope,
         statusFilter,
-        options.correlationId ?? null,
+        correlationId,
       );
       endSpan({
         commentCount: response.comments.length,
@@ -211,9 +203,9 @@ export function useComments(options: UseCommentsOptions): UseCommentsResult {
     }
   }, [
     commands,
+    correlationId,
     isLatestListRequest,
     isSameListScopeResult,
-    options.correlationId,
     scope,
     scopeKey,
     statusFilter,
