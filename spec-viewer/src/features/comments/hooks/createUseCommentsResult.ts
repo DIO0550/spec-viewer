@@ -2,11 +2,9 @@ import {
   CommentOperationFailedState,
   CommentOperationSavingState,
 } from "@/features/comments/domain/commentOperation";
+import type { CommentListState } from "@/features/comments/domain/commentListState";
 import type { UseCommentOperationsResult } from "@/features/comments/hooks/useCommentOperations";
-import type {
-  CommentListState,
-  UseCommentsResult,
-} from "@/features/comments/hooks/useComments";
+import type { UseCommentsResult } from "@/features/comments/hooks/useComments";
 
 export type CreateUseCommentsResultInput = Readonly<{
   listState: CommentListState;

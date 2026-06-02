@@ -14,7 +14,7 @@ import {
   CommentOperationFailedState,
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
-import type { CommentListState } from "@/features/comments/hooks/useComments";
+import type { CommentListState } from "@/features/comments/domain/commentListState";
 import { uiText } from "@/shared/lib/uiText";
 import type {
   ApplyWithAiPlaceholderState,
