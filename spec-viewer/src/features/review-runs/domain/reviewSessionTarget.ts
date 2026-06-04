@@ -1,4 +1,4 @@
-import type { ReviewRunTarget as ReviewRunTargetDto } from "@/features/review-runs/types/reviewRun";
+import type { ReviewRunTarget } from "@/features/review-runs/types/reviewRun";
 import type { SpecFileKey } from "@/features/specs/types/spec";
 
 export type ReviewSessionTargetScope = "file" | "spec";
@@ -13,7 +13,7 @@ export type ReviewSessionTargetIdentity = string;
 
 export const ReviewSessionTarget = {
   /** @returns A review-run target for file/spec scope, or null when incomplete. */
-  create(input: ReviewSessionTargetInput): ReviewRunTargetDto | null {
+  create(input: ReviewSessionTargetInput): ReviewRunTarget | null {
     if (input.specId === null) {
       return null;
     }
@@ -39,7 +39,7 @@ export const ReviewSessionTarget = {
 
 export const ReviewSessionTargetIdentity = {
   /** @returns Stable target identity for stale async result checks. */
-  create(target: ReviewRunTargetDto | null): ReviewSessionTargetIdentity {
+  create(target: ReviewRunTarget | null): ReviewSessionTargetIdentity {
     if (target === null) {
       return "none";
     }
