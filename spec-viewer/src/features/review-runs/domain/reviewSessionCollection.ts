@@ -83,7 +83,7 @@ export const ReviewSessionCollection = {
 
 /** @returns Non-archived review run or throws for an invalid active entry. */
 function toNonArchivedRun(reviewRun: ReviewRun): NonArchivedReviewSession {
-  const entity = ReviewSession.fromDto(reviewRun);
+  const entity = ReviewSession.fromReviewRun(reviewRun);
 
   if (ReviewSession.isArchived(entity)) {
     throw new Error(
@@ -96,7 +96,7 @@ function toNonArchivedRun(reviewRun: ReviewRun): NonArchivedReviewSession {
 
 /** @returns Archived review run or throws for an invalid archived entry. */
 function toArchivedRun(reviewRun: ReviewRun): ArchivedReviewSession {
-  const entity = ReviewSession.fromDto(reviewRun);
+  const entity = ReviewSession.fromReviewRun(reviewRun);
 
   if (ReviewSession.isNonArchived(entity)) {
     throw new Error(

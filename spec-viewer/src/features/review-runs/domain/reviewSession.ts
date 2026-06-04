@@ -38,10 +38,10 @@ export type NonArchivedReviewSession =
 export type ReviewSession = NonArchivedReviewSession | ArchivedReviewSession;
 
 export const ReviewSession = {
-  /** @returns Review run DTO narrowed to a review-session lifecycle variant. */
-  fromDto(dto: ReviewRun): ReviewSession {
-    ReviewSession.assertValidLifecycle(dto);
-    return dto as ReviewSession;
+  /** @returns Review run narrowed to a review-session lifecycle variant. */
+  fromReviewRun(reviewRun: ReviewRun): ReviewSession {
+    ReviewSession.assertValidLifecycle(reviewRun);
+    return reviewRun as ReviewSession;
   },
 
   /** @returns True when the session belongs to archived collection. */
@@ -57,17 +57,22 @@ export const ReviewSession = {
   },
 
   /**
-   * @param dto - Review run DTO from the command boundary.
+   * @param reviewRun - Review run from the command boundary.
    * @throws Error when status and archivedAt violate lifecycle invariants.
    */
-  assertValidLifecycle(dto: ReviewRun): void {
-    if (dto.status === "archived" && dto.archivedAt === null) {
-      throw new Error(`Archived review run must have archivedAt: ${dto.id}`);
+  assertValidLifecycle(reviewRun: ReviewRun): void {
+    if (reviewRun.status === "archived" && reviewRun.archivedAt === null) {
+      throw new Error(
+        `Archived review run must have archivedAt: ${reviewRun.id}`,
+      );
     }
 
-    if (isNonArchivedStatus(dto.status) && dto.archivedAt !== null) {
+    if (
+      isNonArchivedStatus(reviewRun.status) &&
+      reviewRun.archivedAt !== null
+    ) {
       throw new Error(
-        `Non-archived review run must not have archivedAt: ${dto.id}`,
+        `Non-archived review run must not have archivedAt: ${reviewRun.id}`,
       );
     }
   },
