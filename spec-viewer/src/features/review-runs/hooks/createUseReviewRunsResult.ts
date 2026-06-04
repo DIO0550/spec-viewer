@@ -1,11 +1,11 @@
-import type { ReviewRunListState } from "@/features/review-runs/domain/reviewRunListState";
+import type { ReviewSessionListState } from "@/features/review-runs/domain/reviewSessionListState";
 import type { UseReviewRunOperationsResult } from "@/features/review-runs/hooks/useReviewRunOperations";
 import type { UseReviewRunsResult } from "@/features/review-runs/hooks/useReviewRuns";
 import type { ReviewRunTarget } from "@/features/review-runs/types/reviewRun";
 
 export type CreateUseReviewRunsResultInput = Readonly<{
   target: ReviewRunTarget | null;
-  listState: ReviewRunListState;
+  listState: ReviewSessionListState;
   reviewRunOperations: UseReviewRunOperationsResult;
   reloadReviewRuns: () => Promise<boolean>;
 }>;

@@ -1,9 +1,9 @@
 import { expect, test } from "vitest";
 
 import {
-  ReviewRunArchiveState,
-  ReviewRunCreateState,
-} from "@/features/review-runs/domain/reviewRunOperation";
+  ReviewSessionArchiveState,
+  ReviewSessionCreateState,
+} from "@/features/review-runs/domain/reviewSessionOperation";
 import type { ReviewRun } from "@/features/review-runs/types/reviewRun";
 import type { NormalizedCommandError } from "@/shared/types/ipc";
 
@@ -14,36 +14,36 @@ const error: NormalizedCommandError = {
   raw: "failed",
 };
 
-test("ReviewRunCreateStateはcreate操作の状態を生成する", () => {
-  expect(ReviewRunCreateState.idle().status).toBe("idle");
-  expect(ReviewRunCreateState.saving().status).toBe("saving");
-  expect(ReviewRunCreateState.success(reviewRun)).toEqual({
+test("ReviewSessionCreateStateはcreate操作の状態を生成する", () => {
+  expect(ReviewSessionCreateState.idle().status).toBe("idle");
+  expect(ReviewSessionCreateState.saving().status).toBe("saving");
+  expect(ReviewSessionCreateState.success(reviewRun)).toEqual({
     status: "success",
     reviewRun,
     error: null,
   });
-  expect(ReviewRunCreateState.error(error)).toEqual({
+  expect(ReviewSessionCreateState.error(error)).toEqual({
     status: "error",
     reviewRun: null,
     error,
   });
 });
 
-test("ReviewRunArchiveStateはarchive操作の状態を生成する", () => {
-  expect(ReviewRunArchiveState.idle().status).toBe("idle");
-  expect(ReviewRunArchiveState.saving("run-1")).toEqual({
+test("ReviewSessionArchiveStateはarchive操作の状態を生成する", () => {
+  expect(ReviewSessionArchiveState.idle().status).toBe("idle");
+  expect(ReviewSessionArchiveState.saving("run-1")).toEqual({
     status: "saving",
     reviewRunId: "run-1",
     reviewRun: null,
     error: null,
   });
-  expect(ReviewRunArchiveState.success("run-1", reviewRun)).toEqual({
+  expect(ReviewSessionArchiveState.success("run-1", reviewRun)).toEqual({
     status: "success",
     reviewRunId: "run-1",
     reviewRun,
     error: null,
   });
-  expect(ReviewRunArchiveState.error("run-1", error)).toEqual({
+  expect(ReviewSessionArchiveState.error("run-1", error)).toEqual({
     status: "error",
     reviewRunId: "run-1",
     reviewRun: null,

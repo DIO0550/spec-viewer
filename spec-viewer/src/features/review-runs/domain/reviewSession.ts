@@ -4,53 +4,55 @@ import type {
   ReviewRunStatus,
 } from "@/features/review-runs/types/reviewRun";
 
-export type ReviewRunBase = Omit<ReviewRun, "archivedAt" | "status">;
+export type ReviewSessionBase = Omit<ReviewRun, "archivedAt" | "status">;
 
-export type ActiveReviewRun = ReviewRunBase &
+export type ActiveReviewSession = ReviewSessionBase &
   Readonly<{
     status: "active";
     archivedAt: null;
   }>;
 
-export type InProgressReviewRun = ReviewRunBase &
+export type InProgressReviewSession = ReviewSessionBase &
   Readonly<{
     status: "inProgress";
     archivedAt: null;
   }>;
 
-export type CompletedReviewRun = ReviewRunBase &
+export type CompletedReviewSession = ReviewSessionBase &
   Readonly<{
     status: "completed";
     archivedAt: null;
   }>;
 
-export type ArchivedReviewRun = ReviewRunBase &
+export type ArchivedReviewSession = ReviewSessionBase &
   Readonly<{
     status: "archived";
     archivedAt: IsoDateTimeString;
   }>;
 
-export type NonArchivedReviewRun =
-  | ActiveReviewRun
-  | InProgressReviewRun
-  | CompletedReviewRun;
+export type NonArchivedReviewSession =
+  | ActiveReviewSession
+  | InProgressReviewSession
+  | CompletedReviewSession;
 
-export type ReviewRunEntity = NonArchivedReviewRun | ArchivedReviewRun;
+export type ReviewSession = NonArchivedReviewSession | ArchivedReviewSession;
 
-export const ReviewRunEntity = {
-  /** @returns Review run narrowed to a lifecycle variant. */
-  fromDto(dto: ReviewRun): ReviewRunEntity {
-    ReviewRunEntity.assertValidLifecycle(dto);
-    return dto as ReviewRunEntity;
+export const ReviewSession = {
+  /** @returns Review run DTO narrowed to a review-session lifecycle variant. */
+  fromDto(dto: ReviewRun): ReviewSession {
+    ReviewSession.assertValidLifecycle(dto);
+    return dto as ReviewSession;
   },
 
-  /** @returns True when the run belongs to archived review-run collection. */
-  isArchived(reviewRun: ReviewRunEntity): reviewRun is ArchivedReviewRun {
+  /** @returns True when the session belongs to archived collection. */
+  isArchived(reviewRun: ReviewSession): reviewRun is ArchivedReviewSession {
     return reviewRun.status === "archived";
   },
 
-  /** @returns True when the run belongs to active review-run collection. */
-  isNonArchived(reviewRun: ReviewRunEntity): reviewRun is NonArchivedReviewRun {
+  /** @returns True when the session belongs to active collection. */
+  isNonArchived(
+    reviewRun: ReviewSession,
+  ): reviewRun is NonArchivedReviewSession {
     return reviewRun.status !== "archived";
   },
 
@@ -71,9 +73,9 @@ export const ReviewRunEntity = {
   },
 } as const;
 
-/** @returns True when the status is visible in the active review-run list. */
+/** @returns True when the status is visible in the active session list. */
 function isNonArchivedStatus(
   status: ReviewRunStatus,
-): status is NonArchivedReviewRun["status"] {
+): status is NonArchivedReviewSession["status"] {
   return status !== "archived";
 }

@@ -1,20 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { ReviewRunCollection } from "@/features/review-runs/domain/reviewRunCollection";
-import type { ReviewRunCollectionTransform } from "@/features/review-runs/domain/reviewRunCollection";
+import { ReviewSessionCollection } from "@/features/review-runs/domain/reviewSessionCollection";
+import type { ReviewSessionCollectionTransform } from "@/features/review-runs/domain/reviewSessionCollection";
 import {
-  ReviewRunListState,
-  type ReviewRunListState as ReviewRunListStateType,
-} from "@/features/review-runs/domain/reviewRunListState";
+  ReviewSessionListState,
+  type ReviewSessionListState as ReviewSessionListStateType,
+} from "@/features/review-runs/domain/reviewSessionListState";
 import type {
-  ReviewRunArchiveState,
-  ReviewRunCreateState,
-} from "@/features/review-runs/domain/reviewRunOperation";
+  ReviewSessionArchiveState,
+  ReviewSessionCreateState,
+} from "@/features/review-runs/domain/reviewSessionOperation";
 import {
-  ReviewRunTarget as ReviewRunTargetDomain,
-  ReviewRunTargetIdentity,
-  type ReviewRunTargetScope,
-} from "@/features/review-runs/domain/reviewRunTarget";
+  ReviewSessionTarget,
+  ReviewSessionTargetIdentity,
+  type ReviewSessionTargetScope,
+} from "@/features/review-runs/domain/reviewSessionTarget";
 import { listReviewRuns as listReviewRunsViaGateway } from "@/features/review-runs/infra/reviewRunGateway";
 import { createUseReviewRunsResult } from "@/features/review-runs/hooks/createUseReviewRunsResult";
 import {
@@ -36,28 +36,33 @@ import type {
 } from "@/features/review-runs/types/reviewRun";
 import type { SpecFileKey } from "@/features/specs/types/spec";
 
-export type { ReviewRunListState } from "@/features/review-runs/domain/reviewRunListState";
+export type { ReviewSessionListState } from "@/features/review-runs/domain/reviewSessionListState";
 export type {
-  ReviewRunArchiveState,
-  ReviewRunCreateState,
-} from "@/features/review-runs/domain/reviewRunOperation";
-export type { ReviewRunTargetScope } from "@/features/review-runs/domain/reviewRunTarget";
+  ReviewSessionArchiveState,
+  ReviewSessionCreateState,
+} from "@/features/review-runs/domain/reviewSessionOperation";
+export type { ReviewSessionTargetScope } from "@/features/review-runs/domain/reviewSessionTarget";
 export type { CreateReviewRunInput } from "@/features/review-runs/hooks/useReviewRunOperations";
+
+export type ReviewRunListState = ReviewSessionListStateType;
+export type ReviewRunCreateState = ReviewSessionCreateState;
+export type ReviewRunArchiveState = ReviewSessionArchiveState;
+export type ReviewRunTargetScope = ReviewSessionTargetScope;
 
 export type UseReviewRunsOptions = Readonly<{
   workspacePath: string | null;
   specId: string | null;
   fileKey: SpecFileKey | null;
-  targetScope: ReviewRunTargetScope;
+  targetScope: ReviewSessionTargetScope;
   correlationId?: string | null;
   commands?: ReviewRunCommands;
 }>;
 
 export type UseReviewRunsResult = Readonly<{
   target: ReviewRunTarget | null;
-  listState: ReviewRunListStateType;
-  createState: ReviewRunCreateState;
-  archiveState: ReviewRunArchiveState;
+  listState: ReviewSessionListStateType;
+  createState: ReviewSessionCreateState;
+  archiveState: ReviewSessionArchiveState;
   activeRuns: readonly ReviewRun[];
   archivedRuns: readonly ReviewRun[];
   reloadReviewRuns: () => Promise<boolean>;
@@ -72,7 +77,7 @@ export function useReviewRuns(
   const commands = options.commands ?? defaultReviewRunCommands;
   const target = useMemo(
     () =>
-      ReviewRunTargetDomain.create({
+      ReviewSessionTarget.create({
         specId: options.specId,
         fileKey: options.fileKey,
         targetScope: options.targetScope,
@@ -80,21 +85,21 @@ export function useReviewRuns(
     [options.fileKey, options.specId, options.targetScope],
   );
   const targetIdentity = useMemo(
-    () => ReviewRunTargetIdentity.create(target),
+    () => ReviewSessionTargetIdentity.create(target),
     [target],
   );
   const listRequestIdRef = useRef(0);
   const activeListTargetIdentityRef = useRef(targetIdentity);
-  const [listState, setListState] = useState<ReviewRunListStateType>(
-    ReviewRunListState.idle(),
+  const [listState, setListState] = useState<ReviewSessionListStateType>(
+    ReviewSessionListState.idle(),
   );
 
   activeListTargetIdentityRef.current = targetIdentity;
 
   const updateCurrentTargetRuns = useCallback(
-    (transform: ReviewRunCollectionTransform): void => {
+    (transform: ReviewSessionCollectionTransform): void => {
       setListState((currentState) => {
-        const result = ReviewRunListState.applyCollectionTransform(
+        const result = ReviewSessionListState.applyCollectionTransform(
           currentState,
           transform,
         );
@@ -114,14 +119,14 @@ export function useReviewRuns(
 
     if (options.workspacePath === null || activeTarget === null) {
       listRequestIdRef.current += 1;
-      setListState(ReviewRunListState.idle());
+      setListState(ReviewSessionListState.idle());
       return true;
     }
 
     const requestId = listRequestIdRef.current + 1;
     const requestTargetIdentity = targetIdentity;
     listRequestIdRef.current = requestId;
-    setListState(ReviewRunListState.loading(activeTarget));
+    setListState(ReviewSessionListState.loading(activeTarget));
 
     const spanCorrelationId =
       options.correlationId ??
@@ -151,7 +156,7 @@ export function useReviewRuns(
 
       if (
         listRequestIdRef.current !== requestId ||
-        !ReviewRunTargetIdentity.equals(
+        !ReviewSessionTargetIdentity.equals(
           activeListTargetIdentityRef.current,
           requestTargetIdentity,
         )
@@ -160,9 +165,9 @@ export function useReviewRuns(
       }
 
       setListState(
-        ReviewRunListState.loaded(
+        ReviewSessionListState.loaded(
           activeTarget,
-          ReviewRunCollection.fromListResponse(
+          ReviewSessionCollection.fromListResponse(
             response.active,
             response.archived,
             response.problems,
@@ -177,7 +182,7 @@ export function useReviewRuns(
 
       if (
         listRequestIdRef.current !== requestId ||
-        !ReviewRunTargetIdentity.equals(
+        !ReviewSessionTargetIdentity.equals(
           activeListTargetIdentityRef.current,
           requestTargetIdentity,
         )
@@ -186,7 +191,10 @@ export function useReviewRuns(
       }
 
       setListState(
-        ReviewRunListState.error(activeTarget, normalizeCommandError(error)),
+        ReviewSessionListState.error(
+          activeTarget,
+          normalizeCommandError(error),
+        ),
       );
       return false;
     }

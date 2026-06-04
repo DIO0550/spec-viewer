@@ -1,10 +1,10 @@
 import { expect, test, vi } from "vitest";
 
-import { ReviewRunListState } from "@/features/review-runs/domain/reviewRunListState";
+import { ReviewSessionListState } from "@/features/review-runs/domain/reviewSessionListState";
 import {
-  ReviewRunArchiveState,
-  ReviewRunCreateState,
-} from "@/features/review-runs/domain/reviewRunOperation";
+  ReviewSessionArchiveState,
+  ReviewSessionCreateState,
+} from "@/features/review-runs/domain/reviewSessionOperation";
 import { createUseReviewRunsResult } from "@/features/review-runs/hooks/createUseReviewRunsResult";
 
 const target = {
@@ -19,11 +19,11 @@ test("createUseReviewRunsResultは公開resultを組み立てる", async () => {
   const archiveReviewRun = vi.fn().mockResolvedValue(null);
   const result = createUseReviewRunsResult({
     target,
-    listState: ReviewRunListState.loading(target),
+    listState: ReviewSessionListState.loading(target),
     reloadReviewRuns,
     reviewRunOperations: {
-      createState: ReviewRunCreateState.idle(),
-      archiveState: ReviewRunArchiveState.idle(),
+      createState: ReviewSessionCreateState.idle(),
+      archiveState: ReviewSessionArchiveState.idle(),
       createReviewRun,
       archiveReviewRun,
     },

@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { ReviewRunCollection } from "@/features/review-runs/domain/reviewRunCollection";
-import type { ReviewRunCollectionTransform } from "@/features/review-runs/domain/reviewRunCollection";
+import { ReviewSessionCollection } from "@/features/review-runs/domain/reviewSessionCollection";
+import type { ReviewSessionCollectionTransform } from "@/features/review-runs/domain/reviewSessionCollection";
 import {
-  ReviewRunArchiveState,
-  ReviewRunCreateState,
-  type ReviewRunArchiveState as ReviewRunArchiveStateType,
-  type ReviewRunCreateState as ReviewRunCreateStateType,
-} from "@/features/review-runs/domain/reviewRunOperation";
+  ReviewSessionArchiveState,
+  ReviewSessionCreateState,
+  type ReviewSessionArchiveState as ReviewSessionArchiveStateType,
+  type ReviewSessionCreateState as ReviewSessionCreateStateType,
+} from "@/features/review-runs/domain/reviewSessionOperation";
 import {
   archiveReviewRun as archiveReviewRunViaGateway,
   createReviewRun as createReviewRunViaGateway,
@@ -33,12 +33,14 @@ export type UseReviewRunOperationsOptions = Readonly<{
   target: ReviewRunTarget | null;
   targetIdentity: string;
   commands: ReviewRunCommands;
-  updateCurrentTargetRuns: (transform: ReviewRunCollectionTransform) => void;
+  updateCurrentTargetRuns: (
+    transform: ReviewSessionCollectionTransform,
+  ) => void;
 }>;
 
 export type UseReviewRunOperationsResult = Readonly<{
-  createState: ReviewRunCreateStateType;
-  archiveState: ReviewRunArchiveStateType;
+  createState: ReviewSessionCreateStateType;
+  archiveState: ReviewSessionArchiveStateType;
   createReviewRun: (input: CreateReviewRunInput) => Promise<ReviewRun | null>;
   archiveReviewRun: (reviewRunId: string) => Promise<ReviewRun | null>;
 }>;
@@ -69,12 +71,11 @@ export function useReviewRunOperations(
     targetIdentity,
   );
   const activeOperationIdentityRef = useRef(operationIdentity);
-  const [createState, setCreateState] = useState<ReviewRunCreateStateType>(
-    ReviewRunCreateState.idle(),
+  const [createState, setCreateState] = useState<ReviewSessionCreateStateType>(
+    ReviewSessionCreateState.idle(),
   );
-  const [archiveState, setArchiveState] = useState<ReviewRunArchiveStateType>(
-    ReviewRunArchiveState.idle(),
-  );
+  const [archiveState, setArchiveState] =
+    useState<ReviewSessionArchiveStateType>(ReviewSessionArchiveState.idle());
 
   activeOperationIdentityRef.current = operationIdentity;
 
@@ -93,7 +94,7 @@ export function useReviewRunOperations(
         operationIdentity,
       );
       createRequestIdRef.current = operation.requestId;
-      setCreateState(ReviewRunCreateState.saving());
+      setCreateState(ReviewSessionCreateState.saving());
 
       try {
         const response = await createReviewRunViaGateway(
@@ -113,9 +114,9 @@ export function useReviewRunOperations(
           return null;
         }
 
-        setCreateState(ReviewRunCreateState.success(response.reviewRun));
+        setCreateState(ReviewSessionCreateState.success(response.reviewRun));
         updateCurrentTargetRuns((collection) =>
-          ReviewRunCollection.addCreated(collection, response.reviewRun),
+          ReviewSessionCollection.addCreated(collection, response.reviewRun),
         );
         return response.reviewRun;
       } catch (error) {
@@ -130,7 +131,7 @@ export function useReviewRunOperations(
         }
 
         setCreateState(
-          ReviewRunCreateState.error(normalizeCommandError(error)),
+          ReviewSessionCreateState.error(normalizeCommandError(error)),
         );
         return null;
       }
@@ -155,7 +156,7 @@ export function useReviewRunOperations(
         operationIdentity,
       );
       archiveRequestIdRef.current = operation.requestId;
-      setArchiveState(ReviewRunArchiveState.saving(reviewRunId));
+      setArchiveState(ReviewSessionArchiveState.saving(reviewRunId));
 
       try {
         const response = await archiveReviewRunViaGateway(
@@ -176,10 +177,10 @@ export function useReviewRunOperations(
         }
 
         setArchiveState(
-          ReviewRunArchiveState.success(reviewRunId, response.reviewRun),
+          ReviewSessionArchiveState.success(reviewRunId, response.reviewRun),
         );
         updateCurrentTargetRuns((collection) =>
-          ReviewRunCollection.moveArchived(collection, response.reviewRun),
+          ReviewSessionCollection.moveArchived(collection, response.reviewRun),
         );
         return response.reviewRun;
       } catch (error) {
@@ -194,7 +195,7 @@ export function useReviewRunOperations(
         }
 
         setArchiveState(
-          ReviewRunArchiveState.error(
+          ReviewSessionArchiveState.error(
             reviewRunId,
             normalizeCommandError(error),
           ),
@@ -214,8 +215,8 @@ export function useReviewRunOperations(
   useEffect(() => {
     createRequestIdRef.current += 1;
     archiveRequestIdRef.current += 1;
-    setCreateState(ReviewRunCreateState.idle());
-    setArchiveState(ReviewRunArchiveState.idle());
+    setCreateState(ReviewSessionCreateState.idle());
+    setArchiveState(ReviewSessionArchiveState.idle());
   }, [operationIdentity]);
 
   return {

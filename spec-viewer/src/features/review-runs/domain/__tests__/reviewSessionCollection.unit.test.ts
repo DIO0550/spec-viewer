@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { ReviewRunCollection } from "@/features/review-runs/domain/reviewRunCollection";
+import { ReviewSessionCollection } from "@/features/review-runs/domain/reviewSessionCollection";
 import type { ReviewRun } from "@/features/review-runs/types/reviewRun";
 
 const firstRun = createReviewRun("run-first", "active", null);
@@ -11,13 +11,16 @@ const archivedFirstRun = createReviewRun(
   "2026-05-06T12:30:00Z",
 );
 
-test("ReviewRunCollection.addCreatedは作成runをactiveの先頭に追加して重複を除く", () => {
-  const collection = ReviewRunCollection.fromListResponse(
+test("ReviewSessionCollection.addCreatedは作成runをactiveの先頭に追加して重複を除く", () => {
+  const collection = ReviewSessionCollection.fromListResponse(
     [secondRun, firstRun],
     [archivedFirstRun],
     [],
   );
-  const nextCollection = ReviewRunCollection.addCreated(collection, firstRun);
+  const nextCollection = ReviewSessionCollection.addCreated(
+    collection,
+    firstRun,
+  );
 
   expect(nextCollection.active.map((run) => run.id)).toEqual([
     "run-first",
@@ -26,13 +29,13 @@ test("ReviewRunCollection.addCreatedは作成runをactiveの先頭に追加し�
   expect(nextCollection.archived).toEqual([]);
 });
 
-test("ReviewRunCollection.moveArchivedはactiveから除外してarchivedの先頭に移す", () => {
-  const collection = ReviewRunCollection.fromListResponse(
+test("ReviewSessionCollection.moveArchivedはactiveから除外してarchivedの先頭に移す", () => {
+  const collection = ReviewSessionCollection.fromListResponse(
     [firstRun, secondRun],
     [],
     [],
   );
-  const nextCollection = ReviewRunCollection.moveArchived(
+  const nextCollection = ReviewSessionCollection.moveArchived(
     collection,
     archivedFirstRun,
   );

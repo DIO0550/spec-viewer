@@ -1,19 +1,19 @@
 import type { ReviewRunTarget as ReviewRunTargetDto } from "@/features/review-runs/types/reviewRun";
 import type { SpecFileKey } from "@/features/specs/types/spec";
 
-export type ReviewRunTargetScope = "file" | "spec";
+export type ReviewSessionTargetScope = "file" | "spec";
 
-export type ReviewRunTargetInput = Readonly<{
+export type ReviewSessionTargetInput = Readonly<{
   specId: string | null;
   fileKey: SpecFileKey | null;
-  targetScope: ReviewRunTargetScope;
+  targetScope: ReviewSessionTargetScope;
 }>;
 
-export type ReviewRunTargetIdentity = string;
+export type ReviewSessionTargetIdentity = string;
 
-export const ReviewRunTarget = {
+export const ReviewSessionTarget = {
   /** @returns A review-run target for file/spec scope, or null when incomplete. */
-  create(input: ReviewRunTargetInput): ReviewRunTargetDto | null {
+  create(input: ReviewSessionTargetInput): ReviewRunTargetDto | null {
     if (input.specId === null) {
       return null;
     }
@@ -37,9 +37,9 @@ export const ReviewRunTarget = {
   },
 } as const;
 
-export const ReviewRunTargetIdentity = {
+export const ReviewSessionTargetIdentity = {
   /** @returns Stable target identity for stale async result checks. */
-  create(target: ReviewRunTargetDto | null): ReviewRunTargetIdentity {
+  create(target: ReviewRunTargetDto | null): ReviewSessionTargetIdentity {
     if (target === null) {
       return "none";
     }
@@ -53,8 +53,8 @@ export const ReviewRunTargetIdentity = {
 
   /** @returns True when both identities refer to the same review-run target. */
   equals(
-    current: ReviewRunTargetIdentity,
-    other: ReviewRunTargetIdentity,
+    current: ReviewSessionTargetIdentity,
+    other: ReviewSessionTargetIdentity,
   ): boolean {
     return current === other;
   },

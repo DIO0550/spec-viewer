@@ -1,7 +1,7 @@
 import type { ReviewRun } from "@/features/review-runs/types/reviewRun";
 import type { NormalizedCommandError } from "@/shared/types/ipc";
 
-export type ReviewRunCreateState =
+export type ReviewSessionCreateState =
   | Readonly<{
       status: "idle";
       reviewRun: null;
@@ -23,7 +23,7 @@ export type ReviewRunCreateState =
       error: NormalizedCommandError;
     }>;
 
-export type ReviewRunArchiveState =
+export type ReviewSessionArchiveState =
   | Readonly<{
       status: "idle";
       reviewRunId: null;
@@ -49,9 +49,9 @@ export type ReviewRunArchiveState =
       error: NormalizedCommandError;
     }>;
 
-export const ReviewRunCreateState = {
+export const ReviewSessionCreateState = {
   /** @returns Idle create operation state. */
-  idle(): ReviewRunCreateState {
+  idle(): ReviewSessionCreateState {
     return {
       status: "idle",
       reviewRun: null,
@@ -60,7 +60,7 @@ export const ReviewRunCreateState = {
   },
 
   /** @returns Saving create operation state. */
-  saving(): ReviewRunCreateState {
+  saving(): ReviewSessionCreateState {
     return {
       status: "saving",
       reviewRun: null,
@@ -69,7 +69,7 @@ export const ReviewRunCreateState = {
   },
 
   /** @returns Successful create operation state. */
-  success(reviewRun: ReviewRun): ReviewRunCreateState {
+  success(reviewRun: ReviewRun): ReviewSessionCreateState {
     return {
       status: "success",
       reviewRun,
@@ -78,7 +78,7 @@ export const ReviewRunCreateState = {
   },
 
   /** @returns Failed create operation state. */
-  error(error: NormalizedCommandError): ReviewRunCreateState {
+  error(error: NormalizedCommandError): ReviewSessionCreateState {
     return {
       status: "error",
       reviewRun: null,
@@ -87,9 +87,9 @@ export const ReviewRunCreateState = {
   },
 } as const;
 
-export const ReviewRunArchiveState = {
+export const ReviewSessionArchiveState = {
   /** @returns Idle archive operation state. */
-  idle(): ReviewRunArchiveState {
+  idle(): ReviewSessionArchiveState {
     return {
       status: "idle",
       reviewRunId: null,
@@ -99,7 +99,7 @@ export const ReviewRunArchiveState = {
   },
 
   /** @returns Saving archive operation state. */
-  saving(reviewRunId: string): ReviewRunArchiveState {
+  saving(reviewRunId: string): ReviewSessionArchiveState {
     return {
       status: "saving",
       reviewRunId,
@@ -109,7 +109,10 @@ export const ReviewRunArchiveState = {
   },
 
   /** @returns Successful archive operation state. */
-  success(reviewRunId: string, reviewRun: ReviewRun): ReviewRunArchiveState {
+  success(
+    reviewRunId: string,
+    reviewRun: ReviewRun,
+  ): ReviewSessionArchiveState {
     return {
       status: "success",
       reviewRunId,
@@ -122,7 +125,7 @@ export const ReviewRunArchiveState = {
   error(
     reviewRunId: string,
     error: NormalizedCommandError,
-  ): ReviewRunArchiveState {
+  ): ReviewSessionArchiveState {
     return {
       status: "error",
       reviewRunId,

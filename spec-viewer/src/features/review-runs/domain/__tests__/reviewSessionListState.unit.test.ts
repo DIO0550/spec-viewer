@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 
-import { ReviewRunCollection } from "@/features/review-runs/domain/reviewRunCollection";
-import { ReviewRunListState } from "@/features/review-runs/domain/reviewRunListState";
+import { ReviewSessionCollection } from "@/features/review-runs/domain/reviewSessionCollection";
+import { ReviewSessionListState } from "@/features/review-runs/domain/reviewSessionListState";
 import type { ReviewRun } from "@/features/review-runs/types/reviewRun";
 
 const target = {
@@ -11,25 +11,32 @@ const target = {
 } as const;
 const activeRun = createReviewRun("run-active");
 
-test("ReviewRunListState.loadedはrunがなければemptyを返す", () => {
-  const state = ReviewRunListState.loaded(target, ReviewRunCollection.empty());
+test("ReviewSessionListState.loadedはrunがなければemptyを返す", () => {
+  const state = ReviewSessionListState.loaded(
+    target,
+    ReviewSessionCollection.empty(),
+  );
 
   expect(state.status).toBe("empty");
   expect(state.active).toEqual([]);
 });
 
-test("ReviewRunListState.loadedはrunがあればreadyを返す", () => {
-  const collection = ReviewRunCollection.fromListResponse([activeRun], [], []);
-  const state = ReviewRunListState.loaded(target, collection);
+test("ReviewSessionListState.loadedはrunがあればreadyを返す", () => {
+  const collection = ReviewSessionCollection.fromListResponse(
+    [activeRun],
+    [],
+    [],
+  );
+  const state = ReviewSessionListState.loaded(target, collection);
 
   expect(state.status).toBe("ready");
   expect(state.active).toEqual([activeRun]);
 });
 
-test("ReviewRunListState.applyCollectionTransformはloading中の更新でrequestを無効化する", () => {
-  const result = ReviewRunListState.applyCollectionTransform(
-    ReviewRunListState.loading(target),
-    (collection) => ReviewRunCollection.addCreated(collection, activeRun),
+test("ReviewSessionListState.applyCollectionTransformはloading中の更新でrequestを無効化する", () => {
+  const result = ReviewSessionListState.applyCollectionTransform(
+    ReviewSessionListState.loading(target),
+    (collection) => ReviewSessionCollection.addCreated(collection, activeRun),
   );
 
   expect(result.invalidatesRequest).toBe(true);
@@ -37,9 +44,9 @@ test("ReviewRunListState.applyCollectionTransformはloading中の更新でreques
   expect(result.state.active).toEqual([activeRun]);
 });
 
-test("ReviewRunListState.applyCollectionTransformはidleなら状態を変えない", () => {
-  const state = ReviewRunListState.idle();
-  const result = ReviewRunListState.applyCollectionTransform(
+test("ReviewSessionListState.applyCollectionTransformはidleなら状態を変えない", () => {
+  const state = ReviewSessionListState.idle();
+  const result = ReviewSessionListState.applyCollectionTransform(
     state,
     (collection) => collection,
   );

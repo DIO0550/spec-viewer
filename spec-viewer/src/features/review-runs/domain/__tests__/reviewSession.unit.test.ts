@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { ReviewRunEntity } from "@/features/review-runs/domain/reviewRun";
+import { ReviewSession } from "@/features/review-runs/domain/reviewSession";
 import type { ReviewRun } from "@/features/review-runs/types/reviewRun";
 
 const activeRun = createReviewRun({
@@ -9,15 +9,15 @@ const activeRun = createReviewRun({
   archivedAt: null,
 });
 
-test("ReviewRunEntity.fromDtoは非archived runをactive collection向けにnarrowする", () => {
-  const entity = ReviewRunEntity.fromDto(activeRun);
+test("ReviewSession.fromDtoは非archived runをactive collection向けにnarrowする", () => {
+  const entity = ReviewSession.fromDto(activeRun);
 
-  expect(ReviewRunEntity.isNonArchived(entity)).toBe(true);
-  expect(ReviewRunEntity.isArchived(entity)).toBe(false);
+  expect(ReviewSession.isNonArchived(entity)).toBe(true);
+  expect(ReviewSession.isArchived(entity)).toBe(false);
 });
 
-test("ReviewRunEntity.fromDtoはarchived runをarchived variantへnarrowする", () => {
-  const entity = ReviewRunEntity.fromDto(
+test("ReviewSession.fromDtoはarchived runをarchived variantへnarrowする", () => {
+  const entity = ReviewSession.fromDto(
     createReviewRun({
       id: "run-archived",
       status: "archived",
@@ -25,29 +25,29 @@ test("ReviewRunEntity.fromDtoはarchived runをarchived variantへnarrowする",
     }),
   );
 
-  expect(ReviewRunEntity.isArchived(entity)).toBe(true);
+  expect(ReviewSession.isArchived(entity)).toBe(true);
 });
 
-test("ReviewRunEntity.fromDtoはarchivedAtのないarchived runを拒否する", () => {
+test("ReviewSession.fromDtoはarchivedAtのないarchived runを拒否する", () => {
   const invalidRun = createReviewRun({
     id: "run-invalid-archived",
     status: "archived",
     archivedAt: null,
   });
 
-  expect(() => ReviewRunEntity.fromDto(invalidRun)).toThrow(
+  expect(() => ReviewSession.fromDto(invalidRun)).toThrow(
     "Archived review run must have archivedAt",
   );
 });
 
-test("ReviewRunEntity.fromDtoはarchivedAtのある非archived runを拒否する", () => {
+test("ReviewSession.fromDtoはarchivedAtのある非archived runを拒否する", () => {
   const invalidRun = createReviewRun({
     id: "run-invalid-active",
     status: "completed",
     archivedAt: "2026-05-06T12:30:00Z",
   });
 
-  expect(() => ReviewRunEntity.fromDto(invalidRun)).toThrow(
+  expect(() => ReviewSession.fromDto(invalidRun)).toThrow(
     "Non-archived review run must not have archivedAt",
   );
 });

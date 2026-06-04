@@ -1,26 +1,26 @@
 import {
-  ReviewRunEntity,
-  type ArchivedReviewRun,
-  type NonArchivedReviewRun,
-} from "@/features/review-runs/domain/reviewRun";
+  ReviewSession,
+  type ArchivedReviewSession,
+  type NonArchivedReviewSession,
+} from "@/features/review-runs/domain/reviewSession";
 import type {
   ReviewRun,
   ReviewRunListProblem,
 } from "@/features/review-runs/types/reviewRun";
 
-export type ReviewRunCollection = Readonly<{
-  active: readonly NonArchivedReviewRun[];
-  archived: readonly ArchivedReviewRun[];
+export type ReviewSessionCollection = Readonly<{
+  active: readonly NonArchivedReviewSession[];
+  archived: readonly ArchivedReviewSession[];
   problems: readonly ReviewRunListProblem[];
 }>;
 
-export type ReviewRunCollectionTransform = (
-  collection: ReviewRunCollection,
-) => ReviewRunCollection;
+export type ReviewSessionCollectionTransform = (
+  collection: ReviewSessionCollection,
+) => ReviewSessionCollection;
 
-export const ReviewRunCollection = {
-  /** @returns Empty review-run collection. */
-  empty(): ReviewRunCollection {
+export const ReviewSessionCollection = {
+  /** @returns Empty review-session collection. */
+  empty(): ReviewSessionCollection {
     return {
       active: [],
       archived: [],
@@ -33,7 +33,7 @@ export const ReviewRunCollection = {
     active: readonly ReviewRun[],
     archived: readonly ReviewRun[],
     problems: readonly ReviewRunListProblem[],
-  ): ReviewRunCollection {
+  ): ReviewSessionCollection {
     return {
       active: active.map(toNonArchivedRun),
       archived: archived.map(toArchivedRun),
@@ -41,11 +41,11 @@ export const ReviewRunCollection = {
     };
   },
 
-  /** @returns Collection with the created run first in active results. */
+  /** @returns Collection with the created session first in active results. */
   addCreated(
-    collection: ReviewRunCollection,
+    collection: ReviewSessionCollection,
     reviewRun: ReviewRun,
-  ): ReviewRunCollection {
+  ): ReviewSessionCollection {
     const created = toNonArchivedRun(reviewRun);
 
     return {
@@ -58,11 +58,11 @@ export const ReviewRunCollection = {
     };
   },
 
-  /** @returns Collection with the archived run moved from active to archived. */
+  /** @returns Collection with the archived session moved from active to archived. */
   moveArchived(
-    collection: ReviewRunCollection,
+    collection: ReviewSessionCollection,
     reviewRun: ReviewRun,
-  ): ReviewRunCollection {
+  ): ReviewSessionCollection {
     const archived = toArchivedRun(reviewRun);
 
     return {
@@ -76,16 +76,16 @@ export const ReviewRunCollection = {
   },
 
   /** @returns True when no active or archived runs exist. */
-  isEmpty(collection: ReviewRunCollection): boolean {
+  isEmpty(collection: ReviewSessionCollection): boolean {
     return collection.active.length === 0 && collection.archived.length === 0;
   },
 } as const;
 
 /** @returns Non-archived review run or throws for an invalid active entry. */
-function toNonArchivedRun(reviewRun: ReviewRun): NonArchivedReviewRun {
-  const entity = ReviewRunEntity.fromDto(reviewRun);
+function toNonArchivedRun(reviewRun: ReviewRun): NonArchivedReviewSession {
+  const entity = ReviewSession.fromDto(reviewRun);
 
-  if (ReviewRunEntity.isArchived(entity)) {
+  if (ReviewSession.isArchived(entity)) {
     throw new Error(
       `Archived review run cannot be placed in active collection: ${reviewRun.id}`,
     );
@@ -95,10 +95,10 @@ function toNonArchivedRun(reviewRun: ReviewRun): NonArchivedReviewRun {
 }
 
 /** @returns Archived review run or throws for an invalid archived entry. */
-function toArchivedRun(reviewRun: ReviewRun): ArchivedReviewRun {
-  const entity = ReviewRunEntity.fromDto(reviewRun);
+function toArchivedRun(reviewRun: ReviewRun): ArchivedReviewSession {
+  const entity = ReviewSession.fromDto(reviewRun);
 
-  if (ReviewRunEntity.isNonArchived(entity)) {
+  if (ReviewSession.isNonArchived(entity)) {
     throw new Error(
       `Non-archived review run cannot be placed in archived collection: ${reviewRun.id}`,
     );
