@@ -3,4 +3,7 @@ export {
   useReviewRuns,
   type ReviewRunTargetScope,
 } from "./hooks/useReviewRuns";
-export type { ReviewRun, ReviewRunExecutionMode } from "@/features/review-runs/types/reviewRun";
+export type {
+  ReviewRun,
+  ReviewRunExecutionMode,
+} from "@/features/review-runs/types/reviewRun";
