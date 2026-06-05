@@ -1,10 +1,24 @@
 import type { IsoDateTimeString } from "@/features/comments/types/comment";
 import type {
   ReviewRun,
+  ReviewRunExecutionTarget,
+  ReviewRunSourceFile,
   ReviewRunStatus,
+  ReviewRunTarget,
 } from "@/features/review-runs/types/reviewRun";
 
-export type ReviewSessionBase = Omit<ReviewRun, "archivedAt" | "status">;
+export type ReviewSessionBase = Readonly<{
+  id: string;
+  target: ReviewRunTarget;
+  executionTarget: ReviewRunExecutionTarget;
+  specFolderPath: string;
+  folderPath: string;
+  sourceFiles: readonly ReviewRunSourceFile[];
+  commentCount: number;
+  createdAt: IsoDateTimeString;
+  summary: string | null;
+  warnings: readonly string[];
+}>;
 
 export type ActiveReviewSession = ReviewSessionBase &
   Readonly<{
