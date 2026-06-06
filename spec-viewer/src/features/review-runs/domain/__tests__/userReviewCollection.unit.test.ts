@@ -1,23 +1,27 @@
 import { expect, test } from "vitest";
 
-import { ReviewSessionCollection } from "@/features/review-runs/domain/reviewSessionCollection";
-import type { ReviewRun } from "@/features/review-runs/types/reviewRun";
+import {
+  UserReview,
+  type UserReview as UserReviewType,
+  type UserReviewRestoreInput,
+} from "@/features/review-runs/domain/userReview";
+import { UserReviewCollection } from "@/features/review-runs/domain/userReviewCollection";
 
-const firstRun = createReviewRun("run-first", "active", null);
-const secondRun = createReviewRun("run-second", "completed", null);
-const archivedFirstRun = createReviewRun(
+const firstRun = createUserReview("run-first", "active", null);
+const secondRun = createUserReview("run-second", "completed", null);
+const archivedFirstRun = createUserReview(
   "run-first",
   "archived",
   "2026-05-06T12:30:00Z",
 );
 
-test("ReviewSessionCollection.addCreatedは作成runをactiveの先頭に追加して重複を除く", () => {
-  const collection = ReviewSessionCollection.fromListResponse(
+test("UserReviewCollection.addCreatedは作成runをactiveの先頭に追加して重複を除く", () => {
+  const collection = UserReviewCollection.fromListResponse(
     [secondRun, firstRun],
     [archivedFirstRun],
     [],
   );
-  const nextCollection = ReviewSessionCollection.addCreated(
+  const nextCollection = UserReviewCollection.addCreated(
     collection,
     firstRun,
   );
@@ -29,13 +33,13 @@ test("ReviewSessionCollection.addCreatedは作成runをactiveの先頭に追加�
   expect(nextCollection.archived).toEqual([]);
 });
 
-test("ReviewSessionCollection.moveArchivedはactiveから除外してarchivedの先頭に移す", () => {
-  const collection = ReviewSessionCollection.fromListResponse(
+test("UserReviewCollection.moveArchivedはactiveから除外してarchivedの先頭に移す", () => {
+  const collection = UserReviewCollection.fromListResponse(
     [firstRun, secondRun],
     [],
     [],
   );
-  const nextCollection = ReviewSessionCollection.moveArchived(
+  const nextCollection = UserReviewCollection.moveArchived(
     collection,
     archivedFirstRun,
   );
@@ -44,12 +48,12 @@ test("ReviewSessionCollection.moveArchivedはactiveから除外してarchivedの
   expect(nextCollection.archived.map((run) => run.id)).toEqual(["run-first"]);
 });
 
-function createReviewRun(
+function createUserReview(
   id: string,
-  status: ReviewRun["status"],
-  archivedAt: ReviewRun["archivedAt"],
-): ReviewRun {
-  return {
+  status: UserReviewRestoreInput["status"],
+  archivedAt: UserReviewRestoreInput["archivedAt"],
+): UserReviewType {
+  return UserReview.restore({
     id,
     status,
     target: {
@@ -57,7 +61,7 @@ function createReviewRun(
       specId: "auth",
       fileKey: "tasks",
     },
-    executionTarget: {
+    workspace: {
       mode: "currentWorkspace",
       workspacePath: "/workspace/spec-reviewer",
     },
@@ -75,5 +79,5 @@ function createReviewRun(
     archivedAt,
     summary: null,
     warnings: [],
-  };
+  });
 }

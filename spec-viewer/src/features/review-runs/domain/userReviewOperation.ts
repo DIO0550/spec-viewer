@@ -1,135 +1,135 @@
-import type { ReviewRun } from "@/features/review-runs/types/reviewRun";
+import type { UserReview } from "@/features/review-runs/domain/userReview";
 import type { NormalizedCommandError } from "@/shared/types/ipc";
 
-export type ReviewSessionCreateState =
+export type UserReviewCreateState =
   | Readonly<{
       status: "idle";
-      reviewRun: null;
+      userReview: null;
       error: null;
     }>
   | Readonly<{
       status: "saving";
-      reviewRun: null;
+      userReview: null;
       error: null;
     }>
   | Readonly<{
       status: "success";
-      reviewRun: ReviewRun;
+      userReview: UserReview;
       error: null;
     }>
   | Readonly<{
       status: "error";
-      reviewRun: null;
+      userReview: null;
       error: NormalizedCommandError;
     }>;
 
-export type ReviewSessionArchiveState =
+export type UserReviewArchiveState =
   | Readonly<{
       status: "idle";
-      reviewRunId: null;
-      reviewRun: null;
+      userReviewId: null;
+      userReview: null;
       error: null;
     }>
   | Readonly<{
       status: "saving";
-      reviewRunId: string;
-      reviewRun: null;
+      userReviewId: string;
+      userReview: null;
       error: null;
     }>
   | Readonly<{
       status: "success";
-      reviewRunId: string;
-      reviewRun: ReviewRun;
+      userReviewId: string;
+      userReview: UserReview;
       error: null;
     }>
   | Readonly<{
       status: "error";
-      reviewRunId: string;
-      reviewRun: null;
+      userReviewId: string;
+      userReview: null;
       error: NormalizedCommandError;
     }>;
 
-export const ReviewSessionCreateState = {
+export const UserReviewCreateState = {
   /** @returns Idle create operation state. */
-  idle(): ReviewSessionCreateState {
+  idle(): UserReviewCreateState {
     return {
       status: "idle",
-      reviewRun: null,
+      userReview: null,
       error: null,
     };
   },
 
   /** @returns Saving create operation state. */
-  saving(): ReviewSessionCreateState {
+  saving(): UserReviewCreateState {
     return {
       status: "saving",
-      reviewRun: null,
+      userReview: null,
       error: null,
     };
   },
 
   /** @returns Successful create operation state. */
-  success(reviewRun: ReviewRun): ReviewSessionCreateState {
+  success(userReview: UserReview): UserReviewCreateState {
     return {
       status: "success",
-      reviewRun,
+      userReview,
       error: null,
     };
   },
 
   /** @returns Failed create operation state. */
-  error(error: NormalizedCommandError): ReviewSessionCreateState {
+  error(error: NormalizedCommandError): UserReviewCreateState {
     return {
       status: "error",
-      reviewRun: null,
+      userReview: null,
       error,
     };
   },
 } as const;
 
-export const ReviewSessionArchiveState = {
+export const UserReviewArchiveState = {
   /** @returns Idle archive operation state. */
-  idle(): ReviewSessionArchiveState {
+  idle(): UserReviewArchiveState {
     return {
       status: "idle",
-      reviewRunId: null,
-      reviewRun: null,
+      userReviewId: null,
+      userReview: null,
       error: null,
     };
   },
 
   /** @returns Saving archive operation state. */
-  saving(reviewRunId: string): ReviewSessionArchiveState {
+  saving(userReviewId: string): UserReviewArchiveState {
     return {
       status: "saving",
-      reviewRunId,
-      reviewRun: null,
+      userReviewId,
+      userReview: null,
       error: null,
     };
   },
 
   /** @returns Successful archive operation state. */
   success(
-    reviewRunId: string,
-    reviewRun: ReviewRun,
-  ): ReviewSessionArchiveState {
+    userReviewId: string,
+    userReview: UserReview,
+  ): UserReviewArchiveState {
     return {
       status: "success",
-      reviewRunId,
-      reviewRun,
+      userReviewId,
+      userReview,
       error: null,
     };
   },
 
   /** @returns Failed archive operation state. */
   error(
-    reviewRunId: string,
+    userReviewId: string,
     error: NormalizedCommandError,
-  ): ReviewSessionArchiveState {
+  ): UserReviewArchiveState {
     return {
       status: "error",
-      reviewRunId,
-      reviewRun: null,
+      userReviewId,
+      userReview: null,
       error,
     };
   },

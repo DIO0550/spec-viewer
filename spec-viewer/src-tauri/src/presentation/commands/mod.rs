@@ -82,7 +82,7 @@ impl From<AppUseCaseError> for CommandError {
             AppUseCaseError::InvalidSpec { .. } => "invalidSpec",
             AppUseCaseError::InvalidComment { .. } => "invalidComment",
             AppUseCaseError::CommentRepository { .. } => "commentRepository",
-            AppUseCaseError::ReviewRunExport { .. } => "reviewRunExport",
+            AppUseCaseError::ReviewRunExport { .. } => "userReviewExport",
         };
 
         Self {

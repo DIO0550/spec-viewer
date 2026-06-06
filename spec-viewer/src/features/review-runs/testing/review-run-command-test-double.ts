@@ -1,32 +1,32 @@
-import type { ReviewRunCommands } from "@/shared/api/tauri";
+import type { UserReviewCommands } from "@/shared/api/tauri";
 import type {
-  ArchiveReviewRunRequest,
-  ArchiveReviewRunResponse,
-  CreateReviewRunRequest,
-  CreateReviewRunResponse,
-  ListReviewRunsRequest,
-  ListReviewRunsResponse,
-  ReviewRun,
-} from "@/features/review-runs/types/reviewRun";
+  ArchiveUserReviewRequest,
+  ArchiveUserReviewResponse,
+  CreateUserReviewRequest,
+  CreateUserReviewResponse,
+  ListUserReviewsRequest,
+  ListUserReviewsResponse,
+  UserReview,
+} from "@/features/review-runs/types/userReviewIpc";
 
-export type ReviewRunCommandTestDoubleResponses = Readonly<{
-  createReviewRun?: CreateReviewRunResponse;
-  listReviewRuns?: ListReviewRunsResponse;
-  archiveReviewRun?: ArchiveReviewRunResponse;
+export type UserReviewCommandTestDoubleResponses = Readonly<{
+  createUserReview?: CreateUserReviewResponse;
+  listUserReviews?: ListUserReviewsResponse;
+  archiveUserReview?: ArchiveUserReviewResponse;
 }>;
 
-export type ReviewRunCommandTestDoubleCalls = Readonly<{
-  createReviewRun: readonly CreateReviewRunRequest[];
-  listReviewRuns: readonly ListReviewRunsRequest[];
-  archiveReviewRun: readonly ArchiveReviewRunRequest[];
+export type UserReviewCommandTestDoubleCalls = Readonly<{
+  createUserReview: readonly CreateUserReviewRequest[];
+  listUserReviews: readonly ListUserReviewsRequest[];
+  archiveUserReview: readonly ArchiveUserReviewRequest[];
 }>;
 
-export type ReviewRunCommandTestDouble = Readonly<{
-  commands: ReviewRunCommands;
-  calls: ReviewRunCommandTestDoubleCalls;
+export type UserReviewCommandTestDouble = Readonly<{
+  commands: UserReviewCommands;
+  calls: UserReviewCommandTestDoubleCalls;
 }>;
 
-const defaultReviewRun: ReviewRun = {
+const defaultUserReview: UserReview = {
   id: "2026-05-06T120000Z-file-tasks-abcdef12",
   status: "active",
   target: {
@@ -34,7 +34,7 @@ const defaultReviewRun: ReviewRun = {
     specId: "auth",
     fileKey: "tasks",
   },
-  executionTarget: {
+  workspace: {
     mode: "currentWorkspace",
     workspacePath: "/workspace/spec-reviewer",
   },
@@ -56,42 +56,42 @@ const defaultReviewRun: ReviewRun = {
 };
 
 /** @returns A typed review run command double for hook and component tests. */
-export function createReviewRunCommandTestDouble(
-  responses: ReviewRunCommandTestDoubleResponses = {},
-): ReviewRunCommandTestDouble {
-  const createReviewRunCalls: CreateReviewRunRequest[] = [];
-  const listReviewRunsCalls: ListReviewRunsRequest[] = [];
-  const archiveReviewRunCalls: ArchiveReviewRunRequest[] = [];
+export function createUserReviewCommandTestDouble(
+  responses: UserReviewCommandTestDoubleResponses = {},
+): UserReviewCommandTestDouble {
+  const createUserReviewCalls: CreateUserReviewRequest[] = [];
+  const listUserReviewsCalls: ListUserReviewsRequest[] = [];
+  const archiveUserReviewCalls: ArchiveUserReviewRequest[] = [];
 
   return {
     calls: {
-      createReviewRun: createReviewRunCalls,
-      listReviewRuns: listReviewRunsCalls,
-      archiveReviewRun: archiveReviewRunCalls,
+      createUserReview: createUserReviewCalls,
+      listUserReviews: listUserReviewsCalls,
+      archiveUserReview: archiveUserReviewCalls,
     },
     commands: {
-      createReviewRun: async (request) => {
-        createReviewRunCalls.push(request);
-        return responses.createReviewRun ?? { reviewRun: defaultReviewRun };
+      createUserReview: async (request) => {
+        createUserReviewCalls.push(request);
+        return responses.createUserReview ?? { userReview: defaultUserReview };
       },
-      listReviewRuns: async (request) => {
-        listReviewRunsCalls.push(request);
+      listUserReviews: async (request) => {
+        listUserReviewsCalls.push(request);
         return (
-          responses.listReviewRuns ?? {
-            active: [defaultReviewRun],
+          responses.listUserReviews ?? {
+            active: [defaultUserReview],
             archived: [],
             problems: [],
           }
         );
       },
-      archiveReviewRun: async (request) => {
-        archiveReviewRunCalls.push(request);
+      archiveUserReview: async (request) => {
+        archiveUserReviewCalls.push(request);
         return (
-          responses.archiveReviewRun ?? {
-            reviewRun: {
-              ...defaultReviewRun,
+          responses.archiveUserReview ?? {
+            userReview: {
+              ...defaultUserReview,
               status: "archived",
-              folderPath: defaultReviewRun.folderPath.replace(
+              folderPath: defaultUserReview.folderPath.replace(
                 "/active/",
                 "/archive/",
               ),

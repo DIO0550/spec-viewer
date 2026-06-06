@@ -46,7 +46,7 @@ type Props = Readonly<{
   onExportComments?: (scope: CommentExportScope) => void;
   onCopyLlmPrompt?: (scope: CommentExportScope) => void;
   onCopyMcpFeedback?: () => void;
-  reviewRunPanel?: ReactNode;
+  userReviewPanel?: ReactNode;
 }>;
 
 type CommentGroups = Readonly<{
@@ -146,7 +146,7 @@ export function CommentSidebar({
   onExportComments,
   onCopyLlmPrompt,
   onCopyMcpFeedback,
-  reviewRunPanel,
+  userReviewPanel,
 }: Props) {
   const [activeFilter, setActiveFilter] =
     useState<CommentDisplayFilter>(defaultDisplayFilter);
@@ -249,7 +249,7 @@ export function CommentSidebar({
           onCopyMcpFeedback={onCopyMcpFeedback}
         />
         <CommentExportFeedback exportState={exportState} />
-        {reviewRunPanel}
+        {userReviewPanel}
         <EmptyState
           title={uiText.sidebar.empty}
           description={`${uiText.sidebar.emptyDescription} ${uiText.sidebar.addHint}`}
@@ -299,7 +299,7 @@ export function CommentSidebar({
         onCopyMcpFeedback={onCopyMcpFeedback}
       />
       <CommentExportFeedback exportState={exportState} />
-      {reviewRunPanel}
+      {userReviewPanel}
       <CommentSearchControl
         searchQuery={searchQuery}
         resultCount={searchedComments.length}

@@ -16,11 +16,11 @@ import type {
   SpecSkillMcpFeedbackPayload,
 } from "@/features/comments/types/comment";
 import type {
-  CreateReviewRunRequest,
-  ReviewRun,
-  ReviewRunManifest,
-  ReviewRunStatusDocument,
-} from "@/features/review-runs/types/reviewRun";
+  CreateUserReviewRequest,
+  UserReview,
+  UserReviewManifest,
+  UserReviewStatusDocument,
+} from "@/features/review-runs/types/userReviewIpc";
 import type { Comment as DomainComment } from "@/features/comments/domain/comment";
 
 test("types/commentのCommentはdomain Commentの互換exportとして扱える", () => {
@@ -100,11 +100,11 @@ test("MCP feedback pathはdry-run payloadとmanual copy operationを表現する
 
 test("review run payloadはfile/spec targetと実行先を表現する", () => {
   expectTypeOf<
-    CommandRequest<"create_review_run">
-  >().toEqualTypeOf<CreateReviewRunRequest>();
-  expectTypeOf<ReviewRun>().toMatchTypeOf<{
+    CommandRequest<"create_user_review">
+  >().toEqualTypeOf<CreateUserReviewRequest>();
+  expectTypeOf<UserReview>().toMatchTypeOf<{
     status: "active" | "inProgress" | "completed" | "archived";
-    executionTarget:
+    workspace:
       | { mode: "currentWorkspace"; workspacePath: string }
       | {
           mode: "worktree";
@@ -113,21 +113,21 @@ test("review run payloadはfile/spec targetと実行先を表現する", () => {
           branchName: string;
         };
   }>();
-  expectTypeOf<CreateReviewRunRequest>().toMatchTypeOf<{
+  expectTypeOf<CreateUserReviewRequest>().toMatchTypeOf<{
     target:
       | { scope: "file"; specId: string }
       | { scope: "spec"; specId: string };
-    executionMode: "currentWorkspace" | "worktree";
+    workspaceMode: "currentWorkspace" | "worktree";
   }>();
 });
 
 test("review run manifestとstatus documentはbundle schemaを表現する", () => {
-  expectTypeOf<ReviewRunManifest>().toMatchTypeOf<{
+  expectTypeOf<UserReviewManifest>().toMatchTypeOf<{
     schemaVersion: "spec-reviewer.review-run.v1";
     commentIds: readonly string[];
     archivedAt: string | null;
   }>();
-  expectTypeOf<ReviewRunStatusDocument>().toMatchTypeOf<{
+  expectTypeOf<UserReviewStatusDocument>().toMatchTypeOf<{
     status: "active" | "inProgress" | "completed" | "archived";
     summary: string | null;
     warnings: readonly string[];

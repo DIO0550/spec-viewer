@@ -1,16 +1,14 @@
 import {
-  ReviewSessionCollection,
-  type ReviewSessionCollection as ReviewSessionCollectionType,
-  type ReviewSessionCollectionTransform,
-} from "@/features/review-runs/domain/reviewSessionCollection";
-import type {
-  ReviewRun,
-  ReviewRunListProblem,
-  ReviewRunTarget,
-} from "@/features/review-runs/types/reviewRun";
+  UserReviewCollection,
+  type UserReviewCollection as UserReviewCollectionType,
+  type UserReviewCollectionTransform,
+} from "@/features/review-runs/domain/userReviewCollection";
+import type { UserReview } from "@/features/review-runs/domain/userReview";
+import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
+import type { UserReviewListProblem } from "@/features/review-runs/types/userReviewIpc";
 import type { NormalizedCommandError } from "@/shared/types/ipc";
 
-export type ReviewSessionListIdleState = Readonly<{
+export type UserReviewListIdleState = Readonly<{
   status: "idle";
   target: null;
   active: readonly [];
@@ -19,57 +17,57 @@ export type ReviewSessionListIdleState = Readonly<{
   error: null;
 }>;
 
-export type ReviewSessionListLoadingState = Readonly<{
+export type UserReviewListLoadingState = Readonly<{
   status: "loading";
-  target: ReviewRunTarget;
+  target: UserReviewTarget;
   active: readonly [];
   archived: readonly [];
   problems: readonly [];
   error: null;
 }>;
 
-export type ReviewSessionListReadyState = Readonly<{
+export type UserReviewListReadyState = Readonly<{
   status: "ready";
-  target: ReviewRunTarget;
-  active: readonly ReviewRun[];
-  archived: readonly ReviewRun[];
-  problems: readonly ReviewRunListProblem[];
+  target: UserReviewTarget;
+  active: readonly UserReview[];
+  archived: readonly UserReview[];
+  problems: readonly UserReviewListProblem[];
   error: null;
 }>;
 
-export type ReviewSessionListEmptyState = Readonly<{
+export type UserReviewListEmptyState = Readonly<{
   status: "empty";
-  target: ReviewRunTarget;
+  target: UserReviewTarget;
   active: readonly [];
   archived: readonly [];
-  problems: readonly ReviewRunListProblem[];
+  problems: readonly UserReviewListProblem[];
   error: null;
 }>;
 
-export type ReviewSessionListErrorState = Readonly<{
+export type UserReviewListErrorState = Readonly<{
   status: "error";
-  target: ReviewRunTarget;
+  target: UserReviewTarget;
   active: readonly [];
   archived: readonly [];
   problems: readonly [];
   error: NormalizedCommandError;
 }>;
 
-export type ReviewSessionListState =
-  | ReviewSessionListIdleState
-  | ReviewSessionListLoadingState
-  | ReviewSessionListReadyState
-  | ReviewSessionListEmptyState
-  | ReviewSessionListErrorState;
+export type UserReviewListState =
+  | UserReviewListIdleState
+  | UserReviewListLoadingState
+  | UserReviewListReadyState
+  | UserReviewListEmptyState
+  | UserReviewListErrorState;
 
-export type ReviewSessionListTransformResult = Readonly<{
-  state: ReviewSessionListState;
+export type UserReviewListTransformResult = Readonly<{
+  state: UserReviewListState;
   invalidatesRequest: boolean;
 }>;
 
-export const ReviewSessionListState = {
+export const UserReviewListState = {
   /** @returns Idle list state with no active target. */
-  idle(): ReviewSessionListIdleState {
+  idle(): UserReviewListIdleState {
     return {
       status: "idle",
       target: null,
@@ -81,7 +79,7 @@ export const ReviewSessionListState = {
   },
 
   /** @returns Loading list state for the active target. */
-  loading(target: ReviewRunTarget): ReviewSessionListLoadingState {
+  loading(target: UserReviewTarget): UserReviewListLoadingState {
     return {
       status: "loading",
       target,
@@ -94,10 +92,10 @@ export const ReviewSessionListState = {
 
   /** @returns Ready or empty list state for a normalized collection. */
   loaded(
-    target: ReviewRunTarget,
-    collection: ReviewSessionCollectionType,
-  ): ReviewSessionListReadyState | ReviewSessionListEmptyState {
-    if (ReviewSessionCollection.isEmpty(collection)) {
+    target: UserReviewTarget,
+    collection: UserReviewCollectionType,
+  ): UserReviewListReadyState | UserReviewListEmptyState {
+    if (UserReviewCollection.isEmpty(collection)) {
       return {
         status: "empty",
         target,
@@ -120,9 +118,9 @@ export const ReviewSessionListState = {
 
   /** @returns Error list state for a failed target load. */
   error(
-    target: ReviewRunTarget,
+    target: UserReviewTarget,
     error: NormalizedCommandError,
-  ): ReviewSessionListErrorState {
+  ): UserReviewListErrorState {
     return {
       status: "error",
       target,
@@ -135,16 +133,16 @@ export const ReviewSessionListState = {
 
   /** @returns True when the list has active or empty loaded data. */
   isLoaded(
-    state: ReviewSessionListState,
-  ): state is ReviewSessionListReadyState | ReviewSessionListEmptyState {
+    state: UserReviewListState,
+  ): state is UserReviewListReadyState | UserReviewListEmptyState {
     return state.status === "ready" || state.status === "empty";
   },
 
   /** @returns State transformed by a collection update plus request invalidation. */
   applyCollectionTransform(
-    state: ReviewSessionListState,
-    transform: ReviewSessionCollectionTransform,
-  ): ReviewSessionListTransformResult {
+    state: UserReviewListState,
+    transform: UserReviewCollectionTransform,
+  ): UserReviewListTransformResult {
     if (state.status === "idle") {
       return {
         state,
@@ -156,7 +154,7 @@ export const ReviewSessionListState = {
     const nextCollection = transform(collection);
 
     return {
-      state: ReviewSessionListState.loaded(state.target, nextCollection),
+      state: UserReviewListState.loaded(state.target, nextCollection),
       invalidatesRequest:
         state.status === "loading" && nextCollection !== collection,
     };
@@ -165,15 +163,15 @@ export const ReviewSessionListState = {
 
 /** @returns Domain collection represented by a list state. */
 function collectionFromState(
-  state: Exclude<ReviewSessionListState, ReviewSessionListIdleState>,
-): ReviewSessionCollectionType {
-  if (ReviewSessionListState.isLoaded(state)) {
-    return ReviewSessionCollection.fromListResponse(
+  state: Exclude<UserReviewListState, UserReviewListIdleState>,
+): UserReviewCollectionType {
+  if (UserReviewListState.isLoaded(state)) {
+    return UserReviewCollection.fromListResponse(
       state.active,
       state.archived,
       state.problems,
     );
   }
 
-  return ReviewSessionCollection.empty();
+  return UserReviewCollection.empty();
 }

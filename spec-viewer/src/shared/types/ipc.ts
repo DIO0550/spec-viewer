@@ -1,5 +1,5 @@
 import type { CommentCommandPayloads } from "@/features/comments/types/comment";
-import type { ReviewRunCommandPayloads } from "@/features/review-runs/types/reviewRun";
+import type { UserReviewCommandPayloads } from "@/features/review-runs/types/userReviewIpc";
 import type {
   ArchiveSpecRequest,
   ArchiveSpecResponse,
@@ -31,7 +31,7 @@ export type CommandErrorCode =
   | "invalidSpec"
   | "invalidComment"
   | "commentRepository"
-  | "reviewRunExport"
+  | "userReviewExport"
   | "fileWatch";
 
 export type CommandError = Readonly<{
@@ -78,7 +78,7 @@ type WorkspaceCommandPayloads = Readonly<{
 
 export type CommandPayloads = WorkspaceCommandPayloads &
   CommentCommandPayloads &
-  ReviewRunCommandPayloads;
+  UserReviewCommandPayloads;
 
 export type CommandName = keyof CommandPayloads;
 

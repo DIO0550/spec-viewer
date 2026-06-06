@@ -1,13 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
 
-import { ReviewRunPanel } from "@/features/review-runs/components/ReviewRunPanel";
+import { UserReviewPanel } from "@/features/review-runs/components/UserReviewPanel";
 
 const meta = {
-  component: ReviewRunPanel,
+  component: UserReviewPanel,
   args: {
     targetScope: "file",
-    executionMode: "currentWorkspace",
+    workspaceMode: "currentWorkspace",
     openCommentCount: 2,
     listState: {
       status: "ready",
@@ -25,7 +25,7 @@ const meta = {
             specId: "auth",
             fileKey: "tasks",
           },
-          executionTarget: {
+          workspace: {
             mode: "currentWorkspace",
             workspacePath: "/workspace/spec-reviewer",
           },
@@ -53,31 +53,31 @@ const meta = {
     },
     createState: {
       status: "idle",
-      reviewRun: null,
+      userReview: null,
       error: null,
     },
     archiveState: {
       status: "idle",
-      reviewRunId: null,
-      reviewRun: null,
+      userReviewId: null,
+      userReview: null,
       error: null,
     },
     onTargetScopeChange: fn(),
-    onExecutionModeChange: fn(),
-    onCreateReviewRun: fn(),
-    onArchiveReviewRun: fn(),
-    onRefreshReviewRuns: fn(),
+    onWorkspaceModeChange: fn(),
+    onCreateUserReview: fn(),
+    onArchiveUserReview: fn(),
+    onRefreshUserReviews: fn(),
     onCopyPath: fn(async () => undefined),
   },
   argTypes: {
     onTargetScopeChange: { control: false },
-    onExecutionModeChange: { control: false },
-    onCreateReviewRun: { control: false },
-    onArchiveReviewRun: { control: false },
-    onRefreshReviewRuns: { control: false },
+    onWorkspaceModeChange: { control: false },
+    onCreateUserReview: { control: false },
+    onArchiveUserReview: { control: false },
+    onRefreshUserReviews: { control: false },
     onCopyPath: { control: false },
   },
-} satisfies Meta<typeof ReviewRunPanel>;
+} satisfies Meta<typeof UserReviewPanel>;
 
 export default meta;
 
@@ -107,9 +107,9 @@ export const Error: Story = {
   args: {
     createState: {
       status: "error",
-      reviewRun: null,
+      userReview: null,
       error: {
-        code: "reviewRunExport",
+        code: "userReviewExport",
         message: "source files have uncommitted changes",
         raw: {},
       },
