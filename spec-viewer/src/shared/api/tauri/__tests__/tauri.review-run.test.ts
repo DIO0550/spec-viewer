@@ -2,17 +2,17 @@ import { invoke } from "@tauri-apps/api/core";
 import { expect, test, vi } from "vitest";
 
 import type {
-  ArchiveReviewRunRequest,
-  ArchiveReviewRunResponse,
-  CreateReviewRunRequest,
-  CreateReviewRunResponse,
-  ListReviewRunsRequest,
-  ListReviewRunsResponse,
-} from "@/features/review-runs/types/reviewRun";
+  ArchiveUserReviewRequest,
+  ArchiveUserReviewResponse,
+  CreateUserReviewRequest,
+  CreateUserReviewResponse,
+  ListUserReviewsRequest,
+  ListUserReviewsResponse,
+} from "@/features/review-runs/types/userReviewIpc";
 import {
-  archiveReviewRun,
-  createReviewRun,
-  listReviewRuns,
+  archiveUserReview,
+  createUserReview,
+  listUserReviews,
   normalizeCommandError,
 } from "@/shared/api/tauri";
 import { CommentId } from "@/features/comments/types/comment";
@@ -24,7 +24,7 @@ vi.mock("@tauri-apps/api/core", () => ({
 const invokeMock = vi.mocked(invoke);
 const commentId = CommentId.fromString;
 
-const request: CreateReviewRunRequest = {
+const request: CreateUserReviewRequest = {
   workspacePath: "/workspace/spec-reviewer",
   target: {
     scope: "file",
@@ -32,15 +32,15 @@ const request: CreateReviewRunRequest = {
     fileKey: "tasks",
   },
   commentIds: [commentId("cmt_1")],
-  executionMode: "currentWorkspace",
+  workspaceMode: "currentWorkspace",
 };
 
-const response: CreateReviewRunResponse = {
-  reviewRun: {
+const response: CreateUserReviewResponse = {
+  userReview: {
     id: "2026-05-06T120000Z-file-tasks-abcdef12",
     status: "active",
     target: request.target,
-    executionTarget: {
+    workspace: {
       mode: "currentWorkspace",
       workspacePath: "/workspace/spec-reviewer",
     },
@@ -62,26 +62,26 @@ const response: CreateReviewRunResponse = {
   },
 };
 
-const listRequest: ListReviewRunsRequest = {
+const listRequest: ListUserReviewsRequest = {
   workspacePath: "/workspace/spec-reviewer",
   target: request.target,
 };
 
-const listResponse: ListReviewRunsResponse = {
-  active: [response.reviewRun],
+const listResponse: ListUserReviewsResponse = {
+  active: [response.userReview],
   archived: [],
   problems: [],
 };
 
-const archiveRequest: ArchiveReviewRunRequest = {
+const archiveRequest: ArchiveUserReviewRequest = {
   workspacePath: "/workspace/spec-reviewer",
   target: request.target,
-  reviewRunId: response.reviewRun.id,
+  userReviewId: response.userReview.id,
 };
 
-const archiveResponse: ArchiveReviewRunResponse = {
-  reviewRun: {
-    ...response.reviewRun,
+const archiveResponse: ArchiveUserReviewResponse = {
+  userReview: {
+    ...response.userReview,
     status: "archived",
     folderPath:
       "/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/archive/2026-05-06T120000Z-file-tasks-abcdef12",
@@ -90,52 +90,52 @@ const archiveResponse: ArchiveReviewRunResponse = {
   },
 };
 
-test("createReviewRunはcreate_review_runへrequestを渡す", async () => {
+test("createUserReviewはcreate_user_reviewへrequestを渡す", async () => {
   invokeMock.mockReset();
   invokeMock.mockResolvedValue(response);
 
-  const result = await createReviewRun(request);
+  const result = await createUserReview(request);
 
-  expect(result.reviewRun.id).toBe(response.reviewRun.id);
-  expect(invokeMock).toHaveBeenCalledWith("create_review_run", {
+  expect(result.userReview.id).toBe(response.userReview.id);
+  expect(invokeMock).toHaveBeenCalledWith("create_user_review", {
     request,
   });
 });
 
-test("listReviewRunsはlist_review_runsへrequestを渡す", async () => {
+test("listUserReviewsはlist_user_reviewsへrequestを渡す", async () => {
   invokeMock.mockReset();
   invokeMock.mockResolvedValue(listResponse);
 
-  const result = await listReviewRuns(listRequest);
+  const result = await listUserReviews(listRequest);
 
-  expect(result.active).toEqual([response.reviewRun]);
-  expect(invokeMock).toHaveBeenCalledWith("list_review_runs", {
+  expect(result.active).toEqual([response.userReview]);
+  expect(invokeMock).toHaveBeenCalledWith("list_user_reviews", {
     request: listRequest,
   });
 });
 
-test("archiveReviewRunはarchive_review_runへrequestを渡す", async () => {
+test("archiveUserReviewはarchive_user_reviewへrequestを渡す", async () => {
   invokeMock.mockReset();
   invokeMock.mockResolvedValue(archiveResponse);
 
-  const result = await archiveReviewRun(archiveRequest);
+  const result = await archiveUserReview(archiveRequest);
 
-  expect(result.reviewRun.status).toBe("archived");
-  expect(invokeMock).toHaveBeenCalledWith("archive_review_run", {
+  expect(result.userReview.status).toBe("archived");
+  expect(invokeMock).toHaveBeenCalledWith("archive_user_review", {
     request: archiveRequest,
   });
 });
 
 test("normalizeCommandErrorはreview run exportエラーを保持する", () => {
   const rawError = {
-    code: "reviewRunExport",
+    code: "userReviewExport",
     message: "failed to export review run",
   };
 
   const result = normalizeCommandError(rawError);
 
   expect(result).toEqual({
-    code: "reviewRunExport",
+    code: "userReviewExport",
     message: "failed to export review run",
     raw: rawError,
   });

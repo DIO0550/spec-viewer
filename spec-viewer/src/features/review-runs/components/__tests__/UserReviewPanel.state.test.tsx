@@ -4,17 +4,17 @@ import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
 import type {
-  ReviewRunCreateState,
-  ReviewRunListState,
-} from "@/features/review-runs/hooks/useReviewRuns";
-import type { ReviewRun } from "@/features/review-runs/types/reviewRun";
-import { ReviewRunPanel } from "@/features/review-runs/components/ReviewRunPanel";
+  UserReviewCreateState,
+  UserReviewListState,
+} from "@/features/review-runs/hooks/useUserReviews";
+import type { UserReview } from "@/features/review-runs/types/userReviewIpc";
+import { UserReviewPanel } from "@/features/review-runs/components/UserReviewPanel";
 
 const activeRunBranchName =
   "spec-reviewer/2026-05-06T120000Z-file-tasks-abcdef12";
 const activeRunSourcePath = ".plugin-workspace/.specs/auth/tasks.md";
 
-const activeRun: ReviewRun = {
+const activeRun: UserReview = {
   id: "2026-05-06T120000Z-file-tasks-abcdef12",
   status: "active",
   target: {
@@ -22,7 +22,7 @@ const activeRun: ReviewRun = {
     specId: "auth",
     fileKey: "tasks",
   },
-  executionTarget: {
+  workspace: {
     mode: "worktree",
     repositoryPath: "/workspace/spec-reviewer",
     worktreePath: "/workspace/spec-reviewer.spec-reviewer-worktrees/auth",
@@ -73,17 +73,17 @@ function renderComponent(component: ReactNode): RenderResult {
 function renderPanel(
   options: Readonly<{
     openCommentCount?: number;
-    listState?: ReviewRunListState;
-    createState?: ReviewRunCreateState;
-    onCreateReviewRun?: () => void;
-    onArchiveReviewRun?: (reviewRunId: string) => void;
+    listState?: UserReviewListState;
+    createState?: UserReviewCreateState;
+    onCreateUserReview?: () => void;
+    onArchiveUserReview?: (userReviewId: string) => void;
     onCopyPath?: (path: string) => Promise<void>;
   }> = {},
 ): RenderResult {
   return renderComponent(
-    <ReviewRunPanel
+    <UserReviewPanel
       targetScope="file"
-      executionMode="currentWorkspace"
+      workspaceMode="currentWorkspace"
       openCommentCount={options.openCommentCount ?? 2}
       listState={
         options.listState ?? {
@@ -98,27 +98,27 @@ function renderPanel(
       createState={
         options.createState ?? {
           status: "idle",
-          reviewRun: null,
+          userReview: null,
           error: null,
         }
       }
       archiveState={{
         status: "idle",
-        reviewRunId: null,
-        reviewRun: null,
+        userReviewId: null,
+        userReview: null,
         error: null,
       }}
       onTargetScopeChange={vi.fn()}
-      onExecutionModeChange={vi.fn()}
-      onCreateReviewRun={options.onCreateReviewRun ?? vi.fn()}
-      onArchiveReviewRun={options.onArchiveReviewRun ?? vi.fn()}
-      onRefreshReviewRuns={vi.fn()}
+      onWorkspaceModeChange={vi.fn()}
+      onCreateUserReview={options.onCreateUserReview ?? vi.fn()}
+      onArchiveUserReview={options.onArchiveUserReview ?? vi.fn()}
+      onRefreshUserReviews={vi.fn()}
       onCopyPath={options.onCopyPath ?? vi.fn().mockResolvedValue(undefined)}
     />,
   );
 }
 
-test("ReviewRunPanelは未解決コメントがないと作成をdisabledにする", () => {
+test("UserReviewPanelは未解決コメントがないと作成をdisabledにする", () => {
   const result = renderPanel({ openCommentCount: 0 });
   const createButton = result.container.querySelector(
     ".review-run-panel__create",
@@ -131,13 +131,13 @@ test("ReviewRunPanelは未解決コメントがないと作成をdisabledにす�
   result.unmount();
 });
 
-test("ReviewRunPanelは作成エラーを日本語alertで表示する", () => {
+test("UserReviewPanelは作成エラーを日本語alertで表示する", () => {
   const result = renderPanel({
     createState: {
       status: "error",
-      reviewRun: null,
+      userReview: null,
       error: {
-        code: "reviewRunExport",
+        code: "userReviewExport",
         message: "source files have uncommitted changes",
         raw: {},
       },
@@ -150,7 +150,7 @@ test("ReviewRunPanelは作成エラーを日本語alertで表示する", () => {
   result.unmount();
 });
 
-test("ReviewRunPanelはactive runのpathとworktree情報を表示してコピーできる", async () => {
+test("UserReviewPanelはactive runのpathとworktree情報を表示してコピーできる", async () => {
   const onCopyPath = vi.fn().mockResolvedValue(undefined);
   const result = renderPanel({ onCopyPath });
   const copyButton = result.container.querySelector(
@@ -171,11 +171,11 @@ test("ReviewRunPanelはactive runのpathとworktree情報を表示してコピ�
   result.unmount();
 });
 
-test("ReviewRunPanelはcompleted runを確認後にアーカイブできる", async () => {
-  const onArchiveReviewRun = vi.fn();
+test("UserReviewPanelはcompleted runを確認後にアーカイブできる", async () => {
+  const onArchiveUserReview = vi.fn();
   const confirmMock = vi.fn(() => true);
   vi.stubGlobal("confirm", confirmMock);
-  const completedRun: ReviewRun = {
+  const completedRun: UserReview = {
     ...activeRun,
     status: "completed",
     summary: "対応完了",
@@ -189,7 +189,7 @@ test("ReviewRunPanelはcompleted runを確認後にアーカイブできる", as
       problems: [],
       error: null,
     },
-    onArchiveReviewRun,
+    onArchiveUserReview,
   });
   const archiveButton = result.container.querySelector(
     `[aria-label="${completedRun.id}をアーカイブ"]`,
@@ -200,7 +200,7 @@ test("ReviewRunPanelはcompleted runを確認後にアーカイブできる", as
   });
 
   expect(confirmMock).toHaveBeenCalled();
-  expect(onArchiveReviewRun).toHaveBeenCalledWith(completedRun.id);
+  expect(onArchiveUserReview).toHaveBeenCalledWith(completedRun.id);
   expect(result.container.textContent).toContain("対応完了");
   result.unmount();
   vi.unstubAllGlobals();

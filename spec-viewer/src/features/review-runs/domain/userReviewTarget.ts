@@ -1,19 +1,24 @@
-import type { ReviewRunTarget } from "@/features/review-runs/types/reviewRun";
+import type { ExportCommentsTarget } from "@/features/comments/types/comment";
 import type { SpecFileKey } from "@/features/specs/types/spec";
 
-export type ReviewSessionTargetScope = "file" | "spec";
+export type UserReviewTargetScope = "file" | "spec";
 
-export type ReviewSessionTargetInput = Readonly<{
+export type UserReviewTarget = Extract<
+  ExportCommentsTarget,
+  { scope: "file" } | { scope: "spec" }
+>;
+
+export type UserReviewTargetInput = Readonly<{
   specId: string | null;
   fileKey: SpecFileKey | null;
-  targetScope: ReviewSessionTargetScope;
+  targetScope: UserReviewTargetScope;
 }>;
 
-export type ReviewSessionTargetIdentity = string;
+export type UserReviewTargetIdentity = string;
 
-export const ReviewSessionTarget = {
-  /** @returns A review-run target for file/spec scope, or null when incomplete. */
-  create(input: ReviewSessionTargetInput): ReviewRunTarget | null {
+export const UserReviewTarget = {
+  /** @returns A user review target for file/spec scope, or null when incomplete. */
+  create(input: UserReviewTargetInput): UserReviewTarget | null {
     if (input.specId === null) {
       return null;
     }
@@ -37,9 +42,9 @@ export const ReviewSessionTarget = {
   },
 } as const;
 
-export const ReviewSessionTargetIdentity = {
+export const UserReviewTargetIdentity = {
   /** @returns Stable target identity for stale async result checks. */
-  create(target: ReviewRunTarget | null): ReviewSessionTargetIdentity {
+  create(target: UserReviewTarget | null): UserReviewTargetIdentity {
     if (target === null) {
       return "none";
     }
@@ -51,10 +56,10 @@ export const ReviewSessionTargetIdentity = {
     return `file:${target.specId}:${target.fileKey}`;
   },
 
-  /** @returns True when both identities refer to the same review-run target. */
+  /** @returns True when both identities refer to the same user review target. */
   equals(
-    current: ReviewSessionTargetIdentity,
-    other: ReviewSessionTargetIdentity,
+    current: UserReviewTargetIdentity,
+    other: UserReviewTargetIdentity,
   ): boolean {
     return current === other;
   },

@@ -30,10 +30,10 @@ import {
   useTheme,
 } from "@/features/preferences";
 import {
-  ReviewRunPanel,
-  useReviewRuns,
-  type ReviewRunExecutionMode,
-  type ReviewRunTargetScope,
+  UserReviewPanel,
+  useUserReviews,
+  type UserReviewWorkspaceMode,
+  type UserReviewTargetScope,
 } from "@/features/review-runs";
 import {
   MarkdownViewer,
@@ -159,15 +159,15 @@ function App() {
     statusFilter: CommentStatusFilter.All,
     correlationId: specs.documentState.correlationId ?? null,
   });
-  const [reviewRunTargetScope, setReviewRunTargetScope] =
-    useState<ReviewRunTargetScope>("file");
-  const [reviewRunExecutionMode, setReviewRunExecutionMode] =
-    useState<ReviewRunExecutionMode>("currentWorkspace");
-  const reviewRuns = useReviewRuns({
+  const [userReviewTargetScope, setUserReviewTargetScope] =
+    useState<UserReviewTargetScope>("file");
+  const [userReviewWorkspaceMode, setUserReviewWorkspaceMode] =
+    useState<UserReviewWorkspaceMode>("currentWorkspace");
+  const userReviews = useUserReviews({
     workspacePath: workspace.workspace?.root ?? null,
     specId: isDocumentReadable ? specs.selectedSpecId : null,
     fileKey: isDocumentReadable ? specs.selectedFileKey : null,
-    targetScope: reviewRunTargetScope,
+    targetScope: userReviewTargetScope,
     correlationId: specs.documentState.correlationId ?? null,
   });
   const [workspaceInput, setWorkspaceInput] = useState("");
@@ -196,8 +196,8 @@ function App() {
   }, [specs.selectedFileKey, specs.selectedSpecId, workspace.workspace?.root]);
 
   useEffect(() => {
-    setReviewRunTargetScope("file");
-    setReviewRunExecutionMode("currentWorkspace");
+    setUserReviewTargetScope("file");
+    setUserReviewWorkspaceMode("currentWorkspace");
   }, [specs.selectedFileKey, specs.selectedSpecId, workspace.workspace?.root]);
 
   useEffect(() => {
@@ -656,17 +656,17 @@ function App() {
     workspace.workspace,
   ]);
 
-  const createReviewRunFromOpenComments =
+  const createUserReviewFromOpenComments =
     useCallback(async (): Promise<void> => {
       const openCommentIds = comments.comments
         .filter((comment) => comment.status === "open")
         .map((comment) => comment.id);
 
-      await reviewRuns.createReviewRun({
+      await userReviews.createUserReview({
         commentIds: openCommentIds,
-        executionMode: reviewRunExecutionMode,
+        workspaceMode: userReviewWorkspaceMode,
       });
-    }, [comments.comments, reviewRunExecutionMode, reviewRuns.createReviewRun]);
+    }, [comments.comments, userReviewWorkspaceMode, userReviews.createUserReview]);
 
   const selectAdjacentFile = useCallback(
     (direction: NavigationDirection): void => {
@@ -1035,24 +1035,24 @@ function App() {
             onCopyMcpFeedback={() => {
               void copyMcpFeedbackPayload();
             }}
-            reviewRunPanel={
-              <ReviewRunPanel
-                targetScope={reviewRunTargetScope}
-                executionMode={reviewRunExecutionMode}
+            userReviewPanel={
+              <UserReviewPanel
+                targetScope={userReviewTargetScope}
+                workspaceMode={userReviewWorkspaceMode}
                 openCommentCount={countOpenComments(comments.comments)}
-                listState={reviewRuns.listState}
-                createState={reviewRuns.createState}
-                archiveState={reviewRuns.archiveState}
-                onTargetScopeChange={setReviewRunTargetScope}
-                onExecutionModeChange={setReviewRunExecutionMode}
-                onCreateReviewRun={() => {
-                  void createReviewRunFromOpenComments();
+                listState={userReviews.listState}
+                createState={userReviews.createState}
+                archiveState={userReviews.archiveState}
+                onTargetScopeChange={setUserReviewTargetScope}
+                onWorkspaceModeChange={setUserReviewWorkspaceMode}
+                onCreateUserReview={() => {
+                  void createUserReviewFromOpenComments();
                 }}
-                onArchiveReviewRun={(reviewRunId) => {
-                  void reviewRuns.archiveReviewRun(reviewRunId);
+                onArchiveUserReview={(userReviewId) => {
+                  void userReviews.archiveUserReview(userReviewId);
                 }}
-                onRefreshReviewRuns={() => {
-                  void reviewRuns.reloadReviewRuns();
+                onRefreshUserReviews={() => {
+                  void userReviews.reloadUserReviews();
                 }}
                 onCopyPath={copyTextToClipboard}
               />

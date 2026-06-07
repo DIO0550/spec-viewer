@@ -1,10 +1,7 @@
-export { ReviewRunPanel } from "@/features/review-runs/components/ReviewRunPanel";
+export { UserReviewPanel } from "@/features/review-runs/components/UserReviewPanel";
 export {
-  useReviewRuns,
-  type ReviewRunTargetScope,
-  type ReviewSessionTargetScope,
-} from "./hooks/useReviewRuns";
-export type {
-  ReviewRun,
-  ReviewRunExecutionMode,
-} from "@/features/review-runs/types/reviewRun";
+  useUserReviews,
+  type UserReviewTargetScope,
+} from "./hooks/useUserReviews";
+export type { UserReview } from "@/features/review-runs/domain/userReview";
+export type { UserReviewWorkspaceMode } from "@/features/review-runs/types/userReviewIpc";

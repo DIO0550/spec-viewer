@@ -26,11 +26,11 @@ use super::{CommandError, CommandResult, CommandState};
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CreateReviewRunRequest {
+pub struct CreateUserReviewRequest {
     workspace_path: String,
-    target: ReviewRunTargetRequest,
+    target: UserReviewTargetRequest,
     comment_ids: Vec<String>,
-    execution_mode: String,
+    workspace_mode: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -39,57 +39,57 @@ pub struct CreateReviewRunRequest {
     rename_all = "camelCase",
     rename_all_fields = "camelCase"
 )]
-pub enum ReviewRunTargetRequest {
+pub enum UserReviewTargetRequest {
     File { spec_id: String, file_key: String },
     Spec { spec_id: String },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CreateReviewRunResponse {
-    review_run: ReviewRunResponse,
+pub struct CreateUserReviewResponse {
+    user_review: UserReviewResponse,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ListReviewRunsRequest {
+pub struct ListUserReviewsRequest {
     workspace_path: String,
-    target: ReviewRunTargetRequest,
+    target: UserReviewTargetRequest,
     correlation_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ListReviewRunsResponse {
-    active: Vec<ReviewRunResponse>,
-    archived: Vec<ReviewRunResponse>,
-    problems: Vec<ReviewRunListProblemResponse>,
+pub struct ListUserReviewsResponse {
+    active: Vec<UserReviewResponse>,
+    archived: Vec<UserReviewResponse>,
+    problems: Vec<UserReviewListProblemResponse>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ArchiveReviewRunRequest {
+pub struct ArchiveUserReviewRequest {
     workspace_path: String,
-    target: ReviewRunTargetRequest,
-    review_run_id: String,
+    target: UserReviewTargetRequest,
+    user_review_id: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ArchiveReviewRunResponse {
-    review_run: ReviewRunResponse,
+pub struct ArchiveUserReviewResponse {
+    user_review: UserReviewResponse,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ReviewRunResponse {
+pub struct UserReviewResponse {
     id: String,
     status: String,
-    target: ReviewRunTargetResponse,
-    execution_target: ReviewRunExecutionTargetResponse,
+    target: UserReviewTargetResponse,
+    workspace: UserReviewWorkspaceResponse,
     spec_folder_path: String,
     folder_path: String,
-    source_files: Vec<ReviewRunSourceFileResponse>,
+    source_files: Vec<ReviewSourceFileResponse>,
     comment_count: usize,
     created_at: DateTime<Utc>,
     archived_at: Option<DateTime<Utc>>,
@@ -99,7 +99,7 @@ pub struct ReviewRunResponse {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ReviewRunListProblemResponse {
+pub struct UserReviewListProblemResponse {
     folder_path: String,
     state: String,
     message: String,
@@ -107,7 +107,7 @@ pub struct ReviewRunListProblemResponse {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ReviewRunSourceFileResponse {
+pub struct ReviewSourceFileResponse {
     spec_id: String,
     file_key: String,
     relative_path: String,
@@ -119,7 +119,7 @@ pub struct ReviewRunSourceFileResponse {
     rename_all = "camelCase",
     rename_all_fields = "camelCase"
 )]
-pub enum ReviewRunTargetResponse {
+pub enum UserReviewTargetResponse {
     File { spec_id: String, file_key: String },
     Spec { spec_id: String },
 }
@@ -130,7 +130,7 @@ pub enum ReviewRunTargetResponse {
     rename_all = "camelCase",
     rename_all_fields = "camelCase"
 )]
-pub enum ReviewRunExecutionTargetResponse {
+pub enum UserReviewWorkspaceResponse {
     CurrentWorkspace {
         workspace_path: String,
     },
@@ -142,10 +142,10 @@ pub enum ReviewRunExecutionTargetResponse {
 }
 
 #[tauri::command]
-pub fn create_review_run(
+pub fn create_user_review(
     state: State<'_, CommandState>,
-    request: CreateReviewRunRequest,
-) -> CommandResult<CreateReviewRunResponse> {
+    request: CreateUserReviewRequest,
+) -> CommandResult<CreateUserReviewResponse> {
     let workspace = state
         .use_cases()
         .load_workspace(&request.workspace_path)
@@ -153,12 +153,12 @@ pub fn create_review_run(
     let input = CreateReviewRunInput::new(
         request.target.into_domain()?,
         parse_comment_ids(&request.comment_ids)?,
-        parse_execution_mode(&request.execution_mode)?,
+        parse_workspace_mode(&request.workspace_mode)?,
     );
     let result = state.use_cases().create_review_run(&workspace, input)?;
 
-    Ok(CreateReviewRunResponse {
-        review_run: ReviewRunResponse::from_run(
+    Ok(CreateUserReviewResponse {
+        user_review: UserReviewResponse::from_run(
             result.review_run(),
             result.folder_path(),
             None,
@@ -168,10 +168,10 @@ pub fn create_review_run(
 }
 
 #[tauri::command]
-pub fn list_review_runs(
+pub fn list_user_reviews(
     state: State<'_, CommandState>,
-    request: ListReviewRunsRequest,
-) -> CommandResult<ListReviewRunsResponse> {
+    request: ListUserReviewsRequest,
+) -> CommandResult<ListUserReviewsResponse> {
     let workspace = state
         .use_cases()
         .load_workspace(&request.workspace_path)
@@ -179,10 +179,10 @@ pub fn list_review_runs(
     let performance_context = request
         .correlation_id
         .as_ref()
-        .map(|correlation_id| PerformanceContext::new(correlation_id, "list_review_runs"));
+        .map(|correlation_id| PerformanceContext::new(correlation_id, "list_user_reviews"));
     let end_span = performance_context
         .as_ref()
-        .map(|context| start_span(context, "command.list_review_runs"));
+        .map(|context| start_span(context, "command.list_user_reviews"));
     let result = (|| {
         let target = request.target.into_domain()?;
         let result = state
@@ -208,42 +208,42 @@ pub fn list_review_runs(
     }
 
     let result = result?;
-    Ok(ListReviewRunsResponse {
+    Ok(ListUserReviewsResponse {
         active: result
             .active()
             .iter()
-            .map(ReviewRunResponse::from_listed)
+            .map(UserReviewResponse::from_listed)
             .collect(),
         archived: result
             .archived()
             .iter()
-            .map(ReviewRunResponse::from_listed)
+            .map(UserReviewResponse::from_listed)
             .collect(),
         problems: result
             .problems()
             .iter()
-            .map(ReviewRunListProblemResponse::from_problem)
+            .map(UserReviewListProblemResponse::from_problem)
             .collect(),
     })
 }
 
 #[tauri::command]
-pub fn archive_review_run(
+pub fn archive_user_review(
     state: State<'_, CommandState>,
-    request: ArchiveReviewRunRequest,
-) -> CommandResult<ArchiveReviewRunResponse> {
+    request: ArchiveUserReviewRequest,
+) -> CommandResult<ArchiveUserReviewResponse> {
     let workspace = state
         .use_cases()
         .load_workspace(&request.workspace_path)
         .map_err(CommandError::from)?;
     let input = ArchiveReviewRunInput::new(
         request.target.into_domain()?,
-        UserReviewRunId::new(request.review_run_id).map_err(invalid_review_run)?,
+        UserReviewRunId::new(request.user_review_id).map_err(invalid_review_run)?,
     );
     let result = state.use_cases().archive_review_run(&workspace, input)?;
 
-    Ok(ArchiveReviewRunResponse {
-        review_run: ReviewRunResponse::from_run(
+    Ok(ArchiveUserReviewResponse {
+        user_review: UserReviewResponse::from_run(
             result.review_run(),
             result.folder_path(),
             result.summary().map(str::to_string),
@@ -252,7 +252,7 @@ pub fn archive_review_run(
     })
 }
 
-impl ReviewRunTargetRequest {
+impl UserReviewTargetRequest {
     fn into_domain(self) -> CommandResult<UserReviewRunTarget> {
         match self {
             Self::File { spec_id, file_key } => Ok(UserReviewRunTarget::file(
@@ -266,7 +266,7 @@ impl ReviewRunTargetRequest {
     }
 }
 
-impl ReviewRunResponse {
+impl UserReviewResponse {
     fn from_run(
         run: &UserReviewRun,
         folder_path: &str,
@@ -276,16 +276,14 @@ impl ReviewRunResponse {
         Self {
             id: run.id().as_str().to_string(),
             status: run.status().as_str().to_string(),
-            target: ReviewRunTargetResponse::from_target(run.target()),
-            execution_target: ReviewRunExecutionTargetResponse::from_execution_target(
-                run.execution_target(),
-            ),
+            target: UserReviewTargetResponse::from_target(run.target()),
+            workspace: UserReviewWorkspaceResponse::from_workspace(run.execution_target()),
             spec_folder_path: run.spec_folder_path().as_str().to_string(),
             folder_path: folder_path.to_string(),
             source_files: run
                 .source_files()
                 .iter()
-                .map(ReviewRunSourceFileResponse::from_source_file)
+                .map(ReviewSourceFileResponse::from_source_file)
                 .collect(),
             comment_count: run.comment_ids().len(),
             created_at: run.created_at(),
@@ -305,7 +303,7 @@ impl ReviewRunResponse {
     }
 }
 
-impl ReviewRunTargetResponse {
+impl UserReviewTargetResponse {
     fn from_target(target: &UserReviewRunTarget) -> Self {
         match target {
             UserReviewRunTarget::File { spec_id, file_key } => Self::File {
@@ -319,8 +317,8 @@ impl ReviewRunTargetResponse {
     }
 }
 
-impl ReviewRunExecutionTargetResponse {
-    fn from_execution_target(target: &UserReviewExecutionTarget) -> Self {
+impl UserReviewWorkspaceResponse {
+    fn from_workspace(target: &UserReviewExecutionTarget) -> Self {
         match target {
             UserReviewExecutionTarget::CurrentWorkspace { workspace_path } => {
                 Self::CurrentWorkspace {
@@ -340,7 +338,7 @@ impl ReviewRunExecutionTargetResponse {
     }
 }
 
-impl ReviewRunSourceFileResponse {
+impl ReviewSourceFileResponse {
     fn from_source_file(source_file: &UserReviewSourceFile) -> Self {
         Self {
             spec_id: source_file.spec_id().as_str().to_string(),
@@ -350,7 +348,7 @@ impl ReviewRunSourceFileResponse {
     }
 }
 
-impl ReviewRunListProblemResponse {
+impl UserReviewListProblemResponse {
     fn from_problem(problem: &ReviewRunListProblem) -> Self {
         Self {
             folder_path: problem.folder_path().to_string(),
@@ -367,7 +365,7 @@ fn parse_comment_ids(values: &[String]) -> CommandResult<Vec<CommentId>> {
         .collect()
 }
 
-fn parse_execution_mode(value: &str) -> CommandResult<ReviewRunExecutionMode> {
+fn parse_workspace_mode(value: &str) -> CommandResult<ReviewRunExecutionMode> {
     match value {
         "currentWorkspace" => Ok(ReviewRunExecutionMode::CurrentWorkspace),
         "worktree" => Ok(ReviewRunExecutionMode::Worktree),

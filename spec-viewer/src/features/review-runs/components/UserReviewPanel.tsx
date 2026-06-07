@@ -11,30 +11,41 @@ import {
 import { useId, useState } from "react";
 
 import type {
-  ReviewRunCreateState,
-  ReviewRunArchiveState,
-  ReviewRunListState,
-  ReviewRunTargetScope,
-} from "@/features/review-runs/hooks/useReviewRuns";
+  UserReviewCreateState,
+  UserReviewArchiveState,
+  UserReviewListState,
+  UserReviewTargetScope,
+} from "@/features/review-runs/hooks/useUserReviews";
 import type {
-  ReviewRun,
-  ReviewRunExecutionMode,
-  ReviewRunExecutionTarget,
-  ReviewRunSourceFile,
-} from "@/features/review-runs/types/reviewRun";
+  ReviewSourceFile,
+  UserReview,
+  UserReviewWorkspace,
+} from "@/features/review-runs/domain/userReview";
+import {
+  canArchiveUserReview,
+  canCreateUserReview,
+  formatArchiveErrorMessage,
+  formatArchiveSuccessMessage,
+  formatCreateErrorMessage,
+  formatCreateSuccessMessage,
+  formatOpenCommentSummary,
+  formatProblemState,
+  formatUserReviewSummary,
+} from "@/features/review-runs/components/userReviewPanelPresenter";
+import type { UserReviewWorkspaceMode } from "@/features/review-runs/types/userReviewIpc";
 
 type Props = Readonly<{
-  targetScope: ReviewRunTargetScope;
-  executionMode: ReviewRunExecutionMode;
+  targetScope: UserReviewTargetScope;
+  workspaceMode: UserReviewWorkspaceMode;
   openCommentCount: number;
-  listState: ReviewRunListState;
-  createState: ReviewRunCreateState;
-  archiveState: ReviewRunArchiveState;
-  onTargetScopeChange: (scope: ReviewRunTargetScope) => void;
-  onExecutionModeChange: (mode: ReviewRunExecutionMode) => void;
-  onCreateReviewRun: () => void;
-  onArchiveReviewRun: (reviewRunId: string) => void;
-  onRefreshReviewRuns: () => void;
+  listState: UserReviewListState;
+  createState: UserReviewCreateState;
+  archiveState: UserReviewArchiveState;
+  onTargetScopeChange: (scope: UserReviewTargetScope) => void;
+  onWorkspaceModeChange: (mode: UserReviewWorkspaceMode) => void;
+  onCreateUserReview: () => void;
+  onArchiveUserReview: (userReviewId: string) => void;
+  onRefreshUserReviews: () => void;
   onCopyPath: (path: string) => Promise<void>;
 }>;
 
@@ -53,33 +64,26 @@ const idleCopyState: CopyState = {
   message: null,
 };
 
-const reviewRunStatusLabels: Readonly<Record<ReviewRun["status"], string>> = {
-  active: "受付中",
-  inProgress: "対応中",
-  completed: "完了",
-  archived: "アーカイブ済み",
-};
-
-/** @returns Japanese-first controls and status for active review runs. */
-export function ReviewRunPanel({
+/** @returns Japanese-first controls and status for active user reviews. */
+export function UserReviewPanel({
   targetScope,
-  executionMode,
+  workspaceMode,
   openCommentCount,
   listState,
   createState,
   archiveState,
   onTargetScopeChange,
-  onExecutionModeChange,
-  onCreateReviewRun,
-  onArchiveReviewRun,
-  onRefreshReviewRuns,
+  onWorkspaceModeChange,
+  onCreateUserReview,
+  onArchiveUserReview,
+  onRefreshUserReviews,
   onCopyPath,
 }: Props) {
-  const executionModeLabelId = useId();
+  const workspaceModeLabelId = useId();
   const [copyState, setCopyState] = useState<CopyState>(idleCopyState);
   const isCreating = createState.status === "saving";
-  const canCreate = openCommentCount > 0 && !isCreating;
-  const activeRuns = listState.active;
+  const canCreate = canCreateUserReview({ openCommentCount, isCreating });
+  const activeReviews = listState.active;
 
   const copyPath = async (path: string): Promise<void> => {
     try {
@@ -111,7 +115,7 @@ export function ReviewRunPanel({
           type="button"
           aria-label="レビュー一覧を再読み込み"
           disabled={listState.status === "loading"}
-          onClick={onRefreshReviewRuns}
+          onClick={onRefreshUserReviews}
         >
           <RefreshCw aria-hidden="true" size={15} />
         </button>
@@ -142,17 +146,17 @@ export function ReviewRunPanel({
 
       <fieldset
         className="review-run-panel__modes"
-        aria-labelledby={executionModeLabelId}
+        aria-labelledby={workspaceModeLabelId}
       >
-        <legend id={executionModeLabelId}>作成先</legend>
+        <legend id={workspaceModeLabelId}>作成先</legend>
         <label>
           <input
             type="radio"
-            name="review-run-execution-mode"
+            name="user-review-workspace-mode"
             value="currentWorkspace"
-            checked={executionMode === "currentWorkspace"}
+            checked={workspaceMode === "currentWorkspace"}
             onChange={() => {
-              onExecutionModeChange("currentWorkspace");
+              onWorkspaceModeChange("currentWorkspace");
             }}
           />
           <span>現在のワークスペース</span>
@@ -160,11 +164,11 @@ export function ReviewRunPanel({
         <label>
           <input
             type="radio"
-            name="review-run-execution-mode"
+            name="user-review-workspace-mode"
             value="worktree"
-            checked={executionMode === "worktree"}
+            checked={workspaceMode === "worktree"}
             onChange={() => {
-              onExecutionModeChange("worktree");
+              onWorkspaceModeChange("worktree");
             }}
           />
           <span>新しいworktree</span>
@@ -175,49 +179,49 @@ export function ReviewRunPanel({
         className="button button--primary review-run-panel__create"
         type="button"
         disabled={!canCreate}
-        onClick={onCreateReviewRun}
+        onClick={onCreateUserReview}
       >
         <Sparkles aria-hidden="true" size={15} />
         <span>{isCreating ? "作成中" : "レビュー作成"}</span>
       </button>
 
-      <ReviewRunFeedback
+      <UserReviewFeedback
         createState={createState}
         archiveState={archiveState}
         copyState={copyState}
       />
-      <ReviewRunList
+      <UserReviewList
         listState={listState}
-        activeRuns={activeRuns}
+        activeReviews={activeReviews}
         archiveState={archiveState}
         onCopyPath={(path) => {
           void copyPath(path);
         }}
-        onArchiveReviewRun={onArchiveReviewRun}
+        onArchiveUserReview={onArchiveUserReview}
       />
     </section>
   );
 }
 
-type ReviewRunFeedbackProps = Readonly<{
-  createState: ReviewRunCreateState;
-  archiveState: ReviewRunArchiveState;
+type UserReviewFeedbackProps = Readonly<{
+  createState: UserReviewCreateState;
+  archiveState: UserReviewArchiveState;
   copyState: CopyState;
 }>;
 
 /** @returns The latest create/copy feedback message. */
-function ReviewRunFeedback({
+function UserReviewFeedback({
   createState,
   archiveState,
   copyState,
-}: ReviewRunFeedbackProps) {
+}: UserReviewFeedbackProps) {
   if (archiveState.status === "success") {
     return (
       <p
         className="review-run-panel__feedback review-run-panel__feedback--success"
         role="status"
       >
-        {formatArchiveSuccessMessage(archiveState.reviewRun)}
+        {formatArchiveSuccessMessage(archiveState.userReview)}
       </p>
     );
   }
@@ -239,7 +243,7 @@ function ReviewRunFeedback({
         className="review-run-panel__feedback review-run-panel__feedback--success"
         role="status"
       >
-        {formatCreateSuccessMessage(createState.reviewRun)}
+        {formatCreateSuccessMessage(createState.userReview)}
       </p>
     );
   }
@@ -269,22 +273,22 @@ function ReviewRunFeedback({
   );
 }
 
-type ReviewRunListProps = Readonly<{
-  listState: ReviewRunListState;
-  activeRuns: readonly ReviewRun[];
-  archiveState: ReviewRunArchiveState;
+type UserReviewListProps = Readonly<{
+  listState: UserReviewListState;
+  activeReviews: readonly UserReview[];
+  archiveState: UserReviewArchiveState;
   onCopyPath: (path: string) => void;
-  onArchiveReviewRun: (reviewRunId: string) => void;
+  onArchiveUserReview: (userReviewId: string) => void;
 }>;
 
 /** @returns Active review run cards or a loading/empty/error state. */
-function ReviewRunList({
+function UserReviewList({
   listState,
-  activeRuns,
+  activeReviews,
   archiveState,
   onCopyPath,
-  onArchiveReviewRun,
-}: ReviewRunListProps) {
+  onArchiveUserReview,
+}: UserReviewListProps) {
   if (listState.status === "idle") {
     return (
       <p className="review-run-panel__empty">
@@ -312,10 +316,10 @@ function ReviewRunList({
     );
   }
 
-  if (activeRuns.length === 0) {
+  if (activeReviews.length === 0) {
     return (
       <div className="review-run-panel__runs" aria-label="アクティブレビュー">
-        <ReviewRunProblems problems={listState.problems} />
+        <UserReviewProblems problems={listState.problems} />
         <p className="review-run-panel__empty">
           アクティブなレビューはありません。
         </p>
@@ -325,13 +329,13 @@ function ReviewRunList({
 
   return (
     <div className="review-run-panel__runs" aria-label="アクティブレビュー">
-      <ReviewRunProblems problems={listState.problems} />
-      {activeRuns.map((run) => (
+      <UserReviewProblems problems={listState.problems} />
+      {activeReviews.map((run) => (
         <article className="review-run-panel__run" key={run.id}>
           <div className="review-run-panel__run-header">
             <div>
               <h4>{run.id}</h4>
-              <p>{formatRunSummary(run)}</p>
+              <p>{formatUserReviewSummary(run)}</p>
             </div>
             <button
               className="icon-button"
@@ -344,14 +348,14 @@ function ReviewRunList({
               <Copy aria-hidden="true" size={14} />
             </button>
           </div>
-          <ReviewRunSummary run={run} />
+          <UserReviewSummary run={run} />
           <code className="review-run-panel__path">{run.folderPath}</code>
           <SourceFileSummary sourceFiles={run.sourceFiles} />
-          <ExecutionTargetSummary executionTarget={run.executionTarget} />
-          <ReviewRunActions
+          <WorkspaceSummary workspace={run.workspace} />
+          <UserReviewActions
             run={run}
             archiveState={archiveState}
-            onArchiveReviewRun={onArchiveReviewRun}
+            onArchiveUserReview={onArchiveUserReview}
           />
         </article>
       ))}
@@ -359,12 +363,12 @@ function ReviewRunList({
   );
 }
 
-type ReviewRunProblemsProps = Readonly<{
-  problems: ReviewRunListState["problems"];
+type UserReviewProblemsProps = Readonly<{
+  problems: UserReviewListState["problems"];
 }>;
 
 /** @returns Malformed or missing review run folders that need manual attention. */
-function ReviewRunProblems({ problems }: ReviewRunProblemsProps) {
+function UserReviewProblems({ problems }: UserReviewProblemsProps) {
   if (problems.length === 0) {
     return null;
   }
@@ -380,12 +384,12 @@ function ReviewRunProblems({ problems }: ReviewRunProblemsProps) {
   );
 }
 
-type ReviewRunSummaryProps = Readonly<{
-  run: ReviewRun;
+type UserReviewSummaryProps = Readonly<{
+  run: UserReview;
 }>;
 
 /** @returns Result summary and warnings captured from status/result files. */
-function ReviewRunSummary({ run }: ReviewRunSummaryProps) {
+function UserReviewSummary({ run }: UserReviewSummaryProps) {
   if (run.summary === null && run.warnings.length === 0) {
     return null;
   }
@@ -404,21 +408,21 @@ function ReviewRunSummary({ run }: ReviewRunSummaryProps) {
   );
 }
 
-type ReviewRunActionsProps = Readonly<{
-  run: ReviewRun;
-  archiveState: ReviewRunArchiveState;
-  onArchiveReviewRun: (reviewRunId: string) => void;
+type UserReviewActionsProps = Readonly<{
+  run: UserReview;
+  archiveState: UserReviewArchiveState;
+  onArchiveUserReview: (userReviewId: string) => void;
 }>;
 
-/** @returns Review run lifecycle actions. */
-function ReviewRunActions({
+/** @returns User review lifecycle actions. */
+function UserReviewActions({
   run,
   archiveState,
-  onArchiveReviewRun,
-}: ReviewRunActionsProps) {
+  onArchiveUserReview,
+}: UserReviewActionsProps) {
   const isSaving =
-    archiveState.status === "saving" && archiveState.reviewRunId === run.id;
-  const canArchive = run.status === "completed" && !isSaving;
+    archiveState.status === "saving" && archiveState.userReviewId === run.id;
+  const canArchive = canArchiveUserReview(run, isSaving);
 
   return (
     <div className="review-run-panel__actions">
@@ -433,8 +437,8 @@ function ReviewRunActions({
             : "status.jsonがcompletedのレビューだけアーカイブできます"
         }
         onClick={() => {
-          if (confirmArchiveReviewRun(run)) {
-            onArchiveReviewRun(run.id);
+          if (confirmArchiveUserReview(run)) {
+            onArchiveUserReview(run.id);
           }
         }}
       >
@@ -446,7 +450,7 @@ function ReviewRunActions({
 }
 
 type SourceFileSummaryProps = Readonly<{
-  sourceFiles: readonly ReviewRunSourceFile[];
+  sourceFiles: readonly ReviewSourceFile[];
 }>;
 
 /** @returns A compact source file list for the review bundle. */
@@ -463,15 +467,15 @@ function SourceFileSummary({ sourceFiles }: SourceFileSummaryProps) {
   );
 }
 
-type ExecutionTargetSummaryProps = Readonly<{
-  executionTarget: ReviewRunExecutionTarget;
+type WorkspaceSummaryProps = Readonly<{
+  workspace: UserReviewWorkspace;
 }>;
 
-/** @returns Worktree metadata when the run uses an isolated checkout. */
-function ExecutionTargetSummary({
-  executionTarget,
-}: ExecutionTargetSummaryProps) {
-  if (executionTarget.mode === "currentWorkspace") {
+/** @returns Worktree metadata when the review uses an isolated checkout. */
+function WorkspaceSummary({
+  workspace,
+}: WorkspaceSummaryProps) {
+  if (workspace.mode === "currentWorkspace") {
     return null;
   }
 
@@ -482,67 +486,22 @@ function ExecutionTargetSummary({
           <GitBranch aria-hidden="true" size={13} />
           <span>Branch</span>
         </dt>
-        <dd>{executionTarget.branchName}</dd>
+        <dd>{workspace.branchName}</dd>
       </div>
       <div>
         <dt>
           <Clipboard aria-hidden="true" size={13} />
           <span>Worktree</span>
         </dt>
-        <dd>{executionTarget.worktreePath}</dd>
+        <dd>{workspace.worktreePath}</dd>
       </div>
     </dl>
   );
 }
 
-/** @returns A Japanese summary for open comments included in a new run. */
-function formatOpenCommentSummary(openCommentCount: number): string {
-  if (openCommentCount === 0) {
-    return "未解決コメントはありません。";
-  }
-
-  return `未解決コメント ${openCommentCount}件を対象にできます。`;
-}
-
-/** @returns A Japanese success message for a newly created run. */
-function formatCreateSuccessMessage(reviewRun: ReviewRun): string {
-  return `レビューを作成しました。${reviewRun.commentCount}件 / ${reviewRun.folderPath}`;
-}
-
-/** @returns A Japanese error message for review run creation failures. */
-function formatCreateErrorMessage(message: string): string {
-  return `レビューを作成できませんでした。${message}`;
-}
-
-/** @returns A Japanese success message for an archived run. */
-function formatArchiveSuccessMessage(reviewRun: ReviewRun): string {
-  return `レビューをアーカイブしました。${reviewRun.folderPath}`;
-}
-
-/** @returns A Japanese error message for archive failures. */
-function formatArchiveErrorMessage(message: string): string {
-  return `レビューをアーカイブできませんでした。${message}`;
-}
-
-/** @returns A compact status and comment summary for an active run. */
-function formatRunSummary(run: ReviewRun): string {
-  return `${reviewRunStatusLabels[run.status]} / コメント ${run.commentCount}件`;
-}
-
 /** @returns True when the user confirms the irreversible active-to-archive move. */
-function confirmArchiveReviewRun(run: ReviewRun): boolean {
+function confirmArchiveUserReview(run: UserReview): boolean {
   return window.confirm(
     `完了済みレビュー ${run.id} をアーカイブします。activeフォルダからarchiveフォルダへ移動します。`,
   );
-}
-
-/** @returns A short Japanese label for malformed/missing folder list states. */
-function formatProblemState(
-  state: ReviewRunListState["problems"][number]["state"],
-): string {
-  if (state === "missingFolder") {
-    return "フォルダなし";
-  }
-
-  return "壊れたレビュー";
 }

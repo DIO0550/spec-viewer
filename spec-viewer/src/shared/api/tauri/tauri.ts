@@ -32,13 +32,13 @@ import type {
   SpecTree,
 } from "@/features/specs/types/spec";
 import type {
-  CreateReviewRunRequest,
-  CreateReviewRunResponse,
-  ArchiveReviewRunRequest,
-  ArchiveReviewRunResponse,
-  ListReviewRunsRequest,
-  ListReviewRunsResponse,
-} from "@/features/review-runs/types/reviewRun";
+  CreateUserReviewRequest,
+  CreateUserReviewResponse,
+  ArchiveUserReviewRequest,
+  ArchiveUserReviewResponse,
+  ListUserReviewsRequest,
+  ListUserReviewsResponse,
+} from "@/features/review-runs/types/userReviewIpc";
 import type {
   StartSpecFileWatchRequest,
   StartSpecFileWatchResponse,
@@ -77,16 +77,16 @@ export type CommentCommands = Readonly<{
   toggleCommentResolved: (request: CommentStatusRequest) => Promise<Comment>;
 }>;
 
-export type ReviewRunCommands = Readonly<{
-  createReviewRun: (
-    request: CreateReviewRunRequest,
-  ) => Promise<CreateReviewRunResponse>;
-  listReviewRuns: (
-    request: ListReviewRunsRequest,
-  ) => Promise<ListReviewRunsResponse>;
-  archiveReviewRun: (
-    request: ArchiveReviewRunRequest,
-  ) => Promise<ArchiveReviewRunResponse>;
+export type UserReviewCommands = Readonly<{
+  createUserReview: (
+    request: CreateUserReviewRequest,
+  ) => Promise<CreateUserReviewResponse>;
+  listUserReviews: (
+    request: ListUserReviewsRequest,
+  ) => Promise<ListUserReviewsResponse>;
+  archiveUserReview: (
+    request: ArchiveUserReviewRequest,
+  ) => Promise<ArchiveUserReviewResponse>;
 }>;
 
 /** @returns The directory selected from the native workspace picker, or null. */
@@ -223,30 +223,30 @@ export async function generateLlmPrompt(
 }
 
 /** @returns Metadata for the active review run bundle created by the backend. */
-export async function createReviewRun(
-  request: CreateReviewRunRequest,
-): Promise<CreateReviewRunResponse> {
-  return invokeCommand("create_review_run", request);
+export async function createUserReview(
+  request: CreateUserReviewRequest,
+): Promise<CreateUserReviewResponse> {
+  return invokeCommand("create_user_review", request);
 }
 
 /** @returns Active and archived review runs for the selected review target. */
-export async function listReviewRuns(
-  request: ListReviewRunsRequest,
-): Promise<ListReviewRunsResponse> {
-  return invokeCommand("list_review_runs", request);
+export async function listUserReviews(
+  request: ListUserReviewsRequest,
+): Promise<ListUserReviewsResponse> {
+  return invokeCommand("list_user_reviews", request);
 }
 
 /** @returns Metadata for the archived review run after moving it out of active. */
-export async function archiveReviewRun(
-  request: ArchiveReviewRunRequest,
-): Promise<ArchiveReviewRunResponse> {
-  return invokeCommand("archive_review_run", request);
+export async function archiveUserReview(
+  request: ArchiveUserReviewRequest,
+): Promise<ArchiveUserReviewResponse> {
+  return invokeCommand("archive_user_review", request);
 }
 
-export const reviewRunCommands: ReviewRunCommands = {
-  createReviewRun,
-  listReviewRuns,
-  archiveReviewRun,
+export const userReviewCommands: UserReviewCommands = {
+  createUserReview,
+  listUserReviews,
+  archiveUserReview,
 };
 
 export const commentCommands: CommentCommands = {
@@ -330,7 +330,7 @@ function isCommandErrorCode(value: unknown): value is CommandError["code"] {
     value === "invalidSpec" ||
     value === "invalidComment" ||
     value === "commentRepository" ||
-    value === "reviewRunExport" ||
+    value === "userReviewExport" ||
     value === "fileWatch"
   );
 }
