@@ -55,6 +55,28 @@ test("listUserReviewsはresponseをnormalizeして返す", async () => {
   });
 });
 
+test("listUserReviewsはarchive state不整合entryをrejectする", async () => {
+  const commands = createCommands({
+    listUserReviews: vi.fn().mockResolvedValue({
+      active: [
+        createUserReviewDto({
+          id: "review-invalid-list",
+          status: "completed",
+          archivedAt: "2026-05-06T12:30:00Z",
+        }),
+      ],
+      archived: [],
+      problems: [],
+    }),
+  });
+
+  await expect(
+    listUserReviews(commands, "/workspace/spec-reviewer", target, "corr-1"),
+  ).rejects.toThrow(
+    "Non-archived user review must not have archivedAt: review-invalid-list",
+  );
+});
+
 test("createUserReviewはinvalid lifecycle responseをrejectする", async () => {
   const commands = createCommands({
     createUserReview: vi.fn().mockResolvedValue({
@@ -94,6 +116,29 @@ test("archiveUserReviewはresponseをnormalizeして返す", async () => {
   );
 
   expect(response.userReview).toEqual(archivedReview);
+});
+
+test("archiveUserReviewはarchive state不整合responseをrejectする", async () => {
+  const commands = createCommands({
+    archiveUserReview: vi.fn().mockResolvedValue({
+      userReview: createUserReviewDto({
+        id: "review-invalid-archive",
+        status: "archived",
+        archivedAt: null,
+      }),
+    }),
+  });
+
+  await expect(
+    archiveUserReview(
+      commands,
+      "/workspace/spec-reviewer",
+      target,
+      "review-invalid-archive",
+    ),
+  ).rejects.toThrow(
+    "Archived user review must have archivedAt: review-invalid-archive",
+  );
 });
 
 function createCommands(
