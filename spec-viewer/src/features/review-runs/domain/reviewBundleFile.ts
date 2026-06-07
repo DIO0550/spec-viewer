@@ -54,6 +54,29 @@ export type ParsedReviewBundleFile =
   | ReviewBundleCommentsFile
   | ReviewBundleContextSourceFile;
 
+export const ReviewBundleContextSourceFile = {
+  /**
+   * @param input - Raw context source file metadata and contents.
+   * @returns Context source variant with required spec identity metadata.
+   * @throws Error when context source metadata is incomplete.
+   */
+  parse(input: RawReviewBundleFile): ReviewBundleContextSourceFile {
+    if (input.specId === undefined || input.fileKey === undefined) {
+      throw new Error(
+        `Context source review bundle file requires specId and fileKey: ${input.relativePath}`,
+      );
+    }
+
+    return {
+      kind: "contextSource",
+      relativePath: input.relativePath,
+      contents: input.contents,
+      specId: input.specId,
+      fileKey: input.fileKey,
+    };
+  },
+} as const;
+
 export const ReviewBundleFile = {
   /**
    * @param input - Raw bundle file metadata and contents.
@@ -62,7 +85,7 @@ export const ReviewBundleFile = {
    */
   parse(input: RawReviewBundleFile): ParsedReviewBundleFile {
     if (input.kind === "contextSource") {
-      return parseContextSourceFile(input);
+      return ReviewBundleContextSourceFile.parse(input);
     }
 
     return {
@@ -72,22 +95,3 @@ export const ReviewBundleFile = {
     };
   },
 } as const;
-
-/** @returns Context source variant with required spec identity metadata. */
-function parseContextSourceFile(
-  input: RawReviewBundleFile,
-): ReviewBundleContextSourceFile {
-  if (input.specId === undefined || input.fileKey === undefined) {
-    throw new Error(
-      `Context source review bundle file requires specId and fileKey: ${input.relativePath}`,
-    );
-  }
-
-  return {
-    kind: "contextSource",
-    relativePath: input.relativePath,
-    contents: input.contents,
-    specId: input.specId,
-    fileKey: input.fileKey,
-  };
-}

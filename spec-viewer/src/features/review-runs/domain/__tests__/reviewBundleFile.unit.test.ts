@@ -1,6 +1,9 @@
 import { expect, test } from "vitest";
 
-import { ReviewBundleFile } from "@/features/review-runs/domain/reviewBundleFile";
+import {
+  ReviewBundleContextSourceFile,
+  ReviewBundleFile,
+} from "@/features/review-runs/domain/reviewBundleFile";
 import type { ReviewBundleFileKind } from "@/features/review-runs/domain/reviewBundleFile";
 
 test.each<ReviewBundleFileKind>([
@@ -37,9 +40,22 @@ test("ReviewBundleFile.parseはcontextSource metadataを保持する", () => {
   });
 });
 
-test("ReviewBundleFile.parseはcontextSource metadata不足を拒否する", () => {
+test("ReviewBundleContextSourceFile.parseはcontextSource metadataを保持する", () => {
+  const result = ReviewBundleContextSourceFile.parse({
+    kind: "contextSource",
+    relativePath: "context/auth/tasks.md",
+    contents: "# Tasks",
+    specId: "auth",
+    fileKey: "tasks",
+  });
+
+  expect(result.specId).toBe("auth");
+  expect(result.fileKey).toBe("tasks");
+});
+
+test("ReviewBundleContextSourceFile.parseはcontextSource metadata不足を拒否する", () => {
   expect(() =>
-    ReviewBundleFile.parse({
+    ReviewBundleContextSourceFile.parse({
       kind: "contextSource",
       relativePath: "context/auth/tasks.md",
       contents: "# Tasks",
