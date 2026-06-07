@@ -7,8 +7,8 @@ import type {
 } from "@/features/review-runs/types/userReviewIpc";
 import type { CommentId } from "@/features/comments/types/comment";
 import {
-  normalizeListUserReviewsResponse,
-  normalizeUserReviewDto,
+  mapListUserReviewsResponseToUserReviews,
+  mapUserReviewDtoToUserReview,
 } from "@/features/review-runs/infra/userReviewIpcAdapter";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import type { UserReviewCommands } from "@/shared/api/tauri";
@@ -35,7 +35,7 @@ export async function listUserReviews(
     createListUserReviewsRequest(workspacePath, target, correlationId),
   );
 
-  return normalizeListUserReviewsResponse(response);
+  return mapListUserReviewsResponseToUserReviews(response);
 }
 
 /**
@@ -59,7 +59,7 @@ export async function createUserReview(
   });
 
   return {
-    userReview: normalizeUserReviewDto(response.userReview),
+    userReview: mapUserReviewDtoToUserReview(response.userReview),
   };
 }
 
@@ -83,7 +83,7 @@ export async function archiveUserReview(
   });
 
   return {
-    userReview: normalizeUserReviewDto(response.userReview),
+    userReview: mapUserReviewDtoToUserReview(response.userReview),
   };
 }
 

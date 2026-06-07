@@ -18,6 +18,69 @@ test("UserReview.restoreは非archived runをactive collection向けにnarrowす
   expect(UserReview.isArchived(entity)).toBe(false);
 });
 
+test("UserReview.tryRestoreはvalid active reviewをsuccessとして返す", () => {
+  const result = UserReview.tryRestore(activeRun);
+
+  expect(result).toEqual({
+    ok: true,
+    userReview: activeRun,
+  });
+});
+
+test("UserReview.tryRestoreはvalid archived reviewをsuccessとして返す", () => {
+  const archivedRun = createUserReview({
+    id: "run-valid-archived",
+    status: "archived",
+    archivedAt: "2026-05-06T12:30:00Z",
+  });
+
+  const result = UserReview.tryRestore(archivedRun);
+
+  expect(result).toEqual({
+    ok: true,
+    userReview: archivedRun,
+  });
+});
+
+test("UserReview.tryRestoreはarchivedAtのないarchived runをfailureとして返す", () => {
+  const invalidRun = createUserReview({
+    id: "run-invalid-archived",
+    status: "archived",
+    archivedAt: null,
+  });
+
+  const result = UserReview.tryRestore(invalidRun);
+
+  expect(result).toEqual({
+    ok: false,
+    error: {
+      reason: "archivedMissingArchivedAt",
+      id: "run-invalid-archived",
+      message: "Archived user review must have archivedAt: run-invalid-archived",
+    },
+  });
+});
+
+test("UserReview.tryRestoreはarchivedAtのある非archived runをfailureとして返す", () => {
+  const invalidRun = createUserReview({
+    id: "run-invalid-active",
+    status: "completed",
+    archivedAt: "2026-05-06T12:30:00Z",
+  });
+
+  const result = UserReview.tryRestore(invalidRun);
+
+  expect(result).toEqual({
+    ok: false,
+    error: {
+      reason: "nonArchivedHasArchivedAt",
+      id: "run-invalid-active",
+      message:
+        "Non-archived user review must not have archivedAt: run-invalid-active",
+    },
+  });
+});
+
 test("UserReview.restoreはarchived runをarchived variantへnarrowする", () => {
   const entity = UserReview.restore(
     createUserReview({

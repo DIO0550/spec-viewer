@@ -1,4 +1,7 @@
-import { UserReview } from "@/features/review-runs/domain/userReview";
+import {
+  UserReview,
+  type UserReviewArchiveStateError,
+} from "@/features/review-runs/domain/userReview";
 import type {
   ListUserReviewsResponse,
   UserReviewDto,
@@ -9,10 +12,16 @@ import type {
  * @returns Domain-validated user review DTO.
  * @throws Error when lifecycle invariants are invalid.
  */
-export function normalizeUserReviewDto(review: UserReviewDto): UserReviewDto {
-  UserReview.restore(review);
+export function mapUserReviewDtoToUserReview(
+  review: UserReviewDto,
+): UserReviewDto {
+  const result = UserReview.tryRestore(review);
 
-  return review;
+  if (!result.ok) {
+    throw toUserReviewArchiveStateError(result.error);
+  }
+
+  return result.userReview;
 }
 
 /**
@@ -20,12 +29,19 @@ export function normalizeUserReviewDto(review: UserReviewDto): UserReviewDto {
  * @returns Response with every user review lifecycle-validated.
  * @throws Error when any user review lifecycle invariant is invalid.
  */
-export function normalizeListUserReviewsResponse(
+export function mapListUserReviewsResponseToUserReviews(
   response: ListUserReviewsResponse,
 ): ListUserReviewsResponse {
   return {
-    active: response.active.map(normalizeUserReviewDto),
-    archived: response.archived.map(normalizeUserReviewDto),
+    active: response.active.map(mapUserReviewDtoToUserReview),
+    archived: response.archived.map(mapUserReviewDtoToUserReview),
     problems: response.problems,
   };
+}
+
+/** @returns Boundary-compatible error for archive state inconsistencies. */
+function toUserReviewArchiveStateError(
+  error: UserReviewArchiveStateError,
+): Error {
+  return new Error(error.message);
 }

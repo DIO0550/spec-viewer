@@ -48,6 +48,18 @@ test("UserReviewCollection.moveArchivedはactiveから除外してarchivedの先
   expect(nextCollection.archived.map((run) => run.id)).toEqual(["run-first"]);
 });
 
+test("UserReviewCollection.fromListResponseはactive collection内のarchived reviewを拒否する", () => {
+  expect(() =>
+    UserReviewCollection.fromListResponse([archivedFirstRun], [], []),
+  ).toThrow("Archived user review cannot be placed in active collection");
+});
+
+test("UserReviewCollection.fromListResponseはarchived collection内の非archived reviewを拒否する", () => {
+  expect(() =>
+    UserReviewCollection.fromListResponse([], [firstRun], []),
+  ).toThrow("Non-archived user review cannot be placed in archived collection");
+});
+
 function createUserReview(
   id: string,
   status: UserReviewRestoreInput["status"],
