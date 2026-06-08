@@ -5,7 +5,7 @@ import {
   type UserReviewSnapshot,
 } from "@/features/review-runs/domain/userReview";
 
-export type UserReviewSnapshotMapResult =
+export type UserReviewSnapshotConversionResult =
   | Readonly<{
       ok: true;
       userReview: UserReview;
@@ -30,7 +30,7 @@ export const UserReviewSnapshotMapper = {
   /** @returns Restore result without throwing for archive state inconsistencies. */
   tryFromSnapshot(
     snapshot: UserReviewSnapshot,
-  ): UserReviewSnapshotMapResult {
+  ): UserReviewSnapshotConversionResult {
     const error = validateArchiveState(snapshot);
 
     if (error !== null) {
