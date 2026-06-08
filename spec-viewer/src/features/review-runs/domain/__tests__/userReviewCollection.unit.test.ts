@@ -1,9 +1,8 @@
 import { expect, test } from "vitest";
 
 import {
-  UserReview,
   type UserReview as UserReviewType,
-  type UserReviewRestoreInput,
+  type UserReviewSnapshot,
 } from "@/features/review-runs/domain/userReview";
 import { UserReviewCollection } from "@/features/review-runs/domain/userReviewCollection";
 
@@ -62,10 +61,10 @@ test("UserReviewCollection.fromListResponseはarchived collection内の非archiv
 
 function createUserReview(
   id: string,
-  status: UserReviewRestoreInput["status"],
-  archivedAt: UserReviewRestoreInput["archivedAt"],
+  status: UserReviewSnapshot["status"],
+  archivedAt: UserReviewSnapshot["archivedAt"],
 ): UserReviewType {
-  return UserReview.restore({
+  return {
     id,
     status,
     target: {
@@ -91,5 +90,5 @@ function createUserReview(
     archivedAt,
     summary: null,
     warnings: [],
-  });
+  } as UserReviewType;
 }

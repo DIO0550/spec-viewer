@@ -1,10 +1,11 @@
-import {
+import type {
   UserReview,
-  type UserReviewArchiveStateError,
+  UserReviewArchiveStateError,
+  UserReviewSnapshot,
 } from "@/features/review-runs/domain/userReview";
+import { UserReviewSnapshotMapper } from "@/features/review-runs/infra/userReviewSnapshotMapper";
 import type {
   ListUserReviewsResponse,
-  UserReviewDto,
 } from "@/features/review-runs/types/userReviewIpc";
 
 /**
@@ -13,9 +14,9 @@ import type {
  * @throws Error when lifecycle invariants are invalid.
  */
 export function mapUserReviewDtoToUserReview(
-  review: UserReviewDto,
-): UserReviewDto {
-  const result = UserReview.tryRestore(review);
+  review: UserReviewSnapshot,
+): UserReview {
+  const result = UserReviewSnapshotMapper.tryFromSnapshot(review);
 
   if (!result.ok) {
     throw toUserReviewArchiveStateError(result.error);
