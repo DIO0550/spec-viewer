@@ -5,16 +5,6 @@ import {
   type UserReviewSnapshot,
 } from "@/features/review-runs/domain/userReview";
 
-type TryFromSnapshotResult =
-  | Readonly<{
-      ok: true;
-      userReview: UserReview;
-    }>
-  | Readonly<{
-      ok: false;
-      error: UserReviewArchiveStateError;
-    }>;
-
 export const UserReviewSnapshotMapper = {
   /** @returns User review restored from a boundary snapshot. */
   fromSnapshot(snapshot: UserReviewSnapshot): UserReview {
@@ -30,7 +20,15 @@ export const UserReviewSnapshotMapper = {
   /** @returns Restore result without throwing for archive state inconsistencies. */
   tryFromSnapshot(
     snapshot: UserReviewSnapshot,
-  ): TryFromSnapshotResult {
+  ):
+    | Readonly<{
+        ok: true;
+        userReview: UserReview;
+      }>
+    | Readonly<{
+        ok: false;
+        error: UserReviewArchiveStateError;
+      }> {
     const error = validateArchiveState(snapshot);
 
     if (error !== null) {
