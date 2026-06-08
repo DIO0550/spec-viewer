@@ -2,11 +2,11 @@ import type {
   CommentId,
   IsoDateTimeString,
 } from "@/features/comments/types/comment";
-import type {
-  ReviewSourceFile,
-  UserReview,
+import {
   UserReviewStatus,
-  UserReviewWorkspace,
+  type ReviewSourceFile,
+  type UserReview,
+  type UserReviewWorkspace,
 } from "@/features/review-runs/domain/userReview";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 
