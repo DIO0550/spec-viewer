@@ -5,45 +5,51 @@ import {
   type UserReviewArchiveStateError,
 } from "@/features/review-runs/domain/userReview";
 
-export const StoredUserReviewValidator = {
-  /** @returns User review validated from stored user review data. */
-  validate(storedUserReview: StoredUserReview): UserReview {
-    const result = StoredUserReviewValidator.tryValidate(storedUserReview);
+/**
+ * @param storedUserReview - Stored user review data read from a boundary.
+ * @returns User review validated from stored user review data.
+ */
+export function validateStoredUserReview(
+  storedUserReview: StoredUserReview,
+): UserReview {
+  const result = tryValidateStoredUserReview(storedUserReview);
 
-    if (!result.ok) {
-      throw new Error(result.error.message);
-    }
+  if (!result.ok) {
+    throw new Error(result.error.message);
+  }
 
-    return result.userReview;
-  },
+  return result.userReview;
+}
 
-  /** @returns Restore result without throwing for archive state inconsistencies. */
-  tryValidate(
-    storedUserReview: StoredUserReview,
-  ):
-    | Readonly<{
-        ok: true;
-        userReview: UserReview;
-      }>
-    | Readonly<{
-        ok: false;
-        error: UserReviewArchiveStateError;
-      }> {
-    const error = validateArchiveState(storedUserReview);
+/**
+ * @param storedUserReview - Stored user review data read from a boundary.
+ * @returns Validation result without throwing for archive state inconsistencies.
+ */
+export function tryValidateStoredUserReview(
+  storedUserReview: StoredUserReview,
+):
+  | Readonly<{
+      ok: true;
+      userReview: UserReview;
+    }>
+  | Readonly<{
+      ok: false;
+      error: UserReviewArchiveStateError;
+    }> {
+  const error = validateArchiveState(storedUserReview);
 
-    if (error !== null) {
-      return {
-        ok: false,
-        error,
-      };
-    }
-
+  if (error !== null) {
     return {
-      ok: true,
-      userReview: storedUserReview as UserReview,
+      ok: false,
+      error,
     };
-  },
-} as const;
+  }
+
+  return {
+    ok: true,
+    userReview: storedUserReview as UserReview,
+  };
+}
 
 /** @returns Archive state error, or null when status and archivedAt are consistent. */
 function validateArchiveState(

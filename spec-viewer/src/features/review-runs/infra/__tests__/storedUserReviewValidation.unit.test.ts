@@ -1,16 +1,19 @@
 import { expect, test } from "vitest";
 
 import type { StoredUserReview } from "@/features/review-runs/domain/userReview";
-import { StoredUserReviewValidator } from "@/features/review-runs/infra/storedUserReviewValidator";
+import {
+  tryValidateStoredUserReview,
+  validateStoredUserReview,
+} from "@/features/review-runs/infra/storedUserReviewValidation";
 
-test("StoredUserReviewValidator.tryValidateはvalid active stored reviewをsuccessとして返す", () => {
+test("tryValidateStoredUserReviewはvalid active stored reviewをsuccessとして返す", () => {
   const activeReview = createStoredUserReview({
     id: "review-active",
     status: "active",
     archivedAt: null,
   });
 
-  const result = StoredUserReviewValidator.tryValidate(activeReview);
+  const result = tryValidateStoredUserReview(activeReview);
 
   expect(result).toEqual({
     ok: true,
@@ -18,14 +21,14 @@ test("StoredUserReviewValidator.tryValidateはvalid active stored reviewをsucce
   });
 });
 
-test("StoredUserReviewValidator.tryValidateはvalid archived stored reviewをsuccessとして返す", () => {
+test("tryValidateStoredUserReviewはvalid archived stored reviewをsuccessとして返す", () => {
   const archivedReview = createStoredUserReview({
     id: "review-archived",
     status: "archived",
     archivedAt: "2026-05-06T12:30:00Z",
   });
 
-  const result = StoredUserReviewValidator.tryValidate(archivedReview);
+  const result = tryValidateStoredUserReview(archivedReview);
 
   expect(result).toEqual({
     ok: true,
@@ -33,14 +36,14 @@ test("StoredUserReviewValidator.tryValidateはvalid archived stored reviewをsuc
   });
 });
 
-test("StoredUserReviewValidator.tryValidateはarchivedAtのないarchived stored reviewをfailureとして返す", () => {
+test("tryValidateStoredUserReviewはarchivedAtのないarchived stored reviewをfailureとして返す", () => {
   const invalidReview = createStoredUserReview({
     id: "review-invalid-archived",
     status: "archived",
     archivedAt: null,
   });
 
-  const result = StoredUserReviewValidator.tryValidate(invalidReview);
+  const result = tryValidateStoredUserReview(invalidReview);
 
   expect(result).toEqual({
     ok: false,
@@ -53,14 +56,14 @@ test("StoredUserReviewValidator.tryValidateはarchivedAtのないarchived stored
   });
 });
 
-test("StoredUserReviewValidator.tryValidateはarchivedAtのある非archived stored reviewをfailureとして返す", () => {
+test("tryValidateStoredUserReviewはarchivedAtのある非archived stored reviewをfailureとして返す", () => {
   const invalidReview = createStoredUserReview({
     id: "review-invalid-active",
     status: "completed",
     archivedAt: "2026-05-06T12:30:00Z",
   });
 
-  const result = StoredUserReviewValidator.tryValidate(invalidReview);
+  const result = tryValidateStoredUserReview(invalidReview);
 
   expect(result).toEqual({
     ok: false,
@@ -73,14 +76,14 @@ test("StoredUserReviewValidator.tryValidateはarchivedAtのある非archived sto
   });
 });
 
-test("StoredUserReviewValidator.validateはinvalid stored reviewを例外として拒否する", () => {
+test("validateStoredUserReviewはinvalid stored reviewを例外として拒否する", () => {
   const invalidReview = createStoredUserReview({
     id: "review-invalid-validate",
     status: "archived",
     archivedAt: null,
   });
 
-  expect(() => StoredUserReviewValidator.validate(invalidReview)).toThrow(
+  expect(() => validateStoredUserReview(invalidReview)).toThrow(
     "Archived user review must have archivedAt: review-invalid-validate",
   );
 });
