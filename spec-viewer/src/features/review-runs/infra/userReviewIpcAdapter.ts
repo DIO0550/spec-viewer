@@ -3,7 +3,7 @@ import type {
   UserReviewArchiveStateError,
   UserReviewSnapshot,
 } from "@/features/review-runs/domain/userReview";
-import { UserReviewSnapshotMapper } from "@/features/review-runs/infra/userReviewSnapshotMapper";
+import { UserReviewSnapshotDecoder } from "@/features/review-runs/infra/userReviewSnapshotDecoder";
 import type {
   ListUserReviewsResponse,
 } from "@/features/review-runs/types/userReviewIpc";
@@ -16,7 +16,7 @@ import type {
 export function mapUserReviewDtoToUserReview(
   review: UserReviewSnapshot,
 ): UserReview {
-  const result = UserReviewSnapshotMapper.tryFromSnapshot(review);
+  const result = UserReviewSnapshotDecoder.tryFromSnapshot(review);
 
   if (!result.ok) {
     throw toUserReviewArchiveStateError(result.error);

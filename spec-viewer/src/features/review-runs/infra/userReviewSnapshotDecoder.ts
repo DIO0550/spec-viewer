@@ -5,10 +5,10 @@ import {
   type UserReviewSnapshot,
 } from "@/features/review-runs/domain/userReview";
 
-export const UserReviewSnapshotMapper = {
+export const UserReviewSnapshotDecoder = {
   /** @returns User review restored from a boundary snapshot. */
   fromSnapshot(snapshot: UserReviewSnapshot): UserReview {
-    const result = UserReviewSnapshotMapper.tryFromSnapshot(snapshot);
+    const result = UserReviewSnapshotDecoder.tryFromSnapshot(snapshot);
 
     if (!result.ok) {
       throw new Error(result.error.message);

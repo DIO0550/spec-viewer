@@ -1,16 +1,16 @@
 import { expect, test } from "vitest";
 
 import type { UserReviewSnapshot } from "@/features/review-runs/domain/userReview";
-import { UserReviewSnapshotMapper } from "@/features/review-runs/infra/userReviewSnapshotMapper";
+import { UserReviewSnapshotDecoder } from "@/features/review-runs/infra/userReviewSnapshotDecoder";
 
-test("UserReviewSnapshotMapper.tryFromSnapshotはvalid active snapshotをsuccessとして返す", () => {
+test("UserReviewSnapshotDecoder.tryFromSnapshotはvalid active snapshotをsuccessとして返す", () => {
   const activeReview = createUserReviewSnapshot({
     id: "review-active",
     status: "active",
     archivedAt: null,
   });
 
-  const result = UserReviewSnapshotMapper.tryFromSnapshot(activeReview);
+  const result = UserReviewSnapshotDecoder.tryFromSnapshot(activeReview);
 
   expect(result).toEqual({
     ok: true,
@@ -18,14 +18,14 @@ test("UserReviewSnapshotMapper.tryFromSnapshotはvalid active snapshotをsuccess
   });
 });
 
-test("UserReviewSnapshotMapper.tryFromSnapshotはvalid archived snapshotをsuccessとして返す", () => {
+test("UserReviewSnapshotDecoder.tryFromSnapshotはvalid archived snapshotをsuccessとして返す", () => {
   const archivedReview = createUserReviewSnapshot({
     id: "review-archived",
     status: "archived",
     archivedAt: "2026-05-06T12:30:00Z",
   });
 
-  const result = UserReviewSnapshotMapper.tryFromSnapshot(archivedReview);
+  const result = UserReviewSnapshotDecoder.tryFromSnapshot(archivedReview);
 
   expect(result).toEqual({
     ok: true,
@@ -33,14 +33,14 @@ test("UserReviewSnapshotMapper.tryFromSnapshotはvalid archived snapshotをsucce
   });
 });
 
-test("UserReviewSnapshotMapper.tryFromSnapshotはarchivedAtのないarchived snapshotをfailureとして返す", () => {
+test("UserReviewSnapshotDecoder.tryFromSnapshotはarchivedAtのないarchived snapshotをfailureとして返す", () => {
   const invalidReview = createUserReviewSnapshot({
     id: "review-invalid-archived",
     status: "archived",
     archivedAt: null,
   });
 
-  const result = UserReviewSnapshotMapper.tryFromSnapshot(invalidReview);
+  const result = UserReviewSnapshotDecoder.tryFromSnapshot(invalidReview);
 
   expect(result).toEqual({
     ok: false,
@@ -53,14 +53,14 @@ test("UserReviewSnapshotMapper.tryFromSnapshotはarchivedAtのないarchived sna
   });
 });
 
-test("UserReviewSnapshotMapper.tryFromSnapshotはarchivedAtのある非archived snapshotをfailureとして返す", () => {
+test("UserReviewSnapshotDecoder.tryFromSnapshotはarchivedAtのある非archived snapshotをfailureとして返す", () => {
   const invalidReview = createUserReviewSnapshot({
     id: "review-invalid-active",
     status: "completed",
     archivedAt: "2026-05-06T12:30:00Z",
   });
 
-  const result = UserReviewSnapshotMapper.tryFromSnapshot(invalidReview);
+  const result = UserReviewSnapshotDecoder.tryFromSnapshot(invalidReview);
 
   expect(result).toEqual({
     ok: false,
@@ -73,14 +73,14 @@ test("UserReviewSnapshotMapper.tryFromSnapshotはarchivedAtのある非archived 
   });
 });
 
-test("UserReviewSnapshotMapper.fromSnapshotはinvalid snapshotを例外として拒否する", () => {
+test("UserReviewSnapshotDecoder.fromSnapshotはinvalid snapshotを例外として拒否する", () => {
   const invalidReview = createUserReviewSnapshot({
     id: "review-invalid-from-snapshot",
     status: "archived",
     archivedAt: null,
   });
 
-  expect(() => UserReviewSnapshotMapper.fromSnapshot(invalidReview)).toThrow(
+  expect(() => UserReviewSnapshotDecoder.fromSnapshot(invalidReview)).toThrow(
     "Archived user review must have archivedAt: review-invalid-from-snapshot",
   );
 });
