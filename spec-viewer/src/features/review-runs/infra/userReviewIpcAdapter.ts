@@ -1,7 +1,8 @@
-import type {
-  StoredUserReview,
-  UserReview,
-  UserReviewArchiveStateError,
+import {
+  ValidatedStoredUserReview,
+  type StoredUserReview,
+  type UserReview,
+  type UserReviewArchiveStateError,
 } from "@/features/review-runs/domain/userReview";
 import { tryValidateStoredUserReview } from "@/features/review-runs/infra/storedUserReviewValidation";
 import type {
@@ -22,7 +23,7 @@ export function mapUserReviewDtoToUserReview(
     throw toUserReviewArchiveStateError(result.error);
   }
 
-  return result.validatedStoredUserReview;
+  return ValidatedStoredUserReview.to(result.validatedStoredUserReview);
 }
 
 /**

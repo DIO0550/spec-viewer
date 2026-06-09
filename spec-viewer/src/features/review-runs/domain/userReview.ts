@@ -91,6 +91,14 @@ export type StoredUserReview = UserReviewBase &
     archivedAt: IsoDateTimeString | null;
   }>;
 export type ValidatedStoredUserReview = UserReview;
+
+export const ValidatedStoredUserReview = {
+  /** @returns Domain user review represented by validated stored data. */
+  to(validatedStoredUserReview: ValidatedStoredUserReview): UserReview {
+    return validatedStoredUserReview;
+  },
+} as const;
+
 export type UserReviewArchiveStateErrorReason =
   | "archivedMissingArchivedAt"
   | "nonArchivedHasArchivedAt";
