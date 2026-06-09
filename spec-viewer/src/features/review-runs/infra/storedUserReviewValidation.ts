@@ -1,9 +1,8 @@
-import {
-  UserReviewStatus,
-  type StoredUserReview,
-  type UserReviewArchiveStateError,
-  type ValidatedStoredUserReview,
+import type {
+  StoredUserReview,
+  UserReviewArchiveStateError,
 } from "@/features/review-runs/domain/userReview";
+import { ValidatedStoredUserReview } from "@/features/review-runs/domain/validatedStoredUserReview";
 
 /**
  * @param storedUserReview - Stored user review data read from a boundary.
@@ -12,7 +11,7 @@ import {
 export function validateStoredUserReview(
   storedUserReview: StoredUserReview,
 ): ValidatedStoredUserReview {
-  const result = tryValidateStoredUserReview(storedUserReview);
+  const result = ValidatedStoredUserReview.from(storedUserReview);
 
   if (!result.ok) {
     throw new Error(result.error.message);
@@ -36,46 +35,5 @@ export function tryValidateStoredUserReview(
       ok: false;
       error: UserReviewArchiveStateError;
     }> {
-  const error = validateArchiveState(storedUserReview);
-
-  if (error !== null) {
-    return {
-      ok: false,
-      error,
-    };
-  }
-
-  return {
-    ok: true,
-    validatedStoredUserReview: storedUserReview as ValidatedStoredUserReview,
-  };
-}
-
-/** @returns Archive state error, or null when status and archivedAt are consistent. */
-function validateArchiveState(
-  storedUserReview: StoredUserReview,
-): UserReviewArchiveStateError | null {
-  if (
-    UserReviewStatus.isArchived(storedUserReview.status) &&
-    storedUserReview.archivedAt === null
-  ) {
-    return {
-      reason: "archivedMissingArchivedAt",
-      id: storedUserReview.id,
-      message: `Archived user review must have archivedAt: ${storedUserReview.id}`,
-    };
-  }
-
-  if (
-    UserReviewStatus.isNonArchived(storedUserReview.status) &&
-    storedUserReview.archivedAt !== null
-  ) {
-    return {
-      reason: "nonArchivedHasArchivedAt",
-      id: storedUserReview.id,
-      message: `Non-archived user review must not have archivedAt: ${storedUserReview.id}`,
-    };
-  }
-
-  return null;
+  return ValidatedStoredUserReview.from(storedUserReview);
 }

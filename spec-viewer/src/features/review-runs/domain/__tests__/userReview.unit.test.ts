@@ -3,7 +3,6 @@ import { expect, test } from "vitest";
 import {
   UserReview,
   UserReviewStatus,
-  ValidatedStoredUserReview,
   type StoredUserReview,
   type UserReview as UserReviewType,
 } from "@/features/review-runs/domain/userReview";
@@ -47,10 +46,6 @@ test("UserReview.isArchivedはarchived runをarchived variantへnarrowする", (
 test("UserReview.isNonArchivedは非archived runをactive collection向けにnarrowする", () => {
   expect(UserReview.isNonArchived(activeRun)).toBe(true);
   expect(UserReview.isArchived(activeRun)).toBe(false);
-});
-
-test("ValidatedStoredUserReview.toは検証済み保存reviewをUserReviewとして返す", () => {
-  expect(ValidatedStoredUserReview.to(activeRun)).toBe(activeRun);
 });
 
 function createUserReview(

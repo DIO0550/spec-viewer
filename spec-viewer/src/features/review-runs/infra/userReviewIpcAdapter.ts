@@ -1,9 +1,9 @@
-import {
-  ValidatedStoredUserReview,
-  type StoredUserReview,
-  type UserReview,
-  type UserReviewArchiveStateError,
+import type {
+  StoredUserReview,
+  UserReview,
+  UserReviewArchiveStateError,
 } from "@/features/review-runs/domain/userReview";
+import { ValidatedStoredUserReview } from "@/features/review-runs/domain/validatedStoredUserReview";
 import { tryValidateStoredUserReview } from "@/features/review-runs/infra/storedUserReviewValidation";
 import type {
   ListUserReviewsResponse,
