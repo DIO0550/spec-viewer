@@ -4,7 +4,6 @@ import type {
   UserReviewArchiveStateError,
 } from "@/features/review-runs/domain/userReview";
 import { ValidatedStoredUserReview } from "@/features/review-runs/domain/validatedStoredUserReview";
-import { tryValidateStoredUserReview } from "@/features/review-runs/infra/storedUserReviewValidation";
 import type {
   ListUserReviewsResponse,
 } from "@/features/review-runs/types/userReviewIpc";
@@ -17,7 +16,7 @@ import type {
 export function mapUserReviewDtoToUserReview(
   review: StoredUserReview,
 ): UserReview {
-  const result = tryValidateStoredUserReview(review);
+  const result = ValidatedStoredUserReview.from(review);
 
   if (!result.ok) {
     throw toUserReviewArchiveStateError(result.error);
