@@ -1,16 +1,16 @@
 import { expect, test } from "vitest";
 
-import type { UserReviewSnapshot } from "@/features/review-runs/domain/userReview";
-import { UserReviewSnapshotDecoder } from "@/features/review-runs/infra/userReviewSnapshotDecoder";
+import type { StoredUserReview } from "@/features/review-runs/domain/userReview";
+import { StoredUserReviewValidator } from "@/features/review-runs/infra/storedUserReviewValidator";
 
-test("UserReviewSnapshotDecoder.tryFromSnapshotはvalid active snapshotをsuccessとして返す", () => {
-  const activeReview = createUserReviewSnapshot({
+test("StoredUserReviewValidator.tryValidateはvalid active stored reviewをsuccessとして返す", () => {
+  const activeReview = createStoredUserReview({
     id: "review-active",
     status: "active",
     archivedAt: null,
   });
 
-  const result = UserReviewSnapshotDecoder.tryFromSnapshot(activeReview);
+  const result = StoredUserReviewValidator.tryValidate(activeReview);
 
   expect(result).toEqual({
     ok: true,
@@ -18,14 +18,14 @@ test("UserReviewSnapshotDecoder.tryFromSnapshotはvalid active snapshotをsucces
   });
 });
 
-test("UserReviewSnapshotDecoder.tryFromSnapshotはvalid archived snapshotをsuccessとして返す", () => {
-  const archivedReview = createUserReviewSnapshot({
+test("StoredUserReviewValidator.tryValidateはvalid archived stored reviewをsuccessとして返す", () => {
+  const archivedReview = createStoredUserReview({
     id: "review-archived",
     status: "archived",
     archivedAt: "2026-05-06T12:30:00Z",
   });
 
-  const result = UserReviewSnapshotDecoder.tryFromSnapshot(archivedReview);
+  const result = StoredUserReviewValidator.tryValidate(archivedReview);
 
   expect(result).toEqual({
     ok: true,
@@ -33,14 +33,14 @@ test("UserReviewSnapshotDecoder.tryFromSnapshotはvalid archived snapshotをsucc
   });
 });
 
-test("UserReviewSnapshotDecoder.tryFromSnapshotはarchivedAtのないarchived snapshotをfailureとして返す", () => {
-  const invalidReview = createUserReviewSnapshot({
+test("StoredUserReviewValidator.tryValidateはarchivedAtのないarchived stored reviewをfailureとして返す", () => {
+  const invalidReview = createStoredUserReview({
     id: "review-invalid-archived",
     status: "archived",
     archivedAt: null,
   });
 
-  const result = UserReviewSnapshotDecoder.tryFromSnapshot(invalidReview);
+  const result = StoredUserReviewValidator.tryValidate(invalidReview);
 
   expect(result).toEqual({
     ok: false,
@@ -53,14 +53,14 @@ test("UserReviewSnapshotDecoder.tryFromSnapshotはarchivedAtのないarchived sn
   });
 });
 
-test("UserReviewSnapshotDecoder.tryFromSnapshotはarchivedAtのある非archived snapshotをfailureとして返す", () => {
-  const invalidReview = createUserReviewSnapshot({
+test("StoredUserReviewValidator.tryValidateはarchivedAtのある非archived stored reviewをfailureとして返す", () => {
+  const invalidReview = createStoredUserReview({
     id: "review-invalid-active",
     status: "completed",
     archivedAt: "2026-05-06T12:30:00Z",
   });
 
-  const result = UserReviewSnapshotDecoder.tryFromSnapshot(invalidReview);
+  const result = StoredUserReviewValidator.tryValidate(invalidReview);
 
   expect(result).toEqual({
     ok: false,
@@ -73,21 +73,21 @@ test("UserReviewSnapshotDecoder.tryFromSnapshotはarchivedAtのある非archived
   });
 });
 
-test("UserReviewSnapshotDecoder.fromSnapshotはinvalid snapshotを例外として拒否する", () => {
-  const invalidReview = createUserReviewSnapshot({
-    id: "review-invalid-from-snapshot",
+test("StoredUserReviewValidator.validateはinvalid stored reviewを例外として拒否する", () => {
+  const invalidReview = createStoredUserReview({
+    id: "review-invalid-validate",
     status: "archived",
     archivedAt: null,
   });
 
-  expect(() => UserReviewSnapshotDecoder.fromSnapshot(invalidReview)).toThrow(
-    "Archived user review must have archivedAt: review-invalid-from-snapshot",
+  expect(() => StoredUserReviewValidator.validate(invalidReview)).toThrow(
+    "Archived user review must have archivedAt: review-invalid-validate",
   );
 });
 
-function createUserReviewSnapshot(
-  input: Pick<UserReviewSnapshot, "archivedAt" | "id" | "status">,
-): UserReviewSnapshot {
+function createStoredUserReview(
+  input: Pick<StoredUserReview, "archivedAt" | "id" | "status">,
+): StoredUserReview {
   return {
     id: input.id,
     status: input.status,

@@ -3,8 +3,8 @@ import { expect, test } from "vitest";
 import {
   UserReview,
   UserReviewStatus,
+  type StoredUserReview,
   type UserReview as UserReviewType,
-  type UserReviewSnapshot,
 } from "@/features/review-runs/domain/userReview";
 
 const activeRun = createUserReview({
@@ -49,7 +49,7 @@ test("UserReview.isNonArchivedは非archived runをactive collection向けにnar
 });
 
 function createUserReview(
-  input: Pick<UserReviewSnapshot, "archivedAt" | "id" | "status">,
+  input: Pick<StoredUserReview, "archivedAt" | "id" | "status">,
 ): UserReviewType {
   return {
     id: input.id,

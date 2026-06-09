@@ -85,7 +85,7 @@ export type NonArchivedUserReview =
   | CompletedUserReview;
 
 export type UserReview = NonArchivedUserReview | ArchivedUserReview;
-export type UserReviewSnapshot = UserReviewBase &
+export type StoredUserReview = UserReviewBase &
   Readonly<{
     status: UserReviewStatus;
     archivedAt: IsoDateTimeString | null;

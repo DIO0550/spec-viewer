@@ -1,8 +1,8 @@
 import { expect, test } from "vitest";
 
 import {
+  type StoredUserReview,
   type UserReview as UserReviewType,
-  type UserReviewSnapshot,
 } from "@/features/review-runs/domain/userReview";
 import { UserReviewCollection } from "@/features/review-runs/domain/userReviewCollection";
 
@@ -61,8 +61,8 @@ test("UserReviewCollection.fromListResponseはarchived collection内の非archiv
 
 function createUserReview(
   id: string,
-  status: UserReviewSnapshot["status"],
-  archivedAt: UserReviewSnapshot["archivedAt"],
+  status: StoredUserReview["status"],
+  archivedAt: StoredUserReview["archivedAt"],
 ): UserReviewType {
   return {
     id,

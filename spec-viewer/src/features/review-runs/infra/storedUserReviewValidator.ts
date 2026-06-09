@@ -1,14 +1,14 @@
 import {
   UserReviewStatus,
+  type StoredUserReview,
   type UserReview,
   type UserReviewArchiveStateError,
-  type UserReviewSnapshot,
 } from "@/features/review-runs/domain/userReview";
 
-export const UserReviewSnapshotDecoder = {
-  /** @returns User review restored from a boundary snapshot. */
-  fromSnapshot(snapshot: UserReviewSnapshot): UserReview {
-    const result = UserReviewSnapshotDecoder.tryFromSnapshot(snapshot);
+export const StoredUserReviewValidator = {
+  /** @returns User review validated from stored user review data. */
+  validate(storedUserReview: StoredUserReview): UserReview {
+    const result = StoredUserReviewValidator.tryValidate(storedUserReview);
 
     if (!result.ok) {
       throw new Error(result.error.message);
@@ -18,8 +18,8 @@ export const UserReviewSnapshotDecoder = {
   },
 
   /** @returns Restore result without throwing for archive state inconsistencies. */
-  tryFromSnapshot(
-    snapshot: UserReviewSnapshot,
+  tryValidate(
+    storedUserReview: StoredUserReview,
   ):
     | Readonly<{
         ok: true;
@@ -29,7 +29,7 @@ export const UserReviewSnapshotDecoder = {
         ok: false;
         error: UserReviewArchiveStateError;
       }> {
-    const error = validateArchiveState(snapshot);
+    const error = validateArchiveState(storedUserReview);
 
     if (error !== null) {
       return {
@@ -40,34 +40,34 @@ export const UserReviewSnapshotDecoder = {
 
     return {
       ok: true,
-      userReview: snapshot as UserReview,
+      userReview: storedUserReview as UserReview,
     };
   },
 } as const;
 
 /** @returns Archive state error, or null when status and archivedAt are consistent. */
 function validateArchiveState(
-  snapshot: UserReviewSnapshot,
+  storedUserReview: StoredUserReview,
 ): UserReviewArchiveStateError | null {
   if (
-    UserReviewStatus.isArchived(snapshot.status) &&
-    snapshot.archivedAt === null
+    UserReviewStatus.isArchived(storedUserReview.status) &&
+    storedUserReview.archivedAt === null
   ) {
     return {
       reason: "archivedMissingArchivedAt",
-      id: snapshot.id,
-      message: `Archived user review must have archivedAt: ${snapshot.id}`,
+      id: storedUserReview.id,
+      message: `Archived user review must have archivedAt: ${storedUserReview.id}`,
     };
   }
 
   if (
-    UserReviewStatus.isNonArchived(snapshot.status) &&
-    snapshot.archivedAt !== null
+    UserReviewStatus.isNonArchived(storedUserReview.status) &&
+    storedUserReview.archivedAt !== null
   ) {
     return {
       reason: "nonArchivedHasArchivedAt",
-      id: snapshot.id,
-      message: `Non-archived user review must not have archivedAt: ${snapshot.id}`,
+      id: storedUserReview.id,
+      message: `Non-archived user review must not have archivedAt: ${storedUserReview.id}`,
     };
   }
 
