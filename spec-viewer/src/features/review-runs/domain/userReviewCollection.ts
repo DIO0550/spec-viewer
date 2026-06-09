@@ -83,26 +83,22 @@ export const UserReviewCollection = {
 
 /** @returns Non-archived user review or throws for an invalid active entry. */
 function toNonArchivedReview(userReview: UserReviewType): NonArchivedUserReview {
-  const entity = UserReview.restore(userReview);
-
-  if (UserReview.isArchived(entity)) {
+  if (UserReview.isArchived(userReview)) {
     throw new Error(
       `Archived user review cannot be placed in active collection: ${userReview.id}`,
     );
   }
 
-  return entity;
+  return userReview;
 }
 
 /** @returns Archived user review or throws for an invalid archived entry. */
 function toArchivedReview(userReview: UserReviewType): ArchivedUserReview {
-  const entity = UserReview.restore(userReview);
-
-  if (UserReview.isNonArchived(entity)) {
+  if (UserReview.isNonArchived(userReview)) {
     throw new Error(
       `Non-archived user review cannot be placed in archived collection: ${userReview.id}`,
     );
   }
 
-  return entity;
+  return userReview;
 }

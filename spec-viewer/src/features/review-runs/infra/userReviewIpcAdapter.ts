@@ -1,10 +1,11 @@
-import {
+import type {
+  StoredUserReview,
   UserReview,
-  type UserReviewArchiveStateError,
+  UserReviewArchiveStateError,
 } from "@/features/review-runs/domain/userReview";
+import { ValidatedStoredUserReview } from "@/features/review-runs/domain/validatedStoredUserReview";
 import type {
   ListUserReviewsResponse,
-  UserReviewDto,
 } from "@/features/review-runs/types/userReviewIpc";
 
 /**
@@ -13,15 +14,15 @@ import type {
  * @throws Error when lifecycle invariants are invalid.
  */
 export function mapUserReviewDtoToUserReview(
-  review: UserReviewDto,
-): UserReviewDto {
-  const result = UserReview.tryRestore(review);
+  review: StoredUserReview,
+): UserReview {
+  const result = ValidatedStoredUserReview.from(review);
 
   if (!result.ok) {
     throw toUserReviewArchiveStateError(result.error);
   }
 
-  return result.userReview;
+  return ValidatedStoredUserReview.to(result.validatedStoredUserReview);
 }
 
 /**

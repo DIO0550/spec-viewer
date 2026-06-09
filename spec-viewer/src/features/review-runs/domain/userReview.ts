@@ -8,6 +8,22 @@ export type UserReviewStatus =
   | "completed"
   | "archived";
 
+export const UserReviewStatus = {
+  /** @returns True when the status belongs to archived collection. */
+  isArchived(
+    status: UserReviewStatus,
+  ): status is ArchivedUserReview["status"] {
+    return status === "archived";
+  },
+
+  /** @returns True when the status is visible in the active user review list. */
+  isNonArchived(
+    status: UserReviewStatus,
+  ): status is NonArchivedUserReview["status"] {
+    return status !== "archived";
+  },
+} as const;
+
 export type UserReviewWorkspace =
   | Readonly<{
       mode: "currentWorkspace";
@@ -69,11 +85,12 @@ export type NonArchivedUserReview =
   | CompletedUserReview;
 
 export type UserReview = NonArchivedUserReview | ArchivedUserReview;
-export type UserReviewRestoreInput = UserReviewBase &
+export type StoredUserReview = UserReviewBase &
   Readonly<{
     status: UserReviewStatus;
     archivedAt: IsoDateTimeString | null;
   }>;
+
 export type UserReviewArchiveStateErrorReason =
   | "archivedMissingArchivedAt"
   | "nonArchivedHasArchivedAt";
@@ -82,85 +99,17 @@ export type UserReviewArchiveStateError = Readonly<{
   id: string;
   message: string;
 }>;
-export type UserReviewRestoreResult =
-  | Readonly<{
-      ok: true;
-      userReview: UserReview;
-    }>
-  | Readonly<{
-      ok: false;
-      error: UserReviewArchiveStateError;
-    }>;
 
 export const UserReview = {
-  /** @returns Restore result without throwing for archive state inconsistencies. */
-  tryRestore(userReview: UserReviewRestoreInput): UserReviewRestoreResult {
-    const error = validateArchiveState(userReview);
-
-    if (error !== null) {
-      return {
-        ok: false,
-        error,
-      };
-    }
-
-    return {
-      ok: true,
-      userReview: userReview as UserReview,
-    };
-  },
-
-  /** @returns User review restored from a boundary-safe domain input. */
-  restore(userReview: UserReviewRestoreInput): UserReview {
-    const result = UserReview.tryRestore(userReview);
-
-    if (!result.ok) {
-      throw new Error(result.error.message);
-    }
-
-    return result.userReview;
-  },
-
   /** @returns True when the review belongs to archived collection. */
   isArchived(userReview: UserReview): userReview is ArchivedUserReview {
-    return userReview.status === "archived";
+    return UserReviewStatus.isArchived(userReview.status);
   },
 
   /** @returns True when the review belongs to active collection. */
   isNonArchived(
     userReview: UserReview,
   ): userReview is NonArchivedUserReview {
-    return userReview.status !== "archived";
+    return UserReviewStatus.isNonArchived(userReview.status);
   },
-
 } as const;
-
-/** @returns Archive state error, or null when status and archivedAt are consistent. */
-function validateArchiveState(
-  userReview: UserReviewRestoreInput,
-): UserReviewArchiveStateError | null {
-  if (userReview.status === "archived" && userReview.archivedAt === null) {
-    return {
-      reason: "archivedMissingArchivedAt",
-      id: userReview.id,
-      message: `Archived user review must have archivedAt: ${userReview.id}`,
-    };
-  }
-
-  if (isNonArchivedStatus(userReview.status) && userReview.archivedAt !== null) {
-    return {
-      reason: "nonArchivedHasArchivedAt",
-      id: userReview.id,
-      message: `Non-archived user review must not have archivedAt: ${userReview.id}`,
-    };
-  }
-
-  return null;
-}
-
-/** @returns True when the status is visible in the active user review list. */
-function isNonArchivedStatus(
-  status: UserReviewStatus,
-): status is NonArchivedUserReview["status"] {
-  return status !== "archived";
-}
