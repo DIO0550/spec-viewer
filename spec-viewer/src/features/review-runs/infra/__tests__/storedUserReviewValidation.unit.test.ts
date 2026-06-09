@@ -17,7 +17,7 @@ test("tryValidateStoredUserReviewはvalid active stored reviewをsuccessとし�
 
   expect(result).toEqual({
     ok: true,
-    userReview: activeReview,
+    validatedStoredUserReview: activeReview,
   });
 });
 
@@ -32,7 +32,7 @@ test("tryValidateStoredUserReviewはvalid archived stored reviewをsuccessとし
 
   expect(result).toEqual({
     ok: true,
-    userReview: archivedReview,
+    validatedStoredUserReview: archivedReview,
   });
 });
 

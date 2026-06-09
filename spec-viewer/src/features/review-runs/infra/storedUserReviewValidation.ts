@@ -1,8 +1,8 @@
 import {
   UserReviewStatus,
   type StoredUserReview,
-  type UserReview,
   type UserReviewArchiveStateError,
+  type ValidatedStoredUserReview,
 } from "@/features/review-runs/domain/userReview";
 
 /**
@@ -11,14 +11,14 @@ import {
  */
 export function validateStoredUserReview(
   storedUserReview: StoredUserReview,
-): UserReview {
+): ValidatedStoredUserReview {
   const result = tryValidateStoredUserReview(storedUserReview);
 
   if (!result.ok) {
     throw new Error(result.error.message);
   }
 
-  return result.userReview;
+  return result.validatedStoredUserReview;
 }
 
 /**
@@ -30,7 +30,7 @@ export function tryValidateStoredUserReview(
 ):
   | Readonly<{
       ok: true;
-      userReview: UserReview;
+      validatedStoredUserReview: ValidatedStoredUserReview;
     }>
   | Readonly<{
       ok: false;
@@ -47,7 +47,7 @@ export function tryValidateStoredUserReview(
 
   return {
     ok: true,
-    userReview: storedUserReview as UserReview,
+    validatedStoredUserReview: storedUserReview as ValidatedStoredUserReview,
   };
 }
 

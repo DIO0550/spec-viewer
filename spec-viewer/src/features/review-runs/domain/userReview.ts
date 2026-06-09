@@ -90,6 +90,7 @@ export type StoredUserReview = UserReviewBase &
     status: UserReviewStatus;
     archivedAt: IsoDateTimeString | null;
   }>;
+export type ValidatedStoredUserReview = UserReview;
 export type UserReviewArchiveStateErrorReason =
   | "archivedMissingArchivedAt"
   | "nonArchivedHasArchivedAt";

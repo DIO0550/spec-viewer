@@ -22,7 +22,7 @@ export function mapUserReviewDtoToUserReview(
     throw toUserReviewArchiveStateError(result.error);
   }
 
-  return result.userReview;
+  return result.validatedStoredUserReview;
 }
 
 /**
