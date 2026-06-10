@@ -3,7 +3,7 @@ import type {
   CommentBlockType,
   CommentSelectionBounds,
 } from "@/features/comments/types/comment";
-import type { SpecFileKey } from "@/features/specs/types/spec";
+import type { SpecFileKey } from "@/shared/types/specFileKey";
 
 type MarkdownBlockType =
   | "heading"

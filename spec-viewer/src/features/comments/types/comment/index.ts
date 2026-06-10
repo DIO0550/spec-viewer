@@ -1,11 +1,12 @@
-import type { SpecFileKey } from "@/features/specs/types/spec";
 import type { Comment as DomainComment } from "@/features/comments/domain/comment";
-import { CommentId as CommentIdValue } from "@/features/comments/types/commentId";
-import type { CommentId as BrandedCommentId } from "@/features/comments/types/commentId";
 import type {
   CommentStatus,
   CommentStatusFilter,
 } from "@/features/comments/domain/commentStatusFilter";
+import type { CommentId as BrandedCommentId } from "@/features/comments/types/commentId";
+import { CommentId as CommentIdValue } from "@/features/comments/types/commentId";
+import type { IsoDateTimeString } from "@/shared/types/isoDateTime";
+import type { SpecFileKey } from "@/shared/types/specFileKey";
 
 export type CommentId = BrandedCommentId;
 export const CommentId = CommentIdValue;
@@ -14,7 +15,7 @@ export type {
   CommentStatusFilter,
 } from "@/features/comments/domain/commentStatusFilter";
 
-export type IsoDateTimeString = string;
+export type { IsoDateTimeString };
 
 export type CommentBlockType =
   | "paragraph"
