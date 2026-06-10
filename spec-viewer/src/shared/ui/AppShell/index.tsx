@@ -6,9 +6,11 @@ import {
 } from "lucide-react";
 import {
   type CSSProperties,
-  type KeyboardEvent,
   type PointerEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
+  useCallback,
+  useEffect,
   useRef,
 } from "react";
 
@@ -86,13 +88,14 @@ export function AppShell({
     </div>
   );
 
-  const closeLeftNavigation = (): void => {
+  const closeLeftNavigation = useCallback((): void => {
     onCloseLeftNavigation?.();
     requestAnimationFrame(() => {
       openLeftNavigationButtonRef.current?.focus();
     });
-  };
+  }, [onCloseLeftNavigation]);
 
+  /** Opens the left navigation and moves focus to its close button. */
   const openLeftNavigation = (): void => {
     onOpenLeftNavigation?.();
     requestAnimationFrame(() => {
@@ -100,13 +103,14 @@ export function AppShell({
     });
   };
 
-  const closeCommentsSidebar = (): void => {
+  const closeCommentsSidebar = useCallback((): void => {
     onCloseCommentsSidebar?.();
     requestAnimationFrame(() => {
       reopenButtonRef.current?.focus();
     });
-  };
+  }, [onCloseCommentsSidebar]);
 
+  /** Opens the comments sidebar and focuses its first interactive element. */
   const openCommentsSidebar = (): void => {
     onOpenCommentsSidebar?.();
     requestAnimationFrame(() => {
@@ -116,49 +120,51 @@ export function AppShell({
     });
   };
 
-  const dismissCommentsSidebar = (
-    event: KeyboardEvent<HTMLDivElement>,
-  ): void => {
-    if (
-      event.defaultPrevented ||
-      event.key !== "Escape" ||
-      !isCommentsSidebarOpen
-    ) {
+  // Escape dismissal lives on a native listener attached to the shell body so
+  // the layout container itself stays non-interactive.
+  useEffect(() => {
+    const body = bodyRef.current;
+
+    if (body === null) {
       return;
     }
 
-    event.preventDefault();
-    closeCommentsSidebar();
-  };
+    const dismissPanels = (event: KeyboardEvent): void => {
+      if (event.defaultPrevented || event.key !== "Escape") {
+        return;
+      }
 
-  const dismissLeftNavigation = (
-    event: KeyboardEvent<HTMLDivElement>,
-  ): void => {
-    if (
-      event.defaultPrevented ||
-      event.key !== "Escape" ||
-      !isLeftNavigationOpen
-    ) {
-      return;
-    }
+      if (isLeftNavigationOpen) {
+        const target = event.target;
+        const isFromLeftNavigation =
+          target instanceof Node &&
+          leftAsideRef.current?.contains(target) === true;
 
-    const target = event.target;
-    const isFromLeftNavigation =
-      target instanceof Node && leftAsideRef.current?.contains(target) === true;
+        if (isFromLeftNavigation || isNarrowViewport()) {
+          event.preventDefault();
+          closeLeftNavigation();
+        }
+      }
 
-    if (!isFromLeftNavigation && !isNarrowViewport()) {
-      return;
-    }
+      if (!event.defaultPrevented && isCommentsSidebarOpen) {
+        event.preventDefault();
+        closeCommentsSidebar();
+      }
+    };
 
-    event.preventDefault();
-    closeLeftNavigation();
-  };
+    body.addEventListener("keydown", dismissPanels);
 
-  const dismissPanels = (event: KeyboardEvent<HTMLDivElement>): void => {
-    dismissLeftNavigation(event);
-    dismissCommentsSidebar(event);
-  };
+    return () => {
+      body.removeEventListener("keydown", dismissPanels);
+    };
+  }, [
+    closeCommentsSidebar,
+    closeLeftNavigation,
+    isCommentsSidebarOpen,
+    isLeftNavigationOpen,
+  ]);
 
+  /** @param clientX - Pointer x position used to derive the new width. */
   const resizeLeftNavigationFromPointer = (clientX: number): void => {
     const body = bodyRef.current;
 
@@ -171,6 +177,7 @@ export function AppShell({
     onLeftNavigationWidthChange(nextWidth);
   };
 
+  /** @param event - Pointer-down event on the left navigation resize handle. */
   const startLeftNavigationResize = (
     event: PointerEvent<HTMLButtonElement>,
   ): void => {
@@ -184,6 +191,7 @@ export function AppShell({
     resizeLeftNavigationFromPointer(event.clientX);
   };
 
+  /** @param event - Pointer-move event while dragging the resize handle. */
   const continueLeftNavigationResize = (
     event: PointerEvent<HTMLButtonElement>,
   ): void => {
@@ -195,6 +203,7 @@ export function AppShell({
     resizeLeftNavigationFromPointer(event.clientX);
   };
 
+  /** @param event - Pointer-up or cancel event that ends the resize. */
   const stopLeftNavigationResize = (
     event: PointerEvent<HTMLButtonElement>,
   ): void => {
@@ -202,8 +211,9 @@ export function AppShell({
     event.currentTarget.releasePointerCapture?.(event.pointerId);
   };
 
+  /** @param event - Keyboard event used to nudge or snap the navigation width. */
   const resizeLeftNavigationWithKeyboard = (
-    event: KeyboardEvent<HTMLButtonElement>,
+    event: ReactKeyboardEvent<HTMLButtonElement>,
   ): void => {
     if (onLeftNavigationWidthChange === undefined) {
       return;
@@ -233,6 +243,7 @@ export function AppShell({
     }
   };
 
+  /** @param clientX - Pointer x position used to derive the new width. */
   const resizeSidebarFromPointer = (clientX: number): void => {
     const body = bodyRef.current;
 
@@ -245,6 +256,7 @@ export function AppShell({
     onCommentsSidebarWidthChange(nextWidth);
   };
 
+  /** @param event - Pointer-down event on the comments sidebar resize handle. */
   const startSidebarResize = (event: PointerEvent<HTMLButtonElement>): void => {
     if (onCommentsSidebarWidthChange === undefined) {
       return;
@@ -256,6 +268,7 @@ export function AppShell({
     resizeSidebarFromPointer(event.clientX);
   };
 
+  /** @param event - Pointer-move event while dragging the sidebar handle. */
   const continueSidebarResize = (
     event: PointerEvent<HTMLButtonElement>,
   ): void => {
@@ -267,13 +280,15 @@ export function AppShell({
     resizeSidebarFromPointer(event.clientX);
   };
 
+  /** @param event - Pointer-up or cancel event that ends the sidebar resize. */
   const stopSidebarResize = (event: PointerEvent<HTMLButtonElement>): void => {
     isResizingRef.current = false;
     event.currentTarget.releasePointerCapture?.(event.pointerId);
   };
 
+  /** @param event - Keyboard event used to nudge or snap the sidebar width. */
   const resizeSidebarWithKeyboard = (
-    event: KeyboardEvent<HTMLButtonElement>,
+    event: ReactKeyboardEvent<HTMLButtonElement>,
   ): void => {
     if (onCommentsSidebarWidthChange === undefined) {
       return;
@@ -311,7 +326,6 @@ export function AppShell({
         data-left-navigation={isLeftNavigationOpen ? "open" : "collapsed"}
         data-comments-sidebar={isCommentsSidebarOpen ? "open" : "collapsed"}
         style={bodyStyle}
-        onKeyDown={dismissPanels}
       >
         <aside
           ref={leftAsideRef}

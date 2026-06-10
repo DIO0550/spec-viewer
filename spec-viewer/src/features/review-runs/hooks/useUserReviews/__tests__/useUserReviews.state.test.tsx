@@ -1,22 +1,21 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-
-import { configurePerformanceLoggerForTest } from "@/shared/lib/performance";
+import { CommentId } from "@/features/comments";
+import {
+  type UserReviewTargetScope,
+  useUserReviews,
+} from "@/features/review-runs/hooks/useUserReviews";
 import { createUserReviewCommandTestDouble } from "@/features/review-runs/testing/review-run-command-test-double";
-import { CommentId } from "@/features/comments/types/comment";
-import type { UserReviewCommands } from "@/shared/api/tauri";
 import type {
   ArchiveUserReviewResponse,
   CreateUserReviewResponse,
   ListUserReviewsResponse,
   UserReview,
 } from "@/features/review-runs/types/userReviewIpc";
-import type { SpecFileKey } from "@/features/specs/types/spec";
-import {
-  useUserReviews,
-  type UserReviewTargetScope,
-} from "@/features/review-runs/hooks/useUserReviews";
+import type { UserReviewCommands } from "@/shared/api/tauri";
+import { configurePerformanceLoggerForTest } from "@/shared/lib/performance";
+import type { SpecFileKey } from "@/shared/types/specFileKey";
 
 const commentId = CommentId.fromString;
 

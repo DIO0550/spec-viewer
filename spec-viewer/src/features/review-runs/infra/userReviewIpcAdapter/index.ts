@@ -4,9 +4,7 @@ import type {
   UserReviewArchiveStateError,
 } from "@/features/review-runs/domain/userReview";
 import { ValidatedStoredUserReview } from "@/features/review-runs/domain/validatedStoredUserReview";
-import type {
-  ListUserReviewsResponse,
-} from "@/features/review-runs/types/userReviewIpc";
+import type { ListUserReviewsResponse } from "@/features/review-runs/types/userReviewIpc";
 
 /**
  * @param review - User review DTO returned from the command boundary.

@@ -7,7 +7,10 @@ type Props = Readonly<{
   onAction?: () => void;
 }>;
 
-/** @returns A reusable error message with an optional retry action. */
+/**
+ * @param props - Error title, message, and an optional action button.
+ * @returns A reusable error message with an optional retry action.
+ */
 export function ErrorState({ title, message, actionLabel, onAction }: Props) {
   return (
     <section className="error-state" role="alert">

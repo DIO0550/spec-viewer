@@ -5,11 +5,19 @@
     "indentStyle": "space",
     "indentWidth": 2
   },
+  "linter": {
+    "rules": {
+      "a11y": {
+        "useSemanticElements": "off"
+      }
+    }
+  },
   "files": {
     "includes": [
       "**",
       "!node_modules",
       "!dist",
+      "!coverage",
       "!storybook-static",
       "!**/*.tsbuildinfo",
       "!src-tauri/gen",

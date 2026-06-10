@@ -1,11 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
-
-import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
 import { createTextHash } from "@/features/comments/lib/comment-anchor-draft";
 import type { Comment } from "@/features/comments/types/comment";
 import { CommentId } from "@/features/comments/types/comment";
 import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
+import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
 
 const commentId = CommentId.fromString;
 
@@ -180,6 +179,10 @@ export const TechReferenceHtmlPreview: Story = {
   parameters: {
     layout: "fullscreen",
   },
+  /**
+   * @param args - The story args forwarded to the viewer.
+   * @returns The viewer rendered inside a full-height app shell frame.
+   */
   render: (args) => (
     <div className="app-shell__viewer" style={{ height: "100dvh" }}>
       <MarkdownViewer {...args} />

@@ -1,14 +1,15 @@
+import type { CommentListState } from "@/features/comments/domain/commentListState";
 import {
   CommentOperationFailedState,
   CommentOperationSavingState,
 } from "@/features/comments/domain/commentOperation";
-import type { CommentListState } from "@/features/comments/domain/commentListState";
 import type { UseCommentOperationsResult } from "@/features/comments/hooks/useCommentOperations";
 import type { UseCommentsResult } from "@/features/comments/hooks/useComments";
 
 export type CreateUseCommentsResultInput = Readonly<{
   listState: CommentListState;
   commentOperations: UseCommentOperationsResult;
+  /** @returns True when the active scope was reloaded. */
   reloadComments: () => Promise<boolean>;
 }>;
 

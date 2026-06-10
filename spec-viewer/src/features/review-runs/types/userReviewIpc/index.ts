@@ -1,7 +1,4 @@
-import type {
-  CommentId,
-  IsoDateTimeString,
-} from "@/features/comments/types/comment";
+import type { CommentId } from "@/features/comments";
 import type {
   ReviewSourceFile,
   UserReview,
@@ -9,6 +6,7 @@ import type {
   UserReviewWorkspace,
 } from "@/features/review-runs/domain/userReview";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
+import type { IsoDateTimeString } from "@/shared/types/isoDateTime";
 
 export type { UserReview };
 

@@ -1,9 +1,8 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-
-import type { SpecDocument, SpecTree } from "@/features/specs/types/spec";
 import { useSpecs } from "@/features/specs/hooks/useSpecs";
+import type { SpecDocument, SpecTree } from "@/features/specs/types/spec";
 
 const populatedTree: SpecTree = {
   specs: [

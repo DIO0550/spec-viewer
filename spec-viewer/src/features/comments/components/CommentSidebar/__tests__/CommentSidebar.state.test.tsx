@@ -2,7 +2,10 @@ import type { ReactNode } from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-
+import {
+  type CommentExportState,
+  CommentSidebar,
+} from "@/features/comments/components/CommentSidebar";
 import type {
   Comment,
   CommentAnchor,
@@ -11,10 +14,6 @@ import type {
   CommentId,
 } from "@/features/comments/types/comment";
 import { CommentId as CommentIdValue } from "@/features/comments/types/comment";
-import {
-  type CommentExportState,
-  CommentSidebar,
-} from "@/features/comments/components/CommentSidebar";
 
 const commentId = CommentIdValue.fromString;
 

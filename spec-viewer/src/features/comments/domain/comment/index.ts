@@ -1,6 +1,6 @@
 import {
-  CommentStatusFilter,
   type CommentStatus,
+  CommentStatusFilter,
   type CommentStatusFilter as CommentStatusFilterType,
 } from "@/features/comments/domain/commentStatusFilter";
 import { Comments } from "@/features/comments/domain/comments";

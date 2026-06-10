@@ -1,13 +1,11 @@
-import { type ReactElement, useRef } from "react";
-import { act } from "react";
+import { act, type ReactElement, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-
+import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
 import {
   createViewerResetKey,
   useViewerReset,
 } from "@/features/specs/hooks/useViewerReset";
-import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
 
 type ViewerResetHarnessProps = Readonly<{
   resetKey: string;
@@ -34,22 +32,13 @@ function ViewerResetHarness({
   return (
     <section
       ref={(element) => {
-        if (element === null) {
-          return;
-        }
-
-        element.scrollTo = scrollTo;
+        void (element && Object.assign(element, { scrollTo }));
       }}
     >
       <article
         ref={(element) => {
           panelRef.current = element;
-
-          if (element === null) {
-            return;
-          }
-
-          element.focus = focus;
+          void (element && Object.assign(element, { focus }));
         }}
         tabIndex={-1}
       />

@@ -1,42 +1,40 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-
-import {
-  commentCommands as defaultCommentCommands,
-  normalizeCommandError,
-  type CommentCommands,
-} from "@/shared/api/tauri";
-import {
-  resolvePerformanceCorrelationId,
-  startPerformanceSpan,
-} from "@/shared/lib/performance";
-import type { CommentScope } from "@/features/comments/domain/commentScope";
-import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import {
   CommentListState,
   type CommentListState as CommentListStateType,
 } from "@/features/comments/domain/commentListState";
 import type { CommentOperationState } from "@/features/comments/domain/commentOperation";
-import { listComments as listCommentsViaGateway } from "@/features/comments/infra/commentGateway";
+import type { CommentScope } from "@/features/comments/domain/commentScope";
+import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import { createUseCommentsResult } from "@/features/comments/hooks/createUseCommentsResult";
 import {
-  useCommentOperations,
   type AddCommentInput,
   type CommentListTransform,
   type UpdateCommentInput,
+  useCommentOperations,
 } from "@/features/comments/hooks/useCommentOperations";
-import type { CommentId } from "@/features/comments/types/comment";
-import type { Comment } from "@/features/comments/types/comment";
+import { listComments as listCommentsViaGateway } from "@/features/comments/infra/commentGateway";
+import type { Comment, CommentId } from "@/features/comments/types/comment";
+import {
+  type CommentCommands,
+  commentCommands as defaultCommentCommands,
+  normalizeCommandError,
+} from "@/shared/api/tauri";
+import {
+  resolvePerformanceCorrelationId,
+  startPerformanceSpan,
+} from "@/shared/lib/performance";
 import type { NormalizedCommandError } from "@/shared/types/ipc";
 
 export type { CommentListState } from "@/features/comments/domain/commentListState";
 export type {
+  CommentOperationKind,
+  CommentOperationState,
+} from "@/features/comments/domain/commentOperation";
+export type {
   AddCommentInput,
   UpdateCommentInput,
 } from "@/features/comments/hooks/useCommentOperations";
-export {
-  type CommentOperationKind,
-  type CommentOperationState,
-} from "@/features/comments/domain/commentOperation";
 
 export type UseCommentsOptions = Readonly<{
   scope: CommentScope | null;
@@ -54,18 +52,46 @@ export type UseCommentsResult = Readonly<{
   isEmpty: boolean;
   error: NormalizedCommandError | null;
   operationError: NormalizedCommandError | null;
+  /** @returns True when the active scope was reloaded. */
   reloadComments: () => Promise<boolean>;
+  /**
+   * @param input - Anchor and body for the new comment.
+   * @returns The created comment, or null when the request was superseded.
+   */
   addComment: (input: AddCommentInput) => Promise<Comment | null>;
+  /**
+   * @param input - Target comment id and replacement body.
+   * @returns The updated comment, or null when the request was superseded.
+   */
   updateComment: (input: UpdateCommentInput) => Promise<Comment | null>;
+  /**
+   * @param commentId - Identifier of the comment to delete.
+   * @returns True when the comment was deleted.
+   */
   deleteComment: (commentId: CommentId) => Promise<boolean>;
+  /**
+   * @param commentId - Identifier of the comment to resolve.
+   * @returns The resolved comment, or null when the request was superseded.
+   */
   resolveComment: (commentId: CommentId) => Promise<Comment | null>;
+  /**
+   * @param commentId - Identifier of the comment to reopen.
+   * @returns The reopened comment, or null when the request was superseded.
+   */
   reopenComment: (commentId: CommentId) => Promise<Comment | null>;
+  /**
+   * @param commentId - Identifier of the comment to toggle.
+   * @returns The toggled comment, or null when the request was superseded.
+   */
   toggleCommentResolved: (commentId: CommentId) => Promise<Comment | null>;
 }>;
 
 const defaultStatusFilter: CommentStatusFilter = CommentStatusFilter.All;
 
-/** @returns Comment loading and operation state for the selected spec file. */
+/**
+ * @param options - Comment scope, status filter, correlation id, and command boundary.
+ * @returns Comment loading and operation state for the selected spec file.
+ */
 export function useComments({
   commands = defaultCommentCommands,
   correlationId = null,

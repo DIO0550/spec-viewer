@@ -1,22 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-
+import type { CommentId } from "@/features/comments";
 import type { UserReview } from "@/features/review-runs/domain/userReview";
-import { UserReviewCollection } from "@/features/review-runs/domain/userReviewCollection";
 import type { UserReviewCollectionTransform } from "@/features/review-runs/domain/userReviewCollection";
+import { UserReviewCollection } from "@/features/review-runs/domain/userReviewCollection";
 import {
   UserReviewArchiveState,
-  UserReviewCreateState,
   type UserReviewArchiveState as UserReviewArchiveStateType,
+  UserReviewCreateState,
   type UserReviewCreateState as UserReviewCreateStateType,
 } from "@/features/review-runs/domain/userReviewOperation";
+import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
+import { UserReviewAsyncToken } from "@/features/review-runs/hooks/userReviewAsyncToken";
 import {
   archiveUserReview as archiveUserReviewViaGateway,
   createUserReview as createUserReviewViaGateway,
 } from "@/features/review-runs/infra/userReviewGateway";
-import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
-import { UserReviewAsyncToken } from "@/features/review-runs/hooks/userReviewAsyncToken";
 import type { UserReviewWorkspaceMode } from "@/features/review-runs/types/userReviewIpc";
-import type { CommentId } from "@/features/comments/types/comment";
 import {
   normalizeCommandError,
   type UserReviewCommands,
@@ -32,6 +31,7 @@ export type UseUserReviewOperationsOptions = Readonly<{
   target: UserReviewTarget | null;
   targetIdentity: string;
   commands: UserReviewCommands;
+  /** @param transform - Transform applied to the current target's collection. */
   updateCurrentTargetReviews: (
     transform: UserReviewCollectionTransform,
   ) => void;
@@ -40,7 +40,17 @@ export type UseUserReviewOperationsOptions = Readonly<{
 export type UseUserReviewOperationsResult = Readonly<{
   createState: UserReviewCreateStateType;
   archiveState: UserReviewArchiveStateType;
-  createUserReview: (input: CreateUserReviewInput) => Promise<UserReview | null>;
+  /**
+   * @param input - Comment ids and workspace mode for the new review.
+   * @returns The created review, or null when skipped or stale.
+   */
+  createUserReview: (
+    input: CreateUserReviewInput,
+  ) => Promise<UserReview | null>;
+  /**
+   * @param userReviewId - Identifier of the review to archive.
+   * @returns The archived review, or null when skipped or stale.
+   */
   archiveUserReview: (userReviewId: string) => Promise<UserReview | null>;
 }>;
 
@@ -68,8 +78,9 @@ export function useUserReviewOperations(
   const [createState, setCreateState] = useState<UserReviewCreateStateType>(
     UserReviewCreateState.idle(),
   );
-  const [archiveState, setArchiveState] =
-    useState<UserReviewArchiveStateType>(UserReviewArchiveState.idle());
+  const [archiveState, setArchiveState] = useState<UserReviewArchiveStateType>(
+    UserReviewArchiveState.idle(),
+  );
 
   activeOperationIdentityRef.current = operationIdentity;
 
@@ -207,6 +218,9 @@ export function useUserReviewOperations(
   );
 
   useEffect(() => {
+    // Invalidate in-flight operations whenever the operation target changes;
+    // operationIdentity is an intentional re-run trigger.
+    void operationIdentity;
     createRequestIdRef.current += 1;
     archiveRequestIdRef.current += 1;
     setCreateState(UserReviewCreateState.idle());
@@ -221,7 +235,11 @@ export function useUserReviewOperations(
   };
 }
 
-/** @returns Identity for async operation invalidation. */
+/**
+ * @param workspacePath - The active workspace path, or null when unset.
+ * @param targetIdentity - The current target identity.
+ * @returns Identity for async operation invalidation.
+ */
 function createOperationIdentity(
   workspacePath: string | null,
   targetIdentity: string,

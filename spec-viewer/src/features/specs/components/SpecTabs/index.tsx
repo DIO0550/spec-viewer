@@ -6,10 +6,20 @@ import { EmptyState } from "@/shared/ui/EmptyState";
 type Props = Readonly<{
   spec: SpecNode | null;
   selectedFileKey: SpecFileKey | null;
+  /**
+   * Called when a file tab is selected.
+   * @param fileKey - Key of the selected file.
+   */
   onSelectFile: (fileKey: SpecFileKey) => void;
 }>;
 
-/** @returns File tabs for the selected spec. */
+/**
+ * @param props - Component props.
+ * @param props.spec - Selected spec whose files are shown as tabs, or null.
+ * @param props.selectedFileKey - Key of the currently selected file, or null.
+ * @param props.onSelectFile - Called with the file key when a tab is selected.
+ * @returns File tabs for the selected spec.
+ */
 export function SpecTabs({ spec, selectedFileKey, onSelectFile }: Props) {
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -116,7 +126,10 @@ export function SpecTabs({ spec, selectedFileKey, onSelectFile }: Props) {
   );
 }
 
-/** @returns Human-readable config source text for tab debug affordances. */
+/**
+ * @param source - Origin of the file's configuration.
+ * @returns Human-readable config source text for tab debug affordances.
+ */
 function configSourceLabel(
   source: SpecNode["files"][number]["configSource"],
 ): string {

@@ -3,7 +3,7 @@ import type {
   CommentBlockType,
   CommentSelectionBounds,
 } from "@/features/comments/types/comment";
-import type { SpecFileKey } from "@/features/specs/types/spec";
+import type { SpecFileKey } from "@/shared/types/specFileKey";
 
 type MarkdownBlockType =
   | "heading"
@@ -128,7 +128,10 @@ export function createCommentAnchorDraftFromBlock({
   };
 }
 
-/** @returns A stable non-cryptographic hash for the rendered block text. */
+/**
+ * @param text - The rendered block text to hash
+ * @returns A stable non-cryptographic hash for the rendered block text.
+ */
 export function createTextHash(text: string): string {
   let hash = FNV_32_OFFSET;
 
@@ -140,7 +143,10 @@ export function createTextHash(text: string): string {
   return `fnv1a:${(hash >>> 0).toString(16).padStart(8, "0")}`;
 }
 
-/** @returns A compact selected text snippet, or null when no text is selected. */
+/**
+ * @param text - The raw selected text
+ * @returns A compact selected text snippet, or null when no text is selected.
+ */
 export function createTextSnippet(text: string): string | null {
   const snippet = normalizeWhitespace(text);
 
@@ -151,7 +157,11 @@ export function createTextSnippet(text: string): string | null {
   return snippet.slice(0, MAX_SNIPPET_LENGTH);
 }
 
-/** @returns true when both range endpoints are inside the rendered Markdown root. */
+/**
+ * @param range - The selected DOM range
+ * @param renderedRoot - The rendered Markdown root element
+ * @returns true when both range endpoints are inside the rendered Markdown root.
+ */
 function isRangeInsideRoot(range: Range, renderedRoot: HTMLElement): boolean {
   return (
     containsSelectionNode(renderedRoot, range.startContainer) &&
@@ -159,7 +169,11 @@ function isRangeInsideRoot(range: Range, renderedRoot: HTMLElement): boolean {
   );
 }
 
-/** @returns true when the node or its owning element belongs to the root. */
+/**
+ * @param root - The rendered Markdown root element
+ * @param node - The DOM node to test
+ * @returns true when the node or its owning element belongs to the root.
+ */
 function containsSelectionNode(root: HTMLElement, node: Node): boolean {
   if (node.nodeType === Node.ELEMENT_NODE) {
     return root.contains(node);
@@ -207,7 +221,10 @@ type BlockMetadata = Readonly<{
   textHash: string | null;
 }>;
 
-/** @returns Validated block metadata from a rendered Markdown block. */
+/**
+ * @param block - The rendered Markdown block element
+ * @returns Validated block metadata from a rendered Markdown block.
+ */
 function readBlockMetadata(block: HTMLElement): BlockMetadata | null {
   const blockType = readCommentBlockType(block);
   const blockIndex = Number.parseInt(block.dataset.blockIndex ?? "", 10);
@@ -227,7 +244,10 @@ function readBlockMetadata(block: HTMLElement): BlockMetadata | null {
   };
 }
 
-/** @returns The persisted comment block type represented by a rendered block. */
+/**
+ * @param block - The rendered Markdown block element
+ * @returns The persisted comment block type represented by a rendered block.
+ */
 function readCommentBlockType(block: HTMLElement): CommentBlockType | null {
   if (isCommentBlockType(block.dataset.commentBlockType)) {
     return block.dataset.commentBlockType;
@@ -236,7 +256,10 @@ function readCommentBlockType(block: HTMLElement): CommentBlockType | null {
   return mapMarkdownBlockType(block.dataset.blockType);
 }
 
-/** @returns The backend text hash attached to the rendered block, when available. */
+/**
+ * @param block - The rendered Markdown block element
+ * @returns The backend text hash attached to the rendered block, when available.
+ */
 function readBackendTextHash(block: HTMLElement): string | null {
   const textHash = block.dataset.textHash;
 
@@ -340,14 +363,21 @@ function getTextOffsetWithinBlock(
   return createRangeText(prefixRange, block).length;
 }
 
-/** @returns Markdown block text without comment controls or annotation UI. */
+/**
+ * @param block - The rendered Markdown block element
+ * @returns Markdown block text without comment controls or annotation UI.
+ */
 function createBlockText(block: HTMLElement): string {
   return getAnchorTextNodes(block)
     .map((textNode) => textNode.data)
     .join("");
 }
 
-/** @returns Selected text inside one Markdown block without comment UI text. */
+/**
+ * @param range - The selected DOM range
+ * @param block - The rendered Markdown block element
+ * @returns Selected text inside one Markdown block without comment UI text.
+ */
 function createRangeText(range: Range, block: HTMLElement): string {
   return getAnchorTextNodes(block)
     .filter((textNode) => range.intersectsNode(textNode))
@@ -355,7 +385,10 @@ function createRangeText(range: Range, block: HTMLElement): string {
     .join("");
 }
 
-/** @returns Text nodes that belong to the Markdown content itself. */
+/**
+ * @param block - The rendered Markdown block element
+ * @returns Text nodes that belong to the Markdown content itself.
+ */
 function getAnchorTextNodes(block: HTMLElement): Text[] {
   const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
   const textNodes: Text[] = [];
@@ -372,7 +405,10 @@ function getAnchorTextNodes(block: HTMLElement): Text[] {
   return textNodes;
 }
 
-/** @returns True when the node belongs to comment controls instead of Markdown text. */
+/**
+ * @param node - The DOM node to test
+ * @returns True when the node belongs to comment controls instead of Markdown text.
+ */
 function isCommentUiNode(node: Node): boolean {
   const element =
     node.nodeType === Node.ELEMENT_NODE
@@ -382,7 +418,11 @@ function isCommentUiNode(node: Node): boolean {
   return element?.closest(COMMENT_UI_SELECTOR) !== null;
 }
 
-/** @returns The selected slice of one text node. */
+/**
+ * @param range - The selected DOM range
+ * @param textNode - The text node to slice
+ * @returns The selected slice of one text node.
+ */
 function createSelectedTextFromNode(range: Range, textNode: Text): string {
   const startOffset =
     textNode === range.startContainer
@@ -400,7 +440,11 @@ function createSelectedTextFromNode(range: Range, textNode: Text): string {
   return textNode.data.slice(startOffset, endOffset);
 }
 
-/** @returns A DOM text offset constrained to the node length. */
+/**
+ * @param offset - The raw DOM text offset
+ * @param textLength - The length of the text node
+ * @returns A DOM text offset constrained to the node length.
+ */
 function clampTextOffset(offset: number, textLength: number): number {
   return Math.min(Math.max(offset, 0), textLength);
 }
@@ -436,7 +480,10 @@ function createBlockSelectionBounds(
   };
 }
 
-/** @returns The viewport x-coordinate for the left edge of the comment lane. */
+/**
+ * @param block - The rendered Markdown block element
+ * @returns The viewport x-coordinate for the left edge of the comment lane.
+ */
 function createCommentLaneLeft(block: HTMLElement): number | undefined {
   const target = block.closest<HTMLElement>(COMMENT_TARGET_SELECTOR) ?? block;
 
@@ -449,7 +496,10 @@ function createCommentLaneLeft(block: HTMLElement): number | undefined {
   return rect.right - COMMENT_LANE_WIDTH;
 }
 
-/** @returns Text trimmed and collapsed to single spaces for anchor display. */
+/**
+ * @param text - The text to normalize
+ * @returns Text trimmed and collapsed to single spaces for anchor display.
+ */
 function normalizeWhitespace(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }

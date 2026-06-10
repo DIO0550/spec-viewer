@@ -17,15 +17,30 @@ type Props = Readonly<{
   refreshStatus: WorkspaceRefreshStatus;
   canRefresh: boolean;
   themeMode: ThemeMode;
+  /**
+   * Updates the workspace path input value.
+   * @param nextValue - The next path text entered by the user.
+   */
   onInputChange: (nextValue: string) => void;
+  /** Opens the native folder picker to choose a workspace. */
   onBrowse: () => void;
+  /** Loads the workspace at the current input path. */
   onLoad: () => void;
+  /** Refreshes the currently loaded workspace. */
   onRefresh: () => void;
+  /** Clears the current workspace selection. */
   onReset: () => void;
+  /**
+   * Changes the active theme mode.
+   * @param nextThemeMode - The theme mode to apply.
+   */
   onThemeModeChange: (nextThemeMode: ThemeMode) => void;
 }>;
 
-/** @returns Workspace path controls and current workspace status. */
+/**
+ * @param props - Toolbar state and workspace action callbacks.
+ * @returns Workspace path controls and current workspace status.
+ */
 export function WorkspaceToolbar({
   workspacePath,
   inputValue,

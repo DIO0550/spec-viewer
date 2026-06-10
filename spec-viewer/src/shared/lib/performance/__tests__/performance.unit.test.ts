@@ -19,19 +19,17 @@ test("performance loggerはprefix付きcorrelation idを生成する", () => {
   expect(correlationId).toMatch(/^document-read-[a-z0-9]+-[a-z0-9]+$/);
 });
 
-test.each([null, undefined] as const)(
-  "performance loggerはcorrelation idが%sならprefix付きIDを生成する",
-  (correlationId) => {
-    const resolvedCorrelationId = resolvePerformanceCorrelationId(
-      correlationId,
-      "comments list",
-    );
+test.each([
+  null,
+  undefined,
+] as const)("performance loggerはcorrelation idが%sならprefix付きIDを生成する", (correlationId) => {
+  const resolvedCorrelationId = resolvePerformanceCorrelationId(
+    correlationId,
+    "comments list",
+  );
 
-    expect(resolvedCorrelationId).toMatch(
-      /^comments-list-[a-z0-9]+-[a-z0-9]+$/,
-    );
-  },
-);
+  expect(resolvedCorrelationId).toMatch(/^comments-list-[a-z0-9]+-[a-z0-9]+$/);
+});
 
 test("performance loggerは既存correlation idをそのまま返す", () => {
   expect(resolvePerformanceCorrelationId("cid-1", "comments list")).toBe(

@@ -9,13 +9,26 @@ type Props = Readonly<{
   isOpen: boolean;
   isBusy: boolean;
   recentWorkspaces: readonly RecentWorkspace[];
+  /** Opens the native folder picker to choose a workspace. */
   onBrowse: () => void;
+  /** Toggles the expanded state of the switcher section. */
   onToggleOpen: () => void;
+  /**
+   * Opens the recent workspace at the given path.
+   * @param path - The workspace path to open.
+   */
   onOpenWorkspace: (path: string) => void;
+  /**
+   * Removes the recent workspace at the given path.
+   * @param path - The workspace path to remove.
+   */
   onRemoveWorkspace: (path: string) => void;
 }>;
 
-/** @returns Workspace switching controls for the left navigation sidebar. */
+/**
+ * @param props - Current workspace, recent list, and switcher action callbacks.
+ * @returns Workspace switching controls for the left navigation sidebar.
+ */
 export function WorkspaceSidebarSection({
   currentWorkspacePath,
   isOpen,

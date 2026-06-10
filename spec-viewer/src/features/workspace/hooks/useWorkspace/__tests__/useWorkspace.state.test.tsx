@@ -1,9 +1,8 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-
-import type { Workspace } from "@/features/workspace/types/workspace";
 import { useWorkspace } from "@/features/workspace/hooks/useWorkspace";
+import type { Workspace } from "@/features/workspace/types/workspace";
 
 const workspace: Workspace = {
   root: "/workspace/spec-reviewer",

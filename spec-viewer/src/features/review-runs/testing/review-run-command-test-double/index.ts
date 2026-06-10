@@ -1,4 +1,3 @@
-import type { UserReviewCommands } from "@/shared/api/tauri";
 import type {
   ArchiveUserReviewRequest,
   ArchiveUserReviewResponse,
@@ -8,6 +7,7 @@ import type {
   ListUserReviewsResponse,
   UserReview,
 } from "@/features/review-runs/types/userReviewIpc";
+import type { UserReviewCommands } from "@/shared/api/tauri";
 
 export type UserReviewCommandTestDoubleResponses = Readonly<{
   createUserReview?: CreateUserReviewResponse;
@@ -55,7 +55,10 @@ const defaultUserReview: UserReview = {
   warnings: [],
 };
 
-/** @returns A typed review run command double for hook and component tests. */
+/**
+ * @param responses - Optional command responses overriding the defaults.
+ * @returns A typed review run command double for hook and component tests.
+ */
 export function createUserReviewCommandTestDouble(
   responses: UserReviewCommandTestDoubleResponses = {},
 ): UserReviewCommandTestDouble {
@@ -70,10 +73,18 @@ export function createUserReviewCommandTestDouble(
       archiveUserReview: archiveUserReviewCalls,
     },
     commands: {
+      /**
+       * @param request - The create user review request to record.
+       * @returns The configured or default create response.
+       */
       createUserReview: async (request) => {
         createUserReviewCalls.push(request);
         return responses.createUserReview ?? { userReview: defaultUserReview };
       },
+      /**
+       * @param request - The list user reviews request to record.
+       * @returns The configured or default list response.
+       */
       listUserReviews: async (request) => {
         listUserReviewsCalls.push(request);
         return (
@@ -84,6 +95,10 @@ export function createUserReviewCommandTestDouble(
           }
         );
       },
+      /**
+       * @param request - The archive user review request to record.
+       * @returns The configured or default archive response.
+       */
       archiveUserReview: async (request) => {
         archiveUserReviewCalls.push(request);
         return (

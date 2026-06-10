@@ -3,13 +3,13 @@ import { useCallback, useEffect, useReducer, useRef } from "react";
 import {
   CommentOperationFailedState,
   CommentOperationIdleState,
-  CommentOperationSavingState,
   type CommentOperationKind,
+  CommentOperationSavingState,
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
-import { Comments } from "@/features/comments/domain/comments";
 import type { CommentScope } from "@/features/comments/domain/commentScope";
 import type { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
+import { Comments } from "@/features/comments/domain/comments";
 import {
   addComment as addCommentViaGateway,
   deleteComment as deleteCommentViaGateway,
@@ -24,8 +24,8 @@ import type {
   CommentId,
 } from "@/features/comments/types/comment";
 import {
-  normalizeCommandError,
   type CommentCommands,
+  normalizeCommandError,
 } from "@/shared/api/tauri";
 import type { NormalizedCommandError } from "@/shared/types/ipc";
 
@@ -39,6 +39,10 @@ export type UpdateCommentInput = Readonly<{
   body: string;
 }>;
 
+/**
+ * @param comments - Current comment list for the active scope.
+ * @returns The next comment list.
+ */
 export type CommentListTransform = (
   comments: readonly Comment[],
 ) => readonly Comment[];
@@ -49,17 +53,43 @@ export type UseCommentOperationsOptions = Readonly<{
   statusFilter: CommentStatusFilter;
   commands: CommentCommands;
   currentComments: readonly Comment[];
+  /** @param transform - Transform applied to the active scope comment list. */
   updateCurrentScopeComments: (transform: CommentListTransform) => void;
+  /** @returns True when the active scope was reloaded. */
   reloadComments: () => Promise<boolean>;
 }>;
 
 export type UseCommentOperationsResult = Readonly<{
   operationState: CommentOperationState;
+  /**
+   * @param input - Anchor and body for the new comment.
+   * @returns The created comment, or null when the request was superseded.
+   */
   addComment: (input: AddCommentInput) => Promise<Comment | null>;
+  /**
+   * @param input - Target comment id and replacement body.
+   * @returns The updated comment, or null when the request was superseded.
+   */
   updateComment: (input: UpdateCommentInput) => Promise<Comment | null>;
+  /**
+   * @param commentId - Identifier of the comment to delete.
+   * @returns True when the comment was deleted.
+   */
   deleteComment: (commentId: CommentId) => Promise<boolean>;
+  /**
+   * @param commentId - Identifier of the comment to resolve.
+   * @returns The resolved comment, or null when the request was superseded.
+   */
   resolveComment: (commentId: CommentId) => Promise<Comment | null>;
+  /**
+   * @param commentId - Identifier of the comment to reopen.
+   * @returns The reopened comment, or null when the request was superseded.
+   */
   reopenComment: (commentId: CommentId) => Promise<Comment | null>;
+  /**
+   * @param commentId - Identifier of the comment to toggle.
+   * @returns The toggled comment, or null when the request was superseded.
+   */
   toggleCommentResolved: (commentId: CommentId) => Promise<Comment | null>;
 }>;
 
@@ -164,6 +194,9 @@ export function useCommentOperations(
   );
 
   useEffect(() => {
+    // Invalidate in-flight operations whenever the comment scope or its
+    // reload entry point changes; the dependencies are intentional triggers.
+    void [reloadComments, scopeKey];
     operationRequestIdRef.current += 1;
     dispatchOperation({ type: "operationInvalidated" });
   }, [reloadComments, scopeKey]);

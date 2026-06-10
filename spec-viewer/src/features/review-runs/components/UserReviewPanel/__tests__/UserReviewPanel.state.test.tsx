@@ -1,14 +1,13 @@
-import { act } from "react";
 import type { ReactNode } from "react";
+import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-
+import { UserReviewPanel } from "@/features/review-runs/components/UserReviewPanel";
 import type {
   UserReviewCreateState,
   UserReviewListState,
 } from "@/features/review-runs/hooks/useUserReviews";
 import type { UserReview } from "@/features/review-runs/types/userReviewIpc";
-import { UserReviewPanel } from "@/features/review-runs/components/UserReviewPanel";
 
 const activeRunBranchName =
   "spec-reviewer/2026-05-06T120000Z-file-tasks-abcdef12";

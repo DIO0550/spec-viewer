@@ -10,8 +10,17 @@ type UseResizableSidebarResult = Readonly<{
   sidebarWidth: number;
   minSidebarWidth: number;
   maxSidebarWidth: number;
+  /**
+   * Sets the sidebar width to an absolute value.
+   * @param width - Target width in pixels.
+   */
   resizeSidebarTo: (width: number) => void;
+  /**
+   * Adjusts the sidebar width by a relative amount.
+   * @param delta - Width change in pixels.
+   */
   resizeSidebarBy: (delta: number) => void;
+  /** Resets the sidebar width to its default. */
   resetSidebarWidth: () => void;
 }>;
 
@@ -83,7 +92,10 @@ type SidebarWidthConstraints = Readonly<{
   max: number;
 }>;
 
-/** @returns Sidebar width constraints for the current viewport. */
+/**
+ * @param viewportWidth - Current viewport width in pixels.
+ * @returns Sidebar width constraints for the current viewport.
+ */
 function createSidebarWidthConstraints(
   viewportWidth: number,
 ): SidebarWidthConstraints {
@@ -99,7 +111,11 @@ function createSidebarWidthConstraints(
   };
 }
 
-/** @returns Width clamped to the given sidebar constraints. */
+/**
+ * @param width - Width to clamp in pixels.
+ * @param constraints - Allowed minimum and maximum widths.
+ * @returns Width clamped to the given sidebar constraints.
+ */
 function clampSidebarWidth(
   width: number,
   constraints: SidebarWidthConstraints,
@@ -114,7 +130,10 @@ function clampSidebarWidth(
   );
 }
 
-/** @returns Stored sidebar width constrained to the current viewport. */
+/**
+ * @param viewportWidth - Current viewport width in pixels.
+ * @returns Stored sidebar width constrained to the current viewport.
+ */
 function readStoredSidebarWidth(viewportWidth: number): number {
   const constraints = createSidebarWidthConstraints(viewportWidth);
 
@@ -132,7 +151,10 @@ function readStoredSidebarWidth(viewportWidth: number): number {
   }
 }
 
-/** Persists the sidebar width when storage is available. */
+/**
+ * Persists the sidebar width when storage is available.
+ * @param sidebarWidth - Sidebar width in pixels to store.
+ */
 function writeStoredSidebarWidth(sidebarWidth: number): void {
   if (typeof window === "undefined") {
     return;

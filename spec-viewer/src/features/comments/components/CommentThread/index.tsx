@@ -18,13 +18,13 @@ import {
   CommentOperationSavingState,
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
-import { uiText } from "@/shared/lib/uiText";
 import type {
   Comment,
   CommentAnchorDisplayStatus,
   CommentId,
 } from "@/features/comments/types/comment";
 import { CommentId as CommentIdValue } from "@/features/comments/types/comment";
+import { uiText } from "@/shared/lib/uiText";
 
 const emptyBodyMessage = uiText.commentThread.emptyBody;
 
@@ -34,10 +34,18 @@ type Props = Readonly<{
   anchorDisplayStatus: CommentAnchorDisplayStatus;
   searchQuery?: string;
   operationState: CommentOperationState;
+  /** @param commentId - The comment to make active. */
   onSelectComment: (commentId: CommentId) => void;
+  /**
+   * @param commentId - The comment to update.
+   * @param body - The new comment body text.
+   */
   onUpdateComment: (commentId: CommentId, body: string) => void;
+  /** @param commentId - The comment to mark resolved. */
   onResolveComment: (commentId: CommentId) => void;
+  /** @param commentId - The comment to reopen. */
   onReopenComment: (commentId: CommentId) => void;
+  /** @param commentId - The comment to delete. */
   onDeleteComment: (commentId: CommentId) => void;
 }>;
 
@@ -384,7 +392,12 @@ type HighlightedTextProps = Readonly<{
   searchQuery: string;
 }>;
 
-/** @returns Text with every search query occurrence marked for visual scanning. */
+/**
+ * @param props - The highlighted text props.
+ * @param props.text - The full text to render.
+ * @param props.searchQuery - The normalized query to highlight within the text.
+ * @returns Text with every search query occurrence marked for visual scanning.
+ */
 function HighlightedText({ text, searchQuery }: HighlightedTextProps) {
   if (searchQuery.length === 0) {
     return text;
@@ -419,14 +432,20 @@ function HighlightedText({ text, searchQuery }: HighlightedTextProps) {
   return <>{segments}</>;
 }
 
-/** @returns A compact title for the selected Markdown anchor. */
+/**
+ * @param comment - The comment whose anchor to title.
+ * @returns A compact title for the selected Markdown anchor.
+ */
 function formatAnchorTitle(comment: Comment): string {
   return `${formatBlockType(comment.anchor.blockType)} block ${
     comment.anchor.blockIndex + 1
   }`;
 }
 
-/** @returns A readable label for persisted Markdown block types. */
+/**
+ * @param blockType - The raw persisted Markdown block type token.
+ * @returns A readable label for persisted Markdown block types.
+ */
 function formatBlockType(blockType: string): string {
   return blockType
     .split("_")
@@ -455,7 +474,10 @@ function formatAnchorDisplayStatus(
   return statusLabels[status];
 }
 
-/** @returns A readable local timestamp, falling back to the raw ISO value. */
+/**
+ * @param timestamp - The ISO timestamp to format.
+ * @returns A readable local timestamp, falling back to the raw ISO value.
+ */
 function formatCommentTimestamp(timestamp: string): string {
   const date = new Date(timestamp);
 

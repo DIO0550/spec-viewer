@@ -9,13 +9,12 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useId, useState } from "react";
-
+import { CommentThread } from "@/features/comments/components/CommentThread";
+import type { CommentListState } from "@/features/comments/domain/commentListState";
 import {
   CommentOperationFailedState,
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
-import type { CommentListState } from "@/features/comments/domain/commentListState";
-import { uiText } from "@/shared/lib/uiText";
 import type {
   ApplyWithAiPlaceholderState,
   Comment,
@@ -26,8 +25,8 @@ import type {
   CommentExportScope,
   CommentId,
 } from "@/features/comments/types/comment";
+import { uiText } from "@/shared/lib/uiText";
 import { CommandErrorDisplay } from "@/shared/ui/CommandErrorDisplay";
-import { CommentThread } from "@/features/comments/components/CommentThread";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { LoadingSkeleton } from "@/shared/ui/LoadingSkeleton";
 
@@ -37,14 +36,26 @@ type Props = Readonly<{
   exportState?: CommentExportState;
   activeCommentId: CommentId | null;
   anchorDisplayStates?: readonly CommentAnchorDisplayState[];
+  /** @param commentId - The comment to make active. */
   onSelectComment: (commentId: CommentId) => void;
+  /** @param commentId - The comment to mark resolved. */
   onResolveComment: (commentId: CommentId) => void;
+  /** @param commentId - The comment to reopen. */
   onReopenComment: (commentId: CommentId) => void;
+  /** @param commentId - The comment to delete. */
   onDeleteComment: (commentId: CommentId) => void;
+  /**
+   * @param commentId - The comment to update.
+   * @param body - The new comment body text.
+   */
   onUpdateComment: (commentId: CommentId, body: string) => void;
+  /** @returns Nothing; reloads the comment list. */
   onReload: () => void;
+  /** @param scope - The review scope whose comments to export. */
   onExportComments?: (scope: CommentExportScope) => void;
+  /** @param scope - The review scope whose prompt to copy. */
   onCopyLlmPrompt?: (scope: CommentExportScope) => void;
+  /** @returns Nothing; copies the MCP feedback payload. */
   onCopyMcpFeedback?: () => void;
   userReviewPanel?: ReactNode;
 }>;
@@ -197,10 +208,10 @@ export function CommentSidebar({
           className="comment-sidebar__loading"
           label={uiText.sidebar.loading}
           rows={[
-            { width: "medium" },
-            { width: "full" },
-            { width: "long" },
-            { width: "medium" },
+            { id: "medium-1", width: "medium" },
+            { id: "full-1", width: "full" },
+            { id: "long-1", width: "long" },
+            { id: "medium-2", width: "medium" },
           ]}
         />
       </section>
@@ -343,7 +354,9 @@ type CommentSearchControlProps = Readonly<{
   searchQuery: string;
   resultCount: number;
   scopeCount: number;
+  /** @param query - The next raw search query text. */
   onSearchQueryChange: (query: string) => void;
+  /** @returns Nothing; clears the active search query. */
   onClearSearch: () => void;
 }>;
 
@@ -404,10 +417,15 @@ type HeaderProps = Readonly<{
   showFilters: boolean;
   showExportControls: boolean;
   exportState: CommentExportState;
+  /** @param filter - The newly selected display filter. */
   onFilterChange: (filter: CommentDisplayFilter) => void;
+  /** @returns Nothing; reloads the comment list. */
   onReload: () => void;
+  /** @param scope - The review scope whose comments to export. */
   onExportComments?: (scope: CommentExportScope) => void;
+  /** @param scope - The review scope whose prompt to copy. */
   onCopyLlmPrompt?: (scope: CommentExportScope) => void;
+  /** @returns Nothing; copies the MCP feedback payload. */
   onCopyMcpFeedback?: () => void;
 }>;
 
@@ -497,8 +515,11 @@ function CommentSidebarHeader({
 
 type CommentExportControlsProps = Readonly<{
   exportState: CommentExportState;
+  /** @param scope - The review scope whose comments to export. */
   onExportComments?: (scope: CommentExportScope) => void;
+  /** @param scope - The review scope whose prompt to copy. */
   onCopyLlmPrompt?: (scope: CommentExportScope) => void;
+  /** @returns Nothing; copies the MCP feedback payload. */
   onCopyMcpFeedback?: () => void;
 }>;
 
@@ -680,7 +701,11 @@ type CommentExportFeedbackProps = Readonly<{
   exportState: CommentExportState;
 }>;
 
-/** @returns A compact status message for the latest comment export attempt. */
+/**
+ * @param props - The export feedback props.
+ * @param props.exportState - The latest comment export operation state.
+ * @returns A compact status message for the latest comment export attempt.
+ */
 function CommentExportFeedback({ exportState }: CommentExportFeedbackProps) {
   if (exportState.status === "idle" || exportState.status === "saving") {
     return null;
@@ -700,7 +725,11 @@ type OperationErrorMessageProps = Readonly<{
   operationState: CommentOperationState;
 }>;
 
-/** @returns A compact operation error, or null when the latest operation succeeded. */
+/**
+ * @param props - The operation error props.
+ * @param props.operationState - The latest comment operation state.
+ * @returns A compact operation error, or null when the latest operation succeeded.
+ */
 function OperationErrorMessage({ operationState }: OperationErrorMessageProps) {
   const operationError = CommentOperationFailedState.errorOf(operationState);
 
@@ -727,10 +756,18 @@ type SectionProps = Readonly<{
   searchQuery: string;
   operationState: CommentOperationState;
   emptyMessage: string;
+  /** @param commentId - The comment to make active. */
   onSelectComment: (commentId: CommentId) => void;
+  /** @param commentId - The comment to mark resolved. */
   onResolveComment: (commentId: CommentId) => void;
+  /** @param commentId - The comment to reopen. */
   onReopenComment: (commentId: CommentId) => void;
+  /** @param commentId - The comment to delete. */
   onDeleteComment: (commentId: CommentId) => void;
+  /**
+   * @param commentId - The comment to update.
+   * @param body - The new comment body text.
+   */
   onUpdateComment: (commentId: CommentId, body: string) => void;
 }>;
 
@@ -877,12 +914,18 @@ function formatAnchorDisplayStatus(
   return statusLabels[status];
 }
 
-/** @returns A case-insensitive query with redundant whitespace collapsed. */
+/**
+ * @param query - The raw search query text.
+ * @returns A case-insensitive query with redundant whitespace collapsed.
+ */
 function normalizeCommentSearchQuery(query: string): string {
   return query.trim().replace(/\s+/g, " ").toLocaleLowerCase();
 }
 
-/** @returns A compact result count label for the search field. */
+/**
+ * @param resultCount - The number of matching comments.
+ * @returns A compact result count label for the search field.
+ */
 function formatSearchResultCount(resultCount: number): string {
   if (resultCount === 1) {
     return "1件";
@@ -891,7 +934,10 @@ function formatSearchResultCount(resultCount: number): string {
   return `${resultCount}件`;
 }
 
-/** @returns Comments split by open and resolved display sections. */
+/**
+ * @param comments - The comments to split.
+ * @returns Comments split by open and resolved display sections.
+ */
 function groupCommentsByStatus(comments: readonly Comment[]): CommentGroups {
   return {
     openComments: comments.filter((comment) => !comment.resolved),
@@ -1008,7 +1054,10 @@ function createCommentSectionModels(
   ];
 }
 
-/** @returns A readable label for the selected filter. */
+/**
+ * @param filter - The display filter to label.
+ * @returns A readable label for the selected filter.
+ */
 function formatFilterLabel(filter: CommentDisplayFilter): string {
   const option = commentFilterOptions.find(
     (filterOption) => filterOption.filter === filter,
@@ -1017,7 +1066,10 @@ function formatFilterLabel(filter: CommentDisplayFilter): string {
   return option?.label ?? filter;
 }
 
-/** @returns Section title for a filtered comment list. */
+/**
+ * @param filter - The display filter to title.
+ * @returns Section title for a filtered comment list.
+ */
 function formatSectionTitle(filter: CommentDisplayFilter): string {
   if (filter === "open" || filter === "resolved") {
     return formatFilterLabel(filter);

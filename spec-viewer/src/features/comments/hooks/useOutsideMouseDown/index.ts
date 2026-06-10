@@ -3,10 +3,15 @@ import { type RefObject, useEffect } from "react";
 type UseOutsideMouseDownOptions<TElement extends HTMLElement> = Readonly<{
   layerRef: RefObject<TElement | null>;
   isEnabled?: boolean;
+  /** Called when a mousedown occurs outside the layer element. */
   onOutsideMouseDown: () => void;
 }>;
 
-/** Registers a document mousedown listener that fires only outside the layer. */
+/**
+ * Registers a document mousedown listener that fires only outside the layer.
+ *
+ * @param options - Layer ref, enabled flag, and outside-mousedown callback.
+ */
 export function useOutsideMouseDown<TElement extends HTMLElement>({
   layerRef,
   isEnabled = true,
@@ -17,9 +22,7 @@ export function useOutsideMouseDown<TElement extends HTMLElement>({
       return;
     }
 
-    const dismissWhenClickingOutside = (
-      event: globalThis.MouseEvent,
-    ): void => {
+    const dismissWhenClickingOutside = (event: globalThis.MouseEvent): void => {
       const target = event.target;
       const layer = layerRef.current;
 

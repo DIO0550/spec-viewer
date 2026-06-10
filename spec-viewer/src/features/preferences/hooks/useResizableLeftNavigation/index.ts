@@ -10,8 +10,17 @@ type UseResizableLeftNavigationResult = Readonly<{
   leftNavigationWidth: number;
   minLeftNavigationWidth: number;
   maxLeftNavigationWidth: number;
+  /**
+   * Sets the left navigation width to an absolute value.
+   * @param width - Target width in pixels.
+   */
   resizeLeftNavigationTo: (width: number) => void;
+  /**
+   * Adjusts the left navigation width by a relative amount.
+   * @param delta - Width change in pixels.
+   */
   resizeLeftNavigationBy: (delta: number) => void;
+  /** Resets the left navigation width to its default. */
   resetLeftNavigationWidth: () => void;
 }>;
 
@@ -85,7 +94,10 @@ type LeftNavigationWidthConstraints = Readonly<{
   max: number;
 }>;
 
-/** @returns Left navigation width constraints for the current viewport. */
+/**
+ * @param viewportWidth - Current viewport width in pixels.
+ * @returns Left navigation width constraints for the current viewport.
+ */
 function createLeftNavigationWidthConstraints(
   viewportWidth: number,
 ): LeftNavigationWidthConstraints {
@@ -101,7 +113,11 @@ function createLeftNavigationWidthConstraints(
   };
 }
 
-/** @returns Width clamped to the given left navigation constraints. */
+/**
+ * @param width - Width to clamp in pixels.
+ * @param constraints - Allowed minimum and maximum widths.
+ * @returns Width clamped to the given left navigation constraints.
+ */
 function clampLeftNavigationWidth(
   width: number,
   constraints: LeftNavigationWidthConstraints,
@@ -116,7 +132,10 @@ function clampLeftNavigationWidth(
   );
 }
 
-/** @returns Stored left navigation width or a sane default for the viewport. */
+/**
+ * @param viewportWidth - Current viewport width in pixels.
+ * @returns Stored left navigation width or a sane default for the viewport.
+ */
 function readStoredLeftNavigationWidth(viewportWidth: number): number {
   const constraints = createLeftNavigationWidthConstraints(viewportWidth);
 
@@ -140,7 +159,10 @@ function readStoredLeftNavigationWidth(viewportWidth: number): number {
   }
 }
 
-/** Persists the left navigation width when storage is available. */
+/**
+ * Persists the left navigation width when storage is available.
+ * @param leftNavigationWidth - Left navigation width in pixels to store.
+ */
 function writeStoredLeftNavigationWidth(leftNavigationWidth: number): void {
   if (typeof window === "undefined") {
     return;
@@ -156,7 +178,11 @@ function writeStoredLeftNavigationWidth(leftNavigationWidth: number): void {
   }
 }
 
-/** @returns Whether the width is finite and usable for the current viewport. */
+/**
+ * @param width - Width to validate in pixels.
+ * @param constraints - Allowed minimum and maximum widths.
+ * @returns Whether the width is finite and usable for the current viewport.
+ */
 function isWidthWithinConstraints(
   width: number,
   constraints: LeftNavigationWidthConstraints,
@@ -168,7 +194,10 @@ function isWidthWithinConstraints(
   );
 }
 
-/** @returns The default left navigation width constrained to the viewport. */
+/**
+ * @param constraints - Allowed minimum and maximum widths.
+ * @returns The default left navigation width constrained to the viewport.
+ */
 function clampDefaultLeftNavigationWidth(
   constraints: LeftNavigationWidthConstraints,
 ): number {

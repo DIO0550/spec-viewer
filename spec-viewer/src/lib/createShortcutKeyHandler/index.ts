@@ -1,4 +1,4 @@
-import { type KeyboardEvent } from "react";
+import type { KeyboardEvent } from "react";
 
 export type ShortcutModifier = "ctrl" | "meta" | "ctrlOrMeta" | "alt" | "shift";
 
@@ -9,6 +9,10 @@ export type ShortcutKeyBinding<TElement extends HTMLElement> = Readonly<{
   isEnabled?: boolean;
   preventDefault?: boolean;
   respectDefaultPrevented?: boolean;
+  /**
+   * Invoked when the shortcut matches.
+   * @param event - The keyboard event that matched the shortcut.
+   */
   onMatch: (event: KeyboardEvent<TElement>) => void;
 }>;
 
@@ -40,6 +44,11 @@ export function createShortcutKeyHandler<TElement extends HTMLElement>({
   };
 }
 
+/**
+ * @param event - The keyboard event to test.
+ * @param shortcut - The shortcut binding to match against.
+ * @returns Whether the event matches the shortcut's key, modifiers and enabled state.
+ */
 function matchesShortcut<TElement extends HTMLElement>(
   event: KeyboardEvent<TElement>,
   shortcut: ShortcutKeyBinding<TElement>,
@@ -69,6 +78,12 @@ type MatchesModifiersInput<TElement extends HTMLElement> = Readonly<{
   allowsAdditionalModifiers: boolean;
 }>;
 
+/**
+ * @param event - The keyboard event to inspect.
+ * @param modifiers - The modifiers the shortcut requires.
+ * @param allowsAdditionalModifiers - Whether modifiers beyond the required ones are tolerated.
+ * @returns Whether the event's modifier keys satisfy the shortcut's modifier requirements.
+ */
 function matchesModifiers<TElement extends HTMLElement>({
   event,
   modifiers,
@@ -94,6 +109,11 @@ function matchesModifiers<TElement extends HTMLElement>({
   );
 }
 
+/**
+ * @param event - The keyboard event to inspect.
+ * @param modifier - The single modifier to test for.
+ * @returns Whether the given modifier key is currently pressed in the event.
+ */
 function matchesModifier<TElement extends HTMLElement>(
   event: KeyboardEvent<TElement>,
   modifier: ShortcutModifier,
@@ -117,6 +137,12 @@ function matchesModifier<TElement extends HTMLElement>(
   return event.shiftKey;
 }
 
+/**
+ * @param modifier - The concrete modifier key whose pressed state is evaluated.
+ * @param modifiers - The modifiers the shortcut requires.
+ * @param isPressed - Whether the modifier key is pressed in the event.
+ * @returns Whether the pressed state of the modifier is permitted by the shortcut.
+ */
 function isModifierAllowed(
   modifier: Exclude<ShortcutModifier, "ctrlOrMeta">,
   modifiers: readonly ShortcutModifier[],

@@ -1,8 +1,8 @@
-import type { Comment, CommentId } from "@/features/comments/types/comment";
 import {
   CommentStatusFilter,
   type CommentStatusFilter as CommentStatusFilterType,
 } from "@/features/comments/domain/commentStatusFilter";
+import type { Comment, CommentId } from "@/features/comments/types/comment";
 
 declare const commentsBrand: unique symbol;
 
@@ -15,7 +15,7 @@ export const Comments = {
   create(comments: readonly Comment[]): Comments {
     return comments as Comments;
   },
-  /** @returns The collection as a readonly comment array. */
+  /** @returns The branded collection as a readonly comment array. */
   toArray(comments: Comments): readonly Comment[] {
     return comments;
   },
@@ -108,7 +108,11 @@ export const Comments = {
   },
 } as const;
 
-/** @returns Incoming comment with known anchor resolution preserved when omitted. */
+/**
+ * @param current - The existing comment, when present
+ * @param next - The incoming comment
+ * @returns Incoming comment with known anchor resolution preserved when omitted.
+ */
 function preserveAnchorResolution(
   current: Comment | undefined,
   next: Comment,
@@ -132,7 +136,10 @@ function shouldDisplay(
   return CommentStatusFilter.matches(statusFilter, comment.status);
 }
 
-/** @returns Comment with resolved state inverted. */
+/**
+ * @param comment - The comment to toggle
+ * @returns Comment with resolved state inverted.
+ */
 function toggleResolved(comment: Comment): Comment {
   if (comment.resolved) {
     return { ...comment, status: "open", resolved: false };

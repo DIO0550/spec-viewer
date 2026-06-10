@@ -1,10 +1,9 @@
 import { expect, test } from "vitest";
-
+import type { ReviewBundleFileKind } from "@/features/review-runs/domain/reviewBundleFile";
 import {
   ReviewBundleContextSourceFile,
   ReviewBundleFile,
 } from "@/features/review-runs/domain/reviewBundleFile";
-import type { ReviewBundleFileKind } from "@/features/review-runs/domain/reviewBundleFile";
 
 test.each<ReviewBundleFileKind>([
   "manifest",
