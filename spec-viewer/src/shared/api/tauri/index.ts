@@ -1,14 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
-import { open, save } from "@tauri-apps/plugin-dialog";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-
-import type {
-  CommandError,
-  CommandName,
-  CommandRequest,
-  CommandResponse,
-  NormalizedCommandError,
-} from "@/shared/types/ipc";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import type {
   AddCommentRequest,
   Comment,
@@ -25,6 +17,14 @@ import type {
   UpdateCommentRequest,
 } from "@/features/comments/types/comment";
 import type {
+  ArchiveUserReviewRequest,
+  ArchiveUserReviewResponse,
+  CreateUserReviewRequest,
+  CreateUserReviewResponse,
+  ListUserReviewsRequest,
+  ListUserReviewsResponse,
+} from "@/features/review-runs/types/userReviewIpc";
+import type {
   ArchiveSpecRequest,
   ArchiveSpecResponse,
   ReadSpecFileRequest,
@@ -32,19 +32,18 @@ import type {
   SpecTree,
 } from "@/features/specs/types/spec";
 import type {
-  CreateUserReviewRequest,
-  CreateUserReviewResponse,
-  ArchiveUserReviewRequest,
-  ArchiveUserReviewResponse,
-  ListUserReviewsRequest,
-  ListUserReviewsResponse,
-} from "@/features/review-runs/types/userReviewIpc";
-import type {
   StartSpecFileWatchRequest,
   StartSpecFileWatchResponse,
   StopSpecFileWatchResponse,
 } from "@/features/specs/types/watch";
 import type { Workspace } from "@/features/workspace/types/workspace";
+import type {
+  CommandError,
+  CommandName,
+  CommandRequest,
+  CommandResponse,
+  NormalizedCommandError,
+} from "@/shared/types/ipc";
 
 const UNKNOWN_COMMAND_ERROR_MESSAGE = "Unknown IPC command failure";
 const COMMENT_EXPORT_DEFAULT_SPEC_ID = "spec";

@@ -1,4 +1,7 @@
-import type { Workspace, WorkspaceKind } from "@/features/workspace/types/workspace";
+import type {
+  Workspace,
+  WorkspaceKind,
+} from "@/features/workspace/types/workspace";
 
 export type RecentWorkspace = Readonly<{
   path: string;
@@ -146,10 +149,10 @@ export function recordRecentWorkspace(
     );
   }
 
-  return dedupeRecentWorkspaces([
-    recentWorkspace,
-    ...workspaces,
-  ]).slice(0, recentWorkspaceLimit);
+  return dedupeRecentWorkspaces([recentWorkspace, ...workspaces]).slice(
+    0,
+    recentWorkspaceLimit,
+  );
 }
 
 /** @returns A recent list without the given path. */

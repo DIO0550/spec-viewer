@@ -18,13 +18,13 @@ import {
   CommentOperationSavingState,
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
-import { uiText } from "@/shared/lib/uiText";
 import type {
   Comment,
   CommentAnchorDisplayStatus,
   CommentId,
 } from "@/features/comments/types/comment";
 import { CommentId as CommentIdValue } from "@/features/comments/types/comment";
+import { uiText } from "@/shared/lib/uiText";
 
 const emptyBodyMessage = uiText.commentThread.emptyBody;
 

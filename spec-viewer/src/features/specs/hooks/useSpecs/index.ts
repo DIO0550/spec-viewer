@@ -1,16 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
-import {
-  archiveSpec as defaultArchiveSpec,
-  listSpecs as defaultListSpecs,
-  normalizeCommandError,
-  readSpecFile as defaultReadSpecFile,
-} from "@/shared/api/tauri";
-import {
-  createPerformanceCorrelationId,
-  startPerformanceSpan,
-} from "@/shared/lib/performance";
-import type { NormalizedCommandError } from "@/shared/types/ipc";
 import type {
   ReadSpecFileRequest,
   SpecDocument,
@@ -19,6 +7,17 @@ import type {
   SpecNode,
   SpecTree,
 } from "@/features/specs/types/spec";
+import {
+  archiveSpec as defaultArchiveSpec,
+  listSpecs as defaultListSpecs,
+  readSpecFile as defaultReadSpecFile,
+  normalizeCommandError,
+} from "@/shared/api/tauri";
+import {
+  createPerformanceCorrelationId,
+  startPerformanceSpan,
+} from "@/shared/lib/performance";
+import type { NormalizedCommandError } from "@/shared/types/ipc";
 
 export type ArchiveSpecCommand = (
   request: Readonly<{ workspacePath: string; specId: string }>,

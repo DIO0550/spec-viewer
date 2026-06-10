@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { expect, test, vi } from "vitest";
-
+import { CommentId } from "@/features/comments/types/comment";
 import type {
   ArchiveUserReviewRequest,
   ArchiveUserReviewResponse,
@@ -15,7 +15,6 @@ import {
   listUserReviews,
   normalizeCommandError,
 } from "@/shared/api/tauri";
-import { CommentId } from "@/features/comments/types/comment";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),

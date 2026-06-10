@@ -8,9 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
-
-import { createShortcutKeyHandler } from "@/lib/createShortcutKeyHandler";
-import { uiText } from "@/shared/lib/uiText";
+import { CommentPopover } from "@/features/comments/components/CommentPopover";
 import {
   CommentBody,
   type CommentBodyValidationError,
@@ -19,7 +17,8 @@ import type {
   AddCommentSubmitInput,
   CommentAnchorDraft,
 } from "@/features/comments/types/comment";
-import { CommentPopover } from "@/features/comments/components/CommentPopover";
+import { createShortcutKeyHandler } from "@/lib/createShortcutKeyHandler";
+import { uiText } from "@/shared/lib/uiText";
 
 type Props = Readonly<{
   draft: CommentAnchorDraft;
@@ -141,21 +140,20 @@ export function AddCommentPopover({
     void submitComment();
   };
 
-  const handleTextareaKeyDown =
-    createShortcutKeyHandler<HTMLTextAreaElement>({
-      shortcuts: [
-        {
-          key: "Enter",
-          modifiers: ["ctrlOrMeta"],
-          allowsAdditionalModifiers: true,
-          isEnabled: !isSaving,
-          preventDefault: true,
-          onMatch: () => {
-            void submitComment();
-          },
+  const handleTextareaKeyDown = createShortcutKeyHandler<HTMLTextAreaElement>({
+    shortcuts: [
+      {
+        key: "Enter",
+        modifiers: ["ctrlOrMeta"],
+        allowsAdditionalModifiers: true,
+        isEnabled: !isSaving,
+        preventDefault: true,
+        onMatch: () => {
+          void submitComment();
         },
-      ],
-    });
+      },
+    ],
+  });
 
   const handleDialogKeyDown = createShortcutKeyHandler<HTMLElement>({
     shortcuts: [

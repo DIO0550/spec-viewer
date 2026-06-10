@@ -1,4 +1,4 @@
-import { type KeyboardEvent } from "react";
+import type { KeyboardEvent } from "react";
 
 export type ShortcutModifier = "ctrl" | "meta" | "ctrlOrMeta" | "alt" | "shift";
 

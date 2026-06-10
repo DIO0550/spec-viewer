@@ -1,11 +1,10 @@
 export { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
 export { SpecTabs } from "@/features/specs/components/SpecTabs";
 export { SpecTree } from "@/features/specs/components/SpecTree";
-export { useSpecFileWatcher } from "./hooks/useSpecFileWatcher";
 export {
-  useSpecs,
   type SpecDocumentState,
   type SpecTreeState,
+  useSpecs,
 } from "@/features/specs/hooks/useSpecs";
 export type {
   MarkdownBlockMetadata,
@@ -16,3 +15,4 @@ export type {
   SpecNode,
   SpecTree as SpecTreeData,
 } from "@/features/specs/types/spec";
+export { useSpecFileWatcher } from "./hooks/useSpecFileWatcher";

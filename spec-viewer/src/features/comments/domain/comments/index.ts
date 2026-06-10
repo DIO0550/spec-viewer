@@ -1,8 +1,8 @@
-import type { Comment, CommentId } from "@/features/comments/types/comment";
 import {
   CommentStatusFilter,
   type CommentStatusFilter as CommentStatusFilterType,
 } from "@/features/comments/domain/commentStatusFilter";
+import type { Comment, CommentId } from "@/features/comments/types/comment";
 
 declare const commentsBrand: unique symbol;
 

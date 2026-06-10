@@ -1,11 +1,11 @@
 import { expect, expectTypeOf, test } from "vitest";
 
 import { Comment } from "@/features/comments/domain/comment";
-import { Comments } from "@/features/comments/domain/comments";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
+import { Comments } from "@/features/comments/domain/comments";
 import type {
-  Comment as CompatComment,
   CommentAnchor,
+  Comment as CompatComment,
 } from "@/features/comments/types/comment";
 import { CommentId } from "@/features/comments/types/comment";
 

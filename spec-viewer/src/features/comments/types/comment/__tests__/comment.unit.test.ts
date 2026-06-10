@@ -1,6 +1,5 @@
 import { expectTypeOf, test } from "vitest";
-
-import type { CommandRequest, CommandResponse } from "@/shared/types/ipc";
+import type { Comment as DomainComment } from "@/features/comments/domain/comment";
 import type {
   AddCommentRequest,
   ApplyWithAiCommentSelectionInput,
@@ -8,9 +7,9 @@ import type {
   ApplyWithAiPlaceholderState,
   Comment,
   CommentAnchorDisplayStatus,
-  CommentExportOperation,
   CommentDisplayFilter,
   CommentDisplayState,
+  CommentExportOperation,
   CommentStatusFilter as CommentStatusFilterType,
   ListCommentsResponse,
   SpecSkillMcpFeedbackPayload,
@@ -21,7 +20,7 @@ import type {
   UserReviewManifest,
   UserReviewStatusDocument,
 } from "@/features/review-runs/types/userReviewIpc";
-import type { Comment as DomainComment } from "@/features/comments/domain/comment";
+import type { CommandRequest, CommandResponse } from "@/shared/types/ipc";
 
 test("types/commentのCommentはdomain Commentの互換exportとして扱える", () => {
   expectTypeOf<Comment>().toEqualTypeOf<DomainComment>();
