@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { UserReview } from "@/features/review-runs/domain/userReview";
-import { UserReviewCollection } from "@/features/review-runs/domain/userReviewCollection";
 import type { UserReviewCollectionTransform } from "@/features/review-runs/domain/userReviewCollection";
+import { UserReviewCollection } from "@/features/review-runs/domain/userReviewCollection";
 import {
   UserReviewListState,
   type UserReviewListState as UserReviewListStateType,
@@ -16,23 +16,23 @@ import {
   UserReviewTargetIdentity,
   type UserReviewTargetScope,
 } from "@/features/review-runs/domain/userReviewTarget";
-import { listUserReviews as listUserReviewsViaGateway } from "@/features/review-runs/infra/userReviewGateway";
 import { createUseUserReviewsResult } from "@/features/review-runs/hooks/createUseUserReviewsResult";
 import { useUserReviewListRequest } from "@/features/review-runs/hooks/useUserReviewListRequest";
 import {
-  useUserReviewOperations,
   type CreateUserReviewInput,
+  useUserReviewOperations,
 } from "@/features/review-runs/hooks/useUserReviewOperations";
+import { listUserReviews as listUserReviewsViaGateway } from "@/features/review-runs/infra/userReviewGateway";
 import {
-  normalizeCommandError,
   userReviewCommands as defaultUserReviewCommands,
+  normalizeCommandError,
   type UserReviewCommands,
 } from "@/shared/api/tauri";
 import {
   createPerformanceCorrelationId,
   startPerformanceSpan,
 } from "@/shared/lib/performance";
-import type { SpecFileKey } from "@/features/specs/types/spec";
+import type { SpecFileKey } from "@/shared/types/specFileKey";
 
 export type { UserReviewListState } from "@/features/review-runs/domain/userReviewListState";
 export type {
@@ -59,7 +59,9 @@ export type UseUserReviewsResult = Readonly<{
   activeReviews: readonly UserReview[];
   archivedReviews: readonly UserReview[];
   reloadUserReviews: () => Promise<boolean>;
-  createUserReview: (input: CreateUserReviewInput) => Promise<UserReview | null>;
+  createUserReview: (
+    input: CreateUserReviewInput,
+  ) => Promise<UserReview | null>;
   archiveUserReview: (userReviewId: string) => Promise<UserReview | null>;
 }>;
 
@@ -125,11 +127,15 @@ export function useUserReviews(
       options.correlationId === undefined || options.correlationId === null
         ? null
         : spanCorrelationId;
-    const endSpan = startPerformanceSpan(spanCorrelationId, "userReviews.list", {
-      targetScope: activeTarget.scope,
-      specId: activeTarget.specId,
-      fileKey: activeTarget.scope === "file" ? activeTarget.fileKey : null,
-    });
+    const endSpan = startPerformanceSpan(
+      spanCorrelationId,
+      "userReviews.list",
+      {
+        targetScope: activeTarget.scope,
+        specId: activeTarget.specId,
+        fileKey: activeTarget.scope === "file" ? activeTarget.fileKey : null,
+      },
+    );
 
     try {
       const response = await listUserReviewsViaGateway(
@@ -169,10 +175,7 @@ export function useUserReviews(
       }
 
       setListState(
-        UserReviewListState.error(
-          activeTarget,
-          normalizeCommandError(error),
-        ),
+        UserReviewListState.error(activeTarget, normalizeCommandError(error)),
       );
       return false;
     }

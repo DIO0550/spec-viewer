@@ -1,22 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-
+import type { CommentId } from "@/features/comments";
 import type { UserReview } from "@/features/review-runs/domain/userReview";
-import { UserReviewCollection } from "@/features/review-runs/domain/userReviewCollection";
 import type { UserReviewCollectionTransform } from "@/features/review-runs/domain/userReviewCollection";
+import { UserReviewCollection } from "@/features/review-runs/domain/userReviewCollection";
 import {
   UserReviewArchiveState,
-  UserReviewCreateState,
   type UserReviewArchiveState as UserReviewArchiveStateType,
+  UserReviewCreateState,
   type UserReviewCreateState as UserReviewCreateStateType,
 } from "@/features/review-runs/domain/userReviewOperation";
+import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
+import { UserReviewAsyncToken } from "@/features/review-runs/hooks/userReviewAsyncToken";
 import {
   archiveUserReview as archiveUserReviewViaGateway,
   createUserReview as createUserReviewViaGateway,
 } from "@/features/review-runs/infra/userReviewGateway";
-import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
-import { UserReviewAsyncToken } from "@/features/review-runs/hooks/userReviewAsyncToken";
 import type { UserReviewWorkspaceMode } from "@/features/review-runs/types/userReviewIpc";
-import type { CommentId } from "@/features/comments/types/comment";
 import {
   normalizeCommandError,
   type UserReviewCommands,
@@ -40,7 +39,9 @@ export type UseUserReviewOperationsOptions = Readonly<{
 export type UseUserReviewOperationsResult = Readonly<{
   createState: UserReviewCreateStateType;
   archiveState: UserReviewArchiveStateType;
-  createUserReview: (input: CreateUserReviewInput) => Promise<UserReview | null>;
+  createUserReview: (
+    input: CreateUserReviewInput,
+  ) => Promise<UserReview | null>;
   archiveUserReview: (userReviewId: string) => Promise<UserReview | null>;
 }>;
 
@@ -68,8 +69,9 @@ export function useUserReviewOperations(
   const [createState, setCreateState] = useState<UserReviewCreateStateType>(
     UserReviewCreateState.idle(),
   );
-  const [archiveState, setArchiveState] =
-    useState<UserReviewArchiveStateType>(UserReviewArchiveState.idle());
+  const [archiveState, setArchiveState] = useState<UserReviewArchiveStateType>(
+    UserReviewArchiveState.idle(),
+  );
 
   activeOperationIdentityRef.current = operationIdentity;
 

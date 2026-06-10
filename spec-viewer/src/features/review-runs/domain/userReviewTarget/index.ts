@@ -1,5 +1,5 @@
-import type { ExportCommentsTarget } from "@/features/comments/types/comment";
-import type { SpecFileKey } from "@/features/specs/types/spec";
+import type { ExportCommentsTarget } from "@/features/comments";
+import type { SpecFileKey } from "@/shared/types/specFileKey";
 
 export type UserReviewTargetScope = "file" | "spec";
 
