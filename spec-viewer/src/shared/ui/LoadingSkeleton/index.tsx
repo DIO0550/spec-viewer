@@ -5,6 +5,7 @@ type Props = Readonly<{
 }>;
 
 type SkeletonRow = Readonly<{
+  id: string;
   width: "short" | "medium" | "long" | "full";
 }>;
 
@@ -19,11 +20,11 @@ export function LoadingSkeleton({ label, rows, className }: Props) {
     <div className={classNames} aria-label={label} role="status">
       <span className="loading-skeleton__label">{label}</span>
       <div className="loading-skeleton__rows" aria-hidden="true">
-        {rows.map((row, index) => (
+        {rows.map((row) => (
           <span
             className="loading-skeleton__bar"
             data-width={row.width}
-            key={`${row.width}-${index}`}
+            key={row.id}
           />
         ))}
       </div>

@@ -2,25 +2,25 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import "./App.css";
 import {
-  CommentSidebar,
-  CommentOperationFailedState,
-  CommentOperationSavingState,
-  createSpecSkillMcpFeedbackDryRunPayload,
-  renderSpecSkillMcpFeedbackDryRunPayload,
-  useComments,
   type AddCommentSubmitInput,
   type CommentAnchorDisplayState,
   type CommentExportOperation,
   type CommentExportScope,
   type CommentId,
+  CommentOperationFailedState,
+  CommentOperationSavingState,
+  CommentSidebar,
+  createSpecSkillMcpFeedbackDryRunPayload,
   type ExportCommentsResponse,
   type ExportCommentsTarget,
   type GenerateLlmPromptResponse,
+  renderSpecSkillMcpFeedbackDryRunPayload,
   type SpecSkillMcpFeedbackPayload,
+  useComments,
 } from "@/features/comments";
-import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
-import { CommentScope } from "@/features/comments/domain/commentScope";
 import { CommentListState } from "@/features/comments/domain/commentListState";
+import { CommentScope } from "@/features/comments/domain/commentScope";
+import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import {
   useKeyboardShortcuts,
   useLeftNavigationPreference,
@@ -31,30 +31,29 @@ import {
 } from "@/features/preferences";
 import {
   UserReviewPanel,
-  useUserReviews,
-  type UserReviewWorkspaceMode,
   type UserReviewTargetScope,
+  type UserReviewWorkspaceMode,
+  useUserReviews,
 } from "@/features/review-runs";
 import {
   MarkdownViewer,
+  type SpecFileKey,
   SpecTabs,
   SpecTree,
   useSpecFileWatcher,
   useSpecs,
-  type SpecFileKey,
 } from "@/features/specs";
 import {
   OpenWorkspaceEmptyState,
-  WorkspaceDropOverlay,
-  WorkspaceSidebarSection,
-  WorkspaceToolbar,
   useRecentWorkspaces,
   useWorkspace,
   useWorkspaceDrop,
   useWorkspaceSidebarSectionPreference,
+  WorkspaceDropOverlay,
   type WorkspaceRefreshStatus,
+  WorkspaceSidebarSection,
+  WorkspaceToolbar,
 } from "@/features/workspace";
-import { AppShell } from "@/shared/ui";
 import {
   exportComments,
   generateLlmPrompt,
@@ -64,6 +63,7 @@ import {
   validateWorkspaceDirectory,
 } from "@/shared/api/tauri";
 import { uiText } from "@/shared/lib/uiText";
+import { AppShell } from "@/shared/ui";
 
 const idleRefreshStatus: WorkspaceRefreshStatus = {
   status: "idle",
@@ -189,6 +189,13 @@ function App() {
   const hasAttemptedStartupRestoreRef = useRef(false);
 
   useEffect(() => {
+    // Reset transient comment UI whenever the active selection or workspace
+    // changes; the dependencies are intentional re-run triggers.
+    void [
+      specs.selectedFileKey,
+      specs.selectedSpecId,
+      workspace.workspace?.root,
+    ];
     setActiveCommentId(null);
     setCommentAnchorDisplayStates([]);
     setRefreshStatus(idleRefreshStatus);
@@ -196,6 +203,13 @@ function App() {
   }, [specs.selectedFileKey, specs.selectedSpecId, workspace.workspace?.root]);
 
   useEffect(() => {
+    // Reset the review target whenever the active selection or workspace
+    // changes; the dependencies are intentional re-run triggers.
+    void [
+      specs.selectedFileKey,
+      specs.selectedSpecId,
+      workspace.workspace?.root,
+    ];
     setUserReviewTargetScope("file");
     setUserReviewWorkspaceMode("currentWorkspace");
   }, [specs.selectedFileKey, specs.selectedSpecId, workspace.workspace?.root]);
@@ -666,7 +680,11 @@ function App() {
         commentIds: openCommentIds,
         workspaceMode: userReviewWorkspaceMode,
       });
-    }, [comments.comments, userReviewWorkspaceMode, userReviews.createUserReview]);
+    }, [
+      comments.comments,
+      userReviewWorkspaceMode,
+      userReviews.createUserReview,
+    ]);
 
   const selectAdjacentFile = useCallback(
     (direction: NavigationDirection): void => {

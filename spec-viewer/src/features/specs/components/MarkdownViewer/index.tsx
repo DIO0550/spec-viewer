@@ -1,29 +1,8 @@
 import {
-  type ComponentPropsWithoutRef,
-  type AriaRole,
-  type CSSProperties,
-  type FormEvent,
-  type KeyboardEvent,
-  type KeyboardEventHandler,
-  type MouseEvent,
-  type MouseEventHandler,
-  type ReactElement,
-  type ReactNode,
-  type RefObject,
-  cloneElement,
-  isValidElement,
-  useEffect,
-  useId,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import {
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   LoaderCircle,
   MessageSquare,
   MessageSquarePlus,
@@ -37,29 +16,44 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
+import {
+  type AriaRole,
+  type ComponentPropsWithoutRef,
+  type CSSProperties,
+  cloneElement,
+  type FormEvent,
+  isValidElement,
+  type KeyboardEvent,
+  type KeyboardEventHandler,
+  type MouseEvent,
+  type MouseEventHandler,
+  type ReactElement,
+  type ReactNode,
+  type RefObject,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
-
-import { useMarkdownTextSelection } from "@/features/comments/hooks/useMarkdownTextSelection";
-import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
+import { AddCommentPopover } from "@/features/comments/components/AddCommentPopover";
 import {
-  createViewerResetKey,
-  useViewerReset,
-} from "@/features/specs/hooks/useViewerReset";
+  CommentOperationIdleState,
+  type CommentOperationKind,
+  CommentOperationSavingState,
+  type CommentOperationState,
+} from "@/features/comments/domain/commentOperation";
+import { useMarkdownTextSelection } from "@/features/comments/hooks/useMarkdownTextSelection";
 import {
   createCommentAnchorDraftFromBlock,
   createTextHash,
 } from "@/features/comments/lib/comment-anchor-draft";
-import {
-  CommentOperationIdleState,
-  CommentOperationSavingState,
-  type CommentOperationKind,
-  type CommentOperationState,
-} from "@/features/comments/domain/commentOperation";
-import { uiText } from "@/shared/lib/uiText";
-import { recordPerformancePoint } from "@/shared/lib/performance";
 import type {
+  AddCommentSubmitInput,
   Comment,
   CommentAnchor,
   CommentAnchorDisplayState,
@@ -68,10 +62,18 @@ import type {
   CommentBlockType,
   CommentId,
   CommentSelectionBounds,
-  AddCommentSubmitInput,
 } from "@/features/comments/types/comment";
-import type { MarkdownBlockMetadata, MarkdownBlockType } from "@/features/specs/types/spec";
-import { AddCommentPopover } from "@/features/comments/components/AddCommentPopover";
+import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
+import {
+  createViewerResetKey,
+  useViewerReset,
+} from "@/features/specs/hooks/useViewerReset";
+import type {
+  MarkdownBlockMetadata,
+  MarkdownBlockType,
+} from "@/features/specs/types/spec";
+import { recordPerformancePoint } from "@/shared/lib/performance";
+import { uiText } from "@/shared/lib/uiText";
 import { CommandErrorDisplay } from "@/shared/ui/CommandErrorDisplay";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { LoadingSkeleton } from "@/shared/ui/LoadingSkeleton";
@@ -255,6 +257,9 @@ export function MarkdownViewer({
   );
   useViewerReset(panelRef, resetKey, state.status !== "idle");
   useEffect(() => {
+    // Reset all transient viewer state when the document resets; resetKey is
+    // an intentional re-run trigger.
+    void resetKey;
     setActiveAnchorDraft(null);
     setActiveEditDraft(null);
     setAnchorDisplayStates([]);
@@ -276,13 +281,20 @@ export function MarkdownViewer({
 
     firstReadableResetKeyRef.current = resetKey;
     const byteLength = getUtf8ByteLength(readyContents);
-    recordPerformancePoint(correlationId ?? resetKey, "document.firstReadable", {
-      bytes: byteLength,
-      syntaxHighlight: byteLength <= SYNTAX_HIGHLIGHT_MAX_BYTES,
-    });
+    recordPerformancePoint(
+      correlationId ?? resetKey,
+      "document.firstReadable",
+      {
+        bytes: byteLength,
+        syntaxHighlight: byteLength <= SYNTAX_HIGHLIGHT_MAX_BYTES,
+      },
+    );
     onFirstReadable?.();
   }, [correlationId, onFirstReadable, readyContents, resetKey, state.status]);
   useEffect(() => {
+    // Reset the active match when the search query changes;
+    // normalizedDocumentSearchQuery is an intentional re-run trigger.
+    void normalizedDocumentSearchQuery;
     setActiveDocumentSearchIndex(0);
   }, [normalizedDocumentSearchQuery]);
   useEffect(() => {
@@ -311,6 +323,9 @@ export function MarkdownViewer({
     state.status,
   ]);
   useEffect(() => {
+    // Re-scroll after anchor positions are recomputed; anchorDisplayStates is
+    // an intentional re-run trigger.
+    void anchorDisplayStates;
     scrollActiveCommentIntoView({
       activeCommentId,
       comments: visibleViewerComments,
@@ -318,6 +333,9 @@ export function MarkdownViewer({
     });
   }, [activeCommentId, anchorDisplayStates, visibleViewerComments]);
   useEffect(() => {
+    // Recount matches after the rendered document changes; readyContents is
+    // an intentional re-run trigger.
+    void readyContents;
     const nextMatchCount = countRenderedDocumentSearchMatches({
       renderedRoot: renderedRootRef.current,
       searchQuery: normalizedDocumentSearchQuery,
@@ -329,6 +347,9 @@ export function MarkdownViewer({
     );
   }, [normalizedDocumentSearchQuery, readyContents]);
   useEffect(() => {
+    // Re-scroll to the active match when the selected index changes;
+    // activeDocumentSearchIndex is an intentional re-run trigger.
+    void activeDocumentSearchIndex;
     scrollActiveDocumentSearchMatchIntoView({
       renderedRoot: renderedRootRef.current,
       searchQuery: normalizedDocumentSearchQuery,
@@ -517,13 +538,13 @@ export function MarkdownViewer({
           className="markdown-loading-skeleton"
           label={uiText.markdown.loading}
           rows={[
-            { width: "short" },
-            { width: "long" },
-            { width: "medium" },
-            { width: "full" },
-            { width: "full" },
-            { width: "medium" },
-            { width: "long" },
+            { id: "short-1", width: "short" },
+            { id: "long-1", width: "long" },
+            { id: "medium-1", width: "medium" },
+            { id: "full-1", width: "full" },
+            { id: "full-2", width: "full" },
+            { id: "medium-2", width: "medium" },
+            { id: "long-2", width: "long" },
           ]}
         />
       </section>
@@ -717,6 +738,7 @@ function HtmlZoomControl({
   return (
     <div
       className="html-zoom-control"
+      role="toolbar"
       aria-label={uiText.markdown.htmlZoomControls}
     >
       <button
@@ -994,6 +1016,7 @@ function MarkdownDocument({
     <div
       ref={renderedRootRef}
       className="markdown-rendered"
+      role="document"
       aria-label={uiText.markdown.renderedDocument}
     >
       <ReactMarkdown
@@ -2546,7 +2569,7 @@ function CommentRangeHighlightSpan({
       data-comment-highlight-count={highlight.commentIds.length}
       data-comment-highlight-state={highlight.state}
       data-comment-ids={highlight.commentIds.join(" ")}
-      aria-label={createHighlightAriaLabel(highlight)}
+      title={createHighlightAriaLabel(highlight)}
     >
       {children}
     </span>
@@ -2752,8 +2775,7 @@ function CommentEditPopover({
           "reopen",
           "delete",
         ]);
-  const visibleErrorMessage =
-    validationMessage ?? scopedOperationErrorMessage;
+  const visibleErrorMessage = validationMessage ?? scopedOperationErrorMessage;
   const isSubmitDisabled = isBusy || trimmedBody.length === 0;
   const describedBy =
     visibleErrorMessage === null ? hintId : `${hintId} ${errorId}`;

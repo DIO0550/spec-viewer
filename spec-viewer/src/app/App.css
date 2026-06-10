@@ -590,15 +590,15 @@ textarea:disabled {
   padding: 0;
 }
 
-.app-shell__toolbar .workspace-toolbar__brand {
-  display: none;
-}
-
 .workspace-toolbar__brand,
 .workspace-toolbar__field {
   display: grid;
   gap: 3px;
   min-width: 0;
+}
+
+.app-shell__toolbar .workspace-toolbar__brand {
+  display: none;
 }
 
 .workspace-toolbar__title {
@@ -2120,13 +2120,12 @@ textarea:disabled {
   border-bottom: 1px solid var(--color-border);
   margin-bottom: 20px;
   padding: 0 0 16px;
-  background:
-    linear-gradient(
-      180deg,
-      var(--color-raised) 0%,
-      color-mix(in srgb, var(--color-raised) 94%, transparent) 76%,
-      transparent 100%
-    );
+  background: linear-gradient(
+    180deg,
+    var(--color-raised) 0%,
+    color-mix(in srgb, var(--color-raised) 94%, transparent) 76%,
+    transparent 100%
+  );
 }
 
 .markdown-viewer--html .markdown-viewer__header {
@@ -2765,8 +2764,10 @@ textarea:disabled {
   overflow: hidden;
 }
 
-.markdown-viewer[data-comment-dialog-open="true"] .text-selection-comment-button,
-.markdown-viewer[data-comment-dialog-open="true"] .markdown-block-comment-button,
+.markdown-viewer[data-comment-dialog-open="true"]
+  .text-selection-comment-button,
+.markdown-viewer[data-comment-dialog-open="true"]
+  .markdown-block-comment-button,
 .markdown-viewer[data-comment-dialog-open="true"]
   .markdown-comment-target:hover
   > .markdown-block-comment-button,

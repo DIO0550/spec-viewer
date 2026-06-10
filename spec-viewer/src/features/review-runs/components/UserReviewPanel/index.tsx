@@ -9,18 +9,6 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useId, useState } from "react";
-
-import type {
-  UserReviewCreateState,
-  UserReviewArchiveState,
-  UserReviewListState,
-  UserReviewTargetScope,
-} from "@/features/review-runs/hooks/useUserReviews";
-import type {
-  ReviewSourceFile,
-  UserReview,
-  UserReviewWorkspace,
-} from "@/features/review-runs/domain/userReview";
 import {
   canArchiveUserReview,
   canCreateUserReview,
@@ -32,6 +20,17 @@ import {
   formatProblemState,
   formatUserReviewSummary,
 } from "@/features/review-runs/components/userReviewPanelPresenter";
+import type {
+  ReviewSourceFile,
+  UserReview,
+  UserReviewWorkspace,
+} from "@/features/review-runs/domain/userReview";
+import type {
+  UserReviewArchiveState,
+  UserReviewCreateState,
+  UserReviewListState,
+  UserReviewTargetScope,
+} from "@/features/review-runs/hooks/useUserReviews";
 import type { UserReviewWorkspaceMode } from "@/features/review-runs/types/userReviewIpc";
 
 type Props = Readonly<{
@@ -121,7 +120,11 @@ export function UserReviewPanel({
         </button>
       </header>
 
-      <div className="review-run-panel__target" aria-label="レビュー範囲">
+      <div
+        className="review-run-panel__target"
+        role="group"
+        aria-label="レビュー範囲"
+      >
         <button
           type="button"
           aria-pressed={targetScope === "file"}
@@ -318,7 +321,11 @@ function UserReviewList({
 
   if (activeReviews.length === 0) {
     return (
-      <div className="review-run-panel__runs" aria-label="アクティブレビュー">
+      <div
+        className="review-run-panel__runs"
+        role="group"
+        aria-label="アクティブレビュー"
+      >
         <UserReviewProblems problems={listState.problems} />
         <p className="review-run-panel__empty">
           アクティブなレビューはありません。
@@ -328,7 +335,11 @@ function UserReviewList({
   }
 
   return (
-    <div className="review-run-panel__runs" aria-label="アクティブレビュー">
+    <div
+      className="review-run-panel__runs"
+      role="group"
+      aria-label="アクティブレビュー"
+    >
       <UserReviewProblems problems={listState.problems} />
       {activeReviews.map((run) => (
         <article className="review-run-panel__run" key={run.id}>
@@ -472,9 +483,7 @@ type WorkspaceSummaryProps = Readonly<{
 }>;
 
 /** @returns Worktree metadata when the review uses an isolated checkout. */
-function WorkspaceSummary({
-  workspace,
-}: WorkspaceSummaryProps) {
+function WorkspaceSummary({ workspace }: WorkspaceSummaryProps) {
   if (workspace.mode === "currentWorkspace") {
     return null;
   }

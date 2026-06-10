@@ -9,13 +9,12 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useId, useState } from "react";
-
+import { CommentThread } from "@/features/comments/components/CommentThread";
+import type { CommentListState } from "@/features/comments/domain/commentListState";
 import {
   CommentOperationFailedState,
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
-import type { CommentListState } from "@/features/comments/domain/commentListState";
-import { uiText } from "@/shared/lib/uiText";
 import type {
   ApplyWithAiPlaceholderState,
   Comment,
@@ -26,8 +25,8 @@ import type {
   CommentExportScope,
   CommentId,
 } from "@/features/comments/types/comment";
+import { uiText } from "@/shared/lib/uiText";
 import { CommandErrorDisplay } from "@/shared/ui/CommandErrorDisplay";
-import { CommentThread } from "@/features/comments/components/CommentThread";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { LoadingSkeleton } from "@/shared/ui/LoadingSkeleton";
 
@@ -197,10 +196,10 @@ export function CommentSidebar({
           className="comment-sidebar__loading"
           label={uiText.sidebar.loading}
           rows={[
-            { width: "medium" },
-            { width: "full" },
-            { width: "long" },
-            { width: "medium" },
+            { id: "medium-1", width: "medium" },
+            { id: "full-1", width: "full" },
+            { id: "long-1", width: "long" },
+            { id: "medium-2", width: "medium" },
           ]}
         />
       </section>

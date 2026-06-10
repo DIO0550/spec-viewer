@@ -46,6 +46,7 @@ export function OpenWorkspaceEmptyState({
             {recentWorkspaces.length > 0 ? (
               <div
                 className="open-workspace-actions__recent"
+                role="group"
                 aria-label={uiText.workspace.recent}
               >
                 <span className="open-workspace-actions__recent-title">

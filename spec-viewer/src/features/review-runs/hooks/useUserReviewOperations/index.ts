@@ -209,6 +209,9 @@ export function useUserReviewOperations(
   );
 
   useEffect(() => {
+    // Invalidate in-flight operations whenever the operation target changes;
+    // operationIdentity is an intentional re-run trigger.
+    void operationIdentity;
     createRequestIdRef.current += 1;
     archiveRequestIdRef.current += 1;
     setCreateState(UserReviewCreateState.idle());

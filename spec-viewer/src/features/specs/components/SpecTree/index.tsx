@@ -8,8 +8,8 @@ import {
 import { type KeyboardEvent, useEffect, useState } from "react";
 
 import type { SpecTreeState } from "@/features/specs/hooks/useSpecs";
-import { uiText } from "@/shared/lib/uiText";
 import type { SpecNode } from "@/features/specs/types/spec";
+import { uiText } from "@/shared/lib/uiText";
 import { CommandErrorDisplay } from "@/shared/ui/CommandErrorDisplay";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { LoadingSkeleton } from "@/shared/ui/LoadingSkeleton";
@@ -92,11 +92,11 @@ export function SpecTree({
         <LoadingSkeleton
           label={uiText.specTree.loading}
           rows={[
-            { width: "long" },
-            { width: "medium" },
-            { width: "full" },
-            { width: "short" },
-            { width: "medium" },
+            { id: "long-1", width: "long" },
+            { id: "medium-1", width: "medium" },
+            { id: "full-1", width: "full" },
+            { id: "short-1", width: "short" },
+            { id: "medium-2", width: "medium" },
           ]}
         />
       </section>

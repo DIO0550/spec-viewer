@@ -6,9 +6,11 @@ import {
 } from "lucide-react";
 import {
   type CSSProperties,
-  type KeyboardEvent,
   type PointerEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
+  useCallback,
+  useEffect,
   useRef,
 } from "react";
 
@@ -86,12 +88,12 @@ export function AppShell({
     </div>
   );
 
-  const closeLeftNavigation = (): void => {
+  const closeLeftNavigation = useCallback((): void => {
     onCloseLeftNavigation?.();
     requestAnimationFrame(() => {
       openLeftNavigationButtonRef.current?.focus();
     });
-  };
+  }, [onCloseLeftNavigation]);
 
   const openLeftNavigation = (): void => {
     onOpenLeftNavigation?.();
@@ -100,12 +102,12 @@ export function AppShell({
     });
   };
 
-  const closeCommentsSidebar = (): void => {
+  const closeCommentsSidebar = useCallback((): void => {
     onCloseCommentsSidebar?.();
     requestAnimationFrame(() => {
       reopenButtonRef.current?.focus();
     });
-  };
+  }, [onCloseCommentsSidebar]);
 
   const openCommentsSidebar = (): void => {
     onOpenCommentsSidebar?.();
@@ -116,48 +118,49 @@ export function AppShell({
     });
   };
 
-  const dismissCommentsSidebar = (
-    event: KeyboardEvent<HTMLDivElement>,
-  ): void => {
-    if (
-      event.defaultPrevented ||
-      event.key !== "Escape" ||
-      !isCommentsSidebarOpen
-    ) {
+  // Escape dismissal lives on a native listener attached to the shell body so
+  // the layout container itself stays non-interactive.
+  useEffect(() => {
+    const body = bodyRef.current;
+
+    if (body === null) {
       return;
     }
 
-    event.preventDefault();
-    closeCommentsSidebar();
-  };
+    const dismissPanels = (event: KeyboardEvent): void => {
+      if (event.defaultPrevented || event.key !== "Escape") {
+        return;
+      }
 
-  const dismissLeftNavigation = (
-    event: KeyboardEvent<HTMLDivElement>,
-  ): void => {
-    if (
-      event.defaultPrevented ||
-      event.key !== "Escape" ||
-      !isLeftNavigationOpen
-    ) {
-      return;
-    }
+      if (isLeftNavigationOpen) {
+        const target = event.target;
+        const isFromLeftNavigation =
+          target instanceof Node &&
+          leftAsideRef.current?.contains(target) === true;
 
-    const target = event.target;
-    const isFromLeftNavigation =
-      target instanceof Node && leftAsideRef.current?.contains(target) === true;
+        if (isFromLeftNavigation || isNarrowViewport()) {
+          event.preventDefault();
+          closeLeftNavigation();
+        }
+      }
 
-    if (!isFromLeftNavigation && !isNarrowViewport()) {
-      return;
-    }
+      if (!event.defaultPrevented && isCommentsSidebarOpen) {
+        event.preventDefault();
+        closeCommentsSidebar();
+      }
+    };
 
-    event.preventDefault();
-    closeLeftNavigation();
-  };
+    body.addEventListener("keydown", dismissPanels);
 
-  const dismissPanels = (event: KeyboardEvent<HTMLDivElement>): void => {
-    dismissLeftNavigation(event);
-    dismissCommentsSidebar(event);
-  };
+    return () => {
+      body.removeEventListener("keydown", dismissPanels);
+    };
+  }, [
+    closeCommentsSidebar,
+    closeLeftNavigation,
+    isCommentsSidebarOpen,
+    isLeftNavigationOpen,
+  ]);
 
   const resizeLeftNavigationFromPointer = (clientX: number): void => {
     const body = bodyRef.current;
@@ -203,7 +206,7 @@ export function AppShell({
   };
 
   const resizeLeftNavigationWithKeyboard = (
-    event: KeyboardEvent<HTMLButtonElement>,
+    event: ReactKeyboardEvent<HTMLButtonElement>,
   ): void => {
     if (onLeftNavigationWidthChange === undefined) {
       return;
@@ -273,7 +276,7 @@ export function AppShell({
   };
 
   const resizeSidebarWithKeyboard = (
-    event: KeyboardEvent<HTMLButtonElement>,
+    event: ReactKeyboardEvent<HTMLButtonElement>,
   ): void => {
     if (onCommentsSidebarWidthChange === undefined) {
       return;
@@ -311,7 +314,6 @@ export function AppShell({
         data-left-navigation={isLeftNavigationOpen ? "open" : "collapsed"}
         data-comments-sidebar={isCommentsSidebarOpen ? "open" : "collapsed"}
         style={bodyStyle}
-        onKeyDown={dismissPanels}
       >
         <aside
           ref={leftAsideRef}

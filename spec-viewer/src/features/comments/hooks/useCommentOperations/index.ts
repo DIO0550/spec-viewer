@@ -3,13 +3,13 @@ import { useCallback, useEffect, useReducer, useRef } from "react";
 import {
   CommentOperationFailedState,
   CommentOperationIdleState,
-  CommentOperationSavingState,
   type CommentOperationKind,
+  CommentOperationSavingState,
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
-import { Comments } from "@/features/comments/domain/comments";
 import type { CommentScope } from "@/features/comments/domain/commentScope";
 import type { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
+import { Comments } from "@/features/comments/domain/comments";
 import {
   addComment as addCommentViaGateway,
   deleteComment as deleteCommentViaGateway,
@@ -24,8 +24,8 @@ import type {
   CommentId,
 } from "@/features/comments/types/comment";
 import {
-  normalizeCommandError,
   type CommentCommands,
+  normalizeCommandError,
 } from "@/shared/api/tauri";
 import type { NormalizedCommandError } from "@/shared/types/ipc";
 
@@ -164,6 +164,9 @@ export function useCommentOperations(
   );
 
   useEffect(() => {
+    // Invalidate in-flight operations whenever the comment scope or its
+    // reload entry point changes; the dependencies are intentional triggers.
+    void [reloadComments, scopeKey];
     operationRequestIdRef.current += 1;
     dispatchOperation({ type: "operationInvalidated" });
   }, [reloadComments, scopeKey]);

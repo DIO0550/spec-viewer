@@ -3,18 +3,18 @@ import type { ComponentProps } from "react";
 import { fn } from "storybook/test";
 
 import {
+  type Comment,
   CommentSidebar,
   createTextHash,
-  type Comment,
 } from "@/features/comments";
 import { CommentId } from "@/features/comments/types/comment";
 import type {
-  SpecDocumentState,
-  SpecTreeState,
   SpecDocument,
+  SpecDocumentState,
   SpecFileKey,
   SpecNode,
   SpecTreeData as SpecTreeShape,
+  SpecTreeState,
 } from "@/features/specs";
 import { MarkdownViewer, SpecTabs, SpecTree } from "@/features/specs";
 import {
@@ -227,7 +227,7 @@ export const Empty: Story = {
   }),
 };
 
-export const Error: Story = {
+export const ErrorState: Story = {
   args: createShellArgs({
     treeState: {
       status: "error",
