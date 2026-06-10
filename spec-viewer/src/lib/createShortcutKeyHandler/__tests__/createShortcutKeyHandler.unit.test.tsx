@@ -1,5 +1,5 @@
-import { act } from "react";
 import type { ReactNode } from "react";
+import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
@@ -112,9 +112,7 @@ function dispatchHarnessKeyDown(container: ParentNode): KeyboardEvent {
     cancelable: true,
   });
 
-  if (button.dataset.defaultPrevented === "true") {
-    event.preventDefault();
-  }
+  void (button.dataset.defaultPrevented === "true" && event.preventDefault());
 
   act(() => {
     button.dispatchEvent(event);
@@ -148,50 +146,44 @@ test("createShortcutKeyHandlerはkeyが一致しないbindingのonMatchを呼ば
 test.each([
   ["Ctrl+Enter", true, false],
   ["Meta+Enter", false, true],
-] as const)(
-  "createShortcutKeyHandlerはctrlOrMeta modifierで%sに一致する",
-  (_label, ctrlKey, metaKey) => {
-    const onMatch = vi.fn();
-    const result = renderComponent(
-      <ShortcutHarness
-        onMatch={onMatch}
-        modifiers={["ctrlOrMeta"]}
-        ctrlKey={ctrlKey}
-        metaKey={metaKey}
-      />,
-    );
+] as const)("createShortcutKeyHandlerはctrlOrMeta modifierで%sに一致する", (_label, ctrlKey, metaKey) => {
+  const onMatch = vi.fn();
+  const result = renderComponent(
+    <ShortcutHarness
+      onMatch={onMatch}
+      modifiers={["ctrlOrMeta"]}
+      ctrlKey={ctrlKey}
+      metaKey={metaKey}
+    />,
+  );
 
-    dispatchHarnessKeyDown(result.container);
+  dispatchHarnessKeyDown(result.container);
 
-    expect(onMatch).toHaveBeenCalledOnce();
-    result.unmount();
-  },
-);
+  expect(onMatch).toHaveBeenCalledOnce();
+  result.unmount();
+});
 
 test.each([
   ["Shift+Ctrl+Enter", true, false, false, true],
   ["Alt+Meta+Enter", false, true, true, false],
-] as const)(
-  "createShortcutKeyHandlerはctrlOrMeta modifierで余分な%sに一致しない",
-  (_label, ctrlKey, metaKey, altKey, shiftKey) => {
-    const onMatch = vi.fn();
-    const result = renderComponent(
-      <ShortcutHarness
-        onMatch={onMatch}
-        modifiers={["ctrlOrMeta"]}
-        ctrlKey={ctrlKey}
-        metaKey={metaKey}
-        altKey={altKey}
-        shiftKey={shiftKey}
-      />,
-    );
+] as const)("createShortcutKeyHandlerはctrlOrMeta modifierで余分な%sに一致しない", (_label, ctrlKey, metaKey, altKey, shiftKey) => {
+  const onMatch = vi.fn();
+  const result = renderComponent(
+    <ShortcutHarness
+      onMatch={onMatch}
+      modifiers={["ctrlOrMeta"]}
+      ctrlKey={ctrlKey}
+      metaKey={metaKey}
+      altKey={altKey}
+      shiftKey={shiftKey}
+    />,
+  );
 
-    dispatchHarnessKeyDown(result.container);
+  dispatchHarnessKeyDown(result.container);
 
-    expect(onMatch).not.toHaveBeenCalled();
-    result.unmount();
-  },
-);
+  expect(onMatch).not.toHaveBeenCalled();
+  result.unmount();
+});
 
 test("createShortcutKeyHandlerはallowsAdditionalModifiers=trueなら余分なmodifierを許容する", () => {
   const onMatch = vi.fn();
