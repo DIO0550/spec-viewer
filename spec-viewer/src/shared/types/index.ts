@@ -7,3 +7,5 @@ export type {
   CommandResponse,
   NormalizedCommandError,
 } from "@/shared/types/ipc";
+export type { IsoDateTimeString } from "@/shared/types/isoDateTime";
+export type { SpecFileKey } from "@/shared/types/specFileKey";
