@@ -179,6 +179,10 @@ export const TechReferenceHtmlPreview: Story = {
   parameters: {
     layout: "fullscreen",
   },
+  /**
+   * @param args - The story args forwarded to the viewer.
+   * @returns The viewer rendered inside a full-height app shell frame.
+   */
   render: (args) => (
     <div className="app-shell__viewer" style={{ height: "100dvh" }}>
       <MarkdownViewer {...args} />

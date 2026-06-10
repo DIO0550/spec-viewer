@@ -95,6 +95,7 @@ export function AppShell({
     });
   }, [onCloseLeftNavigation]);
 
+  /** Opens the left navigation and moves focus to its close button. */
   const openLeftNavigation = (): void => {
     onOpenLeftNavigation?.();
     requestAnimationFrame(() => {
@@ -109,6 +110,7 @@ export function AppShell({
     });
   }, [onCloseCommentsSidebar]);
 
+  /** Opens the comments sidebar and focuses its first interactive element. */
   const openCommentsSidebar = (): void => {
     onOpenCommentsSidebar?.();
     requestAnimationFrame(() => {
@@ -162,6 +164,7 @@ export function AppShell({
     isLeftNavigationOpen,
   ]);
 
+  /** @param clientX - Pointer x position used to derive the new width. */
   const resizeLeftNavigationFromPointer = (clientX: number): void => {
     const body = bodyRef.current;
 
@@ -174,6 +177,7 @@ export function AppShell({
     onLeftNavigationWidthChange(nextWidth);
   };
 
+  /** @param event - Pointer-down event on the left navigation resize handle. */
   const startLeftNavigationResize = (
     event: PointerEvent<HTMLButtonElement>,
   ): void => {
@@ -187,6 +191,7 @@ export function AppShell({
     resizeLeftNavigationFromPointer(event.clientX);
   };
 
+  /** @param event - Pointer-move event while dragging the resize handle. */
   const continueLeftNavigationResize = (
     event: PointerEvent<HTMLButtonElement>,
   ): void => {
@@ -198,6 +203,7 @@ export function AppShell({
     resizeLeftNavigationFromPointer(event.clientX);
   };
 
+  /** @param event - Pointer-up or cancel event that ends the resize. */
   const stopLeftNavigationResize = (
     event: PointerEvent<HTMLButtonElement>,
   ): void => {
@@ -205,6 +211,7 @@ export function AppShell({
     event.currentTarget.releasePointerCapture?.(event.pointerId);
   };
 
+  /** @param event - Keyboard event used to nudge or snap the navigation width. */
   const resizeLeftNavigationWithKeyboard = (
     event: ReactKeyboardEvent<HTMLButtonElement>,
   ): void => {
@@ -236,6 +243,7 @@ export function AppShell({
     }
   };
 
+  /** @param clientX - Pointer x position used to derive the new width. */
   const resizeSidebarFromPointer = (clientX: number): void => {
     const body = bodyRef.current;
 
@@ -248,6 +256,7 @@ export function AppShell({
     onCommentsSidebarWidthChange(nextWidth);
   };
 
+  /** @param event - Pointer-down event on the comments sidebar resize handle. */
   const startSidebarResize = (event: PointerEvent<HTMLButtonElement>): void => {
     if (onCommentsSidebarWidthChange === undefined) {
       return;
@@ -259,6 +268,7 @@ export function AppShell({
     resizeSidebarFromPointer(event.clientX);
   };
 
+  /** @param event - Pointer-move event while dragging the sidebar handle. */
   const continueSidebarResize = (
     event: PointerEvent<HTMLButtonElement>,
   ): void => {
@@ -270,11 +280,13 @@ export function AppShell({
     resizeSidebarFromPointer(event.clientX);
   };
 
+  /** @param event - Pointer-up or cancel event that ends the sidebar resize. */
   const stopSidebarResize = (event: PointerEvent<HTMLButtonElement>): void => {
     isResizingRef.current = false;
     event.currentTarget.releasePointerCapture?.(event.pointerId);
   };
 
+  /** @param event - Keyboard event used to nudge or snap the sidebar width. */
   const resizeSidebarWithKeyboard = (
     event: ReactKeyboardEvent<HTMLButtonElement>,
   ): void => {

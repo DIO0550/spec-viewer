@@ -19,6 +19,11 @@ import {
 } from "@/shared/lib/performance";
 import type { NormalizedCommandError } from "@/shared/types/ipc";
 
+/**
+ * Archives a spec directory.
+ * @param request - Workspace path and spec ID to archive.
+ * @returns A promise resolving to the archived spec ID and archive path.
+ */
 export type ArchiveSpecCommand = (
   request: Readonly<{ workspacePath: string; specId: string }>,
 ) => Promise<Readonly<{ archivedSpecId: string; archivePath: string }>>;
@@ -102,8 +107,18 @@ export type SpecDocumentState =
       error: NormalizedCommandError;
     }>;
 
+/**
+ * Lists the spec tree for a workspace.
+ * @param workspacePath - Absolute path to the workspace.
+ * @returns A promise resolving to the spec tree.
+ */
 export type ListSpecsCommand = (workspacePath: string) => Promise<SpecTree>;
 
+/**
+ * Reads a single spec Markdown file.
+ * @param request - Workspace path, spec ID, and file key to read.
+ * @returns A promise resolving to the spec document.
+ */
 export type ReadSpecFileCommand = (
   request: ReadSpecFileRequest,
 ) => Promise<SpecDocument>;
@@ -128,11 +143,36 @@ export type UseSpecsResult = Readonly<{
   selectedFile: SpecFile | null;
   archivingSpecId: string | null;
   archiveSpecError: NormalizedCommandError | null;
+  /**
+   * Archives a spec and reloads the tree.
+   * @param specId - ID of the spec to archive.
+   * @returns A promise resolving to true on success.
+   */
   archiveSpec: (specId: string) => Promise<boolean>;
+  /**
+   * Reloads the spec tree.
+   * @param options - Reload behavior, such as preserving the selection.
+   * @returns A promise resolving to true on success.
+   */
   reloadSpecs: (options?: ReloadSpecsOptions) => Promise<boolean>;
+  /**
+   * Selects a spec and loads its default file.
+   * @param specId - ID of the spec to select, or null to clear.
+   * @returns A promise that resolves once selection completes.
+   */
   selectSpec: (specId: string | null) => Promise<void>;
+  /**
+   * Selects a file within the current spec.
+   * @param fileKey - Key of the file to select, or null to clear.
+   * @returns A promise that resolves once selection completes.
+   */
   selectFileKey: (fileKey: SpecFileKey | null) => Promise<void>;
+  /**
+   * Reloads the currently selected document.
+   * @returns A promise resolving to true on success.
+   */
   reloadDocument: () => Promise<boolean>;
+  /** Clears the current spec and file selection. */
   resetSelection: () => void;
 }>;
 
@@ -152,7 +192,10 @@ const initialDocumentState: SpecDocumentState = {
   error: null,
 };
 
-/** @returns Spec tree, selection, and Markdown loading state for a workspace. */
+/**
+ * @param options - Workspace path and optional command overrides.
+ * @returns Spec tree, selection, and Markdown loading state for a workspace.
+ */
 export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
   const { workspacePath } = options;
   const listSpecs = options.listSpecs ?? defaultListSpecs;
@@ -449,7 +492,11 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
   };
 }
 
-/** @returns Matching spec node from a nested tree, or null when absent. */
+/**
+ * @param nodes - Spec nodes to search at the current level.
+ * @param id - ID of the spec node to find.
+ * @returns Matching spec node from a nested tree, or null when absent.
+ */
 function findSpecNode(nodes: readonly SpecNode[], id: string): SpecNode | null {
   for (const node of nodes) {
     if (node.id === id) {
@@ -466,7 +513,10 @@ function findSpecNode(nodes: readonly SpecNode[], id: string): SpecNode | null {
   return null;
 }
 
-/** @returns First spec node that can open a file, falling back to the first node. */
+/**
+ * @param nodes - Spec nodes to search at the current level.
+ * @returns First spec node that can open a file, falling back to the first node.
+ */
 function findDefaultSpecNode(nodes: readonly SpecNode[]): SpecNode | null {
   const firstNode = nodes[0] ?? null;
 
@@ -497,7 +547,10 @@ type ReloadedSelection = Readonly<{
   fileKey: SpecFileKey | null;
 }>;
 
-/** @returns Selection to use after refreshing the spec tree. */
+/**
+ * @param options - Refreshed tree, preservation flag, and prior selection.
+ * @returns Selection to use after refreshing the spec tree.
+ */
 function resolveReloadedSelection({
   tree,
   preserveSelection,
@@ -528,7 +581,11 @@ function resolveReloadedSelection({
   };
 }
 
-/** @returns Current file key when still present, otherwise the first file key. */
+/**
+ * @param spec - Spec node whose files are inspected.
+ * @param selectedFileKey - Previously selected file key, or null.
+ * @returns Current file key when still present, otherwise the first file key.
+ */
 function findPreservedFileKey(
   spec: SpecNode,
   selectedFileKey: SpecFileKey | null,
@@ -543,7 +600,12 @@ function findPreservedFileKey(
   return spec.files[0]?.key ?? null;
 }
 
-/** @returns Idle Markdown document state for the current selection context. */
+/**
+ * @param workspacePath - Active workspace path, or null.
+ * @param specId - Selected spec ID, or null.
+ * @param fileKey - Selected file key, or null.
+ * @returns Idle Markdown document state for the current selection context.
+ */
 function createIdleDocumentState(
   workspacePath: string | null,
   specId: string | null = null,

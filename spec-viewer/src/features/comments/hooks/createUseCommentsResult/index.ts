@@ -9,6 +9,7 @@ import type { UseCommentsResult } from "@/features/comments/hooks/useComments";
 export type CreateUseCommentsResultInput = Readonly<{
   listState: CommentListState;
   commentOperations: UseCommentOperationsResult;
+  /** @returns True when the active scope was reloaded. */
   reloadComments: () => Promise<boolean>;
 }>;
 

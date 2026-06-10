@@ -31,6 +31,7 @@ export type UseUserReviewOperationsOptions = Readonly<{
   target: UserReviewTarget | null;
   targetIdentity: string;
   commands: UserReviewCommands;
+  /** @param transform - Transform applied to the current target's collection. */
   updateCurrentTargetReviews: (
     transform: UserReviewCollectionTransform,
   ) => void;
@@ -39,9 +40,17 @@ export type UseUserReviewOperationsOptions = Readonly<{
 export type UseUserReviewOperationsResult = Readonly<{
   createState: UserReviewCreateStateType;
   archiveState: UserReviewArchiveStateType;
+  /**
+   * @param input - Comment ids and workspace mode for the new review.
+   * @returns The created review, or null when skipped or stale.
+   */
   createUserReview: (
     input: CreateUserReviewInput,
   ) => Promise<UserReview | null>;
+  /**
+   * @param userReviewId - Identifier of the review to archive.
+   * @returns The archived review, or null when skipped or stale.
+   */
   archiveUserReview: (userReviewId: string) => Promise<UserReview | null>;
 }>;
 
@@ -226,7 +235,11 @@ export function useUserReviewOperations(
   };
 }
 
-/** @returns Identity for async operation invalidation. */
+/**
+ * @param workspacePath - The active workspace path, or null when unset.
+ * @param targetIdentity - The current target identity.
+ * @returns Identity for async operation invalidation.
+ */
 function createOperationIdentity(
   workspacePath: string | null,
   targetIdentity: string,

@@ -10,6 +10,10 @@ export type ResolvedTheme = Exclude<ThemeMode, "system">;
 type UseThemeResult = Readonly<{
   themeMode: ThemeMode;
   resolvedTheme: ResolvedTheme;
+  /**
+   * Updates the active theme preference.
+   * @param nextThemeMode - Theme preference to apply.
+   */
   setThemeMode: (nextThemeMode: ThemeMode) => void;
 }>;
 
@@ -80,7 +84,10 @@ function readStoredThemeMode(): ThemeMode {
   }
 }
 
-/** Persists the selected theme preference when storage is available. */
+/**
+ * Persists the selected theme preference when storage is available.
+ * @param themeMode - Theme preference to store.
+ */
 function writeStoredThemeMode(themeMode: ThemeMode): void {
   if (typeof window === "undefined") {
     return;
@@ -102,7 +109,10 @@ function getSystemTheme(): ResolvedTheme {
   return window.matchMedia(darkSchemeQuery).matches ? "dark" : "light";
 }
 
-/** @returns True when a storage value is a supported theme mode. */
+/**
+ * @param value - Stored value to validate.
+ * @returns True when a storage value is a supported theme mode.
+ */
 function isThemeMode(value: string | null): value is ThemeMode {
   return themeModes.some((themeMode) => themeMode === value);
 }

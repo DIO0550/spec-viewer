@@ -33,7 +33,10 @@ export function canArchiveUserReview(
   return review.status === "completed" && !isSaving;
 }
 
-/** @returns A Japanese summary for open comments included in a new review. */
+/**
+ * @param openCommentCount - Number of open comments eligible for the review.
+ * @returns A Japanese summary for open comments included in a new review.
+ */
 export function formatOpenCommentSummary(openCommentCount: number): string {
   if (openCommentCount === 0) {
     return "未解決コメントはありません。";
@@ -42,32 +45,50 @@ export function formatOpenCommentSummary(openCommentCount: number): string {
   return `未解決コメント ${openCommentCount}件を対象にできます。`;
 }
 
-/** @returns A Japanese success message for a newly created review. */
+/**
+ * @param userReview - The newly created user review.
+ * @returns A Japanese success message for a newly created review.
+ */
 export function formatCreateSuccessMessage(userReview: UserReview): string {
   return `レビューを作成しました。${userReview.commentCount}件 / ${userReview.folderPath}`;
 }
 
-/** @returns A Japanese error message for user review creation failures. */
+/**
+ * @param message - The underlying failure message.
+ * @returns A Japanese error message for user review creation failures.
+ */
 export function formatCreateErrorMessage(message: string): string {
   return `レビューを作成できませんでした。${message}`;
 }
 
-/** @returns A Japanese success message for an archived review. */
+/**
+ * @param userReview - The archived user review.
+ * @returns A Japanese success message for an archived review.
+ */
 export function formatArchiveSuccessMessage(userReview: UserReview): string {
   return `レビューをアーカイブしました。${userReview.folderPath}`;
 }
 
-/** @returns A Japanese error message for archive failures. */
+/**
+ * @param message - The underlying failure message.
+ * @returns A Japanese error message for archive failures.
+ */
 export function formatArchiveErrorMessage(message: string): string {
   return `レビューをアーカイブできませんでした。${message}`;
 }
 
-/** @returns A compact status and comment summary for an active review. */
+/**
+ * @param userReview - The active user review to summarize.
+ * @returns A compact status and comment summary for an active review.
+ */
 export function formatUserReviewSummary(userReview: UserReview): string {
   return `${userReviewStatusLabels[userReview.status]} / コメント ${userReview.commentCount}件`;
 }
 
-/** @returns A short Japanese label for malformed/missing folder list states. */
+/**
+ * @param state - The problem state of a malformed or missing folder entry.
+ * @returns A short Japanese label for malformed/missing folder list states.
+ */
 export function formatProblemState(
   state: UserReviewListState["problems"][number]["state"],
 ): string {

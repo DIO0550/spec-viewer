@@ -20,12 +20,24 @@ export type UseRecentWorkspacesOptions = Readonly<{
 export type UseRecentWorkspacesResult = Readonly<{
   recentWorkspaces: readonly RecentWorkspace[];
   lastActiveWorkspacePath: string | null;
+  /**
+   * Records a workspace as the most recent entry.
+   * @param workspace - The workspace to record.
+   */
   recordWorkspace: (workspace: Workspace) => void;
+  /**
+   * Removes a recent workspace by path.
+   * @param path - The workspace path to remove.
+   */
   removeWorkspace: (path: string) => void;
+  /** Clears all recent workspaces and the last active path. */
   clearWorkspaces: () => void;
 }>;
 
-/** @returns Recent workspace state synchronized with local browser storage. */
+/**
+ * @param options - Optional storage override for persisting recent workspaces.
+ * @returns Recent workspace state synchronized with local browser storage.
+ */
 export function useRecentWorkspaces(
   options: UseRecentWorkspacesOptions = {},
 ): UseRecentWorkspacesResult {

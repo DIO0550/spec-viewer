@@ -68,7 +68,10 @@ export function createSpecSkillMcpFeedbackDryRunPayload({
   };
 }
 
-/** @returns Pretty JSON intended for clipboard-based MCP feedback dry-runs. */
+/**
+ * @param payload - The prepared MCP feedback dry-run payload
+ * @returns Pretty JSON intended for clipboard-based MCP feedback dry-runs.
+ */
 export function renderSpecSkillMcpFeedbackDryRunPayload(
   payload: SpecSkillMcpFeedbackPayload,
 ): string {
@@ -89,7 +92,10 @@ export function formatMcpFeedbackDryRunSummary({
   )} and ${formatCommentCount(resolvedCommentCount, "resolved")}.`;
 }
 
-/** @returns The comment subset carried across the manual MCP feedback boundary. */
+/**
+ * @param comment - The full comment to project
+ * @returns The comment subset carried across the manual MCP feedback boundary.
+ */
 function createSpecSkillMcpFeedbackComment(
   comment: Comment,
 ): SpecSkillMcpFeedbackComment {
@@ -106,7 +112,11 @@ function createSpecSkillMcpFeedbackComment(
   };
 }
 
-/** @returns A singular or plural comment count label. */
+/**
+ * @param count - The number of comments
+ * @param label - The status label to include
+ * @returns A singular or plural comment count label.
+ */
 function formatCommentCount(count: number, label: string): string {
   const suffix = count === 1 ? "comment" : "comments";
 

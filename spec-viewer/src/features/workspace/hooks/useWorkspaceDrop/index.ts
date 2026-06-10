@@ -10,13 +10,30 @@ import {
 
 export type WorkspaceDropStatus = "idle" | "dragging";
 
+/**
+ * Subscribes to native workspace drag-and-drop events.
+ * @param handler - Receives each drag-and-drop event.
+ * @returns A promise resolving to an unsubscribe function.
+ */
 export type SubscribeWorkspaceDragDropEvents = (
+  /**
+   * Receives each native drag-and-drop event.
+   * @param event - The emitted drag-and-drop event.
+   */
   handler: (event: WorkspaceDragDropEvent) => void,
 ) => Promise<() => void>;
 
 export type UseWorkspaceDropOptions = Readonly<{
   isDisabled: boolean;
+  /**
+   * Opens the workspace at a dropped path.
+   * @param path - The dropped workspace path.
+   */
   onDropWorkspacePath: (path: string) => void;
+  /**
+   * Reports a rejected drop with a user-facing message.
+   * @param message - The reason the drop was rejected.
+   */
   onInvalidDrop: (message: string) => void;
   subscribeDragDropEvents?: SubscribeWorkspaceDragDropEvents;
 }>;
@@ -25,7 +42,10 @@ export type UseWorkspaceDropResult = Readonly<{
   status: WorkspaceDropStatus;
 }>;
 
-/** @returns Workspace drag-and-drop subscription state for native and browser drops. */
+/**
+ * @param options - Drop handling callbacks and an optional event subscriber.
+ * @returns Workspace drag-and-drop subscription state for native and browser drops.
+ */
 export function useWorkspaceDrop({
   isDisabled,
   onDropWorkspacePath,

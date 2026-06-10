@@ -11,10 +11,14 @@ type UseMarkdownTextSelectionOptions = Readonly<{
 
 type UseMarkdownTextSelectionResult = Readonly<{
   selectionDraft: CommentAnchorDraft | null;
+  /** Clears the current selection draft. */
   clearSelectionDraft: () => void;
 }>;
 
-/** @returns The current comment anchor draft for selected Markdown text. */
+/**
+ * @param options - Rendered Markdown root ref and active file key.
+ * @returns The current comment anchor draft for selected Markdown text.
+ */
 export function useMarkdownTextSelection({
   renderedRootRef,
   fileKey,
@@ -85,7 +89,11 @@ export function useMarkdownTextSelection({
   };
 }
 
-/** @returns true when both range endpoints are inside the rendered Markdown root. */
+/**
+ * @param range - Selection range to test.
+ * @param renderedRoot - Rendered Markdown root element.
+ * @returns true when both range endpoints are inside the rendered Markdown root.
+ */
 function isRangeEndpointInsideRoot(
   range: Range,
   renderedRoot: HTMLElement,
@@ -96,7 +104,11 @@ function isRangeEndpointInsideRoot(
   );
 }
 
-/** @returns true when the node or its parent element belongs to the root. */
+/**
+ * @param root - Rendered Markdown root element.
+ * @param node - Node to test for containment.
+ * @returns true when the node or its parent element belongs to the root.
+ */
 function containsSelectionNode(root: HTMLElement, node: Node): boolean {
   if (node.nodeType === Node.ELEMENT_NODE) {
     return root.contains(node);

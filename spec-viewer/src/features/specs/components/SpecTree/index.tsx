@@ -21,12 +21,30 @@ type Props = Readonly<{
   state: SpecTreeState;
   selectedSpecId: string | null;
   archivingSpecId?: string | null;
+  /**
+   * Called when a spec is selected.
+   * @param specId - ID of the selected spec.
+   */
   onSelectSpec: (specId: string) => void;
+  /**
+   * Called when a spec is archived.
+   * @param specId - ID of the spec to archive.
+   */
   onArchiveSpec?: (specId: string) => void;
+  /** Called to reload the spec tree. */
   onReload: () => void;
 }>;
 
-/** @returns A navigable spec tree sidebar with loading, error, and empty states. */
+/**
+ * @param props - Component props.
+ * @param props.state - Current spec tree loading state.
+ * @param props.selectedSpecId - ID of the currently selected spec, or null.
+ * @param props.archivingSpecId - ID of the spec being archived, or null.
+ * @param props.onSelectSpec - Called with the spec ID when a spec is selected.
+ * @param props.onArchiveSpec - Called with the spec ID when a spec is archived.
+ * @param props.onReload - Called to reload the spec tree.
+ * @returns A navigable spec tree sidebar with loading, error, and empty states.
+ */
 export function SpecTree({
   state,
   selectedSpecId,
@@ -174,8 +192,20 @@ type SpecTreeItemProps = Readonly<{
   expandedSpecIds: ReadonlySet<string>;
   selectedSpecId: string | null;
   archivingSpecId: string | null;
+  /**
+   * Called when a spec is selected.
+   * @param specId - ID of the selected spec.
+   */
   onSelectSpec: (specId: string) => void;
+  /**
+   * Called when a spec is archived.
+   * @param specId - ID of the spec to archive.
+   */
   onArchiveSpec?: (specId: string) => void;
+  /**
+   * Called to toggle a spec's expanded state.
+   * @param specId - ID of the spec to toggle.
+   */
   onToggleExpanded: (specId: string) => void;
 }>;
 
@@ -296,7 +326,10 @@ function SpecTreeItem({
   );
 }
 
-/** @returns Whether this tree node represents an archiveable spec directory. */
+/**
+ * @param node - Spec tree node to inspect.
+ * @returns Whether this tree node represents an archiveable spec directory.
+ */
 function isArchivableSpecNode(node: SpecNode): boolean {
   return !node.id.endsWith("/.specs");
 }
@@ -304,10 +337,15 @@ function isArchivableSpecNode(node: SpecNode): boolean {
 type TreeItemKeyDownOptions = Readonly<{
   hasChildren: boolean;
   isExpanded: boolean;
+  /** Called to toggle the item's expanded state. */
   onToggleExpanded: () => void;
 }>;
 
-/** Moves focus between visible tree items for arrow-key navigation. */
+/**
+ * Moves focus between visible tree items for arrow-key navigation.
+ * @param event - Keyboard event from the focused tree item.
+ * @param options - Expansion state and toggle callback for the item.
+ */
 function handleTreeItemKeyDown(
   event: KeyboardEvent<HTMLButtonElement>,
   options: TreeItemKeyDownOptions,
@@ -348,7 +386,10 @@ function handleTreeItemKeyDown(
   nextItem.focus();
 }
 
-/** @returns The next tree item index for supported navigation keys. */
+/**
+ * @param event - Keyboard event from the focused tree item.
+ * @returns The next tree item index for supported navigation keys.
+ */
 function getNextTreeItemIndex(
   event: KeyboardEvent<HTMLButtonElement>,
 ): number | null {
@@ -389,7 +430,11 @@ function getNextTreeItemIndex(
   return null;
 }
 
-/** @returns The first visible child item index, or null when the item is a leaf. */
+/**
+ * @param items - All visible tree item elements in document order.
+ * @param currentIndex - Index of the current item within `items`.
+ * @returns The first visible child item index, or null when the item is a leaf.
+ */
 function findFirstChildTreeItemIndex(
   items: readonly HTMLButtonElement[],
   currentIndex: number,
@@ -407,7 +452,11 @@ function findFirstChildTreeItemIndex(
   return nextLevel > currentLevel ? nextIndex : null;
 }
 
-/** @returns The closest visible parent item index, or null for root items. */
+/**
+ * @param items - All visible tree item elements in document order.
+ * @param currentIndex - Index of the current item within `items`.
+ * @returns The closest visible parent item index, or null for root items.
+ */
 function findParentTreeItemIndex(
   items: readonly HTMLButtonElement[],
   currentIndex: number,
@@ -427,7 +476,10 @@ function findParentTreeItemIndex(
   return null;
 }
 
-/** @returns The aria tree level for a rendered tree item. */
+/**
+ * @param item - Rendered tree item element, or undefined.
+ * @returns The aria tree level for a rendered tree item.
+ */
 function readTreeItemLevel(item: HTMLButtonElement | undefined): number {
   if (item === undefined) {
     return 1;
@@ -438,7 +490,12 @@ function readTreeItemLevel(item: HTMLButtonElement | undefined): number {
   return Number.isFinite(level) ? level : 1;
 }
 
-/** @returns Ancestor spec IDs for the selected node, excluding the selected ID. */
+/**
+ * @param nodes - Spec nodes to search at the current level.
+ * @param selectedSpecId - ID of the node whose ancestors are collected.
+ * @param ancestors - Ancestor IDs accumulated from parent levels.
+ * @returns Ancestor spec IDs for the selected node, excluding the selected ID.
+ */
 function findAncestorSpecIds(
   nodes: readonly SpecNode[],
   selectedSpecId: string,

@@ -65,24 +65,64 @@ export type WorkspaceDragDropEvent =
     }>;
 
 export type CommentCommands = Readonly<{
+  /**
+   * @param request - Spec file and status filter to query.
+   * @returns Comment threads for the requested spec file.
+   */
   listComments: (request: ListCommentsRequest) => Promise<ListCommentsResponse>;
+  /**
+   * @param request - New comment payload to persist.
+   * @returns The newly persisted comment.
+   */
   addComment: (request: AddCommentRequest) => Promise<Comment>;
+  /**
+   * @param request - Comment id and replacement body.
+   * @returns The updated comment.
+   */
   updateComment: (request: UpdateCommentRequest) => Promise<Comment>;
+  /**
+   * @param request - Comment id to delete.
+   * @returns Delete confirmation for the requested comment.
+   */
   deleteComment: (
     request: DeleteCommentRequest,
   ) => Promise<DeleteCommentResponse>;
+  /**
+   * @param request - Comment id to resolve.
+   * @returns The comment after marking it resolved.
+   */
   resolveComment: (request: CommentStatusRequest) => Promise<Comment>;
+  /**
+   * @param request - Comment id to reopen.
+   * @returns The comment after reopening it.
+   */
   reopenComment: (request: CommentStatusRequest) => Promise<Comment>;
+  /**
+   * @param request - Comment id whose resolved status to toggle.
+   * @returns The comment after toggling its resolved status.
+   */
   toggleCommentResolved: (request: CommentStatusRequest) => Promise<Comment>;
 }>;
 
 export type UserReviewCommands = Readonly<{
+  /**
+   * @param request - Review target and metadata for the new review run.
+   * @returns Metadata for the created review run bundle.
+   */
   createUserReview: (
     request: CreateUserReviewRequest,
   ) => Promise<CreateUserReviewResponse>;
+  /**
+   * @param request - Review target to list runs for.
+   * @returns Active and archived review runs for the target.
+   */
   listUserReviews: (
     request: ListUserReviewsRequest,
   ) => Promise<ListUserReviewsResponse>;
+  /**
+   * @param request - Review run to archive.
+   * @returns Metadata for the archived review run.
+   */
   archiveUserReview: (
     request: ArchiveUserReviewRequest,
   ) => Promise<ArchiveUserReviewResponse>;
@@ -120,8 +160,12 @@ export async function validateWorkspaceDirectory(
   return invokeCommand("validate_workspace_directory", { path });
 }
 
-/** @returns An unlisten function for native Tauri workspace drag-and-drop events. */
+/**
+ * @param handler - Receives each native drag-and-drop lifecycle event.
+ * @returns An unlisten function for native Tauri workspace drag-and-drop events.
+ */
 export async function subscribeWorkspaceDragDropEvents(
+  /** @param event - Native drag-and-drop lifecycle event payload. */
   handler: (event: WorkspaceDragDropEvent) => void,
 ): Promise<() => void> {
   return getCurrentWebview().onDragDropEvent((event) => {
@@ -129,7 +173,10 @@ export async function subscribeWorkspaceDragDropEvents(
   });
 }
 
-/** @returns Spec tree for the workspace path. */
+/**
+ * @param workspacePath - Absolute path of the workspace to scan.
+ * @returns Spec tree for the workspace path.
+ */
 export async function listSpecs(workspacePath: string): Promise<SpecTree> {
   return invokeCommand("list_specs", { workspacePath });
 }
@@ -167,7 +214,10 @@ export async function listComments(
   return invokeCommand("list_comments", request);
 }
 
-/** @returns The newly persisted comment. */
+/**
+ * @param request - New comment payload to persist.
+ * @returns The newly persisted comment.
+ */
 export async function addComment(request: AddCommentRequest): Promise<Comment> {
   return invokeCommand("add_comment", request);
 }
@@ -258,7 +308,10 @@ export const commentCommands: CommentCommands = {
   toggleCommentResolved,
 };
 
-/** @returns A stable command error shape for UI state and messages. */
+/**
+ * @param error - Unknown error thrown from an IPC command.
+ * @returns A stable command error shape for UI state and messages.
+ */
 export function normalizeCommandError(error: unknown): NormalizedCommandError {
   if (isCommandError(error)) {
     return {
@@ -303,7 +356,10 @@ async function invokeCommand<Name extends CommandName>(
   }
 }
 
-/** @returns True when an unknown value matches the backend CommandError DTO. */
+/**
+ * @param error - Unknown value to test.
+ * @returns True when an unknown value matches the backend CommandError DTO.
+ */
 function isCommandError(error: unknown): error is CommandError {
   if (!isRecord(error)) {
     return false;
@@ -312,12 +368,18 @@ function isCommandError(error: unknown): error is CommandError {
   return isCommandErrorCode(error.code) && typeof error.message === "string";
 }
 
-/** @returns True when an unknown value is a non-null object record. */
+/**
+ * @param value - Unknown value to test.
+ * @returns True when an unknown value is a non-null object record.
+ */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-/** @returns True when an unknown value is a known backend command error code. */
+/**
+ * @param value - Unknown value to test.
+ * @returns True when an unknown value is a known backend command error code.
+ */
 function isCommandErrorCode(value: unknown): value is CommandError["code"] {
   return (
     value === "invalidRequest" ||
@@ -334,7 +396,10 @@ function isCommandErrorCode(value: unknown): value is CommandError["code"] {
   );
 }
 
-/** @returns Native save dialog options for the requested comment export target. */
+/**
+ * @param target - Export scope and identifiers for the comment export.
+ * @returns Native save dialog options for the requested comment export target.
+ */
 function createCommentExportDialogOptions(target: ExportCommentsTarget) {
   const fileName = createCommentExportDefaultFileName(target);
   const isJsonExport = target.scope === "workspace";
@@ -368,7 +433,10 @@ function createCommentExportDefaultFileName(
   return `${specId}-${target.fileKey}-comments.md`;
 }
 
-/** @returns A file-system-safe path component for save dialog defaults. */
+/**
+ * @param value - Raw identifier to sanitize for use in a file name.
+ * @returns A file-system-safe path component for save dialog defaults.
+ */
 function sanitizeExportPathPart(value: string): string {
   const sanitized = value.trim().replace(/[^A-Za-z0-9._-]+/g, "-");
 

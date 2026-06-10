@@ -7,12 +7,24 @@ import { EmptyState } from "@/shared/ui/EmptyState";
 type Props = Readonly<{
   isOpening: boolean;
   recentWorkspaces?: readonly RecentWorkspace[];
+  /** Opens the native folder picker to choose a workspace. */
   onOpenWorkspace: () => void;
+  /**
+   * Opens the recent workspace at the given path.
+   * @param path - The workspace path to open.
+   */
   onOpenRecentWorkspace?: (path: string) => void;
+  /**
+   * Removes the recent workspace at the given path.
+   * @param path - The workspace path to remove.
+   */
   onRemoveRecentWorkspace?: (path: string) => void;
 }>;
 
-/** @returns An initial empty state that opens the native workspace picker. */
+/**
+ * @param props - Opening state, recent workspaces, and workspace action callbacks.
+ * @returns An initial empty state that opens the native workspace picker.
+ */
 export function OpenWorkspaceEmptyState({
   isOpening,
   recentWorkspaces = [],

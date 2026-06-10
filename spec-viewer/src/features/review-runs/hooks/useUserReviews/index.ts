@@ -58,14 +58,26 @@ export type UseUserReviewsResult = Readonly<{
   archiveState: UserReviewArchiveState;
   activeReviews: readonly UserReview[];
   archivedReviews: readonly UserReview[];
+  /** @returns A promise resolving to true when the reload succeeds. */
   reloadUserReviews: () => Promise<boolean>;
+  /**
+   * @param input - Comment ids and workspace mode for the new review.
+   * @returns The created review, or null when skipped or stale.
+   */
   createUserReview: (
     input: CreateUserReviewInput,
   ) => Promise<UserReview | null>;
+  /**
+   * @param userReviewId - Identifier of the review to archive.
+   * @returns The archived review, or null when skipped or stale.
+   */
   archiveUserReview: (userReviewId: string) => Promise<UserReview | null>;
 }>;
 
-/** @returns User review loading and creation state for the selected target. */
+/**
+ * @param options - Target selection, workspace path, and command boundary.
+ * @returns User review loading and creation state for the selected target.
+ */
 export function useUserReviews(
   options: UseUserReviewsOptions,
 ): UseUserReviewsResult {

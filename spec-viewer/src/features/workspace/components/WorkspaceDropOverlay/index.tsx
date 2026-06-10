@@ -4,7 +4,10 @@ type Props = Readonly<{
   isVisible: boolean;
 }>;
 
-/** @returns A full-window affordance shown while dragging a workspace path. */
+/**
+ * @param props - Overlay visibility state.
+ * @returns A full-window affordance shown while dragging a workspace path.
+ */
 export function WorkspaceDropOverlay({ isVisible }: Props) {
   if (!isVisible) {
     return null;

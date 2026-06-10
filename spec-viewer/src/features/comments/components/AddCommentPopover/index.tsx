@@ -26,7 +26,12 @@ type Props = Readonly<{
   isSaving: boolean;
   errorMessage: string | null;
   isScopeReady: boolean;
+  /**
+   * @param input - The anchor and trimmed body to persist.
+   * @returns A promise resolving to true when the comment was saved.
+   */
   onSubmit: (input: AddCommentSubmitInput) => Promise<boolean>;
+  /** @returns Nothing; cancels the add-comment flow. */
   onCancel: () => void;
 }>;
 
@@ -266,7 +271,10 @@ export function AddCommentPopover({
   );
 }
 
-/** @returns Human-readable block type text for the anchor preview. */
+/**
+ * @param blockType - The raw persisted Markdown block type token.
+ * @returns Human-readable block type text for the anchor preview.
+ */
 function formatDraftBlockType(blockType: string): string {
   return blockType.replace(/_/g, " ");
 }

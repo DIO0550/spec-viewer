@@ -3,13 +3,26 @@ import type { UserReviewAsyncToken as UserReviewAsyncTokenType } from "@/feature
 import { UserReviewAsyncToken } from "@/features/review-runs/hooks/userReviewAsyncToken";
 
 export type UserReviewListRequestController = Readonly<{
+  /**
+   * @param identity - Target identity for the new request.
+   * @returns A token identifying the started request.
+   */
   begin: (identity: string) => UserReviewAsyncTokenType;
+  /** Invalidates any in-flight request. */
   invalidate: () => void;
+  /**
+   * @param token - The token to check against the latest request.
+   * @returns True when the token is still the current request.
+   */
   isCurrent: (token: UserReviewAsyncTokenType) => boolean;
+  /** @param identity - The target identity to mark as current. */
   setCurrentIdentity: (identity: string) => void;
 }>;
 
-/** @returns Controller for list request staleness and target identity changes. */
+/**
+ * @param initialIdentity - The initial target identity to track.
+ * @returns Controller for list request staleness and target identity changes.
+ */
 export function useUserReviewListRequest(
   initialIdentity: string,
 ): UserReviewListRequestController {

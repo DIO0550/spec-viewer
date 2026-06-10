@@ -2,13 +2,20 @@ import { useEffect } from "react";
 
 type KeyboardShortcutOptions = Readonly<{
   isEnabled: boolean;
+  /** Moves to the next file. */
   onNextFile: () => void;
+  /** Moves to the previous file. */
   onPreviousFile: () => void;
+  /** Moves to the next comment. */
   onNextComment: () => void;
+  /** Moves to the previous comment. */
   onPreviousComment: () => void;
 }>;
 
-/** Registers app-level keyboard shortcuts that avoid editable controls. */
+/**
+ * Registers app-level keyboard shortcuts that avoid editable controls.
+ * @param options - Shortcut enablement flag and navigation callbacks.
+ */
 export function useKeyboardShortcuts({
   isEnabled,
   onNextFile,
@@ -58,7 +65,10 @@ export function useKeyboardShortcuts({
   }, [isEnabled, onNextComment, onNextFile, onPreviousComment, onPreviousFile]);
 }
 
-/** @returns True when the key event belongs to text entry or native controls. */
+/**
+ * @param target - Event target that received the key event.
+ * @returns True when the key event belongs to text entry or native controls.
+ */
 function shouldIgnoreKeyboardShortcut(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) {
     return false;

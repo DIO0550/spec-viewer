@@ -74,6 +74,7 @@ type RefreshCurrentViewOptions = Readonly<{
   loadingMessage: string;
   failureStatus: "stale" | "error";
   failureMessage: string;
+  /** @returns Whether the underlying refresh work succeeded. */
   run: () => Promise<boolean>;
 }>;
 
@@ -117,6 +118,7 @@ const idleCommentExportState: CommentExportState = {
   message: null,
 };
 
+/** @returns The root application shell wiring workspace, specs, comments and review features together. */
 function App() {
   const workspace = useWorkspace();
   const recentWorkspaces = useRecentWorkspaces();
@@ -390,20 +392,35 @@ function App() {
 
   const workspaceDrop = useWorkspaceDrop({
     isDisabled: workspace.isLoading || isBrowsingWorkspace,
+    /** @param selectedDirectory - The dropped directory path to open as a workspace. */
     onDropWorkspacePath: (selectedDirectory) => {
       void openDroppedWorkspacePath(selectedDirectory);
     },
     onInvalidDrop: setDropErrorMessage,
   });
 
+  /**
+   * Marks a comment as resolved without awaiting the result.
+   * @param commentId - The identifier of the comment to resolve.
+   */
   const resolveComment = (commentId: CommentId): void => {
     void comments.resolveComment(commentId);
   };
 
+  /**
+   * Reopens a resolved comment without awaiting the result.
+   * @param commentId - The identifier of the comment to reopen.
+   */
   const reopenComment = (commentId: CommentId): void => {
     void comments.reopenComment(commentId);
   };
 
+  /**
+   * Updates a comment's body.
+   * @param commentId - The identifier of the comment to update.
+   * @param body - The new comment body text.
+   * @returns Whether the comment was updated successfully.
+   */
   const updateComment = async (
     commentId: CommentId,
     body: string,
@@ -413,6 +430,11 @@ function App() {
     return updatedComment !== null;
   };
 
+  /**
+   * Resolves a comment from the inline viewer.
+   * @param commentId - The identifier of the comment to resolve.
+   * @returns Whether the comment was resolved successfully.
+   */
   const resolveInlineComment = async (
     commentId: CommentId,
   ): Promise<boolean> => {
@@ -421,6 +443,11 @@ function App() {
     return resolvedComment !== null;
   };
 
+  /**
+   * Reopens a comment from the inline viewer.
+   * @param commentId - The identifier of the comment to reopen.
+   * @returns Whether the comment was reopened successfully.
+   */
   const reopenInlineComment = async (
     commentId: CommentId,
   ): Promise<boolean> => {
@@ -429,6 +456,11 @@ function App() {
     return reopenedComment !== null;
   };
 
+  /**
+   * Deletes a comment from the inline viewer, clearing it if active.
+   * @param commentId - The identifier of the comment to delete.
+   * @returns Whether the comment was deleted successfully.
+   */
   const deleteInlineComment = async (
     commentId: CommentId,
   ): Promise<boolean> => {
@@ -439,6 +471,10 @@ function App() {
     return comments.deleteComment(commentId);
   };
 
+  /**
+   * Deletes a comment without awaiting the result, clearing it if active.
+   * @param commentId - The identifier of the comment to delete.
+   */
   const deleteComment = (commentId: CommentId): void => {
     if (commentId === activeCommentId) {
       setActiveCommentId(null);
@@ -462,6 +498,12 @@ function App() {
     [],
   );
 
+  /**
+   * Adds a new comment and selects it on success.
+   * @param anchor - The document anchor the comment is attached to.
+   * @param body - The comment body text.
+   * @returns Whether the comment was added successfully.
+   */
   const addComment = async ({
     anchor,
     body,
@@ -784,6 +826,7 @@ function App() {
         failureStatus: "stale",
         failureMessage:
           "自動再読み込みに失敗しました。内容が古い可能性があります。",
+        /** @returns Whether the document and its comments both reloaded. */
         run: async () => {
           const isDocumentReloaded = await specs.reloadDocument();
           const areCommentsReloaded = await comments.reloadComments();
@@ -799,6 +842,7 @@ function App() {
         failureStatus: "stale",
         failureMessage:
           "自動再読み込みに失敗しました。内容が古い可能性があります。",
+        /** @returns Whether the specs and comments both reloaded. */
         run: async () => {
           const areSpecsReloaded = await specs.reloadSpecs({
             preserveSelection: true,
@@ -824,6 +868,7 @@ function App() {
       failureStatus: "error",
       failureMessage:
         "再読み込みに失敗しました。エラーを確認して再試行してください。",
+      /** @returns Whether the specs and comments both reloaded. */
       run: async () => {
         const areSpecsReloaded = await specs.reloadSpecs({
           preserveSelection: true,
@@ -846,6 +891,7 @@ function App() {
     fileKey: specs.selectedFileKey,
     onMarkdownChange: reloadCurrentMarkdownFromWatcher,
     onConfigChange: reloadWorkspaceConfigFromWatcher,
+    /** @param event - The watcher error event whose message is surfaced to the user. */
     onWatcherError: (event) => {
       setRefreshStatus({
         status: "stale",
@@ -879,15 +925,19 @@ function App() {
 
   useKeyboardShortcuts({
     isEnabled: true,
+    /** Selects the next file in the active spec. */
     onNextFile: () => {
       selectAdjacentFile("next");
     },
+    /** Selects the previous file in the active spec. */
     onPreviousFile: () => {
       selectAdjacentFile("previous");
     },
+    /** Selects the next comment in the active list. */
     onNextComment: () => {
       selectAdjacentComment("next");
     },
+    /** Selects the previous comment in the active list. */
     onPreviousComment: () => {
       selectAdjacentComment("previous");
     },
@@ -1095,18 +1145,28 @@ function selectFallbackCommentIndex(
   return Math.max(commentCount - 1, 0);
 }
 
+/**
+ * @param response - The export result reported by the backend.
+ * @returns A success message describing how many comments were exported and where.
+ */
 function formatCommentExportSuccessMessage(
   response: ExportCommentsResponse,
 ): string {
   return `${response.commentCount}件のコメントを${response.destinationPath}へexportしました。`;
 }
 
-/** @returns The number of unresolved comments in the active sidebar list. */
+/**
+ * @param comments - The comments to count.
+ * @returns The number of unresolved comments in the active sidebar list.
+ */
 function countOpenComments(comments: readonly { status: string }[]): number {
   return comments.filter((comment) => comment.status === "open").length;
 }
 
-/** @returns A stable identity for the document load that must become readable. */
+/**
+ * @param state - The current document load state.
+ * @returns A stable identity for the document load that must become readable, or null when not ready.
+ */
 function createDocumentReadableKey(
   state: ReturnType<typeof useSpecs>["documentState"],
 ): string | null {
@@ -1122,7 +1182,11 @@ function createDocumentReadableKey(
   ].join("\u0000");
 }
 
-/** Copies generated prompt text to the browser clipboard. */
+/**
+ * Copies generated prompt text to the browser clipboard.
+ * @param text - The text to write to the clipboard.
+ * @throws When the clipboard API is unavailable in the current environment.
+ */
 async function copyTextToClipboard(text: string): Promise<void> {
   if (navigator.clipboard === undefined) {
     throw new Error("この環境ではクリップボードを利用できません。");

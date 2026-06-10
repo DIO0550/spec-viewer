@@ -39,6 +39,10 @@ export type UpdateCommentInput = Readonly<{
   body: string;
 }>;
 
+/**
+ * @param comments - Current comment list for the active scope.
+ * @returns The next comment list.
+ */
 export type CommentListTransform = (
   comments: readonly Comment[],
 ) => readonly Comment[];
@@ -49,17 +53,43 @@ export type UseCommentOperationsOptions = Readonly<{
   statusFilter: CommentStatusFilter;
   commands: CommentCommands;
   currentComments: readonly Comment[];
+  /** @param transform - Transform applied to the active scope comment list. */
   updateCurrentScopeComments: (transform: CommentListTransform) => void;
+  /** @returns True when the active scope was reloaded. */
   reloadComments: () => Promise<boolean>;
 }>;
 
 export type UseCommentOperationsResult = Readonly<{
   operationState: CommentOperationState;
+  /**
+   * @param input - Anchor and body for the new comment.
+   * @returns The created comment, or null when the request was superseded.
+   */
   addComment: (input: AddCommentInput) => Promise<Comment | null>;
+  /**
+   * @param input - Target comment id and replacement body.
+   * @returns The updated comment, or null when the request was superseded.
+   */
   updateComment: (input: UpdateCommentInput) => Promise<Comment | null>;
+  /**
+   * @param commentId - Identifier of the comment to delete.
+   * @returns True when the comment was deleted.
+   */
   deleteComment: (commentId: CommentId) => Promise<boolean>;
+  /**
+   * @param commentId - Identifier of the comment to resolve.
+   * @returns The resolved comment, or null when the request was superseded.
+   */
   resolveComment: (commentId: CommentId) => Promise<Comment | null>;
+  /**
+   * @param commentId - Identifier of the comment to reopen.
+   * @returns The reopened comment, or null when the request was superseded.
+   */
   reopenComment: (commentId: CommentId) => Promise<Comment | null>;
+  /**
+   * @param commentId - Identifier of the comment to toggle.
+   * @returns The toggled comment, or null when the request was superseded.
+   */
   toggleCommentResolved: (commentId: CommentId) => Promise<Comment | null>;
 }>;
 

@@ -32,6 +32,11 @@ export type WorkspaceState =
       error: NormalizedCommandError;
     }>;
 
+/**
+ * Loads a workspace from the selected directory.
+ * @param selectedDirectory - The directory chosen as the workspace root.
+ * @returns A promise resolving to the loaded workspace.
+ */
 export type LoadWorkspaceCommand = (
   selectedDirectory: string,
 ) => Promise<Workspace>;
@@ -42,6 +47,10 @@ export type UseWorkspaceOptions = Readonly<{
 
 export type LoadWorkspaceOptions = Readonly<{
   preserveCurrentWorkspace?: boolean;
+  /**
+   * Called after a workspace finishes loading successfully.
+   * @param workspace - The workspace that was loaded.
+   */
   onWorkspaceLoaded?: (workspace: Workspace) => void;
 }>;
 
@@ -51,10 +60,17 @@ export type UseWorkspaceResult = Readonly<{
   workspace: Workspace | null;
   isLoading: boolean;
   error: NormalizedCommandError | null;
+  /**
+   * Loads the workspace at the selected directory.
+   * @param selectedDirectory - The directory chosen as the workspace root.
+   * @param options - Optional loading behavior overrides.
+   * @returns A promise resolving to whether the load succeeded.
+   */
   load: (
     selectedDirectory: string,
     options?: LoadWorkspaceOptions,
   ) => Promise<boolean>;
+  /** Resets the workspace state back to idle. */
   reset: () => void;
 }>;
 
@@ -65,7 +81,10 @@ const initialWorkspaceState: WorkspaceState = {
   error: null,
 };
 
-/** @returns Workspace loading state and actions for selecting/resetting a workspace. */
+/**
+ * @param options - Optional workspace loader override.
+ * @returns Workspace loading state and actions for selecting/resetting a workspace.
+ */
 export function useWorkspace(
   options: UseWorkspaceOptions = {},
 ): UseWorkspaceResult {

@@ -17,14 +17,29 @@ import {
   stopSpecFileWatch as defaultStopSpecFileWatch,
 } from "@/shared/api/tauri";
 
+/**
+ * Starts the backend file watcher for a spec file.
+ * @param request - Watch target descriptor.
+ * @returns A promise resolving to the start-watch response.
+ */
 export type StartSpecFileWatchCommand = (
   request: StartSpecFileWatchRequest,
 ) => Promise<StartSpecFileWatchResponse>;
 
 export type StopSpecFileWatchCommand = () => Promise<StopSpecFileWatchResponse>;
 
+/**
+ * Subscribes to a backend event and resolves with an unsubscribe callback.
+ * @param eventName - Name of the event to subscribe to.
+ * @param handler - Receives each emitted event payload.
+ * @returns A promise resolving to the unsubscribe callback.
+ */
 export type SpecFileWatchSubscriber = <Payload>(
   eventName: string,
+  /**
+   * Receives each emitted event.
+   * @param event - The emitted Tauri event.
+   */
   handler: (event: TauriEvent<Payload>) => void,
 ) => Promise<() => void>;
 
@@ -38,15 +53,30 @@ export type UseSpecFileWatcherOptions = Readonly<{
   workspacePath: string | null;
   specId: string | null;
   fileKey: SpecFileKey | null;
+  /**
+   * Called when the watched Markdown file changes.
+   * @param event - The Markdown change event.
+   */
   onMarkdownChange: (event: SpecFileWatchChangedEvent) => void | Promise<void>;
+  /**
+   * Called when the watched config file changes.
+   * @param event - The config change event.
+   */
   onConfigChange?: (event: SpecFileWatchChangedEvent) => void | Promise<void>;
+  /**
+   * Called when the watcher reports an error.
+   * @param event - The watcher error event.
+   */
   onWatcherError?: (event: SpecFileWatchErrorEvent) => void;
   startWatch?: StartSpecFileWatchCommand;
   stopWatch?: StopSpecFileWatchCommand;
   subscribe?: SpecFileWatchSubscriber;
 }>;
 
-/** Keeps the backend file watcher aligned with the selected spec file. */
+/**
+ * Keeps the backend file watcher aligned with the selected spec file.
+ * @param options - Watch target selection and change/error callbacks.
+ */
 export function useSpecFileWatcher(options: UseSpecFileWatcherOptions): void {
   const startWatch = options.startWatch ?? defaultStartSpecFileWatch;
   const stopWatch = options.stopWatch ?? defaultStopSpecFileWatch;
@@ -149,7 +179,11 @@ export function useSpecFileWatcher(options: UseSpecFileWatcherOptions): void {
   ]);
 }
 
-/** @returns True when a watch event belongs to the selected file scope. */
+/**
+ * @param event - Watch change or error event to test.
+ * @param scope - Selected file scope to match against.
+ * @returns True when a watch event belongs to the selected file scope.
+ */
 export function isSpecFileWatchEventForScope(
   event: SpecFileWatchChangedEvent | SpecFileWatchErrorEvent,
   scope: SpecFileWatchScope,
@@ -161,7 +195,10 @@ export function isSpecFileWatchEventForScope(
   );
 }
 
-/** @returns Complete watch scope, or null while the selection is incomplete. */
+/**
+ * @param options - Current workspace path, spec ID, and file key selection.
+ * @returns Complete watch scope, or null while the selection is incomplete.
+ */
 function createSpecFileWatchScope(options: {
   workspacePath: string | null;
   specId: string | null;

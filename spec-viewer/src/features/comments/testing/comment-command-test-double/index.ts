@@ -59,7 +59,10 @@ const defaultComment: Comment = {
   updatedAt: "2026-05-05T10:00:00Z",
 };
 
-/** @returns A typed comment command double for component and hook tests. */
+/**
+ * @param responses - Optional canned responses overriding the defaults
+ * @returns A typed comment command double for component and hook tests.
+ */
 export function createCommentCommandTestDouble(
   responses: CommentCommandTestDoubleResponses = {},
 ): CommentCommandTestDouble {
@@ -83,22 +86,42 @@ export function createCommentCommandTestDouble(
       toggleCommentResolved: toggleCommentResolvedCalls,
     },
     commands: {
+      /**
+       * @param request - The list comments request
+       * @returns The configured list response, or a single default comment.
+       */
       listComments: async (request) => {
         listCommentsCalls.push(request);
         return responses.listComments ?? { comments: [comment] };
       },
+      /**
+       * @param request - The add comment request
+       * @returns The configured added comment, or the default comment.
+       */
       addComment: async (request) => {
         addCommentCalls.push(request);
         return responses.addComment ?? defaultComment;
       },
+      /**
+       * @param request - The update comment request
+       * @returns The configured updated comment, or the resolved base comment.
+       */
       updateComment: async (request) => {
         updateCommentCalls.push(request);
         return responses.updateComment ?? comment;
       },
+      /**
+       * @param request - The delete comment request
+       * @returns The configured delete response, or a deleted result.
+       */
       deleteComment: async (request) => {
         deleteCommentCalls.push(request);
         return responses.deleteComment ?? { deleted: true };
       },
+      /**
+       * @param request - The resolve comment status request
+       * @returns The configured comment, or the base comment marked resolved.
+       */
       resolveComment: async (request) => {
         resolveCommentCalls.push(request);
         return (
@@ -109,6 +132,10 @@ export function createCommentCommandTestDouble(
           }
         );
       },
+      /**
+       * @param request - The reopen comment status request
+       * @returns The configured comment, or the base comment marked open.
+       */
       reopenComment: async (request) => {
         reopenCommentCalls.push(request);
         return (
@@ -119,6 +146,10 @@ export function createCommentCommandTestDouble(
           }
         );
       },
+      /**
+       * @param request - The toggle comment status request
+       * @returns The configured comment, or the base comment marked resolved.
+       */
       toggleCommentResolved: async (request) => {
         toggleCommentResolvedCalls.push(request);
         return (
