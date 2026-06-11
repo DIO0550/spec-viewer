@@ -1,3 +1,4 @@
+import { CommentThreadFormat } from "@/features/comments/domain/commentThreadFormat";
 import type {
   Comment,
   CommentAnchorDisplayStatus,
@@ -16,33 +17,13 @@ type CommentSearchFilterInput = Readonly<{
 
 const defaultAnchorDisplayStatus: CommentAnchorDisplayStatus = "exact";
 
-/** @returns The visible anchor reconciliation status, or null for exact anchors. */
-function formatAnchorDisplayStatus(
-  status: CommentAnchorDisplayStatus,
-): string | null {
-  if (status === "exact") {
-    return null;
-  }
-
-  const statusLabels: Record<
-    Exclude<CommentAnchorDisplayStatus, "exact">,
-    string
-  > = {
-    moved: uiText.commentThread.anchorMoved,
-    fuzzy: uiText.commentThread.fuzzyAnchor,
-    orphaned: uiText.commentThread.anchorOrphaned,
-    stale: uiText.commentThread.anchorStale,
-  };
-
-  return statusLabels[status];
-}
-
 /** @returns Text fields covered by local comment search. */
 function createCommentSearchFields(
   comment: Comment,
   anchorDisplayStatus: CommentAnchorDisplayStatus,
 ): readonly string[] {
-  const anchorStatusLabel = formatAnchorDisplayStatus(anchorDisplayStatus);
+  const anchorStatusLabel =
+    CommentThreadFormat.anchorDisplayStatusLabel(anchorDisplayStatus);
 
   return [
     comment.body,

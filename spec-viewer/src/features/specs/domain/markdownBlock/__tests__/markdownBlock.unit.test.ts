@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { createTextHash } from "@/features/comments/lib/comment-anchor-draft";
+import { CommentAnchorDraft } from "@/features/comments/domain/commentAnchorDraft";
 import {
   type BlockMetadata,
   MarkdownBlock,
@@ -116,6 +116,6 @@ test("readRenderedTextHashはdata属性が無ければ本文からレガシー�
   block.textContent = "Rendered text";
 
   expect(MarkdownBlock.readRenderedTextHash(block)).toBe(
-    createTextHash("Rendered text"),
+    CommentAnchorDraft.textHash("Rendered text"),
   );
 });

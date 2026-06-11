@@ -1,6 +1,6 @@
 import type { AriaRole, KeyboardEventHandler, MouseEventHandler } from "react";
 
-import { createTextHash } from "@/features/comments/lib/comment-anchor-draft";
+import { CommentAnchorDraft } from "@/features/comments/domain/commentAnchorDraft";
 import type { CommentBlockType } from "@/features/comments/types/comment";
 import type {
   CommentHighlightMode,
@@ -148,6 +148,6 @@ export const MarkdownBlock = {
       return textHash;
     }
 
-    return createTextHash(block.textContent ?? "");
+    return CommentAnchorDraft.textHash(block.textContent ?? "");
   },
 } as const;

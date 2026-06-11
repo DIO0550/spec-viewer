@@ -3,8 +3,8 @@ import type { ComponentProps } from "react";
 import { fn } from "storybook/test";
 
 import {
+  CommentAnchorDraft,
   CommentSidebar,
-  createTextHash,
   type Comment,
 } from "@/features/comments";
 import { CommentId } from "@/features/comments/types/comment";
@@ -120,7 +120,7 @@ const sampleComments: readonly Comment[] = [
       fileKey: "tasks",
       blockType: "list_item",
       blockIndex: 5,
-      textHash: createTextHash("Comment behavior follows in P1.15"),
+      textHash: CommentAnchorDraft.textHash("Comment behavior follows in P1.15"),
       textSnippet: "Comment behavior follows in P1.15",
       charRange: {
         start: 0,
@@ -139,7 +139,7 @@ const sampleComments: readonly Comment[] = [
       fileKey: "tasks",
       blockType: "heading",
       blockIndex: 0,
-      textHash: createTextHash("P1.14 Markdown Rendering"),
+      textHash: CommentAnchorDraft.textHash("P1.14 Markdown Rendering"),
       textSnippet: "P1.14 Markdown Rendering",
       charRange: {
         start: 0,

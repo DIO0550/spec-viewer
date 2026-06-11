@@ -1,10 +1,6 @@
 import { afterEach, expect, test } from "vitest";
 
-import {
-  createCommentAnchorDraftFromSelection,
-  createTextHash,
-  createTextSnippet,
-} from "@/features/comments/lib/comment-anchor-draft";
+import { CommentAnchorDraft } from "@/features/comments/domain/commentAnchorDraft";
 
 afterEach(() => {
   document.getSelection()?.removeAllRanges();
@@ -43,7 +39,7 @@ test("Markdownブロック内の選択からコメントアンカードラフト
   expect(textNode).toBeInstanceOf(Text);
 
   const selection = selectText(textNode as Text, 6, 10);
-  const draft = createCommentAnchorDraftFromSelection({
+  const draft = CommentAnchorDraft.fromSelection({
     selection,
     renderedRoot: root,
     fileKey: "tasks",
@@ -53,7 +49,7 @@ test("Markdownブロック内の選択からコメントアンカードラフト
     fileKey: "tasks",
     blockType: "paragraph",
     blockIndex: 3,
-    textHash: createTextHash("Alpha beta gamma"),
+    textHash: CommentAnchorDraft.textHash("Alpha beta gamma"),
     textSnippet: "beta",
     charRange: {
       start: 6,
@@ -76,7 +72,7 @@ test("Markdownブロック内のコメントUIは選択アンカー文字列に�
   expect(textNode).toBeInstanceOf(Text);
 
   const selection = selectText(textNode as Text, 6, 10);
-  const draft = createCommentAnchorDraftFromSelection({
+  const draft = CommentAnchorDraft.fromSelection({
     selection,
     renderedRoot: root,
     fileKey: "tasks",
@@ -86,7 +82,7 @@ test("Markdownブロック内のコメントUIは選択アンカー文字列に�
     fileKey: "tasks",
     blockType: "list_item",
     blockIndex: 2,
-    textHash: createTextHash("Alpha beta gamma"),
+    textHash: CommentAnchorDraft.textHash("Alpha beta gamma"),
     textSnippet: "beta",
     charRange: {
       start: 6,
@@ -108,7 +104,7 @@ test("backendメタデータ付きMarkdownブロックではbackend hashをア�
   expect(textNode).toBeInstanceOf(Text);
 
   const selection = selectText(textNode as Text, 6, 10);
-  const draft = createCommentAnchorDraftFromSelection({
+  const draft = CommentAnchorDraft.fromSelection({
     selection,
     renderedRoot: root,
     fileKey: "tasks",
@@ -132,7 +128,7 @@ test.each([
   expect(textNode).toBeInstanceOf(Text);
 
   const selection = selectText(textNode as Text, 0, 8);
-  const draft = createCommentAnchorDraftFromSelection({
+  const draft = CommentAnchorDraft.fromSelection({
     selection,
     renderedRoot: root,
     fileKey: "impl",
@@ -152,7 +148,7 @@ test("Markdown外の選択はコメントアンカードラフトにしない", 
   expect(textNode).toBeInstanceOf(Text);
 
   const selection = selectText(textNode as Text, 0, 7);
-  const draft = createCommentAnchorDraftFromSelection({
+  const draft = CommentAnchorDraft.fromSelection({
     selection,
     renderedRoot: root,
     fileKey: "tasks",
@@ -183,7 +179,7 @@ test("複数Markdownブロックにまたがる選択はコメントアンカー
   readySelection.removeAllRanges();
   readySelection.addRange(range);
 
-  const draft = createCommentAnchorDraftFromSelection({
+  const draft = CommentAnchorDraft.fromSelection({
     selection: readySelection,
     renderedRoot: root,
     fileKey: "tasks",
@@ -195,7 +191,7 @@ test("複数Markdownブロックにまたがる選択はコメントアンカー
 test("選択スニペットは空白を正規化して上限長で切り詰める", () => {
   const longText = `${"word ".repeat(40)}tail`;
 
-  expect(createTextSnippet("  alpha\n beta\tgamma  ")).toBe("alpha beta gamma");
-  expect(createTextSnippet("   ")).toBeNull();
-  expect(createTextSnippet(longText)?.length).toBe(160);
+  expect(CommentAnchorDraft.textSnippet("  alpha\n beta\tgamma  ")).toBe("alpha beta gamma");
+  expect(CommentAnchorDraft.textSnippet("   ")).toBeNull();
+  expect(CommentAnchorDraft.textSnippet(longText)?.length).toBe(160);
 });

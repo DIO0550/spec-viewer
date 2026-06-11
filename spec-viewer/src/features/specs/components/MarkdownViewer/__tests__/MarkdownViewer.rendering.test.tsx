@@ -11,7 +11,7 @@ import {
   type CommentOperationKind,
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
-import { createTextHash } from "@/features/comments/lib/comment-anchor-draft";
+import { CommentAnchorDraft } from "@/features/comments/domain/commentAnchorDraft";
 import type {
   Comment,
   CommentAnchorResolution,
@@ -137,7 +137,7 @@ function createComment({
       fileKey: "tasks",
       blockType,
       blockIndex,
-      textHash: createTextHash(text),
+      textHash: CommentAnchorDraft.textHash(text),
       textSnippet: text,
       charRange,
     },
@@ -1022,7 +1022,7 @@ test("MarkdownViewerはexact解決済みアンカーの選択範囲をハイラ�
         target: {
           blockType: "paragraph",
           blockIndex: 0,
-          textHash: createTextHash(contents),
+          textHash: CommentAnchorDraft.textHash(contents),
           textSnippet: contents,
           sourceRange: null,
           score: 100,
@@ -1067,7 +1067,7 @@ test("MarkdownViewerはインラインコード内のコメント範囲に背景
         target: {
           blockType: "paragraph",
           blockIndex: 0,
-          textHash: createTextHash(contents),
+          textHash: CommentAnchorDraft.textHash(contents),
           textSnippet: contents,
           sourceRange: null,
           score: 100,
@@ -1144,7 +1144,7 @@ test("MarkdownViewerはmoved/fuzzy/orphaned解決結果をtarget blockへ反映�
         target: {
           blockType: "paragraph",
           blockIndex: 1,
-          textHash: createTextHash("Exact target paragraph."),
+          textHash: CommentAnchorDraft.textHash("Exact target paragraph."),
           textSnippet: "Exact target paragraph.",
           sourceRange: null,
           score: 100,
@@ -1163,7 +1163,7 @@ test("MarkdownViewerはmoved/fuzzy/orphaned解決結果をtarget blockへ反映�
         target: {
           blockType: "paragraph",
           blockIndex: 2,
-          textHash: createTextHash("Fuzzy target paragraph with edits."),
+          textHash: CommentAnchorDraft.textHash("Fuzzy target paragraph with edits."),
           textSnippet: "Fuzzy target paragraph with edits.",
           sourceRange: null,
           score: 82,

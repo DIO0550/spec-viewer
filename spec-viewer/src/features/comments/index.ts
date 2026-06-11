@@ -11,7 +11,7 @@ export {
   type CommentOperationState,
 } from "./domain/commentOperation";
 export { useComments } from "./hooks/useComments";
-export { createTextHash } from "./lib/comment-anchor-draft";
+export { CommentAnchorDraft } from "./domain/commentAnchorDraft";
 export {
   createSpecSkillMcpFeedbackDryRunPayload,
   renderSpecSkillMcpFeedbackDryRunPayload,

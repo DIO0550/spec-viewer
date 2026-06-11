@@ -1,7 +1,7 @@
 import { type RefObject, useEffect, useState } from "react";
 
-import { createCommentAnchorDraftFromSelection } from "@/features/comments/lib/comment-anchor-draft";
-import type { CommentAnchorDraft } from "@/features/comments/types/comment";
+import { CommentAnchorDraft } from "@/features/comments/domain/commentAnchorDraft";
+import type { CommentAnchorDraft as CommentAnchorDraftModel } from "@/features/comments/types/comment";
 import type { SpecFileKey } from "@/features/specs/types/spec";
 
 type UseMarkdownTextSelectionOptions = Readonly<{
@@ -10,7 +10,7 @@ type UseMarkdownTextSelectionOptions = Readonly<{
 }>;
 
 type UseMarkdownTextSelectionResult = Readonly<{
-  selectionDraft: CommentAnchorDraft | null;
+  selectionDraft: CommentAnchorDraftModel | null;
   clearSelectionDraft: () => void;
 }>;
 
@@ -20,7 +20,7 @@ export function useMarkdownTextSelection({
   fileKey,
 }: UseMarkdownTextSelectionOptions): UseMarkdownTextSelectionResult {
   const [selectionDraft, setSelectionDraft] =
-    useState<CommentAnchorDraft | null>(null);
+    useState<CommentAnchorDraftModel | null>(null);
 
   useEffect(() => {
     setSelectionDraft(null);
@@ -30,7 +30,7 @@ export function useMarkdownTextSelection({
     }
 
     const updateSelectionDraft = (): void => {
-      const nextDraft = createCommentAnchorDraftFromSelection({
+      const nextDraft = CommentAnchorDraft.fromSelection({
         selection: document.getSelection(),
         renderedRoot: renderedRootRef.current,
         fileKey,

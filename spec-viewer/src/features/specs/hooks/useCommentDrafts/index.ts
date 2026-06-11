@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { createCommentAnchorDraftFromBlock } from "@/features/comments/lib/comment-anchor-draft";
+import { CommentAnchorDraft } from "@/features/comments/domain/commentAnchorDraft";
 import type {
   AddCommentSubmitInput,
   Comment,
-  CommentAnchorDraft,
+  CommentAnchorDraft as CommentAnchorDraftModel,
   CommentId,
 } from "@/features/comments/types/comment";
 import type { CommentEditDraft } from "@/features/specs/components/MarkdownDocument";
@@ -37,10 +37,10 @@ type UseCommentDraftsOptions = Readonly<{
 }>;
 
 type UseCommentDraftsResult = Readonly<{
-  activeAnchorDraft: CommentAnchorDraft | null;
+  activeAnchorDraft: CommentAnchorDraftModel | null;
   visibleEditDraft: CommentEditDraft | null;
   /** @param draft - Selection-based anchor draft to open in the comment form */
-  openSelectionDraft: (draft: CommentAnchorDraft) => void;
+  openSelectionDraft: (draft: CommentAnchorDraftModel) => void;
   /** Closes the add-comment form and clears the browser selection. */
   closeAnchorDraft: () => void;
   /** Closes the edit dialog without saving. */
@@ -118,7 +118,7 @@ export function useCommentDrafts({
   onDeleteComment,
 }: UseCommentDraftsOptions): UseCommentDraftsResult {
   const [activeAnchorDraft, setActiveAnchorDraft] =
-    useState<CommentAnchorDraft | null>(null);
+    useState<CommentAnchorDraftModel | null>(null);
   const [activeEditDraft, setActiveEditDraft] =
     useState<CommentEditDraft | null>(null);
 
@@ -145,7 +145,7 @@ export function useCommentDrafts({
     [activeEditDraft, visibleComments],
   );
 
-  const openSelectionDraft = (draft: CommentAnchorDraft): void => {
+  const openSelectionDraft = (draft: CommentAnchorDraftModel): void => {
     setActiveAnchorDraft(draft);
     clearSelectionDraft();
   };
@@ -171,7 +171,7 @@ export function useCommentDrafts({
       return;
     }
 
-    const draft = createCommentAnchorDraftFromBlock({
+    const draft = CommentAnchorDraft.fromBlock({
       block,
       fileKey,
     });
