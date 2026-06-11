@@ -212,7 +212,7 @@ impl UserReviewRun {
                         .unwrap_or("unknown")
                 ));
                 output.push_str("- 元の選択テキスト:\n\n");
-                output.push_str(&format_blockquote(&comment.anchor.text_snippet));
+                output.push_str(&Self::format_blockquote(&comment.anchor.text_snippet));
                 output.push('\n');
 
                 if let Some(target) = comment
@@ -221,7 +221,7 @@ impl UserReviewRun {
                     .and_then(|resolution| resolution.target.as_ref())
                 {
                     output.push_str("- 現在の解決先スニペット:\n\n");
-                    output.push_str(&format_blockquote(&target.text_snippet));
+                    output.push_str(&Self::format_blockquote(&target.text_snippet));
                     output.push('\n');
                 }
 
@@ -242,6 +242,13 @@ impl UserReviewRun {
             "# レビュー対応結果\n\n- Review run: `{}`\n- Status: `active`\n\n## 対応した変更\n\n- \n\n## 対応しなかったコメント\n\n- \n\n## フォローアップ質問\n\n- \n",
             self.id()
         )
+    }
+
+    fn format_blockquote(value: &str) -> String {
+        value
+            .lines()
+            .map(|line| format!("> {line}\n"))
+            .collect::<String>()
     }
 }
 
@@ -297,12 +304,19 @@ impl ReviewRunCommentDocument {
             id: comment.id().as_str().to_string(),
             anchor: ReviewRunCommentAnchorDocument::from_anchor(comment.anchor()),
             body: comment.body().as_str().to_string(),
-            status: comment_status(comment.status()).to_string(),
+            status: Self::comment_status(comment.status()).to_string(),
             resolved: comment.is_resolved(),
             anchor_resolution,
             created_at: comment.created_at(),
             updated_at: comment.updated_at(),
             exported_at,
+        }
+    }
+
+    fn comment_status(status: CommentStatus) -> &'static str {
+        match status {
+            CommentStatus::Open => "open",
+            CommentStatus::Resolved => "resolved",
         }
     }
 }
@@ -324,7 +338,7 @@ impl ReviewRunCommentAnchorDocument {
 
         Self {
             file_key: anchor.file_key().as_str().to_string(),
-            block_type: block_type(anchor.block_type()).to_string(),
+            block_type: Self::block_type(anchor.block_type()).to_string(),
             block_index: anchor.block_index().value(),
             text_hash: anchor.text_hash().as_str().to_string(),
             text_snippet: anchor.text_snippet().as_str().to_string(),
@@ -332,6 +346,20 @@ impl ReviewRunCommentAnchorDocument {
                 start: char_range.start(),
                 end: char_range.end(),
             },
+        }
+    }
+
+    fn block_type(block_type: BlockType) -> &'static str {
+        match block_type {
+            BlockType::Paragraph => "paragraph",
+            BlockType::Heading => "heading",
+            BlockType::ListItem => "list_item",
+            BlockType::CodeBlock => "code_block",
+            BlockType::BlockQuote => "block_quote",
+            BlockType::Table => "table",
+            BlockType::ThematicBreak => "thematic_break",
+            BlockType::Html => "html",
+            BlockType::Other => "other",
         }
     }
 }
@@ -360,10 +388,33 @@ impl ReviewRunAnchorResolutionDocument {
         target: Option<ReviewRunAnchorResolutionTargetDocument>,
     ) -> Self {
         Self {
-            status: anchor_resolution_status(status).to_string(),
-            reason: anchor_resolution_reason(reason).to_string(),
+            status: Self::anchor_resolution_status(status).to_string(),
+            reason: Self::anchor_resolution_reason(reason).to_string(),
             details: details.map(str::to_string),
             target,
+        }
+    }
+
+    fn anchor_resolution_status(status: AnchorResolutionStatus) -> &'static str {
+        match status {
+            AnchorResolutionStatus::Resolved => "resolved",
+            AnchorResolutionStatus::Moved => "moved",
+            AnchorResolutionStatus::Fuzzy => "fuzzy",
+            AnchorResolutionStatus::Orphaned => "orphaned",
+        }
+    }
+
+    fn anchor_resolution_reason(reason: AnchorResolutionReason) -> &'static str {
+        match reason {
+            AnchorResolutionReason::ExactMatch => "exact_match",
+            AnchorResolutionReason::MovedByHash => "moved_by_hash",
+            AnchorResolutionReason::StaleSnippet => "stale_snippet",
+            AnchorResolutionReason::FuzzyMatch => "fuzzy_match",
+            AnchorResolutionReason::MissingOriginalBlock => "missing_original_block",
+            AnchorResolutionReason::AmbiguousFuzzyCandidates => "ambiguous_fuzzy_candidates",
+            AnchorResolutionReason::BelowThreshold => "below_threshold",
+            AnchorResolutionReason::DeletedText => "deleted_text",
+            AnchorResolutionReason::UnsupportedBlockType => "unsupported_block_type",
         }
     }
 }
@@ -385,10 +436,22 @@ impl ReviewRunAnchorResolutionTargetDocument {
             block_type: block.block_type().as_str().to_string(),
             block_index: block.index().value(),
             text_hash: block.text_hash().as_str().to_string(),
-            text_snippet: block_snippet(block),
+            text_snippet: Self::block_snippet(block),
             source_range: block.source_range().map(ReviewRunSourceRangeDocument::from),
             score,
         }
+    }
+
+    fn block_snippet(block: &MarkdownBlock) -> String {
+        const MAX_SNIPPET_CHARS: usize = 240;
+        let text = block.text().normalized();
+        let mut snippet = text.chars().take(MAX_SNIPPET_CHARS).collect::<String>();
+
+        if text.chars().count() > MAX_SNIPPET_CHARS {
+            snippet.push_str("...");
+        }
+
+        snippet
     }
 }
 
@@ -405,68 +468,5 @@ impl From<MarkdownBlockSourceRange> for ReviewRunSourceRangeDocument {
             start_byte_offset: range.start_byte_offset(),
             end_byte_offset: range.end_byte_offset(),
         }
-    }
-}
-
-fn format_blockquote(value: &str) -> String {
-    value
-        .lines()
-        .map(|line| format!("> {line}\n"))
-        .collect::<String>()
-}
-
-fn block_snippet(block: &MarkdownBlock) -> String {
-    const MAX_SNIPPET_CHARS: usize = 240;
-    let text = block.text().normalized();
-    let mut snippet = text.chars().take(MAX_SNIPPET_CHARS).collect::<String>();
-
-    if text.chars().count() > MAX_SNIPPET_CHARS {
-        snippet.push_str("...");
-    }
-
-    snippet
-}
-
-fn comment_status(status: CommentStatus) -> &'static str {
-    match status {
-        CommentStatus::Open => "open",
-        CommentStatus::Resolved => "resolved",
-    }
-}
-
-fn anchor_resolution_status(status: AnchorResolutionStatus) -> &'static str {
-    match status {
-        AnchorResolutionStatus::Resolved => "resolved",
-        AnchorResolutionStatus::Moved => "moved",
-        AnchorResolutionStatus::Fuzzy => "fuzzy",
-        AnchorResolutionStatus::Orphaned => "orphaned",
-    }
-}
-
-fn anchor_resolution_reason(reason: AnchorResolutionReason) -> &'static str {
-    match reason {
-        AnchorResolutionReason::ExactMatch => "exact_match",
-        AnchorResolutionReason::MovedByHash => "moved_by_hash",
-        AnchorResolutionReason::StaleSnippet => "stale_snippet",
-        AnchorResolutionReason::FuzzyMatch => "fuzzy_match",
-        AnchorResolutionReason::MissingOriginalBlock => "missing_original_block",
-        AnchorResolutionReason::AmbiguousFuzzyCandidates => "ambiguous_fuzzy_candidates",
-        AnchorResolutionReason::BelowThreshold => "below_threshold",
-        AnchorResolutionReason::DeletedText => "deleted_text",
-        AnchorResolutionReason::UnsupportedBlockType => "unsupported_block_type",
-    }
-}
-
-fn block_type(block_type: BlockType) -> &'static str {
-    match block_type {
-        BlockType::Paragraph => "paragraph",
-        BlockType::Heading => "heading",
-        BlockType::ListItem => "list_item",
-        BlockType::CodeBlock => "code_block",
-        BlockType::BlockQuote => "block_quote",
-        BlockType::Table => "table",
-        BlockType::ThematicBreak => "thematic_break",
-        BlockType::Html => "html",
-        BlockType::Other => "other",
     }
 }

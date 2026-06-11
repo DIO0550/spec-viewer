@@ -13,9 +13,8 @@ use thiserror::Error;
 use crate::domain::{
     spec::{SpecDomainError, SpecFileKey},
     workspace::{
-        default_scan_excluded_directory_names, SpecConfigOverride, WorkspaceConfig,
-        WorkspaceConfigError, WorkspaceConfigSource, WorkspaceFileMapping, WorkspaceKind,
-        WorkspaceLayout,
+        SpecConfigOverride, WorkspaceConfig, WorkspaceConfigError, WorkspaceConfigSource,
+        WorkspaceFileMapping, WorkspaceKind, WorkspaceLayout,
     },
 };
 
@@ -125,7 +124,7 @@ fn parse_workspace_config(
         files,
         raw_config
             .scan_excluded_directory_names
-            .unwrap_or_else(default_scan_excluded_directory_names),
+            .unwrap_or_else(WorkspaceConfig::default_scan_excluded_directory_names),
     )
     .map_err(|source| ConfigLoadError::InvalidFileMapping {
         path: display_path(path),
