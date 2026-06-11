@@ -7,8 +7,20 @@ use thiserror::Error;
 
 use crate::domain::spec::{MarkdownBlock, MarkdownBlockType, SpecFileKey};
 
+mod anchor_resolution;
+mod export;
+mod exported_comment;
+mod fuzzy;
+mod llm_prompt;
 mod repository;
 
+pub use anchor_resolution::{CommentAnchorResolution, CommentAnchorResolutionTarget};
+pub use export::{
+    CommentExport, CommentExportFile, CommentExportFormat, CommentExportRenderError,
+    CommentExportTarget,
+};
+pub use exported_comment::ExportedComment;
+pub use llm_prompt::{LlmPrompt, LlmPromptFile};
 pub use repository::{
     CommentListQuery, CommentRepository, CommentRepositoryError, CommentScope, CommentStatusFilter,
 };
@@ -77,6 +89,14 @@ impl CommentStatus {
     pub fn is_resolved(self) -> bool {
         matches!(self, Self::Resolved)
     }
+
+    /// Stable serialization label shared by exports and frontend payloads.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Open => "open",
+            Self::Resolved => "resolved",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -90,6 +110,16 @@ pub enum AnchorResolutionStatus {
 impl AnchorResolutionStatus {
     pub fn is_orphaned(self) -> bool {
         matches!(self, Self::Orphaned)
+    }
+
+    /// Stable serialization label shared by exports and frontend payloads.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Resolved => "resolved",
+            Self::Moved => "moved",
+            Self::Fuzzy => "fuzzy",
+            Self::Orphaned => "orphaned",
+        }
     }
 }
 
@@ -106,6 +136,23 @@ pub enum AnchorResolutionReason {
     UnsupportedBlockType,
 }
 
+impl AnchorResolutionReason {
+    /// Stable serialization label shared by exports and frontend payloads.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::ExactMatch => "exact_match",
+            Self::MovedByHash => "moved_by_hash",
+            Self::StaleSnippet => "stale_snippet",
+            Self::FuzzyMatch => "fuzzy_match",
+            Self::MissingOriginalBlock => "missing_original_block",
+            Self::AmbiguousFuzzyCandidates => "ambiguous_fuzzy_candidates",
+            Self::BelowThreshold => "below_threshold",
+            Self::DeletedText => "deleted_text",
+            Self::UnsupportedBlockType => "unsupported_block_type",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BlockType {
     Paragraph,
@@ -117,6 +164,36 @@ pub enum BlockType {
     ThematicBreak,
     Html,
     Other,
+}
+
+impl BlockType {
+    /// Stable serialization label shared by exports and frontend payloads.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Paragraph => "paragraph",
+            Self::Heading => "heading",
+            Self::ListItem => "list_item",
+            Self::CodeBlock => "code_block",
+            Self::BlockQuote => "block_quote",
+            Self::Table => "table",
+            Self::ThematicBreak => "thematic_break",
+            Self::Html => "html",
+            Self::Other => "other",
+        }
+    }
+
+    /// Reports whether comments anchored to this block type can be re-resolved.
+    pub fn supports_anchor_resolution(self) -> bool {
+        matches!(
+            self,
+            Self::Paragraph
+                | Self::Heading
+                | Self::ListItem
+                | Self::CodeBlock
+                | Self::BlockQuote
+                | Self::Table
+        )
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -755,6 +832,23 @@ mod tests {
         let thread = CommentThread::new(root, vec![reply]).expect("thread should be valid");
 
         assert!(thread.is_resolved());
+    }
+
+    #[test]
+    fn anchor_resolution_status_and_reason_use_frontend_labels() {
+        assert_eq!("resolved", AnchorResolutionStatus::Resolved.as_str());
+        assert_eq!("moved", AnchorResolutionStatus::Moved.as_str());
+        assert_eq!("fuzzy", AnchorResolutionStatus::Fuzzy.as_str());
+        assert_eq!("orphaned", AnchorResolutionStatus::Orphaned.as_str());
+        assert_eq!("exact_match", AnchorResolutionReason::ExactMatch.as_str());
+        assert_eq!(
+            "stale_snippet",
+            AnchorResolutionReason::StaleSnippet.as_str()
+        );
+        assert_eq!(
+            "ambiguous_fuzzy_candidates",
+            AnchorResolutionReason::AmbiguousFuzzyCandidates.as_str()
+        );
     }
 
     #[test]

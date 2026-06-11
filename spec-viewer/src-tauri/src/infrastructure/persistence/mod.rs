@@ -1,5 +1,6 @@
 //! Persistence adapters.
 
+pub mod comment_export_writer;
 pub mod comment_paths;
 pub mod comment_store;
 pub mod comments;

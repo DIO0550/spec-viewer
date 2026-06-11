@@ -34,9 +34,10 @@ use crate::{
 
 pub use crate::domain::comment::{AnchorResolutionReason, AnchorResolutionStatus};
 pub use comments::{
-    CommentAnchorResolution, CommentAnchorResolutionTarget, CommentUseCases,
-    FilesystemCommentUseCases, GenerateCommentId, GetCurrentTime, ResolveCommentAnchorsResult,
-    UtcCommentClock, UuidCommentIdGenerator,
+    CommentAnchorResolution, CommentAnchorResolutionTarget, CommentUseCases, ExportCommentsError,
+    ExportCommentsInput, ExportCommentsResult, FilesystemCommentUseCases, GenerateCommentId,
+    GenerateLlmPromptInput, GetCurrentTime, ResolveCommentAnchorsResult, UtcCommentClock,
+    UuidCommentIdGenerator,
 };
 pub use review_runs::{
     ArchiveReviewRunInput, ArchiveReviewRunResult, CreateReviewRunInput, CreateReviewRunResult,

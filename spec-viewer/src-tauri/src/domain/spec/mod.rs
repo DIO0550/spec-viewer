@@ -548,6 +548,21 @@ impl SpecNode {
             Self::find_by_id(spec.children(), spec_id)
         })
     }
+
+    /// Collects the spec nodes in this subtree that own files, searching recursively.
+    pub fn collect_nodes_with_files(&self) -> Vec<&SpecNode> {
+        let mut nodes = Vec::new();
+
+        if !self.files.is_empty() {
+            nodes.push(self);
+        }
+
+        for child in &self.children {
+            nodes.extend(child.collect_nodes_with_files());
+        }
+
+        nodes
+    }
 }
 
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
