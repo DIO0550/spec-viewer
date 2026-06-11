@@ -1,12 +1,11 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-
-import type { WorkspaceDragDropEvent } from "@/shared/api/tauri";
 import {
   type SubscribeWorkspaceDragDropEvents,
   useWorkspaceDrop,
 } from "@/features/workspace/hooks/useWorkspaceDrop";
+import type { WorkspaceDragDropEvent } from "@/shared/api/tauri";
 
 type HookResult<Result> = Readonly<{
   current: Result;

@@ -18,15 +18,15 @@ type UsePanelResizeOptions = Readonly<{
 
 export type UsePanelResizeResult = Readonly<{
   /** @param event - Pointer-down event on the resize separator */
-  startResize: (event: PointerEvent<HTMLButtonElement>) => void;
+  startResize: (event: PointerEvent<HTMLElement>) => void;
   /** @param event - Pointer-move event while resizing */
-  continueResize: (event: PointerEvent<HTMLButtonElement>) => void;
+  continueResize: (event: PointerEvent<HTMLElement>) => void;
   /** @param event - Pointer-up or cancel event ending the resize */
-  stopResize: (event: PointerEvent<HTMLButtonElement>) => void;
+  stopResize: (event: PointerEvent<HTMLElement>) => void;
   /** Ends the resize when pointer capture is lost. */
   releaseResize: () => void;
   /** @param event - Keydown event on the resize separator */
-  resizeWithKeyboard: (event: KeyboardEvent<HTMLButtonElement>) => void;
+  resizeWithKeyboard: (event: KeyboardEvent<HTMLElement>) => void;
 }>;
 
 /**
@@ -63,7 +63,7 @@ export function usePanelResize({
     );
   };
 
-  const startResize = (event: PointerEvent<HTMLButtonElement>): void => {
+  const startResize = (event: PointerEvent<HTMLElement>): void => {
     if (onWidthChange === undefined) {
       return;
     }
@@ -74,7 +74,7 @@ export function usePanelResize({
     resizeFromPointer(event.clientX);
   };
 
-  const continueResize = (event: PointerEvent<HTMLButtonElement>): void => {
+  const continueResize = (event: PointerEvent<HTMLElement>): void => {
     if (!isResizingRef.current) {
       return;
     }
@@ -83,7 +83,7 @@ export function usePanelResize({
     resizeFromPointer(event.clientX);
   };
 
-  const stopResize = (event: PointerEvent<HTMLButtonElement>): void => {
+  const stopResize = (event: PointerEvent<HTMLElement>): void => {
     isResizingRef.current = false;
     event.currentTarget.releasePointerCapture?.(event.pointerId);
   };
@@ -92,9 +92,7 @@ export function usePanelResize({
     isResizingRef.current = false;
   };
 
-  const resizeWithKeyboard = (
-    event: KeyboardEvent<HTMLButtonElement>,
-  ): void => {
+  const resizeWithKeyboard = (event: KeyboardEvent<HTMLElement>): void => {
     if (onWidthChange === undefined) {
       return;
     }

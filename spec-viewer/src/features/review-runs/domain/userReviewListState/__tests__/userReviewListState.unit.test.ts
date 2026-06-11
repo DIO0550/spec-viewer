@@ -22,11 +22,7 @@ test("UserReviewListState.loadedはrunがなければemptyを返す", () => {
 });
 
 test("UserReviewListState.loadedはrunがあればreadyを返す", () => {
-  const collection = UserReviewCollection.fromListResponse(
-    [activeRun],
-    [],
-    [],
-  );
+  const collection = UserReviewCollection.fromListResponse([activeRun], [], []);
   const state = UserReviewListState.loaded(target, collection);
 
   expect(state.status).toBe("ready");

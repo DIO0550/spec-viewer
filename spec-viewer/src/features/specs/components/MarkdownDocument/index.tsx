@@ -289,6 +289,7 @@ export function MarkdownDocument({
     <div
       ref={renderedRootRef}
       className="markdown-rendered"
+      role="document"
       aria-label={uiText.markdown.renderedDocument}
     >
       <ReactMarkdown

@@ -17,9 +17,7 @@ export function useOutsideMouseDown<TElement extends HTMLElement>({
       return;
     }
 
-    const dismissWhenClickingOutside = (
-      event: globalThis.MouseEvent,
-    ): void => {
+    const dismissWhenClickingOutside = (event: globalThis.MouseEvent): void => {
       const target = event.target;
       const layer = layerRef.current;
 

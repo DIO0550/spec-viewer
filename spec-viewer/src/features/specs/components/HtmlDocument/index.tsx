@@ -19,7 +19,7 @@ export function HtmlZoomControl({
   onIncrease,
 }: HtmlZoomControlProps) {
   return (
-    <div
+    <section
       className="html-zoom-control"
       aria-label={uiText.markdown.htmlZoomControls}
     >
@@ -49,7 +49,7 @@ export function HtmlZoomControl({
       >
         <ZoomIn aria-hidden="true" size={15} />
       </button>
-    </div>
+    </section>
   );
 }
 

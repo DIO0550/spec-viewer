@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useRef } from "react";
-
-import { UserReviewAsyncToken } from "@/features/review-runs/hooks/userReviewAsyncToken";
 import type { UserReviewAsyncToken as UserReviewAsyncTokenType } from "@/features/review-runs/hooks/userReviewAsyncToken";
+import { UserReviewAsyncToken } from "@/features/review-runs/hooks/userReviewAsyncToken";
 
 export type UserReviewListRequestController = Readonly<{
   begin: (identity: string) => UserReviewAsyncTokenType;

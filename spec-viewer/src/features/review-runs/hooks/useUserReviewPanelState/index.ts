@@ -33,6 +33,7 @@ export function useUserReviewPanelState({
   const [workspaceMode, setWorkspaceMode] =
     useState<UserReviewWorkspaceMode>(defaultWorkspaceMode);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies(resetKey): 表示ビューの切り替え（resetKey変更）を契機にパネル選択を初期化するための意図的な依存
   useEffect(() => {
     setTargetScope(defaultTargetScope);
     setWorkspaceMode(defaultWorkspaceMode);

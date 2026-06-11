@@ -1,3 +1,9 @@
+import type { CommentId } from "@/features/comments/types/comment";
+import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
+import {
+  mapListUserReviewsResponseToUserReviews,
+  mapUserReviewDtoToUserReview,
+} from "@/features/review-runs/infra/userReviewIpcAdapter";
 import type {
   ArchiveUserReviewResponse,
   CreateUserReviewResponse,
@@ -5,12 +11,6 @@ import type {
   ListUserReviewsResponse,
   UserReviewWorkspaceMode,
 } from "@/features/review-runs/types/userReviewIpc";
-import type { CommentId } from "@/features/comments/types/comment";
-import {
-  mapListUserReviewsResponseToUserReviews,
-  mapUserReviewDtoToUserReview,
-} from "@/features/review-runs/infra/userReviewIpcAdapter";
-import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import type { UserReviewCommands } from "@/shared/api/tauri";
 
 export type CreateUserReviewParam = Readonly<{

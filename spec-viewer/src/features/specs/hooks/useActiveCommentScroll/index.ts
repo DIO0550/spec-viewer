@@ -67,6 +67,7 @@ export function useActiveCommentScroll({
   anchorDisplayStates,
   renderedRootRef,
 }: UseActiveCommentScrollOptions): void {
+  // biome-ignore lint/correctness/useExhaustiveDependencies(anchorDisplayStates): アンカー表示状態の更新でDOMが再描画された後に再スクロールするための意図的な依存
   useEffect(() => {
     scrollActiveCommentIntoView({
       activeCommentId,

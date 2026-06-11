@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SpecCollection } from "@/features/specs/domain/specCollection";
 import type { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
 import { SpecTreeState } from "@/features/specs/domain/specTreeState";
-import { useSpecDocumentLoader } from "./useSpecDocumentLoader";
 import type {
   ReadSpecFileRequest,
   SpecDocument,
@@ -18,6 +17,7 @@ import {
   normalizeCommandError,
 } from "@/shared/api/tauri";
 import type { NormalizedCommandError } from "@/shared/types/ipc";
+import { useSpecDocumentLoader } from "./useSpecDocumentLoader";
 
 export type { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
 export type { SpecTreeState } from "@/features/specs/domain/specTreeState";

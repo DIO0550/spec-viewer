@@ -1,10 +1,5 @@
-import { useEffect } from "react";
 import { listen, type Event as TauriEvent } from "@tauri-apps/api/event";
-
-import {
-  startSpecFileWatch as defaultStartSpecFileWatch,
-  stopSpecFileWatch as defaultStopSpecFileWatch,
-} from "@/shared/api/tauri";
+import { useEffect } from "react";
 import type { SpecFileKey } from "@/features/specs/types/spec";
 import type {
   SpecFileWatchChangedEvent,
@@ -17,6 +12,10 @@ import {
   SPEC_FILE_WATCH_CHANGED_EVENT,
   SPEC_FILE_WATCH_ERROR_EVENT,
 } from "@/features/specs/types/watch";
+import {
+  startSpecFileWatch as defaultStartSpecFileWatch,
+  stopSpecFileWatch as defaultStopSpecFileWatch,
+} from "@/shared/api/tauri";
 
 export type StartSpecFileWatchCommand = (
   request: StartSpecFileWatchRequest,

@@ -1,11 +1,10 @@
 import { useCallback, useRef, useState } from "react";
-
+import type { Workspace } from "@/features/workspace/types/workspace";
 import {
   loadWorkspace as defaultLoadWorkspace,
   normalizeCommandError,
 } from "@/shared/api/tauri";
 import type { NormalizedCommandError } from "@/shared/types/ipc";
-import type { Workspace } from "@/features/workspace/types/workspace";
 
 export type WorkspaceState =
   | Readonly<{

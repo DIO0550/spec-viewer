@@ -122,6 +122,7 @@ export function useCommentDrafts({
   const [activeEditDraft, setActiveEditDraft] =
     useState<CommentEditDraft | null>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies(resetKey): 表示ドキュメントの切り替え（resetKey変更）を契機に下書きを破棄するための意図的な依存
   useEffect(() => {
     setActiveAnchorDraft(null);
     setActiveEditDraft(null);

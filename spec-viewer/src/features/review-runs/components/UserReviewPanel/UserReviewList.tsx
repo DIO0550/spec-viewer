@@ -11,7 +11,9 @@ type Props = Readonly<{
   listState: UserReviewListState;
   activeReviews: readonly UserReview[];
   archiveState: UserReviewArchiveState;
+  /** @param path - Review run folder path to copy */
   onCopyPath: (path: string) => void;
+  /** @param userReviewId - Identifier of the user review to archive */
   onArchiveUserReview: (userReviewId: string) => void;
 }>;
 
@@ -52,17 +54,20 @@ export function UserReviewList({
 
   if (activeReviews.length === 0) {
     return (
-      <div className="review-run-panel__runs" aria-label="アクティブレビュー">
+      <section
+        className="review-run-panel__runs"
+        aria-label="アクティブレビュー"
+      >
         <UserReviewProblems problems={listState.problems} />
         <p className="review-run-panel__empty">
           アクティブなレビューはありません。
         </p>
-      </div>
+      </section>
     );
   }
 
   return (
-    <div className="review-run-panel__runs" aria-label="アクティブレビュー">
+    <section className="review-run-panel__runs" aria-label="アクティブレビュー">
       <UserReviewProblems problems={listState.problems} />
       {activeReviews.map((run) => (
         <UserReviewCard
@@ -73,7 +78,7 @@ export function UserReviewList({
           onArchiveUserReview={onArchiveUserReview}
         />
       ))}
-    </div>
+    </section>
   );
 }
 
@@ -81,7 +86,10 @@ type UserReviewProblemsProps = Readonly<{
   problems: UserReviewListState["problems"];
 }>;
 
-/** @returns Malformed or missing review run folders that need manual attention. */
+/**
+ * @param props - Problems reported for review run folders
+ * @returns Malformed or missing review run folders that need manual attention.
+ */
 function UserReviewProblems({ problems }: UserReviewProblemsProps) {
   if (problems.length === 0) {
     return null;

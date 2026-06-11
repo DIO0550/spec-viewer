@@ -6,8 +6,9 @@ import {
 } from "lucide-react";
 import {
   type CSSProperties,
-  type KeyboardEvent,
   type ReactNode,
+  useCallback,
+  useEffect,
   useRef,
 } from "react";
 
@@ -92,12 +93,12 @@ export function AppShell({
     <LeftNavigationBrand />
   );
 
-  const closeLeftNavigation = (): void => {
+  const closeLeftNavigation = useCallback((): void => {
     onCloseLeftNavigation?.();
     requestAnimationFrame(() => {
       openLeftNavigationButtonRef.current?.focus();
     });
-  };
+  }, [onCloseLeftNavigation]);
 
   const openLeftNavigation = (): void => {
     onOpenLeftNavigation?.();
@@ -106,12 +107,12 @@ export function AppShell({
     });
   };
 
-  const closeCommentsSidebar = (): void => {
+  const closeCommentsSidebar = useCallback((): void => {
     onCloseCommentsSidebar?.();
     requestAnimationFrame(() => {
       reopenButtonRef.current?.focus();
     });
-  };
+  }, [onCloseCommentsSidebar]);
 
   const openCommentsSidebar = (): void => {
     onOpenCommentsSidebar?.();
@@ -122,48 +123,58 @@ export function AppShell({
     });
   };
 
-  const dismissCommentsSidebar = (
-    event: KeyboardEvent<HTMLDivElement>,
-  ): void => {
-    if (
-      event.defaultPrevented ||
-      event.key !== "Escape" ||
-      !isCommentsSidebarOpen
-    ) {
-      return;
-    }
+  useEffect(() => {
+    const dismissCommentsSidebar = (event: KeyboardEvent): void => {
+      if (
+        event.defaultPrevented ||
+        event.key !== "Escape" ||
+        !isCommentsSidebarOpen
+      ) {
+        return;
+      }
 
-    event.preventDefault();
-    closeCommentsSidebar();
-  };
+      event.preventDefault();
+      closeCommentsSidebar();
+    };
 
-  const dismissLeftNavigation = (
-    event: KeyboardEvent<HTMLDivElement>,
-  ): void => {
-    if (
-      event.defaultPrevented ||
-      event.key !== "Escape" ||
-      !isLeftNavigationOpen
-    ) {
-      return;
-    }
+    const dismissLeftNavigation = (event: KeyboardEvent): void => {
+      if (
+        event.defaultPrevented ||
+        event.key !== "Escape" ||
+        !isLeftNavigationOpen
+      ) {
+        return;
+      }
 
-    const target = event.target;
-    const isFromLeftNavigation =
-      target instanceof Node && leftAsideRef.current?.contains(target) === true;
+      const target = event.target;
+      const isFromLeftNavigation =
+        target instanceof Node &&
+        leftAsideRef.current?.contains(target) === true;
 
-    if (!isFromLeftNavigation && !isNarrowViewport()) {
-      return;
-    }
+      if (!isFromLeftNavigation && !isNarrowViewport()) {
+        return;
+      }
 
-    event.preventDefault();
-    closeLeftNavigation();
-  };
+      event.preventDefault();
+      closeLeftNavigation();
+    };
 
-  const dismissPanels = (event: KeyboardEvent<HTMLDivElement>): void => {
-    dismissLeftNavigation(event);
-    dismissCommentsSidebar(event);
-  };
+    const dismissPanels = (event: KeyboardEvent): void => {
+      dismissLeftNavigation(event);
+      dismissCommentsSidebar(event);
+    };
+
+    document.addEventListener("keydown", dismissPanels);
+
+    return () => {
+      document.removeEventListener("keydown", dismissPanels);
+    };
+  }, [
+    closeCommentsSidebar,
+    closeLeftNavigation,
+    isCommentsSidebarOpen,
+    isLeftNavigationOpen,
+  ]);
 
   return (
     <div className="app-shell">
@@ -173,7 +184,6 @@ export function AppShell({
         data-left-navigation={isLeftNavigationOpen ? "open" : "collapsed"}
         data-comments-sidebar={isCommentsSidebarOpen ? "open" : "collapsed"}
         style={bodyStyle}
-        onKeyDown={dismissPanels}
       >
         <aside
           ref={leftAsideRef}
@@ -196,10 +206,9 @@ export function AppShell({
               <PanelLeftClose aria-hidden="true" size={16} />
             </button>
           </div>
-          <button
+          <hr
             className="app-shell__left-resize"
-            type="button"
-            role="separator"
+            tabIndex={0}
             aria-label={uiText.leftNavigation.resize}
             aria-orientation="vertical"
             aria-valuemin={leftNavigationMinWidth}
@@ -244,10 +253,9 @@ export function AppShell({
           aria-hidden={!isCommentsSidebarOpen}
           aria-label={uiText.appShell.commentSidebar}
         >
-          <button
+          <hr
             className="app-shell__comments-resize"
-            type="button"
-            role="separator"
+            tabIndex={0}
             aria-label={uiText.sidebar.resize}
             aria-orientation="vertical"
             aria-valuemin={commentsSidebarMinWidth}

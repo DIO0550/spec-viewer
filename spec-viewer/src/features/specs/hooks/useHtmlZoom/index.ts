@@ -27,6 +27,7 @@ export function useHtmlZoom({
     HtmlZoom.defaultPercent,
   );
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies(resetKey): 表示ドキュメントの切り替え（resetKey変更）を契機にズームを初期値へ戻すための意図的な依存
   useEffect(() => {
     setZoomPercent(HtmlZoom.defaultPercent);
   }, [resetKey]);

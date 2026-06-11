@@ -24,11 +24,17 @@ type Props = Readonly<{
   listState: UserReviewListState;
   createState: UserReviewCreateState;
   archiveState: UserReviewArchiveState;
+  /** @param scope - User review target scope selected in the panel */
   onTargetScopeChange: (scope: UserReviewTargetScope) => void;
+  /** @param mode - Workspace mode selected in the panel */
   onWorkspaceModeChange: (mode: UserReviewWorkspaceMode) => void;
+  /** Creates a user review for the current target. */
   onCreateUserReview: () => void;
+  /** @param userReviewId - Identifier of the user review to archive */
   onArchiveUserReview: (userReviewId: string) => void;
+  /** Reloads the user review list. */
   onRefreshUserReviews: () => void;
+  /** @param path - Review run folder path to copy */
   onCopyPath: (path: string) => Promise<void>;
 }>;
 
@@ -80,7 +86,7 @@ export function UserReviewPanel({
         </button>
       </header>
 
-      <div className="review-run-panel__target" aria-label="レビュー範囲">
+      <section className="review-run-panel__target" aria-label="レビュー範囲">
         <button
           type="button"
           aria-pressed={targetScope === "file"}
@@ -101,7 +107,7 @@ export function UserReviewPanel({
           <Layers aria-hidden="true" size={14} />
           <span>Spec</span>
         </button>
-      </div>
+      </section>
 
       <fieldset
         className="review-run-panel__modes"

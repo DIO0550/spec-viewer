@@ -52,6 +52,7 @@ export function useCommentSelection({
     readonly CommentAnchorDisplayState[]
   >([]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies(resetKey): 表示ビューの切り替え（resetKey変更）を契機に選択状態を初期化するための意図的な依存
   useEffect(() => {
     setSelectedCommentId(null);
     setAnchorDisplayStates([]);

@@ -1,8 +1,8 @@
+import type { CommentScope } from "@/features/comments/domain/commentScope";
 import {
   CommentStatusFilter,
   type CommentStatusFilter as CommentStatusFilterType,
 } from "@/features/comments/domain/commentStatusFilter";
-import type { CommentScope } from "@/features/comments/domain/commentScope";
 import type {
   Comment,
   CommentAnchor,

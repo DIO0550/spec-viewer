@@ -1,42 +1,40 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-
-import {
-  commentCommands as defaultCommentCommands,
-  normalizeCommandError,
-  type CommentCommands,
-} from "@/shared/api/tauri";
-import {
-  resolvePerformanceCorrelationId,
-  startPerformanceSpan,
-} from "@/shared/lib/performance";
-import type { CommentScope } from "@/features/comments/domain/commentScope";
-import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import {
   CommentListState,
   type CommentListState as CommentListStateType,
 } from "@/features/comments/domain/commentListState";
 import type { CommentOperationState } from "@/features/comments/domain/commentOperation";
-import { listComments as listCommentsViaGateway } from "@/features/comments/infra/commentGateway";
+import type { CommentScope } from "@/features/comments/domain/commentScope";
+import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import { createUseCommentsResult } from "@/features/comments/hooks/createUseCommentsResult";
 import {
-  useCommentOperations,
   type AddCommentInput,
   type CommentListTransform,
   type UpdateCommentInput,
+  useCommentOperations,
 } from "@/features/comments/hooks/useCommentOperations";
-import type { CommentId } from "@/features/comments/types/comment";
-import type { Comment } from "@/features/comments/types/comment";
+import { listComments as listCommentsViaGateway } from "@/features/comments/infra/commentGateway";
+import type { Comment, CommentId } from "@/features/comments/types/comment";
+import {
+  type CommentCommands,
+  commentCommands as defaultCommentCommands,
+  normalizeCommandError,
+} from "@/shared/api/tauri";
+import {
+  resolvePerformanceCorrelationId,
+  startPerformanceSpan,
+} from "@/shared/lib/performance";
 import type { NormalizedCommandError } from "@/shared/types/ipc";
 
 export type { CommentListState } from "@/features/comments/domain/commentListState";
 export type {
+  CommentOperationKind,
+  CommentOperationState,
+} from "@/features/comments/domain/commentOperation";
+export type {
   AddCommentInput,
   UpdateCommentInput,
 } from "@/features/comments/hooks/useCommentOperations";
-export {
-  type CommentOperationKind,
-  type CommentOperationState,
-} from "@/features/comments/domain/commentOperation";
 
 export type UseCommentsOptions = Readonly<{
   scope: CommentScope | null;

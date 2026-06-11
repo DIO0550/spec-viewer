@@ -1,13 +1,11 @@
-import { type ReactElement, useRef } from "react";
-import { act } from "react";
+import { act, type ReactElement, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-
+import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
 import {
   createViewerResetKey,
   useViewerReset,
 } from "@/features/specs/hooks/useViewerReset";
-import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
 
 type ViewerResetHarnessProps = Readonly<{
   resetKey: string;

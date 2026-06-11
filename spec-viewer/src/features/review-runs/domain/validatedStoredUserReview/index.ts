@@ -1,8 +1,8 @@
 import {
-  UserReviewStatus,
   type StoredUserReview,
   type UserReview,
   type UserReviewArchiveStateError,
+  UserReviewStatus,
 } from "@/features/review-runs/domain/userReview";
 
 export type ValidatedStoredUserReview = UserReview;
@@ -12,9 +12,7 @@ export const ValidatedStoredUserReview = {
    * @param storedUserReview - Stored user review data read from a boundary.
    * @returns Validation result for converting stored data into validated stored data.
    */
-  from(
-    storedUserReview: StoredUserReview,
-  ):
+  from(storedUserReview: StoredUserReview):
     | Readonly<{
         ok: true;
         validatedStoredUserReview: ValidatedStoredUserReview;
@@ -34,8 +32,7 @@ export const ValidatedStoredUserReview = {
 
     return {
       ok: true,
-      validatedStoredUserReview:
-        storedUserReview as ValidatedStoredUserReview,
+      validatedStoredUserReview: storedUserReview as ValidatedStoredUserReview,
     };
   },
 

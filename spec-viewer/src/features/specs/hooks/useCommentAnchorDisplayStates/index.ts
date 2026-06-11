@@ -37,6 +37,7 @@ export function useCommentAnchorDisplayStates({
     readonly CommentAnchorDisplayState[]
   >([]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies(resetKey): 表示ドキュメントの切り替え（resetKey変更）を契機にアンカー表示状態を初期化するための意図的な依存
   useEffect(() => {
     setAnchorDisplayStates([]);
     onChange?.([]);

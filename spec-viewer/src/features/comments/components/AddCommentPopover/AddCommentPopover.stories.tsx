@@ -1,8 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
-
-import type { CommentAnchorDraft } from "@/features/comments/types/comment";
 import { AddCommentPopover } from "@/features/comments/components/AddCommentPopover";
+import type { CommentAnchorDraft } from "@/features/comments/types/comment";
 
 const defaultDraft: CommentAnchorDraft = {
   anchor: {

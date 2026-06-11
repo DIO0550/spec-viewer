@@ -1,4 +1,3 @@
-import type { UserReviewCommands } from "@/shared/api/tauri";
 import type {
   ArchiveUserReviewRequest,
   ArchiveUserReviewResponse,
@@ -8,6 +7,7 @@ import type {
   ListUserReviewsResponse,
   UserReview,
 } from "@/features/review-runs/types/userReviewIpc";
+import type { UserReviewCommands } from "@/shared/api/tauri";
 
 export type UserReviewCommandTestDoubleResponses = Readonly<{
   createUserReview?: CreateUserReviewResponse;

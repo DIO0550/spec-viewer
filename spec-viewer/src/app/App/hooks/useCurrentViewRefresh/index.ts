@@ -65,6 +65,9 @@ export function useCurrentViewRefresh({
   const [refreshStatus, setRefreshStatus] =
     useState<WorkspaceRefreshStatus>(idleRefreshStatus);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies(fileKey): 表示対象の切り替えを契機に更新状態を初期化するための意図的な依存
+  // biome-ignore lint/correctness/useExhaustiveDependencies(specId): 表示対象の切り替えを契機に更新状態を初期化するための意図的な依存
+  // biome-ignore lint/correctness/useExhaustiveDependencies(workspacePath): 表示対象の切り替えを契機に更新状態を初期化するための意図的な依存
   useEffect(() => {
     setRefreshStatus(idleRefreshStatus);
   }, [fileKey, specId, workspacePath]);

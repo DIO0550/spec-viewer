@@ -5,7 +5,6 @@ import {
   type ReactNode,
 } from "react";
 import type { CommentRangeHighlight } from "@/features/specs/domain/commentBlockHighlight";
-import { CommentBlockHighlight } from "@/features/specs/domain/commentBlockHighlight";
 import type { DocumentSearchCursor } from "@/features/specs/domain/documentSearch";
 
 import { renderDocumentSearchHighlightedNode } from "./documentSearchHighlight";
@@ -31,7 +30,6 @@ function CommentRangeHighlightSpan({
       data-comment-highlight-count={highlight.commentIds.length}
       data-comment-highlight-state={highlight.state}
       data-comment-ids={highlight.commentIds.join(" ")}
-      aria-label={CommentBlockHighlight.createAriaLabel(highlight)}
     >
       {children}
     </span>

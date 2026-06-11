@@ -39,14 +39,17 @@ export function useDocumentSearch({
   const [matchCount, setMatchCount] = useState(0);
   const normalizedQuery = DocumentSearch.normalizeQuery(query);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies(resetKey): 表示ドキュメントの切り替え（resetKey変更）を契機に検索状態を初期化するための意図的な依存
   useEffect(() => {
     setQuery("");
     setActiveMatchIndex(0);
     setMatchCount(0);
   }, [resetKey]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies(normalizedQuery): 検索クエリの変更を契機にアクティブマッチ位置を先頭へ戻すための意図的な依存
   useEffect(() => {
     setActiveMatchIndex(0);
   }, [normalizedQuery]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies(readyContents): ドキュメント内容の再描画後にDOM上のマッチを数え直すための意図的な依存
   useEffect(() => {
     const nextMatchCount = DocumentSearch.countRenderedMatches({
       renderedRoot: renderedRootRef.current,
@@ -58,6 +61,7 @@ export function useDocumentSearch({
       DocumentSearch.clampIndex(currentIndex, nextMatchCount),
     );
   }, [normalizedQuery, readyContents, renderedRootRef]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies(activeMatchIndex): アクティブマッチの切り替えでDOM属性が更新された後に再スクロールするための意図的な依存
   useEffect(() => {
     DocumentSearch.scrollActiveMatchIntoView({
       renderedRoot: renderedRootRef.current,

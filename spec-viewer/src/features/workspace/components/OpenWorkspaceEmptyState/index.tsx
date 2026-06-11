@@ -7,8 +7,11 @@ import { EmptyState } from "@/shared/ui/EmptyState";
 type Props = Readonly<{
   isOpening: boolean;
   recentWorkspaces?: readonly RecentWorkspace[];
+  /** Opens the native workspace picker. */
   onOpenWorkspace: () => void;
+  /** @param path - Recent workspace path to reopen */
   onOpenRecentWorkspace?: (path: string) => void;
+  /** @param path - Recent workspace path to remove from the list */
   onRemoveRecentWorkspace?: (path: string) => void;
 }>;
 
@@ -44,7 +47,7 @@ export function OpenWorkspaceEmptyState({
                 : uiText.workspace.openTitle}
             </button>
             {recentWorkspaces.length > 0 ? (
-              <div
+              <section
                 className="open-workspace-actions__recent"
                 aria-label={uiText.workspace.recent}
               >
@@ -90,7 +93,7 @@ export function OpenWorkspaceEmptyState({
                     </div>
                   ))}
                 </div>
-              </div>
+              </section>
             ) : null}
           </div>
         }

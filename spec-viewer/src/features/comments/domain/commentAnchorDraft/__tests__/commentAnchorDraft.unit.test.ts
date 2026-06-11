@@ -63,7 +63,7 @@ test("Markdownブロック内のコメントUIは選択アンカー文字列に�
     [
       '<ul><li data-block-type="list-item" data-block-index="2">',
       '<button class="markdown-block-comment-button"><span>コメント追加</span></button>',
-      '<span>Alpha beta gamma</span>',
+      "<span>Alpha beta gamma</span>",
       '<aside class="markdown-comment-annotations">Unrelated comment body</aside>',
       "</li></ul>",
     ].join(""),
@@ -191,7 +191,9 @@ test("複数Markdownブロックにまたがる選択はコメントアンカー
 test("選択スニペットは空白を正規化して上限長で切り詰める", () => {
   const longText = `${"word ".repeat(40)}tail`;
 
-  expect(CommentAnchorDraft.textSnippet("  alpha\n beta\tgamma  ")).toBe("alpha beta gamma");
+  expect(CommentAnchorDraft.textSnippet("  alpha\n beta\tgamma  ")).toBe(
+    "alpha beta gamma",
+  );
   expect(CommentAnchorDraft.textSnippet("   ")).toBeNull();
   expect(CommentAnchorDraft.textSnippet(longText)?.length).toBe(160);
 });

@@ -110,6 +110,8 @@ export function useCommentOperationRunner({
     [],
   );
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies(reloadComments): コメント再読み込み手段の差し替えを契機に進行中操作を無効化するための意図的な依存
+  // biome-ignore lint/correctness/useExhaustiveDependencies(scopeKey): スコープ切り替えを契機に進行中操作を無効化するための意図的な依存
   useEffect(() => {
     operationRequestIdRef.current += 1;
     dispatchOperation({ type: "operationInvalidated" });

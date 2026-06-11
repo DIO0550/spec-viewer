@@ -1,9 +1,9 @@
 import { expect, test } from "vitest";
 
 import {
+  type StoredUserReview,
   UserReview,
   UserReviewStatus,
-  type StoredUserReview,
   type UserReview as UserReviewType,
 } from "@/features/review-runs/domain/userReview";
 
@@ -21,12 +21,13 @@ test("UserReviewStatus.isArchivedはcompleted statusをfalseとして返す", ()
   expect(UserReviewStatus.isArchived("completed")).toBe(false);
 });
 
-test.each(["active", "inProgress", "completed"] as const)(
-  "UserReviewStatus.isNonArchivedは%s statusをtrueとして返す",
-  (status) => {
-    expect(UserReviewStatus.isNonArchived(status)).toBe(true);
-  },
-);
+test.each([
+  "active",
+  "inProgress",
+  "completed",
+] as const)("UserReviewStatus.isNonArchivedは%s statusをtrueとして返す", (status) => {
+  expect(UserReviewStatus.isNonArchived(status)).toBe(true);
+});
 
 test("UserReviewStatus.isNonArchivedはarchived statusをfalseとして返す", () => {
   expect(UserReviewStatus.isNonArchived("archived")).toBe(false);

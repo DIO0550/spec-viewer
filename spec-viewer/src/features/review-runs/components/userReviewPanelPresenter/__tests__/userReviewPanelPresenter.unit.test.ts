@@ -12,15 +12,15 @@ import type { UserReview } from "@/features/review-runs/domain/userReview";
 const completedReview = createUserReview("completed");
 
 test("canCreateUserReviewは未解決コメントがあり保存中でなければtrueを返す", () => {
-  expect(
-    canCreateUserReview({ openCommentCount: 1, isCreating: false }),
-  ).toBe(true);
+  expect(canCreateUserReview({ openCommentCount: 1, isCreating: false })).toBe(
+    true,
+  );
 });
 
 test("canCreateUserReviewは未解決コメントがないとfalseを返す", () => {
-  expect(
-    canCreateUserReview({ openCommentCount: 0, isCreating: false }),
-  ).toBe(false);
+  expect(canCreateUserReview({ openCommentCount: 0, isCreating: false })).toBe(
+    false,
+  );
 });
 
 test("canArchiveUserReviewはcompletedだけarchive可能にする", () => {
