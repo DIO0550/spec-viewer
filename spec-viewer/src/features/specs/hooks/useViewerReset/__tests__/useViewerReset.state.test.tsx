@@ -32,22 +32,13 @@ function ViewerResetHarness({
   return (
     <section
       ref={(element) => {
-        if (element === null) {
-          return;
-        }
-
-        element.scrollTo = scrollTo;
+        Object.assign(element ?? {}, { scrollTo });
       }}
     >
       <article
         ref={(element) => {
           panelRef.current = element;
-
-          if (element === null) {
-            return;
-          }
-
-          element.focus = focus;
+          Object.assign(element ?? {}, { focus });
         }}
         tabIndex={-1}
       />

@@ -112,9 +112,10 @@ function dispatchHarnessKeyDown(container: ParentNode): KeyboardEvent {
     cancelable: true,
   });
 
-  if (button.dataset.defaultPrevented === "true") {
-    event.preventDefault();
-  }
+  const preventDefaultByFlag: Record<string, () => void> = {
+    true: () => event.preventDefault(),
+  };
+  preventDefaultByFlag[button.dataset.defaultPrevented ?? "false"]?.();
 
   act(() => {
     button.dispatchEvent(event);
