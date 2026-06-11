@@ -1,8 +1,8 @@
 import { expect, expectTypeOf, test } from "vitest";
 
 import type { Comment } from "@/features/comments/domain/comment";
-import { Comments } from "@/features/comments/domain/comments";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
+import { Comments } from "@/features/comments/domain/comments";
 import type { CommentAnchor } from "@/features/comments/types/comment";
 import { CommentId } from "@/features/comments/types/comment";
 
@@ -237,4 +237,30 @@ test("Comments.upsertOptimisticToggleは対象idがない場合に元配列を�
       CommentStatusFilter.All,
     ),
   ).toBe(comments);
+});
+
+test("Comments.openCommentIdsは未解決コメントのidだけ返す", () => {
+  const resolvedComment: Comment = {
+    ...openComment,
+    id: commentId("cmt_resolved"),
+    status: "resolved",
+    resolved: true,
+  };
+
+  expect(
+    Comments.openCommentIds([openComment, resolvedComment, secondOpenComment]),
+  ).toEqual([openComment.id, secondOpenComment.id]);
+});
+
+test("Comments.countOpenは未解決コメント数を返す", () => {
+  const resolvedComment: Comment = {
+    ...openComment,
+    id: commentId("cmt_resolved"),
+    status: "resolved",
+    resolved: true,
+  };
+
+  expect(
+    Comments.countOpen([openComment, resolvedComment, secondOpenComment]),
+  ).toBe(2);
 });

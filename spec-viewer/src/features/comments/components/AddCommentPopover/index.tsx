@@ -8,9 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
-
-import { createShortcutKeyHandler } from "@/lib/createShortcutKeyHandler";
-import { uiText } from "@/shared/lib/uiText";
+import { CommentPopover } from "@/features/comments/components/CommentPopover";
 import {
   CommentBody,
   type CommentBodyValidationError,
@@ -19,7 +17,8 @@ import type {
   AddCommentSubmitInput,
   CommentAnchorDraft,
 } from "@/features/comments/types/comment";
-import { CommentPopover } from "@/features/comments/components/CommentPopover";
+import { createShortcutKeyHandler } from "@/lib/createShortcutKeyHandler";
+import { uiText } from "@/shared/lib/uiText";
 
 type Props = Readonly<{
   draft: CommentAnchorDraft;
@@ -27,7 +26,13 @@ type Props = Readonly<{
   isSaving: boolean;
   errorMessage: string | null;
   isScopeReady: boolean;
+  /**
+   * Saves the drafted comment.
+   * @param input - Anchor and body to save.
+   * @returns Whether the comment was saved.
+   */
   onSubmit: (input: AddCommentSubmitInput) => Promise<boolean>;
+  /** Cancels the add-comment flow. */
   onCancel: () => void;
 }>;
 
@@ -141,21 +146,20 @@ export function AddCommentPopover({
     void submitComment();
   };
 
-  const handleTextareaKeyDown =
-    createShortcutKeyHandler<HTMLTextAreaElement>({
-      shortcuts: [
-        {
-          key: "Enter",
-          modifiers: ["ctrlOrMeta"],
-          allowsAdditionalModifiers: true,
-          isEnabled: !isSaving,
-          preventDefault: true,
-          onMatch: () => {
-            void submitComment();
-          },
+  const handleTextareaKeyDown = createShortcutKeyHandler<HTMLTextAreaElement>({
+    shortcuts: [
+      {
+        key: "Enter",
+        modifiers: ["ctrlOrMeta"],
+        allowsAdditionalModifiers: true,
+        isEnabled: !isSaving,
+        preventDefault: true,
+        onMatch: () => {
+          void submitComment();
         },
-      ],
-    });
+      },
+    ],
+  });
 
   const handleDialogKeyDown = createShortcutKeyHandler<HTMLElement>({
     shortcuts: [
@@ -268,7 +272,10 @@ export function AddCommentPopover({
   );
 }
 
-/** @returns Human-readable block type text for the anchor preview. */
+/**
+ * @param blockType - Raw anchor block type identifier.
+ * @returns Human-readable block type text for the anchor preview.
+ */
 function formatDraftBlockType(blockType: string): string {
   return blockType.replace(/_/g, " ");
 }

@@ -1,9 +1,9 @@
+import type { UserReview } from "@/features/review-runs/domain/userReview";
 import {
   UserReviewCollection,
-  type UserReviewCollection as UserReviewCollectionType,
   type UserReviewCollectionTransform,
+  type UserReviewCollection as UserReviewCollectionType,
 } from "@/features/review-runs/domain/userReviewCollection";
-import type { UserReview } from "@/features/review-runs/domain/userReview";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import type { UserReviewListProblem } from "@/features/review-runs/types/userReviewIpc";
 import type { NormalizedCommandError } from "@/shared/types/ipc";

@@ -7,8 +7,8 @@ use thiserror::Error;
 mod config;
 
 pub use config::{
-    default_scan_excluded_directory_names, SpecConfigOverride, WorkspaceConfig,
-    WorkspaceConfigError, WorkspaceConfigSource, WorkspaceFileMapping,
+    SpecConfigOverride, WorkspaceConfig, WorkspaceConfigError, WorkspaceConfigSource,
+    WorkspaceFileMapping,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -98,6 +98,13 @@ impl WorkspaceLayout {
 
     pub fn kind(&self) -> WorkspaceKind {
         self.kind
+    }
+
+    /// Builds a layout of the same kind rooted at a different path.
+    pub fn with_root_path(&self, root_path: &str) -> Result<Self, WorkspaceDomainError> {
+        let root = WorkspaceRoot::new(root_path)?;
+
+        Ok(Self::new(root, self.kind()))
     }
 }
 

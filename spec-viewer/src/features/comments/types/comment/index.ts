@@ -1,11 +1,11 @@
-import type { SpecFileKey } from "@/features/specs/types/spec";
 import type { Comment as DomainComment } from "@/features/comments/domain/comment";
-import { CommentId as CommentIdValue } from "@/features/comments/types/commentId";
-import type { CommentId as BrandedCommentId } from "@/features/comments/types/commentId";
 import type {
   CommentStatus,
   CommentStatusFilter,
 } from "@/features/comments/domain/commentStatusFilter";
+import type { CommentId as BrandedCommentId } from "@/features/comments/types/commentId";
+import { CommentId as CommentIdValue } from "@/features/comments/types/commentId";
+import type { SpecFileKey } from "@/features/specs/types/spec";
 
 export type CommentId = BrandedCommentId;
 export const CommentId = CommentIdValue;

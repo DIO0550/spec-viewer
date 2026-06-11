@@ -10,8 +10,11 @@ type UseResizableSidebarResult = Readonly<{
   sidebarWidth: number;
   minSidebarWidth: number;
   maxSidebarWidth: number;
+  /** @param width - Absolute width in pixels to apply within constraints */
   resizeSidebarTo: (width: number) => void;
+  /** @param delta - Width change in pixels to apply within constraints */
   resizeSidebarBy: (delta: number) => void;
+  /** Resets the sidebar width to its default. */
   resetSidebarWidth: () => void;
 }>;
 
@@ -114,7 +117,10 @@ function clampSidebarWidth(
   );
 }
 
-/** @returns Stored sidebar width constrained to the current viewport. */
+/**
+ * @param viewportWidth - Current viewport width in pixels
+ * @returns Stored sidebar width constrained to the current viewport.
+ */
 function readStoredSidebarWidth(viewportWidth: number): number {
   const constraints = createSidebarWidthConstraints(viewportWidth);
 
@@ -132,7 +138,10 @@ function readStoredSidebarWidth(viewportWidth: number): number {
   }
 }
 
-/** Persists the sidebar width when storage is available. */
+/**
+ * Persists the sidebar width when storage is available.
+ * @param sidebarWidth - Width in pixels to store
+ */
 function writeStoredSidebarWidth(sidebarWidth: number): void {
   if (typeof window === "undefined") {
     return;

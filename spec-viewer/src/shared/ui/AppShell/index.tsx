@@ -6,13 +6,16 @@ import {
 } from "lucide-react";
 import {
   type CSSProperties,
-  type KeyboardEvent,
-  type PointerEvent,
   type ReactNode,
+  useCallback,
+  useEffect,
   useRef,
 } from "react";
 
 import { uiText } from "@/shared/lib/uiText";
+
+import { LeftNavigationBrand } from "./LeftNavigationBrand";
+import { usePanelResize } from "./usePanelResize";
 
 type Props = Readonly<{
   toolbar: ReactNode;
@@ -36,8 +39,6 @@ type Props = Readonly<{
   onCloseCommentsSidebar?: () => void;
   onCommentsSidebarWidthChange?: (width: number) => void;
 }>;
-
-const keyboardResizeStep = 16;
 
 /** @returns The three-pane application shell for spec review. */
 export function AppShell({
@@ -68,30 +69,36 @@ export function AppShell({
   const reopenButtonRef = useRef<HTMLButtonElement>(null);
   const commentsAsideRef = useRef<HTMLElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
-  const isResizingLeftNavigationRef = useRef(false);
-  const isResizingRef = useRef(false);
+  const leftNavigationResize = usePanelResize({
+    side: "left",
+    width: leftNavigationWidth,
+    minWidth: leftNavigationMinWidth,
+    maxWidth: leftNavigationMaxWidth,
+    bodyRef,
+    onWidthChange: onLeftNavigationWidthChange,
+  });
+  const commentsSidebarResize = usePanelResize({
+    side: "right",
+    width: commentsSidebarWidth,
+    minWidth: commentsSidebarMinWidth,
+    maxWidth: commentsSidebarMaxWidth,
+    bodyRef,
+    onWidthChange: onCommentsSidebarWidthChange,
+  });
   const bodyStyle = {
     "--left-navigation-width": `${leftNavigationWidth}px`,
     "--comment-sidebar-width": `${commentsSidebarWidth}px`,
   } as CSSProperties;
   const leftNavigationHeaderContent = leftNavigationHeader ?? (
-    <div className="left-navigation-brand">
-      <span className="left-navigation-brand__mark" aria-hidden="true">
-        S
-      </span>
-      <span className="left-navigation-brand__copy">
-        <strong>Spec Reviewer</strong>
-        <span>Spec workspace</span>
-      </span>
-    </div>
+    <LeftNavigationBrand />
   );
 
-  const closeLeftNavigation = (): void => {
+  const closeLeftNavigation = useCallback((): void => {
     onCloseLeftNavigation?.();
     requestAnimationFrame(() => {
       openLeftNavigationButtonRef.current?.focus();
     });
-  };
+  }, [onCloseLeftNavigation]);
 
   const openLeftNavigation = (): void => {
     onOpenLeftNavigation?.();
@@ -100,12 +107,12 @@ export function AppShell({
     });
   };
 
-  const closeCommentsSidebar = (): void => {
+  const closeCommentsSidebar = useCallback((): void => {
     onCloseCommentsSidebar?.();
     requestAnimationFrame(() => {
       reopenButtonRef.current?.focus();
     });
-  };
+  }, [onCloseCommentsSidebar]);
 
   const openCommentsSidebar = (): void => {
     onOpenCommentsSidebar?.();
@@ -116,192 +123,58 @@ export function AppShell({
     });
   };
 
-  const dismissCommentsSidebar = (
-    event: KeyboardEvent<HTMLDivElement>,
-  ): void => {
-    if (
-      event.defaultPrevented ||
-      event.key !== "Escape" ||
-      !isCommentsSidebarOpen
-    ) {
-      return;
-    }
+  useEffect(() => {
+    const dismissCommentsSidebar = (event: KeyboardEvent): void => {
+      if (
+        event.defaultPrevented ||
+        event.key !== "Escape" ||
+        !isCommentsSidebarOpen
+      ) {
+        return;
+      }
 
-    event.preventDefault();
-    closeCommentsSidebar();
-  };
-
-  const dismissLeftNavigation = (
-    event: KeyboardEvent<HTMLDivElement>,
-  ): void => {
-    if (
-      event.defaultPrevented ||
-      event.key !== "Escape" ||
-      !isLeftNavigationOpen
-    ) {
-      return;
-    }
-
-    const target = event.target;
-    const isFromLeftNavigation =
-      target instanceof Node && leftAsideRef.current?.contains(target) === true;
-
-    if (!isFromLeftNavigation && !isNarrowViewport()) {
-      return;
-    }
-
-    event.preventDefault();
-    closeLeftNavigation();
-  };
-
-  const dismissPanels = (event: KeyboardEvent<HTMLDivElement>): void => {
-    dismissLeftNavigation(event);
-    dismissCommentsSidebar(event);
-  };
-
-  const resizeLeftNavigationFromPointer = (clientX: number): void => {
-    const body = bodyRef.current;
-
-    if (body === null || onLeftNavigationWidthChange === undefined) {
-      return;
-    }
-
-    const nextWidth = clientX - body.getBoundingClientRect().left;
-
-    onLeftNavigationWidthChange(nextWidth);
-  };
-
-  const startLeftNavigationResize = (
-    event: PointerEvent<HTMLButtonElement>,
-  ): void => {
-    if (onLeftNavigationWidthChange === undefined) {
-      return;
-    }
-
-    event.preventDefault();
-    isResizingLeftNavigationRef.current = true;
-    event.currentTarget.setPointerCapture?.(event.pointerId);
-    resizeLeftNavigationFromPointer(event.clientX);
-  };
-
-  const continueLeftNavigationResize = (
-    event: PointerEvent<HTMLButtonElement>,
-  ): void => {
-    if (!isResizingLeftNavigationRef.current) {
-      return;
-    }
-
-    event.preventDefault();
-    resizeLeftNavigationFromPointer(event.clientX);
-  };
-
-  const stopLeftNavigationResize = (
-    event: PointerEvent<HTMLButtonElement>,
-  ): void => {
-    isResizingLeftNavigationRef.current = false;
-    event.currentTarget.releasePointerCapture?.(event.pointerId);
-  };
-
-  const resizeLeftNavigationWithKeyboard = (
-    event: KeyboardEvent<HTMLButtonElement>,
-  ): void => {
-    if (onLeftNavigationWidthChange === undefined) {
-      return;
-    }
-
-    if (event.key === "ArrowRight") {
       event.preventDefault();
-      onLeftNavigationWidthChange(leftNavigationWidth + keyboardResizeStep);
-      return;
-    }
+      closeCommentsSidebar();
+    };
 
-    if (event.key === "ArrowLeft") {
+    const dismissLeftNavigation = (event: KeyboardEvent): void => {
+      if (
+        event.defaultPrevented ||
+        event.key !== "Escape" ||
+        !isLeftNavigationOpen
+      ) {
+        return;
+      }
+
+      const target = event.target;
+      const isFromLeftNavigation =
+        target instanceof Node &&
+        leftAsideRef.current?.contains(target) === true;
+
+      if (!isFromLeftNavigation && !isNarrowViewport()) {
+        return;
+      }
+
       event.preventDefault();
-      onLeftNavigationWidthChange(leftNavigationWidth - keyboardResizeStep);
-      return;
-    }
+      closeLeftNavigation();
+    };
 
-    if (event.key === "Home") {
-      event.preventDefault();
-      onLeftNavigationWidthChange(leftNavigationMinWidth);
-      return;
-    }
+    const dismissPanels = (event: KeyboardEvent): void => {
+      dismissLeftNavigation(event);
+      dismissCommentsSidebar(event);
+    };
 
-    if (event.key === "End") {
-      event.preventDefault();
-      onLeftNavigationWidthChange(leftNavigationMaxWidth);
-    }
-  };
+    document.addEventListener("keydown", dismissPanels);
 
-  const resizeSidebarFromPointer = (clientX: number): void => {
-    const body = bodyRef.current;
-
-    if (body === null || onCommentsSidebarWidthChange === undefined) {
-      return;
-    }
-
-    const nextWidth = body.getBoundingClientRect().right - clientX;
-
-    onCommentsSidebarWidthChange(nextWidth);
-  };
-
-  const startSidebarResize = (event: PointerEvent<HTMLButtonElement>): void => {
-    if (onCommentsSidebarWidthChange === undefined) {
-      return;
-    }
-
-    event.preventDefault();
-    isResizingRef.current = true;
-    event.currentTarget.setPointerCapture?.(event.pointerId);
-    resizeSidebarFromPointer(event.clientX);
-  };
-
-  const continueSidebarResize = (
-    event: PointerEvent<HTMLButtonElement>,
-  ): void => {
-    if (!isResizingRef.current) {
-      return;
-    }
-
-    event.preventDefault();
-    resizeSidebarFromPointer(event.clientX);
-  };
-
-  const stopSidebarResize = (event: PointerEvent<HTMLButtonElement>): void => {
-    isResizingRef.current = false;
-    event.currentTarget.releasePointerCapture?.(event.pointerId);
-  };
-
-  const resizeSidebarWithKeyboard = (
-    event: KeyboardEvent<HTMLButtonElement>,
-  ): void => {
-    if (onCommentsSidebarWidthChange === undefined) {
-      return;
-    }
-
-    if (event.key === "ArrowLeft") {
-      event.preventDefault();
-      onCommentsSidebarWidthChange(commentsSidebarWidth + keyboardResizeStep);
-      return;
-    }
-
-    if (event.key === "ArrowRight") {
-      event.preventDefault();
-      onCommentsSidebarWidthChange(commentsSidebarWidth - keyboardResizeStep);
-      return;
-    }
-
-    if (event.key === "Home") {
-      event.preventDefault();
-      onCommentsSidebarWidthChange(commentsSidebarMinWidth);
-      return;
-    }
-
-    if (event.key === "End") {
-      event.preventDefault();
-      onCommentsSidebarWidthChange(commentsSidebarMaxWidth);
-    }
-  };
+    return () => {
+      document.removeEventListener("keydown", dismissPanels);
+    };
+  }, [
+    closeCommentsSidebar,
+    closeLeftNavigation,
+    isCommentsSidebarOpen,
+    isLeftNavigationOpen,
+  ]);
 
   return (
     <div className="app-shell">
@@ -311,7 +184,6 @@ export function AppShell({
         data-left-navigation={isLeftNavigationOpen ? "open" : "collapsed"}
         data-comments-sidebar={isCommentsSidebarOpen ? "open" : "collapsed"}
         style={bodyStyle}
-        onKeyDown={dismissPanels}
       >
         <aside
           ref={leftAsideRef}
@@ -334,24 +206,21 @@ export function AppShell({
               <PanelLeftClose aria-hidden="true" size={16} />
             </button>
           </div>
-          <button
+          <hr
             className="app-shell__left-resize"
-            type="button"
-            role="separator"
+            tabIndex={0}
             aria-label={uiText.leftNavigation.resize}
             aria-orientation="vertical"
             aria-valuemin={leftNavigationMinWidth}
             aria-valuemax={leftNavigationMaxWidth}
             aria-valuenow={leftNavigationWidth}
             title={uiText.leftNavigation.resize}
-            onPointerDown={startLeftNavigationResize}
-            onPointerMove={continueLeftNavigationResize}
-            onPointerUp={stopLeftNavigationResize}
-            onPointerCancel={stopLeftNavigationResize}
-            onLostPointerCapture={() => {
-              isResizingLeftNavigationRef.current = false;
-            }}
-            onKeyDown={resizeLeftNavigationWithKeyboard}
+            onPointerDown={leftNavigationResize.startResize}
+            onPointerMove={leftNavigationResize.continueResize}
+            onPointerUp={leftNavigationResize.stopResize}
+            onPointerCancel={leftNavigationResize.stopResize}
+            onLostPointerCapture={leftNavigationResize.releaseResize}
+            onKeyDown={leftNavigationResize.resizeWithKeyboard}
           />
           {sidebar}
         </aside>
@@ -384,24 +253,21 @@ export function AppShell({
           aria-hidden={!isCommentsSidebarOpen}
           aria-label={uiText.appShell.commentSidebar}
         >
-          <button
+          <hr
             className="app-shell__comments-resize"
-            type="button"
-            role="separator"
+            tabIndex={0}
             aria-label={uiText.sidebar.resize}
             aria-orientation="vertical"
             aria-valuemin={commentsSidebarMinWidth}
             aria-valuemax={commentsSidebarMaxWidth}
             aria-valuenow={commentsSidebarWidth}
             title={uiText.sidebar.resize}
-            onPointerDown={startSidebarResize}
-            onPointerMove={continueSidebarResize}
-            onPointerUp={stopSidebarResize}
-            onPointerCancel={stopSidebarResize}
-            onLostPointerCapture={() => {
-              isResizingRef.current = false;
-            }}
-            onKeyDown={resizeSidebarWithKeyboard}
+            onPointerDown={commentsSidebarResize.startResize}
+            onPointerMove={commentsSidebarResize.continueResize}
+            onPointerUp={commentsSidebarResize.stopResize}
+            onPointerCancel={commentsSidebarResize.stopResize}
+            onLostPointerCapture={commentsSidebarResize.releaseResize}
+            onKeyDown={commentsSidebarResize.resizeWithKeyboard}
           />
           <button
             className="icon-button app-shell__comments-close"

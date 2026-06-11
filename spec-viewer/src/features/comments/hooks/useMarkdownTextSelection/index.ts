@@ -1,7 +1,7 @@
 import { type RefObject, useEffect, useState } from "react";
 
-import { createCommentAnchorDraftFromSelection } from "@/features/comments/lib/comment-anchor-draft";
-import type { CommentAnchorDraft } from "@/features/comments/types/comment";
+import { CommentAnchorDraft } from "@/features/comments/domain/commentAnchorDraft";
+import type { CommentAnchorDraft as CommentAnchorDraftModel } from "@/features/comments/types/comment";
 import type { SpecFileKey } from "@/features/specs/types/spec";
 
 type UseMarkdownTextSelectionOptions = Readonly<{
@@ -10,7 +10,8 @@ type UseMarkdownTextSelectionOptions = Readonly<{
 }>;
 
 type UseMarkdownTextSelectionResult = Readonly<{
-  selectionDraft: CommentAnchorDraft | null;
+  selectionDraft: CommentAnchorDraftModel | null;
+  /** Clears the current selection draft. */
   clearSelectionDraft: () => void;
 }>;
 
@@ -20,7 +21,7 @@ export function useMarkdownTextSelection({
   fileKey,
 }: UseMarkdownTextSelectionOptions): UseMarkdownTextSelectionResult {
   const [selectionDraft, setSelectionDraft] =
-    useState<CommentAnchorDraft | null>(null);
+    useState<CommentAnchorDraftModel | null>(null);
 
   useEffect(() => {
     setSelectionDraft(null);
@@ -30,7 +31,7 @@ export function useMarkdownTextSelection({
     }
 
     const updateSelectionDraft = (): void => {
-      const nextDraft = createCommentAnchorDraftFromSelection({
+      const nextDraft = CommentAnchorDraft.fromSelection({
         selection: document.getSelection(),
         renderedRoot: renderedRootRef.current,
         fileKey,
@@ -96,7 +97,11 @@ function isRangeEndpointInsideRoot(
   );
 }
 
-/** @returns true when the node or its parent element belongs to the root. */
+/**
+ * @param root - Rendered Markdown root element.
+ * @param node - Selection node to test.
+ * @returns true when the node or its parent element belongs to the root.
+ */
 function containsSelectionNode(root: HTMLElement, node: Node): boolean {
   if (node.nodeType === Node.ELEMENT_NODE) {
     return root.contains(node);

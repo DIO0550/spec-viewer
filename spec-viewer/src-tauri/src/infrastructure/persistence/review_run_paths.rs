@@ -13,7 +13,7 @@ use thiserror::Error;
 
 use crate::{
     domain::{review_run::UserReviewRunId, spec::SpecId, workspace::WorkspaceLayout},
-    infrastructure::filesystem::spec_directory_path,
+    infrastructure::filesystem::SpecPathResolver,
 };
 
 pub const USER_REVIEW_DIRECTORY: &str = "user-review";
@@ -50,11 +50,10 @@ impl ReviewRunPathResolver {
         run_id: &UserReviewRunId,
         state: ReviewRunFolderState,
     ) -> Result<ReviewRunPath, ReviewRunPathError> {
-        let spec_directory = spec_directory_path(layout, spec_id.as_str()).map_err(|_| {
-            ReviewRunPathError::InvalidSpecId {
+        let spec_directory = SpecPathResolver::spec_directory_path(layout, spec_id.as_str())
+            .map_err(|_| ReviewRunPathError::InvalidSpecId {
                 spec_id: spec_id.as_str().to_string(),
-            }
-        })?;
+            })?;
         let user_review_directory = spec_directory.join(USER_REVIEW_DIRECTORY);
         let active_directory = user_review_directory.join(ACTIVE_REVIEW_RUN_DIRECTORY);
         let archive_directory = user_review_directory.join(ARCHIVE_REVIEW_RUN_DIRECTORY);

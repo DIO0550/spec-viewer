@@ -1,11 +1,10 @@
 import { useCallback, useRef, useState } from "react";
-
+import type { Workspace } from "@/features/workspace/types/workspace";
 import {
   loadWorkspace as defaultLoadWorkspace,
   normalizeCommandError,
 } from "@/shared/api/tauri";
 import type { NormalizedCommandError } from "@/shared/types/ipc";
-import type { Workspace } from "@/features/workspace/types/workspace";
 
 export type WorkspaceState =
   | Readonly<{
@@ -52,10 +51,12 @@ export type UseWorkspaceResult = Readonly<{
   workspace: Workspace | null;
   isLoading: boolean;
   error: NormalizedCommandError | null;
+  /** @param selectedDirectory - Directory to load as the workspace */
   load: (
     selectedDirectory: string,
     options?: LoadWorkspaceOptions,
   ) => Promise<boolean>;
+  /** Resets the workspace to its initial idle state. */
   reset: () => void;
 }>;
 

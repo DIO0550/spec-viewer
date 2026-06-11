@@ -1,15 +1,9 @@
-import { useCallback, useEffect, useReducer, useRef } from "react";
+import { useCallback } from "react";
 
-import {
-  CommentOperationFailedState,
-  CommentOperationIdleState,
-  CommentOperationSavingState,
-  type CommentOperationKind,
-  type CommentOperationState,
-} from "@/features/comments/domain/commentOperation";
-import { Comments } from "@/features/comments/domain/comments";
+import type { CommentOperationState } from "@/features/comments/domain/commentOperation";
 import type { CommentScope } from "@/features/comments/domain/commentScope";
 import type { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
+import { Comments } from "@/features/comments/domain/comments";
 import {
   addComment as addCommentViaGateway,
   deleteComment as deleteCommentViaGateway,
@@ -23,11 +17,9 @@ import type {
   CommentAnchor,
   CommentId,
 } from "@/features/comments/types/comment";
-import {
-  normalizeCommandError,
-  type CommentCommands,
-} from "@/shared/api/tauri";
-import type { NormalizedCommandError } from "@/shared/types/ipc";
+import type { CommentCommands } from "@/shared/api/tauri";
+
+import { useCommentOperationRunner } from "./useCommentOperationRunner";
 
 export type AddCommentInput = Readonly<{
   anchor: CommentAnchor;
@@ -49,42 +41,27 @@ export type UseCommentOperationsOptions = Readonly<{
   statusFilter: CommentStatusFilter;
   commands: CommentCommands;
   currentComments: readonly Comment[];
+  /** @param transform - List transform applied to the active scope comments */
   updateCurrentScopeComments: (transform: CommentListTransform) => void;
+  /** Reloads the active scope comments from the backend. */
   reloadComments: () => Promise<boolean>;
 }>;
 
 export type UseCommentOperationsResult = Readonly<{
   operationState: CommentOperationState;
+  /** @param input - Anchor and body for the new comment */
   addComment: (input: AddCommentInput) => Promise<Comment | null>;
+  /** @param input - Comment id and replacement body */
   updateComment: (input: UpdateCommentInput) => Promise<Comment | null>;
+  /** @param commentId - Comment to delete */
   deleteComment: (commentId: CommentId) => Promise<boolean>;
+  /** @param commentId - Comment to resolve */
   resolveComment: (commentId: CommentId) => Promise<Comment | null>;
+  /** @param commentId - Comment to reopen */
   reopenComment: (commentId: CommentId) => Promise<Comment | null>;
+  /** @param commentId - Comment whose resolved status should toggle */
   toggleCommentResolved: (commentId: CommentId) => Promise<Comment | null>;
 }>;
-
-type CommentOperationEvent =
-  | Readonly<{
-      type: "operationStarted";
-      operation: CommentOperationKind;
-      commentId: CommentId | null;
-    }>
-  | Readonly<{ type: "operationSucceeded" }>
-  | Readonly<{
-      type: "operationFailed";
-      operation: CommentOperationKind;
-      commentId: CommentId | null;
-      error: NormalizedCommandError;
-    }>
-  | Readonly<{ type: "operationInvalidated" }>;
-
-type AsyncOperationToken = Readonly<{
-  requestId: number;
-  scopeKey: string;
-}>;
-
-const initialOperationState: CommentOperationState =
-  CommentOperationIdleState.create();
 
 /**
  * @param options - Active comment scope, command boundary, and list callbacks.
@@ -102,300 +79,99 @@ export function useCommentOperations(
     statusFilter,
     updateCurrentScopeComments,
   } = options;
-  const operationRequestIdRef = useRef(0);
-  const activeOperationScopeKeyRef = useRef(scopeKey);
-  const [operationState, dispatchOperation] = useReducer(
-    commentOperationReducer,
-    initialOperationState,
+  const { operationState, runMutation, runDeletion } =
+    useCommentOperationRunner({
+      scope,
+      scopeKey,
+      updateCurrentScopeComments,
+      reloadComments,
+    });
+
+  const upsertDisplayable = useCallback(
+    (comments: readonly Comment[], comment: Comment): readonly Comment[] =>
+      Comments.upsertDisplayable(comments, comment, statusFilter),
+    [statusFilter],
   );
-
-  activeOperationScopeKeyRef.current = scopeKey;
-
-  const beginOperation = useCallback(
-    (
-      operation: CommentOperationKind,
-      commentId: CommentId | null,
-    ): AsyncOperationToken | null => {
-      if (scope === null) {
-        return null;
-      }
-
-      const requestId = operationRequestIdRef.current + 1;
-      operationRequestIdRef.current = requestId;
-      dispatchOperation({
-        type: "operationStarted",
-        operation,
-        commentId,
-      });
-
-      return createOperationToken(requestId, scopeKey);
-    },
-    [scope, scopeKey],
-  );
-
-  const canApplyOperationResult = useCallback(
-    (token: AsyncOperationToken): boolean =>
-      isMatchingOperationToken(
-        token,
-        operationRequestIdRef.current,
-        activeOperationScopeKeyRef.current,
-      ),
-    [],
-  );
-
-  const markOperationSucceeded = useCallback((): void => {
-    dispatchOperation({ type: "operationSucceeded" });
-  }, []);
-
-  const markOperationFailed = useCallback(
-    (
-      operation: CommentOperationKind,
-      commentId: CommentId | null,
-      error: unknown,
-    ): void => {
-      dispatchOperation({
-        type: "operationFailed",
-        operation,
-        commentId,
-        error: normalizeCommandError(error),
-      });
-    },
-    [],
-  );
-
-  useEffect(() => {
-    operationRequestIdRef.current += 1;
-    dispatchOperation({ type: "operationInvalidated" });
-  }, [reloadComments, scopeKey]);
 
   const addComment = useCallback(
-    async (input: AddCommentInput): Promise<Comment | null> => {
-      const token = beginOperation("add", null);
-      if (token === null || scope === null) {
-        return null;
-      }
-
-      try {
-        const comment = await addCommentViaGateway(commands, scope, {
-          anchor: input.anchor,
-          body: input.body,
-        });
-
-        if (!canApplyOperationResult(token)) {
-          return null;
-        }
-
-        updateCurrentScopeComments((comments) =>
+    async (input: AddCommentInput): Promise<Comment | null> =>
+      runMutation({
+        operation: "add",
+        commentId: null,
+        /**
+         * Adds the comment through the gateway.
+         * @param activeScope - Scope to add the comment in.
+         */
+        execute: (activeScope) =>
+          addCommentViaGateway(commands, activeScope, {
+            anchor: input.anchor,
+            body: input.body,
+          }),
+        /**
+         * Appends the added comment when the status filter displays it.
+         * @param comments - Current comment list.
+         * @param comment - Added comment to append.
+         */
+        applyResult: (comments, comment) =>
           Comments.appendDisplayable(comments, comment, statusFilter),
-        );
-        markOperationSucceeded();
-        return comment;
-      } catch (error) {
-        if (!canApplyOperationResult(token)) {
-          return null;
-        }
-
-        markOperationFailed("add", null, error);
-        return null;
-      }
-    },
-    [
-      beginOperation,
-      canApplyOperationResult,
-      commands,
-      markOperationFailed,
-      markOperationSucceeded,
-      scope,
-      statusFilter,
-      updateCurrentScopeComments,
-    ],
+      }),
+    [commands, runMutation, statusFilter],
   );
 
   const updateComment = useCallback(
-    async (input: UpdateCommentInput): Promise<Comment | null> => {
-      const token = beginOperation("update", input.commentId);
-      if (token === null || scope === null) {
-        return null;
-      }
-
-      try {
-        const comment = await updateCommentViaGateway(commands, scope, {
-          commentId: input.commentId,
-          body: input.body,
-        });
-
-        if (!canApplyOperationResult(token)) {
-          return null;
-        }
-
-        updateCurrentScopeComments((comments) =>
-          Comments.upsertDisplayable(comments, comment, statusFilter),
-        );
-        markOperationSucceeded();
-        return comment;
-      } catch (error) {
-        if (!canApplyOperationResult(token)) {
-          return null;
-        }
-
-        markOperationFailed("update", input.commentId, error);
-        return null;
-      }
-    },
-    [
-      beginOperation,
-      canApplyOperationResult,
-      commands,
-      markOperationFailed,
-      markOperationSucceeded,
-      scope,
-      statusFilter,
-      updateCurrentScopeComments,
-    ],
-  );
-
-  const deleteComment = useCallback(
-    async (commentId: CommentId): Promise<boolean> => {
-      const token = beginOperation("delete", commentId);
-      if (token === null || scope === null) {
-        return false;
-      }
-
-      try {
-        const response = await deleteCommentViaGateway(
-          commands,
-          scope,
-          commentId,
-        );
-
-        if (!canApplyOperationResult(token)) {
-          return false;
-        }
-
-        if (!response.deleted) {
-          markOperationSucceeded();
-          return false;
-        }
-
-        updateCurrentScopeComments((comments) =>
-          comments.filter((comment) => comment.id !== commentId),
-        );
-        markOperationSucceeded();
-        await reloadComments();
-        return true;
-      } catch (error) {
-        if (!canApplyOperationResult(token)) {
-          return false;
-        }
-
-        markOperationFailed("delete", commentId, error);
-        return false;
-      }
-    },
-    [
-      beginOperation,
-      canApplyOperationResult,
-      commands,
-      markOperationFailed,
-      markOperationSucceeded,
-      reloadComments,
-      scope,
-      updateCurrentScopeComments,
-    ],
+    async (input: UpdateCommentInput): Promise<Comment | null> =>
+      runMutation({
+        operation: "update",
+        commentId: input.commentId,
+        /**
+         * Updates the comment body through the gateway.
+         * @param activeScope - Scope the comment belongs to.
+         */
+        execute: (activeScope) =>
+          updateCommentViaGateway(commands, activeScope, {
+            commentId: input.commentId,
+            body: input.body,
+          }),
+        applyResult: upsertDisplayable,
+      }),
+    [commands, runMutation, upsertDisplayable],
   );
 
   const resolveComment = useCallback(
-    async (commentId: CommentId): Promise<Comment | null> => {
-      const token = beginOperation("resolve", commentId);
-      if (token === null || scope === null) {
-        return null;
-      }
-
-      try {
-        const comment = await resolveCommentViaGateway(
-          commands,
-          scope,
-          commentId,
-        );
-
-        if (!canApplyOperationResult(token)) {
-          return null;
-        }
-
-        updateCurrentScopeComments((comments) =>
-          Comments.upsertDisplayable(comments, comment, statusFilter),
-        );
-        markOperationSucceeded();
-        return comment;
-      } catch (error) {
-        if (!canApplyOperationResult(token)) {
-          return null;
-        }
-
-        markOperationFailed("resolve", commentId, error);
-        return null;
-      }
-    },
-    [
-      beginOperation,
-      canApplyOperationResult,
-      commands,
-      markOperationFailed,
-      markOperationSucceeded,
-      scope,
-      statusFilter,
-      updateCurrentScopeComments,
-    ],
+    async (commentId: CommentId): Promise<Comment | null> =>
+      runMutation({
+        operation: "resolve",
+        commentId,
+        /**
+         * Resolves the comment through the gateway.
+         * @param activeScope - Scope the comment belongs to.
+         */
+        execute: (activeScope) =>
+          resolveCommentViaGateway(commands, activeScope, commentId),
+        applyResult: upsertDisplayable,
+      }),
+    [commands, runMutation, upsertDisplayable],
   );
 
   const reopenComment = useCallback(
-    async (commentId: CommentId): Promise<Comment | null> => {
-      const token = beginOperation("reopen", commentId);
-      if (token === null || scope === null) {
-        return null;
-      }
-
-      try {
-        const comment = await reopenCommentViaGateway(
-          commands,
-          scope,
-          commentId,
-        );
-
-        if (!canApplyOperationResult(token)) {
-          return null;
-        }
-
-        updateCurrentScopeComments((comments) =>
-          Comments.upsertDisplayable(comments, comment, statusFilter),
-        );
-        markOperationSucceeded();
-        return comment;
-      } catch (error) {
-        if (!canApplyOperationResult(token)) {
-          return null;
-        }
-
-        markOperationFailed("reopen", commentId, error);
-        return null;
-      }
-    },
-    [
-      beginOperation,
-      canApplyOperationResult,
-      commands,
-      markOperationFailed,
-      markOperationSucceeded,
-      scope,
-      statusFilter,
-      updateCurrentScopeComments,
-    ],
+    async (commentId: CommentId): Promise<Comment | null> =>
+      runMutation({
+        operation: "reopen",
+        commentId,
+        /**
+         * Reopens the comment through the gateway.
+         * @param activeScope - Scope the comment belongs to.
+         */
+        execute: (activeScope) =>
+          reopenCommentViaGateway(commands, activeScope, commentId),
+        applyResult: upsertDisplayable,
+      }),
+    [commands, runMutation, upsertDisplayable],
   );
 
   const toggleCommentResolved = useCallback(
     async (commentId: CommentId): Promise<Comment | null> => {
-      const token = beginOperation("toggle", commentId);
-      if (token === null || scope === null) {
+      if (scope === null) {
         return null;
       }
 
@@ -404,43 +180,45 @@ export function useCommentOperations(
         Comments.upsertOptimisticToggle(comments, commentId, statusFilter),
       );
 
-      try {
-        const comment = await toggleCommentResolvedViaGateway(
-          commands,
-          scope,
-          commentId,
-        );
-
-        if (!canApplyOperationResult(token)) {
-          return null;
-        }
-
-        updateCurrentScopeComments((comments) =>
-          Comments.upsertDisplayable(comments, comment, statusFilter),
-        );
-        markOperationSucceeded();
-        return comment;
-      } catch (error) {
-        if (!canApplyOperationResult(token)) {
-          return null;
-        }
-
-        updateCurrentScopeComments(() => previousComments);
-        markOperationFailed("toggle", commentId, error);
-        return null;
-      }
+      return runMutation({
+        operation: "toggle",
+        commentId,
+        /**
+         * Toggles the comment resolved status through the gateway.
+         * @param activeScope - Scope the comment belongs to.
+         */
+        execute: (activeScope) =>
+          toggleCommentResolvedViaGateway(commands, activeScope, commentId),
+        applyResult: upsertDisplayable,
+        /** Restores the comment list captured before the optimistic toggle. */
+        rollback: () => {
+          updateCurrentScopeComments(() => previousComments);
+        },
+      });
     },
     [
-      beginOperation,
-      canApplyOperationResult,
       commands,
       currentComments,
-      markOperationFailed,
-      markOperationSucceeded,
+      runMutation,
       scope,
       statusFilter,
       updateCurrentScopeComments,
+      upsertDisplayable,
     ],
+  );
+
+  const deleteComment = useCallback(
+    async (commentId: CommentId): Promise<boolean> =>
+      runDeletion({
+        commentId,
+        /**
+         * Deletes the comment through the gateway.
+         * @param activeScope - Scope the comment belongs to.
+         */
+        execute: (activeScope) =>
+          deleteCommentViaGateway(commands, activeScope, commentId),
+      }),
+    [commands, runDeletion],
   );
 
   return {
@@ -452,72 +230,4 @@ export function useCommentOperations(
     reopenComment,
     toggleCommentResolved,
   };
-}
-
-/**
- * @param _state - Current operation state.
- * @param event - Operation lifecycle event.
- * @returns Next operation state.
- */
-function commentOperationReducer(
-  _state: CommentOperationState,
-  event: CommentOperationEvent,
-): CommentOperationState {
-  switch (event.type) {
-    case "operationStarted":
-      return CommentOperationSavingState.create(
-        event.operation,
-        event.commentId,
-      );
-    case "operationSucceeded":
-    case "operationInvalidated":
-      return initialOperationState;
-    case "operationFailed":
-      return CommentOperationFailedState.create(
-        event.operation,
-        event.commentId,
-        event.error,
-      );
-    default:
-      return assertNever(event);
-  }
-}
-
-/**
- * @param value - Value that should have been narrowed to never.
- * @returns Never returns because exhaustive handling failed.
- * @throws Error when an unhandled union member reaches runtime.
- */
-function assertNever(value: never): never {
-  throw new Error(
-    `Unhandled comment operation event: ${JSON.stringify(value)}`,
-  );
-}
-
-/**
- * @param requestId - Operation request id.
- * @param scopeKey - Scope key captured when the request started.
- * @returns Token used to reject stale operation results.
- */
-function createOperationToken(
-  requestId: number,
-  scopeKey: string,
-): AsyncOperationToken {
-  return { requestId, scopeKey };
-}
-
-/**
- * @param token - Captured operation token.
- * @param latestRequestId - Most recent operation request id.
- * @param currentScopeKey - Current active scope key.
- * @returns True when the async operation still belongs to the current scope.
- */
-function isMatchingOperationToken(
-  token: AsyncOperationToken,
-  latestRequestId: number,
-  currentScopeKey: string,
-): boolean {
-  return (
-    token.requestId === latestRequestId && token.scopeKey === currentScopeKey
-  );
 }

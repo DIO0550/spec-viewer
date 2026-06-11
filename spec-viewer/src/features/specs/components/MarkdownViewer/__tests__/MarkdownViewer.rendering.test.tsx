@@ -1,17 +1,15 @@
-import { act } from "react";
 import type { ReactNode } from "react";
+import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-
-import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
+import { CommentAnchorDraft } from "@/features/comments/domain/commentAnchorDraft";
 import {
   CommentOperationFailedState,
   CommentOperationIdleState,
-  CommentOperationSavingState,
   type CommentOperationKind,
+  CommentOperationSavingState,
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
-import { createTextHash } from "@/features/comments/lib/comment-anchor-draft";
 import type {
   Comment,
   CommentAnchorResolution,
@@ -19,8 +17,12 @@ import type {
   CommentId,
 } from "@/features/comments/types/comment";
 import { CommentId as CommentIdValue } from "@/features/comments/types/comment";
-import type { MarkdownBlockMetadata, SpecDocument } from "@/features/specs/types/spec";
 import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
+import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
+import type {
+  MarkdownBlockMetadata,
+  SpecDocument,
+} from "@/features/specs/types/spec";
 
 const commentId = CommentIdValue.fromString;
 
@@ -137,7 +139,7 @@ function createComment({
       fileKey: "tasks",
       blockType,
       blockIndex,
-      textHash: createTextHash(text),
+      textHash: CommentAnchorDraft.textHash(text),
       textSnippet: text,
       charRange,
     },
@@ -295,8 +297,12 @@ test("MarkdownViewerはHTML文書をsandbox iframeで閲覧表示する", () => 
     result.container.querySelector(".markdown-viewer--html"),
   ).not.toBeNull();
   expect(result.container.querySelector(".markdown-rendered")).toBeNull();
-  expect(result.container.querySelector(".markdown-block-comment-button")).toBeNull();
-  expect(result.container.querySelector(".markdown-document-search")).toBeNull();
+  expect(
+    result.container.querySelector(".markdown-block-comment-button"),
+  ).toBeNull();
+  expect(
+    result.container.querySelector(".markdown-document-search"),
+  ).toBeNull();
   result.unmount();
 });
 
@@ -502,12 +508,13 @@ test("MarkdownViewerは現在のMarkdown文書を検索して一致箇所を移�
     ".markdown-rendered",
   ) as HTMLDivElement;
 
-  expect(result.container.querySelectorAll("[data-document-search-match]")).toHaveLength(3);
+  expect(
+    result.container.querySelectorAll("[data-document-search-match]"),
+  ).toHaveLength(3);
   expect(result.container.textContent).toContain("1/3");
   expect(
-    result.container.querySelector(
-      '[data-document-search-match-active="true"]',
-    )?.textContent,
+    result.container.querySelector('[data-document-search-match-active="true"]')
+      ?.textContent,
   ).toBe("Alpha");
 
   const queryAllSpy = vi.spyOn(renderedDocument, "querySelectorAll");
@@ -518,9 +525,8 @@ test("MarkdownViewerは現在のMarkdown文書を検索して一致箇所を移�
   expect(queryAllSpy).not.toHaveBeenCalled();
   expect(result.container.textContent).toContain("2/3");
   expect(
-    result.container.querySelector(
-      '[data-document-search-match-active="true"]',
-    )?.textContent,
+    result.container.querySelector('[data-document-search-match-active="true"]')
+      ?.textContent,
   ).toBe("alpha");
 
   const clearButton = result.container.querySelector(
@@ -533,7 +539,9 @@ test("MarkdownViewerは現在のMarkdown文書を検索して一致箇所を移�
 
   queryAllSpy.mockRestore();
   expect(searchInput.value).toBe("");
-  expect(result.container.querySelectorAll("[data-document-search-match]")).toHaveLength(0);
+  expect(
+    result.container.querySelectorAll("[data-document-search-match]"),
+  ).toHaveLength(0);
   result.unmount();
 });
 
@@ -713,7 +721,9 @@ test("MarkdownViewerはコメント解決後に左ビューの表示から外す
 
   result.rerender(renderMarkdownViewer([resolvedComment]));
 
-  expect(result.container.querySelectorAll(".markdown-comment-annotation")).toHaveLength(0);
+  expect(
+    result.container.querySelectorAll(".markdown-comment-annotation"),
+  ).toHaveLength(0);
   expect(result.container.querySelector(".add-comment-popover")).toBeNull();
   result.unmount();
 });
@@ -782,7 +792,9 @@ test("MarkdownViewerは初期表示の解決済みコメントを左ビューか
     vi.fn().mockResolvedValue(true),
   );
 
-  expect(result.container.querySelectorAll(".markdown-comment-annotation")).toHaveLength(0);
+  expect(
+    result.container.querySelectorAll(".markdown-comment-annotation"),
+  ).toHaveLength(0);
   expect(result.container.querySelector("[data-comment-highlight]")).toBeNull();
   expect(result.container.textContent).not.toContain("解決済み");
   result.unmount();
@@ -910,9 +922,7 @@ test("MarkdownViewerは対象コメントの操作中に編集ポップオーバ
   ).find((button) => button.textContent === "削除") as HTMLButtonElement;
   const saveButton = Array.from(
     popover.querySelectorAll<HTMLButtonElement>("button"),
-  ).find((button) =>
-    button.textContent?.includes("保存"),
-  ) as HTMLButtonElement;
+  ).find((button) => button.textContent?.includes("保存")) as HTMLButtonElement;
 
   expect(textarea.disabled).toBe(true);
   expect(closeButton.disabled).toBe(true);
@@ -1022,7 +1032,7 @@ test("MarkdownViewerはexact解決済みアンカーの選択範囲をハイラ�
         target: {
           blockType: "paragraph",
           blockIndex: 0,
-          textHash: createTextHash(contents),
+          textHash: CommentAnchorDraft.textHash(contents),
           textSnippet: contents,
           sourceRange: null,
           score: 100,
@@ -1067,7 +1077,7 @@ test("MarkdownViewerはインラインコード内のコメント範囲に背景
         target: {
           blockType: "paragraph",
           blockIndex: 0,
-          textHash: createTextHash(contents),
+          textHash: CommentAnchorDraft.textHash(contents),
           textSnippet: contents,
           sourceRange: null,
           score: 100,
@@ -1081,7 +1091,9 @@ test("MarkdownViewerはインラインコード内のコメント範囲に背景
     vi.fn().mockResolvedValue(true),
     comments,
   );
-  const inlineCode = result.container.querySelector(".markdown-rendered p code");
+  const inlineCode = result.container.querySelector(
+    ".markdown-rendered p code",
+  );
 
   expect(inlineCode?.textContent).toBe("inlineCode");
   expect(
@@ -1116,9 +1128,7 @@ test("MarkdownViewerはコードブロックコメントを範囲色ではなく
 
   expect(codeBlock?.getAttribute("data-comment-highlight")).toBe("true");
   expect(codeBlock?.getAttribute("data-comment-highlight-mode")).toBe("block");
-  expect(
-    codeBlock?.querySelector("[data-comment-highlight-range]"),
-  ).toBeNull();
+  expect(codeBlock?.querySelector("[data-comment-highlight-range]")).toBeNull();
   result.unmount();
 });
 
@@ -1144,7 +1154,7 @@ test("MarkdownViewerはmoved/fuzzy/orphaned解決結果をtarget blockへ反映�
         target: {
           blockType: "paragraph",
           blockIndex: 1,
-          textHash: createTextHash("Exact target paragraph."),
+          textHash: CommentAnchorDraft.textHash("Exact target paragraph."),
           textSnippet: "Exact target paragraph.",
           sourceRange: null,
           score: 100,
@@ -1163,7 +1173,9 @@ test("MarkdownViewerはmoved/fuzzy/orphaned解決結果をtarget blockへ反映�
         target: {
           blockType: "paragraph",
           blockIndex: 2,
-          textHash: createTextHash("Fuzzy target paragraph with edits."),
+          textHash: CommentAnchorDraft.textHash(
+            "Fuzzy target paragraph with edits.",
+          ),
           textSnippet: "Fuzzy target paragraph with edits.",
           sourceRange: null,
           score: 82,

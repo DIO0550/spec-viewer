@@ -1,8 +1,8 @@
 import { expect, test } from "vitest";
 
-import {
-  type StoredUserReview,
-  type UserReview as UserReviewType,
+import type {
+  StoredUserReview,
+  UserReview as UserReviewType,
 } from "@/features/review-runs/domain/userReview";
 import { UserReviewCollection } from "@/features/review-runs/domain/userReviewCollection";
 
@@ -20,10 +20,7 @@ test("UserReviewCollection.addCreatedは作成runをactiveの先頭に追加し�
     [archivedFirstRun],
     [],
   );
-  const nextCollection = UserReviewCollection.addCreated(
-    collection,
-    firstRun,
-  );
+  const nextCollection = UserReviewCollection.addCreated(collection, firstRun);
 
   expect(nextCollection.active.map((run) => run.id)).toEqual([
     "run-first",

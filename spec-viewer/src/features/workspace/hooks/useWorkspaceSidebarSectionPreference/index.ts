@@ -5,6 +5,7 @@ const workspaceSidebarSectionPreferenceStorageKey =
 
 type UseWorkspaceSidebarSectionPreferenceResult = Readonly<{
   isWorkspaceSidebarSectionOpen: boolean;
+  /** Toggles the workspace switcher section open or collapsed. */
   toggleWorkspaceSidebarSection: () => void;
 }>;
 

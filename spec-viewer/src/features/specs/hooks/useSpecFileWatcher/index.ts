@@ -1,10 +1,5 @@
-import { useEffect } from "react";
 import { listen, type Event as TauriEvent } from "@tauri-apps/api/event";
-
-import {
-  startSpecFileWatch as defaultStartSpecFileWatch,
-  stopSpecFileWatch as defaultStopSpecFileWatch,
-} from "@/shared/api/tauri";
+import { useEffect } from "react";
 import type { SpecFileKey } from "@/features/specs/types/spec";
 import type {
   SpecFileWatchChangedEvent,
@@ -17,6 +12,10 @@ import {
   SPEC_FILE_WATCH_CHANGED_EVENT,
   SPEC_FILE_WATCH_ERROR_EVENT,
 } from "@/features/specs/types/watch";
+import {
+  startSpecFileWatch as defaultStartSpecFileWatch,
+  stopSpecFileWatch as defaultStopSpecFileWatch,
+} from "@/shared/api/tauri";
 
 export type StartSpecFileWatchCommand = (
   request: StartSpecFileWatchRequest,
@@ -26,6 +25,7 @@ export type StopSpecFileWatchCommand = () => Promise<StopSpecFileWatchResponse>;
 
 export type SpecFileWatchSubscriber = <Payload>(
   eventName: string,
+  /** @param event - Tauri event delivered for the subscribed name */
   handler: (event: TauriEvent<Payload>) => void,
 ) => Promise<() => void>;
 
@@ -39,6 +39,7 @@ export type UseSpecFileWatcherOptions = Readonly<{
   workspacePath: string | null;
   specId: string | null;
   fileKey: SpecFileKey | null;
+  /** @param event - Watch event describing the changed markdown file */
   onMarkdownChange: (event: SpecFileWatchChangedEvent) => void | Promise<void>;
   onConfigChange?: (event: SpecFileWatchChangedEvent) => void | Promise<void>;
   onWatcherError?: (event: SpecFileWatchErrorEvent) => void;
@@ -47,7 +48,10 @@ export type UseSpecFileWatcherOptions = Readonly<{
   subscribe?: SpecFileWatchSubscriber;
 }>;
 
-/** Keeps the backend file watcher aligned with the selected spec file. */
+/**
+ * Keeps the backend file watcher aligned with the selected spec file.
+ * @param options - Watch target selection, change callbacks, and command overrides
+ */
 export function useSpecFileWatcher(options: UseSpecFileWatcherOptions): void {
   const startWatch = options.startWatch ?? defaultStartSpecFileWatch;
   const stopWatch = options.stopWatch ?? defaultStopSpecFileWatch;

@@ -1,10 +1,9 @@
-import { act } from "react";
 import type { ReactNode } from "react";
+import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-
-import type { CommentAnchorDraft } from "@/features/comments/types/comment";
 import { AddCommentPopover } from "@/features/comments/components/AddCommentPopover";
+import type { CommentAnchorDraft } from "@/features/comments/types/comment";
 
 const draft: CommentAnchorDraft = {
   anchor: {

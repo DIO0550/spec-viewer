@@ -2,7 +2,7 @@
 
 use thiserror::Error;
 
-use crate::domain::spec::{SpecFileKey, SpecId};
+use crate::domain::spec::{SpecDomainError, SpecFileKey, SpecId};
 
 use super::{Comment, CommentId, CommentStatus};
 
@@ -15,6 +15,11 @@ pub struct CommentScope {
 impl CommentScope {
     pub fn new(spec_id: SpecId, file_key: SpecFileKey) -> Self {
         Self { spec_id, file_key }
+    }
+
+    /// Builds a scope from a raw spec id string, validating the id.
+    pub fn parse(spec_id: &str, file_key: SpecFileKey) -> Result<Self, SpecDomainError> {
+        Ok(Self::new(SpecId::new(spec_id)?, file_key))
     }
 
     pub fn spec_id(&self) -> &SpecId {

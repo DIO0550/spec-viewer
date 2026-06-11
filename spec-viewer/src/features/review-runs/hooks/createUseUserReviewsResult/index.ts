@@ -7,6 +7,10 @@ export type CreateUseUserReviewsResultInput = Readonly<{
   target: UserReviewTarget | null;
   listState: UserReviewListState;
   userReviewOperations: UseUserReviewOperationsResult;
+  /**
+   * Reloads the user review list.
+   * @returns Whether the reload succeeded.
+   */
   reloadUserReviews: () => Promise<boolean>;
 }>;
 

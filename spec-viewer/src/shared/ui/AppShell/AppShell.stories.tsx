@@ -3,18 +3,18 @@ import type { ComponentProps } from "react";
 import { fn } from "storybook/test";
 
 import {
-  CommentSidebar,
-  createTextHash,
   type Comment,
+  CommentAnchorDraft,
+  CommentSidebar,
 } from "@/features/comments";
 import { CommentId } from "@/features/comments/types/comment";
 import type {
-  SpecDocumentState,
-  SpecTreeState,
   SpecDocument,
+  SpecDocumentState,
   SpecFileKey,
   SpecNode,
   SpecTreeData as SpecTreeShape,
+  SpecTreeState,
 } from "@/features/specs";
 import { MarkdownViewer, SpecTabs, SpecTree } from "@/features/specs";
 import {
@@ -120,7 +120,9 @@ const sampleComments: readonly Comment[] = [
       fileKey: "tasks",
       blockType: "list_item",
       blockIndex: 5,
-      textHash: createTextHash("Comment behavior follows in P1.15"),
+      textHash: CommentAnchorDraft.textHash(
+        "Comment behavior follows in P1.15",
+      ),
       textSnippet: "Comment behavior follows in P1.15",
       charRange: {
         start: 0,
@@ -139,7 +141,7 @@ const sampleComments: readonly Comment[] = [
       fileKey: "tasks",
       blockType: "heading",
       blockIndex: 0,
-      textHash: createTextHash("P1.14 Markdown Rendering"),
+      textHash: CommentAnchorDraft.textHash("P1.14 Markdown Rendering"),
       textSnippet: "P1.14 Markdown Rendering",
       charRange: {
         start: 0,
@@ -227,7 +229,7 @@ export const Empty: Story = {
   }),
 };
 
-export const Error: Story = {
+export const ErrorState: Story = {
   args: createShellArgs({
     treeState: {
       status: "error",

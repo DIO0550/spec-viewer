@@ -1,11 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
-
-import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
-import { createTextHash } from "@/features/comments/lib/comment-anchor-draft";
+import { CommentAnchorDraft } from "@/features/comments/domain/commentAnchorDraft";
 import type { Comment } from "@/features/comments/types/comment";
 import { CommentId } from "@/features/comments/types/comment";
 import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
+import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
 
 const commentId = CommentId.fromString;
 
@@ -84,7 +83,7 @@ const comments: readonly Comment[] = [
       fileKey: "tasks",
       blockType: "paragraph",
       blockIndex: 1,
-      textHash: createTextHash(highlightedParagraph),
+      textHash: CommentAnchorDraft.textHash(highlightedParagraph),
       textSnippet: "paragraph fragment",
       charRange: {
         start: 27,
@@ -108,7 +107,7 @@ const commentCardComments: readonly Comment[] = [
       fileKey: "tasks",
       blockType: "paragraph",
       blockIndex: 1,
-      textHash: createTextHash(highlightedParagraph),
+      textHash: CommentAnchorDraft.textHash(highlightedParagraph),
       textSnippet: highlightedParagraph,
       charRange: {
         start: 0,
@@ -128,7 +127,9 @@ const commentCardComments: readonly Comment[] = [
       fileKey: "tasks",
       blockType: "code_block",
       blockIndex: 4,
-      textHash: createTextHash('const selectedText = "paragraph fragment";'),
+      textHash: CommentAnchorDraft.textHash(
+        'const selectedText = "paragraph fragment";',
+      ),
       textSnippet: "selectedText",
       charRange: {
         start: 6,
@@ -180,6 +181,7 @@ export const TechReferenceHtmlPreview: Story = {
   parameters: {
     layout: "fullscreen",
   },
+  /** @param args - Story args forwarded to MarkdownViewer */
   render: (args) => (
     <div className="app-shell__viewer" style={{ height: "100dvh" }}>
       <MarkdownViewer {...args} />

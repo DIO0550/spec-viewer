@@ -1,26 +1,16 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo } from "react";
 
-import "./App.css";
-import {
-  CommentSidebar,
-  CommentOperationFailedState,
-  CommentOperationSavingState,
-  createSpecSkillMcpFeedbackDryRunPayload,
-  renderSpecSkillMcpFeedbackDryRunPayload,
-  useComments,
-  type AddCommentSubmitInput,
-  type CommentAnchorDisplayState,
-  type CommentExportOperation,
-  type CommentExportScope,
-  type CommentId,
-  type ExportCommentsResponse,
-  type ExportCommentsTarget,
-  type GenerateLlmPromptResponse,
-  type SpecSkillMcpFeedbackPayload,
-} from "@/features/comments";
-import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
+import "../App.css";
+import { CommentReviewPane } from "@/app/App/components/CommentReviewPane";
+import { DocumentViewerPane } from "@/app/App/components/DocumentViewerPane";
+import { useCurrentViewRefresh } from "@/app/App/hooks/useCurrentViewRefresh";
+import { useComments } from "@/features/comments";
 import { CommentScope } from "@/features/comments/domain/commentScope";
-import { CommentListState } from "@/features/comments/domain/commentListState";
+import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
+import { useCommentActions } from "@/features/comments/hooks/useCommentActions";
+import { useCommentExport } from "@/features/comments/hooks/useCommentExport";
+import { useCommentSelection } from "@/features/comments/hooks/useCommentSelection";
+import type { CommentId } from "@/features/comments/types/comment";
 import {
   useKeyboardShortcuts,
   useLeftNavigationPreference,
@@ -29,94 +19,29 @@ import {
   useSidebarPreference,
   useTheme,
 } from "@/features/preferences";
+import { useUserReviews } from "@/features/review-runs";
+import { useUserReviewPanelState } from "@/features/review-runs/hooks/useUserReviewPanelState";
+import { SpecTabs, SpecTree, useSpecs } from "@/features/specs";
 import {
-  UserReviewPanel,
-  useUserReviews,
-  type UserReviewWorkspaceMode,
-  type UserReviewTargetScope,
-} from "@/features/review-runs";
+  SpecFileNavigation,
+  type SpecFileNavigationDirection,
+} from "@/features/specs/domain/specFileNavigation";
+import { useDocumentReadable } from "@/features/specs/hooks/useDocumentReadable";
 import {
-  MarkdownViewer,
-  SpecTabs,
-  SpecTree,
-  useSpecFileWatcher,
-  useSpecs,
-  type SpecFileKey,
-} from "@/features/specs";
-import {
-  OpenWorkspaceEmptyState,
+  useRecentWorkspaces,
+  useWorkspace,
+  useWorkspaceSidebarSectionPreference,
   WorkspaceDropOverlay,
   WorkspaceSidebarSection,
   WorkspaceToolbar,
-  useRecentWorkspaces,
-  useWorkspace,
-  useWorkspaceDrop,
-  useWorkspaceSidebarSectionPreference,
-  type WorkspaceRefreshStatus,
 } from "@/features/workspace";
-import { AppShell } from "@/shared/ui";
-import {
-  exportComments,
-  generateLlmPrompt,
-  normalizeCommandError,
-  selectCommentExportDestination,
-  selectWorkspaceDirectory,
-  validateWorkspaceDirectory,
-} from "@/shared/api/tauri";
+import { useWorkspaceSession } from "@/features/workspace/hooks/useWorkspaceSession";
 import { uiText } from "@/shared/lib/uiText";
+import { AppShell } from "@/shared/ui";
 
-const idleRefreshStatus: WorkspaceRefreshStatus = {
-  status: "idle",
-  message: null,
-};
+const VIEW_RESET_KEY_SEPARATOR = "\u0000";
 
-type RefreshCurrentViewOptions = Readonly<{
-  loadingMessage: string;
-  failureStatus: "stale" | "error";
-  failureMessage: string;
-  run: () => Promise<boolean>;
-}>;
-
-type LoadWorkspacePathOptions = Readonly<{
-  preserveCurrentWorkspace?: boolean;
-}>;
-
-type NavigationDirection = "next" | "previous";
-
-type CommentExportState =
-  | Readonly<{
-      status: "idle";
-      operation: null;
-      message: null;
-    }>
-  | Readonly<{
-      status: "saving";
-      operation: CommentExportOperation;
-      message: string;
-    }>
-  | Readonly<{
-      status: "success";
-      operation: CommentExportOperation;
-      message: string;
-    }>
-  | Readonly<{
-      status: "error";
-      operation: CommentExportOperation;
-      message: string;
-    }>;
-
-const invalidDroppedDirectoryMessage =
-  "ワークスペースフォルダをドロップしてください。ファイルはワークスペースとして開けません。";
-const missingSavedWorkspaceMessage =
-  "ワークスペースが見つかりません。保存済み一覧から削除しました。";
-const unsupportedSavedWorkspaceMessage =
-  "対応していないワークスペースです。保存済み一覧から削除しました。";
-const idleCommentExportState: CommentExportState = {
-  status: "idle",
-  operation: null,
-  message: null,
-};
-
+/** @returns The Spec Reviewer application root composing all feature surfaces. */
 function App() {
   const workspace = useWorkspace();
   const recentWorkspaces = useRecentWorkspaces();
@@ -127,21 +52,25 @@ function App() {
   const resizableLeftNavigation = useResizableLeftNavigation();
   const sidebarPreference = useSidebarPreference();
   const resizableSidebar = useResizableSidebar();
-  const specs = useSpecs({ workspacePath: workspace.workspace?.root ?? null });
+  const session = useWorkspaceSession({ workspace, recentWorkspaces });
+  const workspaceRoot = workspace.workspace?.root ?? null;
+  const specs = useSpecs({ workspacePath: workspaceRoot });
+  const documentReadable = useDocumentReadable({
+    documentState: specs.documentState,
+  });
+  const isDocumentReadable = documentReadable.isDocumentReadable;
   const isHtmlDocument =
     specs.documentState.status === "ready" &&
     specs.documentState.document.format === "html";
-  const [readableDocumentKey, setReadableDocumentKey] = useState<string | null>(
-    null,
-  );
-  const currentDocumentKey = createDocumentReadableKey(specs.documentState);
-  const isDocumentReadable =
-    specs.documentState.status === "missing" ||
-    (currentDocumentKey !== null && readableDocumentKey === currentDocumentKey);
+  const viewResetKey = [
+    workspaceRoot ?? "",
+    specs.selectedSpecId ?? "",
+    specs.selectedFileKey ?? "",
+  ].join(VIEW_RESET_KEY_SEPARATOR);
   const commentScope = useMemo(
     () =>
       CommentScope.create({
-        workspacePath: workspace.workspace?.root ?? null,
+        workspacePath: workspaceRoot,
         specId: specs.selectedSpecId,
         fileKey:
           isHtmlDocument || !isDocumentReadable ? null : specs.selectedFileKey,
@@ -151,7 +80,7 @@ function App() {
       isHtmlDocument,
       specs.selectedFileKey,
       specs.selectedSpecId,
-      workspace.workspace?.root,
+      workspaceRoot,
     ],
   );
   const comments = useComments({
@@ -159,721 +88,105 @@ function App() {
     statusFilter: CommentStatusFilter.All,
     correlationId: specs.documentState.correlationId ?? null,
   });
-  const [userReviewTargetScope, setUserReviewTargetScope] =
-    useState<UserReviewTargetScope>("file");
-  const [userReviewWorkspaceMode, setUserReviewWorkspaceMode] =
-    useState<UserReviewWorkspaceMode>("currentWorkspace");
+  const commentSelection = useCommentSelection({
+    comments: comments.comments,
+    listState: comments.listState,
+    resetKey: viewResetKey,
+  });
+  const commentActions = useCommentActions({
+    comments,
+    onCommentAdded: commentSelection.activateComment,
+    onDeleteRequested: commentSelection.clearIfActive,
+  });
+  const commentExport = useCommentExport({
+    workspacePath: workspaceRoot,
+    specId: specs.selectedSpecId,
+    fileKey: specs.selectedFileKey,
+    comments: comments.comments,
+    resetKey: viewResetKey,
+  });
+  const userReviewPanelState = useUserReviewPanelState({
+    resetKey: viewResetKey,
+  });
   const userReviews = useUserReviews({
-    workspacePath: workspace.workspace?.root ?? null,
+    workspacePath: workspaceRoot,
     specId: isDocumentReadable ? specs.selectedSpecId : null,
     fileKey: isDocumentReadable ? specs.selectedFileKey : null,
-    targetScope: userReviewTargetScope,
+    targetScope: userReviewPanelState.targetScope,
     correlationId: specs.documentState.correlationId ?? null,
   });
-  const [workspaceInput, setWorkspaceInput] = useState("");
-  const [activeCommentId, setActiveCommentId] = useState<CommentId | null>(
-    null,
+  const reloadSpecsPreservingSelection = useCallback(
+    (): Promise<boolean> => specs.reloadSpecs({ preserveSelection: true }),
+    [specs.reloadSpecs],
   );
-  const [commentAnchorDisplayStates, setCommentAnchorDisplayStates] = useState<
-    readonly CommentAnchorDisplayState[]
-  >([]);
-  const [isBrowsingWorkspace, setIsBrowsingWorkspace] = useState(false);
-  const [dialogErrorMessage, setDialogErrorMessage] = useState<string | null>(
-    null,
-  );
-  const [dropErrorMessage, setDropErrorMessage] = useState<string | null>(null);
-  const [refreshStatus, setRefreshStatus] =
-    useState<WorkspaceRefreshStatus>(idleRefreshStatus);
-  const [commentExportState, setCommentExportState] =
-    useState<CommentExportState>(idleCommentExportState);
-  const hasAttemptedStartupRestoreRef = useRef(false);
-
-  useEffect(() => {
-    setActiveCommentId(null);
-    setCommentAnchorDisplayStates([]);
-    setRefreshStatus(idleRefreshStatus);
-    setCommentExportState(idleCommentExportState);
-  }, [specs.selectedFileKey, specs.selectedSpecId, workspace.workspace?.root]);
-
-  useEffect(() => {
-    setUserReviewTargetScope("file");
-    setUserReviewWorkspaceMode("currentWorkspace");
-  }, [specs.selectedFileKey, specs.selectedSpecId, workspace.workspace?.root]);
-
-  useEffect(() => {
-    if (!CommentListState.isLoaded(comments.listState)) {
-      return;
-    }
-
-    const hasActiveComment = comments.comments.some(
-      (comment) => comment.id === activeCommentId,
-    );
-
-    if (activeCommentId !== null && !hasActiveComment) {
-      setActiveCommentId(null);
-    }
-  }, [activeCommentId, comments.comments, comments.listState]);
-
-  const loadWorkspacePath = useCallback(
-    async (
-      selectedDirectory: string,
-      options: LoadWorkspacePathOptions = {},
-    ): Promise<boolean> => {
-      setDialogErrorMessage(null);
-      setDropErrorMessage(null);
-      setWorkspaceInput(selectedDirectory);
-      const isLoaded = await workspace.load(selectedDirectory, {
-        preserveCurrentWorkspace: options.preserveCurrentWorkspace,
-        onWorkspaceLoaded: recentWorkspaces.recordWorkspace,
-      });
-
-      return isLoaded;
-    },
-    [recentWorkspaces.recordWorkspace, workspace.load],
-  );
-
-  const browseWorkspace = async (): Promise<void> => {
-    if (workspace.isLoading || isBrowsingWorkspace) {
-      return;
-    }
-
-    setDialogErrorMessage(null);
-    setIsBrowsingWorkspace(true);
-
-    try {
-      const selectedDirectory = await selectWorkspaceDirectory();
-
-      if (selectedDirectory === null) {
-        return;
-      }
-
-      await loadWorkspacePath(selectedDirectory);
-    } catch (error) {
-      setDialogErrorMessage(normalizeCommandError(error).message);
-    } finally {
-      setIsBrowsingWorkspace(false);
-    }
-  };
-
-  const loadWorkspace = (): void => {
-    const selectedDirectory = workspaceInput.trim();
-
-    if (selectedDirectory.length === 0) {
-      return;
-    }
-
-    void loadWorkspacePath(selectedDirectory);
-  };
-
-  const resetWorkspace = (): void => {
-    setWorkspaceInput("");
-    setDialogErrorMessage(null);
-    setDropErrorMessage(null);
-    setActiveCommentId(null);
-    workspace.reset();
-  };
-
-  const openDroppedWorkspacePath = useCallback(
-    async (selectedDirectory: string): Promise<void> => {
-      if (workspace.isLoading || isBrowsingWorkspace) {
-        return;
-      }
-
-      setDialogErrorMessage(null);
-      setDropErrorMessage(null);
-      setWorkspaceInput(selectedDirectory);
-
-      try {
-        const validation = await validateWorkspaceDirectory(selectedDirectory);
-
-        if (!validation.isDirectory) {
-          setDropErrorMessage(invalidDroppedDirectoryMessage);
-          return;
-        }
-
-        await loadWorkspacePath(selectedDirectory, {
-          preserveCurrentWorkspace: true,
-        });
-      } catch (error) {
-        setDropErrorMessage(normalizeCommandError(error).message);
-      }
-    },
-    [isBrowsingWorkspace, loadWorkspacePath, workspace.isLoading],
-  );
-
-  const openRecentWorkspacePath = useCallback(
-    async (selectedDirectory: string): Promise<void> => {
-      if (workspace.isLoading || isBrowsingWorkspace) {
-        return;
-      }
-
-      setDialogErrorMessage(null);
-      setDropErrorMessage(null);
-      setWorkspaceInput(selectedDirectory);
-
-      try {
-        const validation = await validateWorkspaceDirectory(selectedDirectory);
-
-        if (!validation.isDirectory) {
-          recentWorkspaces.removeWorkspace(selectedDirectory);
-          setDialogErrorMessage(missingSavedWorkspaceMessage);
-          setWorkspaceInput(workspace.workspace?.root ?? "");
-          return;
-        }
-
-        const isLoaded = await loadWorkspacePath(selectedDirectory, {
-          preserveCurrentWorkspace: true,
-        });
-
-        if (!isLoaded) {
-          recentWorkspaces.removeWorkspace(selectedDirectory);
-          setDialogErrorMessage(unsupportedSavedWorkspaceMessage);
-          setWorkspaceInput(workspace.workspace?.root ?? "");
-        }
-      } catch (error) {
-        recentWorkspaces.removeWorkspace(selectedDirectory);
-        setDialogErrorMessage(
-          `${missingSavedWorkspaceMessage} ${normalizeCommandError(error).message}`,
-        );
-        setWorkspaceInput(workspace.workspace?.root ?? "");
-      }
-    },
-    [
-      isBrowsingWorkspace,
-      loadWorkspacePath,
-      recentWorkspaces.removeWorkspace,
-      workspace.workspace?.root,
-      workspace.isLoading,
-    ],
-  );
-
-  useEffect(() => {
-    if (hasAttemptedStartupRestoreRef.current) {
-      return;
-    }
-
-    if (
-      workspace.workspace !== null ||
-      workspace.isLoading ||
-      isBrowsingWorkspace
-    ) {
-      return;
-    }
-
-    if (recentWorkspaces.lastActiveWorkspacePath === null) {
-      return;
-    }
-
-    hasAttemptedStartupRestoreRef.current = true;
-    void openRecentWorkspacePath(recentWorkspaces.lastActiveWorkspacePath);
-  }, [
-    isBrowsingWorkspace,
-    openRecentWorkspacePath,
-    recentWorkspaces.lastActiveWorkspacePath,
-    workspace.isLoading,
-    workspace.workspace,
-  ]);
-
-  const workspaceDrop = useWorkspaceDrop({
-    isDisabled: workspace.isLoading || isBrowsingWorkspace,
-    onDropWorkspacePath: (selectedDirectory) => {
-      void openDroppedWorkspacePath(selectedDirectory);
-    },
-    onInvalidDrop: setDropErrorMessage,
+  const refresh = useCurrentViewRefresh({
+    workspacePath: workspaceRoot,
+    specId: specs.selectedSpecId,
+    fileKey: specs.selectedFileKey,
+    reloadDocument: specs.reloadDocument,
+    reloadSpecs: reloadSpecsPreservingSelection,
+    reloadComments: comments.reloadComments,
+    onRefreshStarted: session.clearDialogError,
   });
-
-  const resolveComment = (commentId: CommentId): void => {
-    void comments.resolveComment(commentId);
-  };
-
-  const reopenComment = (commentId: CommentId): void => {
-    void comments.reopenComment(commentId);
-  };
-
-  const updateComment = async (
-    commentId: CommentId,
-    body: string,
-  ): Promise<boolean> => {
-    const updatedComment = await comments.updateComment({ commentId, body });
-
-    return updatedComment !== null;
-  };
-
-  const resolveInlineComment = async (
-    commentId: CommentId,
-  ): Promise<boolean> => {
-    const resolvedComment = await comments.resolveComment(commentId);
-
-    return resolvedComment !== null;
-  };
-
-  const reopenInlineComment = async (
-    commentId: CommentId,
-  ): Promise<boolean> => {
-    const reopenedComment = await comments.reopenComment(commentId);
-
-    return reopenedComment !== null;
-  };
-
-  const deleteInlineComment = async (
-    commentId: CommentId,
-  ): Promise<boolean> => {
-    if (commentId === activeCommentId) {
-      setActiveCommentId(null);
-    }
-
-    return comments.deleteComment(commentId);
-  };
-
-  const deleteComment = (commentId: CommentId): void => {
-    if (commentId === activeCommentId) {
-      setActiveCommentId(null);
-    }
-
-    void comments.deleteComment(commentId);
-  };
 
   const selectComment = useCallback(
     (commentId: CommentId): void => {
-      setActiveCommentId(commentId);
+      commentSelection.activateComment(commentId);
       sidebarPreference.openSidebar();
     },
-    [sidebarPreference.openSidebar],
+    [commentSelection.activateComment, sidebarPreference.openSidebar],
   );
 
-  const updateCommentAnchorDisplayStates = useCallback(
-    (nextStates: readonly CommentAnchorDisplayState[]): void => {
-      setCommentAnchorDisplayStates(nextStates);
-    },
-    [],
-  );
-
-  const addComment = async ({
-    anchor,
-    body,
-  }: AddCommentSubmitInput): Promise<boolean> => {
-    const addedComment = await comments.addComment({ anchor, body });
-
-    if (addedComment === null) {
-      return false;
-    }
-
-    setActiveCommentId(addedComment.id);
-    return true;
+  /** Clears the loaded workspace together with the highlighted comment. */
+  const resetWorkspace = (): void => {
+    commentSelection.clearActiveComment();
+    session.resetWorkspace();
   };
 
-  const runCommentExport = useCallback(
-    async (target: ExportCommentsTarget): Promise<void> => {
-      if (workspace.workspace === null) {
-        return;
-      }
+  /** @param direction - Wrap-around direction over the selected spec files */
+  const selectAdjacentFile = (direction: SpecFileNavigationDirection): void => {
+    const nextFileKey = SpecFileNavigation.adjacentFileKey({
+      files: specs.selectedSpec?.files ?? [],
+      selectedFileKey: specs.selectedFileKey,
+      direction,
+    });
 
-      setCommentExportState({
-        status: "saving",
-        operation: target.scope,
-        message: "export先を選択中",
-      });
-
-      try {
-        const destinationPath = await selectCommentExportDestination(target);
-
-        if (destinationPath === null) {
-          setCommentExportState(idleCommentExportState);
-          return;
-        }
-
-        setCommentExportState({
-          status: "saving",
-          operation: target.scope,
-          message: "コメントをexport中",
-        });
-
-        const response = await exportComments({
-          workspacePath: workspace.workspace.root,
-          target,
-          destinationPath,
-        });
-
-        setCommentExportState({
-          status: "success",
-          operation: target.scope,
-          message: formatCommentExportSuccessMessage(response),
-        });
-      } catch (error) {
-        setCommentExportState({
-          status: "error",
-          operation: target.scope,
-          message: normalizeCommandError(error).message,
-        });
-      }
-    },
-    [workspace.workspace],
-  );
-
-  const exportCommentScope = useCallback(
-    (scope: CommentExportScope): void => {
-      if (specs.selectedSpecId === null) {
-        return;
-      }
-
-      if (scope === "workspace") {
-        void runCommentExport({ scope });
-        return;
-      }
-
-      if (scope === "spec") {
-        void runCommentExport({
-          scope,
-          specId: specs.selectedSpecId,
-        });
-        return;
-      }
-
-      if (specs.selectedFileKey === null) {
-        return;
-      }
-
-      void runCommentExport({
-        scope,
-        specId: specs.selectedSpecId,
-        fileKey: specs.selectedFileKey,
-      });
-    },
-    [runCommentExport, specs.selectedFileKey, specs.selectedSpecId],
-  );
-
-  const runLlmPromptCopy = useCallback(
-    async (target: ExportCommentsTarget): Promise<void> => {
-      if (workspace.workspace === null) {
-        return;
-      }
-
-      setCommentExportState({
-        status: "saving",
-        operation: target.scope,
-        message: "LLM promptを生成中",
-      });
-
-      try {
-        const response = await generateLlmPrompt({
-          workspacePath: workspace.workspace.root,
-          target,
-        });
-        await copyTextToClipboard(response.prompt);
-
-        setCommentExportState({
-          status: "success",
-          operation: target.scope,
-          message: formatLlmPromptCopySuccessMessage(response),
-        });
-      } catch (error) {
-        setCommentExportState({
-          status: "error",
-          operation: target.scope,
-          message: normalizeCommandError(error).message,
-        });
-      }
-    },
-    [workspace.workspace],
-  );
-
-  const copyLlmPromptScope = useCallback(
-    (scope: CommentExportScope): void => {
-      if (specs.selectedSpecId === null) {
-        return;
-      }
-
-      if (scope === "workspace") {
-        void runLlmPromptCopy({ scope });
-        return;
-      }
-
-      if (scope === "spec") {
-        void runLlmPromptCopy({
-          scope,
-          specId: specs.selectedSpecId,
-        });
-        return;
-      }
-
-      if (specs.selectedFileKey === null) {
-        return;
-      }
-
-      void runLlmPromptCopy({
-        scope,
-        specId: specs.selectedSpecId,
-        fileKey: specs.selectedFileKey,
-      });
-    },
-    [runLlmPromptCopy, specs.selectedFileKey, specs.selectedSpecId],
-  );
-
-  const copyMcpFeedbackPayload = useCallback(async (): Promise<void> => {
-    if (
-      workspace.workspace === null ||
-      specs.selectedSpecId === null ||
-      specs.selectedFileKey === null
-    ) {
+    if (nextFileKey === null) {
       return;
     }
 
-    setCommentExportState({
-      status: "saving",
-      operation: "mcpFeedback",
-      message: "MCP feedback dry-run payloadを準備中",
-    });
+    void specs.selectFileKey(nextFileKey);
+  };
 
-    try {
-      const payload = createSpecSkillMcpFeedbackDryRunPayload({
-        workspacePath: workspace.workspace.root,
-        specId: specs.selectedSpecId,
-        fileKey: specs.selectedFileKey,
-        comments: comments.comments,
-        generatedAt: new Date().toISOString(),
-      });
-
-      await copyTextToClipboard(
-        renderSpecSkillMcpFeedbackDryRunPayload(payload),
-      );
-
-      setCommentExportState({
-        status: "success",
-        operation: "mcpFeedback",
-        message: formatMcpFeedbackCopySuccessMessage(payload),
-      });
-    } catch (error) {
-      setCommentExportState({
-        status: "error",
-        operation: "mcpFeedback",
-        message: normalizeCommandError(error).message,
-      });
-    }
-  }, [
-    comments.comments,
-    specs.selectedFileKey,
-    specs.selectedSpecId,
-    workspace.workspace,
-  ]);
-
-  const createUserReviewFromOpenComments =
-    useCallback(async (): Promise<void> => {
-      const openCommentIds = comments.comments
-        .filter((comment) => comment.status === "open")
-        .map((comment) => comment.id);
-
-      await userReviews.createUserReview({
-        commentIds: openCommentIds,
-        workspaceMode: userReviewWorkspaceMode,
-      });
-    }, [comments.comments, userReviewWorkspaceMode, userReviews.createUserReview]);
-
-  const selectAdjacentFile = useCallback(
-    (direction: NavigationDirection): void => {
-      const selectedSpec = specs.selectedSpec;
-
-      if (selectedSpec === null || selectedSpec.files.length === 0) {
-        return;
-      }
-
-      const currentIndex = selectedSpec.files.findIndex(
-        (file) => file.key === specs.selectedFileKey,
-      );
-      const selectedIndex = currentIndex < 0 ? 0 : currentIndex;
-      const offset = direction === "next" ? 1 : -1;
-      const nextIndex =
-        (selectedIndex + offset + selectedSpec.files.length) %
-        selectedSpec.files.length;
-      const nextFileKey: SpecFileKey | undefined =
-        selectedSpec.files[nextIndex]?.key;
-
-      if (nextFileKey === undefined) {
-        return;
-      }
-
-      void specs.selectFileKey(nextFileKey);
+  useKeyboardShortcuts({
+    isEnabled: true,
+    /** Selects the next file tab in the current spec. */
+    onNextFile: () => {
+      selectAdjacentFile("next");
     },
-    [specs.selectFileKey, specs.selectedFileKey, specs.selectedSpec],
-  );
-
-  const selectAdjacentComment = useCallback(
-    (direction: NavigationDirection): void => {
-      if (comments.comments.length === 0) {
-        return;
-      }
-
-      const currentIndex = comments.comments.findIndex(
-        (comment) => comment.id === activeCommentId,
-      );
-      const offset = direction === "next" ? 1 : -1;
-      const nextIndex =
-        currentIndex < 0
-          ? selectFallbackCommentIndex(direction, comments.comments.length)
-          : (currentIndex + offset + comments.comments.length) %
-            comments.comments.length;
-      const nextCommentId = comments.comments[nextIndex]?.id;
-
-      if (nextCommentId === undefined) {
-        return;
-      }
-
-      setActiveCommentId(nextCommentId);
+    /** Selects the previous file tab in the current spec. */
+    onPreviousFile: () => {
+      selectAdjacentFile("previous");
     },
-    [activeCommentId, comments.comments],
-  );
-
-  const refreshCurrentView = useCallback(
-    async ({
-      loadingMessage,
-      failureStatus,
-      failureMessage,
-      run,
-    }: RefreshCurrentViewOptions): Promise<boolean> => {
-      setDialogErrorMessage(null);
-      setRefreshStatus({
-        status: "loading",
-        message: loadingMessage,
-      });
-
-      try {
-        const isRefreshSuccessful = await run();
-
-        if (!isRefreshSuccessful) {
-          setRefreshStatus({
-            status: failureStatus,
-            message: failureMessage,
-          });
-          return false;
-        }
-
-        setRefreshStatus(idleRefreshStatus);
-        return true;
-      } catch (error) {
-        setRefreshStatus({
-          status: failureStatus,
-          message: `${failureMessage} ${normalizeCommandError(error).message}`,
-        });
-        return false;
-      }
+    /** Highlights the next comment in the sidebar list. */
+    onNextComment: () => {
+      commentSelection.selectAdjacentComment("next");
     },
-    [],
-  );
-
-  const reloadCurrentMarkdownFromWatcher =
-    useCallback(async (): Promise<void> => {
-      await refreshCurrentView({
-        loadingMessage: "Markdown変更を反映中",
-        failureStatus: "stale",
-        failureMessage:
-          "自動再読み込みに失敗しました。内容が古い可能性があります。",
-        run: async () => {
-          const isDocumentReloaded = await specs.reloadDocument();
-          const areCommentsReloaded = await comments.reloadComments();
-          return isDocumentReloaded && areCommentsReloaded;
-        },
-      });
-    }, [comments.reloadComments, refreshCurrentView, specs.reloadDocument]);
-
-  const reloadWorkspaceConfigFromWatcher =
-    useCallback(async (): Promise<void> => {
-      await refreshCurrentView({
-        loadingMessage: "Spec設定変更を反映中",
-        failureStatus: "stale",
-        failureMessage:
-          "自動再読み込みに失敗しました。内容が古い可能性があります。",
-        run: async () => {
-          const areSpecsReloaded = await specs.reloadSpecs({
-            preserveSelection: true,
-          });
-          const areCommentsReloaded = await comments.reloadComments();
-          return areSpecsReloaded && areCommentsReloaded;
-        },
-      });
-    }, [comments.reloadComments, refreshCurrentView, specs.reloadSpecs]);
-
-  const canRefreshCurrentView =
-    workspace.workspace !== null &&
-    specs.selectedSpecId !== null &&
-    specs.selectedFileKey !== null;
-
-  const refreshCurrentViewManually = useCallback(async (): Promise<void> => {
-    if (!canRefreshCurrentView || refreshStatus.status === "loading") {
-      return;
-    }
-
-    await refreshCurrentView({
-      loadingMessage: "現在の表示を再読み込み中",
-      failureStatus: "error",
-      failureMessage:
-        "再読み込みに失敗しました。エラーを確認して再試行してください。",
-      run: async () => {
-        const areSpecsReloaded = await specs.reloadSpecs({
-          preserveSelection: true,
-        });
-        const areCommentsReloaded = await comments.reloadComments();
-        return areSpecsReloaded && areCommentsReloaded;
-      },
-    });
-  }, [
-    canRefreshCurrentView,
-    comments.reloadComments,
-    refreshCurrentView,
-    refreshStatus.status,
-    specs.reloadSpecs,
-  ]);
-
-  useSpecFileWatcher({
-    workspacePath: workspace.workspace?.root ?? null,
-    specId: specs.selectedSpecId,
-    fileKey: specs.selectedFileKey,
-    onMarkdownChange: reloadCurrentMarkdownFromWatcher,
-    onConfigChange: reloadWorkspaceConfigFromWatcher,
-    onWatcherError: (event) => {
-      setRefreshStatus({
-        status: "stale",
-        message: `ファイル監視に失敗しました。内容が古い可能性があります。${event.message}`,
-      });
+    /** Highlights the previous comment in the sidebar list. */
+    onPreviousComment: () => {
+      commentSelection.selectAdjacentComment("previous");
     },
   });
 
-  const toolbarErrorMessage =
-    dropErrorMessage ?? dialogErrorMessage ?? workspace.error?.message ?? null;
   const shouldShowOpenWorkspacePrompt =
     workspace.workspace === null && !workspace.isLoading;
-  const addCommentErrorMessage =
-    CommentOperationFailedState.errorFor(comments.operationState, "add")
-      ?.message ?? null;
-  const isAddingComment = CommentOperationSavingState.matchesOperation(
-    comments.operationState,
-    "add",
-  );
-  const isUpdatingComment = CommentOperationSavingState.matchesOperation(
-    comments.operationState,
-    "update",
-  );
   const isCommentScopeReady =
-    workspace.workspace !== null &&
+    workspaceRoot !== null &&
     specs.selectedSpecId !== null &&
     specs.selectedFileKey !== null &&
     isDocumentReadable;
   const leftNavigationSubtitle =
     workspace.workspacePath ?? uiText.workspace.noWorkspace;
-
-  useKeyboardShortcuts({
-    isEnabled: true,
-    onNextFile: () => {
-      selectAdjacentFile("next");
-    },
-    onPreviousFile: () => {
-      selectAdjacentFile("previous");
-    },
-    onNextComment: () => {
-      selectAdjacentComment("next");
-    },
-    onPreviousComment: () => {
-      selectAdjacentComment("previous");
-    },
-  });
 
   return (
     <div className="app-drop-root">
@@ -910,20 +223,20 @@ function App() {
         toolbar={
           <WorkspaceToolbar
             workspacePath={workspace.workspacePath}
-            inputValue={workspaceInput}
+            inputValue={session.workspaceInput}
             isLoading={workspace.isLoading}
-            isBrowsing={isBrowsingWorkspace}
-            errorMessage={toolbarErrorMessage}
-            refreshStatus={refreshStatus}
-            canRefresh={canRefreshCurrentView}
+            isBrowsing={session.isBrowsing}
+            errorMessage={session.toolbarErrorMessage}
+            refreshStatus={refresh.refreshStatus}
+            canRefresh={refresh.canRefresh}
             themeMode={theme.themeMode}
-            onInputChange={setWorkspaceInput}
+            onInputChange={session.changeWorkspaceInput}
             onBrowse={() => {
-              void browseWorkspace();
+              void session.browseWorkspace();
             }}
-            onLoad={loadWorkspace}
+            onLoad={session.loadWorkspaceFromInput}
             onRefresh={() => {
-              void refreshCurrentViewManually();
+              void refresh.refreshCurrentView();
             }}
             onReset={resetWorkspace}
             onThemeModeChange={theme.setThemeMode}
@@ -936,16 +249,16 @@ function App() {
               isOpen={
                 workspaceSidebarSectionPreference.isWorkspaceSidebarSectionOpen
               }
-              isBusy={workspace.isLoading || isBrowsingWorkspace}
+              isBusy={workspace.isLoading || session.isBrowsing}
               recentWorkspaces={recentWorkspaces.recentWorkspaces}
               onBrowse={() => {
-                void browseWorkspace();
+                void session.browseWorkspace();
               }}
               onToggleOpen={
                 workspaceSidebarSectionPreference.toggleWorkspaceSidebarSection
               }
               onOpenWorkspace={(path) => {
-                void openRecentWorkspacePath(path);
+                void session.openRecentWorkspace(path);
               }}
               onRemoveWorkspace={recentWorkspaces.removeWorkspace}
             />
@@ -975,156 +288,40 @@ function App() {
           />
         }
         viewer={
-          shouldShowOpenWorkspacePrompt ? (
-            <OpenWorkspaceEmptyState
-              isOpening={isBrowsingWorkspace}
-              recentWorkspaces={recentWorkspaces.recentWorkspaces}
-              onOpenWorkspace={() => {
-                void browseWorkspace();
-              }}
-              onOpenRecentWorkspace={(path) => {
-                void openRecentWorkspacePath(path);
-              }}
-              onRemoveRecentWorkspace={recentWorkspaces.removeWorkspace}
-            />
-          ) : (
-            <MarkdownViewer
-              state={specs.documentState}
-              selectedSpecLabel={specs.selectedSpec?.label ?? null}
-              selectedFileLabel={specs.selectedFile?.label ?? null}
-              comments={comments.comments}
-              activeCommentId={activeCommentId}
-              isAddingComment={isAddingComment}
-              addCommentErrorMessage={addCommentErrorMessage}
-              isUpdatingComment={isUpdatingComment}
-              operationState={comments.operationState}
-              isCommentScopeReady={isCommentScopeReady}
-              onReload={() => {
-                void specs.reloadDocument();
-              }}
-              onAddComment={addComment}
-              onUpdateComment={updateComment}
-              onResolveComment={resolveInlineComment}
-              onReopenComment={reopenInlineComment}
-              onDeleteComment={deleteInlineComment}
-              onSelectComment={selectComment}
-              onAnchorDisplayStatesChange={updateCommentAnchorDisplayStates}
-              onFirstReadable={() => {
-                setReadableDocumentKey(currentDocumentKey);
-              }}
-            />
-          )
+          <DocumentViewerPane
+            showOpenWorkspacePrompt={shouldShowOpenWorkspacePrompt}
+            isBrowsing={session.isBrowsing}
+            recentWorkspaces={recentWorkspaces}
+            specs={specs}
+            comments={comments}
+            selection={commentSelection}
+            actions={commentActions}
+            isCommentScopeReady={isCommentScopeReady}
+            onOpenWorkspace={() => {
+              void session.browseWorkspace();
+            }}
+            onOpenRecentWorkspace={(path) => {
+              void session.openRecentWorkspace(path);
+            }}
+            onSelectComment={selectComment}
+            onFirstReadable={documentReadable.markCurrentDocumentReadable}
+          />
         }
         comments={
-          <CommentSidebar
-            listState={comments.listState}
-            operationState={comments.operationState}
-            exportState={commentExportState}
-            activeCommentId={activeCommentId}
-            anchorDisplayStates={commentAnchorDisplayStates}
+          <CommentReviewPane
+            comments={comments}
+            selection={commentSelection}
+            actions={commentActions}
+            commentExport={commentExport}
+            userReviews={userReviews}
+            panelState={userReviewPanelState}
             onSelectComment={selectComment}
-            onResolveComment={resolveComment}
-            onReopenComment={reopenComment}
-            onDeleteComment={deleteComment}
-            onUpdateComment={updateComment}
-            onReload={() => {
-              void comments.reloadComments();
-            }}
-            onExportComments={exportCommentScope}
-            onCopyLlmPrompt={copyLlmPromptScope}
-            onCopyMcpFeedback={() => {
-              void copyMcpFeedbackPayload();
-            }}
-            userReviewPanel={
-              <UserReviewPanel
-                targetScope={userReviewTargetScope}
-                workspaceMode={userReviewWorkspaceMode}
-                openCommentCount={countOpenComments(comments.comments)}
-                listState={userReviews.listState}
-                createState={userReviews.createState}
-                archiveState={userReviews.archiveState}
-                onTargetScopeChange={setUserReviewTargetScope}
-                onWorkspaceModeChange={setUserReviewWorkspaceMode}
-                onCreateUserReview={() => {
-                  void createUserReviewFromOpenComments();
-                }}
-                onArchiveUserReview={(userReviewId) => {
-                  void userReviews.archiveUserReview(userReviewId);
-                }}
-                onRefreshUserReviews={() => {
-                  void userReviews.reloadUserReviews();
-                }}
-                onCopyPath={copyTextToClipboard}
-              />
-            }
           />
         }
       />
-      <WorkspaceDropOverlay isVisible={workspaceDrop.status === "dragging"} />
+      <WorkspaceDropOverlay isVisible={session.isDropTargetActive} />
     </div>
   );
-}
-
-/** @returns The first or last comment index when no comment is active yet. */
-function selectFallbackCommentIndex(
-  direction: NavigationDirection,
-  commentCount: number,
-): number {
-  if (direction === "next") {
-    return 0;
-  }
-
-  return Math.max(commentCount - 1, 0);
-}
-
-function formatCommentExportSuccessMessage(
-  response: ExportCommentsResponse,
-): string {
-  return `${response.commentCount}件のコメントを${response.destinationPath}へexportしました。`;
-}
-
-/** @returns The number of unresolved comments in the active sidebar list. */
-function countOpenComments(comments: readonly { status: string }[]): number {
-  return comments.filter((comment) => comment.status === "open").length;
-}
-
-/** @returns A stable identity for the document load that must become readable. */
-function createDocumentReadableKey(
-  state: ReturnType<typeof useSpecs>["documentState"],
-): string | null {
-  if (state.status !== "ready") {
-    return null;
-  }
-
-  return [
-    state.workspacePath,
-    state.specId,
-    state.fileKey,
-    state.correlationId ?? "no-correlation",
-  ].join("\u0000");
-}
-
-/** Copies generated prompt text to the browser clipboard. */
-async function copyTextToClipboard(text: string): Promise<void> {
-  if (navigator.clipboard === undefined) {
-    throw new Error("この環境ではクリップボードを利用できません。");
-  }
-
-  await navigator.clipboard.writeText(text);
-}
-
-/** @returns A compact success message for copied LLM prompt bundles. */
-function formatLlmPromptCopySuccessMessage(
-  response: GenerateLlmPromptResponse,
-): string {
-  return `${response.contextFileCount}ファイル / ${response.commentCount}件のコメントを含むLLM promptをコピーしました。`;
-}
-
-/** @returns A compact success message for copied Spec Skill MCP feedback dry-runs. */
-function formatMcpFeedbackCopySuccessMessage(
-  payload: SpecSkillMcpFeedbackPayload,
-): string {
-  return `${payload.summary.commentCount}件のコメントを${payload.interface.toolName}向けdry-run MCP feedback payloadとしてコピーしました。`;
 }
 
 export default App;

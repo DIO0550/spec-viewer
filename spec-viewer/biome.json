@@ -10,6 +10,7 @@
       "**",
       "!node_modules",
       "!dist",
+      "!coverage",
       "!storybook-static",
       "!**/*.tsbuildinfo",
       "!src-tauri/gen",

@@ -55,7 +55,7 @@ impl WorkspaceFileMapping {
             return Err(WorkspaceConfigError::MissingFileName { key });
         }
 
-        validate_safe_file_name(key, trimmed)?;
+        Self::validate_safe_file_name(key, trimmed)?;
 
         Ok(Self {
             key,
@@ -75,6 +75,33 @@ impl WorkspaceFileMapping {
     pub fn source(&self) -> WorkspaceConfigSource {
         self.source
     }
+
+    fn validate_safe_file_name(
+        key: SpecFileKey,
+        file_name: &str,
+    ) -> Result<(), WorkspaceConfigError> {
+        let is_single_plain_name = matches!(
+            Path::new(file_name)
+                .components()
+                .collect::<Vec<Component<'_>>>()
+                .as_slice(),
+            [Component::Normal(_)]
+        );
+
+        if !is_single_plain_name
+            || Path::new(file_name).is_absolute()
+            || file_name.contains('/')
+            || file_name.contains('\\')
+            || file_name.contains('\0')
+        {
+            return Err(WorkspaceConfigError::UnsafeFileName {
+                key,
+                file_name: file_name.to_string(),
+            });
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -85,7 +112,10 @@ pub struct WorkspaceConfig {
 
 impl WorkspaceConfig {
     pub fn new(files: Vec<WorkspaceFileMapping>) -> Result<Self, WorkspaceConfigError> {
-        Self::with_scan_excluded_directory_names(files, default_scan_excluded_directory_names())
+        Self::with_scan_excluded_directory_names(
+            files,
+            Self::default_scan_excluded_directory_names(),
+        )
     }
 
     pub fn with_scan_excluded_directory_names(
@@ -102,10 +132,14 @@ impl WorkspaceConfig {
 
         Ok(Self {
             files,
-            scan_excluded_directory_names: validate_scan_excluded_directory_names(
+            scan_excluded_directory_names: Self::validate_scan_excluded_directory_names(
                 scan_excluded_directory_names,
             )?,
         })
+    }
+
+    pub fn default_scan_excluded_directory_names() -> Vec<String> {
+        vec!["plan-review".to_string(), "user-review".to_string()]
     }
 
     pub fn default_for(kind: WorkspaceKind) -> Self {
@@ -120,14 +154,14 @@ impl WorkspaceConfig {
     pub fn plugin_workspace_default() -> Self {
         Self::from_default_keys(
             SpecFileKey::default_keys(),
-            plugin_workspace_default_file_name,
+            Self::plugin_workspace_default_file_name,
         )
     }
 
     pub fn spec_skill_default() -> Self {
         Self::from_default_keys(
             SpecFileKey::compatibility_keys(),
-            spec_skill_default_file_name,
+            Self::spec_skill_default_file_name,
         )
     }
 
@@ -199,6 +233,55 @@ impl WorkspaceConfig {
 
         Self::new(files).expect("workspace default keys should be unique")
     }
+
+    fn plugin_workspace_default_file_name(key: SpecFileKey) -> &'static str {
+        match key {
+            SpecFileKey::Exploration => "exploration-report.md",
+            SpecFileKey::Hearing => "hearing-notes.md",
+            SpecFileKey::Impl => "implementation-plan.md",
+            SpecFileKey::Tasks => "tasks.md",
+            SpecFileKey::TechReference => "tech-reference.html",
+            SpecFileKey::Requirements => "requirements.md",
+            SpecFileKey::Design => "design.md",
+        }
+    }
+
+    fn spec_skill_default_file_name(key: SpecFileKey) -> &'static str {
+        match key {
+            SpecFileKey::Requirements => "requirements.md",
+            SpecFileKey::Design => "design.md",
+            SpecFileKey::Tasks => "tasks.md",
+            SpecFileKey::TechReference => "tech-reference.html",
+            SpecFileKey::Exploration => "exploration-report.md",
+            SpecFileKey::Hearing => "hearing-notes.md",
+            SpecFileKey::Impl => "implementation-plan.md",
+        }
+    }
+
+    fn validate_scan_excluded_directory_names(
+        names: Vec<String>,
+    ) -> Result<Vec<String>, WorkspaceConfigError> {
+        let mut normalized = Vec::with_capacity(names.len());
+
+        for name in names {
+            let trimmed = name.trim();
+
+            if trimmed.is_empty()
+                || trimmed.contains('/')
+                || trimmed.contains('\\')
+                || trimmed.contains('\0')
+                || Path::new(trimmed)
+                    .components()
+                    .any(|component| !matches!(component, Component::Normal(_)))
+            {
+                return Err(WorkspaceConfigError::UnsafeScanExcludedDirectoryName { name });
+            }
+
+            normalized.push(trimmed.to_string());
+        }
+
+        Ok(normalized)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -228,83 +311,6 @@ pub enum WorkspaceConfigError {
     UnsafeFileName { key: SpecFileKey, file_name: String },
     #[error("unsafe scan excluded directory name in workspace config: {name}")]
     UnsafeScanExcludedDirectoryName { name: String },
-}
-
-pub fn default_scan_excluded_directory_names() -> Vec<String> {
-    vec!["plan-review".to_string(), "user-review".to_string()]
-}
-
-fn plugin_workspace_default_file_name(key: SpecFileKey) -> &'static str {
-    match key {
-        SpecFileKey::Exploration => "exploration-report.md",
-        SpecFileKey::Hearing => "hearing-notes.md",
-        SpecFileKey::Impl => "implementation-plan.md",
-        SpecFileKey::Tasks => "tasks.md",
-        SpecFileKey::TechReference => "tech-reference.html",
-        SpecFileKey::Requirements => "requirements.md",
-        SpecFileKey::Design => "design.md",
-    }
-}
-
-fn validate_scan_excluded_directory_names(
-    names: Vec<String>,
-) -> Result<Vec<String>, WorkspaceConfigError> {
-    let mut normalized = Vec::with_capacity(names.len());
-
-    for name in names {
-        let trimmed = name.trim();
-
-        if trimmed.is_empty()
-            || trimmed.contains('/')
-            || trimmed.contains('\\')
-            || trimmed.contains('\0')
-            || Path::new(trimmed)
-                .components()
-                .any(|component| !matches!(component, Component::Normal(_)))
-        {
-            return Err(WorkspaceConfigError::UnsafeScanExcludedDirectoryName { name });
-        }
-
-        normalized.push(trimmed.to_string());
-    }
-
-    Ok(normalized)
-}
-
-fn spec_skill_default_file_name(key: SpecFileKey) -> &'static str {
-    match key {
-        SpecFileKey::Requirements => "requirements.md",
-        SpecFileKey::Design => "design.md",
-        SpecFileKey::Tasks => "tasks.md",
-        SpecFileKey::TechReference => "tech-reference.html",
-        SpecFileKey::Exploration => "exploration-report.md",
-        SpecFileKey::Hearing => "hearing-notes.md",
-        SpecFileKey::Impl => "implementation-plan.md",
-    }
-}
-
-fn validate_safe_file_name(key: SpecFileKey, file_name: &str) -> Result<(), WorkspaceConfigError> {
-    let is_single_plain_name = matches!(
-        Path::new(file_name)
-            .components()
-            .collect::<Vec<Component<'_>>>()
-            .as_slice(),
-        [Component::Normal(_)]
-    );
-
-    if !is_single_plain_name
-        || Path::new(file_name).is_absolute()
-        || file_name.contains('/')
-        || file_name.contains('\\')
-        || file_name.contains('\0')
-    {
-        return Err(WorkspaceConfigError::UnsafeFileName {
-            key,
-            file_name: file_name.to_string(),
-        });
-    }
-
-    Ok(())
 }
 
 #[cfg(test)]

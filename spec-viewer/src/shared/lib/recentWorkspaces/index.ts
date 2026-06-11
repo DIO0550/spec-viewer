@@ -1,4 +1,7 @@
-import type { Workspace, WorkspaceKind } from "@/features/workspace/types/workspace";
+import type {
+  Workspace,
+  WorkspaceKind,
+} from "@/features/workspace/types/workspace";
 
 export type RecentWorkspace = Readonly<{
   path: string;
@@ -146,10 +149,10 @@ export function recordRecentWorkspace(
     );
   }
 
-  return dedupeRecentWorkspaces([
-    recentWorkspace,
-    ...workspaces,
-  ]).slice(0, recentWorkspaceLimit);
+  return dedupeRecentWorkspaces([recentWorkspace, ...workspaces]).slice(
+    0,
+    recentWorkspaceLimit,
+  );
 }
 
 /** @returns A recent list without the given path. */
@@ -197,7 +200,10 @@ function parseRecentWorkspaces(
   ).slice(0, recentWorkspaceLimit);
 }
 
-/** @returns A supported recent workspace object from unknown storage data. */
+/**
+ * @param value - Unknown entry parsed from storage
+ * @returns A supported recent workspace object from unknown storage data.
+ */
 function normalizeRecentWorkspace(value: unknown): RecentWorkspace | null {
   if (typeof value === "string") {
     const path = normalizeWorkspacePath(value);
@@ -269,7 +275,10 @@ function dedupeRecentWorkspaces(
   return dedupedWorkspaces;
 }
 
-/** @returns A non-empty trimmed workspace path, or null for blank input. */
+/**
+ * @param path - Raw workspace path
+ * @returns A non-empty trimmed workspace path, or null for blank input.
+ */
 function normalizeWorkspacePath(path: string): string | null {
   const trimmedPath = path.trim();
 
@@ -286,7 +295,10 @@ function normalizeWorkspacePath(path: string): string | null {
   return normalizedPath;
 }
 
-/** @returns A readable display name for the workspace path. */
+/**
+ * @param path - Workspace path to derive a name from
+ * @returns A readable display name for the workspace path.
+ */
 function createWorkspaceDisplayName(path: string): string {
   const normalizedPath = path.replace(/[\\/]+$/, "");
   const pathParts = normalizedPath.split(/[\\/]/);
@@ -299,7 +311,10 @@ function createWorkspaceDisplayName(path: string): string {
   return path;
 }
 
-/** @returns True when the stored value is a supported workspace kind. */
+/**
+ * @param value - Stored value to inspect
+ * @returns True when the stored value is a supported workspace kind.
+ */
 function isWorkspaceKind(value: unknown): value is WorkspaceKind {
   return (
     value === "plugin-workspace" ||

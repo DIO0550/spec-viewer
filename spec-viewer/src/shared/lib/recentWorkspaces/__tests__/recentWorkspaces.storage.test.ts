@@ -1,15 +1,15 @@
 import { expect, test } from "vitest";
 
 import {
+  type RecentWorkspace,
+  type RecentWorkspaceStorage,
+  readLastActiveWorkspacePath,
   readRecentWorkspaces,
   recentWorkspaceLimit,
-  readLastActiveWorkspacePath,
   recordRecentWorkspace,
   removeRecentWorkspace,
   writeLastActiveWorkspacePath,
   writeRecentWorkspaces,
-  type RecentWorkspace,
-  type RecentWorkspaceStorage,
 } from "@/shared/lib/recentWorkspaces";
 
 class MemoryStorage implements RecentWorkspaceStorage {

@@ -1,29 +1,25 @@
 //! Markdown file readers.
 
+mod document;
 pub mod hash;
 pub mod normalizer;
 pub mod parser;
+mod path_resolution;
 
-use std::{
-    fs, io,
-    path::{Path, PathBuf},
-    string::FromUtf8Error,
-};
+pub use document::{MarkdownDocument, MarkdownReadResult, MissingMarkdownFile};
+pub use path_resolution::{ResolvedSpecDocumentPath, SpecDocumentPathResolver};
+
+use std::{fs, io, string::FromUtf8Error};
 
 use thiserror::Error;
 
-use crate::{
-    domain::{
-        spec::{MarkdownBlock, SpecDocumentFormat, SpecFileKey},
-        workspace::{WorkspaceConfig, WorkspaceLayout},
-    },
-    infrastructure::{
-        filesystem::spec_directory_path,
-        spec_file_resolution::{spec_file_path_candidates, SpecFilePathCandidate},
-    },
+use crate::domain::{
+    spec::{SpecDocumentFormat, SpecFileKey},
+    workspace::{WorkspaceConfig, WorkspaceLayout},
 };
 
 use self::parser::{parse_markdown_blocks, MarkdownParseError};
+use self::path_resolution::display_path;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct FilesystemMarkdownReader;
@@ -40,17 +36,17 @@ impl FilesystemMarkdownReader {
         spec_id: &str,
         key: SpecFileKey,
     ) -> Result<MarkdownReadResult, MarkdownReadError> {
-        let resolved_path = resolve_spec_document_path(layout, config, spec_id, key)?;
+        let resolved_path = SpecDocumentPathResolver::resolve(layout, config, spec_id, key)?;
         let file_path = resolved_path.path();
 
         let contents = match fs::read(file_path) {
             Ok(contents) => contents,
             Err(error) if error.kind() == io::ErrorKind::NotFound => {
-                return Ok(MarkdownReadResult::Missing(MissingMarkdownFile {
+                return Ok(MarkdownReadResult::Missing(MissingMarkdownFile::new(
                     key,
-                    format: resolved_path.format(),
-                    path: display_path(resolved_path.preferred_path()),
-                }));
+                    resolved_path.format(),
+                    display_path(resolved_path.preferred_path()),
+                )));
             }
             Err(source) => {
                 return Err(MarkdownReadError::UnreadableFile {
@@ -86,112 +82,6 @@ impl FilesystemMarkdownReader {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum MarkdownReadResult {
-    Found(MarkdownDocument),
-    Missing(MissingMarkdownFile),
-}
-
-impl MarkdownReadResult {
-    pub fn is_missing(&self) -> bool {
-        matches!(self, Self::Missing(_))
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct MarkdownDocument {
-    key: SpecFileKey,
-    format: SpecDocumentFormat,
-    path: String,
-    contents: String,
-    blocks: Vec<MarkdownBlock>,
-}
-
-impl MarkdownDocument {
-    pub fn new(
-        key: SpecFileKey,
-        format: SpecDocumentFormat,
-        path: impl Into<String>,
-        contents: impl Into<String>,
-        blocks: Vec<MarkdownBlock>,
-    ) -> Self {
-        Self {
-            key,
-            format,
-            path: path.into(),
-            contents: contents.into(),
-            blocks,
-        }
-    }
-
-    pub fn key(&self) -> SpecFileKey {
-        self.key
-    }
-
-    pub fn format(&self) -> SpecDocumentFormat {
-        self.format
-    }
-
-    pub fn path(&self) -> &str {
-        &self.path
-    }
-
-    pub fn contents(&self) -> &str {
-        &self.contents
-    }
-
-    pub fn blocks(&self) -> &[MarkdownBlock] {
-        &self.blocks
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct MissingMarkdownFile {
-    key: SpecFileKey,
-    format: SpecDocumentFormat,
-    path: String,
-}
-
-impl MissingMarkdownFile {
-    pub fn key(&self) -> SpecFileKey {
-        self.key
-    }
-
-    pub fn format(&self) -> SpecDocumentFormat {
-        self.format
-    }
-
-    pub fn path(&self) -> &str {
-        &self.path
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ResolvedSpecDocumentPath {
-    preferred_path: PathBuf,
-    path: PathBuf,
-    format: SpecDocumentFormat,
-    candidate_paths: Vec<PathBuf>,
-}
-
-impl ResolvedSpecDocumentPath {
-    pub fn preferred_path(&self) -> &Path {
-        &self.preferred_path
-    }
-
-    pub fn path(&self) -> &Path {
-        &self.path
-    }
-
-    pub fn format(&self) -> SpecDocumentFormat {
-        self.format
-    }
-
-    pub fn candidate_paths(&self) -> &[PathBuf] {
-        &self.candidate_paths
-    }
-}
-
 #[derive(Debug, Error)]
 pub enum MarkdownReadError {
     #[error("workspace config does not define a file for key: {key}")]
@@ -215,150 +105,11 @@ pub enum MarkdownReadError {
     },
 }
 
-pub fn markdown_file_path(
-    layout: &WorkspaceLayout,
-    config: &WorkspaceConfig,
-    spec_id: &str,
-    key: SpecFileKey,
-) -> Result<PathBuf, MarkdownReadError> {
-    resolve_spec_document_path(layout, config, spec_id, key).map(|resolved_path| resolved_path.path)
-}
-
-pub fn resolve_spec_document_path(
-    layout: &WorkspaceLayout,
-    config: &WorkspaceConfig,
-    spec_id: &str,
-    key: SpecFileKey,
-) -> Result<ResolvedSpecDocumentPath, MarkdownReadError> {
-    let mapping = config
-        .file_for_key(key)
-        .ok_or(MarkdownReadError::MissingFileMapping { key })?;
-    let spec_directory =
-        spec_directory_path(layout, spec_id).map_err(|_| MarkdownReadError::InvalidSpecId {
-            spec_id: spec_id.to_string(),
-        })?;
-    let configured_path = spec_directory.join(mapping.file_name());
-    let candidates = spec_file_path_candidates(key, &configured_path);
-    let preferred = candidates
-        .first()
-        .ok_or(MarkdownReadError::MissingFileMapping { key })?;
-
-    for candidate in &candidates {
-        ensure_within_workspace(layout, candidate.path())?;
-    }
-
-    for candidate in &candidates {
-        if file_exists(candidate.path())? {
-            return Ok(resolved_spec_document_path(
-                candidate,
-                preferred,
-                &candidates,
-            ));
-        }
-    }
-
-    Ok(resolved_spec_document_path(
-        preferred,
-        preferred,
-        &candidates,
-    ))
-}
-
-fn file_exists(path: &Path) -> Result<bool, MarkdownReadError> {
-    match fs::metadata(path) {
-        Ok(metadata) => Ok(metadata.is_file()),
-        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
-        Err(source) => Err(MarkdownReadError::InspectPath {
-            path: display_path(path),
-            source,
-        }),
-    }
-}
-
-fn resolved_spec_document_path(
-    selected: &SpecFilePathCandidate,
-    preferred: &SpecFilePathCandidate,
-    candidates: &[SpecFilePathCandidate],
-) -> ResolvedSpecDocumentPath {
-    ResolvedSpecDocumentPath {
-        preferred_path: preferred.path().to_path_buf(),
-        path: selected.path().to_path_buf(),
-        format: selected.format(),
-        candidate_paths: candidates
-            .iter()
-            .map(|candidate| candidate.path().to_path_buf())
-            .collect(),
-    }
-}
-
-fn ensure_within_workspace(
-    layout: &WorkspaceLayout,
-    file_path: &Path,
-) -> Result<(), MarkdownReadError> {
-    let workspace_root = PathBuf::from(layout.root().as_str());
-    let canonical_root = fs::canonicalize(&workspace_root).map_err(|source| {
-        MarkdownReadError::WorkspaceRootUnavailable {
-            path: display_path(&workspace_root),
-            source,
-        }
-    })?;
-
-    match fs::canonicalize(file_path) {
-        Ok(canonical_file) => ensure_path_starts_with_workspace(&canonical_file, &canonical_root),
-        Err(error) if error.kind() == io::ErrorKind::NotFound => {
-            ensure_existing_parent_within_workspace(file_path, &canonical_root)
-        }
-        Err(source) => Err(MarkdownReadError::InspectPath {
-            path: display_path(file_path),
-            source,
-        }),
-    }
-}
-
-fn ensure_existing_parent_within_workspace(
-    file_path: &Path,
-    canonical_root: &Path,
-) -> Result<(), MarkdownReadError> {
-    let Some(parent) = file_path.parent() else {
-        return Err(MarkdownReadError::PathEscapesWorkspace {
-            path: display_path(file_path),
-        });
-    };
-
-    match fs::canonicalize(parent) {
-        Ok(canonical_parent) => {
-            ensure_path_starts_with_workspace(&canonical_parent, canonical_root)
-        }
-        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
-        Err(source) => Err(MarkdownReadError::InspectPath {
-            path: display_path(parent),
-            source,
-        }),
-    }
-}
-
-fn ensure_path_starts_with_workspace(
-    path: &Path,
-    canonical_root: &Path,
-) -> Result<(), MarkdownReadError> {
-    if path.starts_with(canonical_root) {
-        return Ok(());
-    }
-
-    Err(MarkdownReadError::PathEscapesWorkspace {
-        path: display_path(path),
-    })
-}
-
-fn display_path(path: &Path) -> String {
-    path.to_string_lossy().into_owned()
-}
-
 #[cfg(test)]
 mod tests {
     use std::{
         env, fs,
-        path::{Path, PathBuf},
+        path::PathBuf,
         time::{SystemTime, UNIX_EPOCH},
     };
 
@@ -367,8 +118,6 @@ mod tests {
         spec::SpecFileKey,
         workspace::{WorkspaceConfig, WorkspaceKind, WorkspaceRoot},
     };
-    use crate::infrastructure::filesystem::safe_relative_spec_path;
-
     const SPECS_DIR: &str = ".plugin-workspace/.specs";
 
     struct TestWorkspace {
@@ -824,13 +573,5 @@ mod tests {
             result,
             Err(MarkdownReadError::UnreadableFile { path, .. }) if path.ends_with("auth/tasks.md")
         ));
-    }
-
-    #[test]
-    fn safe_relative_spec_path_allows_nested_spec_ids() {
-        let path =
-            safe_relative_spec_path("auth/code-review").expect("nested spec id should be allowed");
-
-        assert_eq!(Path::new("auth/code-review"), path);
     }
 }

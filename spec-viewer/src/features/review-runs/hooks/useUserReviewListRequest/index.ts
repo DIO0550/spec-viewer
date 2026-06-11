@@ -1,12 +1,26 @@
 import { useCallback, useMemo, useRef } from "react";
-
-import { UserReviewAsyncToken } from "@/features/review-runs/hooks/userReviewAsyncToken";
 import type { UserReviewAsyncToken as UserReviewAsyncTokenType } from "@/features/review-runs/hooks/userReviewAsyncToken";
+import { UserReviewAsyncToken } from "@/features/review-runs/hooks/userReviewAsyncToken";
 
 export type UserReviewListRequestController = Readonly<{
+  /**
+   * Starts a new list request.
+   * @param identity - Target identity the request belongs to.
+   * @returns Token identifying the started request.
+   */
   begin: (identity: string) => UserReviewAsyncTokenType;
+  /** Invalidates any in-flight list request. */
   invalidate: () => void;
+  /**
+   * Tests whether a request token is still current.
+   * @param token - Token returned by begin.
+   * @returns true when the token matches the latest request and identity.
+   */
   isCurrent: (token: UserReviewAsyncTokenType) => boolean;
+  /**
+   * Updates the current target identity.
+   * @param identity - New target identity.
+   */
   setCurrentIdentity: (identity: string) => void;
 }>;
 

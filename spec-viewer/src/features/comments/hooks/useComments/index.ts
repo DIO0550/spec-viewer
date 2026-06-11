@@ -1,42 +1,40 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-
-import {
-  commentCommands as defaultCommentCommands,
-  normalizeCommandError,
-  type CommentCommands,
-} from "@/shared/api/tauri";
-import {
-  resolvePerformanceCorrelationId,
-  startPerformanceSpan,
-} from "@/shared/lib/performance";
-import type { CommentScope } from "@/features/comments/domain/commentScope";
-import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import {
   CommentListState,
   type CommentListState as CommentListStateType,
 } from "@/features/comments/domain/commentListState";
 import type { CommentOperationState } from "@/features/comments/domain/commentOperation";
-import { listComments as listCommentsViaGateway } from "@/features/comments/infra/commentGateway";
+import type { CommentScope } from "@/features/comments/domain/commentScope";
+import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import { createUseCommentsResult } from "@/features/comments/hooks/createUseCommentsResult";
 import {
-  useCommentOperations,
   type AddCommentInput,
   type CommentListTransform,
   type UpdateCommentInput,
+  useCommentOperations,
 } from "@/features/comments/hooks/useCommentOperations";
-import type { CommentId } from "@/features/comments/types/comment";
-import type { Comment } from "@/features/comments/types/comment";
+import { listComments as listCommentsViaGateway } from "@/features/comments/infra/commentGateway";
+import type { Comment, CommentId } from "@/features/comments/types/comment";
+import {
+  type CommentCommands,
+  commentCommands as defaultCommentCommands,
+  normalizeCommandError,
+} from "@/shared/api/tauri";
+import {
+  resolvePerformanceCorrelationId,
+  startPerformanceSpan,
+} from "@/shared/lib/performance";
 import type { NormalizedCommandError } from "@/shared/types/ipc";
 
 export type { CommentListState } from "@/features/comments/domain/commentListState";
 export type {
+  CommentOperationKind,
+  CommentOperationState,
+} from "@/features/comments/domain/commentOperation";
+export type {
   AddCommentInput,
   UpdateCommentInput,
 } from "@/features/comments/hooks/useCommentOperations";
-export {
-  type CommentOperationKind,
-  type CommentOperationState,
-} from "@/features/comments/domain/commentOperation";
 
 export type UseCommentsOptions = Readonly<{
   scope: CommentScope | null;
@@ -54,12 +52,46 @@ export type UseCommentsResult = Readonly<{
   isEmpty: boolean;
   error: NormalizedCommandError | null;
   operationError: NormalizedCommandError | null;
+  /**
+   * Reloads the comment list for the current scope.
+   * @returns Whether the reload succeeded.
+   */
   reloadComments: () => Promise<boolean>;
+  /**
+   * Adds a comment.
+   * @param input - Anchor and body for the new comment.
+   * @returns The added comment, or null on failure.
+   */
   addComment: (input: AddCommentInput) => Promise<Comment | null>;
+  /**
+   * Updates a comment body.
+   * @param input - Comment id and new body.
+   * @returns The updated comment, or null on failure.
+   */
   updateComment: (input: UpdateCommentInput) => Promise<Comment | null>;
+  /**
+   * Deletes a comment.
+   * @param commentId - Identifier of the comment to delete.
+   * @returns Whether the deletion succeeded.
+   */
   deleteComment: (commentId: CommentId) => Promise<boolean>;
+  /**
+   * Marks a comment as resolved.
+   * @param commentId - Identifier of the comment to resolve.
+   * @returns The resolved comment, or null on failure.
+   */
   resolveComment: (commentId: CommentId) => Promise<Comment | null>;
+  /**
+   * Reopens a resolved comment.
+   * @param commentId - Identifier of the comment to reopen.
+   * @returns The reopened comment, or null on failure.
+   */
   reopenComment: (commentId: CommentId) => Promise<Comment | null>;
+  /**
+   * Toggles a comment between open and resolved.
+   * @param commentId - Identifier of the comment to toggle.
+   * @returns The toggled comment, or null on failure.
+   */
   toggleCommentResolved: (commentId: CommentId) => Promise<Comment | null>;
 }>;
 
