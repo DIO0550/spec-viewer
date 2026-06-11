@@ -1,8 +1,8 @@
-import type { Comment, CommentId } from "@/features/comments/types/comment";
 import {
   CommentStatusFilter,
   type CommentStatusFilter as CommentStatusFilterType,
 } from "@/features/comments/domain/commentStatusFilter";
+import type { Comment, CommentId } from "@/features/comments/types/comment";
 
 declare const commentsBrand: unique symbol;
 
@@ -106,6 +106,22 @@ export const Comments = {
       statusFilter,
     );
   },
+  /**
+   * @param comments - Current visible comments
+   * @returns Ids of comments that are still open.
+   */
+  openCommentIds(comments: readonly Comment[]): readonly CommentId[] {
+    return comments
+      .filter((comment) => comment.status === "open")
+      .map((comment) => comment.id);
+  },
+  /**
+   * @param comments - Current visible comments
+   * @returns The number of unresolved comments.
+   */
+  countOpen(comments: readonly Comment[]): number {
+    return comments.filter((comment) => comment.status === "open").length;
+  },
 } as const;
 
 /** @returns Incoming comment with known anchor resolution preserved when omitted. */
@@ -132,7 +148,10 @@ function shouldDisplay(
   return CommentStatusFilter.matches(statusFilter, comment.status);
 }
 
-/** @returns Comment with resolved state inverted. */
+/**
+ * @param comment - Comment to toggle
+ * @returns Comment with resolved state inverted.
+ */
 function toggleResolved(comment: Comment): Comment {
   if (comment.resolved) {
     return { ...comment, status: "open", resolved: false };
