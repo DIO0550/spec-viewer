@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react";
 
-import "./App.css";
+import "../App.css";
 import { CommentReviewPane } from "@/app/App/components/CommentReviewPane";
 import { DocumentViewerPane } from "@/app/App/components/DocumentViewerPane";
 import { useCurrentViewRefresh } from "@/app/App/hooks/useCurrentViewRefresh";
