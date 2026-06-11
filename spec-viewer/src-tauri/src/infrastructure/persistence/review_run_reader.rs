@@ -17,7 +17,7 @@ use crate::{
         workspace::WorkspaceLayout,
     },
     infrastructure::{
-        filesystem::{spec_directory_path, SafeSpecPathError},
+        filesystem::{SafeSpecPathError, SpecPathResolver},
         persistence::{
             review_run_paths::{ReviewRunFolderState, USER_REVIEW_DIRECTORY},
             review_run_schema::{
@@ -223,9 +223,11 @@ fn state_directory(
     spec_id: &SpecId,
     state: ReviewRunFolderState,
 ) -> Result<PathBuf, ReviewRunReadError> {
-    Ok(spec_directory_path(layout, spec_id.as_str())?
-        .join(USER_REVIEW_DIRECTORY)
-        .join(state.directory_name()))
+    Ok(
+        SpecPathResolver::spec_directory_path(layout, spec_id.as_str())?
+            .join(USER_REVIEW_DIRECTORY)
+            .join(state.directory_name()),
+    )
 }
 
 fn source_changed_after_export(

@@ -1,12 +1,8 @@
 //! JSON-backed comment repository implementation.
 
-use std::{
-    collections::{HashMap, HashSet},
-    fs, io,
-    path::Path,
-};
+use std::{collections::HashSet, fs, io, path::Path};
 
-use serde_json::{Map, Value};
+use serde_json::Value;
 use uuid::Uuid;
 
 use crate::{
@@ -19,8 +15,9 @@ use crate::{
         workspace::WorkspaceLayout,
     },
     infrastructure::persistence::{
+        comment_document::CommentDocumentBuilder,
         comment_paths::{CommentStoragePath, CommentStoragePathError, CommentStoragePathResolver},
-        comments::{deserialize_comments, serialize_comments, CommentJsonError},
+        comments::{deserialize_comments, CommentJsonError},
     },
 };
 
@@ -59,8 +56,8 @@ impl JsonCommentRepository {
             }
         };
 
-        let comments = deserialize_comments(file_key, &contents).map_err(json_error)?;
-        ensure_unique_comment_ids(&comments)?;
+        let comments = deserialize_comments(file_key, &contents).map_err(Self::json_error)?;
+        Self::ensure_unique_comment_ids(&comments)?;
         let previous_json = serde_json::from_str(&contents).map_err(|source| {
             CommentRepositoryError::invalid_data(format!(
                 "comment JSON is malformed at {}: {source}",
@@ -82,7 +79,7 @@ impl JsonCommentRepository {
     ) -> Result<CommentStoragePath, CommentRepositoryError> {
         self.path_resolver
             .resolve(&self.layout, scope)
-            .map_err(storage_path_error)
+            .map_err(Self::storage_path_error)
     }
 
     fn write(
@@ -93,17 +90,123 @@ impl JsonCommentRepository {
         state
             .path
             .ensure_comments_directory()
-            .map_err(storage_path_error)?;
+            .map_err(Self::storage_path_error)?;
 
         let document =
-            build_comment_document(state.file_key, comments, state.previous_json.as_ref())?;
+            CommentDocumentBuilder::build(state.file_key, comments, state.previous_json.as_ref())?;
         let contents = serde_json::to_string_pretty(&document).map_err(|source| {
             CommentRepositoryError::invalid_data(format!(
                 "failed to serialize comment JSON: {source}"
             ))
         })?;
 
-        write_via_temp_file(state.path.file_path(), &contents)
+        Self::write_via_temp_file(state.path.file_path(), &contents)
+    }
+
+    fn ensure_scope_contains(
+        scope: &CommentScope,
+        comment: &Comment,
+    ) -> Result<(), CommentRepositoryError> {
+        if !scope.contains_comment(comment) {
+            return Err(CommentRepositoryError::scope_mismatch(
+                scope.file_key(),
+                comment.anchor().file_key(),
+            ));
+        }
+
+        Ok(())
+    }
+
+    fn ensure_unique_comment_ids(comments: &[Comment]) -> Result<(), CommentRepositoryError> {
+        let mut seen = HashSet::new();
+
+        for comment in comments {
+            if !seen.insert(comment.id().clone()) {
+                return Err(CommentRepositoryError::invalid_data(format!(
+                    "duplicate comment id in persisted data: {}",
+                    comment.id()
+                )));
+            }
+        }
+
+        Ok(())
+    }
+
+    fn write_via_temp_file(path: &Path, contents: &str) -> Result<(), CommentRepositoryError> {
+        let parent = path.parent().ok_or_else(|| {
+            CommentRepositoryError::unavailable(format!(
+                "comment file has no parent directory: {}",
+                display_path(path)
+            ))
+        })?;
+        let file_name = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .ok_or_else(|| {
+                CommentRepositoryError::unavailable(format!(
+                    "comment file name is not valid UTF-8: {}",
+                    display_path(path)
+                ))
+            })?;
+        let temp_path = parent.join(format!(".{file_name}.{}.tmp", Uuid::new_v4()));
+
+        fs::write(&temp_path, contents).map_err(|source| {
+            CommentRepositoryError::unavailable(format!(
+                "failed to write temp comment file {}: {source}",
+                display_path(&temp_path)
+            ))
+        })?;
+
+        match fs::rename(&temp_path, path) {
+            Ok(()) => Ok(()),
+            Err(source) if source.kind() == io::ErrorKind::AlreadyExists => {
+                fs::remove_file(path).map_err(|remove_source| {
+                    let _ = fs::remove_file(&temp_path);
+                    CommentRepositoryError::unavailable(format!(
+                        "failed to replace comment file {}: {remove_source}",
+                        display_path(path)
+                    ))
+                })?;
+                fs::rename(&temp_path, path).map_err(|rename_source| {
+                    let _ = fs::remove_file(&temp_path);
+                    CommentRepositoryError::unavailable(format!(
+                        "failed to move temp comment file {} into place: {rename_source}",
+                        display_path(&temp_path)
+                    ))
+                })
+            }
+            Err(source) => {
+                let _ = fs::remove_file(&temp_path);
+                Err(CommentRepositoryError::unavailable(format!(
+                    "failed to move temp comment file {} into place: {source}",
+                    display_path(&temp_path)
+                )))
+            }
+        }
+    }
+
+    fn storage_path_error(error: CommentStoragePathError) -> CommentRepositoryError {
+        match error {
+            CommentStoragePathError::InvalidSpecId { spec_id } => {
+                CommentRepositoryError::invalid_data(format!(
+                    "invalid comment storage spec id: {spec_id}"
+                ))
+            }
+            CommentStoragePathError::PathEscapesSpecDirectory { path } => {
+                CommentRepositoryError::invalid_data(format!(
+                    "comment storage path escapes selected spec folder: {path}"
+                ))
+            }
+            CommentStoragePathError::CreateCommentsDirectory { path, source } => {
+                CommentRepositoryError::unavailable(format!(
+                    "failed to create comment storage directory {path}: {source}"
+                ))
+            }
+        }
+    }
+
+    fn json_error(error: CommentJsonError) -> CommentRepositoryError {
+        CommentRepositoryError::invalid_data(error.to_string())
     }
 }
 
@@ -123,7 +226,7 @@ impl CommentRepository for JsonCommentRepository {
         scope: &CommentScope,
         comment: Comment,
     ) -> Result<Comment, CommentRepositoryError> {
-        ensure_scope_contains(scope, &comment)?;
+        Self::ensure_scope_contains(scope, &comment)?;
 
         let mut state = self.load(scope)?;
         if state
@@ -145,7 +248,7 @@ impl CommentRepository for JsonCommentRepository {
         scope: &CommentScope,
         comment: Comment,
     ) -> Result<Comment, CommentRepositoryError> {
-        ensure_scope_contains(scope, &comment)?;
+        Self::ensure_scope_contains(scope, &comment)?;
 
         let mut state = self.load(scope)?;
         let existing = state
@@ -179,216 +282,6 @@ struct CommentFileState {
     file_key: SpecFileKey,
     comments: Vec<Comment>,
     previous_json: Option<Value>,
-}
-
-fn ensure_scope_contains(
-    scope: &CommentScope,
-    comment: &Comment,
-) -> Result<(), CommentRepositoryError> {
-    if !scope.contains_comment(comment) {
-        return Err(CommentRepositoryError::scope_mismatch(
-            scope.file_key(),
-            comment.anchor().file_key(),
-        ));
-    }
-
-    Ok(())
-}
-
-fn ensure_unique_comment_ids(comments: &[Comment]) -> Result<(), CommentRepositoryError> {
-    let mut seen = HashSet::new();
-
-    for comment in comments {
-        if !seen.insert(comment.id().clone()) {
-            return Err(CommentRepositoryError::invalid_data(format!(
-                "duplicate comment id in persisted data: {}",
-                comment.id()
-            )));
-        }
-    }
-
-    Ok(())
-}
-
-fn build_comment_document(
-    file_key: SpecFileKey,
-    comments: &[Comment],
-    previous_json: Option<&Value>,
-) -> Result<Value, CommentRepositoryError> {
-    let previous_records = previous_comment_records_by_id(previous_json);
-    let comments = comments
-        .iter()
-        .map(|comment| {
-            let record = serialize_comment_record(file_key, comment)?;
-            let id = comment.id().as_str();
-
-            Ok(match previous_records.get(id) {
-                Some(previous_record) => merge_known_fields(previous_record.clone(), record),
-                None => record,
-            })
-        })
-        .collect::<Result<Vec<_>, CommentRepositoryError>>()?;
-
-    let mut document = match previous_json {
-        Some(Value::Object(object)) => Value::Object(object.clone()),
-        _ => Value::Object(Map::new()),
-    };
-
-    if let Value::Object(object) = &mut document {
-        object.insert("version".to_string(), Value::from(1));
-        object.insert("comments".to_string(), Value::Array(comments));
-    }
-
-    Ok(document)
-}
-
-fn previous_comment_records_by_id(previous_json: Option<&Value>) -> HashMap<String, Value> {
-    let Some(previous_json) = previous_json else {
-        return HashMap::new();
-    };
-    let comments = match previous_json {
-        Value::Object(object) => object.get("comments").and_then(Value::as_array),
-        Value::Array(comments) => Some(comments),
-        _ => None,
-    };
-    let Some(comments) = comments else {
-        return HashMap::new();
-    };
-
-    comments
-        .iter()
-        .filter_map(|record| {
-            record
-                .get("id")
-                .and_then(Value::as_str)
-                .map(|id| (id.to_string(), record.clone()))
-        })
-        .collect()
-}
-
-fn merge_known_fields(previous: Value, current: Value) -> Value {
-    match (previous, current) {
-        (Value::Object(mut previous_object), Value::Object(current_object)) => {
-            for (key, value) in current_object {
-                if key == "anchor" {
-                    merge_anchor_field(&mut previous_object, value);
-                } else {
-                    previous_object.insert(key, value);
-                }
-            }
-
-            Value::Object(previous_object)
-        }
-        (_, current) => current,
-    }
-}
-
-fn merge_anchor_field(previous_object: &mut Map<String, Value>, current_anchor: Value) {
-    match (previous_object.get_mut("anchor"), current_anchor) {
-        (Some(Value::Object(previous_anchor_object)), Value::Object(current_anchor_object)) => {
-            for (key, value) in current_anchor_object {
-                previous_anchor_object.insert(key, value);
-            }
-        }
-        (_, current_anchor) => {
-            previous_object.insert("anchor".to_string(), current_anchor);
-        }
-    }
-}
-
-fn serialize_comment_record(
-    file_key: SpecFileKey,
-    comment: &Comment,
-) -> Result<Value, CommentRepositoryError> {
-    let document =
-        serialize_comments(file_key, std::slice::from_ref(comment)).map_err(json_error)?;
-    let value: Value = serde_json::from_str(&document).map_err(|source| {
-        CommentRepositoryError::invalid_data(format!(
-            "serialized comment JSON did not parse: {source}"
-        ))
-    })?;
-
-    value
-        .get("comments")
-        .and_then(Value::as_array)
-        .and_then(|comments| comments.first())
-        .cloned()
-        .ok_or_else(|| CommentRepositoryError::invalid_data("serialized comment JSON was empty"))
-}
-
-fn write_via_temp_file(path: &Path, contents: &str) -> Result<(), CommentRepositoryError> {
-    let parent = path.parent().ok_or_else(|| {
-        CommentRepositoryError::unavailable(format!(
-            "comment file has no parent directory: {}",
-            display_path(path)
-        ))
-    })?;
-    let file_name = path
-        .file_name()
-        .and_then(|name| name.to_str())
-        .ok_or_else(|| {
-            CommentRepositoryError::unavailable(format!(
-                "comment file name is not valid UTF-8: {}",
-                display_path(path)
-            ))
-        })?;
-    let temp_path = parent.join(format!(".{file_name}.{}.tmp", Uuid::new_v4()));
-
-    fs::write(&temp_path, contents).map_err(|source| {
-        CommentRepositoryError::unavailable(format!(
-            "failed to write temp comment file {}: {source}",
-            display_path(&temp_path)
-        ))
-    })?;
-
-    match fs::rename(&temp_path, path) {
-        Ok(()) => Ok(()),
-        Err(source) if source.kind() == io::ErrorKind::AlreadyExists => {
-            fs::remove_file(path).map_err(|remove_source| {
-                let _ = fs::remove_file(&temp_path);
-                CommentRepositoryError::unavailable(format!(
-                    "failed to replace comment file {}: {remove_source}",
-                    display_path(path)
-                ))
-            })?;
-            fs::rename(&temp_path, path).map_err(|rename_source| {
-                let _ = fs::remove_file(&temp_path);
-                CommentRepositoryError::unavailable(format!(
-                    "failed to move temp comment file {} into place: {rename_source}",
-                    display_path(&temp_path)
-                ))
-            })
-        }
-        Err(source) => {
-            let _ = fs::remove_file(&temp_path);
-            Err(CommentRepositoryError::unavailable(format!(
-                "failed to move temp comment file {} into place: {source}",
-                display_path(&temp_path)
-            )))
-        }
-    }
-}
-
-fn storage_path_error(error: CommentStoragePathError) -> CommentRepositoryError {
-    match error {
-        CommentStoragePathError::InvalidSpecId { spec_id } => CommentRepositoryError::invalid_data(
-            format!("invalid comment storage spec id: {spec_id}"),
-        ),
-        CommentStoragePathError::PathEscapesSpecDirectory { path } => {
-            CommentRepositoryError::invalid_data(format!(
-                "comment storage path escapes selected spec folder: {path}"
-            ))
-        }
-        CommentStoragePathError::CreateCommentsDirectory { path, source } => {
-            CommentRepositoryError::unavailable(format!(
-                "failed to create comment storage directory {path}: {source}"
-            ))
-        }
-    }
-}
-
-fn json_error(error: CommentJsonError) -> CommentRepositoryError {
-    CommentRepositoryError::invalid_data(error.to_string())
 }
 
 fn display_path(path: &Path) -> String {

@@ -14,8 +14,8 @@ use crate::{
         workspace::{WorkspaceConfig, WorkspaceLayout},
     },
     infrastructure::markdown::{
-        resolve_spec_document_path, FilesystemMarkdownReader, MarkdownDocument, MarkdownReadError,
-        MarkdownReadResult,
+        FilesystemMarkdownReader, MarkdownDocument, MarkdownReadError, MarkdownReadResult,
+        SpecDocumentPathResolver,
     },
 };
 
@@ -146,7 +146,7 @@ impl MarkdownDocumentCache {
         spec_id: &str,
         key: SpecFileKey,
     ) -> Result<MarkdownReadResult, MarkdownReadError> {
-        let resolved_path = resolve_spec_document_path(layout, config, spec_id, key)?;
+        let resolved_path = SpecDocumentPathResolver::resolve(layout, config, spec_id, key)?;
         let metadata = match fs::metadata(resolved_path.path()) {
             Ok(metadata) => metadata,
             Err(error) if error.kind() == io::ErrorKind::NotFound => {

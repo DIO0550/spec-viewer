@@ -20,10 +20,9 @@ use crate::{
             ReviewRunRelativePath, UserReviewExecutionTarget, UserReviewRun, UserReviewRunId,
             UserReviewRunStatus, UserReviewRunTarget, UserReviewSourceFile,
         },
-        spec::{SpecFile, SpecFileKey, SpecId, SpecNode},
+        spec::{SafeSpecPath, SpecFile, SpecFileKey, SpecId, SpecNode},
     },
     infrastructure::{
-        filesystem::safe_relative_spec_path,
         git::GitReviewWorktreeService,
         persistence::{
             review_run_paths::{ReviewRunFolderState, ReviewRunPathResolver},
@@ -293,7 +292,7 @@ fn context_snapshot_path(
     spec_id: &str,
     file_key: SpecFileKey,
 ) -> Result<ReviewRunRelativePath, AppUseCaseError> {
-    let spec_path = safe_relative_spec_path(spec_id)?;
+    let spec_path = SafeSpecPath::parse(spec_id)?.into_path_buf();
     let relative = Path::new("context")
         .join(spec_path)
         .join(format!("{}.md", file_key.as_str()));

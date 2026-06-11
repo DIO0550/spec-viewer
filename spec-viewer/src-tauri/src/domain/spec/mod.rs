@@ -1,5 +1,9 @@
 //! Spec document and tree domain concepts.
 
+mod safe_path;
+
+pub use safe_path::{SafeSpecPath, SafeSpecPathError};
+
 use std::{fmt, str::FromStr};
 
 use thiserror::Error;
@@ -536,6 +540,15 @@ impl SpecNode {
 
     pub fn is_leaf(&self) -> bool {
         self.children.is_empty()
+    }
+
+    /// Composes the id of a child node from its parent id and label.
+    pub fn child_id(parent_id: &str, label: &str) -> String {
+        if parent_id.is_empty() {
+            return label.to_string();
+        }
+
+        format!("{parent_id}/{label}")
     }
 
     /// Finds the spec node with the given id within a spec tree, searching recursively.
