@@ -25,6 +25,7 @@ export type StopSpecFileWatchCommand = () => Promise<StopSpecFileWatchResponse>;
 
 export type SpecFileWatchSubscriber = <Payload>(
   eventName: string,
+  /** @param event - Tauri event delivered for the subscribed name */
   handler: (event: TauriEvent<Payload>) => void,
 ) => Promise<() => void>;
 
@@ -38,6 +39,7 @@ export type UseSpecFileWatcherOptions = Readonly<{
   workspacePath: string | null;
   specId: string | null;
   fileKey: SpecFileKey | null;
+  /** @param event - Watch event describing the changed markdown file */
   onMarkdownChange: (event: SpecFileWatchChangedEvent) => void | Promise<void>;
   onConfigChange?: (event: SpecFileWatchChangedEvent) => void | Promise<void>;
   onWatcherError?: (event: SpecFileWatchErrorEvent) => void;
@@ -46,7 +48,10 @@ export type UseSpecFileWatcherOptions = Readonly<{
   subscribe?: SpecFileWatchSubscriber;
 }>;
 
-/** Keeps the backend file watcher aligned with the selected spec file. */
+/**
+ * Keeps the backend file watcher aligned with the selected spec file.
+ * @param options - Watch target selection, change callbacks, and command overrides
+ */
 export function useSpecFileWatcher(options: UseSpecFileWatcherOptions): void {
   const startWatch = options.startWatch ?? defaultStartSpecFileWatch;
   const stopWatch = options.stopWatch ?? defaultStopSpecFileWatch;

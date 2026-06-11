@@ -21,14 +21,21 @@ import { invokeCommand } from "./invokeCommand";
 const COMMENT_EXPORT_DEFAULT_SPEC_ID = "spec";
 
 export type CommentCommands = Readonly<{
+  /** @param request - Spec file scope and status filter */
   listComments: (request: ListCommentsRequest) => Promise<ListCommentsResponse>;
+  /** @param request - Anchor and body for the new comment */
   addComment: (request: AddCommentRequest) => Promise<Comment>;
+  /** @param request - Comment id and replacement body */
   updateComment: (request: UpdateCommentRequest) => Promise<Comment>;
+  /** Deletes the comment identified by the request. */
   deleteComment: (
     request: DeleteCommentRequest,
   ) => Promise<DeleteCommentResponse>;
+  /** @param request - Comment id to mark as resolved */
   resolveComment: (request: CommentStatusRequest) => Promise<Comment>;
+  /** @param request - Comment id to reopen */
   reopenComment: (request: CommentStatusRequest) => Promise<Comment>;
+  /** @param request - Comment id whose resolved state is toggled */
   toggleCommentResolved: (request: CommentStatusRequest) => Promise<Comment>;
 }>;
 

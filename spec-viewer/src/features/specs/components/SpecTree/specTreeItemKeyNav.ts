@@ -5,6 +5,7 @@ import { SpecTreeKeyNav } from "@/features/specs/domain/specTreeKeyNav";
 type TreeItemKeyDownOptions = Readonly<{
   hasChildren: boolean;
   isExpanded: boolean;
+  /** Toggles the expansion state of the focused item. */
   onToggleExpanded: () => void;
 }>;
 

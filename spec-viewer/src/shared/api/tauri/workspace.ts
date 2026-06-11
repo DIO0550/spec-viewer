@@ -55,6 +55,7 @@ export async function validateWorkspaceDirectory(
  * @returns An unlisten function for native Tauri workspace drag-and-drop events.
  */
 export async function subscribeWorkspaceDragDropEvents(
+  /** @param event - Native drag-and-drop event from the Tauri webview */
   handler: (event: WorkspaceDragDropEvent) => void,
 ): Promise<() => void> {
   return getCurrentWebview().onDragDropEvent((event) => {

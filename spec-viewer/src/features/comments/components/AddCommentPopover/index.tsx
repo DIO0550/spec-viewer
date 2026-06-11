@@ -26,7 +26,13 @@ type Props = Readonly<{
   isSaving: boolean;
   errorMessage: string | null;
   isScopeReady: boolean;
+  /**
+   * Saves the drafted comment.
+   * @param input - Anchor and body to save.
+   * @returns Whether the comment was saved.
+   */
   onSubmit: (input: AddCommentSubmitInput) => Promise<boolean>;
+  /** Cancels the add-comment flow. */
   onCancel: () => void;
 }>;
 
@@ -266,7 +272,10 @@ export function AddCommentPopover({
   );
 }
 
-/** @returns Human-readable block type text for the anchor preview. */
+/**
+ * @param blockType - Raw anchor block type identifier.
+ * @returns Human-readable block type text for the anchor preview.
+ */
 function formatDraftBlockType(blockType: string): string {
   return blockType.replace(/_/g, " ");
 }

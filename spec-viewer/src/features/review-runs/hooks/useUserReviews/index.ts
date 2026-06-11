@@ -58,10 +58,24 @@ export type UseUserReviewsResult = Readonly<{
   archiveState: UserReviewArchiveState;
   activeReviews: readonly UserReview[];
   archivedReviews: readonly UserReview[];
+  /**
+   * Reloads the user review list for the current target.
+   * @returns Whether the reload succeeded.
+   */
   reloadUserReviews: () => Promise<boolean>;
+  /**
+   * Creates a user review for the current target.
+   * @param input - Creation input for the new review.
+   * @returns The created review, or null on failure.
+   */
   createUserReview: (
     input: CreateUserReviewInput,
   ) => Promise<UserReview | null>;
+  /**
+   * Archives a completed user review.
+   * @param userReviewId - Identifier of the review to archive.
+   * @returns The archived review, or null on failure.
+   */
   archiveUserReview: (userReviewId: string) => Promise<UserReview | null>;
 }>;
 

@@ -25,10 +25,31 @@ type Props = Readonly<{
   anchorDisplayStatus: CommentAnchorDisplayStatus;
   searchQuery?: string;
   operationState: CommentOperationState;
+  /**
+   * Selects the comment as active.
+   * @param commentId - Identifier of the comment to select.
+   */
   onSelectComment: (commentId: CommentId) => void;
+  /**
+   * Saves an edited comment body.
+   * @param commentId - Identifier of the comment to update.
+   * @param body - New comment body text.
+   */
   onUpdateComment: (commentId: CommentId, body: string) => void;
+  /**
+   * Marks the comment as resolved.
+   * @param commentId - Identifier of the comment to resolve.
+   */
   onResolveComment: (commentId: CommentId) => void;
+  /**
+   * Reopens a resolved comment.
+   * @param commentId - Identifier of the comment to reopen.
+   */
   onReopenComment: (commentId: CommentId) => void;
+  /**
+   * Deletes the comment.
+   * @param commentId - Identifier of the comment to delete.
+   */
   onDeleteComment: (commentId: CommentId) => void;
 }>;
 

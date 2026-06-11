@@ -17,11 +17,17 @@ type Props = Readonly<{
   refreshStatus: WorkspaceRefreshStatus;
   canRefresh: boolean;
   themeMode: ThemeMode;
+  /** @param nextValue - Updated workspace path input value */
   onInputChange: (nextValue: string) => void;
+  /** Opens the native folder picker. */
   onBrowse: () => void;
+  /** Loads the workspace at the entered path. */
   onLoad: () => void;
+  /** Refreshes the current workspace. */
   onRefresh: () => void;
+  /** Clears the current workspace selection. */
   onReset: () => void;
+  /** @param nextThemeMode - Theme preference to apply */
   onThemeModeChange: (nextThemeMode: ThemeMode) => void;
 }>;
 

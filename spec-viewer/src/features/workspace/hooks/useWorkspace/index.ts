@@ -51,10 +51,12 @@ export type UseWorkspaceResult = Readonly<{
   workspace: Workspace | null;
   isLoading: boolean;
   error: NormalizedCommandError | null;
+  /** @param selectedDirectory - Directory to load as the workspace */
   load: (
     selectedDirectory: string,
     options?: LoadWorkspaceOptions,
   ) => Promise<boolean>;
+  /** Resets the workspace to its initial idle state. */
   reset: () => void;
 }>;
 

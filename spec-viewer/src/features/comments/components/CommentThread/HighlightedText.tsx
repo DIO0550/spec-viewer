@@ -7,7 +7,10 @@ type Props = Readonly<{
   searchQuery: string;
 }>;
 
-/** @returns Text with every search query occurrence marked for visual scanning. */
+/**
+ * @param props - Text to render and the search query to highlight.
+ * @returns Text with every search query occurrence marked for visual scanning.
+ */
 export function HighlightedText({ text, searchQuery }: Props) {
   const segments = CommentSearchHighlight.segments(text, searchQuery);
   const nodes: ReactNode[] = [];

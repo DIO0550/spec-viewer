@@ -83,22 +83,42 @@ export function createCommentCommandTestDouble(
       toggleCommentResolved: toggleCommentResolvedCalls,
     },
     commands: {
+      /**
+       * Records the call and returns the stubbed list response.
+       * @param request - List comments request to record.
+       */
       listComments: async (request) => {
         listCommentsCalls.push(request);
         return responses.listComments ?? { comments: [comment] };
       },
+      /**
+       * Records the call and returns the stubbed added comment.
+       * @param request - Add comment request to record.
+       */
       addComment: async (request) => {
         addCommentCalls.push(request);
         return responses.addComment ?? defaultComment;
       },
+      /**
+       * Records the call and returns the stubbed updated comment.
+       * @param request - Update comment request to record.
+       */
       updateComment: async (request) => {
         updateCommentCalls.push(request);
         return responses.updateComment ?? comment;
       },
+      /**
+       * Records the call and returns the stubbed delete response.
+       * @param request - Delete comment request to record.
+       */
       deleteComment: async (request) => {
         deleteCommentCalls.push(request);
         return responses.deleteComment ?? { deleted: true };
       },
+      /**
+       * Records the call and returns the stubbed resolved comment.
+       * @param request - Comment status request to record.
+       */
       resolveComment: async (request) => {
         resolveCommentCalls.push(request);
         return (
@@ -109,6 +129,10 @@ export function createCommentCommandTestDouble(
           }
         );
       },
+      /**
+       * Records the call and returns the stubbed reopened comment.
+       * @param request - Comment status request to record.
+       */
       reopenComment: async (request) => {
         reopenCommentCalls.push(request);
         return (
@@ -119,6 +143,10 @@ export function createCommentCommandTestDouble(
           }
         );
       },
+      /**
+       * Records the call and returns the stubbed toggled comment.
+       * @param request - Comment status request to record.
+       */
       toggleCommentResolved: async (request) => {
         toggleCommentResolvedCalls.push(request);
         return (

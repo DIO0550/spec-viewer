@@ -94,7 +94,11 @@ function toNonArchivedReview(
   return userReview;
 }
 
-/** @returns Archived user review or throws for an invalid archived entry. */
+/**
+ * @param userReview - User review expected to be archived.
+ * @returns Archived user review.
+ * @throws Error when a non-archived review is placed in the archived collection.
+ */
 function toArchivedReview(userReview: UserReviewType): ArchivedUserReview {
   if (UserReview.isNonArchived(userReview)) {
     throw new Error(

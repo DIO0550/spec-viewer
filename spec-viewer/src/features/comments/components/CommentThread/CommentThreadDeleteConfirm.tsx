@@ -4,7 +4,9 @@ import { uiText } from "@/shared/lib/uiText";
 type Props = Readonly<{
   comment: Comment;
   isOperatingComment: boolean;
+  /** Confirms deleting the comment. */
   onConfirm: () => void;
+  /** Cancels the delete confirmation. */
   onCancel: () => void;
 }>;
 

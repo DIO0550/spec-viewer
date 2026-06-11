@@ -11,12 +11,15 @@ import {
 export type WorkspaceDropStatus = "idle" | "dragging";
 
 export type SubscribeWorkspaceDragDropEvents = (
+  /** @param event - Native drag-and-drop event from the Tauri window */
   handler: (event: WorkspaceDragDropEvent) => void,
 ) => Promise<() => void>;
 
 export type UseWorkspaceDropOptions = Readonly<{
   isDisabled: boolean;
+  /** @param path - Dropped directory path to open as a workspace */
   onDropWorkspacePath: (path: string) => void;
+  /** @param message - Reason why the dropped payload was rejected */
   onInvalidDrop: (message: string) => void;
   subscribeDragDropEvents?: SubscribeWorkspaceDragDropEvents;
 }>;

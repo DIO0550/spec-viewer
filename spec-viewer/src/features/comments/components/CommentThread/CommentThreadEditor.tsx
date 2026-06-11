@@ -7,7 +7,12 @@ import { uiText } from "@/shared/lib/uiText";
 type Props = Readonly<{
   comment: Comment;
   isOperatingComment: boolean;
+  /**
+   * Submits the trimmed edited body.
+   * @param body - New comment body text.
+   */
   onSubmit: (body: string) => void;
+  /** Cancels editing without saving. */
   onCancel: () => void;
 }>;
 

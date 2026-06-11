@@ -98,11 +98,20 @@ export function useCommentOperations(
       runMutation({
         operation: "add",
         commentId: null,
+        /**
+         * Adds the comment through the gateway.
+         * @param activeScope - Scope to add the comment in.
+         */
         execute: (activeScope) =>
           addCommentViaGateway(commands, activeScope, {
             anchor: input.anchor,
             body: input.body,
           }),
+        /**
+         * Appends the added comment when the status filter displays it.
+         * @param comments - Current comment list.
+         * @param comment - Added comment to append.
+         */
         applyResult: (comments, comment) =>
           Comments.appendDisplayable(comments, comment, statusFilter),
       }),
@@ -114,6 +123,10 @@ export function useCommentOperations(
       runMutation({
         operation: "update",
         commentId: input.commentId,
+        /**
+         * Updates the comment body through the gateway.
+         * @param activeScope - Scope the comment belongs to.
+         */
         execute: (activeScope) =>
           updateCommentViaGateway(commands, activeScope, {
             commentId: input.commentId,
@@ -129,6 +142,10 @@ export function useCommentOperations(
       runMutation({
         operation: "resolve",
         commentId,
+        /**
+         * Resolves the comment through the gateway.
+         * @param activeScope - Scope the comment belongs to.
+         */
         execute: (activeScope) =>
           resolveCommentViaGateway(commands, activeScope, commentId),
         applyResult: upsertDisplayable,
@@ -141,6 +158,10 @@ export function useCommentOperations(
       runMutation({
         operation: "reopen",
         commentId,
+        /**
+         * Reopens the comment through the gateway.
+         * @param activeScope - Scope the comment belongs to.
+         */
         execute: (activeScope) =>
           reopenCommentViaGateway(commands, activeScope, commentId),
         applyResult: upsertDisplayable,
@@ -162,9 +183,14 @@ export function useCommentOperations(
       return runMutation({
         operation: "toggle",
         commentId,
+        /**
+         * Toggles the comment resolved status through the gateway.
+         * @param activeScope - Scope the comment belongs to.
+         */
         execute: (activeScope) =>
           toggleCommentResolvedViaGateway(commands, activeScope, commentId),
         applyResult: upsertDisplayable,
+        /** Restores the comment list captured before the optimistic toggle. */
         rollback: () => {
           updateCurrentScopeComments(() => previousComments);
         },
@@ -185,6 +211,10 @@ export function useCommentOperations(
     async (commentId: CommentId): Promise<boolean> =>
       runDeletion({
         commentId,
+        /**
+         * Deletes the comment through the gateway.
+         * @param activeScope - Scope the comment belongs to.
+         */
         execute: (activeScope) =>
           deleteCommentViaGateway(commands, activeScope, commentId),
       }),

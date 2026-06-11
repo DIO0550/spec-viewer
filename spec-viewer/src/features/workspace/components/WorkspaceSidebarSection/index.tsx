@@ -9,9 +9,13 @@ type Props = Readonly<{
   isOpen: boolean;
   isBusy: boolean;
   recentWorkspaces: readonly RecentWorkspace[];
+  /** Opens the native folder picker. */
   onBrowse: () => void;
+  /** Toggles the section open or collapsed. */
   onToggleOpen: () => void;
+  /** @param path - Absolute path of the recent workspace to open */
   onOpenWorkspace: (path: string) => void;
+  /** @param path - Absolute path of the recent workspace to remove */
   onRemoveWorkspace: (path: string) => void;
 }>;
 

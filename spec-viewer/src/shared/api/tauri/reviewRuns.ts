@@ -10,12 +10,15 @@ import type {
 import { invokeCommand } from "./invokeCommand";
 
 export type UserReviewCommands = Readonly<{
+  /** Creates a new review run bundle for the requested target. */
   createUserReview: (
     request: CreateUserReviewRequest,
   ) => Promise<CreateUserReviewResponse>;
+  /** Lists active and archived review runs for the requested target. */
   listUserReviews: (
     request: ListUserReviewsRequest,
   ) => Promise<ListUserReviewsResponse>;
+  /** Archives the review run identified by the request. */
   archiveUserReview: (
     request: ArchiveUserReviewRequest,
   ) => Promise<ArchiveUserReviewResponse>;

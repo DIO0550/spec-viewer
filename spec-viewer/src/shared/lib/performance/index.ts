@@ -31,7 +31,10 @@ export function configurePerformanceLoggerForTest(
   loggerEnabledOverride = enabled;
 }
 
-/** @returns A readable correlation id for a related group of performance events. */
+/**
+ * @param prefix - Readable prefix for the generated id
+ * @returns A readable correlation id for a related group of performance events.
+ */
 export function createPerformanceCorrelationId(prefix: string): string {
   const normalizedPrefix = prefix.trim().replace(/\s+/g, "-") || "perf";
   const timestamp = Date.now().toString(36);
@@ -103,10 +106,12 @@ export function recordPerformancePoint(
   });
 }
 
+/** @returns Current high-resolution timestamp, falling back to Date.now(). */
 function now(): number {
   return globalThis.performance?.now?.() ?? Date.now();
 }
 
+/** @returns True when performance logging is enabled (test override or dev mode). */
 function isPerformanceLoggerEnabled(): boolean {
   if (loggerEnabledOverride !== null) {
     return loggerEnabledOverride;
@@ -115,6 +120,12 @@ function isPerformanceLoggerEnabled(): boolean {
   return import.meta.env.DEV;
 }
 
+/**
+ * @param correlationId - Correlation id of the related events
+ * @param phase - Measured performance phase
+ * @param point - Mark position within the span
+ * @returns The performance mark name for the given span point.
+ */
 function markName(
   correlationId: string,
   phase: PerformancePhase,
@@ -123,6 +134,10 @@ function markName(
   return `spec-viewer:${correlationId}:${phase}:${point}`;
 }
 
+/**
+ * Records a performance mark when logging is enabled.
+ * @param name - Performance mark name
+ */
 function mark(name: string): void {
   if (!isPerformanceLoggerEnabled()) {
     return;
@@ -131,6 +146,13 @@ function mark(name: string): void {
   globalThis.performance?.mark?.(name);
 }
 
+/**
+ * Records a performance measure between two marks when logging is enabled.
+ * @param correlationId - Correlation id of the related events
+ * @param phase - Measured performance phase
+ * @param startMark - Name of the start mark
+ * @param endMark - Name of the end mark
+ */
 function measure(
   correlationId: string,
   phase: PerformancePhase,
@@ -148,6 +170,11 @@ function measure(
   );
 }
 
+/**
+ * Logs a completed performance span when logging is enabled.
+ * @param type - Event type discriminator
+ * @param span - Completed performance span
+ */
 function emit(type: "span", span: PerformanceSpan): void {
   if (!isPerformanceLoggerEnabled()) {
     return;
@@ -159,6 +186,11 @@ function emit(type: "span", span: PerformanceSpan): void {
   });
 }
 
+/**
+ * @param initialMetadata - Metadata captured when the span started
+ * @param endMetadata - Metadata captured when the span ended
+ * @returns Merged metadata, or undefined when both inputs are absent.
+ */
 function mergeMetadata(
   initialMetadata: PerformanceMetadata | undefined,
   endMetadata: PerformanceMetadata | undefined,

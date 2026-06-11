@@ -13,8 +13,10 @@ type Props = Readonly<{
   state: SpecTreeState;
   selectedSpecId: string | null;
   archivingSpecId?: string | null;
+  /** @param specId - Identifier of the spec to select */
   onSelectSpec: (specId: string) => void;
   onArchiveSpec?: (specId: string) => void;
+  /** Reloads the spec tree. */
   onReload: () => void;
 }>;
 

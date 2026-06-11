@@ -12,8 +12,10 @@ type Props = Readonly<{
   expandedSpecIds: ReadonlySet<string>;
   selectedSpecId: string | null;
   archivingSpecId: string | null;
+  /** @param specId - Identifier of the spec to select */
   onSelectSpec: (specId: string) => void;
   onArchiveSpec?: (specId: string) => void;
+  /** @param specId - Identifier of the spec node to expand or collapse */
   onToggleExpanded: (specId: string) => void;
 }>;
 

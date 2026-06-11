@@ -4,7 +4,9 @@ const sidebarPreferenceStorageKey = "spec-reviewer.comment-sidebar-open";
 
 type UseSidebarPreferenceResult = Readonly<{
   isSidebarOpen: boolean;
+  /** Opens the comment sidebar. */
   openSidebar: () => void;
+  /** Closes the comment sidebar. */
   closeSidebar: () => void;
 }>;
 
@@ -50,7 +52,10 @@ function readStoredSidebarPreference(): boolean {
   }
 }
 
-/** Persists the sidebar visibility preference when storage is available. */
+/**
+ * Persists the sidebar visibility preference when storage is available.
+ * @param isSidebarOpen - Sidebar visibility to store
+ */
 function writeStoredSidebarPreference(isSidebarOpen: boolean): void {
   if (typeof window === "undefined") {
     return;

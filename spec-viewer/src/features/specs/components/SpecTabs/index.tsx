@@ -6,10 +6,14 @@ import { EmptyState } from "@/shared/ui/EmptyState";
 type Props = Readonly<{
   spec: SpecNode | null;
   selectedFileKey: SpecFileKey | null;
+  /** @param fileKey - Key of the spec file to select */
   onSelectFile: (fileKey: SpecFileKey) => void;
 }>;
 
-/** @returns File tabs for the selected spec. */
+/**
+ * @param props - Selected spec, active file key, and selection callback
+ * @returns File tabs for the selected spec.
+ */
 export function SpecTabs({ spec, selectedFileKey, onSelectFile }: Props) {
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 

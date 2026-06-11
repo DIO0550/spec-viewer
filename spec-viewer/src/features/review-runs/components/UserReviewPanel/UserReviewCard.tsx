@@ -14,7 +14,15 @@ import type { UserReviewArchiveState } from "@/features/review-runs/hooks/useUse
 type Props = Readonly<{
   run: UserReview;
   archiveState: UserReviewArchiveState;
+  /**
+   * Copies the review folder path to the clipboard.
+   * @param path - Folder path to copy.
+   */
   onCopyPath: (path: string) => void;
+  /**
+   * Archives the review.
+   * @param userReviewId - Identifier of the review to archive.
+   */
   onArchiveUserReview: (userReviewId: string) => void;
 }>;
 
@@ -60,7 +68,10 @@ type UserReviewSummaryProps = Readonly<{
   run: UserReview;
 }>;
 
-/** @returns Result summary and warnings captured from status/result files. */
+/**
+ * @param props - Review run whose summary is rendered.
+ * @returns Result summary and warnings captured from status/result files.
+ */
 function UserReviewSummary({ run }: UserReviewSummaryProps) {
   if (run.summary === null && run.warnings.length === 0) {
     return null;
@@ -83,6 +94,10 @@ function UserReviewSummary({ run }: UserReviewSummaryProps) {
 type UserReviewActionsProps = Readonly<{
   run: UserReview;
   archiveState: UserReviewArchiveState;
+  /**
+   * Archives the review.
+   * @param userReviewId - Identifier of the review to archive.
+   */
   onArchiveUserReview: (userReviewId: string) => void;
 }>;
 
@@ -125,7 +140,10 @@ type SourceFileSummaryProps = Readonly<{
   sourceFiles: readonly ReviewSourceFile[];
 }>;
 
-/** @returns A compact source file list for the review bundle. */
+/**
+ * @param props - Source files included in the review bundle.
+ * @returns A compact source file list for the review bundle.
+ */
 function SourceFileSummary({ sourceFiles }: SourceFileSummaryProps) {
   return (
     <ul className="review-run-panel__source-files" aria-label="対象ファイル">
@@ -143,7 +161,10 @@ type WorkspaceSummaryProps = Readonly<{
   workspace: UserReviewWorkspace;
 }>;
 
-/** @returns Worktree metadata when the review uses an isolated checkout. */
+/**
+ * @param props - Workspace metadata for the review.
+ * @returns Worktree metadata when the review uses an isolated checkout.
+ */
 function WorkspaceSummary({ workspace }: WorkspaceSummaryProps) {
   if (workspace.mode === "currentWorkspace") {
     return null;

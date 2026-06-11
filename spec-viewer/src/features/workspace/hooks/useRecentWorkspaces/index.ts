@@ -20,8 +20,11 @@ export type UseRecentWorkspacesOptions = Readonly<{
 export type UseRecentWorkspacesResult = Readonly<{
   recentWorkspaces: readonly RecentWorkspace[];
   lastActiveWorkspacePath: string | null;
+  /** @param workspace - Workspace to record as most recently used */
   recordWorkspace: (workspace: Workspace) => void;
+  /** @param path - Absolute path of the recent workspace to remove */
   removeWorkspace: (path: string) => void;
+  /** Clears all recent workspaces and the last active path. */
   clearWorkspaces: () => void;
 }>;
 
