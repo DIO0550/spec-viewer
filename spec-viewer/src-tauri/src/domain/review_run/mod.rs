@@ -1,13 +1,21 @@
 //! User review run domain concepts.
 
-use std::{fmt, str::FromStr};
+pub mod bundle;
+
+use std::{fmt, path::Path, str::FromStr};
 
 use chrono::{DateTime, Utc};
 use thiserror::Error;
+use uuid::Uuid;
 
 use crate::domain::{
     comment::CommentId,
     spec::{SpecFileKey, SpecId},
+};
+
+pub use bundle::{
+    ReviewRunAnchorResolutionDocument, ReviewRunAnchorResolutionTargetDocument,
+    ReviewRunBundleFile, ReviewRunCommentDocument, ReviewRunResultMarkdown,
 };
 
 pub const USER_REVIEW_MANIFEST_SCHEMA_VERSION: &str = "spec-reviewer.review-run.v1";
@@ -35,6 +43,31 @@ impl UserReviewRunId {
         Ok(Self {
             value: trimmed.to_string(),
         })
+    }
+
+    /// Generates a new run id from the review target and creation timestamp.
+    pub fn generate(
+        target: &UserReviewRunTarget,
+        created_at: DateTime<Utc>,
+    ) -> Result<Self, ReviewRunDomainError> {
+        let target_suffix = match target {
+            UserReviewRunTarget::File { file_key, .. } => format!("file-{}", file_key.as_str()),
+            UserReviewRunTarget::Spec { .. } => "spec".to_string(),
+        };
+        let unique_suffix = Uuid::new_v4()
+            .simple()
+            .to_string()
+            .chars()
+            .take(8)
+            .collect::<String>();
+        let value = format!(
+            "{}-{}-{}",
+            created_at.format("%Y-%m-%dT%H%M%SZ"),
+            target_suffix,
+            unique_suffix
+        );
+
+        Self::new(value)
     }
 
     pub fn as_str(&self) -> &str {
@@ -125,6 +158,16 @@ impl UserReviewRunTarget {
             Self::File { spec_id, .. } | Self::Spec { spec_id } => spec_id,
         }
     }
+
+    /// Renders a short human-readable description of the review scope.
+    pub fn describe(&self) -> String {
+        match self {
+            Self::File { spec_id, file_key } => {
+                format!("file / {spec_id} / {file_key}")
+            }
+            Self::Spec { spec_id } => format!("spec / {spec_id}"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -153,6 +196,32 @@ impl UserReviewExecutionTarget {
             repository_path,
             worktree_path,
             branch_name,
+        }
+    }
+
+    /// Returns the workspace path where the review run is executed.
+    pub fn workspace_path(&self) -> &str {
+        match self {
+            Self::CurrentWorkspace { workspace_path } => workspace_path.as_str(),
+            Self::Worktree { worktree_path, .. } => worktree_path.as_str(),
+        }
+    }
+
+    /// Renders a short human-readable description of the execution target.
+    pub fn describe(&self) -> String {
+        match self {
+            Self::CurrentWorkspace { workspace_path } => {
+                format!("currentWorkspace / {}", workspace_path.as_str())
+            }
+            Self::Worktree {
+                worktree_path,
+                branch_name,
+                ..
+            } => format!(
+                "worktree / {} / {}",
+                worktree_path.as_str(),
+                branch_name.as_str()
+            ),
         }
     }
 }
@@ -252,6 +321,20 @@ impl ReviewRunRelativePath {
         Ok(Self {
             value: trimmed.to_string(),
         })
+    }
+
+    /// Builds the path of a source file relative to the workspace root.
+    pub fn from_workspace_source(
+        workspace_path: &str,
+        source_path: &str,
+    ) -> Result<Self, ReviewRunDomainError> {
+        let relative = Path::new(source_path)
+            .strip_prefix(Path::new(workspace_path))
+            .map_err(|_| ReviewRunDomainError::SourceFileOutsideWorkspace {
+                path: source_path.to_string(),
+            })?;
+
+        Self::new(relative.to_string_lossy())
     }
 
     pub fn as_str(&self) -> &str {
@@ -434,6 +517,8 @@ pub enum ReviewRunDomainError {
     InvalidBranchName { branch_name: String },
     #[error("review run relative path is invalid: {path}")]
     InvalidRelativePath { path: String },
+    #[error("source file is outside workspace: {path}")]
+    SourceFileOutsideWorkspace { path: String },
     #[error("review run requires at least one source file")]
     MissingSourceFiles,
     #[error("review run requires at least one comment id")]

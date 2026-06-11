@@ -2,13 +2,19 @@
 
 use std::{fs, io, path::Path};
 
+use chrono::{DateTime, Utc};
+use serde::Serialize;
 use thiserror::Error;
 
 use crate::{
-    domain::review_run::{ReviewRunRelativePath, UserReviewRunId},
+    domain::review_run::{
+        ReviewRunBundleFile, ReviewRunRelativePath, UserReviewRun, UserReviewRunId,
+    },
     infrastructure::persistence::{
         review_run_paths::ReviewRunPath,
-        review_run_schema::{ReviewRunManifestDocument, ReviewRunStatusDocument},
+        review_run_schema::{
+            ReviewRunManifestDocument, ReviewRunStatusDocument, ReviewRunStatusValue,
+        },
     },
 };
 
@@ -43,6 +49,54 @@ pub struct ReviewRunBundleDocument {
     pub result_markdown: String,
     pub status: ReviewRunStatusDocument,
     pub context_snapshots: Vec<ReviewRunContextSnapshot>,
+}
+
+impl ReviewRunBundleDocument {
+    /// Assembles the persisted bundle documents for a freshly created review run.
+    pub fn for_new_run(
+        run: &UserReviewRun,
+        files: &[ReviewRunBundleFile],
+        created_at: DateTime<Utc>,
+    ) -> Self {
+        Self {
+            manifest: ReviewRunManifestDocument::for_new_run(run),
+            instructions_markdown: run.render_instructions(files),
+            comments_json: serde_json::to_value(ReviewRunCommentsDocument {
+                schema_version: "spec-reviewer.review-run.comments.v1",
+                review_run_id: run.id().as_str(),
+                generated_at: created_at,
+                comment_count: run.comment_ids().len(),
+                files,
+            })
+            .expect("review run comments document should serialize"),
+            result_markdown: run.render_result_template(),
+            status: ReviewRunStatusDocument {
+                status: ReviewRunStatusValue::Active,
+                updated_at: created_at,
+                summary: None,
+                warnings: Vec::new(),
+            },
+            context_snapshots: files
+                .iter()
+                .map(|file| {
+                    ReviewRunContextSnapshot::new(
+                        file.context_relative_path().clone(),
+                        file.markdown_contents(),
+                    )
+                })
+                .collect(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ReviewRunCommentsDocument<'a> {
+    schema_version: &'static str,
+    review_run_id: &'a str,
+    generated_at: DateTime<Utc>,
+    comment_count: usize,
+    files: &'a [ReviewRunBundleFile],
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -100,6 +154,65 @@ impl ReviewRunBundleWriter {
 
         Ok(())
     }
+
+    /// Persists the archived manifest/status documents and moves the run folder
+    /// from the active directory into the archive directory.
+    pub fn archive_run(
+        &self,
+        active_run_directory: &Path,
+        archive_path: &ReviewRunPath,
+        manifest: &ReviewRunManifestDocument,
+        status: &ReviewRunStatusDocument,
+    ) -> Result<(), ReviewRunArchiveError> {
+        write_archived_json_document(&active_run_directory.join("manifest.json"), manifest)?;
+        write_archived_json_document(&active_run_directory.join("status.json"), status)?;
+        fs::create_dir_all(archive_path.archive_directory()).map_err(|source| {
+            ReviewRunArchiveError {
+                message: format!(
+                    "failed to create archive review run directory {}: {source}",
+                    archive_path.archive_directory().to_string_lossy()
+                ),
+            }
+        })?;
+        fs::rename(active_run_directory, archive_path.run_directory()).map_err(|source| {
+            ReviewRunArchiveError {
+                message: format!(
+                    "failed to move review run from {} to {}: {source}",
+                    active_run_directory.to_string_lossy(),
+                    archive_path.run_directory().to_string_lossy()
+                ),
+            }
+        })?;
+
+        Ok(())
+    }
+}
+
+fn write_archived_json_document<T: Serialize>(
+    path: &Path,
+    document: &T,
+) -> Result<(), ReviewRunArchiveError> {
+    let contents =
+        serde_json::to_string_pretty(document).map_err(|source| ReviewRunArchiveError {
+            message: format!(
+                "failed to serialize review run JSON {}: {source}",
+                path.to_string_lossy()
+            ),
+        })?;
+
+    fs::write(path, format!("{contents}\n")).map_err(|source| ReviewRunArchiveError {
+        message: format!(
+            "failed to write review run JSON {}: {source}",
+            path.to_string_lossy()
+        ),
+    })
+}
+
+/// Errors raised while archiving a review run bundle.
+#[derive(Debug, Error)]
+#[error("{message}")]
+pub struct ReviewRunArchiveError {
+    message: String,
 }
 
 fn write_bundle_to_temporary_directory(

@@ -537,6 +537,17 @@ impl SpecNode {
     pub fn is_leaf(&self) -> bool {
         self.children.is_empty()
     }
+
+    /// Finds the spec node with the given id within a spec tree, searching recursively.
+    pub fn find_by_id<'a>(specs: &'a [SpecNode], spec_id: &str) -> Option<&'a SpecNode> {
+        specs.iter().find_map(|spec| {
+            if spec.id() == spec_id {
+                return Some(spec);
+            }
+
+            Self::find_by_id(spec.children(), spec_id)
+        })
+    }
 }
 
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
