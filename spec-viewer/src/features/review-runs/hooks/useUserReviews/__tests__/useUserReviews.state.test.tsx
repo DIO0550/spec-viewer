@@ -2,6 +2,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
+import { WorkspacePath } from "@/shared/domain/workspacePath";
 import { configurePerformanceLoggerForTest } from "@/shared/lib/performance";
 import { createUserReviewCommandTestDouble } from "@/features/review-runs/testing/review-run-command-test-double";
 import { CommentId } from "@/features/comments/types/comment";
@@ -123,10 +124,13 @@ function renderUseUserReviews(props: HookProps) {
   return renderHook(
     ({ workspacePath, specId, fileKey, targetScope, commands }) =>
       useUserReviews({
-        workspacePath,
-        specId,
-        fileKey,
-        targetScope,
+        selection: {
+          workspacePath:
+            workspacePath === null ? null : WorkspacePath.fromString(workspacePath),
+          specId,
+          fileKey,
+          targetScope,
+        },
         commands,
       }),
     props,
@@ -447,7 +451,10 @@ test("useUserReviewsは同一targetの古いcreate完了を現在stateとlistへ
     await firstCreatePromise;
   });
 
-  expect(result.current.createState.userReview).toEqual(secondActiveRun);
+  expect(result.current.createState).toMatchObject({
+    status: "success",
+    result: secondActiveRun,
+  });
   expect(result.current.activeReviews).toEqual([secondActiveRun]);
   result.unmount();
 });

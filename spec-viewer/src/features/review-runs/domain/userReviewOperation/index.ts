@@ -1,136 +1,120 @@
+import type { CommentId } from "@/features/comments/types/comment";
 import type { UserReview } from "@/features/review-runs/domain/userReview";
+import type { UserReviewWorkspaceMode } from "@/features/review-runs/types/userReviewIpc";
 import type { NormalizedCommandError } from "@/shared/types/ipc";
 
-export type UserReviewCreateState =
+export type AsyncOperationState<TPayload, TResult> =
   | Readonly<{
       status: "idle";
-      userReview: null;
-      error: null;
     }>
   | Readonly<{
       status: "saving";
-      userReview: null;
-      error: null;
+      payload: TPayload;
     }>
   | Readonly<{
       status: "success";
-      userReview: UserReview;
-      error: null;
+      payload: TPayload;
+      result: TResult;
     }>
   | Readonly<{
       status: "error";
-      userReview: null;
+      payload: TPayload;
       error: NormalizedCommandError;
     }>;
 
-export type UserReviewArchiveState =
-  | Readonly<{
-      status: "idle";
-      userReviewId: null;
-      userReview: null;
-      error: null;
-    }>
-  | Readonly<{
-      status: "saving";
-      userReviewId: string;
-      userReview: null;
-      error: null;
-    }>
-  | Readonly<{
-      status: "success";
-      userReviewId: string;
-      userReview: UserReview;
-      error: null;
-    }>
-  | Readonly<{
-      status: "error";
-      userReviewId: string;
-      userReview: null;
-      error: NormalizedCommandError;
-    }>;
+export type CreateUserReviewPayload = Readonly<{
+  commentIds: readonly CommentId[];
+  workspaceMode: UserReviewWorkspaceMode;
+}>;
+
+export type ArchiveUserReviewPayload = Readonly<{
+  userReviewId: string;
+}>;
+
+export type UserReviewCreateState = AsyncOperationState<
+  CreateUserReviewPayload,
+  UserReview
+>;
+
+export type UserReviewArchiveState = AsyncOperationState<
+  ArchiveUserReviewPayload,
+  UserReview
+>;
 
 export const UserReviewCreateState = {
   /** @returns Idle create operation state. */
   idle(): UserReviewCreateState {
-    return {
-      status: "idle",
-      userReview: null,
-      error: null,
-    };
+    return { status: "idle" };
   },
 
-  /** @returns Saving create operation state. */
-  saving(): UserReviewCreateState {
-    return {
-      status: "saving",
-      userReview: null,
-      error: null,
-    };
+  /**
+   * @param payload - Input used for the in-flight create operation.
+   * @returns Saving create operation state.
+   */
+  saving(payload: CreateUserReviewPayload): UserReviewCreateState {
+    return { status: "saving", payload };
   },
 
-  /** @returns Successful create operation state. */
-  success(userReview: UserReview): UserReviewCreateState {
-    return {
-      status: "success",
-      userReview,
-      error: null,
-    };
+  /**
+   * @param payload - Input used for the completed create operation.
+   * @param userReview - Created user review.
+   * @returns Successful create operation state.
+   */
+  success(
+    payload: CreateUserReviewPayload,
+    userReview: UserReview,
+  ): UserReviewCreateState {
+    return { status: "success", payload, result: userReview };
   },
 
-  /** @returns Failed create operation state. */
-  error(error: NormalizedCommandError): UserReviewCreateState {
-    return {
-      status: "error",
-      userReview: null,
-      error,
-    };
+  /**
+   * @param payload - Input used for the failed create operation.
+   * @param error - Normalized command error.
+   * @returns Failed create operation state.
+   */
+  error(
+    payload: CreateUserReviewPayload,
+    error: NormalizedCommandError,
+  ): UserReviewCreateState {
+    return { status: "error", payload, error };
   },
 } as const;
 
 export const UserReviewArchiveState = {
   /** @returns Idle archive operation state. */
   idle(): UserReviewArchiveState {
-    return {
-      status: "idle",
-      userReviewId: null,
-      userReview: null,
-      error: null,
-    };
+    return { status: "idle" };
   },
 
-  /** @returns Saving archive operation state. */
-  saving(userReviewId: string): UserReviewArchiveState {
-    return {
-      status: "saving",
-      userReviewId,
-      userReview: null,
-      error: null,
-    };
+  /**
+   * @param payload - Input used for the in-flight archive operation.
+   * @returns Saving archive operation state.
+   */
+  saving(payload: ArchiveUserReviewPayload): UserReviewArchiveState {
+    return { status: "saving", payload };
   },
 
-  /** @returns Successful archive operation state. */
+  /**
+   * @param payload - Input used for the completed archive operation.
+   * @param userReview - Archived user review.
+   * @returns Successful archive operation state.
+   */
   success(
-    userReviewId: string,
+    payload: ArchiveUserReviewPayload,
     userReview: UserReview,
   ): UserReviewArchiveState {
-    return {
-      status: "success",
-      userReviewId,
-      userReview,
-      error: null,
-    };
+    return { status: "success", payload, result: userReview };
   },
 
-  /** @returns Failed archive operation state. */
+  /**
+   * @param payload - Input used for the failed archive operation.
+   * @param error - Normalized command error.
+   * @returns Failed archive operation state.
+   */
   error(
-    userReviewId: string,
+    payload: ArchiveUserReviewPayload,
     error: NormalizedCommandError,
   ): UserReviewArchiveState {
-    return {
-      status: "error",
-      userReviewId,
-      userReview: null,
-      error,
-    };
+    return { status: "error", payload, error };
   },
 } as const;

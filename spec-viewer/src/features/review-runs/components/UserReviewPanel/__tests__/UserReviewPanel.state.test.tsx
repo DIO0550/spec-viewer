@@ -95,19 +95,8 @@ function renderPanel(
           error: null,
         }
       }
-      createState={
-        options.createState ?? {
-          status: "idle",
-          userReview: null,
-          error: null,
-        }
-      }
-      archiveState={{
-        status: "idle",
-        userReviewId: null,
-        userReview: null,
-        error: null,
-      }}
+      createState={options.createState ?? { status: "idle" }}
+      archiveState={{ status: "idle" }}
       onTargetScopeChange={vi.fn()}
       onWorkspaceModeChange={vi.fn()}
       onCreateUserReview={options.onCreateUserReview ?? vi.fn()}
@@ -135,7 +124,7 @@ test("UserReviewPanelは作成エラーを日本語alertで表示する", () => 
   const result = renderPanel({
     createState: {
       status: "error",
-      userReview: null,
+      payload: { commentIds: [], workspaceMode: "currentWorkspace" },
       error: {
         code: "userReviewExport",
         message: "source files have uncommitted changes",

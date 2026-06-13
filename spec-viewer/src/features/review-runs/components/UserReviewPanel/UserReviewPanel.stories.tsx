@@ -53,14 +53,9 @@ const meta = {
     },
     createState: {
       status: "idle",
-      userReview: null,
-      error: null,
     },
     archiveState: {
       status: "idle",
-      userReviewId: null,
-      userReview: null,
-      error: null,
     },
     onTargetScopeChange: fn(),
     onWorkspaceModeChange: fn(),
@@ -107,7 +102,7 @@ export const Error: Story = {
   args: {
     createState: {
       status: "error",
-      userReview: null,
+      payload: { commentIds: [], workspaceMode: "currentWorkspace" },
       error: {
         code: "userReviewExport",
         message: "source files have uncommitted changes",

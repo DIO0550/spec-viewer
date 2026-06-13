@@ -63,6 +63,7 @@ import {
   selectWorkspaceDirectory,
   validateWorkspaceDirectory,
 } from "@/shared/api/tauri";
+import { WorkspacePath } from "@/shared/domain/workspacePath";
 import { uiText } from "@/shared/lib/uiText";
 
 const idleRefreshStatus: WorkspaceRefreshStatus = {
@@ -164,10 +165,15 @@ function App() {
   const [userReviewWorkspaceMode, setUserReviewWorkspaceMode] =
     useState<UserReviewWorkspaceMode>("currentWorkspace");
   const userReviews = useUserReviews({
-    workspacePath: workspace.workspace?.root ?? null,
-    specId: isDocumentReadable ? specs.selectedSpecId : null,
-    fileKey: isDocumentReadable ? specs.selectedFileKey : null,
-    targetScope: userReviewTargetScope,
+    selection: {
+      workspacePath:
+        workspace.workspace === null
+          ? null
+          : WorkspacePath.fromString(workspace.workspace.root),
+      specId: isDocumentReadable ? specs.selectedSpecId : null,
+      fileKey: isDocumentReadable ? specs.selectedFileKey : null,
+      targetScope: userReviewTargetScope,
+    },
     correlationId: specs.documentState.correlationId ?? null,
   });
   const [workspaceInput, setWorkspaceInput] = useState("");

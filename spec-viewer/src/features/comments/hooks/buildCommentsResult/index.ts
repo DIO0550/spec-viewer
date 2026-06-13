@@ -6,21 +6,27 @@ import type { CommentListState } from "@/features/comments/domain/commentListSta
 import type { UseCommentOperationsResult } from "@/features/comments/hooks/useCommentOperations";
 import type { UseCommentsResult } from "@/features/comments/hooks/useComments";
 
-export type CreateUseCommentsResultInput = Readonly<{
+type CommentsListResultInput = Readonly<{
   listState: CommentListState;
-  commentOperations: UseCommentOperationsResult;
   reloadComments: () => Promise<boolean>;
 }>;
 
+type CommentsOperationResultInput = UseCommentOperationsResult;
+
+type CommentsResultInput = Readonly<{
+  list: CommentsListResultInput;
+  operations: CommentsOperationResultInput;
+}>;
+
+type CommentsResultBuilder = (input: CommentsResultInput) => UseCommentsResult;
+
 /**
- * @param input - Current list state, comment operation callbacks, and reload function.
+ * @param input - UI hook side list/reload input and operation input.
  * @returns Public result object exposed by useComments.
  */
-export function createUseCommentsResult({
-  listState,
-  commentOperations,
-  reloadComments,
-}: CreateUseCommentsResultInput): UseCommentsResult {
+export const buildCommentsResult: CommentsResultBuilder = (input) => {
+  const { listState, reloadComments } = input.list;
+  const commentOperations = input.operations;
   const { operationState } = commentOperations;
 
   return {
@@ -40,4 +46,4 @@ export function createUseCommentsResult({
     reopenComment: commentOperations.reopenComment,
     toggleCommentResolved: commentOperations.toggleCommentResolved,
   };
-}
+};

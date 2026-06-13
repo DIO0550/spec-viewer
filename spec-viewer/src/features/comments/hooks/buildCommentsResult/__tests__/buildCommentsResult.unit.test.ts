@@ -5,7 +5,7 @@ import {
   CommentOperationIdleState,
   CommentOperationSavingState,
 } from "@/features/comments/domain/commentOperation";
-import { createUseCommentsResult } from "@/features/comments/hooks/createUseCommentsResult";
+import { buildCommentsResult } from "@/features/comments/hooks/buildCommentsResult";
 import type { UseCommentOperationsResult } from "@/features/comments/hooks/useCommentOperations";
 import type {
   CommentListState,
@@ -59,7 +59,7 @@ function createCommentOperations(
   };
 }
 
-test("createUseCommentsResultはlistStateとコメント操作結果からhook公開APIを組み立てる", () => {
+test("buildCommentsResultはlistStateとコメント操作結果からhook公開APIを組み立てる", () => {
   const reloadComments = vi.fn();
   const listState: CommentListState = {
     status: "ready",
@@ -70,10 +70,12 @@ test("createUseCommentsResultはlistStateとコメント操作結果からhook�
     CommentOperationSavingState.create("add", null),
   );
 
-  const result = createUseCommentsResult({
-    listState,
-    commentOperations,
-    reloadComments,
+  const result = buildCommentsResult({
+    list: {
+      listState,
+      reloadComments,
+    },
+    operations: commentOperations,
   });
 
   expect(result).toMatchObject<Partial<UseCommentsResult>>({
@@ -95,7 +97,7 @@ test("createUseCommentsResultはlistStateとコメント操作結果からhook�
   });
 });
 
-test("createUseCommentsResultはoperation失敗時のエラーをoperationErrorとして公開する", () => {
+test("buildCommentsResultはoperation失敗時のエラーをoperationErrorとして公開する", () => {
   const listState: CommentListState = {
     status: "ready",
     comments: [comment],
@@ -105,10 +107,12 @@ test("createUseCommentsResultはoperation失敗時のエラーをoperationError�
     CommentOperationFailedState.create("update", comment.id, commandError),
   );
 
-  const result = createUseCommentsResult({
-    listState,
-    commentOperations,
-    reloadComments: vi.fn(),
+  const result = buildCommentsResult({
+    list: {
+      listState,
+      reloadComments: vi.fn(),
+    },
+    operations: commentOperations,
   });
 
   expect(result.operationError).toBe(commandError);

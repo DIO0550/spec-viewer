@@ -6,6 +6,7 @@ import type { UserReviewCollectionTransform } from "@/features/review-runs/domai
 import {
   UserReviewArchiveState,
   UserReviewCreateState,
+  type CreateUserReviewPayload,
   type UserReviewArchiveState as UserReviewArchiveStateType,
   type UserReviewCreateState as UserReviewCreateStateType,
 } from "@/features/review-runs/domain/userReviewOperation";
@@ -15,20 +16,16 @@ import {
 } from "@/features/review-runs/infra/userReviewGateway";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import { UserReviewAsyncToken } from "@/features/review-runs/hooks/userReviewAsyncToken";
-import type { UserReviewWorkspaceMode } from "@/features/review-runs/types/userReviewIpc";
-import type { CommentId } from "@/features/comments/types/comment";
+import { WorkspacePath } from "@/shared/domain/workspacePath";
 import {
   normalizeCommandError,
   type UserReviewCommands,
 } from "@/shared/api/tauri";
 
-export type CreateUserReviewInput = Readonly<{
-  commentIds: readonly CommentId[];
-  workspaceMode: UserReviewWorkspaceMode;
-}>;
+export type CreateUserReviewInput = CreateUserReviewPayload;
 
 export type UseUserReviewOperationsOptions = Readonly<{
-  workspacePath: string | null;
+  workspacePath: WorkspacePath | null;
   target: UserReviewTarget | null;
   targetIdentity: string;
   commands: UserReviewCommands;
@@ -83,19 +80,20 @@ export function useUserReviewOperations(
         return null;
       }
 
+      const payload = input;
       const operation = UserReviewAsyncToken.create(
         createRequestIdRef.current + 1,
         operationIdentity,
       );
       createRequestIdRef.current = operation.requestId;
-      setCreateState(UserReviewCreateState.saving());
+      setCreateState(UserReviewCreateState.saving(payload));
 
       try {
         const response = await createUserReviewViaGateway(
           commands,
-          workspacePath,
+          WorkspacePath.toString(workspacePath),
           target,
-          input,
+          payload,
         );
 
         if (
@@ -108,7 +106,9 @@ export function useUserReviewOperations(
           return null;
         }
 
-        setCreateState(UserReviewCreateState.success(response.userReview));
+        setCreateState(
+          UserReviewCreateState.success(payload, response.userReview),
+        );
         updateCurrentTargetReviews((collection) =>
           UserReviewCollection.addCreated(collection, response.userReview),
         );
@@ -125,7 +125,7 @@ export function useUserReviewOperations(
         }
 
         setCreateState(
-          UserReviewCreateState.error(normalizeCommandError(error)),
+          UserReviewCreateState.error(payload, normalizeCommandError(error)),
         );
         return null;
       }
@@ -145,19 +145,20 @@ export function useUserReviewOperations(
         return null;
       }
 
+      const payload = { userReviewId };
       const operation = UserReviewAsyncToken.create(
         archiveRequestIdRef.current + 1,
         operationIdentity,
       );
       archiveRequestIdRef.current = operation.requestId;
-      setArchiveState(UserReviewArchiveState.saving(userReviewId));
+      setArchiveState(UserReviewArchiveState.saving(payload));
 
       try {
         const response = await archiveUserReviewViaGateway(
           commands,
-          workspacePath,
+          WorkspacePath.toString(workspacePath),
           target,
-          userReviewId,
+          payload.userReviewId,
         );
 
         if (
@@ -171,7 +172,7 @@ export function useUserReviewOperations(
         }
 
         setArchiveState(
-          UserReviewArchiveState.success(userReviewId, response.userReview),
+          UserReviewArchiveState.success(payload, response.userReview),
         );
         updateCurrentTargetReviews((collection) =>
           UserReviewCollection.moveArchived(collection, response.userReview),
@@ -189,10 +190,7 @@ export function useUserReviewOperations(
         }
 
         setArchiveState(
-          UserReviewArchiveState.error(
-            userReviewId,
-            normalizeCommandError(error),
-          ),
+          UserReviewArchiveState.error(payload, normalizeCommandError(error)),
         );
         return null;
       }
@@ -223,7 +221,7 @@ export function useUserReviewOperations(
 
 /** @returns Identity for async operation invalidation. */
 function createOperationIdentity(
-  workspacePath: string | null,
+  workspacePath: WorkspacePath | null,
   targetIdentity: string,
 ): string {
   return `${workspacePath ?? "none"}:${targetIdentity}`;
