@@ -17,7 +17,8 @@ import {
   type UserReviewTargetScope,
 } from "@/features/review-runs/domain/userReviewTarget";
 import { listUserReviews as listUserReviewsViaGateway } from "@/features/review-runs/infra/userReviewGateway";
-import { createUseUserReviewsResult } from "@/features/review-runs/hooks/createUseUserReviewsResult";
+import { buildUserReviewsResult } from "@/features/review-runs/hooks/buildUserReviewsResult";
+import { WorkspacePath } from "@/shared/domain/workspacePath";
 import { useUserReviewListRequest } from "@/features/review-runs/hooks/useUserReviewListRequest";
 import {
   useUserReviewOperations,
@@ -42,11 +43,15 @@ export type {
 export type { UserReviewTargetScope } from "@/features/review-runs/domain/userReviewTarget";
 export type { CreateUserReviewInput } from "@/features/review-runs/hooks/useUserReviewOperations";
 
-export type UseUserReviewsOptions = Readonly<{
-  workspacePath: string | null;
+export type UserReviewsSelectionInput = Readonly<{
+  workspacePath: WorkspacePath | null;
   specId: string | null;
   fileKey: SpecFileKey | null;
   targetScope: UserReviewTargetScope;
+}>;
+
+export type UseUserReviewsOptions = Readonly<{
+  selection: UserReviewsSelectionInput;
   correlationId?: string | null;
   commands?: UserReviewCommands;
 }>;
@@ -68,14 +73,15 @@ export function useUserReviews(
   options: UseUserReviewsOptions,
 ): UseUserReviewsResult {
   const commands = options.commands ?? defaultUserReviewCommands;
+  const { selection } = options;
   const target = useMemo(
     () =>
       UserReviewTarget.create({
-        specId: options.specId,
-        fileKey: options.fileKey,
-        targetScope: options.targetScope,
+        specId: selection.specId,
+        fileKey: selection.fileKey,
+        targetScope: selection.targetScope,
       }),
-    [options.fileKey, options.specId, options.targetScope],
+    [selection.fileKey, selection.specId, selection.targetScope],
   );
   const targetIdentity = useMemo(
     () => UserReviewTargetIdentity.create(target),
@@ -109,7 +115,7 @@ export function useUserReviews(
   const reloadUserReviews = useCallback(async (): Promise<boolean> => {
     const activeTarget = target;
 
-    if (options.workspacePath === null || activeTarget === null) {
+    if (selection.workspacePath === null || activeTarget === null) {
       listRequest.invalidate();
       setListState(UserReviewListState.idle());
       return true;
@@ -134,7 +140,7 @@ export function useUserReviews(
     try {
       const response = await listUserReviewsViaGateway(
         commands,
-        options.workspacePath,
+        WorkspacePath.toString(selection.workspacePath),
         activeTarget,
         commandCorrelationId,
       );
@@ -180,7 +186,7 @@ export function useUserReviews(
     commands,
     listRequest,
     options.correlationId,
-    options.workspacePath,
+    selection.workspacePath,
     target,
     targetIdentity,
   ]);
@@ -190,17 +196,19 @@ export function useUserReviews(
   }, [reloadUserReviews]);
 
   const userReviewOperations = useUserReviewOperations({
-    workspacePath: options.workspacePath,
+    workspacePath: selection.workspacePath,
     target,
     targetIdentity,
     commands,
     updateCurrentTargetReviews,
   });
 
-  return createUseUserReviewsResult({
-    target,
-    listState,
-    userReviewOperations,
-    reloadUserReviews,
+  return buildUserReviewsResult({
+    list: {
+      target,
+      listState,
+      reloadUserReviews,
+    },
+    operations: userReviewOperations,
   });
 }

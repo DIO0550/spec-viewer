@@ -221,7 +221,7 @@ function UserReviewFeedback({
         className="review-run-panel__feedback review-run-panel__feedback--success"
         role="status"
       >
-        {formatArchiveSuccessMessage(archiveState.userReview)}
+        {formatArchiveSuccessMessage(archiveState.result)}
       </p>
     );
   }
@@ -243,7 +243,7 @@ function UserReviewFeedback({
         className="review-run-panel__feedback review-run-panel__feedback--success"
         role="status"
       >
-        {formatCreateSuccessMessage(createState.userReview)}
+        {formatCreateSuccessMessage(createState.result)}
       </p>
     );
   }
@@ -421,7 +421,8 @@ function UserReviewActions({
   onArchiveUserReview,
 }: UserReviewActionsProps) {
   const isSaving =
-    archiveState.status === "saving" && archiveState.userReviewId === run.id;
+    archiveState.status === "saving" &&
+    archiveState.payload.userReviewId === run.id;
   const canArchive = canArchiveUserReview(run, isSaving);
 
   return (

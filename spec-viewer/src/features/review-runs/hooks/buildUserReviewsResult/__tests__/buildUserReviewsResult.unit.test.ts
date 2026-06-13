@@ -5,7 +5,7 @@ import {
   UserReviewArchiveState,
   UserReviewCreateState,
 } from "@/features/review-runs/domain/userReviewOperation";
-import { createUseUserReviewsResult } from "@/features/review-runs/hooks/createUseUserReviewsResult";
+import { buildUserReviewsResult } from "@/features/review-runs/hooks/buildUserReviewsResult";
 
 const target = {
   scope: "file",
@@ -13,15 +13,17 @@ const target = {
   fileKey: "tasks",
 } as const;
 
-test("createUseUserReviewsResultは公開resultを組み立てる", async () => {
+test("buildUserReviewsResultは公開resultへ組み立てる", async () => {
   const reloadUserReviews = vi.fn().mockResolvedValue(true);
   const createUserReview = vi.fn().mockResolvedValue(null);
   const archiveUserReview = vi.fn().mockResolvedValue(null);
-  const result = createUseUserReviewsResult({
-    target,
-    listState: UserReviewListState.loading(target),
-    reloadUserReviews,
-    userReviewOperations: {
+  const result = buildUserReviewsResult({
+    list: {
+      target,
+      listState: UserReviewListState.loading(target),
+      reloadUserReviews,
+    },
+    operations: {
       createState: UserReviewCreateState.idle(),
       archiveState: UserReviewArchiveState.idle(),
       createUserReview,

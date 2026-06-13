@@ -17,7 +17,7 @@ import {
 } from "@/features/comments/domain/commentListState";
 import type { CommentOperationState } from "@/features/comments/domain/commentOperation";
 import { listComments as listCommentsViaGateway } from "@/features/comments/infra/commentGateway";
-import { createUseCommentsResult } from "@/features/comments/hooks/createUseCommentsResult";
+import { buildCommentsResult } from "@/features/comments/hooks/buildCommentsResult";
 import {
   useCommentOperations,
   type AddCommentInput,
@@ -188,10 +188,12 @@ export function useComments({
     reloadComments,
   });
 
-  return createUseCommentsResult({
-    listState,
-    commentOperations,
-    reloadComments,
+  return buildCommentsResult({
+    list: {
+      listState,
+      reloadComments,
+    },
+    operations: commentOperations,
   });
 }
 

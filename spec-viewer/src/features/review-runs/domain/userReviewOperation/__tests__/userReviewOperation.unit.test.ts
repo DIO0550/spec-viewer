@@ -4,49 +4,54 @@ import {
   UserReviewArchiveState,
   UserReviewCreateState,
 } from "@/features/review-runs/domain/userReviewOperation";
+import type { CreateUserReviewPayload } from "@/features/review-runs/domain/userReviewOperation";
 import type { UserReview } from "@/features/review-runs/types/userReviewIpc";
 import type { NormalizedCommandError } from "@/shared/types/ipc";
 
 const userReview = createUserReview();
+const createPayload: CreateUserReviewPayload = {
+  commentIds: [],
+  workspaceMode: "currentWorkspace",
+};
+const archivePayload = { userReviewId: "run-1" };
 const error: NormalizedCommandError = {
   message: "failed",
   code: "unknown",
   raw: "failed",
 };
 
-test("UserReviewCreateStateはcreate操作の状態を生成する", () => {
-  expect(UserReviewCreateState.idle().status).toBe("idle");
-  expect(UserReviewCreateState.saving().status).toBe("saving");
-  expect(UserReviewCreateState.success(userReview)).toEqual({
-    status: "success",
-    userReview,
-    error: null,
+test("UserReviewCreateStateはpayload付きcreate操作の状態を生成する", () => {
+  expect(UserReviewCreateState.idle()).toEqual({ status: "idle" });
+  expect(UserReviewCreateState.saving(createPayload)).toEqual({
+    status: "saving",
+    payload: createPayload,
   });
-  expect(UserReviewCreateState.error(error)).toEqual({
+  expect(UserReviewCreateState.success(createPayload, userReview)).toEqual({
+    status: "success",
+    payload: createPayload,
+    result: userReview,
+  });
+  expect(UserReviewCreateState.error(createPayload, error)).toEqual({
     status: "error",
-    userReview: null,
+    payload: createPayload,
     error,
   });
 });
 
-test("UserReviewArchiveStateはarchive操作の状態を生成する", () => {
-  expect(UserReviewArchiveState.idle().status).toBe("idle");
-  expect(UserReviewArchiveState.saving("run-1")).toEqual({
+test("UserReviewArchiveStateはpayload付きarchive操作の状態を生成する", () => {
+  expect(UserReviewArchiveState.idle()).toEqual({ status: "idle" });
+  expect(UserReviewArchiveState.saving(archivePayload)).toEqual({
     status: "saving",
-    userReviewId: "run-1",
-    userReview: null,
-    error: null,
+    payload: archivePayload,
   });
-  expect(UserReviewArchiveState.success("run-1", userReview)).toEqual({
+  expect(UserReviewArchiveState.success(archivePayload, userReview)).toEqual({
     status: "success",
-    userReviewId: "run-1",
-    userReview,
-    error: null,
+    payload: archivePayload,
+    result: userReview,
   });
-  expect(UserReviewArchiveState.error("run-1", error)).toEqual({
+  expect(UserReviewArchiveState.error(archivePayload, error)).toEqual({
     status: "error",
-    userReviewId: "run-1",
-    userReview: null,
+    payload: archivePayload,
     error,
   });
 });
