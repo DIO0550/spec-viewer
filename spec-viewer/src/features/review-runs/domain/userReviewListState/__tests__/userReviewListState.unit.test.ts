@@ -10,6 +10,15 @@ const target = {
   fileKey: "tasks",
 } as const;
 const activeRun = createUserReview("run-active");
+const secondActiveRun = createUserReview("run-second-active");
+const archivedRun: UserReview = {
+  ...activeRun,
+  id: "run-archived",
+  status: "archived",
+  folderPath:
+    "/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/archive/run-archived",
+  archivedAt: "2026-05-06T12:30:00Z",
+};
 
 test("UserReviewListState.loadedはrunがなければemptyを返す", () => {
   const state = UserReviewListState.loaded(
@@ -22,15 +31,50 @@ test("UserReviewListState.loadedはrunがなければemptyを返す", () => {
 });
 
 test("UserReviewListState.loadedはrunがあればreadyを返す", () => {
-  const collection = UserReviewCollection.fromListResponse(
-    [activeRun],
-    [],
-    [],
-  );
+  const collection = UserReviewCollection.fromListResponse([activeRun], [], []);
   const state = UserReviewListState.loaded(target, collection);
 
   expect(state.status).toBe("ready");
   expect(state.active).toEqual([activeRun]);
+});
+
+test("UserReviewListState.reduceUserReviewEventはreadyでcreated reviewをactive list先頭へ追加する", () => {
+  const collection = UserReviewCollection.fromListResponse([activeRun], [], []);
+  const state = UserReviewListState.loaded(target, collection);
+
+  const result = UserReviewListState.reduceUserReviewEvent(state, {
+    type: "reviewCreated",
+    review: secondActiveRun,
+  });
+
+  expect(result.invalidatesInFlightListRequest).toBe(false);
+  expect(result.state.status).toBe("ready");
+  expect(result.state.active).toEqual([secondActiveRun, activeRun]);
+});
+
+test.each([
+  [
+    "created",
+    { type: "reviewCreated" as const, review: activeRun },
+    [activeRun],
+    [],
+  ],
+  [
+    "archived",
+    { type: "reviewArchived" as const, review: archivedRun },
+    [],
+    [archivedRun],
+  ],
+])("UserReviewListState.reduceUserReviewEventはloading中の%s reviewを反映してrequestを無効化する", (_, event, expectedActive, expectedArchived) => {
+  const result = UserReviewListState.reduceUserReviewEvent(
+    UserReviewListState.loading(target),
+    event,
+  );
+
+  expect(result.invalidatesInFlightListRequest).toBe(true);
+  expect(result.state.status).toBe("ready");
+  expect(result.state.active).toEqual(expectedActive);
+  expect(result.state.archived).toEqual(expectedArchived);
 });
 
 test("UserReviewListState.applyCollectionTransformはloading中の更新でrequestを無効化する", () => {
