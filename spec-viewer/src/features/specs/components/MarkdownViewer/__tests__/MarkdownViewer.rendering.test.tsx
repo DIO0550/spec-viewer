@@ -88,14 +88,15 @@ function createReadyState(
   contents: string | null,
   blocks: readonly MarkdownBlockMetadata[] = [],
   format: SpecDocument["format"] = "markdown",
+  documentPath: string =
+    format === "html"
+      ? "/workspace/spec-reviewer/docs/plans/tasks.html"
+      : "/workspace/spec-reviewer/docs/plans/tasks.md",
 ): SpecDocumentState {
   const document: SpecDocument = {
     key: "tasks",
     format,
-    path:
-      format === "html"
-        ? "/workspace/spec-reviewer/docs/plans/tasks.html"
-        : "/workspace/spec-reviewer/docs/plans/tasks.md",
+    path: documentPath,
     contents,
     missing: false,
     blocks,
@@ -304,6 +305,26 @@ test("MarkdownViewerはHTML文書をsandbox iframeで閲覧表示する", () => 
   expect(
     result.container.querySelector(".markdown-document-search"),
   ).not.toBeNull();
+  result.unmount();
+});
+
+test("MarkdownViewerはtest-cases.htmlだけHTML文書のscript実行を許可する", () => {
+  const result = renderViewer(
+    createReadyState(
+      "<main><h1>Test Cases</h1></main><script>window.__testCasesRendered = true;</script>",
+      [],
+      "html",
+      "/workspace/spec-reviewer/docs/plans/test-cases.html",
+    ),
+  );
+  const iframe = result.container.querySelector(
+    ".html-rendered",
+  ) as HTMLIFrameElement | null;
+
+  expect(iframe?.getAttribute("sandbox")).toBe("allow-scripts");
+  expect(iframe?.getAttribute("srcdoc")).toContain(
+    "window.__testCasesRendered = true;",
+  );
   result.unmount();
 });
 
