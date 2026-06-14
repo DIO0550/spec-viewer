@@ -1,6 +1,6 @@
 [package]
 name = "spec-viewer"
-version = "0.1.7"
+version = "0.1.8"
 description = "Desktop reviewer for Spec Skill Markdown workspaces."
 authors = ["DIO0550"]
 edition = "2021"
