@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import "./App.css";
+import "../App.css";
 import {
   CommentSidebar,
   CommentOperationFailedState,
