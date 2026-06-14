@@ -1,54 +1,33 @@
-import { useCallback, useMemo, useRef } from "react";
+import { useMemo } from "react";
 
-import { UserReviewAsyncToken } from "@/features/review-runs/hooks/userReviewAsyncToken";
-import type { UserReviewAsyncToken as UserReviewAsyncTokenType } from "@/features/review-runs/hooks/userReviewAsyncToken";
+import type { UserReviewTargetIdentity } from "@/features/review-runs/domain/userReviewTarget";
+import {
+  useUserReviewAsyncGuard,
+  type UserReviewAsyncGuard,
+} from "@/features/review-runs/hooks/useUserReviewAsyncGuard";
+import type { UserReviewAsyncRequest } from "@/features/review-runs/hooks/useUserReviewAsyncGuard";
 
 export type UserReviewListRequestController = Readonly<{
-  begin: (identity: string) => UserReviewAsyncTokenType;
+  begin: (identity: UserReviewTargetIdentity) => UserReviewAsyncRequest;
   invalidate: () => void;
-  isCurrent: (token: UserReviewAsyncTokenType) => boolean;
-  setCurrentIdentity: (identity: string) => void;
+  isCurrent: (token: UserReviewAsyncRequest) => boolean;
+  setCurrentIdentity: (identity: UserReviewTargetIdentity) => void;
 }>;
 
 /** @returns Controller for list request staleness and target identity changes. */
 export function useUserReviewListRequest(
-  initialIdentity: string,
+  initialIdentity: UserReviewTargetIdentity,
 ): UserReviewListRequestController {
-  const requestIdRef = useRef(0);
-  const currentIdentityRef = useRef(initialIdentity);
-
-  const begin = useCallback((identity: string): UserReviewAsyncTokenType => {
-    const requestId = requestIdRef.current + 1;
-    requestIdRef.current = requestId;
-
-    return UserReviewAsyncToken.create(requestId, identity);
-  }, []);
-
-  const invalidate = useCallback((): void => {
-    requestIdRef.current += 1;
-  }, []);
-
-  const isCurrent = useCallback(
-    (token: UserReviewAsyncTokenType): boolean =>
-      UserReviewAsyncToken.isCurrent(
-        token,
-        currentIdentityRef.current,
-        requestIdRef.current,
-      ),
-    [],
-  );
-
-  const setCurrentIdentity = useCallback((identity: string): void => {
-    currentIdentityRef.current = identity;
-  }, []);
+  const guard: UserReviewAsyncGuard = useUserReviewAsyncGuard();
+  guard.setCurrentIdentity(initialIdentity);
 
   return useMemo(
     () => ({
-      begin,
-      invalidate,
-      isCurrent,
-      setCurrentIdentity,
+      begin: guard.begin,
+      invalidate: guard.invalidate,
+      isCurrent: guard.isCurrent,
+      setCurrentIdentity: guard.setCurrentIdentity,
     }),
-    [begin, invalidate, isCurrent, setCurrentIdentity],
+    [guard],
   );
 }

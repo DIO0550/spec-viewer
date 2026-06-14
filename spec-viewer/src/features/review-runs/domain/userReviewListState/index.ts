@@ -65,6 +65,21 @@ export type UserReviewListTransformResult = Readonly<{
   invalidatesRequest: boolean;
 }>;
 
+export type UserReviewListEvent =
+  | Readonly<{
+      type: "reviewCreated";
+      review: UserReview;
+    }>
+  | Readonly<{
+      type: "reviewArchived";
+      review: UserReview;
+    }>;
+
+export type UserReviewListEventResult = Readonly<{
+  state: UserReviewListState;
+  invalidatesInFlightListRequest: boolean;
+}>;
+
 export const UserReviewListState = {
   /** @returns Idle list state with no active target. */
   idle(): UserReviewListIdleState {
@@ -138,28 +153,55 @@ export const UserReviewListState = {
     return state.status === "ready" || state.status === "empty";
   },
 
+  /** @returns State transformed by a user review event plus request invalidation. */
+  reduceUserReviewEvent(
+    state: UserReviewListState,
+    event: UserReviewListEvent,
+  ): UserReviewListEventResult {
+    const result = applyCollectionTransformForState(state, (collection) => {
+      if (event.type === "reviewCreated") {
+        return UserReviewCollection.addCreated(collection, event.review);
+      }
+
+      return UserReviewCollection.moveArchived(collection, event.review);
+    });
+
+    return {
+      state: result.state,
+      invalidatesInFlightListRequest: result.invalidatesRequest,
+    };
+  },
+
   /** @returns State transformed by a collection update plus request invalidation. */
   applyCollectionTransform(
     state: UserReviewListState,
     transform: UserReviewCollectionTransform,
   ): UserReviewListTransformResult {
-    if (state.status === "idle") {
-      return {
-        state,
-        invalidatesRequest: false,
-      };
-    }
-
-    const collection = collectionFromState(state);
-    const nextCollection = transform(collection);
-
-    return {
-      state: UserReviewListState.loaded(state.target, nextCollection),
-      invalidatesRequest:
-        state.status === "loading" && nextCollection !== collection,
-    };
+    return applyCollectionTransformForState(state, transform);
   },
 } as const;
+
+/** @returns State transformed by a collection update plus request invalidation. */
+function applyCollectionTransformForState(
+  state: UserReviewListState,
+  transform: UserReviewCollectionTransform,
+): UserReviewListTransformResult {
+  if (state.status === "idle") {
+    return {
+      state,
+      invalidatesRequest: false,
+    };
+  }
+
+  const collection = collectionFromState(state);
+  const nextCollection = transform(collection);
+
+  return {
+    state: UserReviewListState.loaded(state.target, nextCollection),
+    invalidatesRequest:
+      state.status === "loading" && nextCollection !== collection,
+  };
+}
 
 /** @returns Domain collection represented by a list state. */
 function collectionFromState(

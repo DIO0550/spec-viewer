@@ -1,228 +1,58 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-
 import type { UserReview } from "@/features/review-runs/domain/userReview";
-import { UserReviewCollection } from "@/features/review-runs/domain/userReviewCollection";
-import type { UserReviewCollectionTransform } from "@/features/review-runs/domain/userReviewCollection";
-import {
-  UserReviewArchiveState,
-  UserReviewCreateState,
-  type CreateUserReviewPayload,
-  type UserReviewArchiveState as UserReviewArchiveStateType,
-  type UserReviewCreateState as UserReviewCreateStateType,
+import type { UserReviewListEvent } from "@/features/review-runs/domain/userReviewListState";
+import type {
+  UserReviewArchiveState as UserReviewArchiveStateType,
+  UserReviewCreateState as UserReviewCreateStateType,
 } from "@/features/review-runs/domain/userReviewOperation";
+import type {
+  UserReviewTarget,
+  UserReviewTargetIdentity,
+} from "@/features/review-runs/domain/userReviewTarget";
 import {
-  archiveUserReview as archiveUserReviewViaGateway,
-  createUserReview as createUserReviewViaGateway,
-} from "@/features/review-runs/infra/userReviewGateway";
-import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
-import { UserReviewAsyncToken } from "@/features/review-runs/hooks/userReviewAsyncToken";
-import { WorkspacePath } from "@/shared/domain/workspacePath";
+  useArchiveUserReview,
+  type UseArchiveUserReviewResult,
+} from "@/features/review-runs/hooks/useArchiveUserReview";
 import {
-  normalizeCommandError,
-  type UserReviewCommands,
-} from "@/shared/api/tauri";
+  useCreateUserReview,
+  type CreateUserReviewInput,
+  type UseCreateUserReviewResult,
+} from "@/features/review-runs/hooks/useCreateUserReview";
+import type { UserReviewCommands } from "@/shared/api/tauri";
+import type { WorkspacePath } from "@/shared/domain/workspacePath";
 
-export type CreateUserReviewInput = CreateUserReviewPayload;
+export type { CreateUserReviewInput };
 
 export type UseUserReviewOperationsOptions = Readonly<{
   workspacePath: WorkspacePath | null;
   target: UserReviewTarget | null;
-  targetIdentity: string;
+  targetIdentity: UserReviewTargetIdentity;
   commands: UserReviewCommands;
-  updateCurrentTargetReviews: (
-    transform: UserReviewCollectionTransform,
-  ) => void;
+  onUserReviewEvent: (event: UserReviewListEvent) => void;
 }>;
 
 export type UseUserReviewOperationsResult = Readonly<{
   createState: UserReviewCreateStateType;
   archiveState: UserReviewArchiveStateType;
-  createUserReview: (input: CreateUserReviewInput) => Promise<UserReview | null>;
+  createUserReview: (
+    input: CreateUserReviewInput,
+  ) => Promise<UserReview | null>;
   archiveUserReview: (userReviewId: string) => Promise<UserReview | null>;
 }>;
 
 /**
- * @param options - Active target, command boundary, and list update callback.
+ * @param options - Active target, command boundary, and list event callback.
  * @returns User review create/archive states and operation callbacks.
  */
 export function useUserReviewOperations(
   options: UseUserReviewOperationsOptions,
 ): UseUserReviewOperationsResult {
-  const {
-    commands,
-    target,
-    targetIdentity,
-    updateCurrentTargetReviews,
-    workspacePath,
-  } = options;
-  const createRequestIdRef = useRef(0);
-  const archiveRequestIdRef = useRef(0);
-  const operationIdentity = createOperationIdentity(
-    workspacePath,
-    targetIdentity,
-  );
-  const activeOperationIdentityRef = useRef(operationIdentity);
-  const [createState, setCreateState] = useState<UserReviewCreateStateType>(
-    UserReviewCreateState.idle(),
-  );
-  const [archiveState, setArchiveState] =
-    useState<UserReviewArchiveStateType>(UserReviewArchiveState.idle());
-
-  activeOperationIdentityRef.current = operationIdentity;
-
-  const createUserReview = useCallback(
-    async (input: CreateUserReviewInput): Promise<UserReview | null> => {
-      if (
-        workspacePath === null ||
-        target === null ||
-        input.commentIds.length === 0
-      ) {
-        return null;
-      }
-
-      const payload = input;
-      const operation = UserReviewAsyncToken.create(
-        createRequestIdRef.current + 1,
-        operationIdentity,
-      );
-      createRequestIdRef.current = operation.requestId;
-      setCreateState(UserReviewCreateState.saving(payload));
-
-      try {
-        const response = await createUserReviewViaGateway(
-          commands,
-          WorkspacePath.toString(workspacePath),
-          target,
-          payload,
-        );
-
-        if (
-          !UserReviewAsyncToken.isCurrent(
-            operation,
-            activeOperationIdentityRef.current,
-            createRequestIdRef.current,
-          )
-        ) {
-          return null;
-        }
-
-        setCreateState(
-          UserReviewCreateState.success(payload, response.userReview),
-        );
-        updateCurrentTargetReviews((collection) =>
-          UserReviewCollection.addCreated(collection, response.userReview),
-        );
-        return response.userReview;
-      } catch (error) {
-        if (
-          !UserReviewAsyncToken.isCurrent(
-            operation,
-            activeOperationIdentityRef.current,
-            createRequestIdRef.current,
-          )
-        ) {
-          return null;
-        }
-
-        setCreateState(
-          UserReviewCreateState.error(payload, normalizeCommandError(error)),
-        );
-        return null;
-      }
-    },
-    [
-      commands,
-      operationIdentity,
-      target,
-      updateCurrentTargetReviews,
-      workspacePath,
-    ],
-  );
-
-  const archiveUserReview = useCallback(
-    async (userReviewId: string): Promise<UserReview | null> => {
-      if (workspacePath === null || target === null) {
-        return null;
-      }
-
-      const payload = { userReviewId };
-      const operation = UserReviewAsyncToken.create(
-        archiveRequestIdRef.current + 1,
-        operationIdentity,
-      );
-      archiveRequestIdRef.current = operation.requestId;
-      setArchiveState(UserReviewArchiveState.saving(payload));
-
-      try {
-        const response = await archiveUserReviewViaGateway(
-          commands,
-          WorkspacePath.toString(workspacePath),
-          target,
-          payload.userReviewId,
-        );
-
-        if (
-          !UserReviewAsyncToken.isCurrent(
-            operation,
-            activeOperationIdentityRef.current,
-            archiveRequestIdRef.current,
-          )
-        ) {
-          return null;
-        }
-
-        setArchiveState(
-          UserReviewArchiveState.success(payload, response.userReview),
-        );
-        updateCurrentTargetReviews((collection) =>
-          UserReviewCollection.moveArchived(collection, response.userReview),
-        );
-        return response.userReview;
-      } catch (error) {
-        if (
-          !UserReviewAsyncToken.isCurrent(
-            operation,
-            activeOperationIdentityRef.current,
-            archiveRequestIdRef.current,
-          )
-        ) {
-          return null;
-        }
-
-        setArchiveState(
-          UserReviewArchiveState.error(payload, normalizeCommandError(error)),
-        );
-        return null;
-      }
-    },
-    [
-      commands,
-      operationIdentity,
-      target,
-      updateCurrentTargetReviews,
-      workspacePath,
-    ],
-  );
-
-  useEffect(() => {
-    createRequestIdRef.current += 1;
-    archiveRequestIdRef.current += 1;
-    setCreateState(UserReviewCreateState.idle());
-    setArchiveState(UserReviewArchiveState.idle());
-  }, [operationIdentity]);
+  const create: UseCreateUserReviewResult = useCreateUserReview(options);
+  const archive: UseArchiveUserReviewResult = useArchiveUserReview(options);
 
   return {
-    createState,
-    archiveState,
-    createUserReview,
-    archiveUserReview,
+    createState: create.createState,
+    archiveState: archive.archiveState,
+    createUserReview: create.createUserReview,
+    archiveUserReview: archive.archiveUserReview,
   };
-}
-
-/** @returns Identity for async operation invalidation. */
-function createOperationIdentity(
-  workspacePath: WorkspacePath | null,
-  targetIdentity: string,
-): string {
-  return `${workspacePath ?? "none"}:${targetIdentity}`;
 }

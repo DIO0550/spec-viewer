@@ -4,9 +4,7 @@ import type {
   UserReviewArchiveStateError,
 } from "@/features/review-runs/domain/userReview";
 import { ValidatedStoredUserReview } from "@/features/review-runs/domain/validatedStoredUserReview";
-import type {
-  ListUserReviewsResponse,
-} from "@/features/review-runs/types/userReviewIpc";
+import type { ListUserReviewsResponse } from "@/features/review-runs/types/userReviewIpc";
 
 /**
  * @param review - User review DTO returned from the command boundary.
@@ -33,6 +31,7 @@ export function mapUserReviewDtoToUserReview(
 export function mapListUserReviewsResponseToUserReviews(
   response: ListUserReviewsResponse,
 ): ListUserReviewsResponse {
+  // DTO/domain split is deferred; this boundary keeps status/archivedAt validation.
   return {
     active: response.active.map(mapUserReviewDtoToUserReview),
     archived: response.archived.map(mapUserReviewDtoToUserReview),

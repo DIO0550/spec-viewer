@@ -1,12 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import type { UserReview } from "@/features/review-runs/domain/userReview";
-import { UserReviewCollection } from "@/features/review-runs/domain/userReviewCollection";
-import type { UserReviewCollectionTransform } from "@/features/review-runs/domain/userReviewCollection";
-import {
-  UserReviewListState,
-  type UserReviewListState as UserReviewListStateType,
-} from "@/features/review-runs/domain/userReviewListState";
+import type { UserReviewListState as UserReviewListStateType } from "@/features/review-runs/domain/userReviewListState";
 import type {
   UserReviewArchiveState,
   UserReviewCreateState,
@@ -16,23 +11,17 @@ import {
   UserReviewTargetIdentity,
   type UserReviewTargetScope,
 } from "@/features/review-runs/domain/userReviewTarget";
-import { listUserReviews as listUserReviewsViaGateway } from "@/features/review-runs/infra/userReviewGateway";
 import { buildUserReviewsResult } from "@/features/review-runs/hooks/buildUserReviewsResult";
+import { useUserReviewList } from "@/features/review-runs/hooks/useUserReviewList";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
-import { useUserReviewListRequest } from "@/features/review-runs/hooks/useUserReviewListRequest";
 import {
   useUserReviewOperations,
   type CreateUserReviewInput,
 } from "@/features/review-runs/hooks/useUserReviewOperations";
 import {
-  normalizeCommandError,
   userReviewCommands as defaultUserReviewCommands,
   type UserReviewCommands,
 } from "@/shared/api/tauri";
-import {
-  createPerformanceCorrelationId,
-  startPerformanceSpan,
-} from "@/shared/lib/performance";
 import type { SpecFileKey } from "@/features/specs/types/spec";
 
 export type { UserReviewListState } from "@/features/review-runs/domain/userReviewListState";
@@ -64,7 +53,9 @@ export type UseUserReviewsResult = Readonly<{
   activeReviews: readonly UserReview[];
   archivedReviews: readonly UserReview[];
   reloadUserReviews: () => Promise<boolean>;
-  createUserReview: (input: CreateUserReviewInput) => Promise<UserReview | null>;
+  createUserReview: (
+    input: CreateUserReviewInput,
+  ) => Promise<UserReview | null>;
   archiveUserReview: (userReviewId: string) => Promise<UserReview | null>;
 }>;
 
@@ -87,127 +78,26 @@ export function useUserReviews(
     () => UserReviewTargetIdentity.create(target),
     [target],
   );
-  const listRequest = useUserReviewListRequest(targetIdentity);
-  const [listState, setListState] = useState<UserReviewListStateType>(
-    UserReviewListState.idle(),
-  );
-
-  listRequest.setCurrentIdentity(targetIdentity);
-
-  const updateCurrentTargetReviews = useCallback(
-    (transform: UserReviewCollectionTransform): void => {
-      setListState((currentState) => {
-        const result = UserReviewListState.applyCollectionTransform(
-          currentState,
-          transform,
-        );
-
-        if (result.invalidatesRequest) {
-          listRequest.invalidate();
-        }
-
-        return result.state;
-      });
-    },
-    [listRequest],
-  );
-
-  const reloadUserReviews = useCallback(async (): Promise<boolean> => {
-    const activeTarget = target;
-
-    if (selection.workspacePath === null || activeTarget === null) {
-      listRequest.invalidate();
-      setListState(UserReviewListState.idle());
-      return true;
-    }
-
-    const token = listRequest.begin(targetIdentity);
-    setListState(UserReviewListState.loading(activeTarget));
-
-    const spanCorrelationId =
-      options.correlationId ??
-      createPerformanceCorrelationId("review-runs-list");
-    const commandCorrelationId =
-      options.correlationId === undefined || options.correlationId === null
-        ? null
-        : spanCorrelationId;
-    const endSpan = startPerformanceSpan(spanCorrelationId, "userReviews.list", {
-      targetScope: activeTarget.scope,
-      specId: activeTarget.specId,
-      fileKey: activeTarget.scope === "file" ? activeTarget.fileKey : null,
-    });
-
-    try {
-      const response = await listUserReviewsViaGateway(
-        commands,
-        WorkspacePath.toString(selection.workspacePath),
-        activeTarget,
-        commandCorrelationId,
-      );
-      endSpan({
-        activeCount: response.active.length,
-        archivedCount: response.archived.length,
-        problemCount: response.problems.length,
-      });
-
-      if (!listRequest.isCurrent(token)) {
-        return false;
-      }
-
-      setListState(
-        UserReviewListState.loaded(
-          activeTarget,
-          UserReviewCollection.fromListResponse(
-            response.active,
-            response.archived,
-            response.problems,
-          ),
-        ),
-      );
-      return true;
-    } catch (error) {
-      endSpan({
-        error: true,
-      });
-
-      if (!listRequest.isCurrent(token)) {
-        return false;
-      }
-
-      setListState(
-        UserReviewListState.error(
-          activeTarget,
-          normalizeCommandError(error),
-        ),
-      );
-      return false;
-    }
-  }, [
+  const list = useUserReviewList({
     commands,
-    listRequest,
-    options.correlationId,
-    selection.workspacePath,
     target,
-    targetIdentity,
-  ]);
-
-  useEffect(() => {
-    void reloadUserReviews();
-  }, [reloadUserReviews]);
+    workspacePath: selection.workspacePath,
+    correlationId: options.correlationId,
+  });
 
   const userReviewOperations = useUserReviewOperations({
     workspacePath: selection.workspacePath,
     target,
     targetIdentity,
     commands,
-    updateCurrentTargetReviews,
+    onUserReviewEvent: list.applyUserReviewEvent,
   });
 
   return buildUserReviewsResult({
     list: {
       target,
-      listState,
-      reloadUserReviews,
+      listState: list.listState,
+      reloadUserReviews: list.reloadUserReviews,
     },
     operations: userReviewOperations,
   });
