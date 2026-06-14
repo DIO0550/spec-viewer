@@ -180,6 +180,7 @@ pub fn list_user_reviews(
         .correlation_id
         .as_ref()
         .map(|correlation_id| PerformanceContext::new(correlation_id, "list_user_reviews"));
+    // Rust span measures command-internal workspace load, use case, and DTO conversion.
     let end_span = performance_context
         .as_ref()
         .map(|context| start_span(context, "command.list_user_reviews"));

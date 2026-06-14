@@ -314,6 +314,34 @@ impl FilesystemAppUseCases {
         workspace: &LoadWorkspaceResult,
         input: CreateReviewRunInput,
     ) -> Result<CreateReviewRunResult, AppUseCaseError> {
+        create_flow::create_review_run(self, workspace, input)
+    }
+
+    pub fn list_review_runs(
+        &self,
+        workspace: &LoadWorkspaceResult,
+        input: ListReviewRunsInput,
+    ) -> Result<ListReviewRunsResult, AppUseCaseError> {
+        list_flow::list_review_runs(workspace, input)
+    }
+
+    pub fn archive_review_run(
+        &self,
+        workspace: &LoadWorkspaceResult,
+        input: ArchiveReviewRunInput,
+    ) -> Result<ArchiveReviewRunResult, AppUseCaseError> {
+        archive_flow::archive_review_run(workspace, input)
+    }
+}
+
+mod create_flow {
+    use super::*;
+
+    pub(super) fn create_review_run(
+        use_cases: &FilesystemAppUseCases,
+        workspace: &LoadWorkspaceResult,
+        input: CreateReviewRunInput,
+    ) -> Result<CreateReviewRunResult, AppUseCaseError> {
         if input.comment_ids().is_empty() {
             return Err(AppUseCaseError::ReviewRunExport {
                 message: "review run requires at least one selected comment".to_string(),
@@ -323,9 +351,14 @@ impl FilesystemAppUseCases {
         let created_at = Utc::now();
         let run_id = create_review_run_id(input.target(), created_at)?;
         let spec_id = input.target().spec_id().clone();
-        let files = collect_target_files(self, workspace, input.target())?;
-        let mut bundle_files =
-            collect_bundle_files(self, workspace, &files, input.comment_ids(), created_at)?;
+        let files = collect_target_files(use_cases, workspace, input.target())?;
+        let mut bundle_files = collect_bundle_files(
+            use_cases,
+            workspace,
+            &files,
+            input.comment_ids(),
+            created_at,
+        )?;
         let included_comment_ids = collect_included_comment_ids(&bundle_files);
         let requested_comment_ids = input
             .comment_ids()
@@ -419,9 +452,12 @@ impl FilesystemAppUseCases {
             path.run_directory().to_string_lossy(),
         ))
     }
+}
 
-    pub fn list_review_runs(
-        &self,
+mod list_flow {
+    use super::*;
+
+    pub(super) fn list_review_runs(
         workspace: &LoadWorkspaceResult,
         input: ListReviewRunsInput,
     ) -> Result<ListReviewRunsResult, AppUseCaseError> {
@@ -441,9 +477,12 @@ impl FilesystemAppUseCases {
 
         Ok(ListReviewRunsResult::new(active, archived, problems))
     }
+}
 
-    pub fn archive_review_run(
-        &self,
+mod archive_flow {
+    use super::*;
+
+    pub(super) fn archive_review_run(
         workspace: &LoadWorkspaceResult,
         input: ArchiveReviewRunInput,
     ) -> Result<ArchiveReviewRunResult, AppUseCaseError> {
@@ -2033,6 +2072,37 @@ mod tests {
             result.problems()[0].state()
         );
         assert!(malformed_directory.is_dir());
+    }
+
+    #[test]
+    fn archive_review_run_rejects_non_completed_bundle() {
+        let workspace = TestWorkspace::new("archive-non-completed");
+        workspace.write_task_file(
+            "# Tasks
+
+Clarify checkout task.
+",
+        );
+        workspace.write_comment_file("cmt_1");
+        let use_cases = FilesystemAppUseCases::default();
+        let loaded_workspace = use_cases
+            .load_workspace(workspace.root_string())
+            .expect("workspace should load");
+        let created = use_cases
+            .create_review_run(&loaded_workspace, create_file_run_input("cmt_1"))
+            .expect("review run should be created");
+        let active_directory = PathBuf::from(created.folder_path());
+
+        let result = use_cases.archive_review_run(
+            &loaded_workspace,
+            archive_file_run_input(created.review_run().id().as_str()),
+        );
+
+        assert!(matches!(
+            result,
+            Err(AppUseCaseError::ReviewRunExport { .. })
+        ));
+        assert!(active_directory.is_dir());
     }
 
     #[test]
