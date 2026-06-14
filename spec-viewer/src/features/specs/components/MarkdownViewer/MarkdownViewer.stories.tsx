@@ -74,6 +74,38 @@ const techReferenceHtmlState: SpecDocumentState = {
   error: null,
 };
 
+const testCasesHtmlContents = [
+  "<!doctype html>",
+  "<html>",
+  "<head><title>Source-only case noise</title></head>",
+  "<body>",
+  "<main>",
+  '<h1 id="cases">Test Cases</h1>',
+  '<p data-search-noise="edge scenario">Searchable body case for login and logout scenarios.</p>',
+  "<script>Searchable body case script noise</script>",
+  "<style>.searchable-body-case { color: red; }</style>",
+  "<table><tbody><tr><td>Scenario</td><td>Expected result</td></tr><tr><td>Login</td><td>Dashboard opens</td></tr></tbody></table>",
+  "</main>",
+  "</body>",
+  "</html>",
+].join("");
+
+const testCasesHtmlState: SpecDocumentState = {
+  status: "ready",
+  workspacePath,
+  specId: "test-cases-tab",
+  fileKey: "test-cases",
+  document: {
+    key: "test-cases",
+    format: "html",
+    path: "/workspace/spec-reviewer/.plugin-workspace/.specs/test-cases-tab/test-cases.html",
+    contents: testCasesHtmlContents,
+    missing: false,
+    blocks: [],
+  },
+  error: null,
+};
+
 const highlightedParagraph =
   "Users can select only this paragraph fragment without activating the highlight.";
 
@@ -189,6 +221,24 @@ export const TechReferenceHtmlPreview: Story = {
     state: techReferenceHtmlState,
     selectedSpecLabel: "Tech Reference Tab",
     selectedFileLabel: "Tech Reference",
+    comments: [],
+    activeCommentId: null,
+  },
+};
+
+export const TestCasesHtml: Story = {
+  parameters: {
+    layout: "fullscreen",
+  },
+  render: (args) => (
+    <div className="app-shell__viewer" style={{ height: "100dvh" }}>
+      <MarkdownViewer {...args} />
+    </div>
+  ),
+  args: {
+    state: testCasesHtmlState,
+    selectedSpecLabel: "Test Cases Tab",
+    selectedFileLabel: "Test Cases",
     comments: [],
     activeCommentId: null,
   },

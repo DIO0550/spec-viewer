@@ -116,7 +116,7 @@ const tasksAndDesignTree: SpecTree = {
   ],
 };
 
-const fiveTabTree: SpecTree = {
+const sixTabTree: SpecTree = {
   specs: [
     {
       id: "tech-reference-tab",
@@ -138,6 +138,13 @@ const fiveTabTree: SpecTree = {
           key: "tech-reference",
           label: "Tech Reference",
           fileName: "tech-reference.html",
+          status: "missing",
+          format: "html",
+        },
+        {
+          key: "test-cases",
+          label: "Test Cases",
+          fileName: "test-cases.html",
           status: "missing",
           format: "html",
         },
@@ -556,8 +563,8 @@ test("useSpecsはrefresh時に選択中fileが消えたら同じspecの先頭fil
   result.unmount();
 });
 
-test("useSpecsは5タブ構成でも選択中のTech Referenceをrefresh後に保持する", async () => {
-  const listSpecs = vi.fn().mockResolvedValue(fiveTabTree);
+test("useSpecsは6タブ構成でも選択中のTech Referenceをrefresh後に保持する", async () => {
+  const listSpecs = vi.fn().mockResolvedValue(sixTabTree);
   const readSpecFile = vi
     .fn()
     .mockResolvedValueOnce(missingDocument)

@@ -70,11 +70,19 @@ import type {
   CommentSelectionBounds,
   AddCommentSubmitInput,
 } from "@/features/comments/types/comment";
-import type { MarkdownBlockMetadata, MarkdownBlockType } from "@/features/specs/types/spec";
+import type {
+  MarkdownBlockMetadata,
+  MarkdownBlockType,
+} from "@/features/specs/types/spec";
 import { AddCommentPopover } from "@/features/comments/components/AddCommentPopover";
 import { CommandErrorDisplay } from "@/shared/ui/CommandErrorDisplay";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { LoadingSkeleton } from "@/shared/ui/LoadingSkeleton";
+import {
+  createHtmlSearchIndex,
+  findHtmlSearchMatches,
+  highlightHtmlDocument,
+} from "@/lib/htmlDocumentSearch";
 
 type BlockType = "heading" | "paragraph" | "list-item" | "table" | "code";
 
@@ -240,6 +248,23 @@ export function MarkdownViewer({
     state.status === "ready" && !isHtmlDocument ? state.fileKey : null;
   const readyContents =
     state.status === "ready" ? state.document.contents : null;
+  const htmlSearchIndex = useMemo(() => {
+    if (!isHtmlDocument || readyContents === null) {
+      return null;
+    }
+
+    return createHtmlSearchIndex(readyContents);
+  }, [isHtmlDocument, readyContents]);
+  const htmlDocumentSearchMatches = useMemo(() => {
+    if (htmlSearchIndex === null) {
+      return [];
+    }
+
+    return findHtmlSearchMatches(
+      htmlSearchIndex,
+      normalizedDocumentSearchQuery,
+    );
+  }, [htmlSearchIndex, normalizedDocumentSearchQuery]);
   const correlationId =
     state.status === "ready" || state.status === "missing"
       ? state.correlationId
@@ -276,10 +301,14 @@ export function MarkdownViewer({
 
     firstReadableResetKeyRef.current = resetKey;
     const byteLength = getUtf8ByteLength(readyContents);
-    recordPerformancePoint(correlationId ?? resetKey, "document.firstReadable", {
-      bytes: byteLength,
-      syntaxHighlight: byteLength <= SYNTAX_HIGHLIGHT_MAX_BYTES,
-    });
+    recordPerformancePoint(
+      correlationId ?? resetKey,
+      "document.firstReadable",
+      {
+        bytes: byteLength,
+        syntaxHighlight: byteLength <= SYNTAX_HIGHLIGHT_MAX_BYTES,
+      },
+    );
     onFirstReadable?.();
   }, [correlationId, onFirstReadable, readyContents, resetKey, state.status]);
   useEffect(() => {
@@ -318,16 +347,23 @@ export function MarkdownViewer({
     });
   }, [activeCommentId, anchorDisplayStates, visibleViewerComments]);
   useEffect(() => {
-    const nextMatchCount = countRenderedDocumentSearchMatches({
-      renderedRoot: renderedRootRef.current,
-      searchQuery: normalizedDocumentSearchQuery,
-    });
+    const nextMatchCount = isHtmlDocument
+      ? htmlDocumentSearchMatches.length
+      : countRenderedDocumentSearchMatches({
+          renderedRoot: renderedRootRef.current,
+          searchQuery: normalizedDocumentSearchQuery,
+        });
 
     setDocumentSearchMatchCount(nextMatchCount);
     setActiveDocumentSearchIndex((currentIndex) =>
       clampDocumentSearchIndex(currentIndex, nextMatchCount),
     );
-  }, [normalizedDocumentSearchQuery, readyContents]);
+  }, [
+    htmlDocumentSearchMatches.length,
+    isHtmlDocument,
+    normalizedDocumentSearchQuery,
+    readyContents,
+  ]);
   useEffect(() => {
     scrollActiveDocumentSearchMatchIntoView({
       renderedRoot: renderedRootRef.current,
@@ -615,18 +651,17 @@ export function MarkdownViewer({
               onDecrease={decreaseHtmlZoom}
               onIncrease={increaseHtmlZoom}
             />
-          ) : (
-            <DocumentSearchControl
-              query={documentSearchQuery}
-              matchCount={documentSearchMatchCount}
-              activeMatchIndex={activeDocumentSearchIndex}
-              disabled={false}
-              onQueryChange={setDocumentSearchQuery}
-              onPrevious={goToPreviousDocumentSearchMatch}
-              onNext={goToNextDocumentSearchMatch}
-              onClear={clearDocumentSearch}
-            />
-          )}
+          ) : null}
+          <DocumentSearchControl
+            query={documentSearchQuery}
+            matchCount={documentSearchMatchCount}
+            activeMatchIndex={activeDocumentSearchIndex}
+            disabled={false}
+            onQueryChange={setDocumentSearchQuery}
+            onPrevious={goToPreviousDocumentSearchMatch}
+            onNext={goToNextDocumentSearchMatch}
+            onClear={clearDocumentSearch}
+          />
           <button
             className="icon-button"
             type="button"
@@ -643,6 +678,8 @@ export function MarkdownViewer({
           contents={contents}
           path={state.document.path}
           zoomPercent={htmlZoomPercent}
+          searchQuery={normalizedDocumentSearchQuery}
+          activeSearchMatchIndex={activeDocumentSearchIndex}
         />
       ) : (
         <>
@@ -1011,10 +1048,18 @@ type HtmlDocumentProps = Readonly<{
   contents: string;
   path: string;
   zoomPercent: number;
+  searchQuery: string;
+  activeSearchMatchIndex: number;
 }>;
 
 /** @returns Sandboxed HTML preview for non-Markdown spec files. */
-function HtmlDocument({ contents, path, zoomPercent }: HtmlDocumentProps) {
+function HtmlDocument({
+  contents,
+  path,
+  zoomPercent,
+  searchQuery,
+  activeSearchMatchIndex,
+}: HtmlDocumentProps) {
   return (
     <iframe
       className="html-rendered"
@@ -1024,6 +1069,8 @@ function HtmlDocument({ contents, path, zoomPercent }: HtmlDocumentProps) {
         contents,
         sourcePath: path,
         zoomPercent,
+        searchQuery,
+        activeSearchMatchIndex,
       })}
     />
   );
@@ -1033,6 +1080,8 @@ type CreateHtmlPreviewDocumentInput = Readonly<{
   contents: string;
   sourcePath: string;
   zoomPercent: number;
+  searchQuery: string;
+  activeSearchMatchIndex: number;
 }>;
 
 /** @returns HTML contents with viewer-controlled viewport and zoom styles. */
@@ -1040,9 +1089,16 @@ function createHtmlPreviewDocument({
   contents,
   sourcePath,
   zoomPercent,
+  searchQuery,
+  activeSearchMatchIndex,
 }: CreateHtmlPreviewDocumentInput): string {
+  const highlightedContents = highlightHtmlDocument(
+    contents,
+    searchQuery,
+    activeSearchMatchIndex,
+  );
   const normalizedContents = rewriteSameDocumentHtmlLinks(
-    removeHtmlBaseElements(contents),
+    removeHtmlBaseElements(highlightedContents),
     sourcePath,
   );
   const previewHead = createHtmlPreviewHead(zoomPercent);
@@ -1146,6 +1202,8 @@ function createHtmlPreviewHead(zoomPercent: number): string {
     "iframe, object, embed { max-width: 100%; }",
     "pre { max-width: 100%; overflow: auto; white-space: pre-wrap; }",
     "table { max-width: 100%; }",
+    "[data-document-search-match] { background: #fde68a; color: inherit; padding: 0 0.08em; border-radius: 2px; }",
+    '[data-document-search-match-active="true"] { background: #f59e0b; outline: 2px solid #b45309; }',
     "@supports (zoom: 1) {",
     "  body { zoom: var(--spec-viewer-html-zoom); }",
     "}",
@@ -2752,8 +2810,7 @@ function CommentEditPopover({
           "reopen",
           "delete",
         ]);
-  const visibleErrorMessage =
-    validationMessage ?? scopedOperationErrorMessage;
+  const visibleErrorMessage = validationMessage ?? scopedOperationErrorMessage;
   const isSubmitDisabled = isBusy || trimmedBody.length === 0;
   const describedBy =
     visibleErrorMessage === null ? hintId : `${hintId} ${errorId}`;

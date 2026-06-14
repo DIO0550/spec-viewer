@@ -43,15 +43,17 @@ pub enum SpecFileKey {
     Impl,
     Tasks,
     TechReference,
+    TestCases,
     Requirements,
     Design,
 }
 
 impl SpecFileKey {
-    pub const DEFAULT_KEYS: [Self; 5] = [
+    pub const DEFAULT_KEYS: [Self; 6] = [
         Self::Impl,
         Self::Tasks,
         Self::TechReference,
+        Self::TestCases,
         Self::Exploration,
         Self::Hearing,
     ];
@@ -64,6 +66,7 @@ impl SpecFileKey {
             Self::Impl => "impl",
             Self::Tasks => "tasks",
             Self::TechReference => "tech-reference",
+            Self::TestCases => "test-cases",
             Self::Requirements => "requirements",
             Self::Design => "design",
         }
@@ -76,6 +79,7 @@ impl SpecFileKey {
             Self::Impl => "Implementation",
             Self::Tasks => "Tasks",
             Self::TechReference => "Tech Reference",
+            Self::TestCases => "Test Cases",
             Self::Requirements => "Requirements",
             Self::Design => "Design",
         }
@@ -106,6 +110,7 @@ impl FromStr for SpecFileKey {
             "impl" => Ok(Self::Impl),
             "tasks" => Ok(Self::Tasks),
             "tech-reference" => Ok(Self::TechReference),
+            "test-cases" => Ok(Self::TestCases),
             "requirements" => Ok(Self::Requirements),
             "design" => Ok(Self::Design),
             _ => Err(SpecDomainError::UnsupportedFileKey {
@@ -592,6 +597,7 @@ mod tests {
                 SpecFileKey::Impl,
                 SpecFileKey::Tasks,
                 SpecFileKey::TechReference,
+                SpecFileKey::TestCases,
                 SpecFileKey::Exploration,
                 SpecFileKey::Hearing,
             ],
@@ -619,6 +625,8 @@ mod tests {
         assert_eq!("Implementation", SpecFileKey::Impl.display_label());
         assert_eq!("tech-reference", SpecFileKey::TechReference.as_str());
         assert_eq!("Tech Reference", SpecFileKey::TechReference.display_label());
+        assert_eq!("test-cases", SpecFileKey::TestCases.as_str());
+        assert_eq!("Test Cases", SpecFileKey::TestCases.display_label());
     }
 
     #[test]
@@ -631,6 +639,10 @@ mod tests {
         assert_eq!(
             Ok(SpecFileKey::TechReference),
             SpecFileKey::from_str("tech-reference")
+        );
+        assert_eq!(
+            Ok(SpecFileKey::TestCases),
+            SpecFileKey::from_str("test-cases")
         );
     }
 

@@ -28,17 +28,8 @@ pub fn spec_file_path_candidates(
     key: SpecFileKey,
     configured_path: &Path,
 ) -> Vec<SpecFilePathCandidate> {
-    if key == SpecFileKey::TechReference {
-        return vec![
-            SpecFilePathCandidate::new(
-                configured_path.with_extension("html"),
-                SpecDocumentFormat::Html,
-            ),
-            SpecFilePathCandidate::new(
-                configured_path.with_extension("md"),
-                SpecDocumentFormat::Markdown,
-            ),
-        ];
+    if is_html_first_key(key) {
+        return html_first_path_candidates(configured_path);
     }
 
     let preferred_format = SpecDocumentFormat::from_file_name(&configured_path.to_string_lossy());
@@ -57,6 +48,23 @@ pub fn spec_file_path_candidates(
         configured_path.to_path_buf(),
         preferred_format,
     )]
+}
+
+fn is_html_first_key(key: SpecFileKey) -> bool {
+    matches!(key, SpecFileKey::TechReference | SpecFileKey::TestCases)
+}
+
+fn html_first_path_candidates(configured_path: &Path) -> Vec<SpecFilePathCandidate> {
+    vec![
+        SpecFilePathCandidate::new(
+            configured_path.with_extension("html"),
+            SpecDocumentFormat::Html,
+        ),
+        SpecFilePathCandidate::new(
+            configured_path.with_extension("md"),
+            SpecDocumentFormat::Markdown,
+        ),
+    ]
 }
 
 #[cfg(test)]
@@ -98,6 +106,28 @@ mod tests {
                 (PathBuf::from("guide.md"), SpecDocumentFormat::Markdown),
             ],
             candidate_paths(SpecFileKey::TechReference, "guide.md")
+        );
+    }
+
+    #[test]
+    fn test_cases_prefers_html_then_markdown_for_default_file_name() {
+        assert_eq!(
+            vec![
+                (PathBuf::from("test-cases.html"), SpecDocumentFormat::Html),
+                (PathBuf::from("test-cases.md"), SpecDocumentFormat::Markdown),
+            ],
+            candidate_paths(SpecFileKey::TestCases, "test-cases.html")
+        );
+    }
+
+    #[test]
+    fn test_cases_uses_override_stem_with_html_first() {
+        assert_eq!(
+            vec![
+                (PathBuf::from("guide.html"), SpecDocumentFormat::Html),
+                (PathBuf::from("guide.md"), SpecDocumentFormat::Markdown),
+            ],
+            candidate_paths(SpecFileKey::TestCases, "guide.md")
         );
     }
 

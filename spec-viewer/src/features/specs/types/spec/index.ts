@@ -4,6 +4,7 @@ export type SpecFileKey =
   | "impl"
   | "tasks"
   | "tech-reference"
+  | "test-cases"
   | "requirements"
   | "design";
 

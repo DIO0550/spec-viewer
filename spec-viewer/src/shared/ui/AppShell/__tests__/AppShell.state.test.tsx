@@ -39,6 +39,14 @@ const techReferenceFile: SpecFile = {
   format: "html",
 };
 
+const testCasesFile: SpecFile = {
+  key: "test-cases",
+  label: "Test Cases",
+  fileName: "test-cases.html",
+  status: "missing",
+  format: "html",
+};
+
 const explorationFile: SpecFile = {
   key: "exploration",
   label: "Exploration",
@@ -207,7 +215,7 @@ test("AppShellはtoolbar、tree、tabs、viewer、comment sidebarを表示する
   result.unmount();
 });
 
-test("SpecTabsはbackendの5タブ順をそのまま表示する", () => {
+test("SpecTabsはbackendの6タブ順をそのまま表示する", () => {
   const result = renderComponent(
     <SpecTabs
       spec={{
@@ -217,6 +225,7 @@ test("SpecTabsはbackendの5タブ順をそのまま表示する", () => {
           implFile,
           taskFile,
           techReferenceFile,
+          testCasesFile,
           explorationFile,
           hearingFile,
         ],
@@ -234,6 +243,7 @@ test("SpecTabsはbackendの5タブ順をそのまま表示する", () => {
     "Implementation",
     "Tasks",
     "Tech Reference",
+    "Test Cases",
     "Exploration",
     "Hearing",
   ]);

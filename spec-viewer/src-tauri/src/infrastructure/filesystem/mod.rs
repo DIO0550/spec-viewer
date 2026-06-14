@@ -1141,6 +1141,62 @@ mod tests {
     }
 
     #[test]
+    fn spec_tree_scanner_reports_test_cases_html_after_tech_reference() {
+        let workspace = TestWorkspace::new("test-cases-html");
+        workspace.create_dir(PLUGIN_WORKSPACE_SPECS_DIR);
+        workspace.write_file(
+            ".plugin-workspace/.specs/auth/test-cases.html",
+            "<h1>Cases</h1>",
+        );
+        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
+        let config = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
+
+        let tree = FilesystemSpecTreeScanner::new()
+            .scan(&layout, &config)
+            .expect("spec tree should be scanned");
+
+        let auth = &tree[0].children()[0];
+        let files: Vec<(SpecFileKey, SpecDocumentFormat)> = auth
+            .files()
+            .iter()
+            .map(|file| (file.key(), file.format()))
+            .collect();
+        assert_eq!(
+            Some(&(SpecFileKey::TechReference, SpecDocumentFormat::Html)),
+            files.get(2)
+        );
+        assert_eq!(
+            Some(&(SpecFileKey::TestCases, SpecDocumentFormat::Html)),
+            files.get(3)
+        );
+
+        let test_cases = auth
+            .file_for_key(SpecFileKey::TestCases)
+            .expect("test cases file should be configured");
+        assert_eq!(SpecFileStatus::Present, test_cases.status());
+        assert_eq!("test-cases.html", test_cases.file_name());
+    }
+
+    #[test]
+    fn spec_tree_scanner_reports_test_cases_markdown_fallback() {
+        let workspace = TestWorkspace::new("test-cases-markdown-fallback");
+        workspace.create_dir(PLUGIN_WORKSPACE_SPECS_DIR);
+        workspace.write_file(".plugin-workspace/.specs/auth/test-cases.md", "# Cases");
+        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
+        let config = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
+
+        let tree = FilesystemSpecTreeScanner::new()
+            .scan(&layout, &config)
+            .expect("spec tree should be scanned");
+
+        let test_cases = tree[0].children()[0]
+            .file_for_key(SpecFileKey::TestCases)
+            .expect("test cases file should be configured");
+        assert_eq!(SpecFileStatus::Present, test_cases.status());
+        assert_eq!(SpecDocumentFormat::Markdown, test_cases.format());
+    }
+
+    #[test]
     fn spec_tree_scanner_ignores_hidden_directories() {
         let workspace = TestWorkspace::new("hidden");
         workspace.create_dir(PLUGIN_WORKSPACE_SPECS_DIR);
@@ -1354,6 +1410,7 @@ mod tests {
                 (SpecFileKey::Impl, SpecFileStatus::Present),
                 (SpecFileKey::Tasks, SpecFileStatus::Present),
                 (SpecFileKey::TechReference, SpecFileStatus::Missing),
+                (SpecFileKey::TestCases, SpecFileStatus::Missing),
                 (SpecFileKey::Exploration, SpecFileStatus::Present),
                 (SpecFileKey::Hearing, SpecFileStatus::Present),
             ],
@@ -1403,6 +1460,7 @@ mod tests {
                 (SpecFileKey::Impl, SpecFileStatus::Present),
                 (SpecFileKey::Tasks, SpecFileStatus::Present),
                 (SpecFileKey::TechReference, SpecFileStatus::Missing),
+                (SpecFileKey::TestCases, SpecFileStatus::Missing),
                 (SpecFileKey::Exploration, SpecFileStatus::Present),
                 (SpecFileKey::Hearing, SpecFileStatus::Present),
             ],
@@ -1453,6 +1511,7 @@ mod tests {
                 (SpecFileKey::Impl, SpecFileStatus::Present),
                 (SpecFileKey::Tasks, SpecFileStatus::Present),
                 (SpecFileKey::TechReference, SpecFileStatus::Missing),
+                (SpecFileKey::TestCases, SpecFileStatus::Missing),
                 (SpecFileKey::Exploration, SpecFileStatus::Present),
                 (SpecFileKey::Hearing, SpecFileStatus::Present),
             ],
