@@ -31,16 +31,30 @@ const sampleSpec: SpecNode = {
   label: "Phase 1 Viewer",
   files: [
     {
+      key: "impl",
+      label: "Implementation",
+      fileName: "implementation-plan.md",
+      status: "missing",
+    },
+    {
       key: "tasks",
       label: "Tasks",
       fileName: "tasks.md",
       status: "present",
     },
     {
-      key: "impl",
-      label: "Implementation",
-      fileName: "implementation-plan.md",
+      key: "tech-reference",
+      label: "Tech Reference",
+      fileName: "tech-reference.html",
       status: "missing",
+      format: "html",
+    },
+    {
+      key: "test-cases",
+      label: "Test Cases",
+      fileName: "test-cases.html",
+      status: "missing",
+      format: "html",
     },
     {
       key: "design",
