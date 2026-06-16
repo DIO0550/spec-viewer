@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import type { UserReview } from "@/features/review-runs/domain/userReview";
 import {
@@ -52,6 +52,13 @@ export function useCreateUserReview(
       state: UserReviewCreateState.idle(),
     },
   );
+
+  useEffect(() => {
+    setCreateViewState({
+      identity: viewIdentity,
+      state: UserReviewCreateState.idle(),
+    });
+  }, [viewIdentity]);
 
   const createUserReview = useCallback(
     async (input: CreateUserReviewInput): Promise<UserReview | null> => {

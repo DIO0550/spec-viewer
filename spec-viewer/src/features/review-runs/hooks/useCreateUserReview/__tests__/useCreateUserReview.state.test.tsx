@@ -9,18 +9,23 @@ import type { UserReview } from "@/features/review-runs/types/userReviewIpc";
 import type { UserReviewCommands } from "@/shared/api/tauri";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 
-type HookResult<Result> = Readonly<{
+type HookResult<Props, Result> = Readonly<{
   current: Result;
+  rerender: (nextProps: Props) => void;
   unmount: () => void;
 }>;
 
-function renderHook<Result>(hook: () => Result): HookResult<Result> {
+function renderHook<Props, Result>(
+  hook: (props: Props) => Result,
+  initialProps: Props,
+): HookResult<Props, Result> {
   const container = document.createElement("div");
   const root = createRoot(container);
+  const props = { current: initialProps };
   const result = { current: undefined as Result };
 
   function TestComponent(): null {
-    result.current = hook();
+    result.current = hook(props.current);
     return null;
   }
 
@@ -32,6 +37,12 @@ function renderHook<Result>(hook: () => Result): HookResult<Result> {
     get current() {
       return result.current;
     },
+    rerender: (nextProps: Props) => {
+      props.current = nextProps;
+      act(() => {
+        root.render(<TestComponent />);
+      });
+    },
     unmount: () => {
       act(() => {
         root.unmount();
@@ -39,6 +50,27 @@ function renderHook<Result>(hook: () => Result): HookResult<Result> {
       container.remove();
     },
   };
+}
+
+type HookProps = Readonly<{
+  workspacePath: string;
+  viewIdentity: string;
+  commands: UserReviewCommands;
+  onUserReviewEvent: (event: unknown) => void;
+}>;
+
+function renderUseCreateUserReview(props: HookProps) {
+  return renderHook(
+    ({ commands, onUserReviewEvent, viewIdentity, workspacePath }) =>
+      useCreateUserReview({
+        commands,
+        workspacePath: WorkspacePath.fromString(workspacePath),
+        target,
+        viewIdentity,
+        onUserReviewEvent,
+      }),
+    props,
+  );
 }
 
 const target: UserReviewTarget = {
@@ -83,15 +115,12 @@ function createCommands(): UserReviewCommands {
 test("useCreateUserReviewはcreate成功後にreviewCreated eventを発行する", async () => {
   const commands = createCommands();
   const onUserReviewEvent = vi.fn();
-  const result = renderHook(() =>
-    useCreateUserReview({
-      commands,
-      workspacePath: WorkspacePath.fromString("/workspace/spec-reviewer"),
-      target,
-      viewIdentity: "/workspace/spec-reviewer:file:auth:tasks",
-      onUserReviewEvent,
-    }),
-  );
+  const result = renderUseCreateUserReview({
+    commands,
+    workspacePath: "/workspace/spec-reviewer",
+    viewIdentity: "/workspace/spec-reviewer:file:auth:tasks",
+    onUserReviewEvent,
+  });
 
   await act(async () => {
     await result.current.createUserReview({
@@ -108,5 +137,39 @@ test("useCreateUserReviewはcreate成功後にreviewCreated eventを発行する
       review: activeRun,
     },
   });
+  result.unmount();
+});
+
+
+test("useCreateUserReviewはviewIdentityを戻しても古いsuccessを再表示しない", async () => {
+  const commands = createCommands();
+  const onUserReviewEvent = vi.fn();
+  const result = renderUseCreateUserReview({
+    commands,
+    workspacePath: "/workspace/spec-reviewer",
+    viewIdentity: "/workspace/spec-reviewer:file:auth:tasks",
+    onUserReviewEvent,
+  });
+
+  await act(async () => {
+    await result.current.createUserReview({
+      commentIds: [CommentId.fromString("cmt_1")],
+      workspaceMode: "currentWorkspace",
+    });
+  });
+  result.rerender({
+    commands,
+    workspacePath: "/workspace/other",
+    viewIdentity: "/workspace/other:file:auth:tasks",
+    onUserReviewEvent,
+  });
+  result.rerender({
+    commands,
+    workspacePath: "/workspace/spec-reviewer",
+    viewIdentity: "/workspace/spec-reviewer:file:auth:tasks",
+    onUserReviewEvent,
+  });
+
+  expect(result.current.createState.status).toBe("idle");
   result.unmount();
 });
