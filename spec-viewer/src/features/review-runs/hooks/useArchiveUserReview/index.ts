@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import type { UserReview } from "@/features/review-runs/domain/userReview";
 import {
@@ -46,6 +46,13 @@ export function useArchiveUserReview(
       identity: viewIdentity,
       state: UserReviewArchiveState.idle(),
     });
+
+  useEffect(() => {
+    setArchiveViewState({
+      identity: viewIdentity,
+      state: UserReviewArchiveState.idle(),
+    });
+  }, [viewIdentity]);
 
   const archiveUserReview = useCallback(
     async (userReviewId: string): Promise<UserReview | null> => {
