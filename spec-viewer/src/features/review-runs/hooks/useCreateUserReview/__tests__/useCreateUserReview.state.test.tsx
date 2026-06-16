@@ -88,7 +88,7 @@ test("useCreateUserReviewはcreate成功後にreviewCreated eventを発行する
       commands,
       workspacePath: WorkspacePath.fromString("/workspace/spec-reviewer"),
       target,
-      targetIdentity: "file:auth:tasks",
+      viewIdentity: "/workspace/spec-reviewer:file:auth:tasks",
       onUserReviewEvent,
     }),
   );
@@ -102,8 +102,11 @@ test("useCreateUserReviewはcreate成功後にreviewCreated eventを発行する
 
   expect(result.current.createState.status).toBe("success");
   expect(onUserReviewEvent).toHaveBeenCalledWith({
-    type: "reviewCreated",
-    review: activeRun,
+    identity: "/workspace/spec-reviewer:file:auth:tasks",
+    event: {
+      type: "reviewCreated",
+      review: activeRun,
+    },
   });
   result.unmount();
 });

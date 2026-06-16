@@ -64,11 +64,6 @@ const archivedRun: UserReview = {
   archivedAt: "2026-05-06T12:30:00Z",
 };
 
-const secondActiveRun: UserReview = {
-  ...activeRun,
-  id: "2026-05-06T120100Z-file-tasks-fedcba98",
-};
-
 type HookProps = Readonly<{
   workspacePath: string | null;
   specId: string | null;
@@ -413,18 +408,15 @@ test("useUserReviewsはtarget変更後に完了したcreateを現在listへ反�
   result.unmount();
 });
 
-test("useUserReviewsは同一targetの古いcreate完了を現在stateとlistへ反映しない", async () => {
-  const firstCreateDeferred = createDeferred<CreateUserReviewResponse>();
+test("useUserReviewsはworkspace変更後に完了したcreateを現在listへ反映しない", async () => {
+  const createRunDeferred = createDeferred<CreateUserReviewResponse>();
   const commands: UserReviewCommands = {
     listUserReviews: vi.fn().mockResolvedValue({
       active: [],
       archived: [],
       problems: [],
     }),
-    createUserReview: vi
-      .fn()
-      .mockReturnValueOnce(firstCreateDeferred.promise)
-      .mockResolvedValueOnce({ userReview: secondActiveRun }),
+    createUserReview: vi.fn().mockReturnValue(createRunDeferred.promise),
     archiveUserReview: vi.fn().mockResolvedValue({ userReview: archivedRun }),
   };
   const result = renderUseUserReviews({
@@ -436,26 +428,26 @@ test("useUserReviewsは同一targetの古いcreate完了を現在stateとlistへ
   });
 
   await flushAsyncEffects();
-  const firstCreatePromise = result.current.createUserReview({
+  const createPromise = result.current.createUserReview({
     commentIds: [commentId("cmt_1")],
     workspaceMode: "currentWorkspace",
   });
-  await act(async () => {
-    await result.current.createUserReview({
-      commentIds: [commentId("cmt_2")],
-      workspaceMode: "currentWorkspace",
-    });
+  result.rerender({
+    workspacePath: "/workspace/other-spec-reviewer",
+    specId: "auth",
+    fileKey: "tasks",
+    targetScope: "file",
+    commands,
   });
+  await flushAsyncEffects();
+
   await act(async () => {
-    firstCreateDeferred.resolve({ userReview: activeRun });
-    await firstCreatePromise;
+    createRunDeferred.resolve({ userReview: activeRun });
+    await createPromise;
   });
 
-  expect(result.current.createState).toMatchObject({
-    status: "success",
-    result: secondActiveRun,
-  });
-  expect(result.current.activeReviews).toEqual([secondActiveRun]);
+  expect(result.current.createState.status).toBe("idle");
+  expect(result.current.activeReviews).toEqual([]);
   result.unmount();
 });
 

@@ -87,7 +87,7 @@ test("useArchiveUserReviewはarchive成功後にreviewArchived eventを発行す
       commands,
       workspacePath: WorkspacePath.fromString("/workspace/spec-reviewer"),
       target,
-      targetIdentity: "file:auth:tasks",
+      viewIdentity: "/workspace/spec-reviewer:file:auth:tasks",
       onUserReviewEvent,
     }),
   );
@@ -98,8 +98,11 @@ test("useArchiveUserReviewはarchive成功後にreviewArchived eventを発行す
 
   expect(result.current.archiveState.status).toBe("success");
   expect(onUserReviewEvent).toHaveBeenCalledWith({
-    type: "reviewArchived",
-    review: archivedRun,
+    identity: "/workspace/spec-reviewer:file:auth:tasks",
+    event: {
+      type: "reviewArchived",
+      review: archivedRun,
+    },
   });
   result.unmount();
 });

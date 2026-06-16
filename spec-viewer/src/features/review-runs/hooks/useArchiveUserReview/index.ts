@@ -1,17 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 
 import type { UserReview } from "@/features/review-runs/domain/userReview";
-import type { UserReviewListEvent } from "@/features/review-runs/domain/userReviewListState";
 import {
   UserReviewArchiveState,
   type UserReviewArchiveState as UserReviewArchiveStateType,
 } from "@/features/review-runs/domain/userReviewOperation";
-import type {
-  UserReviewTarget,
-  UserReviewTargetIdentity,
-} from "@/features/review-runs/domain/userReviewTarget";
+import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import { archiveUserReview as archiveUserReviewViaGateway } from "@/features/review-runs/infra/userReviewGateway";
-import { useUserReviewAsyncGuard } from "@/features/review-runs/hooks/useUserReviewAsyncGuard";
+import type {
+  IdentifiedUserReviewListEvent,
+  UserReviewViewIdentity,
+} from "@/features/review-runs/hooks/userReviewViewIdentity";
 import {
   normalizeCommandError,
   type UserReviewCommands,
@@ -21,9 +20,14 @@ import { WorkspacePath } from "@/shared/domain/workspacePath";
 export type UseArchiveUserReviewOptions = Readonly<{
   workspacePath: WorkspacePath | null;
   target: UserReviewTarget | null;
-  targetIdentity: UserReviewTargetIdentity;
+  viewIdentity: UserReviewViewIdentity;
   commands: UserReviewCommands;
-  onUserReviewEvent: (event: UserReviewListEvent) => void;
+  onUserReviewEvent: (event: IdentifiedUserReviewListEvent) => void;
+}>;
+
+type IdentifiedArchiveState = Readonly<{
+  identity: UserReviewViewIdentity;
+  state: UserReviewArchiveStateType;
 }>;
 
 export type UseArchiveUserReviewResult = Readonly<{
@@ -35,19 +39,13 @@ export type UseArchiveUserReviewResult = Readonly<{
 export function useArchiveUserReview(
   options: UseArchiveUserReviewOptions,
 ): UseArchiveUserReviewResult {
-  const { commands, onUserReviewEvent, target, targetIdentity, workspacePath } =
+  const { commands, onUserReviewEvent, target, viewIdentity, workspacePath } =
     options;
-  const guard = useUserReviewAsyncGuard();
-  const operationIdentity = createOperationIdentity(
-    workspacePath,
-    targetIdentity,
-  );
-  const previousOperationIdentityRef = useRef(operationIdentity);
-  const [archiveState, setArchiveState] = useState<UserReviewArchiveStateType>(
-    UserReviewArchiveState.idle(),
-  );
-
-  guard.setCurrentIdentity(operationIdentity);
+  const [archiveViewState, setArchiveViewState] =
+    useState<IdentifiedArchiveState>({
+      identity: viewIdentity,
+      state: UserReviewArchiveState.idle(),
+    });
 
   const archiveUserReview = useCallback(
     async (userReviewId: string): Promise<UserReview | null> => {
@@ -56,8 +54,11 @@ export function useArchiveUserReview(
       }
 
       const payload = { userReviewId };
-      const operation = guard.begin(operationIdentity);
-      setArchiveState(UserReviewArchiveState.saving(payload));
+      const startedIdentity = viewIdentity;
+      setArchiveViewState({
+        identity: startedIdentity,
+        state: UserReviewArchiveState.saving(payload),
+      });
 
       try {
         const response = await archiveUserReviewViaGateway(
@@ -67,59 +68,51 @@ export function useArchiveUserReview(
           payload.userReviewId,
         );
 
-        if (!guard.isCurrent(operation)) {
-          return null;
-        }
+        setArchiveViewState((current) => {
+          if (current.identity !== startedIdentity) {
+            return current;
+          }
 
-        setArchiveState(
-          UserReviewArchiveState.success(payload, response.userReview),
-        );
+          return {
+            identity: startedIdentity,
+            state: UserReviewArchiveState.success(payload, response.userReview),
+          };
+        });
         onUserReviewEvent({
-          type: "reviewArchived",
-          review: response.userReview,
+          identity: startedIdentity,
+          event: {
+            type: "reviewArchived",
+            review: response.userReview,
+          },
         });
         return response.userReview;
       } catch (error) {
-        if (!guard.isCurrent(operation)) {
-          return null;
-        }
+        setArchiveViewState((current) => {
+          if (current.identity !== startedIdentity) {
+            return current;
+          }
 
-        setArchiveState(
-          UserReviewArchiveState.error(payload, normalizeCommandError(error)),
-        );
+          return {
+            identity: startedIdentity,
+            state: UserReviewArchiveState.error(
+              payload,
+              normalizeCommandError(error),
+            ),
+          };
+        });
         return null;
       }
     },
-    [
-      commands,
-      guard,
-      onUserReviewEvent,
-      operationIdentity,
-      target,
-      workspacePath,
-    ],
+    [commands, onUserReviewEvent, target, viewIdentity, workspacePath],
   );
 
-  useEffect(() => {
-    if (previousOperationIdentityRef.current === operationIdentity) {
-      return;
-    }
-
-    previousOperationIdentityRef.current = operationIdentity;
-    guard.invalidate();
-    setArchiveState(UserReviewArchiveState.idle());
-  }, [guard, operationIdentity]);
+  const archiveState =
+    archiveViewState.identity === viewIdentity
+      ? archiveViewState.state
+      : UserReviewArchiveState.idle();
 
   return {
     archiveState,
     archiveUserReview,
   };
-}
-
-/** @returns Async operation identity scoped by workspace and target. */
-function createOperationIdentity(
-  workspacePath: WorkspacePath | null,
-  targetIdentity: UserReviewTargetIdentity,
-): UserReviewTargetIdentity {
-  return `${workspacePath ?? "none"}:${targetIdentity}`;
 }

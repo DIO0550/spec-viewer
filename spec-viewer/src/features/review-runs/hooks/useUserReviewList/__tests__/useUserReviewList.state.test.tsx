@@ -16,6 +16,7 @@ type HookProps = Readonly<{
   workspacePath: string | null;
   target: UserReviewTarget | null;
   commands: UserReviewCommands;
+  viewIdentity?: string;
 }>;
 
 const target = {
@@ -94,10 +95,11 @@ function renderHook<Props, Result>(
 
 function renderUseUserReviewList(props: HookProps) {
   return renderHook(
-    ({ workspacePath, target, commands }) =>
+    ({ workspacePath, target, commands, viewIdentity }) =>
       useUserReviewList({
         commands,
         target,
+        viewIdentity,
         workspacePath:
           workspacePath === null
             ? null
@@ -112,6 +114,28 @@ async function flushAsyncEffects(): Promise<void> {
     await Promise.resolve();
     await Promise.resolve();
   });
+}
+
+
+type Deferred<T> = Readonly<{
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+  reject: (error: unknown) => void;
+}>;
+
+function createDeferred<T>(): Deferred<T> {
+  let resolve: (value: T) => void = () => undefined;
+  let reject: (error: unknown) => void = () => undefined;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+
+  return {
+    promise,
+    resolve,
+    reject,
+  };
 }
 
 function createCommands(
@@ -214,4 +238,64 @@ test("useUserReviewListはlist失敗時もfrontend performance spanにerrorを�
   result.unmount();
   debugSpy.mockRestore();
   configurePerformanceLoggerForTest(null);
+});
+
+
+test("useUserReviewListはidentity不一致のlist eventを反映しない", async () => {
+  const commands = createCommands();
+  const result = renderUseUserReviewList({
+    workspacePath: "/workspace/spec-reviewer",
+    target,
+    commands,
+  });
+
+  await flushAsyncEffects();
+  act(() => {
+    result.current.applyUserReviewEvent({
+      identity: "/workspace/other:file:auth:tasks",
+      event: {
+        type: "reviewCreated",
+        review: activeRun,
+      },
+    });
+  });
+
+  expect(result.current.listState.active).toEqual([]);
+  result.unmount();
+});
+
+test("useUserReviewListはloading中のeventを古いlist responseで上書きしない", async () => {
+  const listDeferred = createDeferred<ListUserReviewsResponse>();
+  const commands: UserReviewCommands = {
+    listUserReviews: vi.fn().mockReturnValue(listDeferred.promise),
+    createUserReview: vi.fn(),
+    archiveUserReview: vi.fn(),
+  };
+  const result = renderUseUserReviewList({
+    workspacePath: "/workspace/spec-reviewer",
+    target,
+    viewIdentity: "/workspace/spec-reviewer:file:auth:tasks",
+    commands,
+  });
+
+  act(() => {
+    result.current.applyUserReviewEvent({
+      identity: "/workspace/spec-reviewer:file:auth:tasks",
+      event: {
+        type: "reviewCreated",
+        review: activeRun,
+      },
+    });
+  });
+  await act(async () => {
+    listDeferred.resolve({
+      active: [],
+      archived: [],
+      problems: [],
+    });
+    await listDeferred.promise;
+  });
+
+  expect(result.current.listState.active).toEqual([activeRun]);
+  result.unmount();
 });
