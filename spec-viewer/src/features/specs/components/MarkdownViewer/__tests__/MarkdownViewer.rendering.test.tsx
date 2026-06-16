@@ -308,7 +308,25 @@ test("MarkdownViewerはHTML文書をsandbox iframeで閲覧表示する", () => 
   result.unmount();
 });
 
-test("MarkdownViewerはtest-cases.htmlだけHTML文書のscript実行を許可する", () => {
+test("MarkdownViewerは特定HTML文書のscript実行を許可する", () => {
+  const requirementsResult = renderViewer(
+    createReadyState(
+      "<main><h1>Requirements</h1></main><script>window.__requirementsRendered = true;</script>",
+      [],
+      "html",
+      "/workspace/spec-reviewer/docs/plans/requirements.html",
+    ),
+  );
+  const requirementsIframe = requirementsResult.container.querySelector(
+    ".html-rendered",
+  ) as HTMLIFrameElement | null;
+
+  expect(requirementsIframe?.getAttribute("sandbox")).toBe("allow-scripts");
+  expect(requirementsIframe?.getAttribute("srcdoc")).toContain(
+    "window.__requirementsRendered = true;",
+  );
+  requirementsResult.unmount();
+
   const result = renderViewer(
     createReadyState(
       "<main><h1>Test Cases</h1></main><script>window.__testCasesRendered = true;</script>",

@@ -51,7 +51,10 @@ pub fn spec_file_path_candidates(
 }
 
 fn is_html_first_key(key: SpecFileKey) -> bool {
-    matches!(key, SpecFileKey::TechReference | SpecFileKey::TestCases)
+    matches!(
+        key,
+        SpecFileKey::Requirements | SpecFileKey::TechReference | SpecFileKey::TestCases
+    )
 }
 
 fn html_first_path_candidates(configured_path: &Path) -> Vec<SpecFilePathCandidate> {
@@ -128,6 +131,31 @@ mod tests {
                 (PathBuf::from("guide.md"), SpecDocumentFormat::Markdown),
             ],
             candidate_paths(SpecFileKey::TestCases, "guide.md")
+        );
+    }
+
+    #[test]
+    fn requirements_prefers_html_then_markdown_for_default_file_name() {
+        assert_eq!(
+            vec![
+                (PathBuf::from("requirements.html"), SpecDocumentFormat::Html),
+                (
+                    PathBuf::from("requirements.md"),
+                    SpecDocumentFormat::Markdown
+                ),
+            ],
+            candidate_paths(SpecFileKey::Requirements, "requirements.html")
+        );
+    }
+
+    #[test]
+    fn requirements_uses_override_stem_with_html_first() {
+        assert_eq!(
+            vec![
+                (PathBuf::from("brief.html"), SpecDocumentFormat::Html),
+                (PathBuf::from("brief.md"), SpecDocumentFormat::Markdown),
+            ],
+            candidate_paths(SpecFileKey::Requirements, "brief.md")
         );
     }
 

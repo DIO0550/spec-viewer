@@ -1086,6 +1086,11 @@ mod tests {
             auth.file_for_key(SpecFileKey::Tasks)
                 .map(|file| file.status())
         );
+        assert_eq!(
+            Some(SpecFileStatus::Missing),
+            auth.file_for_key(SpecFileKey::Requirements)
+                .map(|file| file.status())
+        );
 
         let code_review = &auth.children()[0];
         assert_eq!(
@@ -1141,9 +1146,13 @@ mod tests {
     }
 
     #[test]
-    fn spec_tree_scanner_reports_test_cases_html_after_tech_reference() {
+    fn spec_tree_scanner_reports_requirements_and_html_files_after_tasks() {
         let workspace = TestWorkspace::new("test-cases-html");
         workspace.create_dir(PLUGIN_WORKSPACE_SPECS_DIR);
+        workspace.write_file(
+            ".plugin-workspace/.specs/auth/requirements.html",
+            "<h1>Requirements</h1>",
+        );
         workspace.write_file(
             ".plugin-workspace/.specs/auth/test-cases.html",
             "<h1>Cases</h1>",
@@ -1162,12 +1171,16 @@ mod tests {
             .map(|file| (file.key(), file.format()))
             .collect();
         assert_eq!(
-            Some(&(SpecFileKey::TechReference, SpecDocumentFormat::Html)),
+            Some(&(SpecFileKey::Requirements, SpecDocumentFormat::Html)),
             files.get(2)
         );
         assert_eq!(
-            Some(&(SpecFileKey::TestCases, SpecDocumentFormat::Html)),
+            Some(&(SpecFileKey::TechReference, SpecDocumentFormat::Html)),
             files.get(3)
+        );
+        assert_eq!(
+            Some(&(SpecFileKey::TestCases, SpecDocumentFormat::Html)),
+            files.get(4)
         );
 
         let test_cases = auth
@@ -1175,6 +1188,12 @@ mod tests {
             .expect("test cases file should be configured");
         assert_eq!(SpecFileStatus::Present, test_cases.status());
         assert_eq!("test-cases.html", test_cases.file_name());
+
+        let requirements = auth
+            .file_for_key(SpecFileKey::Requirements)
+            .expect("requirements file should be configured");
+        assert_eq!(SpecFileStatus::Present, requirements.status());
+        assert_eq!("requirements.html", requirements.file_name());
     }
 
     #[test]
@@ -1409,6 +1428,7 @@ mod tests {
             vec![
                 (SpecFileKey::Impl, SpecFileStatus::Present),
                 (SpecFileKey::Tasks, SpecFileStatus::Present),
+                (SpecFileKey::Requirements, SpecFileStatus::Missing),
                 (SpecFileKey::TechReference, SpecFileStatus::Missing),
                 (SpecFileKey::TestCases, SpecFileStatus::Missing),
                 (SpecFileKey::Exploration, SpecFileStatus::Present),
@@ -1459,6 +1479,7 @@ mod tests {
             vec![
                 (SpecFileKey::Impl, SpecFileStatus::Present),
                 (SpecFileKey::Tasks, SpecFileStatus::Present),
+                (SpecFileKey::Requirements, SpecFileStatus::Missing),
                 (SpecFileKey::TechReference, SpecFileStatus::Missing),
                 (SpecFileKey::TestCases, SpecFileStatus::Missing),
                 (SpecFileKey::Exploration, SpecFileStatus::Present),
@@ -1510,6 +1531,7 @@ mod tests {
             vec![
                 (SpecFileKey::Impl, SpecFileStatus::Present),
                 (SpecFileKey::Tasks, SpecFileStatus::Present),
+                (SpecFileKey::Requirements, SpecFileStatus::Missing),
                 (SpecFileKey::TechReference, SpecFileStatus::Missing),
                 (SpecFileKey::TestCases, SpecFileStatus::Missing),
                 (SpecFileKey::Exploration, SpecFileStatus::Present),

@@ -570,6 +570,38 @@ mod tests {
     }
 
     #[test]
+    fn reads_requirements_html_before_markdown() {
+        let workspace = TestWorkspace::new("requirements-html-first");
+        workspace.write_file(
+            ".plugin-workspace/.specs/auth/requirements.html",
+            "<h1>Requirements</h1>",
+        );
+        workspace.write_file(
+            ".plugin-workspace/.specs/auth/requirements.md",
+            "# Requirements",
+        );
+
+        let result = FilesystemMarkdownReader::new()
+            .read(
+                &workspace.layout(),
+                &WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace),
+                "auth",
+                SpecFileKey::Requirements,
+            )
+            .expect("requirements should be readable");
+
+        match result {
+            MarkdownReadResult::Found(document) => {
+                assert_eq!(SpecDocumentFormat::Html, document.format());
+                assert!(document.path().ends_with("auth/requirements.html"));
+                assert_eq!("<h1>Requirements</h1>", document.contents());
+                assert!(document.blocks().is_empty());
+            }
+            MarkdownReadResult::Missing(_) => panic!("expected requirements html document"),
+        }
+    }
+
+    #[test]
     fn returns_missing_html_result_for_absent_tech_reference() {
         let workspace = TestWorkspace::new("tech-reference-missing");
         workspace.create_dir(".plugin-workspace/.specs/auth");

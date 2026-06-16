@@ -756,6 +756,35 @@ mod tests {
     }
 
     #[test]
+    fn plan_file_watch_tracks_requirements_html_and_markdown_candidates() {
+        let workspace = TestWorkspace::new("requirements-markdown-fallback");
+        workspace.write_file(
+            ".plugin-workspace/.specs/auth/requirements.md",
+            "# Requirements",
+        );
+        let loaded_workspace = workspace.workspace();
+
+        let plan = plan_file_watch(
+            &loaded_workspace,
+            loaded_workspace.config(),
+            "auth",
+            SpecFileKey::Requirements,
+        )
+        .expect("watch plan should be created");
+
+        let markdown_targets: Vec<&Path> = plan
+            .targets()
+            .iter()
+            .filter(|target| target.kind() == FileWatchTargetKind::Markdown)
+            .map(FileWatchTarget::path)
+            .collect();
+
+        assert_eq!(2, markdown_targets.len());
+        assert!(markdown_targets[0].ends_with("auth/requirements.md"));
+        assert!(markdown_targets[1].ends_with("auth/requirements.html"));
+    }
+
+    #[test]
     fn plan_file_watch_tracks_test_cases_html_and_markdown_candidates() {
         let workspace = TestWorkspace::new("test-cases-markdown-fallback");
         workspace.write_file(".plugin-workspace/.specs/auth/test-cases.md", "# Cases");

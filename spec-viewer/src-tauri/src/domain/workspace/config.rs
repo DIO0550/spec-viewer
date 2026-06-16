@@ -240,9 +240,9 @@ fn plugin_workspace_default_file_name(key: SpecFileKey) -> &'static str {
         SpecFileKey::Hearing => "hearing-notes.md",
         SpecFileKey::Impl => "implementation-plan.md",
         SpecFileKey::Tasks => "tasks.md",
+        SpecFileKey::Requirements => "requirements.html",
         SpecFileKey::TechReference => "tech-reference.html",
         SpecFileKey::TestCases => "test-cases.html",
-        SpecFileKey::Requirements => "requirements.md",
         SpecFileKey::Design => "design.md",
     }
 }
@@ -334,6 +334,7 @@ mod tests {
             vec![
                 (SpecFileKey::Impl, "implementation-plan.md"),
                 (SpecFileKey::Tasks, "tasks.md"),
+                (SpecFileKey::Requirements, "requirements.html"),
                 (SpecFileKey::TechReference, "tech-reference.html"),
                 (SpecFileKey::TestCases, "test-cases.html"),
                 (SpecFileKey::Exploration, "exploration-report.md"),
@@ -413,6 +414,7 @@ mod tests {
             vec![
                 (SpecFileKey::Impl, "implementation-plan.md"),
                 (SpecFileKey::Tasks, "tasks.md"),
+                (SpecFileKey::Requirements, "requirements.html"),
                 (SpecFileKey::TechReference, "tech-reference.html"),
                 (SpecFileKey::TestCases, "test-cases.html"),
                 (SpecFileKey::Exploration, "exploration-report.md"),

@@ -313,6 +313,7 @@ mod tests {
             vec![
                 (SpecFileKey::Impl, "implementation-plan.md"),
                 (SpecFileKey::Tasks, "tasks.md"),
+                (SpecFileKey::Requirements, "requirements.html"),
                 (SpecFileKey::TechReference, "tech-reference.html"),
                 (SpecFileKey::TestCases, "test-cases.html"),
                 (SpecFileKey::Exploration, "exploration-report.md"),
