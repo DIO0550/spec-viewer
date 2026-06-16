@@ -1,6 +1,11 @@
+import type { UserReview } from "@/features/review-runs/domain/userReview";
 import type { UserReviewListState } from "@/features/review-runs/domain/userReviewListState";
+import type {
+  UserReviewArchiveState,
+  UserReviewCreateState,
+} from "@/features/review-runs/domain/userReviewOperation";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
-import type { UseUserReviewOperationsResult } from "@/features/review-runs/hooks/useUserReviewOperations";
+import type { CreateUserReviewInput } from "@/features/review-runs/hooks/useCreateUserReview";
 import type { UseUserReviewsResult } from "@/features/review-runs/hooks/useUserReviews";
 
 type UserReviewsListResultInput = Readonly<{
@@ -10,10 +15,12 @@ type UserReviewsListResultInput = Readonly<{
 }>;
 
 type UserReviewsOperationResultInput = Readonly<{
-  createState: UseUserReviewOperationsResult["createState"];
-  archiveState: UseUserReviewOperationsResult["archiveState"];
-  createUserReview: UseUserReviewOperationsResult["createUserReview"];
-  archiveUserReview: UseUserReviewOperationsResult["archiveUserReview"];
+  createState: UserReviewCreateState;
+  archiveState: UserReviewArchiveState;
+  createUserReview: (
+    input: CreateUserReviewInput,
+  ) => Promise<UserReview | null>;
+  archiveUserReview: (userReviewId: string) => Promise<UserReview | null>;
 }>;
 
 type UserReviewsResultInput = Readonly<{

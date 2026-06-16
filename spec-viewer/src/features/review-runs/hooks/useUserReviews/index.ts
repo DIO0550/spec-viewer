@@ -12,16 +12,22 @@ import {
   type UserReviewTargetScope,
 } from "@/features/review-runs/domain/userReviewTarget";
 import { buildUserReviewsResult } from "@/features/review-runs/hooks/buildUserReviewsResult";
-import { useUserReviewList } from "@/features/review-runs/hooks/useUserReviewList";
-import { WorkspacePath } from "@/shared/domain/workspacePath";
 import {
-  useUserReviewOperations,
+  useArchiveUserReview,
+  type UseArchiveUserReviewResult,
+} from "@/features/review-runs/hooks/useArchiveUserReview";
+import {
+  useCreateUserReview,
   type CreateUserReviewInput,
-} from "@/features/review-runs/hooks/useUserReviewOperations";
+  type UseCreateUserReviewResult,
+} from "@/features/review-runs/hooks/useCreateUserReview";
+import { useUserReviewList } from "@/features/review-runs/hooks/useUserReviewList";
+import { createUserReviewViewIdentity } from "@/features/review-runs/hooks/userReviewViewIdentity";
 import {
   userReviewCommands as defaultUserReviewCommands,
   type UserReviewCommands,
 } from "@/shared/api/tauri";
+import { WorkspacePath } from "@/shared/domain/workspacePath";
 import type { SpecFileKey } from "@/features/specs/types/spec";
 
 export type { UserReviewListState } from "@/features/review-runs/domain/userReviewListState";
@@ -30,7 +36,7 @@ export type {
   UserReviewCreateState,
 } from "@/features/review-runs/domain/userReviewOperation";
 export type { UserReviewTargetScope } from "@/features/review-runs/domain/userReviewTarget";
-export type { CreateUserReviewInput } from "@/features/review-runs/hooks/useUserReviewOperations";
+export type { CreateUserReviewInput } from "@/features/review-runs/hooks/useCreateUserReview";
 
 export type UserReviewsSelectionInput = Readonly<{
   workspacePath: WorkspacePath | null;
@@ -78,17 +84,30 @@ export function useUserReviews(
     () => UserReviewTargetIdentity.create(target),
     [target],
   );
+  const viewIdentity = useMemo(
+    () =>
+      createUserReviewViewIdentity(selection.workspacePath, targetIdentity),
+    [selection.workspacePath, targetIdentity],
+  );
   const list = useUserReviewList({
     commands,
     target,
     workspacePath: selection.workspacePath,
+    viewIdentity,
     correlationId: options.correlationId,
   });
 
-  const userReviewOperations = useUserReviewOperations({
+  const create: UseCreateUserReviewResult = useCreateUserReview({
     workspacePath: selection.workspacePath,
     target,
-    targetIdentity,
+    viewIdentity,
+    commands,
+    onUserReviewEvent: list.applyUserReviewEvent,
+  });
+  const archive: UseArchiveUserReviewResult = useArchiveUserReview({
+    workspacePath: selection.workspacePath,
+    target,
+    viewIdentity,
     commands,
     onUserReviewEvent: list.applyUserReviewEvent,
   });
@@ -99,6 +118,11 @@ export function useUserReviews(
       listState: list.listState,
       reloadUserReviews: list.reloadUserReviews,
     },
-    operations: userReviewOperations,
+    operations: {
+      createState: create.createState,
+      archiveState: archive.archiveState,
+      createUserReview: create.createUserReview,
+      archiveUserReview: archive.archiveUserReview,
+    },
   });
 }

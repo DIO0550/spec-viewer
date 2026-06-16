@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
 import type {
+  UserReviewArchiveState,
   UserReviewCreateState,
   UserReviewListState,
 } from "@/features/review-runs/hooks/useUserReviews";
@@ -75,6 +76,7 @@ function renderPanel(
     openCommentCount?: number;
     listState?: UserReviewListState;
     createState?: UserReviewCreateState;
+    archiveState?: UserReviewArchiveState;
     onCreateUserReview?: () => void;
     onArchiveUserReview?: (userReviewId: string) => void;
     onCopyPath?: (path: string) => Promise<void>;
@@ -96,7 +98,7 @@ function renderPanel(
         }
       }
       createState={options.createState ?? { status: "idle" }}
-      archiveState={{ status: "idle" }}
+      archiveState={options.archiveState ?? { status: "idle" }}
       onTargetScopeChange={vi.fn()}
       onWorkspaceModeChange={vi.fn()}
       onCreateUserReview={options.onCreateUserReview ?? vi.fn()}
@@ -117,6 +119,25 @@ test("UserReviewPanelは未解決コメントがないと作成をdisabledにす
   expect(result.container.textContent).toContain(
     "未解決コメントはありません。",
   );
+  result.unmount();
+});
+
+test("UserReviewPanelは作成中に作成ボタンをdisabledにする", () => {
+  const result = renderPanel({
+    createState: {
+      status: "saving",
+      payload: {
+        commentIds: [],
+        workspaceMode: "currentWorkspace",
+      },
+    },
+  });
+  const createButton = result.container.querySelector(
+    ".review-run-panel__create",
+  ) as HTMLButtonElement;
+
+  expect(createButton.disabled).toBe(true);
+  expect(createButton.textContent).toContain("作成中");
   result.unmount();
 });
 
@@ -193,4 +214,35 @@ test("UserReviewPanelはcompleted runを確認後にアーカイブできる", a
   expect(result.container.textContent).toContain("対応完了");
   result.unmount();
   vi.unstubAllGlobals();
+});
+
+test("UserReviewPanelはアーカイブ中のレビュー行だけarchiveをdisabledにする", () => {
+  const completedRun: UserReview = {
+    ...activeRun,
+    status: "completed",
+    summary: "対応完了",
+  };
+  const result = renderPanel({
+    listState: {
+      status: "ready",
+      target: activeRun.target,
+      active: [completedRun],
+      archived: [],
+      problems: [],
+      error: null,
+    },
+    archiveState: {
+      status: "saving",
+      payload: {
+        userReviewId: completedRun.id,
+      },
+    },
+  });
+  const archiveButton = result.container.querySelector(
+    `[aria-label="${completedRun.id}をアーカイブ"]`,
+  ) as HTMLButtonElement;
+
+  expect(archiveButton.disabled).toBe(true);
+  expect(archiveButton.textContent).toContain("アーカイブ中");
+  result.unmount();
 });

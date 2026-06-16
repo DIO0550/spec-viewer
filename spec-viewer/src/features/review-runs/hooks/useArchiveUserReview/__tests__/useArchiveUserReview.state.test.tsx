@@ -8,18 +8,23 @@ import type { UserReview } from "@/features/review-runs/types/userReviewIpc";
 import type { UserReviewCommands } from "@/shared/api/tauri";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 
-type HookResult<Result> = Readonly<{
+type HookResult<Props, Result> = Readonly<{
   current: Result;
+  rerender: (nextProps: Props) => void;
   unmount: () => void;
 }>;
 
-function renderHook<Result>(hook: () => Result): HookResult<Result> {
+function renderHook<Props, Result>(
+  hook: (props: Props) => Result,
+  initialProps: Props,
+): HookResult<Props, Result> {
   const container = document.createElement("div");
   const root = createRoot(container);
+  const props = { current: initialProps };
   const result = { current: undefined as Result };
 
   function TestComponent(): null {
-    result.current = hook();
+    result.current = hook(props.current);
     return null;
   }
 
@@ -31,6 +36,12 @@ function renderHook<Result>(hook: () => Result): HookResult<Result> {
     get current() {
       return result.current;
     },
+    rerender: (nextProps: Props) => {
+      props.current = nextProps;
+      act(() => {
+        root.render(<TestComponent />);
+      });
+    },
     unmount: () => {
       act(() => {
         root.unmount();
@@ -38,6 +49,27 @@ function renderHook<Result>(hook: () => Result): HookResult<Result> {
       container.remove();
     },
   };
+}
+
+type HookProps = Readonly<{
+  workspacePath: string;
+  viewIdentity: string;
+  commands: UserReviewCommands;
+  onUserReviewEvent: (event: unknown) => void;
+}>;
+
+function renderUseArchiveUserReview(props: HookProps) {
+  return renderHook(
+    ({ commands, onUserReviewEvent, viewIdentity, workspacePath }) =>
+      useArchiveUserReview({
+        commands,
+        workspacePath: WorkspacePath.fromString(workspacePath),
+        target,
+        viewIdentity,
+        onUserReviewEvent,
+      }),
+    props,
+  );
 }
 
 const target: UserReviewTarget = {
@@ -71,6 +103,11 @@ const archivedRun: UserReview = {
   warnings: [],
 };
 
+const secondArchivedRun: UserReview = {
+  ...archivedRun,
+  id: "review-second-archived",
+};
+
 function createCommands(): UserReviewCommands {
   return {
     listUserReviews: vi.fn(),
@@ -79,18 +116,36 @@ function createCommands(): UserReviewCommands {
   };
 }
 
+type Deferred<T> = Readonly<{
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+  reject: (error: unknown) => void;
+}>;
+
+function createDeferred<T>(): Deferred<T> {
+  let resolve: (value: T) => void = () => undefined;
+  let reject: (error: unknown) => void = () => undefined;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+
+  return {
+    promise,
+    resolve,
+    reject,
+  };
+}
+
 test("useArchiveUserReviewはarchive成功後にreviewArchived eventを発行する", async () => {
   const commands = createCommands();
   const onUserReviewEvent = vi.fn();
-  const result = renderHook(() =>
-    useArchiveUserReview({
-      commands,
-      workspacePath: WorkspacePath.fromString("/workspace/spec-reviewer"),
-      target,
-      targetIdentity: "file:auth:tasks",
-      onUserReviewEvent,
-    }),
-  );
+  const result = renderUseArchiveUserReview({
+    commands,
+    workspacePath: "/workspace/spec-reviewer",
+    viewIdentity: "/workspace/spec-reviewer:file:auth:tasks",
+    onUserReviewEvent,
+  });
 
   await act(async () => {
     await result.current.archiveUserReview("review-active");
@@ -98,8 +153,84 @@ test("useArchiveUserReviewはarchive成功後にreviewArchived eventを発行す
 
   expect(result.current.archiveState.status).toBe("success");
   expect(onUserReviewEvent).toHaveBeenCalledWith({
-    type: "reviewArchived",
-    review: archivedRun,
+    identity: "/workspace/spec-reviewer:file:auth:tasks",
+    event: {
+      type: "reviewArchived",
+      review: archivedRun,
+    },
+  });
+  result.unmount();
+});
+
+
+test("useArchiveUserReviewはviewIdentityを戻しても古いsuccessを再表示しない", async () => {
+  const commands = createCommands();
+  const onUserReviewEvent = vi.fn();
+  const result = renderUseArchiveUserReview({
+    commands,
+    workspacePath: "/workspace/spec-reviewer",
+    viewIdentity: "/workspace/spec-reviewer:file:auth:tasks",
+    onUserReviewEvent,
+  });
+
+  await act(async () => {
+    await result.current.archiveUserReview("review-active");
+  });
+  result.rerender({
+    commands,
+    workspacePath: "/workspace/other",
+    viewIdentity: "/workspace/other:file:auth:tasks",
+    onUserReviewEvent,
+  });
+  result.rerender({
+    commands,
+    workspacePath: "/workspace/spec-reviewer",
+    viewIdentity: "/workspace/spec-reviewer:file:auth:tasks",
+    onUserReviewEvent,
+  });
+
+  expect(result.current.archiveState.status).toBe("idle");
+  result.unmount();
+});
+
+test("useArchiveUserReviewは同一identityの古いarchive完了を反映しない", async () => {
+  const firstArchive = createDeferred<{ userReview: UserReview }>();
+  const commands: UserReviewCommands = {
+    listUserReviews: vi.fn(),
+    createUserReview: vi.fn(),
+    archiveUserReview: vi
+      .fn()
+      .mockReturnValueOnce(firstArchive.promise)
+      .mockResolvedValueOnce({ userReview: secondArchivedRun }),
+  };
+  const onUserReviewEvent = vi.fn();
+  const result = renderUseArchiveUserReview({
+    commands,
+    workspacePath: "/workspace/spec-reviewer",
+    viewIdentity: "/workspace/spec-reviewer:file:auth:tasks",
+    onUserReviewEvent,
+  });
+
+  const firstPromise = result.current.archiveUserReview("review-active");
+  await act(async () => {
+    await result.current.archiveUserReview("review-second-active");
+  });
+  await act(async () => {
+    firstArchive.resolve({ userReview: archivedRun });
+    await firstPromise;
+  });
+
+  expect(result.current.archiveState).toMatchObject({
+    status: "success",
+    result: secondArchivedRun,
+  });
+  expect(onUserReviewEvent).toHaveBeenCalledTimes(1);
+  expect(onUserReviewEvent).toHaveBeenCalledWith({
+    identity: "/workspace/spec-reviewer:file:auth:tasks",
+    event: {
+      type: "reviewArchived",
+      review: secondArchivedRun,
+    },
   });
   result.unmount();
 });

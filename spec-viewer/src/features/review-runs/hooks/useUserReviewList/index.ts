@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { UserReviewCollection } from "@/features/review-runs/domain/userReviewCollection";
 import {
   UserReviewListState,
-  type UserReviewListEvent,
   type UserReviewListState as UserReviewListStateType,
 } from "@/features/review-runs/domain/userReviewListState";
 import {
@@ -11,7 +10,11 @@ import {
   type UserReviewTarget,
 } from "@/features/review-runs/domain/userReviewTarget";
 import { listUserReviews as listUserReviewsViaGateway } from "@/features/review-runs/infra/userReviewGateway";
-import { useUserReviewListRequest } from "@/features/review-runs/hooks/useUserReviewListRequest";
+import {
+  createUserReviewViewIdentity,
+  type IdentifiedUserReviewListEvent,
+  type UserReviewViewIdentity,
+} from "@/features/review-runs/hooks/userReviewViewIdentity";
 import {
   normalizeCommandError,
   type UserReviewCommands,
@@ -26,14 +29,20 @@ export type UseUserReviewListOptions = Readonly<{
   commands: UserReviewCommands;
   target: UserReviewTarget | null;
   workspacePath: WorkspacePath | null;
+  viewIdentity?: UserReviewViewIdentity;
   correlationId?: string | null;
 }>;
 
 export type UseUserReviewListResult = Readonly<{
   listState: UserReviewListStateType;
   reloadUserReviews: () => Promise<boolean>;
-  invalidateListRequest: () => void;
-  applyUserReviewEvent: (event: UserReviewListEvent) => void;
+  applyUserReviewEvent: (event: IdentifiedUserReviewListEvent) => void;
+}>;
+
+type IdentifiedListState = Readonly<{
+  identity: UserReviewViewIdentity;
+  requestVersion: number;
+  state: UserReviewListStateType;
 }>;
 
 /** @returns User review list state and reload controls for the active target. */
@@ -45,42 +54,64 @@ export function useUserReviewList(
     () => UserReviewTargetIdentity.create(target),
     [target],
   );
-  const listRequest = useUserReviewListRequest(targetIdentity);
-  const [listState, setListState] = useState<UserReviewListStateType>(
-    UserReviewListState.idle(),
+  const viewIdentity = useMemo(
+    () =>
+      options.viewIdentity ??
+      createUserReviewViewIdentity(workspacePath, targetIdentity),
+    [options.viewIdentity, targetIdentity, workspacePath],
   );
-
-  listRequest.setCurrentIdentity(targetIdentity);
+  const requestVersionRef = useRef(0);
+  const [listViewState, setListViewState] = useState<IdentifiedListState>({
+    identity: viewIdentity,
+    requestVersion: requestVersionRef.current,
+    state: UserReviewListState.idle(),
+  });
 
   const applyUserReviewEvent = useCallback(
-    (event: UserReviewListEvent): void => {
-      setListState((currentState) => {
-        const result = UserReviewListState.reduceUserReviewEvent(
-          currentState,
-          event,
-        );
-
-        if (result.invalidatesInFlightListRequest) {
-          listRequest.invalidate();
+    (identifiedEvent: IdentifiedUserReviewListEvent): void => {
+      setListViewState((current) => {
+        if (current.identity !== identifiedEvent.identity) {
+          return current;
         }
 
-        return result.state;
+        const result = UserReviewListState.reduceUserReviewEvent(
+          current.state,
+          identifiedEvent.event,
+        );
+        const requestVersion = result.invalidatesInFlightListRequest
+          ? current.requestVersion + 1
+          : current.requestVersion;
+
+        return {
+          identity: current.identity,
+          requestVersion,
+          state: result.state,
+        };
       });
     },
-    [listRequest],
+    [],
   );
 
   const reloadUserReviews = useCallback(async (): Promise<boolean> => {
     const activeTarget = target;
+    const startedIdentity = viewIdentity;
+    const startedRequestVersion = requestVersionRef.current + 1;
+    requestVersionRef.current = startedRequestVersion;
 
     if (workspacePath === null || activeTarget === null) {
-      listRequest.invalidate();
-      setListState(UserReviewListState.idle());
+      setListViewState({
+        identity: startedIdentity,
+        requestVersion: startedRequestVersion,
+        state: UserReviewListState.idle(),
+      });
       return true;
     }
 
-    const token = listRequest.begin(targetIdentity);
-    setListState(UserReviewListState.loading(activeTarget));
+    setListViewState({
+      identity: startedIdentity,
+      requestVersion: startedRequestVersion,
+      state: UserReviewListState.loading(activeTarget),
+    });
 
     const spanCorrelationId =
       correlationId ?? createPerformanceCorrelationId("review-runs-list");
@@ -112,52 +143,66 @@ export function useUserReviewList(
         problemCount: response.problems.length,
       });
 
-      if (!listRequest.isCurrent(token)) {
-        return false;
-      }
+      setListViewState((current) => {
+        if (
+          current.identity !== startedIdentity ||
+          current.requestVersion !== startedRequestVersion
+        ) {
+          return current;
+        }
 
-      setListState(
-        UserReviewListState.loaded(
-          activeTarget,
-          UserReviewCollection.fromListResponse(
-            response.active,
-            response.archived,
-            response.problems,
+        return {
+          identity: startedIdentity,
+          requestVersion: startedRequestVersion,
+          state: UserReviewListState.loaded(
+            activeTarget,
+            UserReviewCollection.fromListResponse(
+              response.active,
+              response.archived,
+              response.problems,
+            ),
           ),
-        ),
-      );
+        };
+      });
       return true;
     } catch (error) {
       endSpan({
         error: true,
       });
 
-      if (!listRequest.isCurrent(token)) {
-        return false;
-      }
+      setListViewState((current) => {
+        if (
+          current.identity !== startedIdentity ||
+          current.requestVersion !== startedRequestVersion
+        ) {
+          return current;
+        }
 
-      setListState(
-        UserReviewListState.error(activeTarget, normalizeCommandError(error)),
-      );
+        return {
+          identity: startedIdentity,
+          requestVersion: startedRequestVersion,
+          state: UserReviewListState.error(
+            activeTarget,
+            normalizeCommandError(error),
+          ),
+        };
+      });
       return false;
     }
-  }, [
-    commands,
-    correlationId,
-    listRequest,
-    target,
-    targetIdentity,
-    workspacePath,
-  ]);
+  }, [commands, correlationId, target, viewIdentity, workspacePath]);
 
   useEffect(() => {
     void reloadUserReviews();
   }, [reloadUserReviews]);
 
+  const listState =
+    listViewState.identity === viewIdentity
+      ? listViewState.state
+      : UserReviewListState.idle();
+
   return {
     listState,
     reloadUserReviews,
-    invalidateListRequest: listRequest.invalidate,
     applyUserReviewEvent,
   };
 }
