@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { UserReview } from "@/features/review-runs/domain/userReview";
 import {
@@ -46,6 +46,7 @@ export function useCreateUserReview(
 ): UseCreateUserReviewResult {
   const { commands, onUserReviewEvent, target, viewIdentity, workspacePath } =
     options;
+  const requestIdRef = useRef(0);
   const [createViewState, setCreateViewState] = useState<IdentifiedCreateState>(
     {
       identity: viewIdentity,
@@ -54,6 +55,7 @@ export function useCreateUserReview(
   );
 
   useEffect(() => {
+    requestIdRef.current += 1;
     setCreateViewState({
       identity: viewIdentity,
       state: UserReviewCreateState.idle(),
@@ -72,6 +74,8 @@ export function useCreateUserReview(
 
       const payload = input;
       const startedIdentity = viewIdentity;
+      const startedRequestId = requestIdRef.current + 1;
+      requestIdRef.current = startedRequestId;
       setCreateViewState({
         identity: startedIdentity,
         state: UserReviewCreateState.saving(payload),
@@ -86,7 +90,10 @@ export function useCreateUserReview(
         );
 
         setCreateViewState((current) => {
-          if (current.identity !== startedIdentity) {
+          if (
+            current.identity !== startedIdentity ||
+            requestIdRef.current !== startedRequestId
+          ) {
             return current;
           }
 
@@ -95,17 +102,22 @@ export function useCreateUserReview(
             state: UserReviewCreateState.success(payload, response.userReview),
           };
         });
-        onUserReviewEvent({
-          identity: startedIdentity,
-          event: {
-            type: "reviewCreated",
-            review: response.userReview,
-          },
-        });
+        if (requestIdRef.current === startedRequestId) {
+          onUserReviewEvent({
+            identity: startedIdentity,
+            event: {
+              type: "reviewCreated",
+              review: response.userReview,
+            },
+          });
+        }
         return response.userReview;
       } catch (error) {
         setCreateViewState((current) => {
-          if (current.identity !== startedIdentity) {
+          if (
+            current.identity !== startedIdentity ||
+            requestIdRef.current !== startedRequestId
+          ) {
             return current;
           }
 

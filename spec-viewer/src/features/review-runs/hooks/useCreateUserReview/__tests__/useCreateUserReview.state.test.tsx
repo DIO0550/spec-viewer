@@ -104,11 +104,37 @@ const activeRun: UserReview = {
   warnings: [],
 };
 
+const secondActiveRun: UserReview = {
+  ...activeRun,
+  id: "review-second-active",
+};
+
 function createCommands(): UserReviewCommands {
   return {
     listUserReviews: vi.fn(),
     createUserReview: vi.fn().mockResolvedValue({ userReview: activeRun }),
     archiveUserReview: vi.fn(),
+  };
+}
+
+type Deferred<T> = Readonly<{
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+  reject: (error: unknown) => void;
+}>;
+
+function createDeferred<T>(): Deferred<T> {
+  let resolve: (value: T) => void = () => undefined;
+  let reject: (error: unknown) => void = () => undefined;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+
+  return {
+    promise,
+    resolve,
+    reject,
   };
 }
 
@@ -171,5 +197,53 @@ test("useCreateUserReviewはviewIdentityを戻しても古いsuccessを再表示
   });
 
   expect(result.current.createState.status).toBe("idle");
+  result.unmount();
+});
+
+test("useCreateUserReviewは同一identityの古いcreate完了を反映しない", async () => {
+  const firstCreate = createDeferred<{ userReview: UserReview }>();
+  const commands: UserReviewCommands = {
+    listUserReviews: vi.fn(),
+    createUserReview: vi
+      .fn()
+      .mockReturnValueOnce(firstCreate.promise)
+      .mockResolvedValueOnce({ userReview: secondActiveRun }),
+    archiveUserReview: vi.fn(),
+  };
+  const onUserReviewEvent = vi.fn();
+  const result = renderUseCreateUserReview({
+    commands,
+    workspacePath: "/workspace/spec-reviewer",
+    viewIdentity: "/workspace/spec-reviewer:file:auth:tasks",
+    onUserReviewEvent,
+  });
+
+  const firstPromise = result.current.createUserReview({
+    commentIds: [CommentId.fromString("cmt_1")],
+    workspaceMode: "currentWorkspace",
+  });
+  await act(async () => {
+    await result.current.createUserReview({
+      commentIds: [CommentId.fromString("cmt_2")],
+      workspaceMode: "currentWorkspace",
+    });
+  });
+  await act(async () => {
+    firstCreate.resolve({ userReview: activeRun });
+    await firstPromise;
+  });
+
+  expect(result.current.createState).toMatchObject({
+    status: "success",
+    result: secondActiveRun,
+  });
+  expect(onUserReviewEvent).toHaveBeenCalledTimes(1);
+  expect(onUserReviewEvent).toHaveBeenCalledWith({
+    identity: "/workspace/spec-reviewer:file:auth:tasks",
+    event: {
+      type: "reviewCreated",
+      review: secondActiveRun,
+    },
+  });
   result.unmount();
 });
