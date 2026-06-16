@@ -176,7 +176,10 @@ const HTML_ZOOM_DEFAULT_PERCENT = 100;
 const HTML_ZOOM_MIN_PERCENT = 50;
 const HTML_ZOOM_MAX_PERCENT = 160;
 const HTML_ZOOM_STEP_PERCENT = 10;
-const TEST_CASES_HTML_FILE_NAME = "test-cases.html";
+const SCRIPT_ENABLED_HTML_FILE_NAMES: readonly string[] = [
+  "requirements.html",
+  "test-cases.html",
+];
 const HTML_PREVIEW_DEFAULT_SANDBOX = "";
 const HTML_PREVIEW_SCRIPT_SANDBOX = "allow-scripts";
 const idleCommentOperationState = CommentOperationIdleState.create();
@@ -1081,16 +1084,18 @@ function HtmlDocument({
 
 /** @returns Sandbox policy for the HTML preview iframe. */
 function createHtmlPreviewSandbox(path: string): string {
-  if (isTestCasesHtmlPath(path)) {
+  if (isScriptEnabledHtmlPath(path)) {
     return HTML_PREVIEW_SCRIPT_SANDBOX;
   }
 
   return HTML_PREVIEW_DEFAULT_SANDBOX;
 }
 
-/** @returns Whether the HTML preview path is the generated test cases document. */
-function isTestCasesHtmlPath(path: string): boolean {
-  return getPathFileName(path).toLocaleLowerCase() === TEST_CASES_HTML_FILE_NAME;
+/** @returns Whether the HTML preview path is a generated document that needs scripts. */
+function isScriptEnabledHtmlPath(path: string): boolean {
+  const fileName = getPathFileName(path).toLocaleLowerCase();
+
+  return SCRIPT_ENABLED_HTML_FILE_NAMES.includes(fileName);
 }
 
 type CreateHtmlPreviewDocumentInput = Readonly<{

@@ -49,9 +49,10 @@ pub enum SpecFileKey {
 }
 
 impl SpecFileKey {
-    pub const DEFAULT_KEYS: [Self; 6] = [
+    pub const DEFAULT_KEYS: [Self; 7] = [
         Self::Impl,
         Self::Tasks,
+        Self::Requirements,
         Self::TechReference,
         Self::TestCases,
         Self::Exploration,
@@ -596,6 +597,7 @@ mod tests {
             &[
                 SpecFileKey::Impl,
                 SpecFileKey::Tasks,
+                SpecFileKey::Requirements,
                 SpecFileKey::TechReference,
                 SpecFileKey::TestCases,
                 SpecFileKey::Exploration,
