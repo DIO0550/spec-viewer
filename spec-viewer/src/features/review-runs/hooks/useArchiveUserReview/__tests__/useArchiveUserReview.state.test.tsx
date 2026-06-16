@@ -103,11 +103,37 @@ const archivedRun: UserReview = {
   warnings: [],
 };
 
+const secondArchivedRun: UserReview = {
+  ...archivedRun,
+  id: "review-second-archived",
+};
+
 function createCommands(): UserReviewCommands {
   return {
     listUserReviews: vi.fn(),
     createUserReview: vi.fn(),
     archiveUserReview: vi.fn().mockResolvedValue({ userReview: archivedRun }),
+  };
+}
+
+type Deferred<T> = Readonly<{
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+  reject: (error: unknown) => void;
+}>;
+
+function createDeferred<T>(): Deferred<T> {
+  let resolve: (value: T) => void = () => undefined;
+  let reject: (error: unknown) => void = () => undefined;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+
+  return {
+    promise,
+    resolve,
+    reject,
   };
 }
 
@@ -164,5 +190,47 @@ test("useArchiveUserReviewはviewIdentityを戻しても古いsuccessを再表�
   });
 
   expect(result.current.archiveState.status).toBe("idle");
+  result.unmount();
+});
+
+test("useArchiveUserReviewは同一identityの古いarchive完了を反映しない", async () => {
+  const firstArchive = createDeferred<{ userReview: UserReview }>();
+  const commands: UserReviewCommands = {
+    listUserReviews: vi.fn(),
+    createUserReview: vi.fn(),
+    archiveUserReview: vi
+      .fn()
+      .mockReturnValueOnce(firstArchive.promise)
+      .mockResolvedValueOnce({ userReview: secondArchivedRun }),
+  };
+  const onUserReviewEvent = vi.fn();
+  const result = renderUseArchiveUserReview({
+    commands,
+    workspacePath: "/workspace/spec-reviewer",
+    viewIdentity: "/workspace/spec-reviewer:file:auth:tasks",
+    onUserReviewEvent,
+  });
+
+  const firstPromise = result.current.archiveUserReview("review-active");
+  await act(async () => {
+    await result.current.archiveUserReview("review-second-active");
+  });
+  await act(async () => {
+    firstArchive.resolve({ userReview: archivedRun });
+    await firstPromise;
+  });
+
+  expect(result.current.archiveState).toMatchObject({
+    status: "success",
+    result: secondArchivedRun,
+  });
+  expect(onUserReviewEvent).toHaveBeenCalledTimes(1);
+  expect(onUserReviewEvent).toHaveBeenCalledWith({
+    identity: "/workspace/spec-reviewer:file:auth:tasks",
+    event: {
+      type: "reviewArchived",
+      review: secondArchivedRun,
+    },
+  });
   result.unmount();
 });

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { UserReview } from "@/features/review-runs/domain/userReview";
 import {
@@ -41,6 +41,7 @@ export function useArchiveUserReview(
 ): UseArchiveUserReviewResult {
   const { commands, onUserReviewEvent, target, viewIdentity, workspacePath } =
     options;
+  const requestIdRef = useRef(0);
   const [archiveViewState, setArchiveViewState] =
     useState<IdentifiedArchiveState>({
       identity: viewIdentity,
@@ -48,6 +49,7 @@ export function useArchiveUserReview(
     });
 
   useEffect(() => {
+    requestIdRef.current += 1;
     setArchiveViewState({
       identity: viewIdentity,
       state: UserReviewArchiveState.idle(),
@@ -62,6 +64,8 @@ export function useArchiveUserReview(
 
       const payload = { userReviewId };
       const startedIdentity = viewIdentity;
+      const startedRequestId = requestIdRef.current + 1;
+      requestIdRef.current = startedRequestId;
       setArchiveViewState({
         identity: startedIdentity,
         state: UserReviewArchiveState.saving(payload),
@@ -76,7 +80,10 @@ export function useArchiveUserReview(
         );
 
         setArchiveViewState((current) => {
-          if (current.identity !== startedIdentity) {
+          if (
+            current.identity !== startedIdentity ||
+            requestIdRef.current !== startedRequestId
+          ) {
             return current;
           }
 
@@ -85,17 +92,22 @@ export function useArchiveUserReview(
             state: UserReviewArchiveState.success(payload, response.userReview),
           };
         });
-        onUserReviewEvent({
-          identity: startedIdentity,
-          event: {
-            type: "reviewArchived",
-            review: response.userReview,
-          },
-        });
+        if (requestIdRef.current === startedRequestId) {
+          onUserReviewEvent({
+            identity: startedIdentity,
+            event: {
+              type: "reviewArchived",
+              review: response.userReview,
+            },
+          });
+        }
         return response.userReview;
       } catch (error) {
         setArchiveViewState((current) => {
-          if (current.identity !== startedIdentity) {
+          if (
+            current.identity !== startedIdentity ||
+            requestIdRef.current !== startedRequestId
+          ) {
             return current;
           }
 
