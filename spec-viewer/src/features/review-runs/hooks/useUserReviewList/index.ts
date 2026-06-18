@@ -1,19 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { UserReviewCollection } from "@/features/review-runs/domain/userReviewCollection";
 import {
   UserReviewListState,
   type UserReviewListState as UserReviewListStateType,
 } from "@/features/review-runs/domain/userReviewListState";
-import {
-  UserReviewTargetIdentity,
-  type UserReviewTarget,
-} from "@/features/review-runs/domain/userReviewTarget";
+import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import { listUserReviews as listUserReviewsViaGateway } from "@/features/review-runs/infra/userReviewGateway";
-import {
-  createUserReviewViewIdentity,
-  type IdentifiedUserReviewListEvent,
-  type UserReviewViewIdentity,
+import type {
+  IdentifiedUserReviewListEvent,
+  UserReviewViewIdentity,
 } from "@/features/review-runs/hooks/userReviewViewIdentity";
 import {
   normalizeCommandError,
@@ -29,7 +25,7 @@ export type UseUserReviewListOptions = Readonly<{
   commands: UserReviewCommands;
   target: UserReviewTarget | null;
   workspacePath: WorkspacePath | null;
-  viewIdentity?: UserReviewViewIdentity;
+  viewIdentity: UserReviewViewIdentity;
   correlationId?: string | null;
 }>;
 
@@ -49,17 +45,8 @@ type IdentifiedListState = Readonly<{
 export function useUserReviewList(
   options: UseUserReviewListOptions,
 ): UseUserReviewListResult {
-  const { commands, correlationId, target, workspacePath } = options;
-  const targetIdentity = useMemo(
-    () => UserReviewTargetIdentity.create(target),
-    [target],
-  );
-  const viewIdentity = useMemo(
-    () =>
-      options.viewIdentity ??
-      createUserReviewViewIdentity(workspacePath, targetIdentity),
-    [options.viewIdentity, targetIdentity, workspacePath],
-  );
+  const { commands, correlationId, target, viewIdentity, workspacePath } =
+    options;
   const requestVersionRef = useRef(0);
   const [listViewState, setListViewState] = useState<IdentifiedListState>({
     identity: viewIdentity,
