@@ -1,7 +1,9 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useMemo,
+  useState,
   type ReactElement,
   type ReactNode,
 } from "react";
@@ -10,28 +12,47 @@ import {
   SpecViewIdentity,
   type SpecViewIdentity as SpecViewIdentityType,
   type SpecViewIdentityInput,
+  type SpecViewTargetScope,
 } from "@/features/specs/domain/specViewIdentity";
 
+export type SpecViewSelection = SpecViewIdentityInput;
+
+export type SpecViewWorkspaceSelectionInput = Pick<
+  SpecViewSelection,
+  "workspacePath" | "specId" | "fileKey"
+>;
+
 export type SpecViewIdentityContextValue = Readonly<{
+  selection: SpecViewSelection;
   viewIdentity: SpecViewIdentityType;
+  setWorkspaceSelection: (selection: SpecViewWorkspaceSelectionInput) => void;
+  setTargetScope: (targetScope: SpecViewTargetScope) => void;
 }>;
 
 export type SpecViewIdentityProviderProps = Readonly<{
-  selection: SpecViewIdentityInput;
   children: ReactNode;
 }>;
+
+const defaultSelection: SpecViewSelection = {
+  workspacePath: null,
+  specId: null,
+  fileKey: null,
+  targetScope: "file",
+};
 
 const SpecViewIdentityContext =
   createContext<SpecViewIdentityContextValue | null>(null);
 
 /**
- * @param props - Provider props with the active spec view selection.
- * @returns Context provider for the active spec view identity.
+ * @param props - Provider props for the managed spec view section.
+ * @returns Context provider that owns the active spec view selection.
  */
 export function SpecViewIdentityProvider(
   props: SpecViewIdentityProviderProps,
 ): ReactElement {
-  const { children, selection } = props;
+  const { children } = props;
+  const [selection, setSelection] =
+    useState<SpecViewSelection>(defaultSelection);
   const viewIdentity = useMemo(
     () => SpecViewIdentity.create(selection),
     [
@@ -41,11 +62,44 @@ export function SpecViewIdentityProvider(
       selection.workspacePath,
     ],
   );
+  const setWorkspaceSelection = useCallback(
+    (nextWorkspaceSelection: SpecViewWorkspaceSelectionInput): void => {
+      setSelection((current) => {
+        const nextSelection = {
+          ...current,
+          ...nextWorkspaceSelection,
+        };
+
+        return areSelectionsEqual(current, nextSelection)
+          ? current
+          : nextSelection;
+      });
+    },
+    [],
+  );
+  const setTargetScope = useCallback(
+    (targetScope: SpecViewTargetScope): void => {
+      setSelection((current) => {
+        if (current.targetScope === targetScope) {
+          return current;
+        }
+
+        return {
+          ...current,
+          targetScope,
+        };
+      });
+    },
+    [],
+  );
   const value = useMemo(
     () => ({
+      selection,
       viewIdentity,
+      setWorkspaceSelection,
+      setTargetScope,
     }),
-    [viewIdentity],
+    [selection, setTargetScope, setWorkspaceSelection, viewIdentity],
   );
 
   return (
@@ -67,4 +121,16 @@ export function useSpecViewIdentity(): SpecViewIdentityContextValue {
   }
 
   return value;
+}
+
+function areSelectionsEqual(
+  current: SpecViewSelection,
+  next: SpecViewSelection,
+): boolean {
+  return (
+    current.workspacePath === next.workspacePath &&
+    current.specId === next.specId &&
+    current.fileKey === next.fileKey &&
+    current.targetScope === next.targetScope
+  );
 }

@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactElement,
+} from "react";
 
 import "../App.css";
 import {
@@ -29,12 +36,15 @@ import {
   useSidebarPreference,
   useTheme,
 } from "@/features/preferences";
-import { SpecViewIdentityProvider } from "@/app/context/specViewIdentity";
+import {
+  SpecViewIdentityProvider,
+  useSpecViewIdentity,
+  type SpecViewWorkspaceSelectionInput,
+} from "@/app/context/specViewIdentity";
 import {
   UserReviewPanel,
   UserReviewsSpecViewBoundary,
   type UserReviewWorkspaceMode,
-  type UserReviewTargetScope,
 } from "@/features/review-runs";
 import {
   MarkdownViewer,
@@ -161,11 +171,9 @@ function App() {
     statusFilter: CommentStatusFilter.All,
     correlationId: specs.documentState.correlationId ?? null,
   });
-  const [userReviewTargetScope, setUserReviewTargetScope] =
-    useState<UserReviewTargetScope>("file");
   const [userReviewWorkspaceMode, setUserReviewWorkspaceMode] =
     useState<UserReviewWorkspaceMode>("currentWorkspace");
-  const userReviewSelection = useMemo(
+  const userReviewWorkspaceSelection = useMemo<SpecViewWorkspaceSelectionInput>(
     () => ({
       workspacePath:
         workspace.workspace === null
@@ -173,13 +181,11 @@ function App() {
           : WorkspacePath.fromString(workspace.workspace.root),
       specId: isDocumentReadable ? specs.selectedSpecId : null,
       fileKey: isDocumentReadable ? specs.selectedFileKey : null,
-      targetScope: userReviewTargetScope,
     }),
     [
       isDocumentReadable,
       specs.selectedFileKey,
       specs.selectedSpecId,
-      userReviewTargetScope,
       workspace.workspace,
     ],
   );
@@ -209,7 +215,6 @@ function App() {
   }, [specs.selectedFileKey, specs.selectedSpecId, workspace.workspace?.root]);
 
   useEffect(() => {
-    setUserReviewTargetScope("file");
     setUserReviewWorkspaceMode("currentWorkspace");
   }, [specs.selectedFileKey, specs.selectedSpecId, workspace.workspace?.root]);
 
@@ -877,223 +882,255 @@ function App() {
   });
 
   return (
-    <SpecViewIdentityProvider selection={userReviewSelection}>
-      <UserReviewsSpecViewBoundary
-        selection={userReviewSelection}
-        correlationId={specs.documentState.correlationId ?? null}
-      >
-        {(userReviews) => (
-          <div className="app-drop-root">
-            <AppShell
-              isLeftNavigationOpen={
-                leftNavigationPreference.isLeftNavigationOpen
-              }
-              onOpenLeftNavigation={leftNavigationPreference.openLeftNavigation}
-              onCloseLeftNavigation={
-                leftNavigationPreference.closeLeftNavigation
-              }
-              leftNavigationWidth={resizableLeftNavigation.leftNavigationWidth}
-              leftNavigationMinWidth={
-                resizableLeftNavigation.minLeftNavigationWidth
-              }
-              leftNavigationMaxWidth={
-                resizableLeftNavigation.maxLeftNavigationWidth
-              }
-              onLeftNavigationWidthChange={
-                resizableLeftNavigation.resizeLeftNavigationTo
-              }
-              isCommentsSidebarOpen={sidebarPreference.isSidebarOpen}
-              onOpenCommentsSidebar={sidebarPreference.openSidebar}
-              onCloseCommentsSidebar={sidebarPreference.closeSidebar}
-              commentsSidebarWidth={resizableSidebar.sidebarWidth}
-              commentsSidebarMinWidth={resizableSidebar.minSidebarWidth}
-              commentsSidebarMaxWidth={resizableSidebar.maxSidebarWidth}
-              onCommentsSidebarWidthChange={resizableSidebar.resizeSidebarTo}
-              leftNavigationHeader={
-                <div className="left-navigation-brand">
-                  <span
-                    className="left-navigation-brand__mark"
-                    aria-hidden="true"
-                  >
-                    S
-                  </span>
-                  <span className="left-navigation-brand__copy">
-                    <strong>Spec Reviewer</strong>
-                    <span title={leftNavigationSubtitle}>
-                      {leftNavigationSubtitle}
-                    </span>
-                  </span>
-                </div>
-              }
-              toolbar={
-                <WorkspaceToolbar
-                  workspacePath={workspace.workspacePath}
-                  inputValue={workspaceInput}
-                  isLoading={workspace.isLoading}
-                  isBrowsing={isBrowsingWorkspace}
-                  errorMessage={toolbarErrorMessage}
-                  refreshStatus={refreshStatus}
-                  canRefresh={canRefreshCurrentView}
-                  themeMode={theme.themeMode}
-                  onInputChange={setWorkspaceInput}
-                  onBrowse={() => {
-                    void browseWorkspace();
-                  }}
-                  onLoad={loadWorkspace}
-                  onRefresh={() => {
-                    void refreshCurrentViewManually();
-                  }}
-                  onReset={resetWorkspace}
-                  onThemeModeChange={theme.setThemeMode}
-                />
-              }
-              sidebar={
-                <div className="left-navigation-panel">
-                  <WorkspaceSidebarSection
-                    currentWorkspacePath={workspace.workspacePath}
-                    isOpen={
-                      workspaceSidebarSectionPreference.isWorkspaceSidebarSectionOpen
-                    }
-                    isBusy={workspace.isLoading || isBrowsingWorkspace}
-                    recentWorkspaces={recentWorkspaces.recentWorkspaces}
-                    onBrowse={() => {
-                      void browseWorkspace();
-                    }}
-                    onToggleOpen={
-                      workspaceSidebarSectionPreference.toggleWorkspaceSidebarSection
-                    }
-                    onOpenWorkspace={(path) => {
-                      void openRecentWorkspacePath(path);
-                    }}
-                    onRemoveWorkspace={recentWorkspaces.removeWorkspace}
-                  />
-                  <SpecTree
-                    state={specs.specTreeState}
-                    selectedSpecId={specs.selectedSpecId}
-                    archivingSpecId={specs.archivingSpecId}
-                    onSelectSpec={(specId) => {
-                      void specs.selectSpec(specId);
-                    }}
-                    onArchiveSpec={(specId) => {
-                      void specs.archiveSpec(specId);
-                    }}
-                    onReload={() => {
-                      void specs.reloadSpecs({ preserveSelection: true });
-                    }}
-                  />
-                </div>
-              }
-              tabs={
-                <SpecTabs
-                  spec={specs.selectedSpec}
-                  selectedFileKey={specs.selectedFileKey}
-                  onSelectFile={(fileKey) => {
-                    void specs.selectFileKey(fileKey);
-                  }}
-                />
-              }
-              viewer={
-                shouldShowOpenWorkspacePrompt ? (
-                  <OpenWorkspaceEmptyState
-                    isOpening={isBrowsingWorkspace}
-                    recentWorkspaces={recentWorkspaces.recentWorkspaces}
-                    onOpenWorkspace={() => {
-                      void browseWorkspace();
-                    }}
-                    onOpenRecentWorkspace={(path) => {
-                      void openRecentWorkspacePath(path);
-                    }}
-                    onRemoveRecentWorkspace={recentWorkspaces.removeWorkspace}
-                  />
-                ) : (
-                  <MarkdownViewer
-                    state={specs.documentState}
-                    selectedSpecLabel={specs.selectedSpec?.label ?? null}
-                    selectedFileLabel={specs.selectedFile?.label ?? null}
-                    comments={comments.comments}
-                    activeCommentId={activeCommentId}
-                    isAddingComment={isAddingComment}
-                    addCommentErrorMessage={addCommentErrorMessage}
-                    isUpdatingComment={isUpdatingComment}
-                    operationState={comments.operationState}
-                    isCommentScopeReady={isCommentScopeReady}
-                    onReload={() => {
-                      void specs.reloadDocument();
-                    }}
-                    onAddComment={addComment}
-                    onUpdateComment={updateComment}
-                    onResolveComment={resolveInlineComment}
-                    onReopenComment={reopenInlineComment}
-                    onDeleteComment={deleteInlineComment}
-                    onSelectComment={selectComment}
-                    onAnchorDisplayStatesChange={
-                      updateCommentAnchorDisplayStates
-                    }
-                    onFirstReadable={() => {
-                      setReadableDocumentKey(currentDocumentKey);
-                    }}
-                  />
-                )
-              }
-              comments={
-                <CommentSidebar
-                  listState={comments.listState}
-                  operationState={comments.operationState}
-                  exportState={commentExportState}
-                  activeCommentId={activeCommentId}
-                  anchorDisplayStates={commentAnchorDisplayStates}
-                  onSelectComment={selectComment}
-                  onResolveComment={resolveComment}
-                  onReopenComment={reopenComment}
-                  onDeleteComment={deleteComment}
-                  onUpdateComment={updateComment}
-                  onReload={() => {
-                    void comments.reloadComments();
-                  }}
-                  onExportComments={exportCommentScope}
-                  onCopyLlmPrompt={copyLlmPromptScope}
-                  onCopyMcpFeedback={() => {
-                    void copyMcpFeedbackPayload();
-                  }}
-                  userReviewPanel={
-                    <UserReviewPanel
-                      targetScope={userReviewTargetScope}
-                      workspaceMode={userReviewWorkspaceMode}
-                      openCommentCount={countOpenComments(comments.comments)}
-                      listState={userReviews.listState}
-                      createState={userReviews.createState}
-                      archiveState={userReviews.archiveState}
-                      onTargetScopeChange={setUserReviewTargetScope}
-                      onWorkspaceModeChange={setUserReviewWorkspaceMode}
-                      onCreateUserReview={() => {
-                        const openCommentIds = comments.comments
-                          .filter((comment) => comment.status === "open")
-                          .map((comment) => comment.id);
-
-                        void userReviews.createUserReview({
-                          commentIds: openCommentIds,
-                          workspaceMode: userReviewWorkspaceMode,
-                        });
-                      }}
-                      onArchiveUserReview={(userReviewId) => {
-                        void userReviews.archiveUserReview(userReviewId);
-                      }}
-                      onRefreshUserReviews={() => {
-                        void userReviews.reloadUserReviews();
-                      }}
-                      onCopyPath={copyTextToClipboard}
-                    />
-                  }
+    <SpecViewIdentityProvider>
+      <SpecViewSelectionSync selection={userReviewWorkspaceSelection} />
+      <div className="app-drop-root">
+        <AppShell
+          isLeftNavigationOpen={leftNavigationPreference.isLeftNavigationOpen}
+          onOpenLeftNavigation={leftNavigationPreference.openLeftNavigation}
+          onCloseLeftNavigation={leftNavigationPreference.closeLeftNavigation}
+          leftNavigationWidth={resizableLeftNavigation.leftNavigationWidth}
+          leftNavigationMinWidth={
+            resizableLeftNavigation.minLeftNavigationWidth
+          }
+          leftNavigationMaxWidth={
+            resizableLeftNavigation.maxLeftNavigationWidth
+          }
+          onLeftNavigationWidthChange={
+            resizableLeftNavigation.resizeLeftNavigationTo
+          }
+          isCommentsSidebarOpen={sidebarPreference.isSidebarOpen}
+          onOpenCommentsSidebar={sidebarPreference.openSidebar}
+          onCloseCommentsSidebar={sidebarPreference.closeSidebar}
+          commentsSidebarWidth={resizableSidebar.sidebarWidth}
+          commentsSidebarMinWidth={resizableSidebar.minSidebarWidth}
+          commentsSidebarMaxWidth={resizableSidebar.maxSidebarWidth}
+          onCommentsSidebarWidthChange={resizableSidebar.resizeSidebarTo}
+          leftNavigationHeader={
+            <div className="left-navigation-brand">
+              <span className="left-navigation-brand__mark" aria-hidden="true">
+                S
+              </span>
+              <span className="left-navigation-brand__copy">
+                <strong>Spec Reviewer</strong>
+                <span title={leftNavigationSubtitle}>
+                  {leftNavigationSubtitle}
+                </span>
+              </span>
+            </div>
+          }
+          toolbar={
+            <WorkspaceToolbar
+              workspacePath={workspace.workspacePath}
+              inputValue={workspaceInput}
+              isLoading={workspace.isLoading}
+              isBrowsing={isBrowsingWorkspace}
+              errorMessage={toolbarErrorMessage}
+              refreshStatus={refreshStatus}
+              canRefresh={canRefreshCurrentView}
+              themeMode={theme.themeMode}
+              onInputChange={setWorkspaceInput}
+              onBrowse={() => {
+                void browseWorkspace();
+              }}
+              onLoad={loadWorkspace}
+              onRefresh={() => {
+                void refreshCurrentViewManually();
+              }}
+              onReset={resetWorkspace}
+              onThemeModeChange={theme.setThemeMode}
+            />
+          }
+          sidebar={
+            <div className="left-navigation-panel">
+              <WorkspaceSidebarSection
+                currentWorkspacePath={workspace.workspacePath}
+                isOpen={
+                  workspaceSidebarSectionPreference.isWorkspaceSidebarSectionOpen
+                }
+                isBusy={workspace.isLoading || isBrowsingWorkspace}
+                recentWorkspaces={recentWorkspaces.recentWorkspaces}
+                onBrowse={() => {
+                  void browseWorkspace();
+                }}
+                onToggleOpen={
+                  workspaceSidebarSectionPreference.toggleWorkspaceSidebarSection
+                }
+                onOpenWorkspace={(path) => {
+                  void openRecentWorkspacePath(path);
+                }}
+                onRemoveWorkspace={recentWorkspaces.removeWorkspace}
+              />
+              <SpecTree
+                state={specs.specTreeState}
+                selectedSpecId={specs.selectedSpecId}
+                archivingSpecId={specs.archivingSpecId}
+                onSelectSpec={(specId) => {
+                  void specs.selectSpec(specId);
+                }}
+                onArchiveSpec={(specId) => {
+                  void specs.archiveSpec(specId);
+                }}
+                onReload={() => {
+                  void specs.reloadSpecs({ preserveSelection: true });
+                }}
+              />
+            </div>
+          }
+          tabs={
+            <SpecTabs
+              spec={specs.selectedSpec}
+              selectedFileKey={specs.selectedFileKey}
+              onSelectFile={(fileKey) => {
+                void specs.selectFileKey(fileKey);
+              }}
+            />
+          }
+          viewer={
+            shouldShowOpenWorkspacePrompt ? (
+              <OpenWorkspaceEmptyState
+                isOpening={isBrowsingWorkspace}
+                recentWorkspaces={recentWorkspaces.recentWorkspaces}
+                onOpenWorkspace={() => {
+                  void browseWorkspace();
+                }}
+                onOpenRecentWorkspace={(path) => {
+                  void openRecentWorkspacePath(path);
+                }}
+                onRemoveRecentWorkspace={recentWorkspaces.removeWorkspace}
+              />
+            ) : (
+              <MarkdownViewer
+                state={specs.documentState}
+                selectedSpecLabel={specs.selectedSpec?.label ?? null}
+                selectedFileLabel={specs.selectedFile?.label ?? null}
+                comments={comments.comments}
+                activeCommentId={activeCommentId}
+                isAddingComment={isAddingComment}
+                addCommentErrorMessage={addCommentErrorMessage}
+                isUpdatingComment={isUpdatingComment}
+                operationState={comments.operationState}
+                isCommentScopeReady={isCommentScopeReady}
+                onReload={() => {
+                  void specs.reloadDocument();
+                }}
+                onAddComment={addComment}
+                onUpdateComment={updateComment}
+                onResolveComment={resolveInlineComment}
+                onReopenComment={reopenInlineComment}
+                onDeleteComment={deleteInlineComment}
+                onSelectComment={selectComment}
+                onAnchorDisplayStatesChange={updateCommentAnchorDisplayStates}
+                onFirstReadable={() => {
+                  setReadableDocumentKey(currentDocumentKey);
+                }}
+              />
+            )
+          }
+          comments={
+            <CommentSidebar
+              listState={comments.listState}
+              operationState={comments.operationState}
+              exportState={commentExportState}
+              activeCommentId={activeCommentId}
+              anchorDisplayStates={commentAnchorDisplayStates}
+              onSelectComment={selectComment}
+              onResolveComment={resolveComment}
+              onReopenComment={reopenComment}
+              onDeleteComment={deleteComment}
+              onUpdateComment={updateComment}
+              onReload={() => {
+                void comments.reloadComments();
+              }}
+              onExportComments={exportCommentScope}
+              onCopyLlmPrompt={copyLlmPromptScope}
+              onCopyMcpFeedback={() => {
+                void copyMcpFeedbackPayload();
+              }}
+              userReviewPanel={
+                <SpecViewUserReviewPanel
+                  comments={comments.comments}
+                  correlationId={specs.documentState.correlationId ?? null}
+                  workspaceMode={userReviewWorkspaceMode}
+                  onWorkspaceModeChange={setUserReviewWorkspaceMode}
                 />
               }
             />
-            <WorkspaceDropOverlay
-              isVisible={workspaceDrop.status === "dragging"}
-            />
-          </div>
-        )}
-      </UserReviewsSpecViewBoundary>
+          }
+        />
+        <WorkspaceDropOverlay isVisible={workspaceDrop.status === "dragging"} />
+      </div>
     </SpecViewIdentityProvider>
+  );
+}
+
+type SpecViewSelectionSyncProps = Readonly<{
+  selection: SpecViewWorkspaceSelectionInput;
+}>;
+
+function SpecViewSelectionSync(props: SpecViewSelectionSyncProps): null {
+  const { selection } = props;
+  const { setTargetScope, setWorkspaceSelection } = useSpecViewIdentity();
+
+  useEffect(() => {
+    setWorkspaceSelection(selection);
+    setTargetScope("file");
+  }, [selection, setTargetScope, setWorkspaceSelection]);
+
+  return null;
+}
+
+type UserReviewCommentSummary = Readonly<{
+  id: CommentId;
+  status: string;
+}>;
+
+type SpecViewUserReviewPanelProps = Readonly<{
+  comments: readonly UserReviewCommentSummary[];
+  correlationId: string | null;
+  workspaceMode: UserReviewWorkspaceMode;
+  onWorkspaceModeChange: (workspaceMode: UserReviewWorkspaceMode) => void;
+}>;
+
+function SpecViewUserReviewPanel(
+  props: SpecViewUserReviewPanelProps,
+): ReactElement {
+  const { comments, correlationId, onWorkspaceModeChange, workspaceMode } =
+    props;
+  const { selection, setTargetScope } = useSpecViewIdentity();
+
+  return (
+    <UserReviewsSpecViewBoundary correlationId={correlationId}>
+      {(userReviews) => (
+        <UserReviewPanel
+          targetScope={selection.targetScope}
+          workspaceMode={workspaceMode}
+          openCommentCount={countOpenComments(comments)}
+          listState={userReviews.listState}
+          createState={userReviews.createState}
+          archiveState={userReviews.archiveState}
+          onTargetScopeChange={setTargetScope}
+          onWorkspaceModeChange={onWorkspaceModeChange}
+          onCreateUserReview={() => {
+            const openCommentIds = comments
+              .filter((comment) => comment.status === "open")
+              .map((comment) => comment.id);
+
+            void userReviews.createUserReview({
+              commentIds: openCommentIds,
+              workspaceMode,
+            });
+          }}
+          onArchiveUserReview={(userReviewId) => {
+            void userReviews.archiveUserReview(userReviewId);
+          }}
+          onRefreshUserReviews={() => {
+            void userReviews.reloadUserReviews();
+          }}
+          onCopyPath={copyTextToClipboard}
+        />
+      )}
+    </UserReviewsSpecViewBoundary>
   );
 }
 

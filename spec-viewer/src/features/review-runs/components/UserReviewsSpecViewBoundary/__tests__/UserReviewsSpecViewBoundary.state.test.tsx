@@ -1,11 +1,15 @@
-import { act } from "react";
+import { act, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
-import { SpecViewIdentityProvider } from "@/app/context/specViewIdentity";
+import {
+  SpecViewIdentityProvider,
+  useSpecViewIdentity,
+} from "@/app/context/specViewIdentity";
 import { UserReviewsSpecViewBoundary } from "@/features/review-runs/components/UserReviewsSpecViewBoundary";
 import type { UseUserReviewsResult } from "@/features/review-runs/hooks/useUserReviews";
 import type { SpecFileKey } from "@/features/specs/types/spec";
+import { WorkspacePath } from "@/shared/domain/workspacePath";
 
 function createContainerRoot(): Readonly<{
   container: HTMLDivElement;
@@ -17,13 +21,6 @@ function createContainerRoot(): Readonly<{
   return { container, root };
 }
 
-const selection = {
-  workspacePath: null,
-  specId: "auth",
-  fileKey: "tasks" as SpecFileKey,
-  targetScope: "file" as const,
-};
-
 test("UserReviewsSpecViewBoundaryはprovider未配置なら明示errorを投げる", () => {
   const errorSpy = vi
     .spyOn(console, "error")
@@ -33,9 +30,7 @@ test("UserReviewsSpecViewBoundaryはprovider未配置なら明示errorを投げ�
   expect(() => {
     act(() => {
       root.render(
-        <UserReviewsSpecViewBoundary selection={selection}>
-          {() => null}
-        </UserReviewsSpecViewBoundary>,
+        <UserReviewsSpecViewBoundary>{() => null}</UserReviewsSpecViewBoundary>,
       );
     });
   }).toThrow("SpecViewIdentityProvider is missing");
@@ -45,17 +40,32 @@ test("UserReviewsSpecViewBoundaryはprovider未配置なら明示errorを投げ�
   errorSpy.mockRestore();
 });
 
-test("UserReviewsSpecViewBoundaryはproviderのidentityでuserReviewsをchildrenへ渡す", async () => {
+test("UserReviewsSpecViewBoundaryはproviderが保持するselectionでuserReviewsをchildrenへ渡す", async () => {
   const received: UseUserReviewsResult[] = [];
   const { container, root } = createContainerRoot();
 
+  function SelectionSetter(): null {
+    const { setWorkspaceSelection } = useSpecViewIdentity();
+
+    useEffect(() => {
+      setWorkspaceSelection({
+        workspacePath: WorkspacePath.fromString("/workspace/spec-reviewer"),
+        specId: "auth",
+        fileKey: "tasks" as SpecFileKey,
+      });
+    }, [setWorkspaceSelection]);
+
+    return null;
+  }
+
   await act(async () => {
     root.render(
-      <SpecViewIdentityProvider selection={selection}>
-        <UserReviewsSpecViewBoundary selection={selection}>
+      <SpecViewIdentityProvider>
+        <SelectionSetter />
+        <UserReviewsSpecViewBoundary>
           {(userReviews) => {
             received.push(userReviews);
-            return <span>{userReviews.listState.status}</span>;
+            return <span>{userReviews.target?.specId ?? "none"}</span>;
           }}
         </UserReviewsSpecViewBoundary>
       </SpecViewIdentityProvider>,
@@ -63,8 +73,12 @@ test("UserReviewsSpecViewBoundaryはproviderのidentityでuserReviewsをchildren
     await Promise.resolve();
   });
 
-  expect(received[received.length - 1]?.listState.status).toBe("idle");
-  expect(container.textContent).toBe("idle");
+  expect(received[received.length - 1]?.target).toMatchObject({
+    scope: "file",
+    specId: "auth",
+    fileKey: "tasks",
+  });
+  expect(container.textContent).toBe("auth");
   root.unmount();
   container.remove();
 });
