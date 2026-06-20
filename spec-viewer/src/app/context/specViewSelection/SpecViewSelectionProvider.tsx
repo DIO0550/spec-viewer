@@ -15,8 +15,8 @@ export function SpecViewSelectionProvider(
   const value = useSpecViewSelectionState();
 
   return (
-    <SpecViewSelectionContext.Provider value={value}>
+    <SpecViewSelectionContext value={value}>
       {children}
-    </SpecViewSelectionContext.Provider>
+    </SpecViewSelectionContext>
   );
 }
