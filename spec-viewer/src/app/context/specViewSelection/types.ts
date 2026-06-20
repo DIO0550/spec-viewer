@@ -8,7 +8,7 @@ import type {
 
 export type SpecViewSelection = SpecViewSelectionIdInput;
 
-export type SpecViewWorkspaceSelectionInput = Pick<
+export type SpecViewSelectionInput = Pick<
   SpecViewSelection,
   "workspacePath" | "specId" | "fileKey"
 >;
@@ -16,7 +16,7 @@ export type SpecViewWorkspaceSelectionInput = Pick<
 export type SpecViewSelectionContextValue = Readonly<{
   selection: SpecViewSelection;
   selectionId: SpecViewSelectionIdType;
-  setWorkspaceSelection: (selection: SpecViewWorkspaceSelectionInput) => void;
+  selectSpecView: (selection: SpecViewSelectionInput) => void;
   setTargetScope: (targetScope: SpecViewTargetScope) => void;
 }>;
 

@@ -40,7 +40,7 @@ test("SpecViewSelectionProviderはselection propなしで選択状態とselectio
     );
   });
   act(() => {
-    currentValue?.setWorkspaceSelection({
+    currentValue?.selectSpecView({
       workspacePath,
       specId: "auth",
       fileKey: "tasks" as SpecFileKey,
@@ -143,7 +143,7 @@ test.each([
     );
   });
   act(() => {
-    currentValue?.setWorkspaceSelection(workspaceSelection);
+    currentValue?.selectSpecView(workspaceSelection);
   });
   act(() => {
     currentValue?.setTargetScope(targetScope);

@@ -39,7 +39,6 @@ import {
 import {
   SpecViewSelectionProvider,
   useSpecViewSelection,
-  type SpecViewWorkspaceSelectionInput,
 } from "@/app/context/specViewSelection";
 import {
   UserReviewPanel,
@@ -53,6 +52,7 @@ import {
   useSpecFileWatcher,
   useSpecs,
   type SpecFileKey,
+  type SpecSelectionChange,
 } from "@/features/specs";
 import {
   OpenWorkspaceEmptyState,
@@ -147,7 +147,24 @@ function SpecViewAppContent(): ReactElement {
   const resizableLeftNavigation = useResizableLeftNavigation();
   const sidebarPreference = useSidebarPreference();
   const resizableSidebar = useResizableSidebar();
-  const specs = useSpecs({ workspacePath: workspace.workspace?.root ?? null });
+  const { selectSpecView } = useSpecViewSelection();
+  const selectCurrentSpecView = useCallback(
+    (selection: SpecSelectionChange): void => {
+      selectSpecView({
+        workspacePath:
+          selection.workspacePath === null
+            ? null
+            : WorkspacePath.fromString(selection.workspacePath),
+        specId: selection.specId,
+        fileKey: selection.fileKey,
+      });
+    },
+    [selectSpecView],
+  );
+  const specs = useSpecs({
+    workspacePath: workspace.workspace?.root ?? null,
+    onSelectionChange: selectCurrentSpecView,
+  });
   const isHtmlDocument =
     specs.documentState.status === "ready" &&
     specs.documentState.document.format === "html";
@@ -181,23 +198,6 @@ function SpecViewAppContent(): ReactElement {
   });
   const [userReviewWorkspaceMode, setUserReviewWorkspaceMode] =
     useState<UserReviewWorkspaceMode>("currentWorkspace");
-  const specViewWorkspaceSelection = useMemo<SpecViewWorkspaceSelectionInput>(
-    () => ({
-      workspacePath:
-        workspace.workspace === null
-          ? null
-          : WorkspacePath.fromString(workspace.workspace.root),
-      specId: isDocumentReadable ? specs.selectedSpecId : null,
-      fileKey: isDocumentReadable ? specs.selectedFileKey : null,
-    }),
-    [
-      isDocumentReadable,
-      specs.selectedFileKey,
-      specs.selectedSpecId,
-      workspace.workspace,
-    ],
-  );
-  const { setTargetScope, setWorkspaceSelection } = useSpecViewSelection();
   const [workspaceInput, setWorkspaceInput] = useState("");
   const [activeCommentId, setActiveCommentId] = useState<CommentId | null>(
     null,
@@ -215,11 +215,6 @@ function SpecViewAppContent(): ReactElement {
   const [commentExportState, setCommentExportState] =
     useState<CommentExportState>(idleCommentExportState);
   const hasAttemptedStartupRestoreRef = useRef(false);
-
-  useEffect(() => {
-    setWorkspaceSelection(specViewWorkspaceSelection);
-    setTargetScope("file");
-  }, [specViewWorkspaceSelection, setTargetScope, setWorkspaceSelection]);
 
   useEffect(() => {
     setActiveCommentId(null);

@@ -4,7 +4,7 @@ import { SpecViewSelectionContext } from "@/app/context/specViewSelection/contex
 import type {
   SpecViewSelectionProviderProps,
   SpecViewSelection,
-  SpecViewWorkspaceSelectionInput,
+  SpecViewSelectionInput,
 } from "@/app/context/specViewSelection/types";
 import {
   SpecViewSelectionId,
@@ -37,12 +37,13 @@ export function SpecViewSelectionProvider(
       selection.workspacePath,
     ],
   );
-  const setWorkspaceSelection = useCallback(
-    (nextWorkspaceSelection: SpecViewWorkspaceSelectionInput): void => {
+  const selectSpecView = useCallback(
+    (nextSpecViewSelection: SpecViewSelectionInput): void => {
       setSelection((current) => {
         const nextSelection = {
           ...current,
-          ...nextWorkspaceSelection,
+          ...nextSpecViewSelection,
+          targetScope: "file" as const,
         };
 
         return areSelectionsEqual(current, nextSelection)
@@ -71,10 +72,10 @@ export function SpecViewSelectionProvider(
     () => ({
       selection,
       selectionId,
-      setWorkspaceSelection,
+      selectSpecView,
       setTargetScope,
     }),
-    [selection, setTargetScope, setWorkspaceSelection, selectionId],
+    [selection, setTargetScope, selectSpecView, selectionId],
   );
 
   return (

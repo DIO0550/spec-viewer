@@ -4,5 +4,5 @@ export type {
   SpecViewSelectionContextValue,
   SpecViewSelectionProviderProps,
   SpecViewSelection,
-  SpecViewWorkspaceSelectionInput,
+  SpecViewSelectionInput,
 } from "@/app/context/specViewSelection/types";

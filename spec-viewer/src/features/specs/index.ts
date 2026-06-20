@@ -5,6 +5,7 @@ export { useSpecFileWatcher } from "./hooks/useSpecFileWatcher";
 export {
   useSpecs,
   type SpecDocumentState,
+  type SpecSelectionChange,
   type SpecTreeState,
 } from "@/features/specs/hooks/useSpecs";
 export type {
