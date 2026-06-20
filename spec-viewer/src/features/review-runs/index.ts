@@ -1,5 +1,4 @@
 export { UserReviewPanel } from "@/features/review-runs/components/UserReviewPanel";
-export { UserReviewsSpecViewBoundary } from "@/features/review-runs/components/UserReviewsSpecViewBoundary";
 export {
   useUserReviews,
   type CreateUserReviewInput,

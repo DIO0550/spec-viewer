@@ -43,7 +43,7 @@ import {
 } from "@/app/context/specViewIdentity";
 import {
   UserReviewPanel,
-  UserReviewsSpecViewBoundary,
+  useUserReviews,
   type UserReviewWorkspaceMode,
 } from "@/features/review-runs";
 import {
@@ -1097,40 +1097,41 @@ function SpecViewUserReviewPanel(
 ): ReactElement {
   const { comments, correlationId, onWorkspaceModeChange, workspaceMode } =
     props;
-  const { selection, setTargetScope } = useSpecViewIdentity();
+  const { selection, setTargetScope, viewIdentity } = useSpecViewIdentity();
+  const userReviews = useUserReviews({
+    selection,
+    viewIdentity,
+    correlationId,
+  });
 
   return (
-    <UserReviewsSpecViewBoundary correlationId={correlationId}>
-      {(userReviews) => (
-        <UserReviewPanel
-          targetScope={selection.targetScope}
-          workspaceMode={workspaceMode}
-          openCommentCount={countOpenComments(comments)}
-          listState={userReviews.listState}
-          createState={userReviews.createState}
-          archiveState={userReviews.archiveState}
-          onTargetScopeChange={setTargetScope}
-          onWorkspaceModeChange={onWorkspaceModeChange}
-          onCreateUserReview={() => {
-            const openCommentIds = comments
-              .filter((comment) => comment.status === "open")
-              .map((comment) => comment.id);
+    <UserReviewPanel
+      targetScope={selection.targetScope}
+      workspaceMode={workspaceMode}
+      openCommentCount={countOpenComments(comments)}
+      listState={userReviews.listState}
+      createState={userReviews.createState}
+      archiveState={userReviews.archiveState}
+      onTargetScopeChange={setTargetScope}
+      onWorkspaceModeChange={onWorkspaceModeChange}
+      onCreateUserReview={() => {
+        const openCommentIds = comments
+          .filter((comment) => comment.status === "open")
+          .map((comment) => comment.id);
 
-            void userReviews.createUserReview({
-              commentIds: openCommentIds,
-              workspaceMode,
-            });
-          }}
-          onArchiveUserReview={(userReviewId) => {
-            void userReviews.archiveUserReview(userReviewId);
-          }}
-          onRefreshUserReviews={() => {
-            void userReviews.reloadUserReviews();
-          }}
-          onCopyPath={copyTextToClipboard}
-        />
-      )}
-    </UserReviewsSpecViewBoundary>
+        void userReviews.createUserReview({
+          commentIds: openCommentIds,
+          workspaceMode,
+        });
+      }}
+      onArchiveUserReview={(userReviewId) => {
+        void userReviews.archiveUserReview(userReviewId);
+      }}
+      onRefreshUserReviews={() => {
+        void userReviews.reloadUserReviews();
+      }}
+      onCopyPath={copyTextToClipboard}
+    />
   );
 }
 
