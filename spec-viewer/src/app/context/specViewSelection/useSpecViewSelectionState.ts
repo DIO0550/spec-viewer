@@ -32,32 +32,20 @@ export function useSpecViewSelectionState(): SpecViewSelectionContextValue {
   );
   const selectSpecView = useCallback(
     (nextSpecViewSelection: SpecViewSelectionInput): void => {
-      setSelection((current) => {
-        const nextSelection = {
-          ...current,
-          ...nextSpecViewSelection,
-          targetScope: "file" as const,
-        };
-
-        return areSelectionsEqual(current, nextSelection)
-          ? current
-          : nextSelection;
-      });
+      setSelection((current) => ({
+        ...current,
+        ...nextSpecViewSelection,
+        targetScope: "file",
+      }));
     },
     [],
   );
   const setTargetScope = useCallback(
     (targetScope: SpecViewTargetScope): void => {
-      setSelection((current) => {
-        if (current.targetScope === targetScope) {
-          return current;
-        }
-
-        return {
-          ...current,
-          targetScope,
-        };
-      });
+      setSelection((current) => ({
+        ...current,
+        targetScope,
+      }));
     },
     [],
   );
@@ -70,17 +58,5 @@ export function useSpecViewSelectionState(): SpecViewSelectionContextValue {
       setTargetScope,
     }),
     [selection, setTargetScope, selectSpecView, selectionId],
-  );
-}
-
-function areSelectionsEqual(
-  current: SpecViewSelection,
-  next: SpecViewSelection,
-): boolean {
-  return (
-    current.workspacePath === next.workspacePath &&
-    current.specId === next.specId &&
-    current.fileKey === next.fileKey &&
-    current.targetScope === next.targetScope
   );
 }
