@@ -16,7 +16,7 @@ type HookProps = Readonly<{
   workspacePath: string | null;
   target: UserReviewTarget | null;
   commands: UserReviewCommands;
-  viewIdentity: string;
+  selectionKey: string;
 }>;
 
 const target = {
@@ -25,7 +25,7 @@ const target = {
   fileKey: "tasks",
 } as const;
 
-const viewIdentity = "/workspace/spec-reviewer:file:auth:tasks";
+const selectionKey = "/workspace/spec-reviewer:file:auth:tasks";
 
 const activeRun: UserReview = {
   id: "review-active",
@@ -97,11 +97,11 @@ function renderHook<Props, Result>(
 
 function renderUseUserReviewList(props: HookProps) {
   return renderHook(
-    ({ workspacePath, target, commands, viewIdentity }) =>
+    ({ workspacePath, target, commands, selectionKey }) =>
       useUserReviewList({
         commands,
         target,
-        viewIdentity,
+        selectionKey,
         workspacePath:
           workspacePath === null
             ? null
@@ -159,7 +159,7 @@ test("useUserReviewListはtargetまたはworkspace不足時にcommandを呼ば�
     workspacePath: null,
     target,
     commands,
-    viewIdentity: "none:file:auth:tasks",
+    selectionKey: "none:file:auth:tasks",
   });
 
   await act(async () => {
@@ -181,7 +181,7 @@ test("useUserReviewListはlist成功時にactive reviewsをreadyへ反映する"
     workspacePath: "/workspace/spec-reviewer",
     target,
     commands,
-    viewIdentity,
+    selectionKey,
   });
 
   await flushAsyncEffects();
@@ -201,7 +201,7 @@ test("useUserReviewListはlist成功時にrunがなければemptyを返す", asy
     workspacePath: "/workspace/spec-reviewer",
     target,
     commands,
-    viewIdentity,
+    selectionKey,
   });
 
   await flushAsyncEffects();
@@ -224,7 +224,7 @@ test("useUserReviewListはlist失敗時もfrontend performance spanにerrorを�
     workspacePath: "/workspace/spec-reviewer",
     target,
     commands,
-    viewIdentity,
+    selectionKey,
   });
 
   await flushAsyncEffects();
@@ -251,13 +251,13 @@ test("useUserReviewListはidentity不一致のlist eventを反映しない", asy
     workspacePath: "/workspace/spec-reviewer",
     target,
     commands,
-    viewIdentity,
+    selectionKey,
   });
 
   await flushAsyncEffects();
   act(() => {
     result.current.applyUserReviewEvent({
-      identity: "/workspace/other:file:auth:tasks",
+      selectionKey: "/workspace/other:file:auth:tasks",
       event: {
         type: "reviewCreated",
         review: activeRun,
@@ -279,13 +279,13 @@ test("useUserReviewListはloading中のeventを古いlist responseで上書き�
   const result = renderUseUserReviewList({
     workspacePath: "/workspace/spec-reviewer",
     target,
-    viewIdentity,
+    selectionKey,
     commands,
   });
 
   act(() => {
     result.current.applyUserReviewEvent({
-      identity: viewIdentity,
+      selectionKey: selectionKey,
       event: {
         type: "reviewCreated",
         review: activeRun,

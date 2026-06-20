@@ -37,10 +37,10 @@ import {
   useTheme,
 } from "@/features/preferences";
 import {
-  SpecViewIdentityProvider,
-  useSpecViewIdentity,
+  SpecViewSelectionProvider,
+  useSpecViewSelection,
   type SpecViewWorkspaceSelectionInput,
-} from "@/app/context/specViewIdentity";
+} from "@/app/context/specViewSelection";
 import {
   UserReviewPanel,
   useUserReviews,
@@ -882,7 +882,7 @@ function App() {
   });
 
   return (
-    <SpecViewIdentityProvider>
+    <SpecViewSelectionProvider>
       <SpecViewSelectionSync selection={userReviewWorkspaceSelection} />
       <div className="app-drop-root">
         <AppShell
@@ -1060,7 +1060,7 @@ function App() {
         />
         <WorkspaceDropOverlay isVisible={workspaceDrop.status === "dragging"} />
       </div>
-    </SpecViewIdentityProvider>
+    </SpecViewSelectionProvider>
   );
 }
 
@@ -1070,7 +1070,7 @@ type SpecViewSelectionSyncProps = Readonly<{
 
 function SpecViewSelectionSync(props: SpecViewSelectionSyncProps): null {
   const { selection } = props;
-  const { setTargetScope, setWorkspaceSelection } = useSpecViewIdentity();
+  const { setTargetScope, setWorkspaceSelection } = useSpecViewSelection();
 
   useEffect(() => {
     setWorkspaceSelection(selection);
@@ -1097,10 +1097,10 @@ function SpecViewUserReviewPanel(
 ): ReactElement {
   const { comments, correlationId, onWorkspaceModeChange, workspaceMode } =
     props;
-  const { selection, setTargetScope, viewIdentity } = useSpecViewIdentity();
+  const { selection, setTargetScope, selectionKey } = useSpecViewSelection();
   const userReviews = useUserReviews({
     selection,
-    viewIdentity,
+    selectionKey,
     correlationId,
   });
 

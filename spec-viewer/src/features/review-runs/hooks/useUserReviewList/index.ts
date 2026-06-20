@@ -8,9 +8,9 @@ import {
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import { listUserReviews as listUserReviewsViaGateway } from "@/features/review-runs/infra/userReviewGateway";
 import type {
-  IdentifiedUserReviewListEvent,
-  UserReviewViewIdentity,
-} from "@/features/review-runs/hooks/userReviewViewIdentity";
+  KeyedUserReviewListEvent,
+  SpecViewSelectionKey,
+} from "@/features/review-runs/hooks/userReviewSelectionKey";
 import {
   normalizeCommandError,
   type UserReviewCommands,
@@ -25,18 +25,18 @@ export type UseUserReviewListOptions = Readonly<{
   commands: UserReviewCommands;
   target: UserReviewTarget | null;
   workspacePath: WorkspacePath | null;
-  viewIdentity: UserReviewViewIdentity;
+  selectionKey: SpecViewSelectionKey;
   correlationId?: string | null;
 }>;
 
 export type UseUserReviewListResult = Readonly<{
   listState: UserReviewListStateType;
   reloadUserReviews: () => Promise<boolean>;
-  applyUserReviewEvent: (event: IdentifiedUserReviewListEvent) => void;
+  applyUserReviewEvent: (event: KeyedUserReviewListEvent) => void;
 }>;
 
-type IdentifiedListState = Readonly<{
-  identity: UserReviewViewIdentity;
+type KeyedListState = Readonly<{
+  selectionKey: SpecViewSelectionKey;
   requestVersion: number;
   state: UserReviewListStateType;
 }>;
@@ -45,19 +45,19 @@ type IdentifiedListState = Readonly<{
 export function useUserReviewList(
   options: UseUserReviewListOptions,
 ): UseUserReviewListResult {
-  const { commands, correlationId, target, viewIdentity, workspacePath } =
+  const { commands, correlationId, target, selectionKey, workspacePath } =
     options;
   const requestVersionRef = useRef(0);
-  const [listViewState, setListViewState] = useState<IdentifiedListState>({
-    identity: viewIdentity,
+  const [listViewState, setListViewState] = useState<KeyedListState>({
+    selectionKey,
     requestVersion: requestVersionRef.current,
     state: UserReviewListState.idle(),
   });
 
   const applyUserReviewEvent = useCallback(
-    (identifiedEvent: IdentifiedUserReviewListEvent): void => {
+    (identifiedEvent: KeyedUserReviewListEvent): void => {
       setListViewState((current) => {
-        if (current.identity !== identifiedEvent.identity) {
+        if (current.selectionKey !== identifiedEvent.selectionKey) {
           return current;
         }
 
@@ -70,7 +70,7 @@ export function useUserReviewList(
           : current.requestVersion;
 
         return {
-          identity: current.identity,
+          selectionKey: current.selectionKey,
           requestVersion,
           state: result.state,
         };
@@ -81,13 +81,13 @@ export function useUserReviewList(
 
   const reloadUserReviews = useCallback(async (): Promise<boolean> => {
     const activeTarget = target;
-    const startedIdentity = viewIdentity;
+    const startedSelectionKey = selectionKey;
     const startedRequestVersion = requestVersionRef.current + 1;
     requestVersionRef.current = startedRequestVersion;
 
     if (workspacePath === null || activeTarget === null) {
       setListViewState({
-        identity: startedIdentity,
+        selectionKey: startedSelectionKey,
         requestVersion: startedRequestVersion,
         state: UserReviewListState.idle(),
       });
@@ -95,7 +95,7 @@ export function useUserReviewList(
     }
 
     setListViewState({
-      identity: startedIdentity,
+      selectionKey: startedSelectionKey,
       requestVersion: startedRequestVersion,
       state: UserReviewListState.loading(activeTarget),
     });
@@ -132,14 +132,14 @@ export function useUserReviewList(
 
       setListViewState((current) => {
         if (
-          current.identity !== startedIdentity ||
+          current.selectionKey !== startedSelectionKey ||
           current.requestVersion !== startedRequestVersion
         ) {
           return current;
         }
 
         return {
-          identity: startedIdentity,
+          selectionKey: startedSelectionKey,
           requestVersion: startedRequestVersion,
           state: UserReviewListState.loaded(
             activeTarget,
@@ -159,14 +159,14 @@ export function useUserReviewList(
 
       setListViewState((current) => {
         if (
-          current.identity !== startedIdentity ||
+          current.selectionKey !== startedSelectionKey ||
           current.requestVersion !== startedRequestVersion
         ) {
           return current;
         }
 
         return {
-          identity: startedIdentity,
+          selectionKey: startedSelectionKey,
           requestVersion: startedRequestVersion,
           state: UserReviewListState.error(
             activeTarget,
@@ -176,14 +176,14 @@ export function useUserReviewList(
       });
       return false;
     }
-  }, [commands, correlationId, target, viewIdentity, workspacePath]);
+  }, [commands, correlationId, target, selectionKey, workspacePath]);
 
   useEffect(() => {
     void reloadUserReviews();
   }, [reloadUserReviews]);
 
   const listState =
-    listViewState.identity === viewIdentity
+    listViewState.selectionKey === selectionKey
       ? listViewState.state
       : UserReviewListState.idle();
 

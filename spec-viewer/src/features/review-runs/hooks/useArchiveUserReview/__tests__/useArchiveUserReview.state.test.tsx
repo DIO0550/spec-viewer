@@ -53,19 +53,19 @@ function renderHook<Props, Result>(
 
 type HookProps = Readonly<{
   workspacePath: string;
-  viewIdentity: string;
+  selectionKey: string;
   commands: UserReviewCommands;
   onUserReviewEvent: (event: unknown) => void;
 }>;
 
 function renderUseArchiveUserReview(props: HookProps) {
   return renderHook(
-    ({ commands, onUserReviewEvent, viewIdentity, workspacePath }) =>
+    ({ commands, onUserReviewEvent, selectionKey, workspacePath }) =>
       useArchiveUserReview({
         commands,
         workspacePath: WorkspacePath.fromString(workspacePath),
         target,
-        viewIdentity,
+        selectionKey,
         onUserReviewEvent,
       }),
     props,
@@ -143,7 +143,7 @@ test("useArchiveUserReviewはarchive成功後にreviewArchived eventを発行す
   const result = renderUseArchiveUserReview({
     commands,
     workspacePath: "/workspace/spec-reviewer",
-    viewIdentity: "/workspace/spec-reviewer:file:auth:tasks",
+    selectionKey: "/workspace/spec-reviewer:file:auth:tasks",
     onUserReviewEvent,
   });
 
@@ -153,7 +153,7 @@ test("useArchiveUserReviewはarchive成功後にreviewArchived eventを発行す
 
   expect(result.current.archiveState.status).toBe("success");
   expect(onUserReviewEvent).toHaveBeenCalledWith({
-    identity: "/workspace/spec-reviewer:file:auth:tasks",
+    selectionKey: "/workspace/spec-reviewer:file:auth:tasks",
     event: {
       type: "reviewArchived",
       review: archivedRun,
@@ -162,14 +162,13 @@ test("useArchiveUserReviewはarchive成功後にreviewArchived eventを発行す
   result.unmount();
 });
 
-
-test("useArchiveUserReviewはviewIdentityを戻しても古いsuccessを再表示しない", async () => {
+test("useArchiveUserReviewはselectionKeyを戻しても古いsuccessを再表示しない", async () => {
   const commands = createCommands();
   const onUserReviewEvent = vi.fn();
   const result = renderUseArchiveUserReview({
     commands,
     workspacePath: "/workspace/spec-reviewer",
-    viewIdentity: "/workspace/spec-reviewer:file:auth:tasks",
+    selectionKey: "/workspace/spec-reviewer:file:auth:tasks",
     onUserReviewEvent,
   });
 
@@ -179,13 +178,13 @@ test("useArchiveUserReviewはviewIdentityを戻しても古いsuccessを再表�
   result.rerender({
     commands,
     workspacePath: "/workspace/other",
-    viewIdentity: "/workspace/other:file:auth:tasks",
+    selectionKey: "/workspace/other:file:auth:tasks",
     onUserReviewEvent,
   });
   result.rerender({
     commands,
     workspacePath: "/workspace/spec-reviewer",
-    viewIdentity: "/workspace/spec-reviewer:file:auth:tasks",
+    selectionKey: "/workspace/spec-reviewer:file:auth:tasks",
     onUserReviewEvent,
   });
 
@@ -207,7 +206,7 @@ test("useArchiveUserReviewは同一identityの古いarchive完了を反映しな
   const result = renderUseArchiveUserReview({
     commands,
     workspacePath: "/workspace/spec-reviewer",
-    viewIdentity: "/workspace/spec-reviewer:file:auth:tasks",
+    selectionKey: "/workspace/spec-reviewer:file:auth:tasks",
     onUserReviewEvent,
   });
 
@@ -226,7 +225,7 @@ test("useArchiveUserReviewは同一identityの古いarchive完了を反映しな
   });
   expect(onUserReviewEvent).toHaveBeenCalledTimes(1);
   expect(onUserReviewEvent).toHaveBeenCalledWith({
-    identity: "/workspace/spec-reviewer:file:auth:tasks",
+    selectionKey: "/workspace/spec-reviewer:file:auth:tasks",
     event: {
       type: "reviewArchived",
       review: secondArchivedRun,

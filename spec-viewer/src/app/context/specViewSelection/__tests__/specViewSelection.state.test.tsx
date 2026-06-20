@@ -3,10 +3,10 @@ import { createRoot } from "react-dom/client";
 import { expect, test } from "vitest";
 
 import {
-  SpecViewIdentityProvider,
-  useSpecViewIdentity,
-  type SpecViewIdentityContextValue,
-} from "@/app/context/specViewIdentity";
+  SpecViewSelectionProvider,
+  useSpecViewSelection,
+  type SpecViewSelectionContextValue,
+} from "@/app/context/specViewSelection";
 import type { SpecFileKey } from "@/features/specs/types/spec";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 
@@ -20,23 +20,23 @@ function createContainerRoot(): Readonly<{
   return { container, root };
 }
 
-test("SpecViewIdentityProviderはselection propなしで選択状態とidentityを保持する", () => {
-  const values: SpecViewIdentityContextValue[] = [];
+test("SpecViewSelectionProviderはselection propなしで選択状態とselectionKeyを保持する", () => {
+  const values: SpecViewSelectionContextValue[] = [];
   const workspacePath = WorkspacePath.fromString("/workspace/spec-reviewer");
   const { container, root } = createContainerRoot();
-  let currentValue: SpecViewIdentityContextValue | null = null;
+  let currentValue: SpecViewSelectionContextValue | null = null;
 
   function Probe(): null {
-    currentValue = useSpecViewIdentity();
+    currentValue = useSpecViewSelection();
     values.push(currentValue);
     return null;
   }
 
   act(() => {
     root.render(
-      <SpecViewIdentityProvider>
+      <SpecViewSelectionProvider>
         <Probe />
-      </SpecViewIdentityProvider>,
+      </SpecViewSelectionProvider>,
     );
   });
   act(() => {
@@ -48,20 +48,20 @@ test("SpecViewIdentityProviderはselection propなしで選択状態とidentity�
   });
   act(() => {
     root.render(
-      <SpecViewIdentityProvider>
+      <SpecViewSelectionProvider>
         <Probe />
-      </SpecViewIdentityProvider>,
+      </SpecViewSelectionProvider>,
     );
   });
 
-  expect(values[0]?.viewIdentity).toBe("none:none");
+  expect(values[0]?.selectionKey).toBe("none:none");
   expect(values[values.length - 1]?.selection).toMatchObject({
     workspacePath,
     specId: "auth",
     fileKey: "tasks",
     targetScope: "file",
   });
-  expect(values[values.length - 1]?.viewIdentity).toBe(
+  expect(values[values.length - 1]?.selectionKey).toBe(
     "/workspace/spec-reviewer:file:auth:tasks",
   );
   expect(values[values.length - 1]).toBe(values[values.length - 2]);
@@ -120,26 +120,26 @@ test.each([
     targetScope: "file" as const,
     expected: "/workspace/spec-reviewer:none",
   },
-])("SpecViewIdentityProviderは内部selectionの$nameでidentityを更新する", ({
+])("SpecViewSelectionProviderは内部selectionの$nameでselectionKeyを更新する", ({
   workspaceSelection,
   targetScope,
   expected,
 }) => {
-  const values: SpecViewIdentityContextValue[] = [];
+  const values: SpecViewSelectionContextValue[] = [];
   const { container, root } = createContainerRoot();
-  let currentValue: SpecViewIdentityContextValue | null = null;
+  let currentValue: SpecViewSelectionContextValue | null = null;
 
   function Probe(): null {
-    currentValue = useSpecViewIdentity();
+    currentValue = useSpecViewSelection();
     values.push(currentValue);
     return null;
   }
 
   act(() => {
     root.render(
-      <SpecViewIdentityProvider>
+      <SpecViewSelectionProvider>
         <Probe />
-      </SpecViewIdentityProvider>,
+      </SpecViewSelectionProvider>,
     );
   });
   act(() => {
@@ -149,7 +149,7 @@ test.each([
     currentValue?.setTargetScope(targetScope);
   });
 
-  expect(values[values.length - 1]?.viewIdentity).toBe(expected);
+  expect(values[values.length - 1]?.selectionKey).toBe(expected);
   root.unmount();
   container.remove();
 });

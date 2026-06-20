@@ -1,25 +1,25 @@
 import type { ReactNode } from "react";
 
 import type {
-  SpecViewIdentity as SpecViewIdentityType,
-  SpecViewIdentityInput,
+  SpecViewSelectionKey as SpecViewSelectionKeyType,
+  SpecViewSelectionKeyInput,
   SpecViewTargetScope,
-} from "@/features/specs/domain/specViewIdentity";
+} from "@/features/specs/domain/specViewSelectionKey";
 
-export type SpecViewSelection = SpecViewIdentityInput;
+export type SpecViewSelection = SpecViewSelectionKeyInput;
 
 export type SpecViewWorkspaceSelectionInput = Pick<
   SpecViewSelection,
   "workspacePath" | "specId" | "fileKey"
 >;
 
-export type SpecViewIdentityContextValue = Readonly<{
+export type SpecViewSelectionContextValue = Readonly<{
   selection: SpecViewSelection;
-  viewIdentity: SpecViewIdentityType;
+  selectionKey: SpecViewSelectionKeyType;
   setWorkspaceSelection: (selection: SpecViewWorkspaceSelectionInput) => void;
   setTargetScope: (targetScope: SpecViewTargetScope) => void;
 }>;
 
-export type SpecViewIdentityProviderProps = Readonly<{
+export type SpecViewSelectionProviderProps = Readonly<{
   children: ReactNode;
 }>;

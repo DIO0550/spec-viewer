@@ -1,15 +1,15 @@
 import { useCallback, useMemo, useState, type ReactElement } from "react";
 
-import { SpecViewIdentityContext } from "@/app/context/specViewIdentity/context";
+import { SpecViewSelectionContext } from "@/app/context/specViewSelection/context";
 import type {
-  SpecViewIdentityProviderProps,
+  SpecViewSelectionProviderProps,
   SpecViewSelection,
   SpecViewWorkspaceSelectionInput,
-} from "@/app/context/specViewIdentity/types";
+} from "@/app/context/specViewSelection/types";
 import {
-  SpecViewIdentity,
+  SpecViewSelectionKey,
   type SpecViewTargetScope,
-} from "@/features/specs/domain/specViewIdentity";
+} from "@/features/specs/domain/specViewSelectionKey";
 
 const defaultSelection: SpecViewSelection = {
   workspacePath: null,
@@ -22,14 +22,14 @@ const defaultSelection: SpecViewSelection = {
  * @param props - Provider props for the managed spec view section.
  * @returns Context provider that owns the active spec view selection.
  */
-export function SpecViewIdentityProvider(
-  props: SpecViewIdentityProviderProps,
+export function SpecViewSelectionProvider(
+  props: SpecViewSelectionProviderProps,
 ): ReactElement {
   const { children } = props;
   const [selection, setSelection] =
     useState<SpecViewSelection>(defaultSelection);
-  const viewIdentity = useMemo(
-    () => SpecViewIdentity.create(selection),
+  const selectionKey = useMemo(
+    () => SpecViewSelectionKey.create(selection),
     [
       selection.fileKey,
       selection.specId,
@@ -70,17 +70,17 @@ export function SpecViewIdentityProvider(
   const value = useMemo(
     () => ({
       selection,
-      viewIdentity,
+      selectionKey,
       setWorkspaceSelection,
       setTargetScope,
     }),
-    [selection, setTargetScope, setWorkspaceSelection, viewIdentity],
+    [selection, setTargetScope, setWorkspaceSelection, selectionKey],
   );
 
   return (
-    <SpecViewIdentityContext.Provider value={value}>
+    <SpecViewSelectionContext.Provider value={value}>
       {children}
-    </SpecViewIdentityContext.Provider>
+    </SpecViewSelectionContext.Provider>
   );
 }
 
