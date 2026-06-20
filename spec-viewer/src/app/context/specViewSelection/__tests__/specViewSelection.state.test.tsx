@@ -20,7 +20,7 @@ function createContainerRoot(): Readonly<{
   return { container, root };
 }
 
-test("SpecViewSelectionProviderはselection propなしで選択状態とselectionKeyを保持する", () => {
+test("SpecViewSelectionProviderはselection propなしで選択状態とselectionIdを保持する", () => {
   const values: SpecViewSelectionContextValue[] = [];
   const workspacePath = WorkspacePath.fromString("/workspace/spec-reviewer");
   const { container, root } = createContainerRoot();
@@ -54,14 +54,14 @@ test("SpecViewSelectionProviderはselection propなしで選択状態とselectio
     );
   });
 
-  expect(values[0]?.selectionKey).toBe("none:none");
+  expect(values[0]?.selectionId).toBe("none:none");
   expect(values[values.length - 1]?.selection).toMatchObject({
     workspacePath,
     specId: "auth",
     fileKey: "tasks",
     targetScope: "file",
   });
-  expect(values[values.length - 1]?.selectionKey).toBe(
+  expect(values[values.length - 1]?.selectionId).toBe(
     "/workspace/spec-reviewer:file:auth:tasks",
   );
   expect(values[values.length - 1]).toBe(values[values.length - 2]);
@@ -120,7 +120,7 @@ test.each([
     targetScope: "file" as const,
     expected: "/workspace/spec-reviewer:none",
   },
-])("SpecViewSelectionProviderは内部selectionの$nameでselectionKeyを更新する", ({
+])("SpecViewSelectionProviderは内部selectionの$nameでselectionIdを更新する", ({
   workspaceSelection,
   targetScope,
   expected,
@@ -149,7 +149,7 @@ test.each([
     currentValue?.setTargetScope(targetScope);
   });
 
-  expect(values[values.length - 1]?.selectionKey).toBe(expected);
+  expect(values[values.length - 1]?.selectionId).toBe(expected);
   root.unmount();
   container.remove();
 });

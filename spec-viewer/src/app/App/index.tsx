@@ -1097,10 +1097,10 @@ function SpecViewUserReviewPanel(
 ): ReactElement {
   const { comments, correlationId, onWorkspaceModeChange, workspaceMode } =
     props;
-  const { selection, setTargetScope, selectionKey } = useSpecViewSelection();
+  const { selection, setTargetScope, selectionId } = useSpecViewSelection();
   const userReviews = useUserReviews({
     selection,
-    selectionKey,
+    selectionId,
     correlationId,
   });
 

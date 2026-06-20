@@ -6,16 +6,16 @@ import {
 
 export type SpecViewTargetScope = "file" | "spec";
 
-export type SpecViewSelectionKey = string;
+export type SpecViewSelectionId = string;
 
-export type SpecViewSelectionKeyInput = Readonly<{
+export type SpecViewSelectionIdInput = Readonly<{
   workspacePath: WorkspacePathType | null;
   specId: string | null;
   fileKey: SpecFileKey | null;
   targetScope: SpecViewTargetScope;
 }>;
 
-function createTargetKey(input: SpecViewSelectionKeyInput): string {
+function createTargetId(input: SpecViewSelectionIdInput): string {
   if (input.specId === null) {
     return "none";
   }
@@ -31,18 +31,18 @@ function createTargetKey(input: SpecViewSelectionKeyInput): string {
   return `file:${input.specId}:${input.fileKey}`;
 }
 
-export const SpecViewSelectionKey = {
+export const SpecViewSelectionId = {
   /**
    * @param input - Current workspace and spec view selection.
-   * @returns Stable key for the currently selected spec view target.
+   * @returns Stable id for the currently selected spec view target.
    */
-  create(input: SpecViewSelectionKeyInput): SpecViewSelectionKey {
-    const workspaceKey =
+  create(input: SpecViewSelectionIdInput): SpecViewSelectionId {
+    const workspaceId =
       input.workspacePath === null
         ? "none"
         : WorkspacePath.toString(input.workspacePath);
-    const targetKey = createTargetKey(input);
+    const targetId = createTargetId(input);
 
-    return `${workspaceKey}:${targetKey}`;
+    return `${workspaceId}:${targetId}`;
   },
 } as const;

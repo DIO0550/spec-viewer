@@ -8,9 +8,9 @@ import {
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import { listUserReviews as listUserReviewsViaGateway } from "@/features/review-runs/infra/userReviewGateway";
 import type {
-  KeyedUserReviewListEvent,
-  SpecViewSelectionKey,
-} from "@/features/review-runs/hooks/userReviewSelectionKey";
+  UserReviewListEventWithSelectionId,
+  SpecViewSelectionId,
+} from "@/features/review-runs/hooks/userReviewSelectionId";
 import {
   normalizeCommandError,
   type UserReviewCommands,
@@ -25,18 +25,18 @@ export type UseUserReviewListOptions = Readonly<{
   commands: UserReviewCommands;
   target: UserReviewTarget | null;
   workspacePath: WorkspacePath | null;
-  selectionKey: SpecViewSelectionKey;
+  selectionId: SpecViewSelectionId;
   correlationId?: string | null;
 }>;
 
 export type UseUserReviewListResult = Readonly<{
   listState: UserReviewListStateType;
   reloadUserReviews: () => Promise<boolean>;
-  applyUserReviewEvent: (event: KeyedUserReviewListEvent) => void;
+  applyUserReviewEvent: (event: UserReviewListEventWithSelectionId) => void;
 }>;
 
-type KeyedListState = Readonly<{
-  selectionKey: SpecViewSelectionKey;
+type SelectionIdListState = Readonly<{
+  selectionId: SpecViewSelectionId;
   requestVersion: number;
   state: UserReviewListStateType;
 }>;
@@ -45,32 +45,32 @@ type KeyedListState = Readonly<{
 export function useUserReviewList(
   options: UseUserReviewListOptions,
 ): UseUserReviewListResult {
-  const { commands, correlationId, target, selectionKey, workspacePath } =
+  const { commands, correlationId, target, selectionId, workspacePath } =
     options;
   const requestVersionRef = useRef(0);
-  const [listViewState, setListViewState] = useState<KeyedListState>({
-    selectionKey,
+  const [listViewState, setListViewState] = useState<SelectionIdListState>({
+    selectionId,
     requestVersion: requestVersionRef.current,
     state: UserReviewListState.idle(),
   });
 
   const applyUserReviewEvent = useCallback(
-    (identifiedEvent: KeyedUserReviewListEvent): void => {
+    (eventWithSelectionId: UserReviewListEventWithSelectionId): void => {
       setListViewState((current) => {
-        if (current.selectionKey !== identifiedEvent.selectionKey) {
+        if (current.selectionId !== eventWithSelectionId.selectionId) {
           return current;
         }
 
         const result = UserReviewListState.reduceUserReviewEvent(
           current.state,
-          identifiedEvent.event,
+          eventWithSelectionId.event,
         );
         const requestVersion = result.invalidatesInFlightListRequest
           ? current.requestVersion + 1
           : current.requestVersion;
 
         return {
-          selectionKey: current.selectionKey,
+          selectionId: current.selectionId,
           requestVersion,
           state: result.state,
         };
@@ -81,13 +81,13 @@ export function useUserReviewList(
 
   const reloadUserReviews = useCallback(async (): Promise<boolean> => {
     const activeTarget = target;
-    const startedSelectionKey = selectionKey;
+    const startedSelectionId = selectionId;
     const startedRequestVersion = requestVersionRef.current + 1;
     requestVersionRef.current = startedRequestVersion;
 
     if (workspacePath === null || activeTarget === null) {
       setListViewState({
-        selectionKey: startedSelectionKey,
+        selectionId: startedSelectionId,
         requestVersion: startedRequestVersion,
         state: UserReviewListState.idle(),
       });
@@ -95,7 +95,7 @@ export function useUserReviewList(
     }
 
     setListViewState({
-      selectionKey: startedSelectionKey,
+      selectionId: startedSelectionId,
       requestVersion: startedRequestVersion,
       state: UserReviewListState.loading(activeTarget),
     });
@@ -132,14 +132,14 @@ export function useUserReviewList(
 
       setListViewState((current) => {
         if (
-          current.selectionKey !== startedSelectionKey ||
+          current.selectionId !== startedSelectionId ||
           current.requestVersion !== startedRequestVersion
         ) {
           return current;
         }
 
         return {
-          selectionKey: startedSelectionKey,
+          selectionId: startedSelectionId,
           requestVersion: startedRequestVersion,
           state: UserReviewListState.loaded(
             activeTarget,
@@ -159,14 +159,14 @@ export function useUserReviewList(
 
       setListViewState((current) => {
         if (
-          current.selectionKey !== startedSelectionKey ||
+          current.selectionId !== startedSelectionId ||
           current.requestVersion !== startedRequestVersion
         ) {
           return current;
         }
 
         return {
-          selectionKey: startedSelectionKey,
+          selectionId: startedSelectionId,
           requestVersion: startedRequestVersion,
           state: UserReviewListState.error(
             activeTarget,
@@ -176,14 +176,14 @@ export function useUserReviewList(
       });
       return false;
     }
-  }, [commands, correlationId, target, selectionKey, workspacePath]);
+  }, [commands, correlationId, target, selectionId, workspacePath]);
 
   useEffect(() => {
     void reloadUserReviews();
   }, [reloadUserReviews]);
 
   const listState =
-    listViewState.selectionKey === selectionKey
+    listViewState.selectionId === selectionId
       ? listViewState.state
       : UserReviewListState.idle();
 

@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
 
 import type {
-  SpecViewSelectionKey as SpecViewSelectionKeyType,
-  SpecViewSelectionKeyInput,
+  SpecViewSelectionId as SpecViewSelectionIdType,
+  SpecViewSelectionIdInput,
   SpecViewTargetScope,
-} from "@/features/specs/domain/specViewSelectionKey";
+} from "@/features/specs/domain/specViewSelectionId";
 
-export type SpecViewSelection = SpecViewSelectionKeyInput;
+export type SpecViewSelection = SpecViewSelectionIdInput;
 
 export type SpecViewWorkspaceSelectionInput = Pick<
   SpecViewSelection,
@@ -15,7 +15,7 @@ export type SpecViewWorkspaceSelectionInput = Pick<
 
 export type SpecViewSelectionContextValue = Readonly<{
   selection: SpecViewSelection;
-  selectionKey: SpecViewSelectionKeyType;
+  selectionId: SpecViewSelectionIdType;
   setWorkspaceSelection: (selection: SpecViewWorkspaceSelectionInput) => void;
   setTargetScope: (targetScope: SpecViewTargetScope) => void;
 }>;

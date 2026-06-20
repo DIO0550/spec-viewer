@@ -26,7 +26,7 @@ import {
   type UserReviewCommands,
 } from "@/shared/api/tauri";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
-import type { SpecViewSelectionKey } from "@/features/specs/domain/specViewSelectionKey";
+import type { SpecViewSelectionId } from "@/features/specs/domain/specViewSelectionId";
 import type { SpecFileKey } from "@/features/specs/types/spec";
 
 export type { UserReviewListState } from "@/features/review-runs/domain/userReviewListState";
@@ -46,7 +46,7 @@ export type UserReviewsSelectionInput = Readonly<{
 
 export type UseUserReviewsOptions = Readonly<{
   selection: UserReviewsSelectionInput;
-  selectionKey: SpecViewSelectionKey;
+  selectionId: SpecViewSelectionId;
   correlationId?: string | null;
   commands?: UserReviewCommands;
 }>;
@@ -70,7 +70,7 @@ export function useUserReviews(
   options: UseUserReviewsOptions,
 ): UseUserReviewsResult {
   const commands = options.commands ?? defaultUserReviewCommands;
-  const { selection, selectionKey } = options;
+  const { selection, selectionId } = options;
   const target = useMemo(
     () =>
       UserReviewTarget.create({
@@ -84,21 +84,21 @@ export function useUserReviews(
     commands,
     target,
     workspacePath: selection.workspacePath,
-    selectionKey,
+    selectionId,
     correlationId: options.correlationId,
   });
 
   const create: UseCreateUserReviewResult = useCreateUserReview({
     workspacePath: selection.workspacePath,
     target,
-    selectionKey,
+    selectionId,
     commands,
     onUserReviewEvent: list.applyUserReviewEvent,
   });
   const archive: UseArchiveUserReviewResult = useArchiveUserReview({
     workspacePath: selection.workspacePath,
     target,
-    selectionKey,
+    selectionId,
     commands,
     onUserReviewEvent: list.applyUserReviewEvent,
   });

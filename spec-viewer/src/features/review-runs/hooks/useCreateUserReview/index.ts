@@ -9,9 +9,9 @@ import {
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import { createUserReview as createUserReviewViaGateway } from "@/features/review-runs/infra/userReviewGateway";
 import type {
-  KeyedUserReviewListEvent,
-  SpecViewSelectionKey,
-} from "@/features/review-runs/hooks/userReviewSelectionKey";
+  UserReviewListEventWithSelectionId,
+  SpecViewSelectionId,
+} from "@/features/review-runs/hooks/userReviewSelectionId";
 import {
   normalizeCommandError,
   type UserReviewCommands,
@@ -23,13 +23,13 @@ export type CreateUserReviewInput = CreateUserReviewPayload;
 export type UseCreateUserReviewOptions = Readonly<{
   workspacePath: WorkspacePath | null;
   target: UserReviewTarget | null;
-  selectionKey: SpecViewSelectionKey;
+  selectionId: SpecViewSelectionId;
   commands: UserReviewCommands;
-  onUserReviewEvent: (event: KeyedUserReviewListEvent) => void;
+  onUserReviewEvent: (event: UserReviewListEventWithSelectionId) => void;
 }>;
 
-type KeyedCreateState = Readonly<{
-  selectionKey: SpecViewSelectionKey;
+type SelectionIdCreateState = Readonly<{
+  selectionId: SpecViewSelectionId;
   state: UserReviewCreateStateType;
 }>;
 
@@ -44,21 +44,22 @@ export type UseCreateUserReviewResult = Readonly<{
 export function useCreateUserReview(
   options: UseCreateUserReviewOptions,
 ): UseCreateUserReviewResult {
-  const { commands, onUserReviewEvent, target, selectionKey, workspacePath } =
+  const { commands, onUserReviewEvent, target, selectionId, workspacePath } =
     options;
   const requestIdRef = useRef(0);
-  const [createViewState, setCreateViewState] = useState<KeyedCreateState>({
-    selectionKey,
-    state: UserReviewCreateState.idle(),
-  });
+  const [createViewState, setCreateViewState] =
+    useState<SelectionIdCreateState>({
+      selectionId,
+      state: UserReviewCreateState.idle(),
+    });
 
   useEffect(() => {
     requestIdRef.current += 1;
     setCreateViewState({
-      selectionKey,
+      selectionId,
       state: UserReviewCreateState.idle(),
     });
-  }, [selectionKey]);
+  }, [selectionId]);
 
   const createUserReview = useCallback(
     async (input: CreateUserReviewInput): Promise<UserReview | null> => {
@@ -71,11 +72,11 @@ export function useCreateUserReview(
       }
 
       const payload = input;
-      const startedSelectionKey = selectionKey;
+      const startedSelectionId = selectionId;
       const startedRequestId = requestIdRef.current + 1;
       requestIdRef.current = startedRequestId;
       setCreateViewState({
-        selectionKey: startedSelectionKey,
+        selectionId: startedSelectionId,
         state: UserReviewCreateState.saving(payload),
       });
 
@@ -89,20 +90,20 @@ export function useCreateUserReview(
 
         setCreateViewState((current) => {
           if (
-            current.selectionKey !== startedSelectionKey ||
+            current.selectionId !== startedSelectionId ||
             requestIdRef.current !== startedRequestId
           ) {
             return current;
           }
 
           return {
-            selectionKey: startedSelectionKey,
+            selectionId: startedSelectionId,
             state: UserReviewCreateState.success(payload, response.userReview),
           };
         });
         if (requestIdRef.current === startedRequestId) {
           onUserReviewEvent({
-            selectionKey: startedSelectionKey,
+            selectionId: startedSelectionId,
             event: {
               type: "reviewCreated",
               review: response.userReview,
@@ -113,14 +114,14 @@ export function useCreateUserReview(
       } catch (error) {
         setCreateViewState((current) => {
           if (
-            current.selectionKey !== startedSelectionKey ||
+            current.selectionId !== startedSelectionId ||
             requestIdRef.current !== startedRequestId
           ) {
             return current;
           }
 
           return {
-            selectionKey: startedSelectionKey,
+            selectionId: startedSelectionId,
             state: UserReviewCreateState.error(
               payload,
               normalizeCommandError(error),
@@ -130,11 +131,11 @@ export function useCreateUserReview(
         return null;
       }
     },
-    [commands, onUserReviewEvent, target, selectionKey, workspacePath],
+    [commands, onUserReviewEvent, target, selectionId, workspacePath],
   );
 
   const createState =
-    createViewState.selectionKey === selectionKey
+    createViewState.selectionId === selectionId
       ? createViewState.state
       : UserReviewCreateState.idle();
 

@@ -7,9 +7,9 @@ import type {
   SpecViewWorkspaceSelectionInput,
 } from "@/app/context/specViewSelection/types";
 import {
-  SpecViewSelectionKey,
+  SpecViewSelectionId,
   type SpecViewTargetScope,
-} from "@/features/specs/domain/specViewSelectionKey";
+} from "@/features/specs/domain/specViewSelectionId";
 
 const defaultSelection: SpecViewSelection = {
   workspacePath: null,
@@ -28,8 +28,8 @@ export function SpecViewSelectionProvider(
   const { children } = props;
   const [selection, setSelection] =
     useState<SpecViewSelection>(defaultSelection);
-  const selectionKey = useMemo(
-    () => SpecViewSelectionKey.create(selection),
+  const selectionId = useMemo(
+    () => SpecViewSelectionId.create(selection),
     [
       selection.fileKey,
       selection.specId,
@@ -70,11 +70,11 @@ export function SpecViewSelectionProvider(
   const value = useMemo(
     () => ({
       selection,
-      selectionKey,
+      selectionId,
       setWorkspaceSelection,
       setTargetScope,
     }),
-    [selection, setTargetScope, setWorkspaceSelection, selectionKey],
+    [selection, setTargetScope, setWorkspaceSelection, selectionId],
   );
 
   return (
