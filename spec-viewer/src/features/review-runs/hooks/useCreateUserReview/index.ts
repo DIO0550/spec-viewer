@@ -8,10 +8,8 @@ import {
 } from "@/features/review-runs/domain/userReviewOperation";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import { createUserReview as createUserReviewViaGateway } from "@/features/review-runs/infra/userReviewGateway";
-import type {
-  UserReviewListEventWithSelectionId,
-  SpecViewSelectionId,
-} from "@/features/review-runs/hooks/userReviewSelectionId";
+import type { UserReviewListEventWithSelectionId } from "@/features/review-runs/hooks/useUserReviewList";
+import type { SpecViewSelectionId } from "@/features/specs/domain/specViewSelectionId";
 import {
   normalizeCommandError,
   type UserReviewCommands,

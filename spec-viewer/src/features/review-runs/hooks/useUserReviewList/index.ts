@@ -3,14 +3,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { UserReviewCollection } from "@/features/review-runs/domain/userReviewCollection";
 import {
   UserReviewListState,
+  type UserReviewListEvent,
   type UserReviewListState as UserReviewListStateType,
 } from "@/features/review-runs/domain/userReviewListState";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import { listUserReviews as listUserReviewsViaGateway } from "@/features/review-runs/infra/userReviewGateway";
-import type {
-  UserReviewListEventWithSelectionId,
-  SpecViewSelectionId,
-} from "@/features/review-runs/hooks/userReviewSelectionId";
+import type { SpecViewSelectionId } from "@/features/specs/domain/specViewSelectionId";
 import {
   normalizeCommandError,
   type UserReviewCommands,
@@ -20,6 +18,11 @@ import {
   createPerformanceCorrelationId,
   startPerformanceSpan,
 } from "@/shared/lib/performance";
+
+export type UserReviewListEventWithSelectionId = Readonly<{
+  selectionId: SpecViewSelectionId;
+  event: UserReviewListEvent;
+}>;
 
 export type UseUserReviewListOptions = Readonly<{
   commands: UserReviewCommands;
