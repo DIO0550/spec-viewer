@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 
 import {
+  ThemeAppearance,
   ThemeMode,
-  type ThemeAppearance,
   type ThemeMode as ThemeModeType,
 } from "@/features/preferences/domain/theme";
-import { applyDocumentTheme } from "@/lib/documentTheme";
 import { readStorageValue, writeStorageValue } from "@/lib/storage";
-import { getSystemTheme, subscribeSystemTheme } from "@/lib/systemTheme";
 
-const themeStorageKey = "spec-reviewer.theme-mode";
+const ThemeStorageKey = "spec-reviewer.theme-mode";
+const SystemThemeQuery = "(prefers-color-scheme: dark)";
 
 export type { ThemeModeType as ThemeMode, ThemeAppearance };
 export type ResolvedTheme = ThemeAppearance;
@@ -22,20 +21,54 @@ type UseThemeResult = Readonly<{
 
 /** @returns Theme preference state synchronized with document attributes. */
 export function useTheme(): UseThemeResult {
-  const [themeMode, setThemeModeState] =
-    useState<ThemeModeType>(readStoredThemeMode);
-  const [systemTheme, setSystemTheme] =
-    useState<ThemeAppearance>(getSystemTheme);
+  const [themeMode, setThemeModeState] = useState<ThemeModeType>(() =>
+    ThemeMode.parse(readStorageValue(ThemeStorageKey)),
+  );
+  const [systemTheme, setSystemTheme] = useState<ThemeAppearance>(() => {
+    if (
+      typeof window === "undefined" ||
+      typeof window.matchMedia !== "function"
+    ) {
+      return ThemeAppearance.defaultValue;
+    }
+
+    return window.matchMedia(SystemThemeQuery).matches
+      ? "dark"
+      : ThemeAppearance.defaultValue;
+  });
 
   useEffect(() => {
-    return subscribeSystemTheme(setSystemTheme);
+    if (
+      typeof window === "undefined" ||
+      typeof window.matchMedia !== "function"
+    ) {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia(SystemThemeQuery);
+    const listener = (): void => {
+      setSystemTheme(
+        mediaQuery.matches ? "dark" : ThemeAppearance.defaultValue,
+      );
+    };
+
+    mediaQuery.addEventListener("change", listener);
+
+    return () => {
+      mediaQuery.removeEventListener("change", listener);
+    };
   }, []);
 
   const resolvedTheme = ThemeMode.toAppearance(themeMode, systemTheme);
 
   useEffect(() => {
-    applyDocumentTheme(themeMode, resolvedTheme);
-    writeStoredThemeMode(themeMode);
+    if (typeof document !== "undefined") {
+      document.documentElement.dataset.theme = resolvedTheme;
+      document.documentElement.dataset.themeMode = themeMode;
+      document.documentElement.style.colorScheme = resolvedTheme;
+    }
+
+    writeStorageValue(ThemeStorageKey, themeMode);
   }, [resolvedTheme, themeMode]);
 
   const setThemeMode = useCallback((nextThemeMode: ThemeModeType): void => {
@@ -43,14 +76,4 @@ export function useTheme(): UseThemeResult {
   }, []);
 
   return { themeMode, resolvedTheme, setThemeMode };
-}
-
-/** @returns Stored theme preference, falling back to system mode. */
-function readStoredThemeMode(): ThemeModeType {
-  return ThemeMode.parse(readStorageValue(themeStorageKey));
-}
-
-/** Persists the selected theme preference when storage is available. */
-function writeStoredThemeMode(themeMode: ThemeModeType): void {
-  writeStorageValue(themeStorageKey, themeMode);
 }
