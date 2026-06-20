@@ -1,20 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { UserReviewCollection } from "@/features/review-runs/domain/userReviewCollection";
 import {
   UserReviewListState,
+  type UserReviewListEvent,
   type UserReviewListState as UserReviewListStateType,
 } from "@/features/review-runs/domain/userReviewListState";
-import {
-  UserReviewTargetIdentity,
-  type UserReviewTarget,
-} from "@/features/review-runs/domain/userReviewTarget";
+import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import { listUserReviews as listUserReviewsViaGateway } from "@/features/review-runs/infra/userReviewGateway";
-import {
-  createUserReviewViewIdentity,
-  type IdentifiedUserReviewListEvent,
-  type UserReviewViewIdentity,
-} from "@/features/review-runs/hooks/userReviewViewIdentity";
+import type { SpecViewSelectionId } from "@/features/specs/domain/specViewSelectionId";
 import {
   normalizeCommandError,
   type UserReviewCommands,
@@ -25,22 +19,27 @@ import {
   startPerformanceSpan,
 } from "@/shared/lib/performance";
 
+export type UserReviewListEventWithSelectionId = Readonly<{
+  selectionId: SpecViewSelectionId;
+  event: UserReviewListEvent;
+}>;
+
 export type UseUserReviewListOptions = Readonly<{
   commands: UserReviewCommands;
   target: UserReviewTarget | null;
   workspacePath: WorkspacePath | null;
-  viewIdentity?: UserReviewViewIdentity;
+  selectionId: SpecViewSelectionId;
   correlationId?: string | null;
 }>;
 
 export type UseUserReviewListResult = Readonly<{
   listState: UserReviewListStateType;
   reloadUserReviews: () => Promise<boolean>;
-  applyUserReviewEvent: (event: IdentifiedUserReviewListEvent) => void;
+  applyUserReviewEvent: (event: UserReviewListEventWithSelectionId) => void;
 }>;
 
-type IdentifiedListState = Readonly<{
-  identity: UserReviewViewIdentity;
+type SelectionIdListState = Readonly<{
+  selectionId: SpecViewSelectionId;
   requestVersion: number;
   state: UserReviewListStateType;
 }>;
@@ -49,41 +48,32 @@ type IdentifiedListState = Readonly<{
 export function useUserReviewList(
   options: UseUserReviewListOptions,
 ): UseUserReviewListResult {
-  const { commands, correlationId, target, workspacePath } = options;
-  const targetIdentity = useMemo(
-    () => UserReviewTargetIdentity.create(target),
-    [target],
-  );
-  const viewIdentity = useMemo(
-    () =>
-      options.viewIdentity ??
-      createUserReviewViewIdentity(workspacePath, targetIdentity),
-    [options.viewIdentity, targetIdentity, workspacePath],
-  );
+  const { commands, correlationId, target, selectionId, workspacePath } =
+    options;
   const requestVersionRef = useRef(0);
-  const [listViewState, setListViewState] = useState<IdentifiedListState>({
-    identity: viewIdentity,
+  const [listViewState, setListViewState] = useState<SelectionIdListState>({
+    selectionId,
     requestVersion: requestVersionRef.current,
     state: UserReviewListState.idle(),
   });
 
   const applyUserReviewEvent = useCallback(
-    (identifiedEvent: IdentifiedUserReviewListEvent): void => {
+    (eventWithSelectionId: UserReviewListEventWithSelectionId): void => {
       setListViewState((current) => {
-        if (current.identity !== identifiedEvent.identity) {
+        if (current.selectionId !== eventWithSelectionId.selectionId) {
           return current;
         }
 
         const result = UserReviewListState.reduceUserReviewEvent(
           current.state,
-          identifiedEvent.event,
+          eventWithSelectionId.event,
         );
         const requestVersion = result.invalidatesInFlightListRequest
           ? current.requestVersion + 1
           : current.requestVersion;
 
         return {
-          identity: current.identity,
+          selectionId: current.selectionId,
           requestVersion,
           state: result.state,
         };
@@ -94,13 +84,13 @@ export function useUserReviewList(
 
   const reloadUserReviews = useCallback(async (): Promise<boolean> => {
     const activeTarget = target;
-    const startedIdentity = viewIdentity;
+    const startedSelectionId = selectionId;
     const startedRequestVersion = requestVersionRef.current + 1;
     requestVersionRef.current = startedRequestVersion;
 
     if (workspacePath === null || activeTarget === null) {
       setListViewState({
-        identity: startedIdentity,
+        selectionId: startedSelectionId,
         requestVersion: startedRequestVersion,
         state: UserReviewListState.idle(),
       });
@@ -108,7 +98,7 @@ export function useUserReviewList(
     }
 
     setListViewState({
-      identity: startedIdentity,
+      selectionId: startedSelectionId,
       requestVersion: startedRequestVersion,
       state: UserReviewListState.loading(activeTarget),
     });
@@ -145,14 +135,14 @@ export function useUserReviewList(
 
       setListViewState((current) => {
         if (
-          current.identity !== startedIdentity ||
+          current.selectionId !== startedSelectionId ||
           current.requestVersion !== startedRequestVersion
         ) {
           return current;
         }
 
         return {
-          identity: startedIdentity,
+          selectionId: startedSelectionId,
           requestVersion: startedRequestVersion,
           state: UserReviewListState.loaded(
             activeTarget,
@@ -172,14 +162,14 @@ export function useUserReviewList(
 
       setListViewState((current) => {
         if (
-          current.identity !== startedIdentity ||
+          current.selectionId !== startedSelectionId ||
           current.requestVersion !== startedRequestVersion
         ) {
           return current;
         }
 
         return {
-          identity: startedIdentity,
+          selectionId: startedSelectionId,
           requestVersion: startedRequestVersion,
           state: UserReviewListState.error(
             activeTarget,
@@ -189,14 +179,14 @@ export function useUserReviewList(
       });
       return false;
     }
-  }, [commands, correlationId, target, viewIdentity, workspacePath]);
+  }, [commands, correlationId, target, selectionId, workspacePath]);
 
   useEffect(() => {
     void reloadUserReviews();
   }, [reloadUserReviews]);
 
   const listState =
-    listViewState.identity === viewIdentity
+    listViewState.selectionId === selectionId
       ? listViewState.state
       : UserReviewListState.idle();
 

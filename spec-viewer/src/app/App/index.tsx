@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactElement,
+} from "react";
 
 import "../App.css";
 import {
@@ -30,10 +37,13 @@ import {
   useTheme,
 } from "@/features/preferences";
 import {
+  SpecViewSelectionProvider,
+  useSpecViewSelection,
+} from "@/app/context/specViewSelection";
+import {
   UserReviewPanel,
   useUserReviews,
   type UserReviewWorkspaceMode,
-  type UserReviewTargetScope,
 } from "@/features/review-runs";
 import {
   MarkdownViewer,
@@ -42,6 +52,7 @@ import {
   useSpecFileWatcher,
   useSpecs,
   type SpecFileKey,
+  type SpecSelectionChange,
 } from "@/features/specs";
 import {
   OpenWorkspaceEmptyState,
@@ -118,7 +129,15 @@ const idleCommentExportState: CommentExportState = {
   message: null,
 };
 
-function App() {
+function App(): ReactElement {
+  return (
+    <SpecViewSelectionProvider>
+      <SpecViewAppContent />
+    </SpecViewSelectionProvider>
+  );
+}
+
+function SpecViewAppContent(): ReactElement {
   const workspace = useWorkspace();
   const recentWorkspaces = useRecentWorkspaces();
   const theme = useTheme();
@@ -128,7 +147,24 @@ function App() {
   const resizableLeftNavigation = useResizableLeftNavigation();
   const sidebarPreference = useSidebarPreference();
   const resizableSidebar = useResizableSidebar();
-  const specs = useSpecs({ workspacePath: workspace.workspace?.root ?? null });
+  const { selectSpecView } = useSpecViewSelection();
+  const selectCurrentSpecView = useCallback(
+    (selection: SpecSelectionChange): void => {
+      selectSpecView({
+        workspacePath:
+          selection.workspacePath === null
+            ? null
+            : WorkspacePath.fromString(selection.workspacePath),
+        specId: selection.specId,
+        fileKey: selection.fileKey,
+      });
+    },
+    [selectSpecView],
+  );
+  const specs = useSpecs({
+    workspacePath: workspace.workspace?.root ?? null,
+    onSelectionChange: selectCurrentSpecView,
+  });
   const isHtmlDocument =
     specs.documentState.status === "ready" &&
     specs.documentState.document.format === "html";
@@ -160,22 +196,8 @@ function App() {
     statusFilter: CommentStatusFilter.All,
     correlationId: specs.documentState.correlationId ?? null,
   });
-  const [userReviewTargetScope, setUserReviewTargetScope] =
-    useState<UserReviewTargetScope>("file");
   const [userReviewWorkspaceMode, setUserReviewWorkspaceMode] =
     useState<UserReviewWorkspaceMode>("currentWorkspace");
-  const userReviews = useUserReviews({
-    selection: {
-      workspacePath:
-        workspace.workspace === null
-          ? null
-          : WorkspacePath.fromString(workspace.workspace.root),
-      specId: isDocumentReadable ? specs.selectedSpecId : null,
-      fileKey: isDocumentReadable ? specs.selectedFileKey : null,
-      targetScope: userReviewTargetScope,
-    },
-    correlationId: specs.documentState.correlationId ?? null,
-  });
   const [workspaceInput, setWorkspaceInput] = useState("");
   const [activeCommentId, setActiveCommentId] = useState<CommentId | null>(
     null,
@@ -202,7 +224,6 @@ function App() {
   }, [specs.selectedFileKey, specs.selectedSpecId, workspace.workspace?.root]);
 
   useEffect(() => {
-    setUserReviewTargetScope("file");
     setUserReviewWorkspaceMode("currentWorkspace");
   }, [specs.selectedFileKey, specs.selectedSpecId, workspace.workspace?.root]);
 
@@ -662,18 +683,6 @@ function App() {
     workspace.workspace,
   ]);
 
-  const createUserReviewFromOpenComments =
-    useCallback(async (): Promise<void> => {
-      const openCommentIds = comments.comments
-        .filter((comment) => comment.status === "open")
-        .map((comment) => comment.id);
-
-      await userReviews.createUserReview({
-        commentIds: openCommentIds,
-        workspaceMode: userReviewWorkspaceMode,
-      });
-    }, [comments.comments, userReviewWorkspaceMode, userReviews.createUserReview]);
-
   const selectAdjacentFile = useCallback(
     (direction: NavigationDirection): void => {
       const selectedSpec = specs.selectedSpec;
@@ -1042,25 +1051,11 @@ function App() {
               void copyMcpFeedbackPayload();
             }}
             userReviewPanel={
-              <UserReviewPanel
-                targetScope={userReviewTargetScope}
+              <SpecViewUserReviewPanel
+                comments={comments.comments}
+                correlationId={specs.documentState.correlationId ?? null}
                 workspaceMode={userReviewWorkspaceMode}
-                openCommentCount={countOpenComments(comments.comments)}
-                listState={userReviews.listState}
-                createState={userReviews.createState}
-                archiveState={userReviews.archiveState}
-                onTargetScopeChange={setUserReviewTargetScope}
                 onWorkspaceModeChange={setUserReviewWorkspaceMode}
-                onCreateUserReview={() => {
-                  void createUserReviewFromOpenComments();
-                }}
-                onArchiveUserReview={(userReviewId) => {
-                  void userReviews.archiveUserReview(userReviewId);
-                }}
-                onRefreshUserReviews={() => {
-                  void userReviews.reloadUserReviews();
-                }}
-                onCopyPath={copyTextToClipboard}
               />
             }
           />
@@ -1068,6 +1063,61 @@ function App() {
       />
       <WorkspaceDropOverlay isVisible={workspaceDrop.status === "dragging"} />
     </div>
+  );
+}
+
+type UserReviewCommentSummary = Readonly<{
+  id: CommentId;
+  status: string;
+}>;
+
+type SpecViewUserReviewPanelProps = Readonly<{
+  comments: readonly UserReviewCommentSummary[];
+  correlationId: string | null;
+  workspaceMode: UserReviewWorkspaceMode;
+  onWorkspaceModeChange: (workspaceMode: UserReviewWorkspaceMode) => void;
+}>;
+
+function SpecViewUserReviewPanel(
+  props: SpecViewUserReviewPanelProps,
+): ReactElement {
+  const { comments, correlationId, onWorkspaceModeChange, workspaceMode } =
+    props;
+  const { selection, setTargetScope, selectionId } = useSpecViewSelection();
+  const userReviews = useUserReviews({
+    selection,
+    selectionId,
+    correlationId,
+  });
+
+  return (
+    <UserReviewPanel
+      targetScope={selection.targetScope}
+      workspaceMode={workspaceMode}
+      openCommentCount={countOpenComments(comments)}
+      listState={userReviews.listState}
+      createState={userReviews.createState}
+      archiveState={userReviews.archiveState}
+      onTargetScopeChange={setTargetScope}
+      onWorkspaceModeChange={onWorkspaceModeChange}
+      onCreateUserReview={() => {
+        const openCommentIds = comments
+          .filter((comment) => comment.status === "open")
+          .map((comment) => comment.id);
+
+        void userReviews.createUserReview({
+          commentIds: openCommentIds,
+          workspaceMode,
+        });
+      }}
+      onArchiveUserReview={(userReviewId) => {
+        void userReviews.archiveUserReview(userReviewId);
+      }}
+      onRefreshUserReviews={() => {
+        void userReviews.reloadUserReviews();
+      }}
+      onCopyPath={copyTextToClipboard}
+    />
   );
 }
 

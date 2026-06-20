@@ -16,7 +16,7 @@ type HookProps = Readonly<{
   workspacePath: string | null;
   target: UserReviewTarget | null;
   commands: UserReviewCommands;
-  viewIdentity?: string;
+  selectionId: string;
 }>;
 
 const target = {
@@ -24,6 +24,8 @@ const target = {
   specId: "auth",
   fileKey: "tasks",
 } as const;
+
+const selectionId = "/workspace/spec-reviewer:file:auth:tasks";
 
 const activeRun: UserReview = {
   id: "review-active",
@@ -95,11 +97,11 @@ function renderHook<Props, Result>(
 
 function renderUseUserReviewList(props: HookProps) {
   return renderHook(
-    ({ workspacePath, target, commands, viewIdentity }) =>
+    ({ workspacePath, target, commands, selectionId }) =>
       useUserReviewList({
         commands,
         target,
-        viewIdentity,
+        selectionId,
         workspacePath:
           workspacePath === null
             ? null
@@ -115,7 +117,6 @@ async function flushAsyncEffects(): Promise<void> {
     await Promise.resolve();
   });
 }
-
 
 type Deferred<T> = Readonly<{
   promise: Promise<T>;
@@ -158,6 +159,7 @@ test("useUserReviewListはtargetまたはworkspace不足時にcommandを呼ば�
     workspacePath: null,
     target,
     commands,
+    selectionId: "none:file:auth:tasks",
   });
 
   await act(async () => {
@@ -179,6 +181,7 @@ test("useUserReviewListはlist成功時にactive reviewsをreadyへ反映する"
     workspacePath: "/workspace/spec-reviewer",
     target,
     commands,
+    selectionId,
   });
 
   await flushAsyncEffects();
@@ -198,6 +201,7 @@ test("useUserReviewListはlist成功時にrunがなければemptyを返す", asy
     workspacePath: "/workspace/spec-reviewer",
     target,
     commands,
+    selectionId,
   });
 
   await flushAsyncEffects();
@@ -220,6 +224,7 @@ test("useUserReviewListはlist失敗時もfrontend performance spanにerrorを�
     workspacePath: "/workspace/spec-reviewer",
     target,
     commands,
+    selectionId,
   });
 
   await flushAsyncEffects();
@@ -240,19 +245,19 @@ test("useUserReviewListはlist失敗時もfrontend performance spanにerrorを�
   configurePerformanceLoggerForTest(null);
 });
 
-
 test("useUserReviewListはidentity不一致のlist eventを反映しない", async () => {
   const commands = createCommands();
   const result = renderUseUserReviewList({
     workspacePath: "/workspace/spec-reviewer",
     target,
     commands,
+    selectionId,
   });
 
   await flushAsyncEffects();
   act(() => {
     result.current.applyUserReviewEvent({
-      identity: "/workspace/other:file:auth:tasks",
+      selectionId: "/workspace/other:file:auth:tasks",
       event: {
         type: "reviewCreated",
         review: activeRun,
@@ -274,13 +279,13 @@ test("useUserReviewListはloading中のeventを古いlist responseで上書き�
   const result = renderUseUserReviewList({
     workspacePath: "/workspace/spec-reviewer",
     target,
-    viewIdentity: "/workspace/spec-reviewer:file:auth:tasks",
+    selectionId,
     commands,
   });
 
   act(() => {
     result.current.applyUserReviewEvent({
-      identity: "/workspace/spec-reviewer:file:auth:tasks",
+      selectionId: selectionId,
       event: {
         type: "reviewCreated",
         review: activeRun,

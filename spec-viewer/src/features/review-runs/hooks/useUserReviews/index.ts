@@ -8,7 +8,6 @@ import type {
 } from "@/features/review-runs/domain/userReviewOperation";
 import {
   UserReviewTarget,
-  UserReviewTargetIdentity,
   type UserReviewTargetScope,
 } from "@/features/review-runs/domain/userReviewTarget";
 import { buildUserReviewsResult } from "@/features/review-runs/hooks/buildUserReviewsResult";
@@ -22,12 +21,12 @@ import {
   type UseCreateUserReviewResult,
 } from "@/features/review-runs/hooks/useCreateUserReview";
 import { useUserReviewList } from "@/features/review-runs/hooks/useUserReviewList";
-import { createUserReviewViewIdentity } from "@/features/review-runs/hooks/userReviewViewIdentity";
 import {
   userReviewCommands as defaultUserReviewCommands,
   type UserReviewCommands,
 } from "@/shared/api/tauri";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
+import type { SpecViewSelectionId } from "@/features/specs/domain/specViewSelectionId";
 import type { SpecFileKey } from "@/features/specs/types/spec";
 
 export type { UserReviewListState } from "@/features/review-runs/domain/userReviewListState";
@@ -47,6 +46,7 @@ export type UserReviewsSelectionInput = Readonly<{
 
 export type UseUserReviewsOptions = Readonly<{
   selection: UserReviewsSelectionInput;
+  selectionId: SpecViewSelectionId;
   correlationId?: string | null;
   commands?: UserReviewCommands;
 }>;
@@ -70,7 +70,7 @@ export function useUserReviews(
   options: UseUserReviewsOptions,
 ): UseUserReviewsResult {
   const commands = options.commands ?? defaultUserReviewCommands;
-  const { selection } = options;
+  const { selection, selectionId } = options;
   const target = useMemo(
     () =>
       UserReviewTarget.create({
@@ -80,34 +80,25 @@ export function useUserReviews(
       }),
     [selection.fileKey, selection.specId, selection.targetScope],
   );
-  const targetIdentity = useMemo(
-    () => UserReviewTargetIdentity.create(target),
-    [target],
-  );
-  const viewIdentity = useMemo(
-    () =>
-      createUserReviewViewIdentity(selection.workspacePath, targetIdentity),
-    [selection.workspacePath, targetIdentity],
-  );
   const list = useUserReviewList({
     commands,
     target,
     workspacePath: selection.workspacePath,
-    viewIdentity,
+    selectionId,
     correlationId: options.correlationId,
   });
 
   const create: UseCreateUserReviewResult = useCreateUserReview({
     workspacePath: selection.workspacePath,
     target,
-    viewIdentity,
+    selectionId,
     commands,
     onUserReviewEvent: list.applyUserReviewEvent,
   });
   const archive: UseArchiveUserReviewResult = useArchiveUserReview({
     workspacePath: selection.workspacePath,
     target,
-    viewIdentity,
+    selectionId,
     commands,
     onUserReviewEvent: list.applyUserReviewEvent,
   });

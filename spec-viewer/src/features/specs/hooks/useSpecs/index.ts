@@ -113,11 +113,18 @@ export type ReloadSpecsOptions = Readonly<{
   preserveSelection?: boolean;
 }>;
 
+export type SpecSelectionChange = Readonly<{
+  workspacePath: string | null;
+  specId: string | null;
+  fileKey: SpecFileKey | null;
+}>;
+
 export type UseSpecsOptions = Readonly<{
   workspacePath: string | null;
   listSpecs?: ListSpecsCommand;
   readSpecFile?: ReadSpecFileCommand;
   archiveSpec?: ArchiveSpecCommand;
+  onSelectionChange?: (selection: SpecSelectionChange) => void;
 }>;
 
 export type UseSpecsResult = Readonly<{
@@ -155,7 +162,7 @@ const initialDocumentState: SpecDocumentState = {
 
 /** @returns Spec tree, selection, and Markdown loading state for a workspace. */
 export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
-  const { workspacePath } = options;
+  const { onSelectionChange, workspacePath } = options;
   const listSpecs = options.listSpecs ?? defaultListSpecs;
   const readSpecFile = options.readSpecFile ?? defaultReadSpecFile;
   const archiveSpecCommand = options.archiveSpec ?? defaultArchiveSpec;
@@ -182,8 +189,13 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
     documentRequestIdRef.current += 1;
     setSelectedSpecId(null);
     setSelectedFileKey(null);
+    onSelectionChange?.({
+      workspacePath,
+      specId: null,
+      fileKey: null,
+    });
     setDocumentState(createIdleDocumentState(workspacePath));
-  }, [workspacePath]);
+  }, [onSelectionChange, workspacePath]);
 
   const loadDocument = useCallback(
     async (specId: string, fileKey: SpecFileKey): Promise<boolean> => {
@@ -306,6 +318,11 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
 
         setSelectedSpecId(nextSelection.spec?.id ?? null);
         setSelectedFileKey(nextSelection.fileKey);
+        onSelectionChange?.({
+          workspacePath: activeWorkspacePath,
+          specId: nextSelection.spec?.id ?? null,
+          fileKey: nextSelection.fileKey,
+        });
 
         if (nextSelection.spec === null || nextSelection.fileKey === null) {
           documentRequestIdRef.current += 1;
@@ -329,7 +346,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
         return false;
       }
     },
-    [listSpecs, loadDocument, resetSelection, workspacePath],
+    [listSpecs, loadDocument, onSelectionChange, resetSelection, workspacePath],
   );
 
   useEffect(() => {
@@ -373,6 +390,11 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
           : findSpecNode(tree.specs, specId);
       const defaultFileKey = nextSpec?.files[0]?.key ?? null;
       setSelectedFileKey(defaultFileKey);
+      onSelectionChange?.({
+        workspacePath,
+        specId,
+        fileKey: defaultFileKey,
+      });
 
       if (specId === null || defaultFileKey === null) {
         documentRequestIdRef.current += 1;
@@ -382,12 +404,17 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
 
       await loadDocument(specId, defaultFileKey);
     },
-    [loadDocument, tree, workspacePath],
+    [loadDocument, onSelectionChange, tree, workspacePath],
   );
 
   const selectFileKey = useCallback(
     async (fileKey: SpecFileKey | null): Promise<void> => {
       setSelectedFileKey(fileKey);
+      onSelectionChange?.({
+        workspacePath,
+        specId: selectedSpecId,
+        fileKey,
+      });
 
       if (selectedSpecId === null || fileKey === null) {
         documentRequestIdRef.current += 1;
@@ -399,7 +426,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
 
       await loadDocument(selectedSpecId, fileKey);
     },
-    [loadDocument, selectedSpecId, workspacePath],
+    [loadDocument, onSelectionChange, selectedSpecId, workspacePath],
   );
 
   const reloadDocument = useCallback(async (): Promise<boolean> => {

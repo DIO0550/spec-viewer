@@ -8,10 +8,8 @@ import {
 } from "@/features/review-runs/domain/userReviewOperation";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import { createUserReview as createUserReviewViaGateway } from "@/features/review-runs/infra/userReviewGateway";
-import type {
-  IdentifiedUserReviewListEvent,
-  UserReviewViewIdentity,
-} from "@/features/review-runs/hooks/userReviewViewIdentity";
+import type { UserReviewListEventWithSelectionId } from "@/features/review-runs/hooks/useUserReviewList";
+import type { SpecViewSelectionId } from "@/features/specs/domain/specViewSelectionId";
 import {
   normalizeCommandError,
   type UserReviewCommands,
@@ -23,13 +21,13 @@ export type CreateUserReviewInput = CreateUserReviewPayload;
 export type UseCreateUserReviewOptions = Readonly<{
   workspacePath: WorkspacePath | null;
   target: UserReviewTarget | null;
-  viewIdentity: UserReviewViewIdentity;
+  selectionId: SpecViewSelectionId;
   commands: UserReviewCommands;
-  onUserReviewEvent: (event: IdentifiedUserReviewListEvent) => void;
+  onUserReviewEvent: (event: UserReviewListEventWithSelectionId) => void;
 }>;
 
-type IdentifiedCreateState = Readonly<{
-  identity: UserReviewViewIdentity;
+type SelectionIdCreateState = Readonly<{
+  selectionId: SpecViewSelectionId;
   state: UserReviewCreateStateType;
 }>;
 
@@ -44,23 +42,22 @@ export type UseCreateUserReviewResult = Readonly<{
 export function useCreateUserReview(
   options: UseCreateUserReviewOptions,
 ): UseCreateUserReviewResult {
-  const { commands, onUserReviewEvent, target, viewIdentity, workspacePath } =
+  const { commands, onUserReviewEvent, target, selectionId, workspacePath } =
     options;
   const requestIdRef = useRef(0);
-  const [createViewState, setCreateViewState] = useState<IdentifiedCreateState>(
-    {
-      identity: viewIdentity,
+  const [createViewState, setCreateViewState] =
+    useState<SelectionIdCreateState>({
+      selectionId,
       state: UserReviewCreateState.idle(),
-    },
-  );
+    });
 
   useEffect(() => {
     requestIdRef.current += 1;
     setCreateViewState({
-      identity: viewIdentity,
+      selectionId,
       state: UserReviewCreateState.idle(),
     });
-  }, [viewIdentity]);
+  }, [selectionId]);
 
   const createUserReview = useCallback(
     async (input: CreateUserReviewInput): Promise<UserReview | null> => {
@@ -73,11 +70,11 @@ export function useCreateUserReview(
       }
 
       const payload = input;
-      const startedIdentity = viewIdentity;
+      const startedSelectionId = selectionId;
       const startedRequestId = requestIdRef.current + 1;
       requestIdRef.current = startedRequestId;
       setCreateViewState({
-        identity: startedIdentity,
+        selectionId: startedSelectionId,
         state: UserReviewCreateState.saving(payload),
       });
 
@@ -91,20 +88,20 @@ export function useCreateUserReview(
 
         setCreateViewState((current) => {
           if (
-            current.identity !== startedIdentity ||
+            current.selectionId !== startedSelectionId ||
             requestIdRef.current !== startedRequestId
           ) {
             return current;
           }
 
           return {
-            identity: startedIdentity,
+            selectionId: startedSelectionId,
             state: UserReviewCreateState.success(payload, response.userReview),
           };
         });
         if (requestIdRef.current === startedRequestId) {
           onUserReviewEvent({
-            identity: startedIdentity,
+            selectionId: startedSelectionId,
             event: {
               type: "reviewCreated",
               review: response.userReview,
@@ -115,14 +112,14 @@ export function useCreateUserReview(
       } catch (error) {
         setCreateViewState((current) => {
           if (
-            current.identity !== startedIdentity ||
+            current.selectionId !== startedSelectionId ||
             requestIdRef.current !== startedRequestId
           ) {
             return current;
           }
 
           return {
-            identity: startedIdentity,
+            selectionId: startedSelectionId,
             state: UserReviewCreateState.error(
               payload,
               normalizeCommandError(error),
@@ -132,11 +129,11 @@ export function useCreateUserReview(
         return null;
       }
     },
-    [commands, onUserReviewEvent, target, viewIdentity, workspacePath],
+    [commands, onUserReviewEvent, target, selectionId, workspacePath],
   );
 
   const createState =
-    createViewState.identity === viewIdentity
+    createViewState.selectionId === selectionId
       ? createViewState.state
       : UserReviewCreateState.idle();
 

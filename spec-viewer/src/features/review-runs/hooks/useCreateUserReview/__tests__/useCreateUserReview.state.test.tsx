@@ -54,19 +54,19 @@ function renderHook<Props, Result>(
 
 type HookProps = Readonly<{
   workspacePath: string;
-  viewIdentity: string;
+  selectionId: string;
   commands: UserReviewCommands;
   onUserReviewEvent: (event: unknown) => void;
 }>;
 
 function renderUseCreateUserReview(props: HookProps) {
   return renderHook(
-    ({ commands, onUserReviewEvent, viewIdentity, workspacePath }) =>
+    ({ commands, onUserReviewEvent, selectionId, workspacePath }) =>
       useCreateUserReview({
         commands,
         workspacePath: WorkspacePath.fromString(workspacePath),
         target,
-        viewIdentity,
+        selectionId,
         onUserReviewEvent,
       }),
     props,
@@ -144,7 +144,7 @@ test("useCreateUserReviewはcreate成功後にreviewCreated eventを発行する
   const result = renderUseCreateUserReview({
     commands,
     workspacePath: "/workspace/spec-reviewer",
-    viewIdentity: "/workspace/spec-reviewer:file:auth:tasks",
+    selectionId: "/workspace/spec-reviewer:file:auth:tasks",
     onUserReviewEvent,
   });
 
@@ -157,7 +157,7 @@ test("useCreateUserReviewはcreate成功後にreviewCreated eventを発行する
 
   expect(result.current.createState.status).toBe("success");
   expect(onUserReviewEvent).toHaveBeenCalledWith({
-    identity: "/workspace/spec-reviewer:file:auth:tasks",
+    selectionId: "/workspace/spec-reviewer:file:auth:tasks",
     event: {
       type: "reviewCreated",
       review: activeRun,
@@ -166,14 +166,13 @@ test("useCreateUserReviewはcreate成功後にreviewCreated eventを発行する
   result.unmount();
 });
 
-
-test("useCreateUserReviewはviewIdentityを戻しても古いsuccessを再表示しない", async () => {
+test("useCreateUserReviewはselectionIdを戻しても古いsuccessを再表示しない", async () => {
   const commands = createCommands();
   const onUserReviewEvent = vi.fn();
   const result = renderUseCreateUserReview({
     commands,
     workspacePath: "/workspace/spec-reviewer",
-    viewIdentity: "/workspace/spec-reviewer:file:auth:tasks",
+    selectionId: "/workspace/spec-reviewer:file:auth:tasks",
     onUserReviewEvent,
   });
 
@@ -186,13 +185,13 @@ test("useCreateUserReviewはviewIdentityを戻しても古いsuccessを再表示
   result.rerender({
     commands,
     workspacePath: "/workspace/other",
-    viewIdentity: "/workspace/other:file:auth:tasks",
+    selectionId: "/workspace/other:file:auth:tasks",
     onUserReviewEvent,
   });
   result.rerender({
     commands,
     workspacePath: "/workspace/spec-reviewer",
-    viewIdentity: "/workspace/spec-reviewer:file:auth:tasks",
+    selectionId: "/workspace/spec-reviewer:file:auth:tasks",
     onUserReviewEvent,
   });
 
@@ -214,7 +213,7 @@ test("useCreateUserReviewは同一identityの古いcreate完了を反映しな�
   const result = renderUseCreateUserReview({
     commands,
     workspacePath: "/workspace/spec-reviewer",
-    viewIdentity: "/workspace/spec-reviewer:file:auth:tasks",
+    selectionId: "/workspace/spec-reviewer:file:auth:tasks",
     onUserReviewEvent,
   });
 
@@ -239,7 +238,7 @@ test("useCreateUserReviewは同一identityの古いcreate完了を反映しな�
   });
   expect(onUserReviewEvent).toHaveBeenCalledTimes(1);
   expect(onUserReviewEvent).toHaveBeenCalledWith({
-    identity: "/workspace/spec-reviewer:file:auth:tasks",
+    selectionId: "/workspace/spec-reviewer:file:auth:tasks",
     event: {
       type: "reviewCreated",
       review: secondActiveRun,

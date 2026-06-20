@@ -64,11 +64,18 @@ const archivedRun: UserReview = {
   archivedAt: "2026-05-06T12:30:00Z",
 };
 
+const selectionId = "/workspace/spec-reviewer:file:auth:tasks";
+const billingSelectionId = "/workspace/spec-reviewer:file:billing:tasks";
+const otherWorkspaceSelectionId =
+  "/workspace/other-spec-reviewer:file:auth:tasks";
+const idleSelectionId = "none:file:auth:tasks";
+
 type HookProps = Readonly<{
   workspacePath: string | null;
   specId: string | null;
   fileKey: SpecFileKey | null;
   targetScope: UserReviewTargetScope;
+  selectionId: string;
   commands: UserReviewCommands;
 }>;
 
@@ -117,15 +124,18 @@ function renderHook<Props, Result>(
 
 function renderUseUserReviews(props: HookProps) {
   return renderHook(
-    ({ workspacePath, specId, fileKey, targetScope, commands }) =>
+    ({ workspacePath, specId, fileKey, targetScope, selectionId, commands }) =>
       useUserReviews({
         selection: {
           workspacePath:
-            workspacePath === null ? null : WorkspacePath.fromString(workspacePath),
+            workspacePath === null
+              ? null
+              : WorkspacePath.fromString(workspacePath),
           specId,
           fileKey,
           targetScope,
         },
+        selectionId,
         commands,
       }),
     props,
@@ -167,6 +177,7 @@ test("useUserReviewsはscope未選択ならidleで一覧を読み込まない", 
     specId: "auth",
     fileKey: "tasks",
     targetScope: "file",
+    selectionId: idleSelectionId,
     commands: double.commands,
   });
 
@@ -191,6 +202,7 @@ test("useUserReviewsは対象が揃うとactive run一覧を読み込む", async
     specId: "auth",
     fileKey: "tasks",
     targetScope: "file",
+    selectionId,
     commands: double.commands,
   });
 
@@ -226,6 +238,7 @@ test("useUserReviewsは一覧読み込み失敗時もperformance spanを記録�
     specId: "auth",
     fileKey: "tasks",
     targetScope: "file",
+    selectionId,
     commands,
   });
 
@@ -262,6 +275,7 @@ test("useUserReviewsは作成したactive runを一覧の先頭に追加する",
     specId: "auth",
     fileKey: "tasks",
     targetScope: "file",
+    selectionId,
     commands: double.commands,
   });
 
@@ -306,6 +320,7 @@ test("useUserReviewsはcompleted runをアーカイブして一覧を移動す�
     specId: "auth",
     fileKey: "tasks",
     targetScope: "file",
+    selectionId,
     commands: double.commands,
   });
 
@@ -343,6 +358,7 @@ test("useUserReviewsはloading中のcreate成功を古いlist responseで上書�
     specId: "auth",
     fileKey: "tasks",
     targetScope: "file",
+    selectionId,
     commands,
   });
 
@@ -365,6 +381,93 @@ test("useUserReviewsはloading中のcreate成功を古いlist responseで上書�
   result.unmount();
 });
 
+test("useUserReviewsはselectionId変更後に完了したcreateを現在listへ反映しない", async () => {
+  const createRunDeferred = createDeferred<CreateUserReviewResponse>();
+  const commands: UserReviewCommands = {
+    listUserReviews: vi.fn().mockResolvedValue({
+      active: [],
+      archived: [],
+      problems: [],
+    }),
+    createUserReview: vi.fn().mockReturnValue(createRunDeferred.promise),
+    archiveUserReview: vi.fn().mockResolvedValue({ userReview: archivedRun }),
+  };
+  const result = renderUseUserReviews({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "auth",
+    fileKey: "tasks",
+    targetScope: "file",
+    selectionId,
+    commands,
+  });
+
+  await flushAsyncEffects();
+  const createPromise = result.current.createUserReview({
+    commentIds: [commentId("cmt_1")],
+    workspaceMode: "currentWorkspace",
+  });
+  result.rerender({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "auth",
+    fileKey: "tasks",
+    targetScope: "file",
+    selectionId: "/workspace/spec-reviewer:file:auth:tasks:next",
+    commands,
+  });
+  await flushAsyncEffects();
+
+  await act(async () => {
+    createRunDeferred.resolve({ userReview: activeRun });
+    await createPromise;
+  });
+
+  expect(result.current.createState.status).toBe("idle");
+  expect(result.current.activeReviews).toEqual([]);
+  result.unmount();
+});
+
+test("useUserReviewsはselectionId変更後に完了したarchiveを現在listへ反映しない", async () => {
+  const archiveDeferred = createDeferred<ArchiveUserReviewResponse>();
+  const commands: UserReviewCommands = {
+    listUserReviews: vi.fn().mockResolvedValue({
+      active: [completedRun],
+      archived: [],
+      problems: [],
+    }),
+    createUserReview: vi.fn().mockResolvedValue({ userReview: activeRun }),
+    archiveUserReview: vi.fn().mockReturnValue(archiveDeferred.promise),
+  };
+  const result = renderUseUserReviews({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "auth",
+    fileKey: "tasks",
+    targetScope: "file",
+    selectionId,
+    commands,
+  });
+
+  await flushAsyncEffects();
+  const archivePromise = result.current.archiveUserReview(completedRun.id);
+  result.rerender({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "auth",
+    fileKey: "tasks",
+    targetScope: "file",
+    selectionId: "/workspace/spec-reviewer:file:auth:tasks:next",
+    commands,
+  });
+  await flushAsyncEffects();
+
+  await act(async () => {
+    archiveDeferred.resolve({ userReview: archivedRun });
+    await archivePromise;
+  });
+
+  expect(result.current.archiveState.status).toBe("idle");
+  expect(result.current.archivedReviews).toEqual([]);
+  result.unmount();
+});
+
 test("useUserReviewsはtarget変更後に完了したcreateを現在listへ反映しない", async () => {
   const createRunDeferred = createDeferred<CreateUserReviewResponse>();
   const commands: UserReviewCommands = {
@@ -381,6 +484,7 @@ test("useUserReviewsはtarget変更後に完了したcreateを現在listへ反�
     specId: "auth",
     fileKey: "tasks",
     targetScope: "file",
+    selectionId,
     commands,
   });
 
@@ -394,6 +498,7 @@ test("useUserReviewsはtarget変更後に完了したcreateを現在listへ反�
     specId: "billing",
     fileKey: "tasks",
     targetScope: "file",
+    selectionId: billingSelectionId,
     commands,
   });
   await flushAsyncEffects();
@@ -424,6 +529,7 @@ test("useUserReviewsはworkspace変更後に完了したcreateを現在listへ�
     specId: "auth",
     fileKey: "tasks",
     targetScope: "file",
+    selectionId,
     commands,
   });
 
@@ -437,6 +543,7 @@ test("useUserReviewsはworkspace変更後に完了したcreateを現在listへ�
     specId: "auth",
     fileKey: "tasks",
     targetScope: "file",
+    selectionId: otherWorkspaceSelectionId,
     commands,
   });
   await flushAsyncEffects();
@@ -467,6 +574,7 @@ test("useUserReviewsはtarget変更後に完了したarchiveを現在listへ反�
     specId: "auth",
     fileKey: "tasks",
     targetScope: "file",
+    selectionId,
     commands,
   });
 
@@ -477,6 +585,7 @@ test("useUserReviewsはtarget変更後に完了したarchiveを現在listへ反�
     specId: "billing",
     fileKey: "tasks",
     targetScope: "file",
+    selectionId: billingSelectionId,
     commands,
   });
   await flushAsyncEffects();
