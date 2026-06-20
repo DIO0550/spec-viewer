@@ -1,6 +1,9 @@
 import { FolderOpen, RefreshCw, RotateCcw, SunMoon } from "lucide-react";
 
-import type { ThemeMode } from "@/features/preferences/hooks/useTheme";
+import {
+  ThemeMode,
+  type ThemeMode as ThemeModeType,
+} from "@/features/preferences/domain/theme";
 import { uiText } from "@/shared/lib/uiText";
 
 export type WorkspaceRefreshStatus = Readonly<{
@@ -16,13 +19,13 @@ type Props = Readonly<{
   errorMessage: string | null;
   refreshStatus: WorkspaceRefreshStatus;
   canRefresh: boolean;
-  themeMode: ThemeMode;
+  themeMode: ThemeModeType;
   onInputChange: (nextValue: string) => void;
   onBrowse: () => void;
   onLoad: () => void;
   onRefresh: () => void;
   onReset: () => void;
-  onThemeModeChange: (nextThemeMode: ThemeMode) => void;
+  onThemeModeChange: (nextThemeMode: ThemeModeType) => void;
 }>;
 
 /** @returns Workspace path controls and current workspace status. */
@@ -92,7 +95,7 @@ export function WorkspaceToolbar({
             value={themeMode}
             aria-label={uiText.workspace.themeMode}
             onChange={(event) => {
-              onThemeModeChange(event.currentTarget.value as ThemeMode);
+              onThemeModeChange(ThemeMode.parse(event.currentTarget.value));
             }}
           >
             <option value="system">{uiText.workspace.system}</option>
