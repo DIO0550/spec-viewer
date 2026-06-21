@@ -1,8 +1,9 @@
 import { act } from "react";
 import type { ReactNode } from "react";
 import { createRoot } from "react-dom/client";
-import { expect, test, vi } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 
+import { ThemeProvider } from "@/features/preferences";
 import type {
   SpecDocumentState,
   SpecTreeState,
@@ -16,6 +17,13 @@ import { WorkspaceToolbar } from "@/features/workspace";
 import { AppShell } from "@/shared/ui/AppShell";
 
 const workspacePath = "/workspace/spec-reviewer";
+
+afterEach(() => {
+  window.localStorage.clear();
+  document.documentElement.removeAttribute("data-theme");
+  document.documentElement.removeAttribute("data-theme-mode");
+  document.documentElement.style.colorScheme = "";
+});
 
 const taskFile: SpecFile = {
   key: "tasks",
@@ -137,7 +145,7 @@ function renderComponent(component: ReactNode): RenderResult {
   const root = createRoot(container);
 
   act(() => {
-    root.render(component);
+    root.render(<ThemeProvider>{component}</ThemeProvider>);
   });
 
   return {
@@ -163,13 +171,11 @@ test("AppShellはtoolbar、tree、tabs、viewer、comment sidebarを表示する
           errorMessage={null}
           refreshStatus={{ status: "idle", message: null }}
           canRefresh={true}
-          themeMode="system"
           onInputChange={vi.fn()}
           onBrowse={vi.fn()}
           onLoad={vi.fn()}
           onRefresh={vi.fn()}
           onReset={vi.fn()}
-          onThemeModeChange={vi.fn()}
         />
       }
       sidebar={
@@ -736,13 +742,11 @@ test("WorkspaceToolbarはopen workspace操作を発火する", () => {
       errorMessage={null}
       refreshStatus={{ status: "idle", message: null }}
       canRefresh={false}
-      themeMode="system"
       onInputChange={vi.fn()}
       onBrowse={onBrowse}
       onLoad={vi.fn()}
       onRefresh={vi.fn()}
       onReset={vi.fn()}
-      onThemeModeChange={vi.fn()}
     />,
   );
   const openButton = result.container.querySelector(
@@ -768,13 +772,11 @@ test("WorkspaceToolbarはパス入力のsubmitでworkspace読み込みを発火�
       errorMessage={null}
       refreshStatus={{ status: "idle", message: null }}
       canRefresh={false}
-      themeMode="system"
       onInputChange={vi.fn()}
       onBrowse={vi.fn()}
       onLoad={onLoad}
       onRefresh={vi.fn()}
       onReset={vi.fn()}
-      onThemeModeChange={vi.fn()}
     />,
   );
   const form = result.container.querySelector(
@@ -805,13 +807,11 @@ test("WorkspaceToolbarはcurrent view refresh操作と状態を表示する", ()
         message: "Content may be stale. Refresh to retry.",
       }}
       canRefresh={true}
-      themeMode="system"
       onInputChange={vi.fn()}
       onBrowse={vi.fn()}
       onLoad={vi.fn()}
       onRefresh={onRefresh}
       onReset={vi.fn()}
-      onThemeModeChange={vi.fn()}
     />,
   );
   const refreshButton = result.container.querySelector(
@@ -828,8 +828,7 @@ test("WorkspaceToolbarはcurrent view refresh操作と状態を表示する", ()
   result.unmount();
 });
 
-test("WorkspaceToolbarはtheme mode変更を発火する", () => {
-  const onThemeModeChange = vi.fn();
+test("WorkspaceToolbarはtheme mode変更をContext経由でdocumentへ反映する", () => {
   const result = renderComponent(
     <WorkspaceToolbar
       workspacePath={workspacePath}
@@ -839,13 +838,11 @@ test("WorkspaceToolbarはtheme mode変更を発火する", () => {
       errorMessage={null}
       refreshStatus={{ status: "idle", message: null }}
       canRefresh={true}
-      themeMode="system"
       onInputChange={vi.fn()}
       onBrowse={vi.fn()}
       onLoad={vi.fn()}
       onRefresh={vi.fn()}
       onReset={vi.fn()}
-      onThemeModeChange={onThemeModeChange}
     />,
   );
   const themeSelect = result.container.querySelector(
@@ -857,7 +854,8 @@ test("WorkspaceToolbarはtheme mode変更を発火する", () => {
     themeSelect.dispatchEvent(new Event("change", { bubbles: true }));
   });
 
-  expect(onThemeModeChange).toHaveBeenCalledWith("dark");
+  expect(document.documentElement.dataset.theme).toBe("dark");
+  expect(document.documentElement.dataset.themeMode).toBe("dark");
   result.unmount();
 });
 
