@@ -33,9 +33,12 @@ import {
   useKeyboardShortcuts,
   useLeftNavigationPreference,
   useResizableLeftNavigation,
-  useResizableSidebar,
-  useSidebarPreference,
 } from "@/features/preferences";
+import {
+  SidebarLayout,
+  SidebarPreferenceProvider,
+  useSidebarPreference,
+} from "@/features/sidebar";
 import {
   SpecViewSelectionProvider,
   useSpecViewSelection,
@@ -65,7 +68,7 @@ import {
   useWorkspaceSidebarSectionPreference,
   type WorkspaceRefreshStatus,
 } from "@/features/workspace";
-import { AppShell } from "@/shared/ui";
+import { WorkspaceLayout } from "@/shared/ui";
 import {
   exportComments,
   generateLlmPrompt,
@@ -132,9 +135,11 @@ const idleCommentExportState: CommentExportState = {
 function App(): ReactElement {
   return (
     <ThemeProvider>
-      <SpecViewSelectionProvider>
-        <SpecViewAppContent />
-      </SpecViewSelectionProvider>
+      <SidebarPreferenceProvider>
+        <SpecViewSelectionProvider>
+          <SpecViewAppContent />
+        </SpecViewSelectionProvider>
+      </SidebarPreferenceProvider>
     </ThemeProvider>
   );
 }
@@ -147,7 +152,6 @@ function SpecViewAppContent(): ReactElement {
     useWorkspaceSidebarSectionPreference();
   const resizableLeftNavigation = useResizableLeftNavigation();
   const sidebarPreference = useSidebarPreference();
-  const resizableSidebar = useResizableSidebar();
   const { selectSpecView } = useSpecViewSelection();
   const selectCurrentSpecView = useCallback(
     (selection: SpecSelectionChange): void => {
@@ -893,57 +897,32 @@ function SpecViewAppContent(): ReactElement {
 
   return (
     <div className="app-drop-root">
-      <AppShell
-        isLeftNavigationOpen={leftNavigationPreference.isLeftNavigationOpen}
-        onOpenLeftNavigation={leftNavigationPreference.openLeftNavigation}
-        onCloseLeftNavigation={leftNavigationPreference.closeLeftNavigation}
-        leftNavigationWidth={resizableLeftNavigation.leftNavigationWidth}
-        leftNavigationMinWidth={resizableLeftNavigation.minLeftNavigationWidth}
-        leftNavigationMaxWidth={resizableLeftNavigation.maxLeftNavigationWidth}
-        onLeftNavigationWidthChange={
-          resizableLeftNavigation.resizeLeftNavigationTo
-        }
-        isCommentsSidebarOpen={sidebarPreference.isSidebarOpen}
-        onOpenCommentsSidebar={sidebarPreference.openSidebar}
-        onCloseCommentsSidebar={sidebarPreference.closeSidebar}
-        commentsSidebarWidth={resizableSidebar.sidebarWidth}
-        commentsSidebarMinWidth={resizableSidebar.minSidebarWidth}
-        commentsSidebarMaxWidth={resizableSidebar.maxSidebarWidth}
-        onCommentsSidebarWidthChange={resizableSidebar.resizeSidebarTo}
-        leftNavigationHeader={
-          <div className="left-navigation-brand">
-            <span className="left-navigation-brand__mark" aria-hidden="true">
-              S
-            </span>
-            <span className="left-navigation-brand__copy">
-              <strong>Spec Reviewer</strong>
-              <span title={leftNavigationSubtitle}>
-                {leftNavigationSubtitle}
+      <SidebarLayout
+        leftNavigation={{
+          isOpen: leftNavigationPreference.isLeftNavigationOpen,
+          width: resizableLeftNavigation.leftNavigationWidth,
+          minWidth: resizableLeftNavigation.minLeftNavigationWidth,
+          maxWidth: resizableLeftNavigation.maxLeftNavigationWidth,
+          onOpen: leftNavigationPreference.openLeftNavigation,
+          onClose: leftNavigationPreference.closeLeftNavigation,
+          onWidthChange: resizableLeftNavigation.resizeLeftNavigationTo,
+        }}
+      >
+        <WorkspaceLayout.LeftNavigation
+          header={
+            <div className="left-navigation-brand">
+              <span className="left-navigation-brand__mark" aria-hidden="true">
+                S
               </span>
-            </span>
-          </div>
-        }
-        toolbar={
-          <WorkspaceToolbar
-            workspacePath={workspace.workspacePath}
-            inputValue={workspaceInput}
-            isLoading={workspace.isLoading}
-            isBrowsing={isBrowsingWorkspace}
-            errorMessage={toolbarErrorMessage}
-            refreshStatus={refreshStatus}
-            canRefresh={canRefreshCurrentView}
-            onInputChange={setWorkspaceInput}
-            onBrowse={() => {
-              void browseWorkspace();
-            }}
-            onLoad={loadWorkspace}
-            onRefresh={() => {
-              void refreshCurrentViewManually();
-            }}
-            onReset={resetWorkspace}
-          />
-        }
-        sidebar={
+              <span className="left-navigation-brand__copy">
+                <strong>Spec Reviewer</strong>
+                <span title={leftNavigationSubtitle}>
+                  {leftNavigationSubtitle}
+                </span>
+              </span>
+            </div>
+          }
+        >
           <div className="left-navigation-panel">
             <WorkspaceSidebarSection
               currentWorkspacePath={workspace.workspacePath}
@@ -978,58 +957,80 @@ function SpecViewAppContent(): ReactElement {
               }}
             />
           </div>
-        }
-        tabs={
-          <SpecTabs
-            spec={specs.selectedSpec}
-            selectedFileKey={specs.selectedFileKey}
-            onSelectFile={(fileKey) => {
-              void specs.selectFileKey(fileKey);
-            }}
-          />
-        }
-        viewer={
-          shouldShowOpenWorkspacePrompt ? (
-            <OpenWorkspaceEmptyState
-              isOpening={isBrowsingWorkspace}
-              recentWorkspaces={recentWorkspaces.recentWorkspaces}
-              onOpenWorkspace={() => {
+        </WorkspaceLayout.LeftNavigation>
+        <WorkspaceLayout.Main>
+          <WorkspaceLayout.Toolbar>
+            <WorkspaceToolbar
+              workspacePath={workspace.workspacePath}
+              inputValue={workspaceInput}
+              isLoading={workspace.isLoading}
+              isBrowsing={isBrowsingWorkspace}
+              errorMessage={toolbarErrorMessage}
+              refreshStatus={refreshStatus}
+              canRefresh={canRefreshCurrentView}
+              onInputChange={setWorkspaceInput}
+              onBrowse={() => {
                 void browseWorkspace();
               }}
-              onOpenRecentWorkspace={(path) => {
-                void openRecentWorkspacePath(path);
+              onLoad={loadWorkspace}
+              onRefresh={() => {
+                void refreshCurrentViewManually();
               }}
-              onRemoveRecentWorkspace={recentWorkspaces.removeWorkspace}
+              onReset={resetWorkspace}
             />
-          ) : (
-            <MarkdownViewer
-              state={specs.documentState}
-              selectedSpecLabel={specs.selectedSpec?.label ?? null}
-              selectedFileLabel={specs.selectedFile?.label ?? null}
-              comments={comments.comments}
-              activeCommentId={activeCommentId}
-              isAddingComment={isAddingComment}
-              addCommentErrorMessage={addCommentErrorMessage}
-              isUpdatingComment={isUpdatingComment}
-              operationState={comments.operationState}
-              isCommentScopeReady={isCommentScopeReady}
-              onReload={() => {
-                void specs.reloadDocument();
-              }}
-              onAddComment={addComment}
-              onUpdateComment={updateComment}
-              onResolveComment={resolveInlineComment}
-              onReopenComment={reopenInlineComment}
-              onDeleteComment={deleteInlineComment}
-              onSelectComment={selectComment}
-              onAnchorDisplayStatesChange={updateCommentAnchorDisplayStates}
-              onFirstReadable={() => {
-                setReadableDocumentKey(currentDocumentKey);
+          </WorkspaceLayout.Toolbar>
+          <WorkspaceLayout.Tabs>
+            <SpecTabs
+              spec={specs.selectedSpec}
+              selectedFileKey={specs.selectedFileKey}
+              onSelectFile={(fileKey) => {
+                void specs.selectFileKey(fileKey);
               }}
             />
-          )
-        }
-        comments={
+          </WorkspaceLayout.Tabs>
+          <WorkspaceLayout.Viewer>
+            {shouldShowOpenWorkspacePrompt ? (
+              <OpenWorkspaceEmptyState
+                isOpening={isBrowsingWorkspace}
+                recentWorkspaces={recentWorkspaces.recentWorkspaces}
+                onOpenWorkspace={() => {
+                  void browseWorkspace();
+                }}
+                onOpenRecentWorkspace={(path) => {
+                  void openRecentWorkspacePath(path);
+                }}
+                onRemoveRecentWorkspace={recentWorkspaces.removeWorkspace}
+              />
+            ) : (
+              <MarkdownViewer
+                state={specs.documentState}
+                selectedSpecLabel={specs.selectedSpec?.label ?? null}
+                selectedFileLabel={specs.selectedFile?.label ?? null}
+                comments={comments.comments}
+                activeCommentId={activeCommentId}
+                isAddingComment={isAddingComment}
+                addCommentErrorMessage={addCommentErrorMessage}
+                isUpdatingComment={isUpdatingComment}
+                operationState={comments.operationState}
+                isCommentScopeReady={isCommentScopeReady}
+                onReload={() => {
+                  void specs.reloadDocument();
+                }}
+                onAddComment={addComment}
+                onUpdateComment={updateComment}
+                onResolveComment={resolveInlineComment}
+                onReopenComment={reopenInlineComment}
+                onDeleteComment={deleteInlineComment}
+                onSelectComment={selectComment}
+                onAnchorDisplayStatesChange={updateCommentAnchorDisplayStates}
+                onFirstReadable={() => {
+                  setReadableDocumentKey(currentDocumentKey);
+                }}
+              />
+            )}
+          </WorkspaceLayout.Viewer>
+        </WorkspaceLayout.Main>
+        <WorkspaceLayout.Comments>
           <CommentSidebar
             listState={comments.listState}
             operationState={comments.operationState}
@@ -1058,8 +1059,8 @@ function SpecViewAppContent(): ReactElement {
               />
             }
           />
-        }
-      />
+        </WorkspaceLayout.Comments>
+      </SidebarLayout>
       <WorkspaceDropOverlay isVisible={workspaceDrop.status === "dragging"} />
     </div>
   );

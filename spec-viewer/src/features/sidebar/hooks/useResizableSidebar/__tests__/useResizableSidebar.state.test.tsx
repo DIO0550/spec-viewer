@@ -2,7 +2,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test } from "vitest";
 
-import { useResizableSidebar } from "@/features/preferences/hooks/useResizableSidebar";
+import { useResizableSidebar } from "@/features/sidebar";
 
 type HookResult<Result> = Readonly<{
   current: Result;

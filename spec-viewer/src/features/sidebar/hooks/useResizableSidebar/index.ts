@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-const sidebarWidthStorageKey = "spec-reviewer.comment-sidebar-width";
-const defaultSidebarWidth = 360;
-const minSidebarWidth = 280;
-const maxSidebarWidth = 560;
-const viewportWidthRatio = 0.45;
+import { readStorageValue, writeStorageValue } from "@/lib/storage";
+
+const SidebarWidthStorageKey = "spec-reviewer.comment-sidebar-width";
+const DefaultSidebarWidth = 360;
+const MinSidebarWidth = 280;
+const MaxSidebarWidth = 560;
+const ViewportWidthRatio = 0.45;
 
 type UseResizableSidebarResult = Readonly<{
   sidebarWidth: number;
@@ -45,7 +47,7 @@ export function useResizableSidebar(): UseResizableSidebarResult {
   }, [constraints]);
 
   useEffect(() => {
-    writeStoredSidebarWidth(sidebarWidth);
+    writeStorageValue(SidebarWidthStorageKey, String(sidebarWidth));
   }, [sidebarWidth]);
 
   const resizeSidebarTo = useCallback(
@@ -65,7 +67,7 @@ export function useResizableSidebar(): UseResizableSidebarResult {
   );
 
   const resetSidebarWidth = useCallback((): void => {
-    setSidebarWidth(clampSidebarWidth(defaultSidebarWidth, constraints));
+    setSidebarWidth(clampSidebarWidth(DefaultSidebarWidth, constraints));
   }, [constraints]);
 
   return {
@@ -87,14 +89,14 @@ type SidebarWidthConstraints = Readonly<{
 function createSidebarWidthConstraints(
   viewportWidth: number,
 ): SidebarWidthConstraints {
-  const viewportMaxWidth = Math.floor(viewportWidth * viewportWidthRatio);
+  const viewportMaxWidth = Math.floor(viewportWidth * ViewportWidthRatio);
   const max = Math.max(
-    minSidebarWidth,
-    Math.min(maxSidebarWidth, viewportMaxWidth),
+    MinSidebarWidth,
+    Math.min(MaxSidebarWidth, viewportMaxWidth),
   );
 
   return {
-    min: minSidebarWidth,
+    min: MinSidebarWidth,
     max,
   };
 }
@@ -105,7 +107,7 @@ function clampSidebarWidth(
   constraints: SidebarWidthConstraints,
 ): number {
   if (!Number.isFinite(width)) {
-    return defaultSidebarWidth;
+    return DefaultSidebarWidth;
   }
 
   return Math.min(
@@ -117,32 +119,10 @@ function clampSidebarWidth(
 /** @returns Stored sidebar width constrained to the current viewport. */
 function readStoredSidebarWidth(viewportWidth: number): number {
   const constraints = createSidebarWidthConstraints(viewportWidth);
+  const storedWidth = readStorageValue(SidebarWidthStorageKey);
+  const parsedWidth = Number.parseInt(storedWidth ?? "", 10);
 
-  if (typeof window === "undefined") {
-    return clampSidebarWidth(defaultSidebarWidth, constraints);
-  }
-
-  try {
-    const storedWidth = window.localStorage.getItem(sidebarWidthStorageKey);
-    const parsedWidth = Number.parseInt(storedWidth ?? "", 10);
-
-    return clampSidebarWidth(parsedWidth, constraints);
-  } catch {
-    return clampSidebarWidth(defaultSidebarWidth, constraints);
-  }
-}
-
-/** Persists the sidebar width when storage is available. */
-function writeStoredSidebarWidth(sidebarWidth: number): void {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  try {
-    window.localStorage.setItem(sidebarWidthStorageKey, String(sidebarWidth));
-  } catch {
-    return;
-  }
+  return clampSidebarWidth(parsedWidth, constraints);
 }
 
 /** @returns Current viewport width with a desktop fallback for non-browser tests. */
