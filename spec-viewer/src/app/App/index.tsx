@@ -29,12 +29,12 @@ import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFil
 import { CommentScope } from "@/features/comments/domain/commentScope";
 import { CommentListState } from "@/features/comments/domain/commentListState";
 import {
+  ThemeProvider,
   useKeyboardShortcuts,
   useLeftNavigationPreference,
   useResizableLeftNavigation,
   useResizableSidebar,
   useSidebarPreference,
-  useTheme,
 } from "@/features/preferences";
 import {
   SpecViewSelectionProvider,
@@ -131,16 +131,17 @@ const idleCommentExportState: CommentExportState = {
 
 function App(): ReactElement {
   return (
-    <SpecViewSelectionProvider>
-      <SpecViewAppContent />
-    </SpecViewSelectionProvider>
+    <ThemeProvider>
+      <SpecViewSelectionProvider>
+        <SpecViewAppContent />
+      </SpecViewSelectionProvider>
+    </ThemeProvider>
   );
 }
 
 function SpecViewAppContent(): ReactElement {
   const workspace = useWorkspace();
   const recentWorkspaces = useRecentWorkspaces();
-  const theme = useTheme();
   const leftNavigationPreference = useLeftNavigationPreference();
   const workspaceSidebarSectionPreference =
     useWorkspaceSidebarSectionPreference();
@@ -931,7 +932,6 @@ function SpecViewAppContent(): ReactElement {
             errorMessage={toolbarErrorMessage}
             refreshStatus={refreshStatus}
             canRefresh={canRefreshCurrentView}
-            themeMode={theme.themeMode}
             onInputChange={setWorkspaceInput}
             onBrowse={() => {
               void browseWorkspace();
@@ -941,7 +941,6 @@ function SpecViewAppContent(): ReactElement {
               void refreshCurrentViewManually();
             }}
             onReset={resetWorkspace}
-            onThemeModeChange={theme.setThemeMode}
           />
         }
         sidebar={

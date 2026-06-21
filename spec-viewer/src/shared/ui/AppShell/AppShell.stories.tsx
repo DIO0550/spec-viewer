@@ -1,5 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ComponentProps } from "react";
+
+import { ThemeProvider } from "@/features/preferences";
 import { fn } from "storybook/test";
 
 import {
@@ -314,22 +316,22 @@ function createShellArgs({
       </div>
     ),
     toolbar: (
-      <WorkspaceToolbar
-        workspacePath={workspaceStatusPath}
-        inputValue={workspaceInput}
-        isLoading={isWorkspaceLoading}
-        isBrowsing={false}
-        errorMessage={workspaceErrorMessage ?? null}
-        refreshStatus={{ status: "idle", message: null }}
-        canRefresh={selectedSpec !== null && selectedFileKey !== null}
-        themeMode="system"
-        onInputChange={fn()}
-        onBrowse={fn()}
-        onLoad={fn()}
-        onRefresh={fn()}
-        onReset={fn()}
-        onThemeModeChange={fn()}
-      />
+      <ThemeProvider>
+        <WorkspaceToolbar
+          workspacePath={workspaceStatusPath}
+          inputValue={workspaceInput}
+          isLoading={isWorkspaceLoading}
+          isBrowsing={false}
+          errorMessage={workspaceErrorMessage ?? null}
+          refreshStatus={{ status: "idle", message: null }}
+          canRefresh={selectedSpec !== null && selectedFileKey !== null}
+          onInputChange={fn()}
+          onBrowse={fn()}
+          onLoad={fn()}
+          onRefresh={fn()}
+          onReset={fn()}
+        />
+      </ThemeProvider>
     ),
     sidebar: (
       <div className="left-navigation-panel">

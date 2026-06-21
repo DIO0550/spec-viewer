@@ -3,4 +3,4 @@ export { useLeftNavigationPreference } from "./hooks/useLeftNavigationPreference
 export { useResizableLeftNavigation } from "./hooks/useResizableLeftNavigation";
 export { useResizableSidebar } from "./hooks/useResizableSidebar";
 export { useSidebarPreference } from "./hooks/useSidebarPreference";
-export { useTheme, type ThemeMode } from "./hooks/useTheme";
+export { ThemeProvider, useTheme, type ThemeMode } from "./hooks/useTheme";
