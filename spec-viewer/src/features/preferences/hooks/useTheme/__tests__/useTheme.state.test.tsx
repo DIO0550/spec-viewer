@@ -1,8 +1,10 @@
-import { act } from "react";
+import { act, type ReactElement, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import { useTheme } from "@/features/preferences/hooks/useTheme";
+import { ThemeProvider, useTheme } from "@/features/preferences/hooks/useTheme";
+
+type HookWrapper = (props: Readonly<{ children: ReactNode }>) => ReactElement;
 
 type HookResult<Result> = Readonly<{
   current: Result;
@@ -26,7 +28,10 @@ afterEach(() => {
   document.documentElement.style.colorScheme = "";
 });
 
-function renderHook<Result>(hook: () => Result): HookResult<Result> {
+function renderHook<Result>(
+  hook: () => Result,
+  options: Readonly<{ wrapper?: HookWrapper }> = {},
+): HookResult<Result> {
   const container = document.createElement("div");
   const root = createRoot(container);
   const result = { current: undefined as Result };
@@ -36,8 +41,18 @@ function renderHook<Result>(hook: () => Result): HookResult<Result> {
     return null;
   }
 
+  const Wrapper = options.wrapper;
+
   act(() => {
-    root.render(<TestComponent />);
+    root.render(
+      Wrapper === undefined ? (
+        <TestComponent />
+      ) : (
+        <Wrapper>
+          <TestComponent />
+        </Wrapper>
+      ),
+    );
   });
 
   return {
@@ -114,7 +129,7 @@ function stubMatchMedia(prefersDark: boolean): MatchMediaController {
 test("useThemeはsystemを初期値にしてOSのdarkを反映する", () => {
   resetThemeEnvironment(true);
 
-  const result = renderHook(() => useTheme());
+  const result = renderHook(() => useTheme(), { wrapper: ThemeProvider });
 
   expect(result.current.themeMode).toBe("system");
   expect(result.current.resolvedTheme).toBe("dark");
@@ -129,7 +144,7 @@ test("useThemeはsystemを初期値にしてOSのdarkを反映する", () => {
 
 test("useThemeは選択したlight preferenceを同じact cycleで保存してdocumentへ反映する", () => {
   resetThemeEnvironment(true);
-  const result = renderHook(() => useTheme());
+  const result = renderHook(() => useTheme(), { wrapper: ThemeProvider });
 
   act(() => {
     result.current.setThemeMode("light");
@@ -150,7 +165,7 @@ test("useThemeは保存済みdark preferenceを初期値にする", () => {
   resetThemeEnvironment(false);
   window.localStorage.setItem("spec-reviewer.theme-mode", "dark");
 
-  const result = renderHook(() => useTheme());
+  const result = renderHook(() => useTheme(), { wrapper: ThemeProvider });
 
   expect(result.current.themeMode).toBe("dark");
   expect(result.current.resolvedTheme).toBe("dark");
@@ -163,7 +178,7 @@ test("useThemeは無効な保存値をsystemへfallbackする", () => {
   resetThemeEnvironment(false);
   window.localStorage.setItem("spec-reviewer.theme-mode", "blue");
 
-  const result = renderHook(() => useTheme());
+  const result = renderHook(() => useTheme(), { wrapper: ThemeProvider });
 
   expect(result.current.themeMode).toBe("system");
   expect(result.current.resolvedTheme).toBe("light");
@@ -179,7 +194,7 @@ test("useThemeはstorage read error時にsystemへfallbackする", () => {
     throw new Error("blocked");
   });
 
-  const result = renderHook(() => useTheme());
+  const result = renderHook(() => useTheme(), { wrapper: ThemeProvider });
 
   expect(result.current.themeMode).toBe("system");
   expect(result.current.resolvedTheme).toBe("dark");
@@ -191,7 +206,7 @@ test("useThemeはstorage write errorでもtheme更新を継続する", () => {
   vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
     throw new Error("write failed");
   });
-  const result = renderHook(() => useTheme());
+  const result = renderHook(() => useTheme(), { wrapper: ThemeProvider });
 
   act(() => {
     result.current.setThemeMode("dark");
@@ -205,7 +220,7 @@ test("useThemeはstorage write errorでもtheme更新を継続する", () => {
 
 test("useThemeはsystem modeでmatchMedia change eventを反映する", () => {
   const matchMediaController = resetThemeEnvironment(false);
-  const result = renderHook(() => useTheme());
+  const result = renderHook(() => useTheme(), { wrapper: ThemeProvider });
 
   act(() => {
     matchMediaController.setMatches(true);
@@ -221,7 +236,7 @@ test("useThemeはsystem modeでmatchMedia change eventを反映する", () => {
 
 test("useThemeは明示light modeでsystem theme変更を無視する", () => {
   const matchMediaController = resetThemeEnvironment(false);
-  const result = renderHook(() => useTheme());
+  const result = renderHook(() => useTheme(), { wrapper: ThemeProvider });
 
   act(() => {
     result.current.setThemeMode("light");
@@ -239,7 +254,7 @@ test("useThemeは明示light modeでsystem theme変更を無視する", () => {
 
 test("useThemeはunmount時にsystem theme listenerを解除する", () => {
   const matchMediaController = resetThemeEnvironment(false);
-  const result = renderHook(() => useTheme());
+  const result = renderHook(() => useTheme(), { wrapper: ThemeProvider });
 
   result.unmount();
 
@@ -252,12 +267,90 @@ test("useThemeはunmount時にsystem theme listenerを解除する", () => {
   expect(matchMediaController.listenerCount()).toBe(0);
 });
 
+test("useThemeはThemeProvider外で呼ぶと例外を投げる", () => {
+  resetThemeEnvironment(false);
+
+  expect(() => {
+    renderHook(() => useTheme());
+  }).toThrow("ThemeProvider is missing");
+});
+
+test("useThemeは同じThemeProvider配下のconsumerでtheme stateを共有する", () => {
+  resetThemeEnvironment(false);
+  let firstValue: ReturnType<typeof useTheme> | null = null;
+  let secondValue: ReturnType<typeof useTheme> | null = null;
+
+  function FirstConsumer(): null {
+    firstValue = useTheme();
+    return null;
+  }
+
+  function SecondConsumer(): null {
+    secondValue = useTheme();
+    return null;
+  }
+
+  const container = document.createElement("div");
+  const root = createRoot(container);
+
+  act(() => {
+    root.render(
+      <ThemeProvider>
+        <FirstConsumer />
+        <SecondConsumer />
+      </ThemeProvider>,
+    );
+  });
+  act(() => {
+    firstValue!.setThemeMode("dark");
+  });
+
+  expect(firstValue!.themeMode).toBe("dark");
+  expect(secondValue!.themeMode).toBe("dark");
+  expect(secondValue!.resolvedTheme).toBe("dark");
+  act(() => {
+    root.unmount();
+  });
+});
+
+test("useThemeは複数consumerでもmatchMedia listenerを1つだけ登録する", () => {
+  const matchMediaController = resetThemeEnvironment(false);
+
+  function FirstConsumer(): null {
+    useTheme();
+    return null;
+  }
+
+  function SecondConsumer(): null {
+    useTheme();
+    return null;
+  }
+
+  const container = document.createElement("div");
+  const root = createRoot(container);
+
+  act(() => {
+    root.render(
+      <ThemeProvider>
+        <FirstConsumer />
+        <SecondConsumer />
+      </ThemeProvider>,
+    );
+  });
+
+  expect(matchMediaController.addEventListener).toHaveBeenCalledTimes(1);
+  expect(matchMediaController.listenerCount()).toBe(1);
+  act(() => {
+    root.unmount();
+  });
+});
+
 test("useThemeはunmountとremountで重複listenerを残さない", () => {
   const matchMediaController = resetThemeEnvironment(false);
-  const firstResult = renderHook(() => useTheme());
+  const firstResult = renderHook(() => useTheme(), { wrapper: ThemeProvider });
 
   firstResult.unmount();
-  const secondResult = renderHook(() => useTheme());
+  const secondResult = renderHook(() => useTheme(), { wrapper: ThemeProvider });
 
   expect(matchMediaController.listenerCount()).toBe(1);
   act(() => {
