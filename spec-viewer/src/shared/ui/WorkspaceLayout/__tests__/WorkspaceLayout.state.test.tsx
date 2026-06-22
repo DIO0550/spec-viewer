@@ -1,5 +1,5 @@
 import { act } from "react";
-import type { ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -14,7 +14,7 @@ import type {
 } from "@/features/specs";
 import { MarkdownViewer, SpecTabs, SpecTree } from "@/features/specs";
 import { WorkspaceToolbar } from "@/features/workspace";
-import { AppShell } from "@/shared/ui/AppShell";
+import { WorkspaceLayout } from "@/shared/ui/WorkspaceLayout";
 
 const workspacePath = "/workspace/spec-reviewer";
 
@@ -159,9 +159,91 @@ function renderComponent(component: ReactNode): RenderResult {
   };
 }
 
-test("AppShellはtoolbar、tree、tabs、viewer、comment sidebarを表示する", () => {
+type TestWorkspaceLayoutProps = Readonly<{
+  toolbar: ReactNode;
+  leftHeader?: ReactNode;
+  sidebar: ReactNode;
+  tabs: ReactNode;
+  viewer: ReactNode;
+  comments: ReactNode;
+  leftOpen?: boolean;
+  leftWidth?: number;
+  leftMinWidth?: number;
+  leftMaxWidth?: number;
+  onOpenLeft?: () => void;
+  onCloseLeft?: () => void;
+  onLeftWidthChange?: (width: number) => void;
+  commentsOpen?: boolean;
+  commentsWidth?: number;
+  commentsMinWidth?: number;
+  commentsMaxWidth?: number;
+  onOpenComments?: () => void;
+  onCloseComments?: () => void;
+  onCommentsWidthChange?: (width: number) => void;
+}>;
+
+/** @returns WorkspaceLayout composed with the slots used by tests. */
+function TestWorkspaceLayout(props: TestWorkspaceLayoutProps): ReactElement {
+  const {
+    toolbar,
+    leftHeader,
+    sidebar,
+    tabs,
+    viewer,
+    comments,
+    leftOpen,
+    leftWidth,
+    leftMinWidth,
+    leftMaxWidth,
+    onOpenLeft,
+    onCloseLeft,
+    onLeftWidthChange,
+    commentsOpen,
+    commentsWidth,
+    commentsMinWidth,
+    commentsMaxWidth,
+    onOpenComments,
+    onCloseComments,
+    onCommentsWidthChange,
+  } = props;
+
+  return (
+    <WorkspaceLayout.Root
+      leftNavigation={{
+        isOpen: leftOpen,
+        width: leftWidth,
+        minWidth: leftMinWidth,
+        maxWidth: leftMaxWidth,
+        onOpen: onOpenLeft,
+        onClose: onCloseLeft,
+        onWidthChange: onLeftWidthChange,
+      }}
+      commentsSidebar={{
+        isOpen: commentsOpen,
+        width: commentsWidth,
+        minWidth: commentsMinWidth,
+        maxWidth: commentsMaxWidth,
+        onOpen: onOpenComments,
+        onClose: onCloseComments,
+        onWidthChange: onCommentsWidthChange,
+      }}
+    >
+      <WorkspaceLayout.LeftNavigation header={leftHeader}>
+        {sidebar}
+      </WorkspaceLayout.LeftNavigation>
+      <WorkspaceLayout.Main>
+        <WorkspaceLayout.Toolbar>{toolbar}</WorkspaceLayout.Toolbar>
+        <WorkspaceLayout.Tabs>{tabs}</WorkspaceLayout.Tabs>
+        <WorkspaceLayout.Viewer>{viewer}</WorkspaceLayout.Viewer>
+      </WorkspaceLayout.Main>
+      <WorkspaceLayout.Comments>{comments}</WorkspaceLayout.Comments>
+    </WorkspaceLayout.Root>
+  );
+}
+
+test("WorkspaceLayoutはtoolbar、tree、tabs、viewer、comment sidebarを表示する", () => {
   const result = renderComponent(
-    <AppShell
+    <TestWorkspaceLayout
       toolbar={
         <WorkspaceToolbar
           workspacePath={workspacePath}
@@ -256,17 +338,17 @@ test("SpecTabsはbackendの6タブ順をそのまま表示する", () => {
   result.unmount();
 });
 
-test("AppShellはコメントサイドバーを閉じると再オープン導線を表示する", () => {
-  const onOpenCommentsSidebar = vi.fn();
+test("WorkspaceLayoutはコメントサイドバーを閉じると再オープン導線を表示する", () => {
+  const onOpenComments = vi.fn();
   const result = renderComponent(
-    <AppShell
+    <TestWorkspaceLayout
       toolbar={<div>Toolbar</div>}
       sidebar={<div>Tree</div>}
       tabs={<div>Tabs</div>}
       viewer={<div>Viewer</div>}
       comments={<div>コメント本文</div>}
-      isCommentsSidebarOpen={false}
-      onOpenCommentsSidebar={onOpenCommentsSidebar}
+      commentsOpen={false}
+      onOpenComments={onOpenComments}
     />,
   );
   const body = result.container.querySelector(".app-shell__body");
@@ -283,21 +365,21 @@ test("AppShellはコメントサイドバーを閉じると再オープン導線
 
   expect(body?.getAttribute("data-comments-sidebar")).toBe("collapsed");
   expect(commentsSidebar?.getAttribute("aria-hidden")).toBe("true");
-  expect(onOpenCommentsSidebar).toHaveBeenCalledOnce();
+  expect(onOpenComments).toHaveBeenCalledOnce();
   result.unmount();
 });
 
-test("AppShellは左ナビゲーションを閉じた状態で表示領域を広げる", () => {
+test("WorkspaceLayoutは左ナビゲーションを閉じた状態で表示領域を広げる", () => {
   const onOpenLeftNavigation = vi.fn();
   const result = renderComponent(
-    <AppShell
+    <TestWorkspaceLayout
       toolbar={<div>Toolbar</div>}
       sidebar={<div>Tree</div>}
       tabs={<div>Tabs</div>}
       viewer={<div>Viewer</div>}
       comments={<div>コメント本文</div>}
-      isLeftNavigationOpen={false}
-      onOpenLeftNavigation={onOpenLeftNavigation}
+      leftOpen={false}
+      onOpenLeft={onOpenLeftNavigation}
     />,
   );
   const body = result.container.querySelector(".app-shell__body");
@@ -318,17 +400,17 @@ test("AppShellは左ナビゲーションを閉じた状態で表示領域を広
   result.unmount();
 });
 
-test("AppShellは左ナビゲーション内の閉じる操作を発火する", () => {
+test("WorkspaceLayoutは左ナビゲーション内の閉じる操作を発火する", () => {
   const onCloseLeftNavigation = vi.fn();
   const result = renderComponent(
-    <AppShell
+    <TestWorkspaceLayout
       toolbar={<div>Toolbar</div>}
       sidebar={<button type="button">Tree item</button>}
       tabs={<div>Tabs</div>}
       viewer={<div>Viewer</div>}
       comments={<div>コメント本文</div>}
-      isLeftNavigationOpen={true}
-      onCloseLeftNavigation={onCloseLeftNavigation}
+      leftOpen={true}
+      onCloseLeft={onCloseLeftNavigation}
     />,
   );
   const closeButton = result.container.querySelector(
@@ -343,17 +425,17 @@ test("AppShellは左ナビゲーション内の閉じる操作を発火する", 
   result.unmount();
 });
 
-test("AppShellはEscapeで開いている左ナビゲーションを閉じる", () => {
+test("WorkspaceLayoutはEscapeで開いている左ナビゲーションを閉じる", () => {
   const onCloseLeftNavigation = vi.fn();
   const result = renderComponent(
-    <AppShell
+    <TestWorkspaceLayout
       toolbar={<div>Toolbar</div>}
       sidebar={<button type="button">Tree item</button>}
       tabs={<div>Tabs</div>}
       viewer={<div>Viewer</div>}
       comments={<div>コメント本文</div>}
-      isLeftNavigationOpen={true}
-      onCloseLeftNavigation={onCloseLeftNavigation}
+      leftOpen={true}
+      onCloseLeft={onCloseLeftNavigation}
     />,
   );
   const leftNavigation = result.container.querySelector(
@@ -370,20 +452,20 @@ test("AppShellはEscapeで開いている左ナビゲーションを閉じる", 
   result.unmount();
 });
 
-test("AppShellはドラッグで左ナビゲーション幅を変更する", () => {
+test("WorkspaceLayoutはドラッグで左ナビゲーション幅を変更する", () => {
   const onLeftNavigationWidthChange = vi.fn();
   const result = renderComponent(
-    <AppShell
+    <TestWorkspaceLayout
       toolbar={<div>Toolbar</div>}
       sidebar={<div>Tree</div>}
       tabs={<div>Tabs</div>}
       viewer={<div>Viewer</div>}
       comments={<div>コメント本文</div>}
-      isLeftNavigationOpen={true}
-      leftNavigationWidth={268}
-      leftNavigationMinWidth={216}
-      leftNavigationMaxWidth={420}
-      onLeftNavigationWidthChange={onLeftNavigationWidthChange}
+      leftOpen={true}
+      leftWidth={268}
+      leftMinWidth={216}
+      leftMaxWidth={420}
+      onLeftWidthChange={onLeftNavigationWidthChange}
     />,
   );
   const body = result.container.querySelector(
@@ -412,17 +494,17 @@ test("AppShellはドラッグで左ナビゲーション幅を変更する", () 
   result.unmount();
 });
 
-test("AppShellはEscapeで開いているコメントサイドバーを閉じる", () => {
-  const onCloseCommentsSidebar = vi.fn();
+test("WorkspaceLayoutはEscapeで開いているコメントサイドバーを閉じる", () => {
+  const onCloseComments = vi.fn();
   const result = renderComponent(
-    <AppShell
+    <TestWorkspaceLayout
       toolbar={<div>Toolbar</div>}
       sidebar={<div>Tree</div>}
       tabs={<div>Tabs</div>}
       viewer={<div>Viewer</div>}
       comments={<button type="button">コメント操作</button>}
-      isCommentsSidebarOpen={true}
-      onCloseCommentsSidebar={onCloseCommentsSidebar}
+      commentsOpen={true}
+      onCloseComments={onCloseComments}
     />,
   );
   const body = result.container.querySelector(
@@ -435,23 +517,23 @@ test("AppShellはEscapeで開いているコメントサイドバーを閉じる
     );
   });
 
-  expect(onCloseCommentsSidebar).toHaveBeenCalledOnce();
+  expect(onCloseComments).toHaveBeenCalledOnce();
   result.unmount();
 });
 
-test("AppShellはドラッグでコメントサイドバー幅を変更する", () => {
-  const onCommentsSidebarWidthChange = vi.fn();
+test("WorkspaceLayoutはドラッグでコメントサイドバー幅を変更する", () => {
+  const onCommentsWidthChange = vi.fn();
   const result = renderComponent(
-    <AppShell
+    <TestWorkspaceLayout
       toolbar={<div>Toolbar</div>}
       sidebar={<div>Tree</div>}
       tabs={<div>Tabs</div>}
       viewer={<div>Viewer</div>}
       comments={<div>コメント本文</div>}
-      commentsSidebarWidth={360}
-      commentsSidebarMinWidth={280}
-      commentsSidebarMaxWidth={560}
-      onCommentsSidebarWidthChange={onCommentsSidebarWidthChange}
+      commentsWidth={360}
+      commentsMinWidth={280}
+      commentsMaxWidth={560}
+      onCommentsWidthChange={onCommentsWidthChange}
     />,
   );
   const body = result.container.querySelector(
@@ -476,23 +558,23 @@ test("AppShellはドラッグでコメントサイドバー幅を変更する", 
     );
   });
 
-  expect(onCommentsSidebarWidthChange).toHaveBeenCalledWith(380);
+  expect(onCommentsWidthChange).toHaveBeenCalledWith(380);
   result.unmount();
 });
 
-test("AppShellはキーボードでコメントサイドバー幅を変更する", () => {
-  const onCommentsSidebarWidthChange = vi.fn();
+test("WorkspaceLayoutはキーボードでコメントサイドバー幅を変更する", () => {
+  const onCommentsWidthChange = vi.fn();
   const result = renderComponent(
-    <AppShell
+    <TestWorkspaceLayout
       toolbar={<div>Toolbar</div>}
       sidebar={<div>Tree</div>}
       tabs={<div>Tabs</div>}
       viewer={<div>Viewer</div>}
       comments={<div>コメント本文</div>}
-      commentsSidebarWidth={360}
-      commentsSidebarMinWidth={280}
-      commentsSidebarMaxWidth={560}
-      onCommentsSidebarWidthChange={onCommentsSidebarWidthChange}
+      commentsWidth={360}
+      commentsMinWidth={280}
+      commentsMaxWidth={560}
+      onCommentsWidthChange={onCommentsWidthChange}
     />,
   );
   const resizeHandle = result.container.querySelector(
@@ -505,7 +587,7 @@ test("AppShellはキーボードでコメントサイドバー幅を変更する
     );
   });
 
-  expect(onCommentsSidebarWidthChange).toHaveBeenCalledWith(376);
+  expect(onCommentsWidthChange).toHaveBeenCalledWith(376);
   result.unmount();
 });
 

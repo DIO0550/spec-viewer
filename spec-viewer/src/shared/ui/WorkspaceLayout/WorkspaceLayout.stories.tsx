@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import type { ComponentProps } from "react";
+import { useState, type ComponentProps, type ReactNode } from "react";
 
 import { ThemeProvider } from "@/features/preferences";
 import { fn } from "storybook/test";
@@ -23,7 +23,7 @@ import {
   WorkspaceSidebarSection,
   WorkspaceToolbar,
 } from "@/features/workspace";
-import { AppShell } from "@/shared/ui/AppShell";
+import { WorkspaceLayout } from "@/shared/ui/WorkspaceLayout";
 
 const workspacePath = "/workspace/spec-reviewer";
 const commentId = CommentId.fromString;
@@ -170,8 +170,117 @@ const sampleComments: readonly Comment[] = [
   },
 ];
 
+
+type WorkspaceLayoutStoryProps = Readonly<{
+  toolbar: ReactNode;
+  leftHeader?: ReactNode;
+  sidebar: ReactNode;
+  tabs: ReactNode;
+  viewer: ReactNode;
+  comments: ReactNode;
+  leftOpen?: boolean;
+  leftWidth?: number;
+  leftMinWidth?: number;
+  leftMaxWidth?: number;
+  onOpenLeft?: () => void;
+  onCloseLeft?: () => void;
+  onLeftWidthChange?: (width: number) => void;
+  commentsOpen?: boolean;
+  commentsWidth?: number;
+  commentsMinWidth?: number;
+  commentsMaxWidth?: number;
+  onOpenComments?: () => void;
+  onCloseComments?: () => void;
+  onCommentsWidthChange?: (width: number) => void;
+}>;
+
+/** @returns WorkspaceLayout composed for Storybook controls. */
+function WorkspaceLayoutStory(props: WorkspaceLayoutStoryProps) {
+  const {
+    toolbar,
+    leftHeader,
+    sidebar,
+    tabs,
+    viewer,
+    comments,
+    leftOpen,
+    leftWidth,
+    leftMinWidth,
+    leftMaxWidth,
+    onOpenLeft,
+    onCloseLeft,
+    onLeftWidthChange,
+    commentsOpen,
+    commentsWidth,
+    commentsMinWidth,
+    commentsMaxWidth,
+    onOpenComments,
+    onCloseComments,
+    onCommentsWidthChange,
+  } = props;
+  const [storyLeftOpen, setStoryLeftOpen] = useState(leftOpen ?? true);
+  const [storyLeftWidth, setStoryLeftWidth] = useState(leftWidth ?? 268);
+  const [storyCommentsOpen, setStoryCommentsOpen] = useState(
+    commentsOpen ?? true,
+  );
+  const [storyCommentsWidth, setStoryCommentsWidth] = useState(
+    commentsWidth ?? 360,
+  );
+
+  return (
+    <WorkspaceLayout.Root
+      leftNavigation={{
+        isOpen: storyLeftOpen,
+        width: storyLeftWidth,
+        minWidth: leftMinWidth,
+        maxWidth: leftMaxWidth,
+        onOpen: () => {
+          setStoryLeftOpen(true);
+          onOpenLeft?.();
+        },
+        onClose: () => {
+          setStoryLeftOpen(false);
+          onCloseLeft?.();
+        },
+        onWidthChange: (width) => {
+          setStoryLeftWidth(width);
+          onLeftWidthChange?.(width);
+        },
+      }}
+      commentsSidebar={{
+        isOpen: storyCommentsOpen,
+        width: storyCommentsWidth,
+        minWidth: commentsMinWidth,
+        maxWidth: commentsMaxWidth,
+        onOpen: () => {
+          setStoryCommentsOpen(true);
+          onOpenComments?.();
+        },
+        onClose: () => {
+          setStoryCommentsOpen(false);
+          onCloseComments?.();
+        },
+        onWidthChange: (width) => {
+          setStoryCommentsWidth(width);
+          onCommentsWidthChange?.(width);
+        },
+      }}
+    >
+      <WorkspaceLayout.LeftNavigation header={leftHeader}>
+        {sidebar}
+      </WorkspaceLayout.LeftNavigation>
+      <WorkspaceLayout.Main>
+        <WorkspaceLayout.Toolbar>{toolbar}</WorkspaceLayout.Toolbar>
+        <WorkspaceLayout.Tabs>{tabs}</WorkspaceLayout.Tabs>
+        <WorkspaceLayout.Viewer>{viewer}</WorkspaceLayout.Viewer>
+      </WorkspaceLayout.Main>
+      <WorkspaceLayout.Comments>{comments}</WorkspaceLayout.Comments>
+    </WorkspaceLayout.Root>
+  );
+}
+
 const meta = {
-  component: AppShell,
+  component: WorkspaceLayoutStory,
   argTypes: {
     toolbar: { control: false },
     sidebar: { control: false },
@@ -179,7 +288,7 @@ const meta = {
     viewer: { control: false },
     comments: { control: false },
   },
-} satisfies Meta<typeof AppShell>;
+} satisfies Meta<typeof WorkspaceLayoutStory>;
 
 export default meta;
 
@@ -286,7 +395,7 @@ type ShellArgsOptions = Readonly<{
   isWorkspaceLoading?: boolean;
 }>;
 
-/** @returns AppShell story args for a representative viewer state. */
+/** @returns WorkspaceLayout story args for a representative viewer state. */
 function createShellArgs({
   treeState,
   documentState,
@@ -296,13 +405,13 @@ function createShellArgs({
   workspaceStatusPath,
   workspaceErrorMessage = undefined,
   isWorkspaceLoading = false,
-}: ShellArgsOptions): ComponentProps<typeof AppShell> {
+}: ShellArgsOptions): ComponentProps<typeof WorkspaceLayoutStory> {
   const selectedFile =
     selectedSpec?.files.find((file) => file.key === selectedFileKey) ?? null;
 
   return {
-    isLeftNavigationOpen: true,
-    leftNavigationHeader: (
+    leftOpen: true,
+    leftHeader: (
       <div className="left-navigation-brand">
         <span className="left-navigation-brand__mark" aria-hidden="true">
           S
