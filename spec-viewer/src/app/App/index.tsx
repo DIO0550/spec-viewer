@@ -1085,8 +1085,10 @@ function SpecViewUserReviewPanel(
     props;
   const { selection, setTargetScope, selectionId } = useSpecViewSelection();
   const userReviews = useUserReviews({
-    selection,
-    selectionId,
+    selectionSnapshot: {
+      selection,
+      selectionId,
+    },
     correlationId,
   });
 

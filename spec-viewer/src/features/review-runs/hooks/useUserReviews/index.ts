@@ -26,7 +26,6 @@ import {
   type UserReviewCommands,
 } from "@/shared/api/tauri";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
-import type { SpecViewSelectionId } from "@/features/specs/domain/specViewSelectionId";
 import type { SpecFileKey } from "@/features/specs/types/spec";
 
 export type { UserReviewListState } from "@/features/review-runs/domain/userReviewListState";
@@ -44,9 +43,13 @@ export type UserReviewsSelectionInput = Readonly<{
   targetScope: UserReviewTargetScope;
 }>;
 
-export type UseUserReviewsOptions = Readonly<{
+export type UserReviewsSelectionSnapshot = Readonly<{
   selection: UserReviewsSelectionInput;
-  selectionId: SpecViewSelectionId;
+  selectionId: string;
+}>;
+
+export type UseUserReviewsOptions = Readonly<{
+  selectionSnapshot: UserReviewsSelectionSnapshot;
   correlationId?: string | null;
   commands?: UserReviewCommands;
 }>;
@@ -70,7 +73,7 @@ export function useUserReviews(
   options: UseUserReviewsOptions,
 ): UseUserReviewsResult {
   const commands = options.commands ?? defaultUserReviewCommands;
-  const { selection, selectionId } = options;
+  const { selection, selectionId } = options.selectionSnapshot;
   const target = useMemo(
     () =>
       UserReviewTarget.create({
