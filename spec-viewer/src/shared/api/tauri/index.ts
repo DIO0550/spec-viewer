@@ -89,6 +89,12 @@ export type UserReviewCommands = Readonly<{
   ) => Promise<ArchiveUserReviewResponse>;
 }>;
 
+export type SpecCommands = Readonly<{
+  listSpecs: (workspacePath: string) => Promise<SpecTree>;
+  readSpecFile: (request: ReadSpecFileRequest) => Promise<SpecDocument>;
+  archiveSpec: (request: ArchiveSpecRequest) => Promise<ArchiveSpecResponse>;
+}>;
+
 /** @returns The directory selected from the native workspace picker, or null. */
 export async function selectWorkspaceDirectory(): Promise<string | null> {
   return open({
@@ -247,6 +253,12 @@ export const userReviewCommands: UserReviewCommands = {
   createUserReview,
   listUserReviews,
   archiveUserReview,
+};
+
+export const specCommands: SpecCommands = {
+  listSpecs,
+  readSpecFile,
+  archiveSpec,
 };
 
 export const commentCommands: CommentCommands = {
