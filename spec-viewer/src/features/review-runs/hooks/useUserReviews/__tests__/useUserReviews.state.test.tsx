@@ -126,16 +126,18 @@ function renderUseUserReviews(props: HookProps) {
   return renderHook(
     ({ workspacePath, specId, fileKey, targetScope, selectionId, commands }) =>
       useUserReviews({
-        selection: {
-          workspacePath:
-            workspacePath === null
-              ? null
-              : WorkspacePath.fromString(workspacePath),
-          specId,
-          fileKey,
-          targetScope,
+        selectionSnapshot: {
+          selection: {
+            workspacePath:
+              workspacePath === null
+                ? null
+                : WorkspacePath.fromString(workspacePath),
+            specId,
+            fileKey,
+            targetScope,
+          },
+          selectionId,
         },
-        selectionId,
         commands,
       }),
     props,

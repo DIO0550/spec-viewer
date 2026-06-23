@@ -8,7 +8,6 @@ import {
 } from "@/features/review-runs/domain/userReviewListState";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import { listUserReviews as listUserReviewsViaGateway } from "@/features/review-runs/infra/userReviewGateway";
-import type { SpecViewSelectionId } from "@/features/specs/domain/specViewSelectionId";
 import {
   normalizeCommandError,
   type UserReviewCommands,
@@ -19,8 +18,10 @@ import {
   startPerformanceSpan,
 } from "@/shared/lib/performance";
 
+type SelectionId = string;
+
 export type UserReviewListEventWithSelectionId = Readonly<{
-  selectionId: SpecViewSelectionId;
+  selectionId: SelectionId;
   event: UserReviewListEvent;
 }>;
 
@@ -28,7 +29,7 @@ export type UseUserReviewListOptions = Readonly<{
   commands: UserReviewCommands;
   target: UserReviewTarget | null;
   workspacePath: WorkspacePath | null;
-  selectionId: SpecViewSelectionId;
+  selectionId: SelectionId;
   correlationId?: string | null;
 }>;
 
@@ -39,7 +40,7 @@ export type UseUserReviewListResult = Readonly<{
 }>;
 
 type SelectionIdListState = Readonly<{
-  selectionId: SpecViewSelectionId;
+  selectionId: SelectionId;
   requestVersion: number;
   state: UserReviewListStateType;
 }>;

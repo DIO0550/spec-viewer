@@ -1,14 +1,14 @@
 import { useCallback, useMemo, useState } from "react";
 
 import type {
-  SpecViewSelection,
   SpecViewSelectionContextValue,
   SpecViewSelectionInput,
 } from "@/app/context/specViewSelection/types";
 import {
-  SpecViewSelectionId,
+  createSpecViewSelectionId,
+  type SpecViewSelection,
   type SpecViewTargetScope,
-} from "@/features/specs/domain/specViewSelectionId";
+} from "@/app/context/specViewSelection/selectionId";
 
 const defaultSelection: SpecViewSelection = {
   workspacePath: null,
@@ -22,7 +22,7 @@ export function useSpecViewSelectionState(): SpecViewSelectionContextValue {
   const [selection, setSelection] =
     useState<SpecViewSelection>(defaultSelection);
   const selectionId = useMemo(
-    () => SpecViewSelectionId.create(selection),
+    () => createSpecViewSelectionId(selection),
     [
       selection.fileKey,
       selection.specId,

@@ -1,12 +1,10 @@
 import type { ReactNode } from "react";
 
 import type {
-  SpecViewSelectionId as SpecViewSelectionIdType,
-  SpecViewSelectionIdInput,
+  SpecViewSelection,
+  SpecViewSelectionId,
   SpecViewTargetScope,
-} from "@/features/specs/domain/specViewSelectionId";
-
-export type SpecViewSelection = SpecViewSelectionIdInput;
+} from "@/app/context/specViewSelection/selectionId";
 
 export type SpecViewSelectionInput = Pick<
   SpecViewSelection,
@@ -15,7 +13,7 @@ export type SpecViewSelectionInput = Pick<
 
 export type SpecViewSelectionContextValue = Readonly<{
   selection: SpecViewSelection;
-  selectionId: SpecViewSelectionIdType;
+  selectionId: SpecViewSelectionId;
   selectSpecView: (selection: SpecViewSelectionInput) => void;
   setTargetScope: (targetScope: SpecViewTargetScope) => void;
 }>;

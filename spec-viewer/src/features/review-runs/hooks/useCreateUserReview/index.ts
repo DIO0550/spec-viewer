@@ -9,25 +9,26 @@ import {
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import { createUserReview as createUserReviewViaGateway } from "@/features/review-runs/infra/userReviewGateway";
 import type { UserReviewListEventWithSelectionId } from "@/features/review-runs/hooks/useUserReviewList";
-import type { SpecViewSelectionId } from "@/features/specs/domain/specViewSelectionId";
 import {
   normalizeCommandError,
   type UserReviewCommands,
 } from "@/shared/api/tauri";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 
+type SelectionId = string;
+
 export type CreateUserReviewInput = CreateUserReviewPayload;
 
 export type UseCreateUserReviewOptions = Readonly<{
   workspacePath: WorkspacePath | null;
   target: UserReviewTarget | null;
-  selectionId: SpecViewSelectionId;
+  selectionId: SelectionId;
   commands: UserReviewCommands;
   onUserReviewEvent: (event: UserReviewListEventWithSelectionId) => void;
 }>;
 
 type SelectionIdCreateState = Readonly<{
-  selectionId: SpecViewSelectionId;
+  selectionId: SelectionId;
   state: UserReviewCreateStateType;
 }>;
 
