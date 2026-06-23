@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
 import type { SpecDocument, SpecTree } from "@/features/specs/types/spec";
+import type { SpecCommands } from "@/shared/api/tauri";
 import { useSpecs } from "@/features/specs/hooks/useSpecs";
 
 const populatedTree: SpecTree = {
@@ -248,6 +249,27 @@ type HookResult<Props, Result> = Readonly<{
   rerender: (nextProps: Props) => void;
   unmount: () => void;
 }>;
+
+type Deferred<T> = Readonly<{
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+  reject: (error: unknown) => void;
+}>;
+
+function createDeferred<T>(): Deferred<T> {
+  let resolveValue: (value: T) => void = () => undefined;
+  let rejectValue: (error: unknown) => void = () => undefined;
+  const promise = new Promise<T>((resolve, reject) => {
+    resolveValue = resolve;
+    rejectValue = reject;
+  });
+
+  return {
+    promise,
+    resolve: resolveValue,
+    reject: rejectValue,
+  };
+}
 
 function renderHook<Props, Result>(
   hook: (props: Props) => Result,
@@ -633,6 +655,144 @@ test("useSpecsはrefresh時に選択中Markdownが削除されたらmissing状�
   result.unmount();
 });
 
+test("useSpecsはcommands optionからspec command setを利用する", async () => {
+  const commands: SpecCommands = {
+    listSpecs: vi.fn().mockResolvedValue(populatedTree),
+    readSpecFile: vi.fn().mockResolvedValue(loadedDocument),
+    archiveSpec: vi.fn().mockResolvedValue({
+      archivedSpecId: "phase-1-viewer",
+      archivePath:
+        "/workspace/spec-reviewer/.plugin-workspace/.specs/.archive/phase-1-viewer",
+    }),
+  };
+
+  const result = renderHook(
+    ({ workspacePath }) => useSpecs({ workspacePath, commands }),
+    { workspacePath: "/workspace/spec-reviewer" },
+  );
+
+  await act(async () => {
+    await result.current.reloadSpecs();
+  });
+
+  expect(commands.listSpecs).toHaveBeenCalledWith("/workspace/spec-reviewer");
+  expect(commands.readSpecFile).toHaveBeenCalledWith({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "phase-1-viewer",
+    fileKey: "tasks",
+    correlationId: expect.any(String),
+  });
+  result.unmount();
+});
+
+test("useSpecsは個別command optionをcommands optionより優先する", async () => {
+  const commands: SpecCommands = {
+    listSpecs: vi.fn().mockResolvedValue({ specs: [] }),
+    readSpecFile: vi.fn().mockResolvedValue(missingTasksDocument),
+    archiveSpec: vi.fn().mockResolvedValue({
+      archivedSpecId: "phase-1-viewer",
+      archivePath:
+        "/workspace/spec-reviewer/.plugin-workspace/.specs/.archive/phase-1-viewer",
+    }),
+  };
+  const listSpecs = vi.fn().mockResolvedValue(populatedTree);
+  const readSpecFile = vi.fn().mockResolvedValue(loadedDocument);
+
+  const result = renderHook(
+    ({ workspacePath }) =>
+      useSpecs({ workspacePath, commands, listSpecs, readSpecFile }),
+    { workspacePath: "/workspace/spec-reviewer" },
+  );
+
+  await act(async () => {
+    await result.current.reloadSpecs();
+  });
+
+  expect(listSpecs).toHaveBeenCalledWith("/workspace/spec-reviewer");
+  expect(readSpecFile).toHaveBeenCalledWith({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "phase-1-viewer",
+    fileKey: "tasks",
+    correlationId: expect.any(String),
+  });
+  expect(commands.listSpecs).not.toHaveBeenCalled();
+  expect(commands.readSpecFile).not.toHaveBeenCalled();
+  result.unmount();
+});
+
+test("useSpecsは古いspec tree responseで最新stateを上書きしない", async () => {
+  const firstTree = createDeferred<SpecTree>();
+  const secondTree = createDeferred<SpecTree>();
+  const listSpecs = vi
+    .fn()
+    .mockReturnValueOnce(firstTree.promise)
+    .mockReturnValueOnce(secondTree.promise);
+  const readSpecFile = vi.fn().mockResolvedValue(loadedDocument);
+
+  const result = renderHook(
+    ({ workspacePath }) => useSpecs({ workspacePath, listSpecs, readSpecFile }),
+    { workspacePath: "/workspace/spec-reviewer" },
+  );
+
+  const latestReload = result.current.reloadSpecs();
+
+  await act(async () => {
+    secondTree.resolve(populatedTree);
+    await latestReload;
+  });
+
+  await act(async () => {
+    firstTree.resolve({ specs: [] });
+    await firstTree.promise;
+  });
+
+  expect(result.current.specTreeState.status).toBe("ready");
+  expect(result.current.selectedSpecId).toBe("phase-1-viewer");
+  result.unmount();
+});
+
+test("useSpecsは古いdocument responseで最新document stateを上書きしない", async () => {
+  const firstDocument = createDeferred<SpecDocument>();
+  const secondDocument = createDeferred<SpecDocument>();
+  const listSpecs = vi.fn().mockResolvedValue(tasksAndDesignTree);
+  const readSpecFile = vi
+    .fn()
+    .mockReturnValueOnce(firstDocument.promise)
+    .mockReturnValueOnce(secondDocument.promise);
+
+  const result = renderHook(
+    ({ workspacePath }) => useSpecs({ workspacePath, listSpecs, readSpecFile }),
+    { workspacePath: "/workspace/spec-reviewer" },
+  );
+
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  const latestLoad = result.current.selectFileKey("tasks");
+
+  await act(async () => {
+    secondDocument.resolve(loadedDocument);
+    await latestLoad;
+  });
+
+  await act(async () => {
+    firstDocument.resolve(designDocument);
+    await firstDocument.promise;
+  });
+
+  expect(result.current.selectedFileKey).toBe("tasks");
+  expect(result.current.documentState).toEqual(
+    expect.objectContaining({
+      status: "ready",
+      fileKey: "tasks",
+      document: loadedDocument,
+    }),
+  );
+  result.unmount();
+});
+
 test("useSpecsはspecをアーカイブした後にtreeを再読み込みする", async () => {
   const listSpecs = vi.fn().mockResolvedValue(populatedTree);
   const readSpecFile = vi.fn().mockResolvedValue(loadedDocument);
@@ -662,5 +822,38 @@ test("useSpecsはspecをアーカイブした後にtreeを再読み込みする"
   });
   expect(result.current.specTreeState.status).toBe("empty");
   expect(result.current.selectedSpecId).toBeNull();
+  result.unmount();
+});
+
+test("useSpecsはarchive error stateを保持して現在のtreeを維持する", async () => {
+  const archiveError = new Error("archive failed");
+  const listSpecs = vi.fn().mockResolvedValue(populatedTree);
+  const readSpecFile = vi.fn().mockResolvedValue(loadedDocument);
+  const archiveSpec = vi.fn().mockRejectedValue(archiveError);
+
+  const result = renderHook(
+    ({ workspacePath }) =>
+      useSpecs({ workspacePath, listSpecs, readSpecFile, archiveSpec }),
+    { workspacePath: "/workspace/spec-reviewer" },
+  );
+
+  await act(async () => {
+    await result.current.reloadSpecs();
+  });
+
+  let archived = true;
+  await act(async () => {
+    archived = await result.current.archiveSpec("phase-1-viewer");
+  });
+
+  expect(archived).toBe(false);
+  expect(result.current.archiveSpecError).toEqual({
+    code: "unknown",
+    message: "archive failed",
+    raw: archiveError,
+  });
+  expect(result.current.archivingSpecId).toBeNull();
+  expect(result.current.specTreeState.status).toBe("ready");
+  expect(result.current.selectedSpecId).toBe("phase-1-viewer");
   result.unmount();
 });
