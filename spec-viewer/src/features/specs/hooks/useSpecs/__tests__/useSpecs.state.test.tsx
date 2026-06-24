@@ -490,6 +490,35 @@ test("useSpecsはspec選択時に最初のfileを選択してMarkdownを読み�
   result.unmount();
 });
 
+test("useSpecsはfileを持たないspec選択時にspecだけ選択してMarkdown状態をidleにする", async () => {
+  const listSpecs = vi.fn().mockResolvedValue(nestedTree);
+  const readSpecFile = vi.fn().mockResolvedValue(designDocument);
+
+  const result = renderHook(
+    ({ workspacePath }) => useSpecs({ workspacePath, listSpecs, readSpecFile }),
+    { workspacePath: "/workspace/spec-reviewer" },
+  );
+
+  await act(async () => {
+    await result.current.reloadSpecs();
+  });
+  await act(async () => {
+    await result.current.selectSpec("phase-root");
+  });
+
+  expect(result.current.selectedSpecId).toBe("phase-root");
+  expect(result.current.selectedFileKey).toBeNull();
+  expect(result.current.documentState).toEqual(
+    expect.objectContaining({
+      status: "idle",
+      workspacePath: "/workspace/spec-reviewer",
+      specId: "phase-root",
+      fileKey: null,
+    }),
+  );
+  result.unmount();
+});
+
 test("useSpecsはworkspace変更時に選択状態とMarkdown状態をリセットする", async () => {
   const listSpecs = vi.fn().mockResolvedValue(populatedTree);
   const readSpecFile = vi.fn().mockResolvedValue(loadedDocument);

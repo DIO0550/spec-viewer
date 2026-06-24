@@ -297,12 +297,12 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
   const selectSpec = useCallback(
     async (specId: string): Promise<void> => {
       const nextSpec = tree === null ? null : SpecTreeDomain.findNode(tree, specId);
-      const defaultFileKey = SpecNodeDomain.firstFileKey(nextSpec);
 
-      if (nextSpec === null || defaultFileKey === null) {
+      if (nextSpec === null) {
         return;
       }
 
+      const defaultFileKey = SpecNodeDomain.firstFileKey(nextSpec);
       setSelectedSpecId(specId);
       setSelectedFileKey(defaultFileKey);
       onSelectionChange?.({
@@ -310,6 +310,12 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
         specId,
         fileKey: defaultFileKey,
       });
+
+      if (defaultFileKey === null) {
+        documentRequestIdRef.current += 1;
+        setDocumentState(SpecDocumentStateFactory.idle(workspacePath, specId));
+        return;
+      }
 
       await loadDocument(specId, defaultFileKey);
     },
