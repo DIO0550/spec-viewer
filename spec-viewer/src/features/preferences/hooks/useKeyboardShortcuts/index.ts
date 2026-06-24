@@ -2,6 +2,8 @@ import { useEffect } from "react";
 
 type KeyboardShortcutOptions = Readonly<{
   isEnabled: boolean;
+  isFileNavigationEnabled?: boolean;
+  isCommentNavigationEnabled?: boolean;
   onNextFile: () => void;
   onPreviousFile: () => void;
   onNextComment: () => void;
@@ -11,6 +13,8 @@ type KeyboardShortcutOptions = Readonly<{
 /** Registers app-level keyboard shortcuts that avoid editable controls. */
 export function useKeyboardShortcuts({
   isEnabled,
+  isFileNavigationEnabled = isEnabled,
+  isCommentNavigationEnabled = isEnabled,
   onNextFile,
   onPreviousFile,
   onNextComment,
@@ -26,25 +30,25 @@ export function useKeyboardShortcuts({
         return;
       }
 
-      if (event.key === "ArrowRight") {
+      if (event.key === "ArrowRight" && isFileNavigationEnabled) {
         event.preventDefault();
         onNextFile();
         return;
       }
 
-      if (event.key === "ArrowLeft") {
+      if (event.key === "ArrowLeft" && isFileNavigationEnabled) {
         event.preventDefault();
         onPreviousFile();
         return;
       }
 
-      if (event.key === "ArrowDown") {
+      if (event.key === "ArrowDown" && isCommentNavigationEnabled) {
         event.preventDefault();
         onNextComment();
         return;
       }
 
-      if (event.key === "ArrowUp") {
+      if (event.key === "ArrowUp" && isCommentNavigationEnabled) {
         event.preventDefault();
         onPreviousComment();
       }
@@ -55,7 +59,15 @@ export function useKeyboardShortcuts({
     return () => {
       document.removeEventListener("keydown", keydown);
     };
-  }, [isEnabled, onNextComment, onNextFile, onPreviousComment, onPreviousFile]);
+  }, [
+    isCommentNavigationEnabled,
+    isEnabled,
+    isFileNavigationEnabled,
+    onNextComment,
+    onNextFile,
+    onPreviousComment,
+    onPreviousFile,
+  ]);
 }
 
 /** @returns True when the key event belongs to text entry or native controls. */
