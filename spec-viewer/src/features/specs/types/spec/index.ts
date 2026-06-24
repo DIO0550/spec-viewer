@@ -1,36 +1,14 @@
-export type SpecFileKey =
-  | "exploration"
-  | "hearing"
-  | "impl"
-  | "tasks"
-  | "tech-reference"
-  | "test-cases"
-  | "requirements"
-  | "design";
+import type { SpecDocumentFormat, SpecFileKey } from "@/features/specs/domain/specFile";
 
-export type SpecFileStatus = "present" | "missing";
-export type SpecDocumentFormat = "markdown" | "html";
-export type ConfigSource = "default" | "workspaceConfig" | "specOverride";
-
-export type SpecFile = Readonly<{
-  key: SpecFileKey;
-  label: string;
-  fileName: string;
-  status: SpecFileStatus;
-  format?: SpecDocumentFormat;
-  configSource?: ConfigSource;
-}>;
-
-export type SpecNode = Readonly<{
-  id: string;
-  label: string;
-  files: readonly SpecFile[];
-  children: readonly SpecNode[];
-}>;
-
-export type SpecTree = Readonly<{
-  specs: readonly SpecNode[];
-}>;
+export type {
+  ConfigSource,
+  SpecDocumentFormat,
+  SpecFile,
+  SpecFileKey,
+  SpecFileStatus,
+} from "@/features/specs/domain/specFile";
+export type { SpecNode } from "@/features/specs/domain/specNode";
+export type { SpecTree } from "@/features/specs/domain/specTree";
 
 export type MarkdownBlockType =
   | "paragraph"
