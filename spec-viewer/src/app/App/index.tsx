@@ -701,6 +701,7 @@ function SpecViewAppContent(): ReactElement {
     specs.selectedSpec !== null &&
     specs.selectedSpec.files.length > 0 &&
     !isSpecOperationBusy;
+  const canReloadSpecTree = workspace.workspace !== null && !isSpecOperationBusy;
   const canRefreshCurrentView =
     workspace.workspace !== null &&
     specs.selectedSpecId !== null &&
@@ -983,7 +984,7 @@ function SpecViewAppContent(): ReactElement {
                 void specs.archiveSpec(specId);
               }}
               onReload={() => {
-                if (!canUseSpecSelection) {
+                if (!canReloadSpecTree) {
                   return;
                 }
 
