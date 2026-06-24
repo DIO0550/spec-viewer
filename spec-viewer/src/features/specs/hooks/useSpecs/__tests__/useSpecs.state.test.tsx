@@ -517,6 +517,36 @@ test("useSpecsはworkspace変更時に選択状態とMarkdown状態をリセッ�
   result.unmount();
 });
 
+test("useSpecsはresetSelectionで選択状態とMarkdown状態をidleに戻す", async () => {
+  const listSpecs = vi.fn().mockResolvedValue(populatedTree);
+  const readSpecFile = vi.fn().mockResolvedValue(loadedDocument);
+
+  const result = renderHook(
+    ({ workspacePath }) => useSpecs({ workspacePath, listSpecs, readSpecFile }),
+    { workspacePath: "/workspace/spec-reviewer" },
+  );
+
+  await act(async () => {
+    await result.current.reloadSpecs();
+  });
+
+  act(() => {
+    result.current.resetSelection();
+  });
+
+  expect(result.current.selectedSpecId).toBeNull();
+  expect(result.current.selectedFileKey).toBeNull();
+  expect(result.current.documentState).toEqual(
+    expect.objectContaining({
+      status: "idle",
+      workspacePath: "/workspace/spec-reviewer",
+      specId: null,
+      fileKey: null,
+    }),
+  );
+  result.unmount();
+});
+
 test("useSpecsはspec tree再読み込み時に選択中のspecとfileを保持する", async () => {
   const listSpecs = vi.fn().mockResolvedValue(nestedTree);
   const readSpecFile = vi.fn().mockResolvedValue(designDocument);
@@ -822,6 +852,45 @@ test("useSpecsはspecをアーカイブした後にtreeを再読み込みする"
   });
   expect(result.current.specTreeState.status).toBe("empty");
   expect(result.current.selectedSpecId).toBeNull();
+  result.unmount();
+});
+
+test("useSpecsはarchive中の追加archiveを実行しない", async () => {
+  const archiveResult = {
+    archivedSpecId: "phase-1-viewer",
+    archivePath:
+      "/workspace/spec-reviewer/.plugin-workspace/.specs/.archive/phase-1-viewer",
+  };
+  const deferredArchive = createDeferred<typeof archiveResult>();
+  const listSpecs = vi.fn().mockResolvedValue(populatedTree);
+  const readSpecFile = vi.fn().mockResolvedValue(loadedDocument);
+  const archiveSpec = vi.fn().mockReturnValue(deferredArchive.promise);
+
+  const result = renderHook(
+    ({ workspacePath }) =>
+      useSpecs({ workspacePath, listSpecs, readSpecFile, archiveSpec }),
+    { workspacePath: "/workspace/spec-reviewer" },
+  );
+
+  await act(async () => {
+    await result.current.reloadSpecs();
+  });
+
+  let secondArchived = true;
+  const firstArchive = result.current.archiveSpec("phase-1-viewer");
+  await act(async () => {
+    await Promise.resolve();
+  });
+  await act(async () => {
+    secondArchived = await result.current.archiveSpec("phase-1-viewer");
+  });
+  await act(async () => {
+    deferredArchive.resolve(archiveResult);
+    await firstArchive;
+  });
+
+  expect(secondArchived).toBe(false);
+  expect(archiveSpec).toHaveBeenCalledOnce();
   result.unmount();
 });
 

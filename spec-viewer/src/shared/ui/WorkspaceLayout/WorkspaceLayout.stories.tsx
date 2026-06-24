@@ -305,6 +305,19 @@ export const Default: Story = {
   }),
 };
 
+export const Busy: Story = {
+  args: createShellArgs({
+    treeState: readyTreeState,
+    documentState: readyDocumentState,
+    selectedSpec: sampleSpec,
+    selectedFileKey: "tasks",
+    workspaceInput: workspacePath,
+    workspaceStatusPath: workspacePath,
+    archivingSpecId: sampleSpec.id,
+    isSpecOperationBusy: true,
+  }),
+};
+
 export const Loading: Story = {
   args: createShellArgs({
     treeState: {
@@ -393,6 +406,8 @@ type ShellArgsOptions = Readonly<{
   workspaceStatusPath: string | null;
   workspaceErrorMessage?: string;
   isWorkspaceLoading?: boolean;
+  isSpecOperationBusy?: boolean;
+  archivingSpecId?: string | null;
 }>;
 
 /** @returns WorkspaceLayout story args for a representative viewer state. */
@@ -405,6 +420,8 @@ function createShellArgs({
   workspaceStatusPath,
   workspaceErrorMessage = undefined,
   isWorkspaceLoading = false,
+  isSpecOperationBusy = false,
+  archivingSpecId = null,
 }: ShellArgsOptions): ComponentProps<typeof WorkspaceLayoutStory> {
   const selectedFile =
     selectedSpec?.files.find((file) => file.key === selectedFileKey) ?? null;
@@ -433,7 +450,11 @@ function createShellArgs({
           isBrowsing={false}
           errorMessage={workspaceErrorMessage ?? null}
           refreshStatus={{ status: "idle", message: null }}
-          canRefresh={selectedSpec !== null && selectedFileKey !== null}
+          canRefresh={
+            selectedSpec !== null &&
+            selectedFileKey !== null &&
+            !isSpecOperationBusy
+          }
           onInputChange={fn()}
           onBrowse={fn()}
           onLoad={fn()}
@@ -470,7 +491,10 @@ function createShellArgs({
         <SpecTree
           state={treeState}
           selectedSpecId={selectedSpec?.id ?? null}
+          archivingSpecId={archivingSpecId}
+          isBusy={isSpecOperationBusy}
           onSelectSpec={fn()}
+          onArchiveSpec={fn()}
           onReload={fn()}
         />
       </div>
@@ -479,6 +503,7 @@ function createShellArgs({
       <SpecTabs
         spec={selectedSpec}
         selectedFileKey={selectedFileKey}
+        isDisabled={isSpecOperationBusy}
         onSelectFile={fn()}
       />
     ),
