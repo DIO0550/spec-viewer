@@ -31,10 +31,10 @@ function renderComponent(component: ReactNode): RenderResult {
 }
 
 type ShortcutHarnessProps = Readonly<{
-  onNextFile: () => void;
-  onPreviousFile: () => void;
-  onNextComment: () => void;
-  onPreviousComment: () => void;
+  onNextFile: () => boolean;
+  onPreviousFile: () => boolean;
+  onNextComment: () => boolean;
+  onPreviousComment: () => boolean;
 }>;
 
 function ShortcutHarness({
@@ -44,7 +44,6 @@ function ShortcutHarness({
   onPreviousComment,
 }: ShortcutHarnessProps) {
   useKeyboardShortcuts({
-    isEnabled: true,
     onNextFile,
     onPreviousFile,
     onNextComment,
@@ -60,10 +59,10 @@ function ShortcutHarness({
 }
 
 test("useKeyboardShortcutsはAlt矢印キーでfile tabとcommentを移動する", () => {
-  const onNextFile = vi.fn();
-  const onPreviousFile = vi.fn();
-  const onNextComment = vi.fn();
-  const onPreviousComment = vi.fn();
+  const onNextFile = vi.fn(() => true);
+  const onPreviousFile = vi.fn(() => true);
+  const onNextComment = vi.fn(() => true);
+  const onPreviousComment = vi.fn(() => true);
   const result = renderComponent(
     <ShortcutHarness
       onNextFile={onNextFile}
@@ -112,13 +111,13 @@ test("useKeyboardShortcutsはAlt矢印キーでfile tabとcommentを移動する
 });
 
 test("useKeyboardShortcutsは入力中の矢印キーを横取りしない", () => {
-  const onNextFile = vi.fn();
+  const onNextFile = vi.fn(() => true);
   const result = renderComponent(
     <ShortcutHarness
       onNextFile={onNextFile}
-      onPreviousFile={vi.fn()}
-      onNextComment={vi.fn()}
-      onPreviousComment={vi.fn()}
+      onPreviousFile={vi.fn(() => true)}
+      onNextComment={vi.fn(() => true)}
+      onPreviousComment={vi.fn(() => true)}
     />,
   );
   const input = result.container.querySelector("input") as HTMLInputElement;
@@ -135,5 +134,31 @@ test("useKeyboardShortcutsは入力中の矢印キーを横取りしない", () 
   });
 
   expect(onNextFile).not.toHaveBeenCalled();
+  result.unmount();
+});
+
+test("useKeyboardShortcutsは処理対象がないAlt矢印キーを横取りしない", () => {
+  const onNextFile = vi.fn(() => false);
+  const result = renderComponent(
+    <ShortcutHarness
+      onNextFile={onNextFile}
+      onPreviousFile={vi.fn(() => true)}
+      onNextComment={vi.fn(() => true)}
+      onPreviousComment={vi.fn(() => true)}
+    />,
+  );
+  const event = new KeyboardEvent("keydown", {
+    key: "ArrowRight",
+    altKey: true,
+    bubbles: true,
+    cancelable: true,
+  });
+
+  act(() => {
+    document.dispatchEvent(event);
+  });
+
+  expect(onNextFile).toHaveBeenCalledOnce();
+  expect(event.defaultPrevented).toBe(false);
   result.unmount();
 });

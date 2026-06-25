@@ -170,7 +170,6 @@ const sampleComments: readonly Comment[] = [
   },
 ];
 
-
 type WorkspaceLayoutStoryProps = Readonly<{
   toolbar: ReactNode;
   leftHeader?: ReactNode;
@@ -305,7 +304,7 @@ export const Default: Story = {
   }),
 };
 
-export const Busy: Story = {
+export const Archiving: Story = {
   args: createShellArgs({
     treeState: readyTreeState,
     documentState: readyDocumentState,
@@ -314,7 +313,6 @@ export const Busy: Story = {
     workspaceInput: workspacePath,
     workspaceStatusPath: workspacePath,
     archivingSpecId: sampleSpec.id,
-    isSpecOperationBusy: true,
   }),
 };
 
@@ -406,7 +404,6 @@ type ShellArgsOptions = Readonly<{
   workspaceStatusPath: string | null;
   workspaceErrorMessage?: string;
   isWorkspaceLoading?: boolean;
-  isSpecOperationBusy?: boolean;
   archivingSpecId?: string | null;
 }>;
 
@@ -420,7 +417,6 @@ function createShellArgs({
   workspaceStatusPath,
   workspaceErrorMessage = undefined,
   isWorkspaceLoading = false,
-  isSpecOperationBusy = false,
   archivingSpecId = null,
 }: ShellArgsOptions): ComponentProps<typeof WorkspaceLayoutStory> {
   const selectedFile =
@@ -450,11 +446,7 @@ function createShellArgs({
           isBrowsing={false}
           errorMessage={workspaceErrorMessage ?? null}
           refreshStatus={{ status: "idle", message: null }}
-          canRefresh={
-            selectedSpec !== null &&
-            selectedFileKey !== null &&
-            !isSpecOperationBusy
-          }
+          canRefresh={selectedSpec !== null && selectedFileKey !== null}
           onInputChange={fn()}
           onBrowse={fn()}
           onLoad={fn()}
@@ -492,7 +484,6 @@ function createShellArgs({
           state={treeState}
           selectedSpecId={selectedSpec?.id ?? null}
           archivingSpecId={archivingSpecId}
-          isBusy={isSpecOperationBusy}
           onSelectSpec={fn()}
           onArchiveSpec={fn()}
           onReload={fn()}
@@ -503,7 +494,6 @@ function createShellArgs({
       <SpecTabs
         spec={selectedSpec}
         selectedFileKey={selectedFileKey}
-        isDisabled={isSpecOperationBusy}
         onSelectFile={fn()}
       />
     ),

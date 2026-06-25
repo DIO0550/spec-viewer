@@ -613,13 +613,13 @@ test("SpecTreeはspec選択イベントを発火する", () => {
   result.unmount();
 });
 
-test("SpecTreeはbusy中にspec選択を発火しない", () => {
+test("SpecTreeはアーカイブ中でも描画済みspec選択を発火する", () => {
   const onSelectSpec = vi.fn();
   const result = renderComponent(
     <SpecTree
       state={readyTreeState}
       selectedSpecId={null}
-      isBusy={true}
+      archivingSpecId="phase-1-viewer"
       onSelectSpec={onSelectSpec}
       onReload={vi.fn()}
     />,
@@ -632,8 +632,8 @@ test("SpecTreeはbusy中にspec選択を発火しない", () => {
     button.click();
   });
 
-  expect(button.disabled).toBe(true);
-  expect(onSelectSpec).not.toHaveBeenCalled();
+  expect(button.disabled).toBe(false);
+  expect(onSelectSpec).toHaveBeenCalledWith("phase-1-viewer");
   result.unmount();
 });
 
@@ -660,14 +660,14 @@ test("SpecTreeはspec行のアーカイブ操作を発火する", () => {
   result.unmount();
 });
 
-test("SpecTreeはbusy中にreloadとarchiveを発火しない", () => {
+test("SpecTreeはアーカイブ中にreloadとarchiveを発火しない", () => {
   const onArchiveSpec = vi.fn();
   const onReload = vi.fn();
   const result = renderComponent(
     <SpecTree
       state={readyTreeState}
       selectedSpecId={null}
-      isBusy={true}
+      archivingSpecId="phase-1-viewer"
       onSelectSpec={vi.fn()}
       onArchiveSpec={onArchiveSpec}
       onReload={onReload}
@@ -920,27 +920,6 @@ test("SpecTabsは選択中tabとfile選択イベントを表現する", () => {
   result.unmount();
 });
 
-test("SpecTabsはdisabled中にclickでfile選択を発火しない", () => {
-  const onSelectFile = vi.fn();
-  const result = renderComponent(
-    <SpecTabs
-      spec={selectedSpec}
-      selectedFileKey="tasks"
-      isDisabled={true}
-      onSelectFile={onSelectFile}
-    />,
-  );
-  const tabs = result.container.querySelectorAll('[role="tab"]');
-
-  act(() => {
-    (tabs[1] as HTMLButtonElement).click();
-  });
-
-  expect((tabs[1] as HTMLButtonElement).disabled).toBe(true);
-  expect(onSelectFile).not.toHaveBeenCalled();
-  result.unmount();
-});
-
 test("SpecTabsは矢印キーで隣のtabを選択する", () => {
   const onSelectFile = vi.fn();
   const result = renderComponent(
@@ -960,29 +939,6 @@ test("SpecTabsは矢印キーで隣のtabを選択する", () => {
   });
 
   expect(onSelectFile).toHaveBeenCalledWith("impl");
-  result.unmount();
-});
-
-test("SpecTabsはdisabled中にkeyboardでfile選択を発火しない", () => {
-  const onSelectFile = vi.fn();
-  const result = renderComponent(
-    <SpecTabs
-      spec={selectedSpec}
-      selectedFileKey="tasks"
-      isDisabled={true}
-      onSelectFile={onSelectFile}
-    />,
-  );
-  const tabs = result.container.querySelectorAll('[role="tab"]');
-
-  act(() => {
-    (tabs[0] as HTMLButtonElement).focus();
-    tabs[0]?.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
-    );
-  });
-
-  expect(onSelectFile).not.toHaveBeenCalled();
   result.unmount();
 });
 

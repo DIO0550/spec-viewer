@@ -688,33 +688,12 @@ function SpecViewAppContent(): ReactElement {
     workspace.workspace,
   ]);
 
-  const isSpecOperationBusy =
-    specs.archivingSpecId !== null ||
-    specs.specTreeState.status === "loading" ||
-    specs.documentState.status === "loading" ||
-    refreshStatus.status === "loading";
-  const canUseSpecSelection =
-    workspace.workspace !== null &&
-    specs.specTreeState.status === "ready" &&
-    !isSpecOperationBusy;
-  const canUseFileSelection =
-    specs.selectedSpec !== null &&
-    specs.selectedSpec.files.length > 0 &&
-    !isSpecOperationBusy;
-  const canReloadSpecTree = workspace.workspace !== null && !isSpecOperationBusy;
-  const canRefreshCurrentView =
-    workspace.workspace !== null &&
-    specs.selectedSpecId !== null &&
-    specs.selectedFileKey !== null &&
-    !isSpecOperationBusy;
-  const canUseCommentNavigation = comments.comments.length > 0;
-
   const selectAdjacentFile = useCallback(
-    (direction: NavigationDirection): void => {
+    (direction: NavigationDirection): boolean => {
       const selectedSpec = specs.selectedSpec;
 
-      if (!canUseFileSelection || selectedSpec === null) {
-        return;
+      if (selectedSpec === null || selectedSpec.files.length === 0) {
+        return false;
       }
 
       const currentIndex = selectedSpec.files.findIndex(
@@ -729,23 +708,19 @@ function SpecViewAppContent(): ReactElement {
         selectedSpec.files[nextIndex]?.key;
 
       if (nextFileKey === undefined) {
-        return;
+        return false;
       }
 
       void specs.selectFileKey(nextFileKey);
+      return true;
     },
-    [
-      canUseFileSelection,
-      specs.selectFileKey,
-      specs.selectedFileKey,
-      specs.selectedSpec,
-    ],
+    [specs.selectFileKey, specs.selectedFileKey, specs.selectedSpec],
   );
 
   const selectAdjacentComment = useCallback(
-    (direction: NavigationDirection): void => {
+    (direction: NavigationDirection): boolean => {
       if (comments.comments.length === 0) {
-        return;
+        return false;
       }
 
       const currentIndex = comments.comments.findIndex(
@@ -760,10 +735,11 @@ function SpecViewAppContent(): ReactElement {
       const nextCommentId = comments.comments[nextIndex]?.id;
 
       if (nextCommentId === undefined) {
-        return;
+        return false;
       }
 
       setActiveCommentId(nextCommentId);
+      return true;
     },
     [activeCommentId, comments.comments],
   );
@@ -838,7 +814,12 @@ function SpecViewAppContent(): ReactElement {
     }, [comments.reloadComments, refreshCurrentView, specs.reloadSpecs]);
 
   const refreshCurrentViewManually = useCallback(async (): Promise<void> => {
-    if (!canRefreshCurrentView) {
+    if (
+      workspace.workspace === null ||
+      specs.selectedSpecId === null ||
+      specs.selectedFileKey === null ||
+      refreshStatus.status === "loading"
+    ) {
       return;
     }
 
@@ -856,10 +837,13 @@ function SpecViewAppContent(): ReactElement {
       },
     });
   }, [
-    canRefreshCurrentView,
     comments.reloadComments,
     refreshCurrentView,
+    refreshStatus.status,
     specs.reloadSpecs,
+    specs.selectedFileKey,
+    specs.selectedSpecId,
+    workspace.workspace,
   ]);
 
   useSpecFileWatcher({
@@ -900,21 +884,10 @@ function SpecViewAppContent(): ReactElement {
     workspace.workspacePath ?? uiText.workspace.noWorkspace;
 
   useKeyboardShortcuts({
-    isEnabled: canUseFileSelection || canUseCommentNavigation,
-    isFileNavigationEnabled: canUseFileSelection,
-    isCommentNavigationEnabled: canUseCommentNavigation,
-    onNextFile: () => {
-      selectAdjacentFile("next");
-    },
-    onPreviousFile: () => {
-      selectAdjacentFile("previous");
-    },
-    onNextComment: () => {
-      selectAdjacentComment("next");
-    },
-    onPreviousComment: () => {
-      selectAdjacentComment("previous");
-    },
+    onNextFile: () => selectAdjacentFile("next"),
+    onPreviousFile: () => selectAdjacentFile("previous"),
+    onNextComment: () => selectAdjacentComment("next"),
+    onPreviousComment: () => selectAdjacentComment("previous"),
   });
 
   return (
@@ -968,26 +941,13 @@ function SpecViewAppContent(): ReactElement {
               state={specs.specTreeState}
               selectedSpecId={specs.selectedSpecId}
               archivingSpecId={specs.archivingSpecId}
-              isBusy={!canUseSpecSelection}
               onSelectSpec={(specId) => {
-                if (!canUseSpecSelection) {
-                  return;
-                }
-
                 void specs.selectSpec(specId);
               }}
               onArchiveSpec={(specId) => {
-                if (!canUseSpecSelection) {
-                  return;
-                }
-
                 void specs.archiveSpec(specId);
               }}
               onReload={() => {
-                if (!canReloadSpecTree) {
-                  return;
-                }
-
                 void specs.reloadSpecs({ preserveSelection: true });
               }}
             />
@@ -1002,7 +962,12 @@ function SpecViewAppContent(): ReactElement {
               isBrowsing={isBrowsingWorkspace}
               errorMessage={toolbarErrorMessage}
               refreshStatus={refreshStatus}
-              canRefresh={canRefreshCurrentView}
+              canRefresh={
+                workspace.workspace !== null &&
+                specs.selectedSpecId !== null &&
+                specs.selectedFileKey !== null &&
+                refreshStatus.status !== "loading"
+              }
               onInputChange={setWorkspaceInput}
               onBrowse={() => {
                 void browseWorkspace();
@@ -1018,12 +983,7 @@ function SpecViewAppContent(): ReactElement {
             <SpecTabs
               spec={specs.selectedSpec}
               selectedFileKey={specs.selectedFileKey}
-              isDisabled={!canUseFileSelection}
               onSelectFile={(fileKey) => {
-                if (!canUseFileSelection) {
-                  return;
-                }
-
                 void specs.selectFileKey(fileKey);
               }}
             />

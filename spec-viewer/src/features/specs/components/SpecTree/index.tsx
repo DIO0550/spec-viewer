@@ -21,7 +21,6 @@ type Props = Readonly<{
   state: SpecTreeState;
   selectedSpecId: string | null;
   archivingSpecId?: string | null;
-  isBusy?: boolean;
   onSelectSpec: (specId: string) => void;
   onArchiveSpec?: (specId: string) => void;
   onReload: () => void;
@@ -32,7 +31,6 @@ export function SpecTree({
   state,
   selectedSpecId,
   archivingSpecId = null,
-  isBusy = false,
   onSelectSpec,
   onArchiveSpec,
   onReload,
@@ -62,6 +60,8 @@ export function SpecTree({
       return nextIds;
     });
   }, [selectedSpecId, state]);
+
+  const isArchivingSpec = archivingSpecId !== null;
 
   const toggleSpecExpanded = (specId: string): void => {
     setExpandedSpecIds((currentIds) => {
@@ -146,9 +146,9 @@ export function SpecTree({
           type="button"
           aria-label={uiText.specTree.refresh}
           title={uiText.specTree.refresh}
-          disabled={isBusy}
+          disabled={isArchivingSpec}
           onClick={() => {
-            if (isBusy) {
+            if (isArchivingSpec) {
               return;
             }
 
@@ -167,7 +167,7 @@ export function SpecTree({
             expandedSpecIds={expandedSpecIds}
             selectedSpecId={selectedSpecId}
             archivingSpecId={archivingSpecId}
-            isBusy={isBusy}
+            isArchivingSpec={isArchivingSpec}
             onSelectSpec={onSelectSpec}
             onArchiveSpec={onArchiveSpec}
             onToggleExpanded={toggleSpecExpanded}
@@ -184,7 +184,7 @@ type SpecTreeItemProps = Readonly<{
   expandedSpecIds: ReadonlySet<string>;
   selectedSpecId: string | null;
   archivingSpecId: string | null;
-  isBusy: boolean;
+  isArchivingSpec: boolean;
   onSelectSpec: (specId: string) => void;
   onArchiveSpec?: (specId: string) => void;
   onToggleExpanded: (specId: string) => void;
@@ -197,7 +197,7 @@ function SpecTreeItem({
   expandedSpecIds,
   selectedSpecId,
   archivingSpecId,
-  isBusy,
+  isArchivingSpec,
   onSelectSpec,
   onArchiveSpec,
   onToggleExpanded,
@@ -248,12 +248,7 @@ function SpecTreeItem({
           aria-level={depth + 1}
           aria-selected={isSelected}
           tabIndex={isSelected || selectedSpecId === null ? 0 : -1}
-          disabled={isBusy}
           onClick={() => {
-            if (isBusy) {
-              return;
-            }
-
             onSelectSpec(node.id);
           }}
           onKeyDown={(event) => {
@@ -280,10 +275,10 @@ function SpecTreeItem({
             type="button"
             aria-label={`${node.label}をアーカイブへ移動`}
             title={uiText.specTree.archive}
-            disabled={isBusy || archivingSpecId !== null}
+            disabled={isArchivingSpec}
             data-archiving={isArchiving ? "true" : "false"}
             onClick={() => {
-              if (isBusy) {
+              if (isArchivingSpec) {
                 return;
               }
 
@@ -306,7 +301,7 @@ function SpecTreeItem({
               expandedSpecIds={expandedSpecIds}
               selectedSpecId={selectedSpecId}
               archivingSpecId={archivingSpecId}
-              isBusy={isBusy}
+              isArchivingSpec={isArchivingSpec}
               onSelectSpec={onSelectSpec}
               onArchiveSpec={onArchiveSpec}
               onToggleExpanded={onToggleExpanded}

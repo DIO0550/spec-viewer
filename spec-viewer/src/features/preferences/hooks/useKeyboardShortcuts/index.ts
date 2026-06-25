@@ -1,56 +1,42 @@
 import { useEffect } from "react";
 
 type KeyboardShortcutOptions = Readonly<{
-  isEnabled: boolean;
-  isFileNavigationEnabled?: boolean;
-  isCommentNavigationEnabled?: boolean;
-  onNextFile: () => void;
-  onPreviousFile: () => void;
-  onNextComment: () => void;
-  onPreviousComment: () => void;
+  onNextFile: () => boolean;
+  onPreviousFile: () => boolean;
+  onNextComment: () => boolean;
+  onPreviousComment: () => boolean;
 }>;
 
 /** Registers app-level keyboard shortcuts that avoid editable controls. */
 export function useKeyboardShortcuts({
-  isEnabled,
-  isFileNavigationEnabled = isEnabled,
-  isCommentNavigationEnabled = isEnabled,
   onNextFile,
   onPreviousFile,
   onNextComment,
   onPreviousComment,
 }: KeyboardShortcutOptions): void {
   useEffect(() => {
-    if (!isEnabled) {
-      return;
-    }
-
     const keydown = (event: KeyboardEvent): void => {
       if (!event.altKey || shouldIgnoreKeyboardShortcut(event.target)) {
         return;
       }
 
-      if (event.key === "ArrowRight" && isFileNavigationEnabled) {
-        event.preventDefault();
-        onNextFile();
+      if (event.key === "ArrowRight") {
+        preventDefaultWhenHandled(event, onNextFile);
         return;
       }
 
-      if (event.key === "ArrowLeft" && isFileNavigationEnabled) {
-        event.preventDefault();
-        onPreviousFile();
+      if (event.key === "ArrowLeft") {
+        preventDefaultWhenHandled(event, onPreviousFile);
         return;
       }
 
-      if (event.key === "ArrowDown" && isCommentNavigationEnabled) {
-        event.preventDefault();
-        onNextComment();
+      if (event.key === "ArrowDown") {
+        preventDefaultWhenHandled(event, onNextComment);
         return;
       }
 
-      if (event.key === "ArrowUp" && isCommentNavigationEnabled) {
-        event.preventDefault();
-        onPreviousComment();
+      if (event.key === "ArrowUp") {
+        preventDefaultWhenHandled(event, onPreviousComment);
       }
     };
 
@@ -59,15 +45,16 @@ export function useKeyboardShortcuts({
     return () => {
       document.removeEventListener("keydown", keydown);
     };
-  }, [
-    isCommentNavigationEnabled,
-    isEnabled,
-    isFileNavigationEnabled,
-    onNextComment,
-    onNextFile,
-    onPreviousComment,
-    onPreviousFile,
-  ]);
+  }, [onNextComment, onNextFile, onPreviousComment, onPreviousFile]);
+}
+
+function preventDefaultWhenHandled(
+  event: KeyboardEvent,
+  handleShortcut: () => boolean,
+): void {
+  if (handleShortcut()) {
+    event.preventDefault();
+  }
 }
 
 /** @returns True when the key event belongs to text entry or native controls. */
