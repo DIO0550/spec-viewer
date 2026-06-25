@@ -77,6 +77,14 @@ export function SpecTree({
     });
   };
 
+  const reloadWhenNotArchiving = (): void => {
+    if (isArchivingSpec) {
+      return;
+    }
+
+    onReload();
+  };
+
   if (state.status === "idle") {
     return (
       <EmptyState
@@ -111,7 +119,8 @@ export function SpecTree({
         title={uiText.specTree.loadError}
         error={state.error}
         actionLabel={uiText.sidebar.retry}
-        onAction={onReload}
+        isActionDisabled={isArchivingSpec}
+        onAction={reloadWhenNotArchiving}
       />
     );
   }
@@ -127,7 +136,8 @@ export function SpecTree({
             type="button"
             aria-label={uiText.specTree.refresh}
             title={uiText.specTree.refresh}
-            onClick={onReload}
+            disabled={isArchivingSpec}
+            onClick={reloadWhenNotArchiving}
           >
             <RefreshCcw aria-hidden="true" size={16} />
           </button>
@@ -147,13 +157,7 @@ export function SpecTree({
           aria-label={uiText.specTree.refresh}
           title={uiText.specTree.refresh}
           disabled={isArchivingSpec}
-          onClick={() => {
-            if (isArchivingSpec) {
-              return;
-            }
-
-            onReload();
-          }}
+          onClick={reloadWhenNotArchiving}
         >
           <RefreshCcw aria-hidden="true" size={16} />
         </button>

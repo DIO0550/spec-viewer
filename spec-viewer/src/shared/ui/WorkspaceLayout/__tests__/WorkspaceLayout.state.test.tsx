@@ -692,6 +692,51 @@ test("SpecTreeはアーカイブ中にreloadとarchiveを発火しない", () =>
   result.unmount();
 });
 
+test.each([
+  [
+    "error",
+    {
+      status: "error",
+      workspacePath,
+      tree: null,
+      error: {
+        code: "specTreeScan",
+        message: "Spec directory could not be scanned.",
+        raw: "Spec directory could not be scanned.",
+      },
+    } satisfies SpecTreeState,
+  ],
+  [
+    "empty",
+    {
+      status: "empty",
+      workspacePath,
+      tree: { specs: [] },
+      error: null,
+    } satisfies SpecTreeState,
+  ],
+])("SpecTreeはアーカイブ中に%s状態のreloadを発火しない", (_label, state) => {
+  const onReload = vi.fn();
+  const result = renderComponent(
+    <SpecTree
+      state={state}
+      selectedSpecId={null}
+      archivingSpecId="phase-1-viewer"
+      onSelectSpec={vi.fn()}
+      onReload={onReload}
+    />,
+  );
+  const button = result.container.querySelector("button") as HTMLButtonElement;
+
+  act(() => {
+    button.click();
+  });
+
+  expect(button.disabled).toBe(true);
+  expect(onReload).not.toHaveBeenCalled();
+  result.unmount();
+});
+
 test("SpecTreeはsource group rootにはアーカイブ操作を表示しない", () => {
   const sourceGroupTreeState: SpecTreeState = {
     status: "ready",
