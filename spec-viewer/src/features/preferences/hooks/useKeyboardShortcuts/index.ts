@@ -1,52 +1,42 @@
 import { useEffect } from "react";
 
 type KeyboardShortcutOptions = Readonly<{
-  isEnabled: boolean;
-  onNextFile: () => void;
-  onPreviousFile: () => void;
-  onNextComment: () => void;
-  onPreviousComment: () => void;
+  onNextFile: () => boolean;
+  onPreviousFile: () => boolean;
+  onNextComment: () => boolean;
+  onPreviousComment: () => boolean;
 }>;
 
 /** Registers app-level keyboard shortcuts that avoid editable controls. */
 export function useKeyboardShortcuts({
-  isEnabled,
   onNextFile,
   onPreviousFile,
   onNextComment,
   onPreviousComment,
 }: KeyboardShortcutOptions): void {
   useEffect(() => {
-    if (!isEnabled) {
-      return;
-    }
-
     const keydown = (event: KeyboardEvent): void => {
       if (!event.altKey || shouldIgnoreKeyboardShortcut(event.target)) {
         return;
       }
 
       if (event.key === "ArrowRight") {
-        event.preventDefault();
-        onNextFile();
+        preventDefaultWhenHandled(event, onNextFile);
         return;
       }
 
       if (event.key === "ArrowLeft") {
-        event.preventDefault();
-        onPreviousFile();
+        preventDefaultWhenHandled(event, onPreviousFile);
         return;
       }
 
       if (event.key === "ArrowDown") {
-        event.preventDefault();
-        onNextComment();
+        preventDefaultWhenHandled(event, onNextComment);
         return;
       }
 
       if (event.key === "ArrowUp") {
-        event.preventDefault();
-        onPreviousComment();
+        preventDefaultWhenHandled(event, onPreviousComment);
       }
     };
 
@@ -55,7 +45,16 @@ export function useKeyboardShortcuts({
     return () => {
       document.removeEventListener("keydown", keydown);
     };
-  }, [isEnabled, onNextComment, onNextFile, onPreviousComment, onPreviousFile]);
+  }, [onNextComment, onNextFile, onPreviousComment, onPreviousFile]);
+}
+
+function preventDefaultWhenHandled(
+  event: KeyboardEvent,
+  handleShortcut: () => boolean,
+): void {
+  if (handleShortcut()) {
+    event.preventDefault();
+  }
 }
 
 /** @returns True when the key event belongs to text entry or native controls. */

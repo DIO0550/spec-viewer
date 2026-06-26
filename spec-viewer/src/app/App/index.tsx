@@ -689,11 +689,11 @@ function SpecViewAppContent(): ReactElement {
   ]);
 
   const selectAdjacentFile = useCallback(
-    (direction: NavigationDirection): void => {
+    (direction: NavigationDirection): boolean => {
       const selectedSpec = specs.selectedSpec;
 
       if (selectedSpec === null || selectedSpec.files.length === 0) {
-        return;
+        return false;
       }
 
       const currentIndex = selectedSpec.files.findIndex(
@@ -708,18 +708,19 @@ function SpecViewAppContent(): ReactElement {
         selectedSpec.files[nextIndex]?.key;
 
       if (nextFileKey === undefined) {
-        return;
+        return false;
       }
 
       void specs.selectFileKey(nextFileKey);
+      return true;
     },
     [specs.selectFileKey, specs.selectedFileKey, specs.selectedSpec],
   );
 
   const selectAdjacentComment = useCallback(
-    (direction: NavigationDirection): void => {
+    (direction: NavigationDirection): boolean => {
       if (comments.comments.length === 0) {
-        return;
+        return false;
       }
 
       const currentIndex = comments.comments.findIndex(
@@ -734,10 +735,11 @@ function SpecViewAppContent(): ReactElement {
       const nextCommentId = comments.comments[nextIndex]?.id;
 
       if (nextCommentId === undefined) {
-        return;
+        return false;
       }
 
       setActiveCommentId(nextCommentId);
+      return true;
     },
     [activeCommentId, comments.comments],
   );
@@ -811,13 +813,13 @@ function SpecViewAppContent(): ReactElement {
       });
     }, [comments.reloadComments, refreshCurrentView, specs.reloadSpecs]);
 
-  const canRefreshCurrentView =
-    workspace.workspace !== null &&
-    specs.selectedSpecId !== null &&
-    specs.selectedFileKey !== null;
-
   const refreshCurrentViewManually = useCallback(async (): Promise<void> => {
-    if (!canRefreshCurrentView || refreshStatus.status === "loading") {
+    if (
+      workspace.workspace === null ||
+      specs.selectedSpecId === null ||
+      specs.selectedFileKey === null ||
+      refreshStatus.status === "loading"
+    ) {
       return;
     }
 
@@ -835,11 +837,13 @@ function SpecViewAppContent(): ReactElement {
       },
     });
   }, [
-    canRefreshCurrentView,
     comments.reloadComments,
     refreshCurrentView,
     refreshStatus.status,
     specs.reloadSpecs,
+    specs.selectedFileKey,
+    specs.selectedSpecId,
+    workspace.workspace,
   ]);
 
   useSpecFileWatcher({
@@ -880,19 +884,10 @@ function SpecViewAppContent(): ReactElement {
     workspace.workspacePath ?? uiText.workspace.noWorkspace;
 
   useKeyboardShortcuts({
-    isEnabled: true,
-    onNextFile: () => {
-      selectAdjacentFile("next");
-    },
-    onPreviousFile: () => {
-      selectAdjacentFile("previous");
-    },
-    onNextComment: () => {
-      selectAdjacentComment("next");
-    },
-    onPreviousComment: () => {
-      selectAdjacentComment("previous");
-    },
+    onNextFile: () => selectAdjacentFile("next"),
+    onPreviousFile: () => selectAdjacentFile("previous"),
+    onNextComment: () => selectAdjacentComment("next"),
+    onPreviousComment: () => selectAdjacentComment("previous"),
   });
 
   return (
@@ -967,7 +962,12 @@ function SpecViewAppContent(): ReactElement {
               isBrowsing={isBrowsingWorkspace}
               errorMessage={toolbarErrorMessage}
               refreshStatus={refreshStatus}
-              canRefresh={canRefreshCurrentView}
+              canRefresh={
+                workspace.workspace !== null &&
+                specs.selectedSpecId !== null &&
+                specs.selectedFileKey !== null &&
+                refreshStatus.status !== "loading"
+              }
               onInputChange={setWorkspaceInput}
               onBrowse={() => {
                 void browseWorkspace();

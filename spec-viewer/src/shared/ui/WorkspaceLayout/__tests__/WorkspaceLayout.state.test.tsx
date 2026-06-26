@@ -613,6 +613,30 @@ test("SpecTreeはspec選択イベントを発火する", () => {
   result.unmount();
 });
 
+test("SpecTreeはアーカイブ中でも描画済みspec選択を発火する", () => {
+  const onSelectSpec = vi.fn();
+  const result = renderComponent(
+    <SpecTree
+      state={readyTreeState}
+      selectedSpecId={null}
+      archivingSpecId="phase-1-viewer"
+      onSelectSpec={onSelectSpec}
+      onReload={vi.fn()}
+    />,
+  );
+  const button = result.container.querySelector(
+    ".spec-tree__item",
+  ) as HTMLButtonElement;
+
+  act(() => {
+    button.click();
+  });
+
+  expect(button.disabled).toBe(false);
+  expect(onSelectSpec).toHaveBeenCalledWith("phase-1-viewer");
+  result.unmount();
+});
+
 test("SpecTreeはspec行のアーカイブ操作を発火する", () => {
   const onArchiveSpec = vi.fn();
   const result = renderComponent(
@@ -633,6 +657,83 @@ test("SpecTreeはspec行のアーカイブ操作を発火する", () => {
   });
 
   expect(onArchiveSpec).toHaveBeenCalledWith("phase-1-viewer");
+  result.unmount();
+});
+
+test("SpecTreeはアーカイブ中にreloadとarchiveを発火しない", () => {
+  const onArchiveSpec = vi.fn();
+  const onReload = vi.fn();
+  const result = renderComponent(
+    <SpecTree
+      state={readyTreeState}
+      selectedSpecId={null}
+      archivingSpecId="phase-1-viewer"
+      onSelectSpec={vi.fn()}
+      onArchiveSpec={onArchiveSpec}
+      onReload={onReload}
+    />,
+  );
+  const refreshButton = result.container.querySelector(
+    '[aria-label="Specツリーを再読み込み"]',
+  ) as HTMLButtonElement;
+  const archiveButton = result.container.querySelector(
+    '[aria-label="Phase 1 Viewerをアーカイブへ移動"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    refreshButton.click();
+    archiveButton.click();
+  });
+
+  expect(refreshButton.disabled).toBe(true);
+  expect(archiveButton.disabled).toBe(true);
+  expect(onReload).not.toHaveBeenCalled();
+  expect(onArchiveSpec).not.toHaveBeenCalled();
+  result.unmount();
+});
+
+test.each([
+  [
+    "error",
+    {
+      status: "error",
+      workspacePath,
+      tree: null,
+      error: {
+        code: "specTreeScan",
+        message: "Spec directory could not be scanned.",
+        raw: "Spec directory could not be scanned.",
+      },
+    } satisfies SpecTreeState,
+  ],
+  [
+    "empty",
+    {
+      status: "empty",
+      workspacePath,
+      tree: { specs: [] },
+      error: null,
+    } satisfies SpecTreeState,
+  ],
+])("SpecTreeはアーカイブ中に%s状態のreloadを発火しない", (_label, state) => {
+  const onReload = vi.fn();
+  const result = renderComponent(
+    <SpecTree
+      state={state}
+      selectedSpecId={null}
+      archivingSpecId="phase-1-viewer"
+      onSelectSpec={vi.fn()}
+      onReload={onReload}
+    />,
+  );
+  const button = result.container.querySelector("button") as HTMLButtonElement;
+
+  act(() => {
+    button.click();
+  });
+
+  expect(button.disabled).toBe(true);
+  expect(onReload).not.toHaveBeenCalled();
   result.unmount();
 });
 
@@ -665,6 +766,61 @@ test("SpecTreeはsource group rootにはアーカイブ操作を表示しない"
   expect(
     result.container.querySelector('[aria-label="ルートをアーカイブへ移動"]'),
   ).toBeNull();
+  result.unmount();
+});
+
+test.each([
+  [
+    "idle",
+    {
+      status: "idle",
+      workspacePath: null,
+      tree: null,
+      error: null,
+    } satisfies SpecTreeState,
+  ],
+  [
+    "loading",
+    {
+      status: "loading",
+      workspacePath,
+      tree: null,
+      error: null,
+    } satisfies SpecTreeState,
+  ],
+  [
+    "error",
+    {
+      status: "error",
+      workspacePath,
+      tree: null,
+      error: {
+        code: "specTreeScan",
+        message: "Spec directory could not be scanned.",
+        raw: "Spec directory could not be scanned.",
+      },
+    } satisfies SpecTreeState,
+  ],
+  [
+    "empty",
+    {
+      status: "empty",
+      workspacePath,
+      tree: { specs: [] },
+      error: null,
+    } satisfies SpecTreeState,
+  ],
+])("SpecTreeは%s中にselection UIを描画しない", (_status, state) => {
+  const result = renderComponent(
+    <SpecTree
+      state={state}
+      selectedSpecId={null}
+      onSelectSpec={vi.fn()}
+      onReload={vi.fn()}
+    />,
+  );
+
+  expect(result.container.querySelector(".spec-tree__item")).toBeNull();
   result.unmount();
 });
 
@@ -766,6 +922,24 @@ test("SpecTreeはissueフォルダ単位を表示して子フォルダを展開�
 
   expect(issueButton.getAttribute("aria-expanded")).toBe("true");
   expect(result.container.textContent).toContain("code-review");
+  result.unmount();
+});
+
+test.each([
+  ["spec未選択", null],
+  [
+    "files空",
+    {
+      ...selectedSpec,
+      files: [],
+    },
+  ],
+])("SpecTabsは%sならtabを描画しない", (_label, spec) => {
+  const result = renderComponent(
+    <SpecTabs spec={spec} selectedFileKey={null} onSelectFile={vi.fn()} />,
+  );
+
+  expect(result.container.querySelector('[role="tab"]')).toBeNull();
   result.unmount();
 });
 
@@ -907,6 +1081,37 @@ test("WorkspaceToolbarはcurrent view refresh操作と状態を表示する", ()
   });
 
   expect(onRefresh).toHaveBeenCalledOnce();
+  result.unmount();
+});
+
+test("WorkspaceToolbarはrefresh不可ならcurrent view refreshを発火しない", () => {
+  const onRefresh = vi.fn();
+  const result = renderComponent(
+    <WorkspaceToolbar
+      workspacePath={workspacePath}
+      inputValue={workspacePath}
+      isLoading={false}
+      isBrowsing={false}
+      errorMessage={null}
+      refreshStatus={{ status: "idle", message: null }}
+      canRefresh={false}
+      onInputChange={vi.fn()}
+      onBrowse={vi.fn()}
+      onLoad={vi.fn()}
+      onRefresh={onRefresh}
+      onReset={vi.fn()}
+    />,
+  );
+  const refreshButton = result.container.querySelector(
+    '[aria-label="現在の表示を再読み込み"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    refreshButton.click();
+  });
+
+  expect(refreshButton.disabled).toBe(true);
+  expect(onRefresh).not.toHaveBeenCalled();
   result.unmount();
 });
 

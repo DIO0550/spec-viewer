@@ -6,6 +6,7 @@ type Props = Readonly<{
   title: string;
   error: NormalizedCommandError;
   actionLabel?: string;
+  isActionDisabled?: boolean;
   onAction?: () => void;
 }>;
 
@@ -14,6 +15,7 @@ export function CommandErrorDisplay({
   title,
   error,
   actionLabel,
+  isActionDisabled = false,
   onAction,
 }: Props) {
   return (
@@ -32,6 +34,7 @@ export function CommandErrorDisplay({
           <button
             className="button button--secondary"
             type="button"
+            disabled={isActionDisabled}
             onClick={onAction}
           >
             {actionLabel}

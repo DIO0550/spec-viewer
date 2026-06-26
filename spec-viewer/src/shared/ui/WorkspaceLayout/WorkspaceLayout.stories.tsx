@@ -170,7 +170,6 @@ const sampleComments: readonly Comment[] = [
   },
 ];
 
-
 type WorkspaceLayoutStoryProps = Readonly<{
   toolbar: ReactNode;
   leftHeader?: ReactNode;
@@ -305,6 +304,18 @@ export const Default: Story = {
   }),
 };
 
+export const Archiving: Story = {
+  args: createShellArgs({
+    treeState: readyTreeState,
+    documentState: readyDocumentState,
+    selectedSpec: sampleSpec,
+    selectedFileKey: "tasks",
+    workspaceInput: workspacePath,
+    workspaceStatusPath: workspacePath,
+    archivingSpecId: sampleSpec.id,
+  }),
+};
+
 export const Loading: Story = {
   args: createShellArgs({
     treeState: {
@@ -393,6 +404,7 @@ type ShellArgsOptions = Readonly<{
   workspaceStatusPath: string | null;
   workspaceErrorMessage?: string;
   isWorkspaceLoading?: boolean;
+  archivingSpecId?: string | null;
 }>;
 
 /** @returns WorkspaceLayout story args for a representative viewer state. */
@@ -405,6 +417,7 @@ function createShellArgs({
   workspaceStatusPath,
   workspaceErrorMessage = undefined,
   isWorkspaceLoading = false,
+  archivingSpecId = null,
 }: ShellArgsOptions): ComponentProps<typeof WorkspaceLayoutStory> {
   const selectedFile =
     selectedSpec?.files.find((file) => file.key === selectedFileKey) ?? null;
@@ -470,7 +483,9 @@ function createShellArgs({
         <SpecTree
           state={treeState}
           selectedSpecId={selectedSpec?.id ?? null}
+          archivingSpecId={archivingSpecId}
           onSelectSpec={fn()}
+          onArchiveSpec={fn()}
           onReload={fn()}
         />
       </div>
