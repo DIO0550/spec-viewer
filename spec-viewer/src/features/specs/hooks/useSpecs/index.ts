@@ -143,7 +143,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
     async (
       load: (operationId: string) => Promise<boolean>,
     ): Promise<boolean> => {
-      if (isLoadStarting) {
+      if (isLoadStarting || isLoading) {
         return false;
       }
 
