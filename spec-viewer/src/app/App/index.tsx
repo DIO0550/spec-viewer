@@ -688,11 +688,19 @@ function SpecViewAppContent(): ReactElement {
     workspace.workspace,
   ]);
 
+  const isSpecTreeLoading = specs.specTreeState.status === "loading";
+  const isSpecDocumentLoading = specs.documentState.status === "loading";
+  const isWorkspaceRefreshLoading = refreshStatus.status === "loading";
+
   const selectAdjacentFile = useCallback(
     (direction: NavigationDirection): boolean => {
       const selectedSpec = specs.selectedSpec;
 
-      if (selectedSpec === null || selectedSpec.files.length === 0) {
+      if (
+        isSpecDocumentLoading ||
+        selectedSpec === null ||
+        selectedSpec.files.length === 0
+      ) {
         return false;
       }
 
@@ -714,7 +722,12 @@ function SpecViewAppContent(): ReactElement {
       void specs.selectFileKey(nextFileKey);
       return true;
     },
-    [specs.selectFileKey, specs.selectedFileKey, specs.selectedSpec],
+    [
+      isSpecDocumentLoading,
+      specs.selectFileKey,
+      specs.selectedFileKey,
+      specs.selectedSpec,
+    ],
   );
 
   const selectAdjacentComment = useCallback(
@@ -878,10 +891,6 @@ function SpecViewAppContent(): ReactElement {
     isDocumentReadable;
   const leftNavigationSubtitle =
     workspace.workspacePath ?? uiText.workspace.noWorkspace;
-  const isSpecTreeLoading = specs.specTreeState.status === "loading";
-  const isSpecDocumentLoading = specs.documentState.status === "loading";
-  const isWorkspaceRefreshLoading = refreshStatus.status === "loading";
-
   const selectSpecFromTree = useCallback(
     (specId: string): void => {
       if (isSpecTreeLoading || isSpecDocumentLoading) {
