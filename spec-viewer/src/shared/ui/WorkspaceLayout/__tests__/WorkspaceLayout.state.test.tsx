@@ -692,6 +692,61 @@ test("SpecTreeはアーカイブ中にreloadとarchiveを発火しない", () =>
   result.unmount();
 });
 
+test("SpecTreeはdocument loading中にreloadとspec選択を発火しない", () => {
+  const onSelectSpec = vi.fn();
+  const onReload = vi.fn();
+  const result = renderComponent(
+    <SpecTree
+      state={readyTreeState}
+      selectedSpecId={null}
+      isDocumentLoading
+      onSelectSpec={onSelectSpec}
+      onReload={onReload}
+    />,
+  );
+  const refreshButton = result.container.querySelector(
+    '[aria-label="Specツリーを再読み込み"]',
+  ) as HTMLButtonElement;
+  const specButton = result.container.querySelector(
+    ".spec-tree__item",
+  ) as HTMLButtonElement;
+
+  act(() => {
+    refreshButton.click();
+    specButton.click();
+  });
+
+  expect(refreshButton.disabled).toBe(true);
+  expect(specButton.disabled).toBe(true);
+  expect(onReload).not.toHaveBeenCalled();
+  expect(onSelectSpec).not.toHaveBeenCalled();
+  result.unmount();
+});
+
+test("SpecTreeはrefresh loading中にreloadを発火しない", () => {
+  const onReload = vi.fn();
+  const result = renderComponent(
+    <SpecTree
+      state={readyTreeState}
+      selectedSpecId={null}
+      isRefreshLoading
+      onSelectSpec={vi.fn()}
+      onReload={onReload}
+    />,
+  );
+  const refreshButton = result.container.querySelector(
+    '[aria-label="Specツリーを再読み込み"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    refreshButton.click();
+  });
+
+  expect(refreshButton.disabled).toBe(true);
+  expect(onReload).not.toHaveBeenCalled();
+  result.unmount();
+});
+
 test.each([
   [
     "error",
@@ -962,6 +1017,31 @@ test("SpecTabsは選択中tabとfile選択イベントを表現する", () => {
   });
 
   expect(onSelectFile).toHaveBeenCalledWith("impl");
+  result.unmount();
+});
+
+test("SpecTabsはselection disabled中にfile選択を発火しない", () => {
+  const onSelectFile = vi.fn();
+  const result = renderComponent(
+    <SpecTabs
+      spec={selectedSpec}
+      selectedFileKey="tasks"
+      isSelectionDisabled
+      onSelectFile={onSelectFile}
+    />,
+  );
+  const tabs = result.container.querySelectorAll('[role="tab"]');
+
+  act(() => {
+    (tabs[1] as HTMLButtonElement).click();
+    tabs[0]?.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
+    );
+  });
+
+  expect((tabs[0] as HTMLButtonElement).disabled).toBe(true);
+  expect((tabs[1] as HTMLButtonElement).disabled).toBe(true);
+  expect(onSelectFile).not.toHaveBeenCalled();
   result.unmount();
 });
 

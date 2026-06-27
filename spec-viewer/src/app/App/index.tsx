@@ -804,9 +804,7 @@ function SpecViewAppContent(): ReactElement {
         failureMessage:
           "自動再読み込みに失敗しました。内容が古い可能性があります。",
         run: async () => {
-          const areSpecsReloaded = await specs.reloadSpecs({
-            preserveSelection: true,
-          });
+          const areSpecsReloaded = await specs.reloadSpecs();
           const areCommentsReloaded = await comments.reloadComments();
           return areSpecsReloaded && areCommentsReloaded;
         },
@@ -829,9 +827,7 @@ function SpecViewAppContent(): ReactElement {
       failureMessage:
         "再読み込みに失敗しました。エラーを確認して再試行してください。",
       run: async () => {
-        const areSpecsReloaded = await specs.reloadSpecs({
-          preserveSelection: true,
-        });
+        const areSpecsReloaded = await specs.reloadSpecs();
         const areCommentsReloaded = await comments.reloadComments();
         return areSpecsReloaded && areCommentsReloaded;
       },
@@ -882,6 +878,67 @@ function SpecViewAppContent(): ReactElement {
     isDocumentReadable;
   const leftNavigationSubtitle =
     workspace.workspacePath ?? uiText.workspace.noWorkspace;
+  const isSpecTreeLoading = specs.specTreeState.status === "loading";
+  const isSpecDocumentLoading = specs.documentState.status === "loading";
+  const isWorkspaceRefreshLoading = refreshStatus.status === "loading";
+
+  const selectSpecFromTree = useCallback(
+    (specId: string): void => {
+      if (isSpecTreeLoading || isSpecDocumentLoading) {
+        return;
+      }
+
+      void specs.selectSpec(specId);
+    },
+    [isSpecDocumentLoading, isSpecTreeLoading, specs.selectSpec],
+  );
+
+  const archiveSpecFromTree = useCallback(
+    (specId: string): void => {
+      if (specs.archivingSpecId !== null || isSpecTreeLoading) {
+        return;
+      }
+
+      void specs.archiveSpec(specId);
+    },
+    [isSpecTreeLoading, specs.archiveSpec, specs.archivingSpecId],
+  );
+
+  const reloadSpecsFromTree = useCallback((): void => {
+    if (
+      isSpecTreeLoading ||
+      specs.archivingSpecId !== null ||
+      isWorkspaceRefreshLoading
+    ) {
+      return;
+    }
+
+    void specs.reloadSpecs();
+  }, [
+    isSpecTreeLoading,
+    isWorkspaceRefreshLoading,
+    specs.archivingSpecId,
+    specs.reloadSpecs,
+  ]);
+
+  const selectFileFromTabs = useCallback(
+    (fileKey: SpecFileKey): void => {
+      if (isSpecDocumentLoading) {
+        return;
+      }
+
+      void specs.selectFileKey(fileKey);
+    },
+    [isSpecDocumentLoading, specs.selectFileKey],
+  );
+
+  const reloadDocumentFromViewer = useCallback((): void => {
+    if (isSpecDocumentLoading) {
+      return;
+    }
+
+    void specs.reloadDocument();
+  }, [isSpecDocumentLoading, specs.reloadDocument]);
 
   useKeyboardShortcuts({
     onNextFile: () => selectAdjacentFile("next"),
@@ -941,15 +998,11 @@ function SpecViewAppContent(): ReactElement {
               state={specs.specTreeState}
               selectedSpecId={specs.selectedSpecId}
               archivingSpecId={specs.archivingSpecId}
-              onSelectSpec={(specId) => {
-                void specs.selectSpec(specId);
-              }}
-              onArchiveSpec={(specId) => {
-                void specs.archiveSpec(specId);
-              }}
-              onReload={() => {
-                void specs.reloadSpecs({ preserveSelection: true });
-              }}
+              isDocumentLoading={isSpecDocumentLoading}
+              isRefreshLoading={isWorkspaceRefreshLoading}
+              onSelectSpec={selectSpecFromTree}
+              onArchiveSpec={archiveSpecFromTree}
+              onReload={reloadSpecsFromTree}
             />
           </div>
         </WorkspaceLayout.LeftNavigation>
@@ -983,9 +1036,8 @@ function SpecViewAppContent(): ReactElement {
             <SpecTabs
               spec={specs.selectedSpec}
               selectedFileKey={specs.selectedFileKey}
-              onSelectFile={(fileKey) => {
-                void specs.selectFileKey(fileKey);
-              }}
+              isSelectionDisabled={isSpecDocumentLoading}
+              onSelectFile={selectFileFromTabs}
             />
           </WorkspaceLayout.Tabs>
           <WorkspaceLayout.Viewer>
@@ -1013,9 +1065,7 @@ function SpecViewAppContent(): ReactElement {
                 isUpdatingComment={isUpdatingComment}
                 operationState={comments.operationState}
                 isCommentScopeReady={isCommentScopeReady}
-                onReload={() => {
-                  void specs.reloadDocument();
-                }}
+                onReload={reloadDocumentFromViewer}
                 onAddComment={addComment}
                 onUpdateComment={updateComment}
                 onResolveComment={resolveInlineComment}
