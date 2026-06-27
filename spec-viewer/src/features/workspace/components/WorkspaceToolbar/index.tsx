@@ -4,18 +4,12 @@ import { useTheme } from "@/features/preferences";
 import { ThemeMode } from "@/features/preferences/domain/theme";
 import { uiText } from "@/shared/lib/uiText";
 
-export type WorkspaceRefreshStatus = Readonly<{
-  status: "idle" | "loading" | "stale" | "error";
-  message: string | null;
-}>;
-
 type Props = Readonly<{
   workspacePath: string | null;
   inputValue: string;
   isLoading: boolean;
   isBrowsing: boolean;
   errorMessage: string | null;
-  refreshStatus: WorkspaceRefreshStatus;
   canRefresh: boolean;
   onInputChange: (nextValue: string) => void;
   onBrowse: () => void;
@@ -31,7 +25,6 @@ export function WorkspaceToolbar({
   isLoading,
   isBrowsing,
   errorMessage,
-  refreshStatus,
   canRefresh,
   onInputChange,
   onBrowse,
@@ -41,7 +34,6 @@ export function WorkspaceToolbar({
 }: Props) {
   const { themeMode, setThemeMode } = useTheme();
   const isBusy = isLoading || isBrowsing;
-  const isRefreshing = refreshStatus.status === "loading";
 
   return (
     <form
@@ -54,17 +46,12 @@ export function WorkspaceToolbar({
     >
       <div className="workspace-toolbar__brand">
         <span className="workspace-toolbar__title">Spec Reviewer</span>
-        <span
-          className="workspace-toolbar__status"
-          aria-live="polite"
-          data-refresh-status={refreshStatus.status}
-        >
+        <span className="workspace-toolbar__status" aria-live="polite">
           {createStatusLabel({
             workspacePath,
             isLoading,
             isBrowsing,
             errorMessage,
-            refreshStatus,
           })}
         </span>
       </div>
@@ -114,7 +101,7 @@ export function WorkspaceToolbar({
           type="button"
           aria-label={uiText.workspace.refresh}
           title={uiText.workspace.refresh}
-          disabled={!canRefresh || isBusy || isRefreshing}
+          disabled={!canRefresh || isBusy}
           onClick={onRefresh}
         >
           <RefreshCw aria-hidden="true" size={15} />
@@ -139,13 +126,11 @@ function createStatusLabel({
   isLoading,
   isBrowsing,
   errorMessage,
-  refreshStatus,
 }: Readonly<{
   workspacePath: string | null;
   isLoading: boolean;
   isBrowsing: boolean;
   errorMessage: string | null;
-  refreshStatus: WorkspaceRefreshStatus;
 }>): string {
   if (isBrowsing) {
     return uiText.workspace.openingPicker;
@@ -153,10 +138,6 @@ function createStatusLabel({
 
   if (isLoading) {
     return uiText.workspace.loadingWorkspace;
-  }
-
-  if (refreshStatus.status !== "idle" && refreshStatus.message !== null) {
-    return refreshStatus.message;
   }
 
   if (errorMessage !== null) {

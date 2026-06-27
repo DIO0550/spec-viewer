@@ -6,11 +6,17 @@ import { EmptyState } from "@/shared/ui/EmptyState";
 type Props = Readonly<{
   spec: SpecNode | null;
   selectedFileKey: SpecFileKey | null;
+  isSelectionDisabled?: boolean;
   onSelectFile: (fileKey: SpecFileKey) => void;
 }>;
 
 /** @returns File tabs for the selected spec. */
-export function SpecTabs({ spec, selectedFileKey, onSelectFile }: Props) {
+export function SpecTabs({
+  spec,
+  selectedFileKey,
+  isSelectionDisabled = false,
+  onSelectFile,
+}: Props) {
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   if (spec === null) {
@@ -37,6 +43,10 @@ export function SpecTabs({ spec, selectedFileKey, onSelectFile }: Props) {
     const file = spec.files[index];
 
     if (file === undefined) {
+      return;
+    }
+
+    if (isSelectionDisabled) {
       return;
     }
 
@@ -98,7 +108,12 @@ export function SpecTabs({ spec, selectedFileKey, onSelectFile }: Props) {
             aria-keyshortcuts="ArrowLeft ArrowRight Home End Alt+ArrowLeft Alt+ArrowRight"
             tabIndex={isSelected ? 0 : -1}
             title={title}
+            disabled={isSelectionDisabled}
             onClick={() => {
+              if (isSelectionDisabled) {
+                return;
+              }
+
               onSelectFile(file.key);
             }}
             onKeyDown={(event) => {

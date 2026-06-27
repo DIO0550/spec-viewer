@@ -445,7 +445,6 @@ function createShellArgs({
           isLoading={isWorkspaceLoading}
           isBrowsing={false}
           errorMessage={workspaceErrorMessage ?? null}
-          refreshStatus={{ status: "idle", message: null }}
           canRefresh={selectedSpec !== null && selectedFileKey !== null}
           onInputChange={fn()}
           onBrowse={fn()}
@@ -484,6 +483,7 @@ function createShellArgs({
           state={treeState}
           selectedSpecId={selectedSpec?.id ?? null}
           archivingSpecId={archivingSpecId}
+          isLoading={archivingSpecId !== null}
           onSelectSpec={fn()}
           onArchiveSpec={fn()}
           onReload={fn()}

@@ -251,7 +251,6 @@ test("WorkspaceLayoutはtoolbar、tree、tabs、viewer、comment sidebarを表�
           isLoading={false}
           isBrowsing={false}
           errorMessage={null}
-          refreshStatus={{ status: "idle", message: null }}
           canRefresh={true}
           onInputChange={vi.fn()}
           onBrowse={vi.fn()}
@@ -613,13 +612,14 @@ test("SpecTreeはspec選択イベントを発火する", () => {
   result.unmount();
 });
 
-test("SpecTreeはアーカイブ中でも描画済みspec選択を発火する", () => {
+test("SpecTreeはloading中に描画済みspec選択を発火しない", () => {
   const onSelectSpec = vi.fn();
   const result = renderComponent(
     <SpecTree
       state={readyTreeState}
       selectedSpecId={null}
       archivingSpecId="phase-1-viewer"
+      isLoading
       onSelectSpec={onSelectSpec}
       onReload={vi.fn()}
     />,
@@ -632,8 +632,8 @@ test("SpecTreeはアーカイブ中でも描画済みspec選択を発火する",
     button.click();
   });
 
-  expect(button.disabled).toBe(false);
-  expect(onSelectSpec).toHaveBeenCalledWith("phase-1-viewer");
+  expect(button.disabled).toBe(true);
+  expect(onSelectSpec).not.toHaveBeenCalled();
   result.unmount();
 });
 
@@ -660,7 +660,7 @@ test("SpecTreeはspec行のアーカイブ操作を発火する", () => {
   result.unmount();
 });
 
-test("SpecTreeはアーカイブ中にreloadとarchiveを発火しない", () => {
+test("SpecTreeはloading中にreloadとarchiveを発火しない", () => {
   const onArchiveSpec = vi.fn();
   const onReload = vi.fn();
   const result = renderComponent(
@@ -668,6 +668,7 @@ test("SpecTreeはアーカイブ中にreloadとarchiveを発火しない", () =>
       state={readyTreeState}
       selectedSpecId={null}
       archivingSpecId="phase-1-viewer"
+      isLoading
       onSelectSpec={vi.fn()}
       onArchiveSpec={onArchiveSpec}
       onReload={onReload}
@@ -688,6 +689,84 @@ test("SpecTreeはアーカイブ中にreloadとarchiveを発火しない", () =>
   expect(refreshButton.disabled).toBe(true);
   expect(archiveButton.disabled).toBe(true);
   expect(onReload).not.toHaveBeenCalled();
+  expect(onArchiveSpec).not.toHaveBeenCalled();
+  result.unmount();
+});
+
+test("SpecTreeはarchive中にreloadとspec選択とarchiveを発火しない", () => {
+  const onArchiveSpec = vi.fn();
+  const onSelectSpec = vi.fn();
+  const onReload = vi.fn();
+  const result = renderComponent(
+    <SpecTree
+      state={readyTreeState}
+      selectedSpecId={null}
+      archivingSpecId="phase-1-viewer"
+      onSelectSpec={onSelectSpec}
+      onArchiveSpec={onArchiveSpec}
+      onReload={onReload}
+    />,
+  );
+  const refreshButton = result.container.querySelector(
+    '[aria-label="Specツリーを再読み込み"]',
+  ) as HTMLButtonElement;
+  const specButton = result.container.querySelector(
+    ".spec-tree__item",
+  ) as HTMLButtonElement;
+  const archiveButton = result.container.querySelector(
+    '[aria-label="Phase 1 Viewerをアーカイブへ移動"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    refreshButton.click();
+    specButton.click();
+    archiveButton.click();
+  });
+
+  expect(refreshButton.disabled).toBe(true);
+  expect(specButton.disabled).toBe(true);
+  expect(archiveButton.disabled).toBe(true);
+  expect(onReload).not.toHaveBeenCalled();
+  expect(onSelectSpec).not.toHaveBeenCalled();
+  expect(onArchiveSpec).not.toHaveBeenCalled();
+  result.unmount();
+});
+
+test("SpecTreeは単一loading中にreloadとspec選択とarchiveを発火しない", () => {
+  const onArchiveSpec = vi.fn();
+  const onSelectSpec = vi.fn();
+  const onReload = vi.fn();
+  const result = renderComponent(
+    <SpecTree
+      state={readyTreeState}
+      selectedSpecId={null}
+      isLoading
+      onSelectSpec={onSelectSpec}
+      onArchiveSpec={onArchiveSpec}
+      onReload={onReload}
+    />,
+  );
+  const refreshButton = result.container.querySelector(
+    '[aria-label="Specツリーを再読み込み"]',
+  ) as HTMLButtonElement;
+  const specButton = result.container.querySelector(
+    ".spec-tree__item",
+  ) as HTMLButtonElement;
+  const archiveButton = result.container.querySelector(
+    '[aria-label="Phase 1 Viewerをアーカイブへ移動"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    refreshButton.click();
+    specButton.click();
+    archiveButton.click();
+  });
+
+  expect(refreshButton.disabled).toBe(true);
+  expect(specButton.disabled).toBe(true);
+  expect(archiveButton.disabled).toBe(true);
+  expect(onReload).not.toHaveBeenCalled();
+  expect(onSelectSpec).not.toHaveBeenCalled();
   expect(onArchiveSpec).not.toHaveBeenCalled();
   result.unmount();
 });
@@ -715,13 +794,14 @@ test.each([
       error: null,
     } satisfies SpecTreeState,
   ],
-])("SpecTreeはアーカイブ中に%s状態のreloadを発火しない", (_label, state) => {
+])("SpecTreeはloading中に%s状態のreloadを発火しない", (_label, state) => {
   const onReload = vi.fn();
   const result = renderComponent(
     <SpecTree
       state={state}
       selectedSpecId={null}
       archivingSpecId="phase-1-viewer"
+      isLoading
       onSelectSpec={vi.fn()}
       onReload={onReload}
     />,
@@ -965,6 +1045,31 @@ test("SpecTabsは選択中tabとfile選択イベントを表現する", () => {
   result.unmount();
 });
 
+test("SpecTabsはselection disabled中にfile選択を発火しない", () => {
+  const onSelectFile = vi.fn();
+  const result = renderComponent(
+    <SpecTabs
+      spec={selectedSpec}
+      selectedFileKey="tasks"
+      isSelectionDisabled
+      onSelectFile={onSelectFile}
+    />,
+  );
+  const tabs = result.container.querySelectorAll('[role="tab"]');
+
+  act(() => {
+    (tabs[1] as HTMLButtonElement).click();
+    tabs[0]?.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
+    );
+  });
+
+  expect((tabs[0] as HTMLButtonElement).disabled).toBe(true);
+  expect((tabs[1] as HTMLButtonElement).disabled).toBe(true);
+  expect(onSelectFile).not.toHaveBeenCalled();
+  result.unmount();
+});
+
 test("SpecTabsは矢印キーで隣のtabを選択する", () => {
   const onSelectFile = vi.fn();
   const result = renderComponent(
@@ -996,7 +1101,6 @@ test("WorkspaceToolbarはopen workspace操作を発火する", () => {
       isLoading={false}
       isBrowsing={false}
       errorMessage={null}
-      refreshStatus={{ status: "idle", message: null }}
       canRefresh={false}
       onInputChange={vi.fn()}
       onBrowse={onBrowse}
@@ -1026,7 +1130,6 @@ test("WorkspaceToolbarはパス入力のsubmitでworkspace読み込みを発火�
       isLoading={false}
       isBrowsing={false}
       errorMessage={null}
-      refreshStatus={{ status: "idle", message: null }}
       canRefresh={false}
       onInputChange={vi.fn()}
       onBrowse={vi.fn()}
@@ -1057,11 +1160,7 @@ test("WorkspaceToolbarはcurrent view refresh操作と状態を表示する", ()
       inputValue={workspacePath}
       isLoading={false}
       isBrowsing={false}
-      errorMessage={null}
-      refreshStatus={{
-        status: "stale",
-        message: "Content may be stale. Refresh to retry.",
-      }}
+      errorMessage="Content may be stale. Refresh to retry."
       canRefresh={true}
       onInputChange={vi.fn()}
       onBrowse={vi.fn()}
@@ -1093,7 +1192,6 @@ test("WorkspaceToolbarはrefresh不可ならcurrent view refreshを発火しな�
       isLoading={false}
       isBrowsing={false}
       errorMessage={null}
-      refreshStatus={{ status: "idle", message: null }}
       canRefresh={false}
       onInputChange={vi.fn()}
       onBrowse={vi.fn()}
@@ -1123,7 +1221,6 @@ test("WorkspaceToolbarはtheme mode変更をContext経由でdocumentへ反映す
       isLoading={false}
       isBrowsing={false}
       errorMessage={null}
-      refreshStatus={{ status: "idle", message: null }}
       canRefresh={true}
       onInputChange={vi.fn()}
       onBrowse={vi.fn()}
