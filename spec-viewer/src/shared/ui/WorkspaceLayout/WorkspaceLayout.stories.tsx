@@ -484,6 +484,7 @@ function createShellArgs({
           state={treeState}
           selectedSpecId={selectedSpec?.id ?? null}
           archivingSpecId={archivingSpecId}
+          isLoading={archivingSpecId !== null}
           onSelectSpec={fn()}
           onArchiveSpec={fn()}
           onReload={fn()}

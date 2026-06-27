@@ -21,8 +21,7 @@ type Props = Readonly<{
   state: SpecTreeState;
   selectedSpecId: string | null;
   archivingSpecId?: string | null;
-  isDocumentLoading?: boolean;
-  isRefreshLoading?: boolean;
+  isLoading?: boolean;
   onSelectSpec: (specId: string) => void;
   onArchiveSpec?: (specId: string) => void;
   onReload: () => void;
@@ -33,8 +32,7 @@ export function SpecTree({
   state,
   selectedSpecId,
   archivingSpecId = null,
-  isDocumentLoading = false,
-  isRefreshLoading = false,
+  isLoading = false,
   onSelectSpec,
   onArchiveSpec,
   onReload,
@@ -65,22 +63,7 @@ export function SpecTree({
     });
   }, [selectedSpecId, state]);
 
-  const isArchivingSpec = archivingSpecId !== null;
-  const isReloadDisabled =
-    state.status === "loading" ||
-    isDocumentLoading ||
-    isRefreshLoading ||
-    isArchivingSpec;
-  const isSelectionDisabled =
-    state.status === "loading" ||
-    isDocumentLoading ||
-    isRefreshLoading ||
-    isArchivingSpec;
-  const isArchiveDisabled =
-    state.status === "loading" ||
-    isDocumentLoading ||
-    isRefreshLoading ||
-    isArchivingSpec;
+  const isActionDisabled = state.status === "loading" || isLoading;
 
   const toggleSpecExpanded = (specId: string): void => {
     setExpandedSpecIds((currentIds) => {
@@ -97,7 +80,7 @@ export function SpecTree({
   };
 
   const reloadWhenEnabled = (): void => {
-    if (isReloadDisabled) {
+    if (isActionDisabled) {
       return;
     }
 
@@ -138,7 +121,7 @@ export function SpecTree({
         title={uiText.specTree.loadError}
         error={state.error}
         actionLabel={uiText.sidebar.retry}
-        isActionDisabled={isReloadDisabled}
+        isActionDisabled={isActionDisabled}
         onAction={reloadWhenEnabled}
       />
     );
@@ -155,7 +138,7 @@ export function SpecTree({
             type="button"
             aria-label={uiText.specTree.refresh}
             title={uiText.specTree.refresh}
-            disabled={isReloadDisabled}
+            disabled={isActionDisabled}
             onClick={reloadWhenEnabled}
           >
             <RefreshCcw aria-hidden="true" size={16} />
@@ -175,7 +158,7 @@ export function SpecTree({
           type="button"
           aria-label={uiText.specTree.refresh}
           title={uiText.specTree.refresh}
-          disabled={isReloadDisabled}
+          disabled={isActionDisabled}
           onClick={reloadWhenEnabled}
         >
           <RefreshCcw aria-hidden="true" size={16} />
@@ -190,8 +173,8 @@ export function SpecTree({
             expandedSpecIds={expandedSpecIds}
             selectedSpecId={selectedSpecId}
             archivingSpecId={archivingSpecId}
-            isSelectionDisabled={isSelectionDisabled}
-            isArchiveDisabled={isArchiveDisabled}
+            isSelectionDisabled={isActionDisabled}
+            isArchiveDisabled={isActionDisabled}
             onSelectSpec={onSelectSpec}
             onArchiveSpec={onArchiveSpec}
             onToggleExpanded={toggleSpecExpanded}

@@ -688,18 +688,15 @@ function SpecViewAppContent(): ReactElement {
     workspace.workspace,
   ]);
 
-  const isSpecTreeLoading = specs.specTreeState.status === "loading";
-  const isSpecDocumentLoading = specs.documentState.status === "loading";
-  const isWorkspaceRefreshLoading = refreshStatus.status === "loading";
+  const isCurrentViewLoading =
+    specs.isLoading || refreshStatus.status === "loading";
 
   const selectAdjacentFile = useCallback(
     (direction: NavigationDirection): boolean => {
       const selectedSpec = specs.selectedSpec;
 
       if (
-        isSpecDocumentLoading ||
-        isWorkspaceRefreshLoading ||
-        specs.archivingSpecId !== null ||
+        isCurrentViewLoading ||
         selectedSpec === null ||
         selectedSpec.files.length === 0
       ) {
@@ -725,9 +722,7 @@ function SpecViewAppContent(): ReactElement {
       return true;
     },
     [
-      isSpecDocumentLoading,
-      isWorkspaceRefreshLoading,
-      specs.archivingSpecId,
+      isCurrentViewLoading,
       specs.selectFileKey,
       specs.selectedFileKey,
       specs.selectedSpec,
@@ -800,7 +795,7 @@ function SpecViewAppContent(): ReactElement {
 
   const reloadCurrentMarkdownFromWatcher =
     useCallback(async (): Promise<void> => {
-      if (isSpecDocumentLoading || isWorkspaceRefreshLoading) {
+      if (isCurrentViewLoading) {
         return;
       }
 
@@ -817,20 +812,14 @@ function SpecViewAppContent(): ReactElement {
       });
     }, [
       comments.reloadComments,
-      isSpecDocumentLoading,
-      isWorkspaceRefreshLoading,
+      isCurrentViewLoading,
       refreshCurrentView,
       specs.reloadDocument,
     ]);
 
   const reloadWorkspaceConfigFromWatcher =
     useCallback(async (): Promise<void> => {
-      if (
-        isSpecTreeLoading ||
-        isSpecDocumentLoading ||
-        isWorkspaceRefreshLoading ||
-        specs.archivingSpecId !== null
-      ) {
+      if (isCurrentViewLoading) {
         return;
       }
 
@@ -847,11 +836,8 @@ function SpecViewAppContent(): ReactElement {
       });
     }, [
       comments.reloadComments,
-      isSpecDocumentLoading,
-      isSpecTreeLoading,
-      isWorkspaceRefreshLoading,
+      isCurrentViewLoading,
       refreshCurrentView,
-      specs.archivingSpecId,
       specs.reloadSpecs,
     ]);
 
@@ -860,10 +846,7 @@ function SpecViewAppContent(): ReactElement {
       workspace.workspace === null ||
       specs.selectedSpecId === null ||
       specs.selectedFileKey === null ||
-      isSpecTreeLoading ||
-      isSpecDocumentLoading ||
-      specs.archivingSpecId !== null ||
-      refreshStatus.status === "loading"
+      isCurrentViewLoading
     ) {
       return;
     }
@@ -881,11 +864,8 @@ function SpecViewAppContent(): ReactElement {
     });
   }, [
     comments.reloadComments,
-    isSpecDocumentLoading,
-    isSpecTreeLoading,
+    isCurrentViewLoading,
     refreshCurrentView,
-    refreshStatus.status,
-    specs.archivingSpecId,
     specs.reloadSpecs,
     specs.selectedFileKey,
     specs.selectedSpecId,
@@ -930,93 +910,52 @@ function SpecViewAppContent(): ReactElement {
     workspace.workspacePath ?? uiText.workspace.noWorkspace;
   const selectSpecFromTree = useCallback(
     (specId: string): void => {
-      if (
-        isSpecTreeLoading ||
-        isSpecDocumentLoading ||
-        isWorkspaceRefreshLoading ||
-        specs.archivingSpecId !== null
-      ) {
+      if (isCurrentViewLoading) {
         return;
       }
 
       void specs.selectSpec(specId);
     },
-    [
-      isSpecDocumentLoading,
-      isSpecTreeLoading,
-      isWorkspaceRefreshLoading,
-      specs.archivingSpecId,
-      specs.selectSpec,
-    ],
+    [isCurrentViewLoading, specs.selectSpec],
   );
 
   const archiveSpecFromTree = useCallback(
     (specId: string): void => {
-      if (
-        specs.archivingSpecId !== null ||
-        isSpecTreeLoading ||
-        isSpecDocumentLoading ||
-        isWorkspaceRefreshLoading ||
-        specs.archivingSpecId !== null
-      ) {
+      if (isCurrentViewLoading) {
         return;
       }
 
       void specs.archiveSpec(specId);
     },
-    [
-      isSpecDocumentLoading,
-      isSpecTreeLoading,
-      isWorkspaceRefreshLoading,
-      specs.archiveSpec,
-      specs.archivingSpecId,
-    ],
+    [isCurrentViewLoading, specs.archiveSpec],
   );
 
   const reloadSpecsFromTree = useCallback((): void => {
-    if (
-      isSpecTreeLoading ||
-      specs.archivingSpecId !== null ||
-      isWorkspaceRefreshLoading
-    ) {
+    if (isCurrentViewLoading) {
       return;
     }
 
     void specs.reloadSpecs();
-  }, [
-    isSpecTreeLoading,
-    isWorkspaceRefreshLoading,
-    specs.archivingSpecId,
-    specs.reloadSpecs,
-  ]);
+  }, [isCurrentViewLoading, specs.reloadSpecs]);
 
   const selectFileFromTabs = useCallback(
     (fileKey: SpecFileKey): void => {
-      if (
-        isSpecDocumentLoading ||
-        isWorkspaceRefreshLoading ||
-        specs.archivingSpecId !== null
-      ) {
+      if (isCurrentViewLoading) {
         return;
       }
 
       void specs.selectFileKey(fileKey);
     },
-    [
-      isSpecDocumentLoading,
-      isWorkspaceRefreshLoading,
-      specs.archivingSpecId,
-      specs.selectFileKey,
-    ],
+    [isCurrentViewLoading, specs.selectFileKey],
   );
 
   const reloadDocumentFromViewer = useCallback((): void => {
-    if (isSpecDocumentLoading) {
+    if (isCurrentViewLoading) {
       return;
     }
 
     void specs.reloadDocument();
-  }, [isSpecDocumentLoading, specs.reloadDocument]);
+  }, [isCurrentViewLoading, specs.reloadDocument]);
 
   useKeyboardShortcuts({
     onNextFile: () => selectAdjacentFile("next"),
@@ -1076,8 +1015,7 @@ function SpecViewAppContent(): ReactElement {
               state={specs.specTreeState}
               selectedSpecId={specs.selectedSpecId}
               archivingSpecId={specs.archivingSpecId}
-              isDocumentLoading={isSpecDocumentLoading}
-              isRefreshLoading={isWorkspaceRefreshLoading}
+              isLoading={isCurrentViewLoading}
               onSelectSpec={selectSpecFromTree}
               onArchiveSpec={archiveSpecFromTree}
               onReload={reloadSpecsFromTree}
@@ -1097,10 +1035,7 @@ function SpecViewAppContent(): ReactElement {
                 workspace.workspace !== null &&
                 specs.selectedSpecId !== null &&
                 specs.selectedFileKey !== null &&
-                !isSpecTreeLoading &&
-                !isSpecDocumentLoading &&
-                specs.archivingSpecId === null &&
-                refreshStatus.status !== "loading"
+                !isCurrentViewLoading
               }
               onInputChange={setWorkspaceInput}
               onBrowse={() => {
@@ -1117,11 +1052,7 @@ function SpecViewAppContent(): ReactElement {
             <SpecTabs
               spec={specs.selectedSpec}
               selectedFileKey={specs.selectedFileKey}
-              isSelectionDisabled={
-                isSpecDocumentLoading ||
-                isWorkspaceRefreshLoading ||
-                specs.archivingSpecId !== null
-              }
+              isSelectionDisabled={isCurrentViewLoading}
               onSelectFile={selectFileFromTabs}
             />
           </WorkspaceLayout.Tabs>

@@ -613,13 +613,14 @@ test("SpecTreeはspec選択イベントを発火する", () => {
   result.unmount();
 });
 
-test("SpecTreeはアーカイブ中に描画済みspec選択を発火しない", () => {
+test("SpecTreeはloading中に描画済みspec選択を発火しない", () => {
   const onSelectSpec = vi.fn();
   const result = renderComponent(
     <SpecTree
       state={readyTreeState}
       selectedSpecId={null}
       archivingSpecId="phase-1-viewer"
+      isLoading
       onSelectSpec={onSelectSpec}
       onReload={vi.fn()}
     />,
@@ -660,7 +661,7 @@ test("SpecTreeはspec行のアーカイブ操作を発火する", () => {
   result.unmount();
 });
 
-test("SpecTreeはアーカイブ中にreloadとarchiveを発火しない", () => {
+test("SpecTreeはloading中にreloadとarchiveを発火しない", () => {
   const onArchiveSpec = vi.fn();
   const onReload = vi.fn();
   const result = renderComponent(
@@ -668,6 +669,7 @@ test("SpecTreeはアーカイブ中にreloadとarchiveを発火しない", () =>
       state={readyTreeState}
       selectedSpecId={null}
       archivingSpecId="phase-1-viewer"
+      isLoading
       onSelectSpec={vi.fn()}
       onArchiveSpec={onArchiveSpec}
       onReload={onReload}
@@ -692,7 +694,7 @@ test("SpecTreeはアーカイブ中にreloadとarchiveを発火しない", () =>
   result.unmount();
 });
 
-test("SpecTreeはdocument loading中にreloadとspec選択とarchiveを発火しない", () => {
+test("SpecTreeは単一loading中にreloadとspec選択とarchiveを発火しない", () => {
   const onArchiveSpec = vi.fn();
   const onSelectSpec = vi.fn();
   const onReload = vi.fn();
@@ -700,46 +702,7 @@ test("SpecTreeはdocument loading中にreloadとspec選択とarchiveを発火し
     <SpecTree
       state={readyTreeState}
       selectedSpecId={null}
-      isDocumentLoading
-      onSelectSpec={onSelectSpec}
-      onArchiveSpec={onArchiveSpec}
-      onReload={onReload}
-    />,
-  );
-  const refreshButton = result.container.querySelector(
-    '[aria-label="Specツリーを再読み込み"]',
-  ) as HTMLButtonElement;
-  const specButton = result.container.querySelector(
-    ".spec-tree__item",
-  ) as HTMLButtonElement;
-  const archiveButton = result.container.querySelector(
-    '[aria-label="Phase 1 Viewerをアーカイブへ移動"]',
-  ) as HTMLButtonElement;
-
-  act(() => {
-    refreshButton.click();
-    specButton.click();
-    archiveButton.click();
-  });
-
-  expect(refreshButton.disabled).toBe(true);
-  expect(specButton.disabled).toBe(true);
-  expect(archiveButton.disabled).toBe(true);
-  expect(onReload).not.toHaveBeenCalled();
-  expect(onSelectSpec).not.toHaveBeenCalled();
-  expect(onArchiveSpec).not.toHaveBeenCalled();
-  result.unmount();
-});
-
-test("SpecTreeはrefresh loading中にreloadとspec選択とarchiveを発火しない", () => {
-  const onArchiveSpec = vi.fn();
-  const onSelectSpec = vi.fn();
-  const onReload = vi.fn();
-  const result = renderComponent(
-    <SpecTree
-      state={readyTreeState}
-      selectedSpecId={null}
-      isRefreshLoading
+      isLoading
       onSelectSpec={onSelectSpec}
       onArchiveSpec={onArchiveSpec}
       onReload={onReload}
@@ -793,13 +756,14 @@ test.each([
       error: null,
     } satisfies SpecTreeState,
   ],
-])("SpecTreeはアーカイブ中に%s状態のreloadを発火しない", (_label, state) => {
+])("SpecTreeはloading中に%s状態のreloadを発火しない", (_label, state) => {
   const onReload = vi.fn();
   const result = renderComponent(
     <SpecTree
       state={state}
       selectedSpecId={null}
       archivingSpecId="phase-1-viewer"
+      isLoading
       onSelectSpec={vi.fn()}
       onReload={onReload}
     />,

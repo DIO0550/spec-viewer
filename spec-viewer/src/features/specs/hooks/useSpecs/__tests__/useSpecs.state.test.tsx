@@ -343,6 +343,60 @@ test("useSpecsはworkspace未選択ならspecとMarkdownをidleにする", () =>
   result.unmount();
 });
 
+test("useSpecsはロード中だけ単一のisLoadingをtrueにする", async () => {
+  const deferredTree = createDeferred<SpecTree>();
+  const listSpecs = specCommandMocks.listSpecs.mockReturnValue(
+    deferredTree.promise,
+  );
+  specCommandMocks.readSpecFile.mockResolvedValue(loadedDocument);
+
+  const result = renderHook(
+    ({ workspacePath }) => useSpecs({ workspacePath }),
+    { workspacePath: "/workspace/spec-reviewer" },
+  );
+
+  expect(result.current.isLoading).toBe(true);
+
+  const reload = result.current.reloadSpecs();
+
+  await act(async () => {
+    deferredTree.resolve(populatedTree);
+    await reload;
+  });
+
+  expect(listSpecs).toHaveBeenCalledOnce();
+  expect(result.current.isLoading).toBe(false);
+  expect(result.current.documentState.status).toBe("ready");
+  result.unmount();
+});
+
+test("useSpecsはloading中のarchiveを実行しない", async () => {
+  const deferredTree = createDeferred<SpecTree>();
+  specCommandMocks.listSpecs.mockReturnValue(deferredTree.promise);
+  specCommandMocks.readSpecFile.mockResolvedValue(loadedDocument);
+
+  const result = renderHook(
+    ({ workspacePath }) => useSpecs({ workspacePath }),
+    { workspacePath: "/workspace/spec-reviewer" },
+  );
+
+  let archived = true;
+  await act(async () => {
+    archived = await result.current.archiveSpec("phase-1-viewer");
+  });
+
+  const initialLoad = result.current.reloadSpecs();
+
+  await act(async () => {
+    deferredTree.resolve(populatedTree);
+    await initialLoad;
+  });
+
+  expect(archived).toBe(false);
+  expect(specCommandMocks.archiveSpec).not.toHaveBeenCalled();
+  result.unmount();
+});
+
 test("useSpecsはworkspace pathからspec treeを読み込みempty状態を表現する", async () => {
   specCommandMocks.listSpecs.mockResolvedValue({ specs: [] });
   const result = renderHook(
@@ -1197,7 +1251,6 @@ test("useSpecsはarchive errorをreloadやselectionで保持し次のarchive開�
 test("useSpecsはarchive後に選択中specが消えたらdefault openable specへfallbackする", async () => {
   const onSelectionChange = vi.fn();
   specCommandMocks.listSpecs
-    .mockResolvedValueOnce(populatedTree)
     .mockResolvedValueOnce(populatedTree)
     .mockResolvedValueOnce(refreshedNestedTree);
   specCommandMocks.readSpecFile
