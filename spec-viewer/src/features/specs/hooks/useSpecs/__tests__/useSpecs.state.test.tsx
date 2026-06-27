@@ -826,6 +826,60 @@ test("useSpecsはworkspace変更後に古いmanual reload responseで最新state
   result.unmount();
 });
 
+test("useSpecsは同じworkspace pathへ戻った後も古いmanual reload responseで最新stateを上書きしない", async () => {
+  const oldWorkspaceReload = createDeferred<SpecTree>();
+  const listSpecs = specCommandMocks.listSpecs
+    .mockResolvedValueOnce(populatedTree)
+    .mockReturnValueOnce(oldWorkspaceReload.promise)
+    .mockResolvedValueOnce(populatedTree)
+    .mockResolvedValueOnce(populatedTree);
+  specCommandMocks.readSpecFile.mockResolvedValue(loadedDocument);
+
+  const result = renderHook(
+    ({ workspacePath }) => useSpecs({ workspacePath }),
+    { workspacePath: "/workspace/spec-reviewer" },
+  );
+
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  const reload = result.current.reloadSpecs();
+  await act(async () => {
+    await Promise.resolve();
+  });
+
+  result.rerender({ workspacePath: "/workspace/other" });
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  result.rerender({ workspacePath: "/workspace/spec-reviewer" });
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  await act(async () => {
+    oldWorkspaceReload.resolve({ specs: [] });
+    await reload;
+  });
+
+  expect(listSpecs).toHaveBeenNthCalledWith(2, "/workspace/spec-reviewer");
+  expect(listSpecs).toHaveBeenNthCalledWith(3, "/workspace/other");
+  expect(listSpecs).toHaveBeenNthCalledWith(4, "/workspace/spec-reviewer");
+  expect(result.current.specTreeState).toEqual(
+    expect.objectContaining({
+      status: "ready",
+      workspacePath: "/workspace/spec-reviewer",
+    }),
+  );
+  expect(result.current.selectedSpecId).toBe("phase-1-viewer");
+  result.unmount();
+});
+
 test("useSpecsはworkspace変更後に古いdocument responseで最新document stateを上書きしない", async () => {
   const oldWorkspaceDocument = createDeferred<SpecDocument>();
   specCommandMocks.listSpecs.mockResolvedValue(populatedTree);

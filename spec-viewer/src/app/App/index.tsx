@@ -698,6 +698,7 @@ function SpecViewAppContent(): ReactElement {
 
       if (
         isSpecDocumentLoading ||
+        isWorkspaceRefreshLoading ||
         selectedSpec === null ||
         selectedSpec.files.length === 0
       ) {
@@ -724,6 +725,7 @@ function SpecViewAppContent(): ReactElement {
     },
     [
       isSpecDocumentLoading,
+      isWorkspaceRefreshLoading,
       specs.selectFileKey,
       specs.selectedFileKey,
       specs.selectedSpec,
@@ -926,13 +928,22 @@ function SpecViewAppContent(): ReactElement {
     workspace.workspacePath ?? uiText.workspace.noWorkspace;
   const selectSpecFromTree = useCallback(
     (specId: string): void => {
-      if (isSpecTreeLoading || isSpecDocumentLoading) {
+      if (
+        isSpecTreeLoading ||
+        isSpecDocumentLoading ||
+        isWorkspaceRefreshLoading
+      ) {
         return;
       }
 
       void specs.selectSpec(specId);
     },
-    [isSpecDocumentLoading, isSpecTreeLoading, specs.selectSpec],
+    [
+      isSpecDocumentLoading,
+      isSpecTreeLoading,
+      isWorkspaceRefreshLoading,
+      specs.selectSpec,
+    ],
   );
 
   const archiveSpecFromTree = useCallback(
@@ -976,13 +987,13 @@ function SpecViewAppContent(): ReactElement {
 
   const selectFileFromTabs = useCallback(
     (fileKey: SpecFileKey): void => {
-      if (isSpecDocumentLoading) {
+      if (isSpecDocumentLoading || isWorkspaceRefreshLoading) {
         return;
       }
 
       void specs.selectFileKey(fileKey);
     },
-    [isSpecDocumentLoading, specs.selectFileKey],
+    [isSpecDocumentLoading, isWorkspaceRefreshLoading, specs.selectFileKey],
   );
 
   const reloadDocumentFromViewer = useCallback((): void => {
@@ -1092,7 +1103,9 @@ function SpecViewAppContent(): ReactElement {
             <SpecTabs
               spec={specs.selectedSpec}
               selectedFileKey={specs.selectedFileKey}
-              isSelectionDisabled={isSpecDocumentLoading}
+              isSelectionDisabled={
+                isSpecDocumentLoading || isWorkspaceRefreshLoading
+              }
               onSelectFile={selectFileFromTabs}
             />
           </WorkspaceLayout.Tabs>

@@ -67,7 +67,13 @@ type ShouldCommitState = () => boolean;
 export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
   const { onSelectionChange, workspacePath } = options;
   const workspacePathRef = useRef(workspacePath);
-  workspacePathRef.current = workspacePath;
+  const workspaceGenerationRef = useRef(0);
+
+  if (workspacePathRef.current !== workspacePath) {
+    workspacePathRef.current = workspacePath;
+    workspaceGenerationRef.current += 1;
+  }
+
   const [specTreeState, setSpecTreeState] =
     useState<SpecTreeState>(initialSpecTreeState);
   const [documentState, setDocumentState] =
@@ -81,9 +87,13 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
     useState<NormalizedCommandError | null>(null);
 
   const createWorkspaceCommitGuard = useCallback(
-    (activeWorkspacePath: string | null): ShouldCommitState =>
-      (): boolean =>
-        workspacePathRef.current === activeWorkspacePath,
+    (activeWorkspacePath: string | null): ShouldCommitState => {
+      const activeWorkspaceGeneration = workspaceGenerationRef.current;
+
+      return (): boolean =>
+        workspacePathRef.current === activeWorkspacePath &&
+        workspaceGenerationRef.current === activeWorkspaceGeneration;
+    },
     [],
   );
 
@@ -298,8 +308,11 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
 
   useEffect(() => {
     let cancelled = false;
+    const activeWorkspaceGeneration = workspaceGenerationRef.current;
     const canCommit = (): boolean =>
-      !cancelled && workspacePathRef.current === workspacePath;
+      !cancelled &&
+      workspacePathRef.current === workspacePath &&
+      workspaceGenerationRef.current === activeWorkspaceGeneration;
 
     resetSelection();
 
