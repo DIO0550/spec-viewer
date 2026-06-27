@@ -58,6 +58,7 @@ import {
 } from "@/features/specs";
 import {
   OpenWorkspaceEmptyState,
+  WorkspaceProvider,
   WorkspaceDropOverlay,
   WorkspaceSidebarSection,
   WorkspaceToolbar,
@@ -126,11 +127,13 @@ const idleCommentExportState: CommentExportState = {
 function App(): ReactElement {
   return (
     <ThemeProvider>
-      <SidebarPreferenceProvider>
-        <SpecViewSelectionProvider>
-          <SpecViewAppContent />
-        </SpecViewSelectionProvider>
-      </SidebarPreferenceProvider>
+      <WorkspaceProvider>
+        <SidebarPreferenceProvider>
+          <SpecViewSelectionProvider>
+            <SpecViewAppContent />
+          </SpecViewSelectionProvider>
+        </SidebarPreferenceProvider>
+      </WorkspaceProvider>
     </ThemeProvider>
   );
 }
