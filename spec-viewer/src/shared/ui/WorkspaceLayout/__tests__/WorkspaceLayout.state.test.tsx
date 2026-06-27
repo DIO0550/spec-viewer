@@ -613,7 +613,7 @@ test("SpecTreeはspec選択イベントを発火する", () => {
   result.unmount();
 });
 
-test("SpecTreeはアーカイブ中でも描画済みspec選択を発火する", () => {
+test("SpecTreeはアーカイブ中に描画済みspec選択を発火しない", () => {
   const onSelectSpec = vi.fn();
   const result = renderComponent(
     <SpecTree
@@ -632,8 +632,8 @@ test("SpecTreeはアーカイブ中でも描画済みspec選択を発火する",
     button.click();
   });
 
-  expect(button.disabled).toBe(false);
-  expect(onSelectSpec).toHaveBeenCalledWith("phase-1-viewer");
+  expect(button.disabled).toBe(true);
+  expect(onSelectSpec).not.toHaveBeenCalled();
   result.unmount();
 });
 

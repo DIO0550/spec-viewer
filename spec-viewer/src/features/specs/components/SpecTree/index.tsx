@@ -72,7 +72,10 @@ export function SpecTree({
     isRefreshLoading ||
     isArchivingSpec;
   const isSelectionDisabled =
-    state.status === "loading" || isDocumentLoading || isRefreshLoading;
+    state.status === "loading" ||
+    isDocumentLoading ||
+    isRefreshLoading ||
+    isArchivingSpec;
   const isArchiveDisabled =
     state.status === "loading" ||
     isDocumentLoading ||

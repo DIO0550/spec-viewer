@@ -699,6 +699,7 @@ function SpecViewAppContent(): ReactElement {
       if (
         isSpecDocumentLoading ||
         isWorkspaceRefreshLoading ||
+        specs.archivingSpecId !== null ||
         selectedSpec === null ||
         selectedSpec.files.length === 0
       ) {
@@ -726,6 +727,7 @@ function SpecViewAppContent(): ReactElement {
     [
       isSpecDocumentLoading,
       isWorkspaceRefreshLoading,
+      specs.archivingSpecId,
       specs.selectFileKey,
       specs.selectedFileKey,
       specs.selectedSpec,
@@ -931,7 +933,8 @@ function SpecViewAppContent(): ReactElement {
       if (
         isSpecTreeLoading ||
         isSpecDocumentLoading ||
-        isWorkspaceRefreshLoading
+        isWorkspaceRefreshLoading ||
+        specs.archivingSpecId !== null
       ) {
         return;
       }
@@ -942,6 +945,7 @@ function SpecViewAppContent(): ReactElement {
       isSpecDocumentLoading,
       isSpecTreeLoading,
       isWorkspaceRefreshLoading,
+      specs.archivingSpecId,
       specs.selectSpec,
     ],
   );
@@ -952,7 +956,8 @@ function SpecViewAppContent(): ReactElement {
         specs.archivingSpecId !== null ||
         isSpecTreeLoading ||
         isSpecDocumentLoading ||
-        isWorkspaceRefreshLoading
+        isWorkspaceRefreshLoading ||
+        specs.archivingSpecId !== null
       ) {
         return;
       }
@@ -987,13 +992,22 @@ function SpecViewAppContent(): ReactElement {
 
   const selectFileFromTabs = useCallback(
     (fileKey: SpecFileKey): void => {
-      if (isSpecDocumentLoading || isWorkspaceRefreshLoading) {
+      if (
+        isSpecDocumentLoading ||
+        isWorkspaceRefreshLoading ||
+        specs.archivingSpecId !== null
+      ) {
         return;
       }
 
       void specs.selectFileKey(fileKey);
     },
-    [isSpecDocumentLoading, isWorkspaceRefreshLoading, specs.selectFileKey],
+    [
+      isSpecDocumentLoading,
+      isWorkspaceRefreshLoading,
+      specs.archivingSpecId,
+      specs.selectFileKey,
+    ],
   );
 
   const reloadDocumentFromViewer = useCallback((): void => {
@@ -1104,7 +1118,9 @@ function SpecViewAppContent(): ReactElement {
               spec={specs.selectedSpec}
               selectedFileKey={specs.selectedFileKey}
               isSelectionDisabled={
-                isSpecDocumentLoading || isWorkspaceRefreshLoading
+                isSpecDocumentLoading ||
+                isWorkspaceRefreshLoading ||
+                specs.archivingSpecId !== null
               }
               onSelectFile={selectFileFromTabs}
             />
