@@ -796,6 +796,10 @@ function SpecViewAppContent(): ReactElement {
 
   const reloadCurrentMarkdownFromWatcher =
     useCallback(async (): Promise<void> => {
+      if (isSpecDocumentLoading || isWorkspaceRefreshLoading) {
+        return;
+      }
+
       await refreshCurrentView({
         loadingMessage: "Markdown変更を反映中",
         failureStatus: "stale",
@@ -807,10 +811,25 @@ function SpecViewAppContent(): ReactElement {
           return isDocumentReloaded && areCommentsReloaded;
         },
       });
-    }, [comments.reloadComments, refreshCurrentView, specs.reloadDocument]);
+    }, [
+      comments.reloadComments,
+      isSpecDocumentLoading,
+      isWorkspaceRefreshLoading,
+      refreshCurrentView,
+      specs.reloadDocument,
+    ]);
 
   const reloadWorkspaceConfigFromWatcher =
     useCallback(async (): Promise<void> => {
+      if (
+        isSpecTreeLoading ||
+        isSpecDocumentLoading ||
+        isWorkspaceRefreshLoading ||
+        specs.archivingSpecId !== null
+      ) {
+        return;
+      }
+
       await refreshCurrentView({
         loadingMessage: "Spec設定変更を反映中",
         failureStatus: "stale",
@@ -822,13 +841,24 @@ function SpecViewAppContent(): ReactElement {
           return areSpecsReloaded && areCommentsReloaded;
         },
       });
-    }, [comments.reloadComments, refreshCurrentView, specs.reloadSpecs]);
+    }, [
+      comments.reloadComments,
+      isSpecDocumentLoading,
+      isSpecTreeLoading,
+      isWorkspaceRefreshLoading,
+      refreshCurrentView,
+      specs.archivingSpecId,
+      specs.reloadSpecs,
+    ]);
 
   const refreshCurrentViewManually = useCallback(async (): Promise<void> => {
     if (
       workspace.workspace === null ||
       specs.selectedSpecId === null ||
       specs.selectedFileKey === null ||
+      isSpecTreeLoading ||
+      isSpecDocumentLoading ||
+      specs.archivingSpecId !== null ||
       refreshStatus.status === "loading"
     ) {
       return;
@@ -847,8 +877,11 @@ function SpecViewAppContent(): ReactElement {
     });
   }, [
     comments.reloadComments,
+    isSpecDocumentLoading,
+    isSpecTreeLoading,
     refreshCurrentView,
     refreshStatus.status,
+    specs.archivingSpecId,
     specs.reloadSpecs,
     specs.selectedFileKey,
     specs.selectedSpecId,
@@ -1039,6 +1072,9 @@ function SpecViewAppContent(): ReactElement {
                 workspace.workspace !== null &&
                 specs.selectedSpecId !== null &&
                 specs.selectedFileKey !== null &&
+                !isSpecTreeLoading &&
+                !isSpecDocumentLoading &&
+                specs.archivingSpecId === null &&
                 refreshStatus.status !== "loading"
               }
               onInputChange={setWorkspaceInput}
