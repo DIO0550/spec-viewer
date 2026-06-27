@@ -895,13 +895,24 @@ function SpecViewAppContent(): ReactElement {
 
   const archiveSpecFromTree = useCallback(
     (specId: string): void => {
-      if (specs.archivingSpecId !== null || isSpecTreeLoading) {
+      if (
+        specs.archivingSpecId !== null ||
+        isSpecTreeLoading ||
+        isSpecDocumentLoading ||
+        isWorkspaceRefreshLoading
+      ) {
         return;
       }
 
       void specs.archiveSpec(specId);
     },
-    [isSpecTreeLoading, specs.archiveSpec, specs.archivingSpecId],
+    [
+      isSpecDocumentLoading,
+      isSpecTreeLoading,
+      isWorkspaceRefreshLoading,
+      specs.archiveSpec,
+      specs.archivingSpecId,
+    ],
   );
 
   const reloadSpecsFromTree = useCallback((): void => {

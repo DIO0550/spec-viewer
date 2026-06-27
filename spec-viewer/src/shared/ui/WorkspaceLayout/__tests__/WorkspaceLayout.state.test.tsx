@@ -692,7 +692,8 @@ test("SpecTreeはアーカイブ中にreloadとarchiveを発火しない", () =>
   result.unmount();
 });
 
-test("SpecTreeはdocument loading中にreloadとspec選択を発火しない", () => {
+test("SpecTreeはdocument loading中にreloadとspec選択とarchiveを発火しない", () => {
+  const onArchiveSpec = vi.fn();
   const onSelectSpec = vi.fn();
   const onReload = vi.fn();
   const result = renderComponent(
@@ -701,6 +702,7 @@ test("SpecTreeはdocument loading中にreloadとspec選択を発火しない", (
       selectedSpecId={null}
       isDocumentLoading
       onSelectSpec={onSelectSpec}
+      onArchiveSpec={onArchiveSpec}
       onReload={onReload}
     />,
   );
@@ -710,20 +712,27 @@ test("SpecTreeはdocument loading中にreloadとspec選択を発火しない", (
   const specButton = result.container.querySelector(
     ".spec-tree__item",
   ) as HTMLButtonElement;
+  const archiveButton = result.container.querySelector(
+    '[aria-label="Phase 1 Viewerをアーカイブへ移動"]',
+  ) as HTMLButtonElement;
 
   act(() => {
     refreshButton.click();
     specButton.click();
+    archiveButton.click();
   });
 
   expect(refreshButton.disabled).toBe(true);
   expect(specButton.disabled).toBe(true);
+  expect(archiveButton.disabled).toBe(true);
   expect(onReload).not.toHaveBeenCalled();
   expect(onSelectSpec).not.toHaveBeenCalled();
+  expect(onArchiveSpec).not.toHaveBeenCalled();
   result.unmount();
 });
 
-test("SpecTreeはrefresh loading中にreloadを発火しない", () => {
+test("SpecTreeはrefresh loading中にreloadとarchiveを発火しない", () => {
+  const onArchiveSpec = vi.fn();
   const onReload = vi.fn();
   const result = renderComponent(
     <SpecTree
@@ -731,19 +740,26 @@ test("SpecTreeはrefresh loading中にreloadを発火しない", () => {
       selectedSpecId={null}
       isRefreshLoading
       onSelectSpec={vi.fn()}
+      onArchiveSpec={onArchiveSpec}
       onReload={onReload}
     />,
   );
   const refreshButton = result.container.querySelector(
     '[aria-label="Specツリーを再読み込み"]',
   ) as HTMLButtonElement;
+  const archiveButton = result.container.querySelector(
+    '[aria-label="Phase 1 Viewerをアーカイブへ移動"]',
+  ) as HTMLButtonElement;
 
   act(() => {
     refreshButton.click();
+    archiveButton.click();
   });
 
   expect(refreshButton.disabled).toBe(true);
+  expect(archiveButton.disabled).toBe(true);
   expect(onReload).not.toHaveBeenCalled();
+  expect(onArchiveSpec).not.toHaveBeenCalled();
   result.unmount();
 });
 

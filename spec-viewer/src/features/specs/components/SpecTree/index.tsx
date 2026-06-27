@@ -72,7 +72,11 @@ export function SpecTree({
     isRefreshLoading ||
     isArchivingSpec;
   const isSelectionDisabled = state.status === "loading" || isDocumentLoading;
-  const isArchiveDisabled = state.status === "loading" || isArchivingSpec;
+  const isArchiveDisabled =
+    state.status === "loading" ||
+    isDocumentLoading ||
+    isRefreshLoading ||
+    isArchivingSpec;
 
   const toggleSpecExpanded = (specId: string): void => {
     setExpandedSpecIds((currentIds) => {
