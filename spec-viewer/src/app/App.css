@@ -619,18 +619,6 @@ textarea:disabled {
   white-space: nowrap;
 }
 
-.workspace-toolbar__status[data-refresh-status="loading"] {
-  color: var(--color-accent);
-}
-
-.workspace-toolbar__status[data-refresh-status="stale"] {
-  color: var(--color-warning);
-}
-
-.workspace-toolbar__status[data-refresh-status="error"] {
-  color: var(--color-danger);
-}
-
 .workspace-toolbar__field span {
   color: var(--color-text-muted);
   font-size: 0.68rem;

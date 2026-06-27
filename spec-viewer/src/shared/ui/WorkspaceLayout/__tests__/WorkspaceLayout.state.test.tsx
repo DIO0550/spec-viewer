@@ -251,7 +251,6 @@ test("WorkspaceLayoutはtoolbar、tree、tabs、viewer、comment sidebarを表�
           isLoading={false}
           isBrowsing={false}
           errorMessage={null}
-          refreshStatus={{ status: "idle", message: null }}
           canRefresh={true}
           onInputChange={vi.fn()}
           onBrowse={vi.fn()}
@@ -1063,7 +1062,6 @@ test("WorkspaceToolbarはopen workspace操作を発火する", () => {
       isLoading={false}
       isBrowsing={false}
       errorMessage={null}
-      refreshStatus={{ status: "idle", message: null }}
       canRefresh={false}
       onInputChange={vi.fn()}
       onBrowse={onBrowse}
@@ -1093,7 +1091,6 @@ test("WorkspaceToolbarはパス入力のsubmitでworkspace読み込みを発火�
       isLoading={false}
       isBrowsing={false}
       errorMessage={null}
-      refreshStatus={{ status: "idle", message: null }}
       canRefresh={false}
       onInputChange={vi.fn()}
       onBrowse={vi.fn()}
@@ -1124,11 +1121,7 @@ test("WorkspaceToolbarはcurrent view refresh操作と状態を表示する", ()
       inputValue={workspacePath}
       isLoading={false}
       isBrowsing={false}
-      errorMessage={null}
-      refreshStatus={{
-        status: "stale",
-        message: "Content may be stale. Refresh to retry.",
-      }}
+      errorMessage="Content may be stale. Refresh to retry."
       canRefresh={true}
       onInputChange={vi.fn()}
       onBrowse={vi.fn()}
@@ -1160,7 +1153,6 @@ test("WorkspaceToolbarはrefresh不可ならcurrent view refreshを発火しな�
       isLoading={false}
       isBrowsing={false}
       errorMessage={null}
-      refreshStatus={{ status: "idle", message: null }}
       canRefresh={false}
       onInputChange={vi.fn()}
       onBrowse={vi.fn()}
@@ -1190,7 +1182,6 @@ test("WorkspaceToolbarはtheme mode変更をContext経由でdocumentへ反映す
       isLoading={false}
       isBrowsing={false}
       errorMessage={null}
-      refreshStatus={{ status: "idle", message: null }}
       canRefresh={true}
       onInputChange={vi.fn()}
       onBrowse={vi.fn()}

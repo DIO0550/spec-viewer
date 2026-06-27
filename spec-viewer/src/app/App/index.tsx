@@ -66,7 +66,6 @@ import {
   useWorkspace,
   useWorkspaceDrop,
   useWorkspaceSidebarSectionPreference,
-  type WorkspaceRefreshStatus,
 } from "@/features/workspace";
 import { WorkspaceLayout } from "@/shared/ui";
 import {
@@ -80,14 +79,7 @@ import {
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 import { uiText } from "@/shared/lib/uiText";
 
-const idleRefreshStatus: WorkspaceRefreshStatus = {
-  status: "idle",
-  message: null,
-};
-
 type RefreshCurrentViewOptions = Readonly<{
-  loadingMessage: string;
-  failureStatus: "stale" | "error";
   failureMessage: string;
   run: () => Promise<boolean>;
 }>;
@@ -215,8 +207,6 @@ function SpecViewAppContent(): ReactElement {
     null,
   );
   const [dropErrorMessage, setDropErrorMessage] = useState<string | null>(null);
-  const [refreshStatus, setRefreshStatus] =
-    useState<WorkspaceRefreshStatus>(idleRefreshStatus);
   const [commentExportState, setCommentExportState] =
     useState<CommentExportState>(idleCommentExportState);
   const hasAttemptedStartupRestoreRef = useRef(false);
@@ -224,7 +214,7 @@ function SpecViewAppContent(): ReactElement {
   useEffect(() => {
     setActiveCommentId(null);
     setCommentAnchorDisplayStates([]);
-    setRefreshStatus(idleRefreshStatus);
+    setDialogErrorMessage(null);
     setCommentExportState(idleCommentExportState);
   }, [specs.selectedFileKey, specs.selectedSpecId, workspace.workspace?.root]);
 
@@ -688,8 +678,7 @@ function SpecViewAppContent(): ReactElement {
     workspace.workspace,
   ]);
 
-  const isCurrentViewLoading =
-    specs.isLoading || refreshStatus.status === "loading";
+  const isCurrentViewLoading = specs.isLoading;
 
   const selectAdjacentFile = useCallback(
     (direction: NavigationDirection): boolean => {
@@ -758,35 +747,24 @@ function SpecViewAppContent(): ReactElement {
 
   const refreshCurrentView = useCallback(
     async ({
-      loadingMessage,
-      failureStatus,
       failureMessage,
       run,
     }: RefreshCurrentViewOptions): Promise<boolean> => {
       setDialogErrorMessage(null);
-      setRefreshStatus({
-        status: "loading",
-        message: loadingMessage,
-      });
 
       try {
         const isRefreshSuccessful = await run();
 
         if (!isRefreshSuccessful) {
-          setRefreshStatus({
-            status: failureStatus,
-            message: failureMessage,
-          });
+          setDialogErrorMessage(failureMessage);
           return false;
         }
 
-        setRefreshStatus(idleRefreshStatus);
         return true;
       } catch (error) {
-        setRefreshStatus({
-          status: failureStatus,
-          message: `${failureMessage} ${normalizeCommandError(error).message}`,
-        });
+        setDialogErrorMessage(
+          `${failureMessage} ${normalizeCommandError(error).message}`,
+        );
         return false;
       }
     },
@@ -800,8 +778,6 @@ function SpecViewAppContent(): ReactElement {
       }
 
       await refreshCurrentView({
-        loadingMessage: "Markdown変更を反映中",
-        failureStatus: "stale",
         failureMessage:
           "自動再読み込みに失敗しました。内容が古い可能性があります。",
         run: async () => {
@@ -824,8 +800,6 @@ function SpecViewAppContent(): ReactElement {
       }
 
       await refreshCurrentView({
-        loadingMessage: "Spec設定変更を反映中",
-        failureStatus: "stale",
         failureMessage:
           "自動再読み込みに失敗しました。内容が古い可能性があります。",
         run: async () => {
@@ -852,8 +826,6 @@ function SpecViewAppContent(): ReactElement {
     }
 
     await refreshCurrentView({
-      loadingMessage: "現在の表示を再読み込み中",
-      failureStatus: "error",
       failureMessage:
         "再読み込みに失敗しました。エラーを確認して再試行してください。",
       run: async () => {
@@ -879,10 +851,9 @@ function SpecViewAppContent(): ReactElement {
     onMarkdownChange: reloadCurrentMarkdownFromWatcher,
     onConfigChange: reloadWorkspaceConfigFromWatcher,
     onWatcherError: (event) => {
-      setRefreshStatus({
-        status: "stale",
-        message: `ファイル監視に失敗しました。内容が古い可能性があります。${event.message}`,
-      });
+      setDialogErrorMessage(
+        `ファイル監視に失敗しました。内容が古い可能性があります。${event.message}`,
+      );
     },
   });
 
@@ -1030,7 +1001,6 @@ function SpecViewAppContent(): ReactElement {
               isLoading={workspace.isLoading}
               isBrowsing={isBrowsingWorkspace}
               errorMessage={toolbarErrorMessage}
-              refreshStatus={refreshStatus}
               canRefresh={
                 workspace.workspace !== null &&
                 specs.selectedSpecId !== null &&
