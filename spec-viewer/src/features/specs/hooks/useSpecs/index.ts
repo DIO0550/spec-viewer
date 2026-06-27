@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { SpecDocumentState as SpecDocumentStateFactory } from "@/features/specs/domain/specDocumentState";
 import type { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
@@ -63,11 +63,11 @@ type ResolvedSelection = ReturnType<typeof SpecTreeDomain.resolveSelection>;
 
 type ShouldCommitState = () => boolean;
 
-const shouldCommitState = (): boolean => true;
-
 /** @returns Spec tree, selection, and Markdown loading state for a workspace. */
 export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
   const { onSelectionChange, workspacePath } = options;
+  const workspacePathRef = useRef(workspacePath);
+  workspacePathRef.current = workspacePath;
   const [specTreeState, setSpecTreeState] =
     useState<SpecTreeState>(initialSpecTreeState);
   const [documentState, setDocumentState] =
@@ -79,6 +79,13 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
   const [archivingSpecId, setArchivingSpecId] = useState<string | null>(null);
   const [archiveSpecError, setArchiveSpecError] =
     useState<NormalizedCommandError | null>(null);
+
+  const createWorkspaceCommitGuard = useCallback(
+    (activeWorkspacePath: string | null): ShouldCommitState =>
+      (): boolean =>
+        workspacePathRef.current === activeWorkspacePath,
+    [],
+  );
 
   const resetSelection = useCallback((): void => {
     setSelectedSpecId(null);
@@ -97,8 +104,14 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
       specId: string,
       fileKey: SpecFileKey,
       activeWorkspacePath: string | null = workspacePath,
-      canCommit: ShouldCommitState = shouldCommitState,
+      canCommit: ShouldCommitState = createWorkspaceCommitGuard(
+        activeWorkspacePath,
+      ),
     ): Promise<boolean> => {
+      if (!canCommit()) {
+        return false;
+      }
+
       if (activeWorkspacePath === null) {
         setDocumentState(
           SpecDocumentStateFactory.idle(activeWorkspacePath, specId, fileKey),
@@ -172,14 +185,16 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
         return false;
       }
     },
-    [workspacePath],
+    [createWorkspaceCommitGuard, workspacePath],
   );
 
   const loadResolvedSelection = useCallback(
     async (
       activeWorkspacePath: string,
       selection: ResolvedSelection,
-      canCommit: ShouldCommitState = shouldCommitState,
+      canCommit: ShouldCommitState = createWorkspaceCommitGuard(
+        activeWorkspacePath,
+      ),
     ): Promise<boolean> => {
       if (!canCommit()) {
         return false;
@@ -205,14 +220,18 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
         canCommit,
       );
     },
-    [loadDocument, onSelectionChange],
+    [createWorkspaceCommitGuard, loadDocument, onSelectionChange],
   );
 
   const loadSpecTree = useCallback(
     async (
       preferredSelection: PreferredSelection,
-      canCommit: ShouldCommitState = shouldCommitState,
+      canCommit: ShouldCommitState = createWorkspaceCommitGuard(workspacePath),
     ): Promise<boolean> => {
+      if (!canCommit()) {
+        return false;
+      }
+
       if (workspacePath === null) {
         setSpecTreeState(initialSpecTreeState);
         resetSelection();
@@ -260,7 +279,12 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
         return false;
       }
     },
-    [loadResolvedSelection, resetSelection, workspacePath],
+    [
+      createWorkspaceCommitGuard,
+      loadResolvedSelection,
+      resetSelection,
+      workspacePath,
+    ],
   );
 
   const reloadSpecs = useCallback(
@@ -274,7 +298,8 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
 
   useEffect(() => {
     let cancelled = false;
-    const canCommit = (): boolean => !cancelled;
+    const canCommit = (): boolean =>
+      !cancelled && workspacePathRef.current === workspacePath;
 
     resetSelection();
 
@@ -304,10 +329,12 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
 
   const selectSpec = useCallback(
     async (specId: string): Promise<void> => {
+      const activeWorkspacePath = workspacePath;
+      const canCommit = createWorkspaceCommitGuard(activeWorkspacePath);
       const nextSpec =
         tree === null ? null : SpecTreeDomain.findNode(tree, specId);
 
-      if (nextSpec === null) {
+      if (nextSpec === null || !canCommit()) {
         return;
       }
 
@@ -315,37 +342,64 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
       setSelectedSpecId(specId);
       setSelectedFileKey(defaultFileKey);
       onSelectionChange?.({
-        workspacePath,
+        workspacePath: activeWorkspacePath,
         specId,
         fileKey: defaultFileKey,
       });
 
       if (defaultFileKey === null) {
-        setDocumentState(SpecDocumentStateFactory.idle(workspacePath, specId));
+        setDocumentState(
+          SpecDocumentStateFactory.idle(activeWorkspacePath, specId),
+        );
         return;
       }
 
-      await loadDocument(specId, defaultFileKey);
+      await loadDocument(
+        specId,
+        defaultFileKey,
+        activeWorkspacePath,
+        canCommit,
+      );
     },
-    [loadDocument, onSelectionChange, tree, workspacePath],
+    [
+      createWorkspaceCommitGuard,
+      loadDocument,
+      onSelectionChange,
+      tree,
+      workspacePath,
+    ],
   );
 
   const selectFileKey = useCallback(
     async (fileKey: SpecFileKey): Promise<void> => {
-      if (selectedSpecId === null) {
+      const activeWorkspacePath = workspacePath;
+      const canCommit = createWorkspaceCommitGuard(activeWorkspacePath);
+
+      if (selectedSpecId === null || !canCommit()) {
         return;
       }
 
       setSelectedFileKey(fileKey);
       onSelectionChange?.({
-        workspacePath,
+        workspacePath: activeWorkspacePath,
         specId: selectedSpecId,
         fileKey,
       });
 
-      await loadDocument(selectedSpecId, fileKey);
+      await loadDocument(
+        selectedSpecId,
+        fileKey,
+        activeWorkspacePath,
+        canCommit,
+      );
     },
-    [loadDocument, onSelectionChange, selectedSpecId, workspacePath],
+    [
+      createWorkspaceCommitGuard,
+      loadDocument,
+      onSelectionChange,
+      selectedSpecId,
+      workspacePath,
+    ],
   );
 
   const reloadDocument = useCallback(async (): Promise<boolean> => {
@@ -353,14 +407,31 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
       return true;
     }
 
-    return await loadDocument(selectedSpecId, selectedFileKey);
-  }, [loadDocument, selectedFileKey, selectedSpecId]);
+    const activeWorkspacePath = workspacePath;
+    return await loadDocument(
+      selectedSpecId,
+      selectedFileKey,
+      activeWorkspacePath,
+      createWorkspaceCommitGuard(activeWorkspacePath),
+    );
+  }, [
+    createWorkspaceCommitGuard,
+    loadDocument,
+    selectedFileKey,
+    selectedSpecId,
+    workspacePath,
+  ]);
 
   const archiveSpec = useCallback(
     async (specId: string): Promise<boolean> => {
       const activeWorkspacePath = workspacePath;
+      const canCommit = createWorkspaceCommitGuard(activeWorkspacePath);
 
-      if (activeWorkspacePath === null || archivingSpecId !== null) {
+      if (
+        activeWorkspacePath === null ||
+        archivingSpecId !== null ||
+        !canCommit()
+      ) {
         return false;
       }
 
@@ -372,15 +443,24 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
           workspacePath: activeWorkspacePath,
           specId,
         });
+
+        if (!canCommit()) {
+          return false;
+        }
+
         return await reloadSpecs();
       } catch (error) {
-        setArchiveSpecError(normalizeCommandError(error));
+        if (canCommit()) {
+          setArchiveSpecError(normalizeCommandError(error));
+        }
         return false;
       } finally {
-        setArchivingSpecId(null);
+        if (canCommit()) {
+          setArchivingSpecId(null);
+        }
       }
     },
-    [archivingSpecId, reloadSpecs, workspacePath],
+    [archivingSpecId, createWorkspaceCommitGuard, reloadSpecs, workspacePath],
   );
 
   return {
