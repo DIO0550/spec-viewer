@@ -63,7 +63,8 @@ export function SpecTree({
     });
   }, [selectedSpecId, state]);
 
-  const isActionDisabled = state.status === "loading" || isLoading;
+  const isActionDisabled =
+    state.status === "loading" || isLoading || archivingSpecId !== null;
 
   const toggleSpecExpanded = (specId: string): void => {
     setExpandedSpecIds((currentIds) => {

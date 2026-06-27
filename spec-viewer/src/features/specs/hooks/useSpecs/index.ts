@@ -425,6 +425,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
     setState((currentState) => ({
       ...currentState,
       activeOperationId: operationId,
+      archiveSpecError: null,
       archivingSpecId: null,
       documentState: SpecDocumentStateFactory.idle(workspacePath),
       isLoading: workspacePath !== null,

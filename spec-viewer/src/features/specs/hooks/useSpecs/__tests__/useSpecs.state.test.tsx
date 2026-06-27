@@ -1324,6 +1324,32 @@ test("useSpecsはarchive後に選択中specが消えたらdefault openable spec�
   result.unmount();
 });
 
+test("useSpecsはworkspace changeでarchive errorをclearする", async () => {
+  const archiveError = new Error("archive failed");
+  specCommandMocks.listSpecs.mockResolvedValue(populatedTree);
+  specCommandMocks.readSpecFile.mockResolvedValue(loadedDocument);
+  specCommandMocks.archiveSpec.mockRejectedValue(archiveError);
+
+  const result = renderHook(
+    ({ workspacePath }) => useSpecs({ workspacePath }),
+    { workspacePath: "/workspace/spec-reviewer" },
+  );
+
+  await act(async () => {
+    await result.current.reloadSpecs();
+  });
+  await act(async () => {
+    await result.current.archiveSpec("phase-1-viewer");
+  });
+
+  expect(result.current.archiveSpecError?.message).toBe("archive failed");
+
+  result.rerender({ workspacePath: "/workspace/other" });
+
+  expect(result.current.archiveSpecError).toBeNull();
+  result.unmount();
+});
+
 test("useSpecsはarchive実行中のworkspace changeでarchivingSpecIdを残留させない", async () => {
   const archiveResult = {
     archivedSpecId: "phase-1-viewer",
