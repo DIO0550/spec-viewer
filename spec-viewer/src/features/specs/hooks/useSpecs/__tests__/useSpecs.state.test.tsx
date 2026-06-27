@@ -1109,6 +1109,45 @@ test("useSpecsはarchive中の追加archiveを実行しない", async () => {
   result.unmount();
 });
 
+test("useSpecsは同一tickの追加archiveを実行しない", async () => {
+  const archiveResult = {
+    archivedSpecId: "phase-1-viewer",
+    archivePath:
+      "/workspace/spec-reviewer/.plugin-workspace/.specs/.archive/phase-1-viewer",
+  };
+  const deferredArchive = createDeferred<typeof archiveResult>();
+  specCommandMocks.listSpecs.mockResolvedValue(populatedTree);
+  specCommandMocks.readSpecFile.mockResolvedValue(loadedDocument);
+  const archiveSpec = specCommandMocks.archiveSpec.mockReturnValue(
+    deferredArchive.promise,
+  );
+
+  const result = renderHook(
+    ({ workspacePath }) => useSpecs({ workspacePath }),
+    { workspacePath: "/workspace/spec-reviewer" },
+  );
+
+  await act(async () => {
+    await result.current.reloadSpecs();
+  });
+
+  let secondArchived = true;
+  const firstArchive = result.current.archiveSpec("phase-1-viewer");
+  const secondArchive = result.current.archiveSpec("phase-1-viewer");
+
+  await act(async () => {
+    secondArchived = await secondArchive;
+  });
+  await act(async () => {
+    deferredArchive.resolve(archiveResult);
+    await firstArchive;
+  });
+
+  expect(secondArchived).toBe(false);
+  expect(archiveSpec).toHaveBeenCalledOnce();
+  result.unmount();
+});
+
 test("useSpecsはarchive error stateを保持して現在のtreeを維持する", async () => {
   const archiveError = new Error("archive failed");
   specCommandMocks.listSpecs.mockResolvedValue(populatedTree);

@@ -137,14 +137,17 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
     });
   }, []);
 
+  let isLoadStarting = isLoading;
+
   const runSpecLoad = useCallback(
     async (
       load: (operationId: string) => Promise<boolean>,
     ): Promise<boolean> => {
-      if (isLoading) {
+      if (isLoadStarting) {
         return false;
       }
 
+      isLoadStarting = true;
       const operationId = createSpecLoadOperationId();
       setState((currentState) => {
         if (currentState.isLoading) {
@@ -161,6 +164,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
       try {
         return await load(operationId);
       } finally {
+        isLoadStarting = false;
         finishLoad(operationId);
       }
     },
