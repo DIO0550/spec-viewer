@@ -2,7 +2,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactElement,
 } from "react";
@@ -209,7 +208,8 @@ function SpecViewAppContent(): ReactElement {
   const [dropErrorMessage, setDropErrorMessage] = useState<string | null>(null);
   const [commentExportState, setCommentExportState] =
     useState<CommentExportState>(idleCommentExportState);
-  const hasAttemptedStartupRestoreRef = useRef(false);
+  const [hasAttemptedStartupRestore, setHasAttemptedStartupRestore] =
+    useState(false);
 
   useEffect(() => {
     setActiveCommentId(null);
@@ -370,7 +370,7 @@ function SpecViewAppContent(): ReactElement {
   );
 
   useEffect(() => {
-    if (hasAttemptedStartupRestoreRef.current) {
+    if (hasAttemptedStartupRestore) {
       return;
     }
 
@@ -386,9 +386,10 @@ function SpecViewAppContent(): ReactElement {
       return;
     }
 
-    hasAttemptedStartupRestoreRef.current = true;
+    setHasAttemptedStartupRestore(true);
     void openRecentWorkspacePath(recentWorkspaces.lastActiveWorkspacePath);
   }, [
+    hasAttemptedStartupRestore,
     isBrowsingWorkspace,
     openRecentWorkspacePath,
     recentWorkspaces.lastActiveWorkspacePath,
