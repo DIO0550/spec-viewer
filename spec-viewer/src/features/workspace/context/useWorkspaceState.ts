@@ -12,35 +12,15 @@ import {
   loadWorkspace as defaultLoadWorkspace,
   toIpcCommandError,
 } from "@/shared/api/tauri";
+import { createGeneration } from "@/shared/lib/generation";
 
 const initialWorkspaceState: WorkspaceState = {
   status: "idle",
 };
 
-type GenerationToken = number & {
-  readonly __brand: "GenerationToken";
-};
-
-class Generation {
-  #current = 0;
-
-  next(): GenerationToken {
-    this.#current += 1;
-    return this.#current as GenerationToken;
-  }
-
-  invalidate(): void {
-    this.#current += 1;
-  }
-
-  isCurrent(token: GenerationToken): boolean {
-    return token === this.#current;
-  }
-}
-
 /** @returns Workspace loading state and actions for selecting/resetting a workspace. */
 export function useWorkspaceState(): WorkspaceContextValue {
-  const [generation] = useState(() => new Generation());
+  const [generation] = useState(createGeneration);
   const stateRef = useRef<WorkspaceState>(initialWorkspaceState);
   const [state, setState] = useState<WorkspaceState>(initialWorkspaceState);
 
