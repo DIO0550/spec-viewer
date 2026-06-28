@@ -1,7 +1,7 @@
 import type { CommentId } from "@/features/comments/types/comment";
 import type { UserReview } from "@/features/review-runs/domain/userReview";
 import type { UserReviewWorkspaceMode } from "@/features/review-runs/types/userReviewIpc";
-import type { NormalizedCommandError } from "@/shared/types/ipc";
+import type { IpcCommandError } from "@/shared/types/ipc";
 
 export type AsyncOperationState<TPayload, TResult> =
   | Readonly<{
@@ -19,7 +19,7 @@ export type AsyncOperationState<TPayload, TResult> =
   | Readonly<{
       status: "error";
       payload: TPayload;
-      error: NormalizedCommandError;
+      error: IpcCommandError;
     }>;
 
 export type CreateUserReviewPayload = Readonly<{
@@ -74,7 +74,7 @@ export const UserReviewCreateState = {
    */
   error(
     payload: CreateUserReviewPayload,
-    error: NormalizedCommandError,
+    error: IpcCommandError,
   ): UserReviewCreateState {
     return { status: "error", payload, error };
   },
@@ -113,7 +113,7 @@ export const UserReviewArchiveState = {
    */
   error(
     payload: ArchiveUserReviewPayload,
-    error: NormalizedCommandError,
+    error: IpcCommandError,
   ): UserReviewArchiveState {
     return { status: "error", payload, error };
   },

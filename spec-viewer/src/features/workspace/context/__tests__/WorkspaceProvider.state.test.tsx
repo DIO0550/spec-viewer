@@ -4,6 +4,8 @@ import { expect, test } from "vitest";
 
 import {
   WorkspaceProvider,
+  selectActiveWorkspaceRoot,
+  selectWorkspace,
   useWorkspace,
   type WorkspaceContextValue,
 } from "@/features/workspace/context";
@@ -27,8 +29,14 @@ test("WorkspaceProviderはworkspace contextを提供する", () => {
   });
 
   expect(seenValues[0]?.state.status).toBe("idle");
-  expect(seenValues[0]?.workspacePath).toBeNull();
-  expect(seenValues[0]?.workspace).toBeNull();
+  expect(
+    selectActiveWorkspaceRoot(seenValues[0]?.state ?? { status: "idle" }),
+  ).toBeNull();
+  expect(
+    selectWorkspace(seenValues[0]?.state ?? { status: "idle" }),
+  ).toBeNull();
+  expect(typeof seenValues[0]?.actions.load).toBe("function");
+  expect(typeof seenValues[0]?.actions.reset).toBe("function");
 
   act(() => {
     root.unmount();

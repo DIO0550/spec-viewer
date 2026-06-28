@@ -23,11 +23,8 @@ import type {
   CommentAnchor,
   CommentId,
 } from "@/features/comments/types/comment";
-import {
-  normalizeCommandError,
-  type CommentCommands,
-} from "@/shared/api/tauri";
-import type { NormalizedCommandError } from "@/shared/types/ipc";
+import { toIpcCommandError, type CommentCommands } from "@/shared/api/tauri";
+import type { IpcCommandError } from "@/shared/types/ipc";
 
 export type AddCommentInput = Readonly<{
   anchor: CommentAnchor;
@@ -74,7 +71,7 @@ type CommentOperationEvent =
       type: "operationFailed";
       operation: CommentOperationKind;
       commentId: CommentId | null;
-      error: NormalizedCommandError;
+      error: IpcCommandError;
     }>
   | Readonly<{ type: "operationInvalidated" }>;
 
@@ -157,7 +154,7 @@ export function useCommentOperations(
         type: "operationFailed",
         operation,
         commentId,
-        error: normalizeCommandError(error),
+        error: toIpcCommandError(error),
       });
     },
     [],

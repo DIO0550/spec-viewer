@@ -3,11 +3,19 @@ export {
   useWorkspace,
   useWorkspaceContext,
 } from "@/features/workspace/context/hooks";
+export {
+  selectActiveWorkspaceRoot,
+  selectIsWorkspaceOpening,
+  selectRequestedWorkspacePath,
+  selectWorkspace,
+  selectWorkspaceError,
+} from "@/features/workspace/context/selectors";
 export { useWorkspaceState } from "@/features/workspace/context/useWorkspaceState";
 export type {
   LoadWorkspaceCommand,
   LoadWorkspaceOptions,
   UseWorkspaceStateOptions,
+  WorkspaceActions,
   WorkspaceContextValue,
   WorkspaceProviderProps,
   WorkspaceState,

@@ -1,5 +1,5 @@
 import type { Comment, CommentId } from "@/features/comments/types/comment";
-import type { NormalizedCommandError } from "@/shared/types/ipc";
+import type { IpcCommandError } from "@/shared/types/ipc";
 
 export type CommentOperationKind =
   | "add"
@@ -27,7 +27,7 @@ export type CommentOperationFailedState = Readonly<{
   status: "error";
   operation: CommentOperationKind;
   commentId: CommentId | null;
-  error: NormalizedCommandError;
+  error: IpcCommandError;
 }>;
 
 export type CommentOperationState =
@@ -78,7 +78,7 @@ export const CommentOperationFailedState = {
   create: (
     operation: CommentOperationKind,
     commentId: CommentId | null,
-    error: NormalizedCommandError,
+    error: IpcCommandError,
   ): CommentOperationFailedState => ({
     status: "error",
     operation,
@@ -95,13 +95,13 @@ export const CommentOperationFailedState = {
   ): boolean =>
     CommentOperationFailedState.is(state) && state.operation === operation,
 
-  errorOf: (state: CommentOperationState): NormalizedCommandError | null =>
+  errorOf: (state: CommentOperationState): IpcCommandError | null =>
     CommentOperationFailedState.is(state) ? state.error : null,
 
   errorFor: (
     state: CommentOperationState,
     operation: CommentOperationKind,
-  ): NormalizedCommandError | null =>
+  ): IpcCommandError | null =>
     CommentOperationFailedState.matchesOperation(state, operation)
       ? state.error
       : null,

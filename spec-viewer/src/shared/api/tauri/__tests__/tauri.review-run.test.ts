@@ -13,7 +13,7 @@ import {
   archiveUserReview,
   createUserReview,
   listUserReviews,
-  normalizeCommandError,
+  toIpcCommandError,
 } from "@/shared/api/tauri";
 import { CommentId } from "@/features/comments/types/comment";
 
@@ -126,13 +126,13 @@ test("archiveUserReviewはarchive_user_reviewへrequestを渡す", async () => {
   });
 });
 
-test("normalizeCommandErrorはreview run exportエラーを保持する", () => {
+test("toIpcCommandErrorはreview run exportエラーを保持する", () => {
   const rawError = {
     code: "userReviewExport",
     message: "failed to export review run",
   };
 
-  const result = normalizeCommandError(rawError);
+  const result = toIpcCommandError(rawError);
 
   expect(result).toEqual({
     code: "userReviewExport",

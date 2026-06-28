@@ -17,7 +17,7 @@ const defaultSelection: SpecViewSelection = {
   targetScope: "file",
 };
 
-/** @returns Context value for the current spec view selection. */
+/** @returns Review-run snapshot synchronized from the canonical specs selection. */
 export function useSpecViewSelectionState(): SpecViewSelectionContextValue {
   const [selection, setSelection] =
     useState<SpecViewSelection>(defaultSelection);

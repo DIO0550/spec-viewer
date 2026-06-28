@@ -3,7 +3,7 @@ import { expect, test } from "vitest";
 import type { SpecFile } from "@/features/specs/domain/specFile";
 import type { SpecNode } from "@/features/specs/domain/specNode";
 import { SpecTreeState } from "@/features/specs/domain/specTreeState";
-import type { NormalizedCommandError } from "@/shared/types/ipc";
+import type { IpcCommandError } from "@/shared/types/ipc";
 
 const implFile: SpecFile = {
   key: "impl",
@@ -19,7 +19,7 @@ const specNode: SpecNode = {
   children: [],
 };
 
-const error: NormalizedCommandError = {
+const error: IpcCommandError = {
   code: "specTreeScan",
   message: "scan failed",
   raw: "scan failed",

@@ -336,10 +336,10 @@ test("useSpecsはworkspace未選択ならspecとMarkdownをidleにする", () =>
     { workspacePath: null as string | null },
   );
 
-  expect(result.current.specTreeState.status).toBe("idle");
-  expect(result.current.documentState.status).toBe("idle");
-  expect(result.current.selectedSpecId).toBeNull();
-  expect(result.current.selectedFileKey).toBeNull();
+  expect(result.current.state.specTreeState.status).toBe("idle");
+  expect(result.current.state.documentState.status).toBe("idle");
+  expect(result.current.state.selection.specId).toBeNull();
+  expect(result.current.state.selection.fileKey).toBeNull();
   result.unmount();
 });
 
@@ -355,9 +355,9 @@ test("useSpecsはロード中だけ単一のisLoadingをtrueにする", async ()
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
-  expect(result.current.isLoading).toBe(true);
+  expect(result.current.selectors.isLoading).toBe(true);
 
-  const reload = result.current.reloadSpecs();
+  const reload = result.current.actions.reloadSpecs();
 
   await act(async () => {
     deferredTree.resolve(populatedTree);
@@ -365,8 +365,8 @@ test("useSpecsはロード中だけ単一のisLoadingをtrueにする", async ()
   });
 
   expect(listSpecs).toHaveBeenCalledOnce();
-  expect(result.current.isLoading).toBe(false);
-  expect(result.current.documentState.status).toBe("ready");
+  expect(result.current.selectors.isLoading).toBe(false);
+  expect(result.current.state.documentState.status).toBe("ready");
   result.unmount();
 });
 
@@ -382,10 +382,10 @@ test("useSpecsはloading中のarchiveを実行しない", async () => {
 
   let archived = true;
   await act(async () => {
-    archived = await result.current.archiveSpec("phase-1-viewer");
+    archived = await result.current.actions.archiveSpec("phase-1-viewer");
   });
 
-  const initialLoad = result.current.reloadSpecs();
+  const initialLoad = result.current.actions.reloadSpecs();
 
   await act(async () => {
     deferredTree.resolve(populatedTree);
@@ -405,16 +405,16 @@ test("useSpecsはworkspace pathからspec treeを読み込みempty状態を表�
   );
 
   await act(async () => {
-    await result.current.reloadSpecs();
+    await result.current.actions.reloadSpecs();
   });
 
-  expect(result.current.specTreeState).toEqual({
+  expect(result.current.state.specTreeState).toEqual({
     status: "empty",
     workspacePath: "/workspace/spec-reviewer",
     tree: { specs: [] },
     error: null,
   });
-  expect(result.current.selectedSpecId).toBeNull();
+  expect(result.current.state.selection.specId).toBeNull();
   result.unmount();
 });
 
@@ -429,12 +429,12 @@ test("useSpecsはspec tree読み込み後に最初のspecとfileを選択してM
   );
 
   await act(async () => {
-    await result.current.reloadSpecs();
+    await result.current.actions.reloadSpecs();
   });
 
-  expect(result.current.selectedSpecId).toBe("phase-1-viewer");
-  expect(result.current.selectedFileKey).toBe("tasks");
-  expect(result.current.documentState.status).toBe("ready");
+  expect(result.current.state.selection.specId).toBe("phase-1-viewer");
+  expect(result.current.state.selection.fileKey).toBe("tasks");
+  expect(result.current.state.documentState.status).toBe("ready");
   expect(readSpecFile).toHaveBeenCalledWith({
     workspacePath: "/workspace/spec-reviewer",
     specId: "phase-1-viewer",
@@ -454,12 +454,12 @@ test("useSpecsは子階層にある最初のfile付きspecを初期選択する"
   );
 
   await act(async () => {
-    await result.current.reloadSpecs();
+    await result.current.actions.reloadSpecs();
   });
 
-  expect(result.current.selectedSpecId).toBe("phase-child");
-  expect(result.current.selectedFileKey).toBe("design");
-  expect(result.current.documentState.status).toBe("ready");
+  expect(result.current.state.selection.specId).toBe("phase-child");
+  expect(result.current.state.selection.fileKey).toBe("design");
+  expect(result.current.state.documentState.status).toBe("ready");
   result.unmount();
 });
 
@@ -474,16 +474,16 @@ test("useSpecsは選択したspec fileのMarkdownを読み込む", async () => {
   );
 
   await act(async () => {
-    await result.current.reloadSpecs();
+    await result.current.actions.reloadSpecs();
   });
   await act(async () => {
-    await result.current.selectSpec("phase-1-viewer");
+    await result.current.actions.selectSpec("phase-1-viewer");
   });
   await act(async () => {
-    await result.current.selectFileKey("tasks");
+    await result.current.actions.selectFileKey("tasks");
   });
 
-  expect(result.current.documentState).toEqual(
+  expect(result.current.state.documentState).toEqual(
     expect.objectContaining({
       status: "ready",
       workspacePath: "/workspace/spec-reviewer",
@@ -512,16 +512,16 @@ test("useSpecsはmissing Markdownをmissing状態として返す", async () => {
   );
 
   await act(async () => {
-    await result.current.reloadSpecs();
+    await result.current.actions.reloadSpecs();
   });
   await act(async () => {
-    await result.current.selectSpec("phase-1-viewer");
+    await result.current.actions.selectSpec("phase-1-viewer");
   });
   await act(async () => {
-    await result.current.selectFileKey("impl");
+    await result.current.actions.selectFileKey("impl");
   });
 
-  expect(result.current.documentState).toEqual(
+  expect(result.current.state.documentState).toEqual(
     expect.objectContaining({
       status: "missing",
       workspacePath: "/workspace/spec-reviewer",
@@ -544,14 +544,14 @@ test("useSpecsはspec選択時に最初のfileを選択してMarkdownを読み�
   );
 
   await act(async () => {
-    await result.current.reloadSpecs();
+    await result.current.actions.reloadSpecs();
   });
   await act(async () => {
-    await result.current.selectSpec("phase-child");
+    await result.current.actions.selectSpec("phase-child");
   });
 
-  expect(result.current.selectedFileKey).toBe("design");
-  expect(result.current.documentState).toEqual(
+  expect(result.current.state.selection.fileKey).toBe("design");
+  expect(result.current.state.documentState).toEqual(
     expect.objectContaining({
       status: "ready",
       workspacePath: "/workspace/spec-reviewer",
@@ -574,15 +574,15 @@ test("useSpecsはfileを持たないspec選択時にspecだけ選択してMarkdo
   );
 
   await act(async () => {
-    await result.current.reloadSpecs();
+    await result.current.actions.reloadSpecs();
   });
   await act(async () => {
-    await result.current.selectSpec("phase-root");
+    await result.current.actions.selectSpec("phase-root");
   });
 
-  expect(result.current.selectedSpecId).toBe("phase-root");
-  expect(result.current.selectedFileKey).toBeNull();
-  expect(result.current.documentState).toEqual(
+  expect(result.current.state.selection.specId).toBe("phase-root");
+  expect(result.current.state.selection.fileKey).toBeNull();
+  expect(result.current.state.documentState).toEqual(
     expect.objectContaining({
       status: "idle",
       workspacePath: "/workspace/spec-reviewer",
@@ -603,20 +603,20 @@ test("useSpecsはworkspace変更時に選択状態とMarkdown状態をリセッ�
   );
 
   await act(async () => {
-    await result.current.reloadSpecs();
+    await result.current.actions.reloadSpecs();
   });
   await act(async () => {
-    await result.current.selectSpec("phase-1-viewer");
+    await result.current.actions.selectSpec("phase-1-viewer");
   });
   await act(async () => {
-    await result.current.selectFileKey("tasks");
+    await result.current.actions.selectFileKey("tasks");
   });
 
   result.rerender({ workspacePath: "/workspace/other" });
 
-  expect(result.current.selectedSpecId).toBeNull();
-  expect(result.current.selectedFileKey).toBeNull();
-  expect(result.current.documentState.status).toBe("idle");
+  expect(result.current.state.selection.specId).toBeNull();
+  expect(result.current.state.selection.fileKey).toBeNull();
+  expect(result.current.state.documentState.status).toBe("idle");
   result.unmount();
 });
 
@@ -630,16 +630,16 @@ test("useSpecsはresetSelectionで選択状態とMarkdown状態をidleに戻す"
   );
 
   await act(async () => {
-    await result.current.reloadSpecs();
+    await result.current.actions.reloadSpecs();
   });
 
   act(() => {
-    result.current.resetSelection();
+    result.current.actions.resetSelection();
   });
 
-  expect(result.current.selectedSpecId).toBeNull();
-  expect(result.current.selectedFileKey).toBeNull();
-  expect(result.current.documentState).toEqual(
+  expect(result.current.state.selection.specId).toBeNull();
+  expect(result.current.state.selection.fileKey).toBeNull();
+  expect(result.current.state.documentState).toEqual(
     expect.objectContaining({
       status: "idle",
       workspacePath: "/workspace/spec-reviewer",
@@ -660,16 +660,16 @@ test("useSpecsはspec tree再読み込み時に選択中のspecとfileを保持�
   );
 
   await act(async () => {
-    await result.current.reloadSpecs();
+    await result.current.actions.reloadSpecs();
   });
   listSpecs.mockResolvedValue(refreshedNestedTree);
   await act(async () => {
-    await result.current.reloadSpecs();
+    await result.current.actions.reloadSpecs();
   });
 
-  expect(result.current.selectedSpecId).toBe("phase-child");
-  expect(result.current.selectedFileKey).toBe("design");
-  expect(result.current.documentState).toEqual(
+  expect(result.current.state.selection.specId).toBe("phase-child");
+  expect(result.current.state.selection.fileKey).toBe("design");
+  expect(result.current.state.documentState).toEqual(
     expect.objectContaining({
       status: "ready",
       workspacePath: "/workspace/spec-reviewer",
@@ -694,20 +694,20 @@ test("useSpecsはrefresh時に選択中fileが消えたら同じspecの先頭fil
   );
 
   await act(async () => {
-    await result.current.reloadSpecs();
+    await result.current.actions.reloadSpecs();
   });
   await act(async () => {
-    await result.current.selectFileKey("tasks");
+    await result.current.actions.selectFileKey("tasks");
   });
   listSpecs.mockResolvedValue(renamedTasksTree);
   readSpecFile.mockResolvedValue(designDocument);
   await act(async () => {
-    await result.current.reloadSpecs();
+    await result.current.actions.reloadSpecs();
   });
 
-  expect(result.current.selectedSpecId).toBe("phase-refresh");
-  expect(result.current.selectedFileKey).toBe("design");
-  expect(result.current.documentState).toEqual(
+  expect(result.current.state.selection.specId).toBe("phase-refresh");
+  expect(result.current.state.selection.fileKey).toBe("design");
+  expect(result.current.state.documentState).toEqual(
     expect.objectContaining({
       status: "ready",
       workspacePath: "/workspace/spec-reviewer",
@@ -732,18 +732,18 @@ test("useSpecsは6タブ構成でも選択中のTech Referenceをrefresh後に�
   );
 
   await act(async () => {
-    await result.current.reloadSpecs();
+    await result.current.actions.reloadSpecs();
   });
   await act(async () => {
-    await result.current.selectFileKey("tech-reference");
+    await result.current.actions.selectFileKey("tech-reference");
   });
   await act(async () => {
-    await result.current.reloadSpecs();
+    await result.current.actions.reloadSpecs();
   });
 
-  expect(result.current.selectedSpecId).toBe("tech-reference-tab");
-  expect(result.current.selectedFileKey).toBe("tech-reference");
-  expect(result.current.documentState).toEqual(
+  expect(result.current.state.selection.specId).toBe("tech-reference-tab");
+  expect(result.current.state.selection.fileKey).toBe("tech-reference");
+  expect(result.current.state.documentState).toEqual(
     expect.objectContaining({
       status: "missing",
       workspacePath: "/workspace/spec-reviewer",
@@ -767,17 +767,17 @@ test("useSpecsはrefresh時に選択中Markdownが削除されたらmissing状�
   );
 
   await act(async () => {
-    await result.current.reloadSpecs();
+    await result.current.actions.reloadSpecs();
   });
   listSpecs.mockResolvedValue(missingTasksTree);
   readSpecFile.mockResolvedValue(missingTasksDocument);
   await act(async () => {
-    await result.current.reloadSpecs();
+    await result.current.actions.reloadSpecs();
   });
 
-  expect(result.current.selectedSpecId).toBe("phase-1-viewer");
-  expect(result.current.selectedFileKey).toBe("tasks");
-  expect(result.current.documentState).toEqual(
+  expect(result.current.state.selection.specId).toBe("phase-1-viewer");
+  expect(result.current.state.selection.fileKey).toBe("tasks");
+  expect(result.current.state.documentState).toEqual(
     expect.objectContaining({
       status: "missing",
       workspacePath: "/workspace/spec-reviewer",
@@ -817,13 +817,13 @@ test("useSpecsはworkspace変更後に古いspec tree responseで最新stateを�
 
   expect(listSpecs).toHaveBeenNthCalledWith(1, "/workspace/spec-reviewer");
   expect(listSpecs).toHaveBeenNthCalledWith(2, "/workspace/other");
-  expect(result.current.specTreeState).toEqual(
+  expect(result.current.state.specTreeState).toEqual(
     expect.objectContaining({
       status: "ready",
       workspacePath: "/workspace/other",
     }),
   );
-  expect(result.current.selectedSpecId).toBe("phase-1-viewer");
+  expect(result.current.state.selection.specId).toBe("phase-1-viewer");
   expect(readSpecFile).toHaveBeenCalledWith({
     workspacePath: "/workspace/other",
     specId: "phase-1-viewer",
@@ -852,7 +852,7 @@ test("useSpecsはworkspace変更後に古いmanual reload responseで最新state
     await Promise.resolve();
   });
 
-  const reload = result.current.reloadSpecs();
+  const reload = result.current.actions.reloadSpecs();
   await act(async () => {
     await Promise.resolve();
   });
@@ -870,13 +870,13 @@ test("useSpecsはworkspace変更後に古いmanual reload responseで最新state
 
   expect(listSpecs).toHaveBeenNthCalledWith(2, "/workspace/spec-reviewer");
   expect(listSpecs).toHaveBeenNthCalledWith(3, "/workspace/other");
-  expect(result.current.specTreeState).toEqual(
+  expect(result.current.state.specTreeState).toEqual(
     expect.objectContaining({
       status: "ready",
       workspacePath: "/workspace/other",
     }),
   );
-  expect(result.current.selectedSpecId).toBe("phase-1-viewer");
+  expect(result.current.state.selection.specId).toBe("phase-1-viewer");
   result.unmount();
 });
 
@@ -899,7 +899,7 @@ test("useSpecsは同じworkspace pathへ戻った後も古いmanual reload respo
     await Promise.resolve();
   });
 
-  const reload = result.current.reloadSpecs();
+  const reload = result.current.actions.reloadSpecs();
   await act(async () => {
     await Promise.resolve();
   });
@@ -924,13 +924,13 @@ test("useSpecsは同じworkspace pathへ戻った後も古いmanual reload respo
   expect(listSpecs).toHaveBeenNthCalledWith(2, "/workspace/spec-reviewer");
   expect(listSpecs).toHaveBeenNthCalledWith(3, "/workspace/other");
   expect(listSpecs).toHaveBeenNthCalledWith(4, "/workspace/spec-reviewer");
-  expect(result.current.specTreeState).toEqual(
+  expect(result.current.state.specTreeState).toEqual(
     expect.objectContaining({
       status: "ready",
       workspacePath: "/workspace/spec-reviewer",
     }),
   );
-  expect(result.current.selectedSpecId).toBe("phase-1-viewer");
+  expect(result.current.state.selection.specId).toBe("phase-1-viewer");
   result.unmount();
 });
 
@@ -974,7 +974,7 @@ test("useSpecsはworkspace変更後に古いdocument responseで最新document s
     fileKey: "tasks",
     correlationId: expect.any(String),
   });
-  expect(result.current.documentState).toEqual(
+  expect(result.current.state.documentState).toEqual(
     expect.objectContaining({
       status: "ready",
       workspacePath: "/workspace/other",
@@ -1010,7 +1010,7 @@ test("useSpecsはarchive完了後のreloadでworkspace変更後のstateを上書
     await Promise.resolve();
   });
 
-  const archive = result.current.archiveSpec("phase-1-viewer");
+  const archive = result.current.actions.archiveSpec("phase-1-viewer");
   await act(async () => {
     await Promise.resolve();
   });
@@ -1028,13 +1028,13 @@ test("useSpecsはarchive完了後のreloadでworkspace変更後のstateを上書
 
   expect(listSpecs).toHaveBeenNthCalledWith(1, "/workspace/spec-reviewer");
   expect(listSpecs).toHaveBeenNthCalledWith(2, "/workspace/other");
-  expect(result.current.specTreeState).toEqual(
+  expect(result.current.state.specTreeState).toEqual(
     expect.objectContaining({
       status: "ready",
       workspacePath: "/workspace/other",
     }),
   );
-  expect(result.current.selectedSpecId).toBe("phase-1-viewer");
+  expect(result.current.state.selection.specId).toBe("phase-1-viewer");
   result.unmount();
 });
 
@@ -1053,19 +1053,19 @@ test("useSpecsはspecをアーカイブした後にtreeを再読み込みする"
   );
 
   await act(async () => {
-    await result.current.reloadSpecs();
+    await result.current.actions.reloadSpecs();
   });
   listSpecs.mockResolvedValue({ specs: [] });
   await act(async () => {
-    await result.current.archiveSpec("phase-1-viewer");
+    await result.current.actions.archiveSpec("phase-1-viewer");
   });
 
   expect(archiveSpec).toHaveBeenCalledWith({
     workspacePath: "/workspace/spec-reviewer",
     specId: "phase-1-viewer",
   });
-  expect(result.current.specTreeState.status).toBe("empty");
-  expect(result.current.selectedSpecId).toBeNull();
+  expect(result.current.state.specTreeState.status).toBe("empty");
+  expect(result.current.state.selection.specId).toBeNull();
   result.unmount();
 });
 
@@ -1088,16 +1088,16 @@ test("useSpecsはarchive中の追加archiveを実行しない", async () => {
   );
 
   await act(async () => {
-    await result.current.reloadSpecs();
+    await result.current.actions.reloadSpecs();
   });
 
   let secondArchived = true;
-  const firstArchive = result.current.archiveSpec("phase-1-viewer");
+  const firstArchive = result.current.actions.archiveSpec("phase-1-viewer");
   await act(async () => {
     await Promise.resolve();
   });
   await act(async () => {
-    secondArchived = await result.current.archiveSpec("phase-1-viewer");
+    secondArchived = await result.current.actions.archiveSpec("phase-1-viewer");
   });
   await act(async () => {
     deferredArchive.resolve(archiveResult);
@@ -1128,12 +1128,12 @@ test("useSpecsは同一tickの追加archiveを実行しない", async () => {
   );
 
   await act(async () => {
-    await result.current.reloadSpecs();
+    await result.current.actions.reloadSpecs();
   });
 
   let secondArchived = true;
-  const firstArchive = result.current.archiveSpec("phase-1-viewer");
-  const secondArchive = result.current.archiveSpec("phase-1-viewer");
+  const firstArchive = result.current.actions.archiveSpec("phase-1-viewer");
+  const secondArchive = result.current.actions.archiveSpec("phase-1-viewer");
 
   await act(async () => {
     secondArchived = await secondArchive;
@@ -1160,23 +1160,23 @@ test("useSpecsはarchive error stateを保持して現在のtreeを維持する"
   );
 
   await act(async () => {
-    await result.current.reloadSpecs();
+    await result.current.actions.reloadSpecs();
   });
 
   let archived = true;
   await act(async () => {
-    archived = await result.current.archiveSpec("phase-1-viewer");
+    archived = await result.current.actions.archiveSpec("phase-1-viewer");
   });
 
   expect(archived).toBe(false);
-  expect(result.current.archiveSpecError).toEqual({
+  expect(result.current.state.archiveSpecError).toEqual({
     code: "unknown",
     message: "archive failed",
     raw: archiveError,
   });
-  expect(result.current.archivingSpecId).toBeNull();
-  expect(result.current.specTreeState.status).toBe("ready");
-  expect(result.current.selectedSpecId).toBe("phase-1-viewer");
+  expect(result.current.state.archivingSpecId).toBeNull();
+  expect(result.current.state.specTreeState.status).toBe("ready");
+  expect(result.current.state.selection.specId).toBe("phase-1-viewer");
   result.unmount();
 });
 
@@ -1191,11 +1191,11 @@ test("useSpecsはlistSpecs errorでtreeをerrorにしてselectionをresetする"
 
   let loaded = true;
   await act(async () => {
-    loaded = await result.current.reloadSpecs();
+    loaded = await result.current.actions.reloadSpecs();
   });
 
   expect(loaded).toBe(false);
-  expect(result.current.specTreeState).toEqual({
+  expect(result.current.state.specTreeState).toEqual({
     status: "error",
     workspacePath: "/workspace/spec-reviewer",
     tree: null,
@@ -1205,8 +1205,8 @@ test("useSpecsはlistSpecs errorでtreeをerrorにしてselectionをresetする"
       raw: scanError,
     },
   });
-  expect(result.current.selectedSpecId).toBeNull();
-  expect(result.current.selectedFileKey).toBeNull();
+  expect(result.current.state.selection.specId).toBeNull();
+  expect(result.current.state.selection.fileKey).toBeNull();
   result.unmount();
 });
 
@@ -1222,13 +1222,13 @@ test("useSpecsはreadSpecFile errorでdocumentをerrorにしてtree selectionを
 
   let loaded = true;
   await act(async () => {
-    loaded = await result.current.reloadSpecs();
+    loaded = await result.current.actions.reloadSpecs();
   });
 
   expect(loaded).toBe(false);
-  expect(result.current.selectedSpecId).toBe("phase-1-viewer");
-  expect(result.current.selectedFileKey).toBe("tasks");
-  expect(result.current.documentState).toEqual(
+  expect(result.current.state.selection.specId).toBe("phase-1-viewer");
+  expect(result.current.state.selection.fileKey).toBe("tasks");
+  expect(result.current.state.documentState).toEqual(
     expect.objectContaining({
       status: "error",
       workspacePath: "/workspace/spec-reviewer",
@@ -1262,28 +1262,28 @@ test("useSpecsはarchive errorをreloadやselectionで保持し次のarchive開�
   );
 
   await act(async () => {
-    await result.current.reloadSpecs();
+    await result.current.actions.reloadSpecs();
   });
   await act(async () => {
-    await result.current.archiveSpec("phase-1-viewer");
+    await result.current.actions.archiveSpec("phase-1-viewer");
   });
 
-  expect(result.current.archiveSpecError?.message).toBe("archive failed");
+  expect(result.current.state.archiveSpecError?.message).toBe("archive failed");
 
   await act(async () => {
-    await result.current.reloadSpecs();
+    await result.current.actions.reloadSpecs();
   });
   await act(async () => {
-    await result.current.selectFileKey("tasks");
+    await result.current.actions.selectFileKey("tasks");
   });
 
-  expect(result.current.archiveSpecError?.message).toBe("archive failed");
+  expect(result.current.state.archiveSpecError?.message).toBe("archive failed");
 
   await act(async () => {
-    await result.current.archiveSpec("phase-1-viewer");
+    await result.current.actions.archiveSpec("phase-1-viewer");
   });
 
-  expect(result.current.archiveSpecError).toBeNull();
+  expect(result.current.state.archiveSpecError).toBeNull();
   result.unmount();
 });
 
@@ -1308,14 +1308,14 @@ test("useSpecsはarchive後に選択中specが消えたらdefault openable spec�
   );
 
   await act(async () => {
-    await result.current.reloadSpecs();
+    await result.current.actions.reloadSpecs();
   });
   await act(async () => {
-    await result.current.archiveSpec("phase-1-viewer");
+    await result.current.actions.archiveSpec("phase-1-viewer");
   });
 
-  expect(result.current.selectedSpecId).toBe("phase-child");
-  expect(result.current.selectedFileKey).toBe("design");
+  expect(result.current.state.selection.specId).toBe("phase-child");
+  expect(result.current.state.selection.fileKey).toBe("design");
   expect(onSelectionChange).toHaveBeenLastCalledWith({
     workspacePath: "/workspace/spec-reviewer",
     specId: "phase-child",
@@ -1336,17 +1336,17 @@ test("useSpecsはworkspace changeでarchive errorをclearする", async () => {
   );
 
   await act(async () => {
-    await result.current.reloadSpecs();
+    await result.current.actions.reloadSpecs();
   });
   await act(async () => {
-    await result.current.archiveSpec("phase-1-viewer");
+    await result.current.actions.archiveSpec("phase-1-viewer");
   });
 
-  expect(result.current.archiveSpecError?.message).toBe("archive failed");
+  expect(result.current.state.archiveSpecError?.message).toBe("archive failed");
 
   result.rerender({ workspacePath: "/workspace/other" });
 
-  expect(result.current.archiveSpecError).toBeNull();
+  expect(result.current.state.archiveSpecError).toBeNull();
   result.unmount();
 });
 
@@ -1367,25 +1367,25 @@ test("useSpecsはarchive実行中のworkspace changeでarchivingSpecIdを残留�
   );
 
   await act(async () => {
-    await result.current.reloadSpecs();
+    await result.current.actions.reloadSpecs();
   });
 
-  const archive = result.current.archiveSpec("phase-1-viewer");
+  const archive = result.current.actions.archiveSpec("phase-1-viewer");
   await act(async () => {
     await Promise.resolve();
   });
 
-  expect(result.current.archivingSpecId).toBe("phase-1-viewer");
+  expect(result.current.state.archivingSpecId).toBe("phase-1-viewer");
 
   result.rerender({ workspacePath: "/workspace/other" });
 
-  expect(result.current.archivingSpecId).toBeNull();
+  expect(result.current.state.archivingSpecId).toBeNull();
 
   await act(async () => {
     deferredArchive.resolve(archiveResult);
     await archive;
   });
 
-  expect(result.current.archivingSpecId).toBeNull();
+  expect(result.current.state.archivingSpecId).toBeNull();
   result.unmount();
 });

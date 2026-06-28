@@ -7,7 +7,13 @@ export {
   type SpecDocumentState,
   type SpecSelectionChange,
   type SpecTreeState,
+  type UseSpecsResult,
 } from "@/features/specs/hooks/useSpecs";
+export type {
+  SpecSelectionState,
+  SpecsActions,
+  SpecsState,
+} from "@/features/specs/hooks/useSpecs/types";
 export type {
   MarkdownBlockMetadata,
   MarkdownBlockType,

@@ -3,7 +3,7 @@ import { expect, test } from "vitest";
 import { CommentListState } from "@/features/comments/domain/commentListState";
 import type { Comment, CommentAnchor } from "@/features/comments/types/comment";
 import { CommentId } from "@/features/comments/types/comment";
-import type { NormalizedCommandError } from "@/shared/types/ipc";
+import type { IpcCommandError } from "@/shared/types/ipc";
 
 const commentId = CommentId.fromString;
 
@@ -35,7 +35,7 @@ const updatedComment: Comment = {
   updatedAt: "2026-05-05T10:15:00Z",
 };
 
-const commandError: NormalizedCommandError = {
+const commandError: IpcCommandError = {
   code: "commentRepository",
   message: "Comment operation failed.",
   raw: "Comment operation failed.",

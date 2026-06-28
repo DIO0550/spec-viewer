@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 
 import { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
 import type { SpecDocument } from "@/features/specs/types/spec";
-import type { NormalizedCommandError } from "@/shared/types/ipc";
+import type { IpcCommandError } from "@/shared/types/ipc";
 
 const document: SpecDocument = {
   key: "impl",
@@ -19,7 +19,7 @@ const missingDocument: SpecDocument = {
   missing: true,
 };
 
-const error: NormalizedCommandError = {
+const error: IpcCommandError = {
   code: "markdownRead",
   message: "read failed",
   raw: "read failed",
@@ -37,7 +37,9 @@ test("SpecDocumentState.idleは選択なし状態を生成する", () => {
 });
 
 test("SpecDocumentState.idleは任意の選択contextを保持する", () => {
-  expect(SpecDocumentState.idle("/workspace/spec-viewer", "spec-1", "tasks")).toEqual({
+  expect(
+    SpecDocumentState.idle("/workspace/spec-viewer", "spec-1", "tasks"),
+  ).toEqual({
     status: "idle",
     workspacePath: "/workspace/spec-viewer",
     specId: "spec-1",

@@ -2,8 +2,14 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
+import {
+  selectActiveWorkspaceRoot,
+  selectIsWorkspaceOpening,
+  selectWorkspace,
+  selectWorkspaceError,
+  useWorkspaceState,
+} from "@/features/workspace/context";
 import type { Workspace } from "@/features/workspace/types/workspace";
-import { useWorkspaceState } from "@/features/workspace/context";
 
 const workspace: Workspace = {
   root: "/workspace/spec-reviewer",
@@ -48,8 +54,12 @@ test("useWorkspaceStateは初期状態を未選択として返す", () => {
   const result = renderHook(() => useWorkspaceState({ loadWorkspace }));
 
   expect(result.current.state.status).toBe("idle");
-  expect(result.current.workspacePath).toBeNull();
-  expect(result.current.workspace).toBeNull();
+  expect(selectActiveWorkspaceRoot(result.current.state)).toBeNull();
+  expect(selectWorkspace(result.current.state)).toBeNull();
+  expect(selectIsWorkspaceOpening(result.current.state)).toBe(false);
+  expect(selectWorkspaceError(result.current.state)).toBeNull();
+  expect(typeof result.current.actions.load).toBe("function");
+  expect(typeof result.current.actions.reset).toBe("function");
   result.unmount();
 });
 
@@ -59,40 +69,47 @@ test("useWorkspaceStateは選択したworkspaceを読み込み成功状態にす
   const result = renderHook(() => useWorkspaceState({ loadWorkspace }));
 
   await act(async () => {
-    await result.current.load("/workspace/spec-reviewer", {
+    await result.current.actions.load("/workspace/spec-reviewer", {
       onWorkspaceLoaded,
     });
   });
 
   expect(result.current.state).toEqual({
-    status: "ready",
-    workspacePath: "/workspace/spec-reviewer",
+    status: "opened",
     workspace,
-    error: null,
+    lastOpenError: null,
   });
+  expect(selectActiveWorkspaceRoot(result.current.state)).toBe(workspace.root);
   expect(loadWorkspace).toHaveBeenCalledWith("/workspace/spec-reviewer");
   expect(onWorkspaceLoaded).toHaveBeenCalledWith(workspace);
   result.unmount();
 });
 
-test("useWorkspaceStateは読み込み失敗を正規化済みerror状態にする", async () => {
+test("useWorkspaceStateは読み込み失敗をWorkspaceError状態にする", async () => {
   const loadWorkspace = vi.fn().mockRejectedValue("missing workspace");
   const result = renderHook(() => useWorkspaceState({ loadWorkspace }));
 
   await act(async () => {
-    await result.current.load("/workspace/missing");
+    await result.current.actions.load("/workspace/missing");
   });
 
   expect(result.current.state).toEqual({
-    status: "error",
-    workspacePath: "/workspace/missing",
-    workspace: null,
+    status: "failed",
+    requestedPath: "/workspace/missing",
     error: {
-      code: "unknown",
+      reason: "unknown",
       message: "missing workspace",
-      raw: "missing workspace",
+      cause: {
+        code: "unknown",
+        message: "missing workspace",
+        raw: "missing workspace",
+      },
     },
   });
+  expect(selectActiveWorkspaceRoot(result.current.state)).toBeNull();
+  expect(selectWorkspaceError(result.current.state)?.message).toBe(
+    "missing workspace",
+  );
   result.unmount();
 });
 
@@ -104,11 +121,11 @@ test("useWorkspaceStateは指定時に読み込み失敗後も現在のworkspace
   const result = renderHook(() => useWorkspaceState({ loadWorkspace }));
 
   await act(async () => {
-    await result.current.load("/workspace/spec-reviewer");
+    await result.current.actions.load("/workspace/spec-reviewer");
   });
 
   await act(async () => {
-    const isLoaded = await result.current.load("/workspace/file.md", {
+    const isLoaded = await result.current.actions.load("/workspace/file.md", {
       preserveCurrentWorkspace: true,
     });
 
@@ -116,14 +133,18 @@ test("useWorkspaceStateは指定時に読み込み失敗後も現在のworkspace
   });
 
   expect(result.current.state).toEqual({
-    status: "ready",
-    workspacePath: "/workspace/spec-reviewer",
+    status: "opened",
     workspace,
-    error: {
-      code: "unknown",
+    lastOpenError: {
+      reason: "unknown",
       message: "unsupported workspace",
-      raw: "unsupported workspace",
+      cause: {
+        code: "unknown",
+        message: "unsupported workspace",
+        raw: "unsupported workspace",
+      },
     },
   });
+  expect(selectActiveWorkspaceRoot(result.current.state)).toBe(workspace.root);
   result.unmount();
 });
