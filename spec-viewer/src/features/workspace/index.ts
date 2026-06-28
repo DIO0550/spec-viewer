@@ -2,8 +2,9 @@ export { OpenWorkspaceEmptyState } from "@/features/workspace/components/OpenWor
 export { WorkspaceDropOverlay } from "@/features/workspace/components/WorkspaceDropOverlay";
 export { WorkspaceSidebarSection } from "@/features/workspace/components/WorkspaceSidebarSection";
 export { WorkspaceToolbar } from "@/features/workspace/components/WorkspaceToolbar";
+export { WorkspaceProvider, useWorkspace } from "./context";
+export type { WorkspaceContextValue } from "./context";
 export { useRecentWorkspaces } from "./hooks/useRecentWorkspaces";
-export { useWorkspace } from "./hooks/useWorkspace";
 export { useWorkspaceDrop } from "./hooks/useWorkspaceDrop";
 export { useWorkspaceSidebarSectionPreference } from "./hooks/useWorkspaceSidebarSectionPreference";
 export type {

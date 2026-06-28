@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
 import type { Workspace } from "@/features/workspace/types/workspace";
-import { useWorkspace } from "@/features/workspace/hooks/useWorkspace";
+import { useWorkspaceState } from "@/features/workspace/context";
 
 const workspace: Workspace = {
   root: "/workspace/spec-reviewer",
@@ -42,10 +42,10 @@ function renderHook<Result>(hook: () => Result): HookResult<Result> {
   };
 }
 
-test("useWorkspaceは初期状態を未選択として返す", () => {
+test("useWorkspaceStateは初期状態を未選択として返す", () => {
   const loadWorkspace = vi.fn();
 
-  const result = renderHook(() => useWorkspace({ loadWorkspace }));
+  const result = renderHook(() => useWorkspaceState({ loadWorkspace }));
 
   expect(result.current.state.status).toBe("idle");
   expect(result.current.workspacePath).toBeNull();
@@ -53,10 +53,10 @@ test("useWorkspaceは初期状態を未選択として返す", () => {
   result.unmount();
 });
 
-test("useWorkspaceは選択したworkspaceを読み込み成功状態にする", async () => {
+test("useWorkspaceStateは選択したworkspaceを読み込み成功状態にする", async () => {
   const loadWorkspace = vi.fn().mockResolvedValue(workspace);
   const onWorkspaceLoaded = vi.fn();
-  const result = renderHook(() => useWorkspace({ loadWorkspace }));
+  const result = renderHook(() => useWorkspaceState({ loadWorkspace }));
 
   await act(async () => {
     await result.current.load("/workspace/spec-reviewer", {
@@ -75,9 +75,9 @@ test("useWorkspaceは選択したworkspaceを読み込み成功状態にする",
   result.unmount();
 });
 
-test("useWorkspaceは読み込み失敗を正規化済みerror状態にする", async () => {
+test("useWorkspaceStateは読み込み失敗を正規化済みerror状態にする", async () => {
   const loadWorkspace = vi.fn().mockRejectedValue("missing workspace");
-  const result = renderHook(() => useWorkspace({ loadWorkspace }));
+  const result = renderHook(() => useWorkspaceState({ loadWorkspace }));
 
   await act(async () => {
     await result.current.load("/workspace/missing");
@@ -96,12 +96,12 @@ test("useWorkspaceは読み込み失敗を正規化済みerror状態にする", 
   result.unmount();
 });
 
-test("useWorkspaceは指定時に読み込み失敗後も現在のworkspaceを保持する", async () => {
+test("useWorkspaceStateは指定時に読み込み失敗後も現在のworkspaceを保持する", async () => {
   const loadWorkspace = vi
     .fn()
     .mockResolvedValueOnce(workspace)
     .mockRejectedValueOnce("unsupported workspace");
-  const result = renderHook(() => useWorkspace({ loadWorkspace }));
+  const result = renderHook(() => useWorkspaceState({ loadWorkspace }));
 
   await act(async () => {
     await result.current.load("/workspace/spec-reviewer");

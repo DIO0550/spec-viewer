@@ -1,63 +1,15 @@
 import { useCallback, useRef, useState } from "react";
 
+import type {
+  LoadWorkspaceOptions,
+  UseWorkspaceStateOptions,
+  WorkspaceContextValue,
+  WorkspaceState,
+} from "@/features/workspace/context/types";
 import {
   loadWorkspace as defaultLoadWorkspace,
   normalizeCommandError,
 } from "@/shared/api/tauri";
-import type { NormalizedCommandError } from "@/shared/types/ipc";
-import type { Workspace } from "@/features/workspace/types/workspace";
-
-export type WorkspaceState =
-  | Readonly<{
-      status: "idle";
-      workspacePath: null;
-      workspace: null;
-      error: null;
-    }>
-  | Readonly<{
-      status: "loading";
-      workspacePath: string;
-      workspace: Workspace | null;
-      error: null;
-    }>
-  | Readonly<{
-      status: "ready";
-      workspacePath: string;
-      workspace: Workspace;
-      error: NormalizedCommandError | null;
-    }>
-  | Readonly<{
-      status: "error";
-      workspacePath: string;
-      workspace: null;
-      error: NormalizedCommandError;
-    }>;
-
-export type LoadWorkspaceCommand = (
-  selectedDirectory: string,
-) => Promise<Workspace>;
-
-export type UseWorkspaceOptions = Readonly<{
-  loadWorkspace?: LoadWorkspaceCommand;
-}>;
-
-export type LoadWorkspaceOptions = Readonly<{
-  preserveCurrentWorkspace?: boolean;
-  onWorkspaceLoaded?: (workspace: Workspace) => void;
-}>;
-
-export type UseWorkspaceResult = Readonly<{
-  state: WorkspaceState;
-  workspacePath: string | null;
-  workspace: Workspace | null;
-  isLoading: boolean;
-  error: NormalizedCommandError | null;
-  load: (
-    selectedDirectory: string,
-    options?: LoadWorkspaceOptions,
-  ) => Promise<boolean>;
-  reset: () => void;
-}>;
 
 const initialWorkspaceState: WorkspaceState = {
   status: "idle",
@@ -67,9 +19,9 @@ const initialWorkspaceState: WorkspaceState = {
 };
 
 /** @returns Workspace loading state and actions for selecting/resetting a workspace. */
-export function useWorkspace(
-  options: UseWorkspaceOptions = {},
-): UseWorkspaceResult {
+export function useWorkspaceState(
+  options: UseWorkspaceStateOptions = {},
+): WorkspaceContextValue {
   const loadWorkspace = options.loadWorkspace ?? defaultLoadWorkspace;
   const requestIdRef = useRef(0);
   const stateRef = useRef<WorkspaceState>(initialWorkspaceState);
