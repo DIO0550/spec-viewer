@@ -20,14 +20,9 @@ const initialWorkspaceState: WorkspaceState = {
 
 /** @returns Workspace loading state and actions for selecting/resetting a workspace. */
 export function useWorkspaceState(): WorkspaceContextValue {
-  const generationRef = useRef<Generation | null>(null);
+  const generationRef = useRef<Generation>(createGeneration());
   const stateRef = useRef<WorkspaceState>(initialWorkspaceState);
   const [state, setState] = useState<WorkspaceState>(initialWorkspaceState);
-
-  if (generationRef.current === null) {
-    generationRef.current = createGeneration();
-  }
-
   const generation = generationRef.current;
 
   const updateState = useCallback((nextState: WorkspaceState): void => {
