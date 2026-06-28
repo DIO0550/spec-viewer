@@ -3,7 +3,6 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { selectWorkspace } from "@/features/workspace/context/selectors";
 import type {
   LoadWorkspaceOptions,
-  UseWorkspaceStateOptions,
   WorkspaceActions,
   WorkspaceContextValue,
   WorkspaceState,
@@ -18,12 +17,30 @@ const initialWorkspaceState: WorkspaceState = {
   status: "idle",
 };
 
+type GenerationToken = number & {
+  readonly __brand: "GenerationToken";
+};
+
+class Generation {
+  #current = 0;
+
+  next(): GenerationToken {
+    this.#current += 1;
+    return this.#current as GenerationToken;
+  }
+
+  invalidate(): void {
+    this.#current += 1;
+  }
+
+  isCurrent(token: GenerationToken): boolean {
+    return token === this.#current;
+  }
+}
+
 /** @returns Workspace loading state and actions for selecting/resetting a workspace. */
-export function useWorkspaceState(
-  options: UseWorkspaceStateOptions = {},
-): WorkspaceContextValue {
-  const loadWorkspace = options.loadWorkspace ?? defaultLoadWorkspace;
-  const requestIdRef = useRef(0);
+export function useWorkspaceState(): WorkspaceContextValue {
+  const [generation] = useState(() => new Generation());
   const stateRef = useRef<WorkspaceState>(initialWorkspaceState);
   const [state, setState] = useState<WorkspaceState>(initialWorkspaceState);
 
@@ -37,12 +54,10 @@ export function useWorkspaceState(
       selectedDirectory: string,
       loadOptions: LoadWorkspaceOptions = {},
     ): Promise<boolean> => {
-      const requestId = requestIdRef.current + 1;
-      requestIdRef.current = requestId;
-      const previousState = stateRef.current;
+      const token = generation.next();
       const preservedWorkspace =
         loadOptions.preserveCurrentWorkspace === true
-          ? selectWorkspace(previousState)
+          ? selectWorkspace(stateRef.current)
           : null;
 
       updateState({
@@ -53,9 +68,9 @@ export function useWorkspaceState(
       });
 
       try {
-        const workspace = await loadWorkspace(selectedDirectory);
+        const workspace = await defaultLoadWorkspace(selectedDirectory);
 
-        if (requestIdRef.current !== requestId) {
+        if (!generation.isCurrent(token)) {
           return false;
         }
 
@@ -67,7 +82,7 @@ export function useWorkspaceState(
         loadOptions.onWorkspaceLoaded?.(workspace);
         return true;
       } catch (error) {
-        if (requestIdRef.current !== requestId) {
+        if (!generation.isCurrent(token)) {
           return false;
         }
 
@@ -90,13 +105,13 @@ export function useWorkspaceState(
         return false;
       }
     },
-    [loadWorkspace, updateState],
+    [generation, updateState],
   );
 
   const reset = useCallback((): void => {
-    requestIdRef.current += 1;
+    generation.invalidate();
     updateState(initialWorkspaceState);
-  }, [updateState]);
+  }, [generation, updateState]);
 
   const actions: WorkspaceActions = useMemo(
     () => ({
