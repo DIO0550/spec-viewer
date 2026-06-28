@@ -1,9 +1,9 @@
 export type {
-  CommandError,
+  CommandErrorDto,
   CommandErrorCode,
   CommandName,
   CommandPayloads,
   CommandRequest,
   CommandResponse,
-  NormalizedCommandError,
+  IpcCommandError,
 } from "@/shared/types/ipc";

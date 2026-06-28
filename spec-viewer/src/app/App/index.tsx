@@ -7,6 +7,7 @@ import {
 } from "react";
 
 import "../App.css";
+import { useDocumentReadiness } from "@/app/App/useDocumentReadiness";
 import {
   CommentSidebar,
   CommentOperationFailedState,
@@ -62,6 +63,10 @@ import {
   WorkspaceDropOverlay,
   WorkspaceSidebarSection,
   WorkspaceToolbar,
+  selectActiveWorkspaceRoot,
+  selectIsWorkspaceOpening,
+  selectWorkspace,
+  selectWorkspaceError,
   useRecentWorkspaces,
   useWorkspace,
   useWorkspaceDrop,
@@ -71,7 +76,7 @@ import { WorkspaceLayout } from "@/shared/ui";
 import {
   exportComments,
   generateLlmPrompt,
-  normalizeCommandError,
+  toIpcCommandError,
   selectCommentExportDestination,
   selectWorkspaceDirectory,
   validateWorkspaceDirectory,
@@ -139,7 +144,13 @@ function App(): ReactElement {
 }
 
 function SpecViewAppContent(): ReactElement {
-  const workspace = useWorkspace();
+  const workspaceContext = useWorkspace();
+  const workspaceState = workspaceContext.state;
+  const workspaceActions = workspaceContext.actions;
+  const currentWorkspace = selectWorkspace(workspaceState);
+  const activeWorkspaceRoot = selectActiveWorkspaceRoot(workspaceState);
+  const isWorkspaceOpening = selectIsWorkspaceOpening(workspaceState);
+  const workspaceError = selectWorkspaceError(workspaceState);
   const recentWorkspaces = useRecentWorkspaces();
   const leftNavigationPreference = useLeftNavigationPreference();
   const workspaceSidebarSectionPreference =
@@ -161,39 +172,36 @@ function SpecViewAppContent(): ReactElement {
     [selectSpecView],
   );
   const specs = useSpecs({
-    workspacePath: workspace.workspace?.root ?? null,
+    workspacePath: activeWorkspaceRoot,
     onSelectionChange: selectCurrentSpecView,
   });
-  const isHtmlDocument =
-    specs.documentState.status === "ready" &&
-    specs.documentState.document.format === "html";
-  const [readableDocumentKey, setReadableDocumentKey] = useState<string | null>(
-    null,
-  );
-  const currentDocumentKey = createDocumentReadableKey(specs.documentState);
-  const isDocumentReadable =
-    specs.documentState.status === "missing" ||
-    (currentDocumentKey !== null && readableDocumentKey === currentDocumentKey);
+  const specState = specs.state;
+  const specActions = specs.actions;
+  const specSelectors = specs.selectors;
+  const documentReadiness = useDocumentReadiness(specState.documentState);
   const commentScope = useMemo(
     () =>
       CommentScope.create({
-        workspacePath: workspace.workspace?.root ?? null,
-        specId: specs.selectedSpecId,
+        workspacePath: activeWorkspaceRoot,
+        specId: specState.selection.specId,
         fileKey:
-          isHtmlDocument || !isDocumentReadable ? null : specs.selectedFileKey,
+          documentReadiness.isHtmlDocument ||
+          !documentReadiness.isDocumentReadable
+            ? null
+            : specState.selection.fileKey,
       }),
     [
-      isDocumentReadable,
-      isHtmlDocument,
-      specs.selectedFileKey,
-      specs.selectedSpecId,
-      workspace.workspace?.root,
+      documentReadiness.isDocumentReadable,
+      documentReadiness.isHtmlDocument,
+      specState.selection.fileKey,
+      specState.selection.specId,
+      activeWorkspaceRoot,
     ],
   );
   const comments = useComments({
     scope: commentScope,
     statusFilter: CommentStatusFilter.All,
-    correlationId: specs.documentState.correlationId ?? null,
+    correlationId: specState.documentState.correlationId ?? null,
   });
   const [userReviewWorkspaceMode, setUserReviewWorkspaceMode] =
     useState<UserReviewWorkspaceMode>("currentWorkspace");
@@ -219,11 +227,19 @@ function SpecViewAppContent(): ReactElement {
     setCommentAnchorDisplayStates([]);
     setDialogErrorMessage(null);
     setCommentExportState(idleCommentExportState);
-  }, [specs.selectedFileKey, specs.selectedSpecId, workspace.workspace?.root]);
+  }, [
+    specState.selection.fileKey,
+    specState.selection.specId,
+    activeWorkspaceRoot,
+  ]);
 
   useEffect(() => {
     setUserReviewWorkspaceMode("currentWorkspace");
-  }, [specs.selectedFileKey, specs.selectedSpecId, workspace.workspace?.root]);
+  }, [
+    specState.selection.fileKey,
+    specState.selection.specId,
+    activeWorkspaceRoot,
+  ]);
 
   useEffect(() => {
     if (!CommentListState.isLoaded(comments.listState)) {
@@ -247,18 +263,18 @@ function SpecViewAppContent(): ReactElement {
       setDialogErrorMessage(null);
       setDropErrorMessage(null);
       setWorkspaceInput(selectedDirectory);
-      const isLoaded = await workspace.load(selectedDirectory, {
+      const isLoaded = await workspaceActions.load(selectedDirectory, {
         preserveCurrentWorkspace: options.preserveCurrentWorkspace,
         onWorkspaceLoaded: recentWorkspaces.recordWorkspace,
       });
 
       return isLoaded;
     },
-    [recentWorkspaces.recordWorkspace, workspace.load],
+    [recentWorkspaces.recordWorkspace, workspaceActions.load],
   );
 
   const browseWorkspace = async (): Promise<void> => {
-    if (workspace.isLoading || isBrowsingWorkspace) {
+    if (isWorkspaceOpening || isBrowsingWorkspace) {
       return;
     }
 
@@ -274,7 +290,7 @@ function SpecViewAppContent(): ReactElement {
 
       await loadWorkspacePath(selectedDirectory);
     } catch (error) {
-      setDialogErrorMessage(normalizeCommandError(error).message);
+      setDialogErrorMessage(toIpcCommandError(error).message);
     } finally {
       setIsBrowsingWorkspace(false);
     }
@@ -295,12 +311,12 @@ function SpecViewAppContent(): ReactElement {
     setDialogErrorMessage(null);
     setDropErrorMessage(null);
     setActiveCommentId(null);
-    workspace.reset();
+    workspaceActions.reset();
   };
 
   const openDroppedWorkspacePath = useCallback(
     async (selectedDirectory: string): Promise<void> => {
-      if (workspace.isLoading || isBrowsingWorkspace) {
+      if (isWorkspaceOpening || isBrowsingWorkspace) {
         return;
       }
 
@@ -320,15 +336,15 @@ function SpecViewAppContent(): ReactElement {
           preserveCurrentWorkspace: true,
         });
       } catch (error) {
-        setDropErrorMessage(normalizeCommandError(error).message);
+        setDropErrorMessage(toIpcCommandError(error).message);
       }
     },
-    [isBrowsingWorkspace, loadWorkspacePath, workspace.isLoading],
+    [isBrowsingWorkspace, loadWorkspacePath, isWorkspaceOpening],
   );
 
   const openRecentWorkspacePath = useCallback(
     async (selectedDirectory: string): Promise<void> => {
-      if (workspace.isLoading || isBrowsingWorkspace) {
+      if (isWorkspaceOpening || isBrowsingWorkspace) {
         return;
       }
 
@@ -342,7 +358,7 @@ function SpecViewAppContent(): ReactElement {
         if (!validation.isDirectory) {
           recentWorkspaces.removeWorkspace(selectedDirectory);
           setDialogErrorMessage(missingSavedWorkspaceMessage);
-          setWorkspaceInput(workspace.workspace?.root ?? "");
+          setWorkspaceInput(activeWorkspaceRoot ?? "");
           return;
         }
 
@@ -353,22 +369,22 @@ function SpecViewAppContent(): ReactElement {
         if (!isLoaded) {
           recentWorkspaces.removeWorkspace(selectedDirectory);
           setDialogErrorMessage(unsupportedSavedWorkspaceMessage);
-          setWorkspaceInput(workspace.workspace?.root ?? "");
+          setWorkspaceInput(activeWorkspaceRoot ?? "");
         }
       } catch (error) {
         recentWorkspaces.removeWorkspace(selectedDirectory);
         setDialogErrorMessage(
-          `${missingSavedWorkspaceMessage} ${normalizeCommandError(error).message}`,
+          `${missingSavedWorkspaceMessage} ${toIpcCommandError(error).message}`,
         );
-        setWorkspaceInput(workspace.workspace?.root ?? "");
+        setWorkspaceInput(activeWorkspaceRoot ?? "");
       }
     },
     [
       isBrowsingWorkspace,
       loadWorkspacePath,
       recentWorkspaces.removeWorkspace,
-      workspace.workspace?.root,
-      workspace.isLoading,
+      activeWorkspaceRoot,
+      isWorkspaceOpening,
     ],
   );
 
@@ -378,8 +394,8 @@ function SpecViewAppContent(): ReactElement {
     }
 
     if (
-      workspace.workspace !== null ||
-      workspace.isLoading ||
+      currentWorkspace !== null ||
+      isWorkspaceOpening ||
       isBrowsingWorkspace
     ) {
       return;
@@ -396,12 +412,12 @@ function SpecViewAppContent(): ReactElement {
     isBrowsingWorkspace,
     openRecentWorkspacePath,
     recentWorkspaces.lastActiveWorkspacePath,
-    workspace.isLoading,
-    workspace.workspace,
+    isWorkspaceOpening,
+    currentWorkspace,
   ]);
 
   const workspaceDrop = useWorkspaceDrop({
-    isDisabled: workspace.isLoading || isBrowsingWorkspace,
+    isDisabled: isWorkspaceOpening || isBrowsingWorkspace,
     onDropWorkspacePath: (selectedDirectory) => {
       void openDroppedWorkspacePath(selectedDirectory);
     },
@@ -490,7 +506,7 @@ function SpecViewAppContent(): ReactElement {
 
   const runCommentExport = useCallback(
     async (target: ExportCommentsTarget): Promise<void> => {
-      if (workspace.workspace === null) {
+      if (currentWorkspace === null) {
         return;
       }
 
@@ -515,7 +531,7 @@ function SpecViewAppContent(): ReactElement {
         });
 
         const response = await exportComments({
-          workspacePath: workspace.workspace.root,
+          workspacePath: currentWorkspace.root,
           target,
           destinationPath,
         });
@@ -529,16 +545,16 @@ function SpecViewAppContent(): ReactElement {
         setCommentExportState({
           status: "error",
           operation: target.scope,
-          message: normalizeCommandError(error).message,
+          message: toIpcCommandError(error).message,
         });
       }
     },
-    [workspace.workspace],
+    [currentWorkspace],
   );
 
   const exportCommentScope = useCallback(
     (scope: CommentExportScope): void => {
-      if (specs.selectedSpecId === null) {
+      if (specState.selection.specId === null) {
         return;
       }
 
@@ -550,27 +566,27 @@ function SpecViewAppContent(): ReactElement {
       if (scope === "spec") {
         void runCommentExport({
           scope,
-          specId: specs.selectedSpecId,
+          specId: specState.selection.specId,
         });
         return;
       }
 
-      if (specs.selectedFileKey === null) {
+      if (specState.selection.fileKey === null) {
         return;
       }
 
       void runCommentExport({
         scope,
-        specId: specs.selectedSpecId,
-        fileKey: specs.selectedFileKey,
+        specId: specState.selection.specId,
+        fileKey: specState.selection.fileKey,
       });
     },
-    [runCommentExport, specs.selectedFileKey, specs.selectedSpecId],
+    [runCommentExport, specState.selection.fileKey, specState.selection.specId],
   );
 
   const runLlmPromptCopy = useCallback(
     async (target: ExportCommentsTarget): Promise<void> => {
-      if (workspace.workspace === null) {
+      if (currentWorkspace === null) {
         return;
       }
 
@@ -582,7 +598,7 @@ function SpecViewAppContent(): ReactElement {
 
       try {
         const response = await generateLlmPrompt({
-          workspacePath: workspace.workspace.root,
+          workspacePath: currentWorkspace.root,
           target,
         });
         await copyTextToClipboard(response.prompt);
@@ -596,16 +612,16 @@ function SpecViewAppContent(): ReactElement {
         setCommentExportState({
           status: "error",
           operation: target.scope,
-          message: normalizeCommandError(error).message,
+          message: toIpcCommandError(error).message,
         });
       }
     },
-    [workspace.workspace],
+    [currentWorkspace],
   );
 
   const copyLlmPromptScope = useCallback(
     (scope: CommentExportScope): void => {
-      if (specs.selectedSpecId === null) {
+      if (specState.selection.specId === null) {
         return;
       }
 
@@ -617,29 +633,29 @@ function SpecViewAppContent(): ReactElement {
       if (scope === "spec") {
         void runLlmPromptCopy({
           scope,
-          specId: specs.selectedSpecId,
+          specId: specState.selection.specId,
         });
         return;
       }
 
-      if (specs.selectedFileKey === null) {
+      if (specState.selection.fileKey === null) {
         return;
       }
 
       void runLlmPromptCopy({
         scope,
-        specId: specs.selectedSpecId,
-        fileKey: specs.selectedFileKey,
+        specId: specState.selection.specId,
+        fileKey: specState.selection.fileKey,
       });
     },
-    [runLlmPromptCopy, specs.selectedFileKey, specs.selectedSpecId],
+    [runLlmPromptCopy, specState.selection.fileKey, specState.selection.specId],
   );
 
   const copyMcpFeedbackPayload = useCallback(async (): Promise<void> => {
     if (
-      workspace.workspace === null ||
-      specs.selectedSpecId === null ||
-      specs.selectedFileKey === null
+      currentWorkspace === null ||
+      specState.selection.specId === null ||
+      specState.selection.fileKey === null
     ) {
       return;
     }
@@ -652,9 +668,9 @@ function SpecViewAppContent(): ReactElement {
 
     try {
       const payload = createSpecSkillMcpFeedbackDryRunPayload({
-        workspacePath: workspace.workspace.root,
-        specId: specs.selectedSpecId,
-        fileKey: specs.selectedFileKey,
+        workspacePath: currentWorkspace.root,
+        specId: specState.selection.specId,
+        fileKey: specState.selection.fileKey,
         comments: comments.comments,
         generatedAt: new Date().toISOString(),
       });
@@ -672,21 +688,21 @@ function SpecViewAppContent(): ReactElement {
       setCommentExportState({
         status: "error",
         operation: "mcpFeedback",
-        message: normalizeCommandError(error).message,
+        message: toIpcCommandError(error).message,
       });
     }
   }, [
     comments.comments,
-    specs.selectedFileKey,
-    specs.selectedSpecId,
-    workspace.workspace,
+    specState.selection.fileKey,
+    specState.selection.specId,
+    currentWorkspace,
   ]);
 
-  const isCurrentViewLoading = specs.isLoading;
+  const isCurrentViewLoading = specSelectors.isLoading;
 
   const selectAdjacentFile = useCallback(
     (direction: NavigationDirection): boolean => {
-      const selectedSpec = specs.selectedSpec;
+      const selectedSpec = specSelectors.selectedSpec;
 
       if (
         isCurrentViewLoading ||
@@ -697,7 +713,7 @@ function SpecViewAppContent(): ReactElement {
       }
 
       const currentIndex = selectedSpec.files.findIndex(
-        (file) => file.key === specs.selectedFileKey,
+        (file) => file.key === specState.selection.fileKey,
       );
       const selectedIndex = currentIndex < 0 ? 0 : currentIndex;
       const offset = direction === "next" ? 1 : -1;
@@ -711,14 +727,14 @@ function SpecViewAppContent(): ReactElement {
         return false;
       }
 
-      void specs.selectFileKey(nextFileKey);
+      void specActions.selectFileKey(nextFileKey);
       return true;
     },
     [
       isCurrentViewLoading,
-      specs.selectFileKey,
-      specs.selectedFileKey,
-      specs.selectedSpec,
+      specActions.selectFileKey,
+      specState.selection.fileKey,
+      specSelectors.selectedSpec,
     ],
   );
 
@@ -767,7 +783,7 @@ function SpecViewAppContent(): ReactElement {
         return true;
       } catch (error) {
         setDialogErrorMessage(
-          `${failureMessage} ${normalizeCommandError(error).message}`,
+          `${failureMessage} ${toIpcCommandError(error).message}`,
         );
         return false;
       }
@@ -785,7 +801,7 @@ function SpecViewAppContent(): ReactElement {
         failureMessage:
           "自動再読み込みに失敗しました。内容が古い可能性があります。",
         run: async () => {
-          const isDocumentReloaded = await specs.reloadDocument();
+          const isDocumentReloaded = await specActions.reloadDocument();
           const areCommentsReloaded = await comments.reloadComments();
           return isDocumentReloaded && areCommentsReloaded;
         },
@@ -794,7 +810,7 @@ function SpecViewAppContent(): ReactElement {
       comments.reloadComments,
       isCurrentViewLoading,
       refreshCurrentView,
-      specs.reloadDocument,
+      specActions.reloadDocument,
     ]);
 
   const reloadWorkspaceConfigFromWatcher =
@@ -807,7 +823,7 @@ function SpecViewAppContent(): ReactElement {
         failureMessage:
           "自動再読み込みに失敗しました。内容が古い可能性があります。",
         run: async () => {
-          const areSpecsReloaded = await specs.reloadSpecs();
+          const areSpecsReloaded = await specActions.reloadSpecs();
           const areCommentsReloaded = await comments.reloadComments();
           return areSpecsReloaded && areCommentsReloaded;
         },
@@ -816,14 +832,14 @@ function SpecViewAppContent(): ReactElement {
       comments.reloadComments,
       isCurrentViewLoading,
       refreshCurrentView,
-      specs.reloadSpecs,
+      specActions.reloadSpecs,
     ]);
 
   const refreshCurrentViewManually = useCallback(async (): Promise<void> => {
     if (
-      workspace.workspace === null ||
-      specs.selectedSpecId === null ||
-      specs.selectedFileKey === null ||
+      currentWorkspace === null ||
+      specState.selection.specId === null ||
+      specState.selection.fileKey === null ||
       isCurrentViewLoading
     ) {
       return;
@@ -833,7 +849,7 @@ function SpecViewAppContent(): ReactElement {
       failureMessage:
         "再読み込みに失敗しました。エラーを確認して再試行してください。",
       run: async () => {
-        const areSpecsReloaded = await specs.reloadSpecs();
+        const areSpecsReloaded = await specActions.reloadSpecs();
         const areCommentsReloaded = await comments.reloadComments();
         return areSpecsReloaded && areCommentsReloaded;
       },
@@ -842,16 +858,16 @@ function SpecViewAppContent(): ReactElement {
     comments.reloadComments,
     isCurrentViewLoading,
     refreshCurrentView,
-    specs.reloadSpecs,
-    specs.selectedFileKey,
-    specs.selectedSpecId,
-    workspace.workspace,
+    specActions.reloadSpecs,
+    specState.selection.fileKey,
+    specState.selection.specId,
+    currentWorkspace,
   ]);
 
   useSpecFileWatcher({
-    workspacePath: workspace.workspace?.root ?? null,
-    specId: specs.selectedSpecId,
-    fileKey: specs.selectedFileKey,
+    workspacePath: activeWorkspaceRoot,
+    specId: specState.selection.specId,
+    fileKey: specState.selection.fileKey,
     onMarkdownChange: reloadCurrentMarkdownFromWatcher,
     onConfigChange: reloadWorkspaceConfigFromWatcher,
     onWatcherError: (event) => {
@@ -862,9 +878,9 @@ function SpecViewAppContent(): ReactElement {
   });
 
   const toolbarErrorMessage =
-    dropErrorMessage ?? dialogErrorMessage ?? workspace.error?.message ?? null;
+    dropErrorMessage ?? dialogErrorMessage ?? workspaceError?.message ?? null;
   const shouldShowOpenWorkspacePrompt =
-    workspace.workspace === null && !workspace.isLoading;
+    currentWorkspace === null && !isWorkspaceOpening;
   const addCommentErrorMessage =
     CommentOperationFailedState.errorFor(comments.operationState, "add")
       ?.message ?? null;
@@ -877,21 +893,21 @@ function SpecViewAppContent(): ReactElement {
     "update",
   );
   const isCommentScopeReady =
-    workspace.workspace !== null &&
-    specs.selectedSpecId !== null &&
-    specs.selectedFileKey !== null &&
-    isDocumentReadable;
+    currentWorkspace !== null &&
+    specState.selection.specId !== null &&
+    specState.selection.fileKey !== null &&
+    documentReadiness.isDocumentReadable;
   const leftNavigationSubtitle =
-    workspace.workspacePath ?? uiText.workspace.noWorkspace;
+    activeWorkspaceRoot ?? uiText.workspace.noWorkspace;
   const selectSpecFromTree = useCallback(
     (specId: string): void => {
       if (isCurrentViewLoading) {
         return;
       }
 
-      void specs.selectSpec(specId);
+      void specActions.selectSpec(specId);
     },
-    [isCurrentViewLoading, specs.selectSpec],
+    [isCurrentViewLoading, specActions.selectSpec],
   );
 
   const archiveSpecFromTree = useCallback(
@@ -900,9 +916,9 @@ function SpecViewAppContent(): ReactElement {
         return;
       }
 
-      void specs.archiveSpec(specId);
+      void specActions.archiveSpec(specId);
     },
-    [isCurrentViewLoading, specs.archiveSpec],
+    [isCurrentViewLoading, specActions.archiveSpec],
   );
 
   const reloadSpecsFromTree = useCallback((): void => {
@@ -910,8 +926,8 @@ function SpecViewAppContent(): ReactElement {
       return;
     }
 
-    void specs.reloadSpecs();
-  }, [isCurrentViewLoading, specs.reloadSpecs]);
+    void specActions.reloadSpecs();
+  }, [isCurrentViewLoading, specActions.reloadSpecs]);
 
   const selectFileFromTabs = useCallback(
     (fileKey: SpecFileKey): void => {
@@ -919,9 +935,9 @@ function SpecViewAppContent(): ReactElement {
         return;
       }
 
-      void specs.selectFileKey(fileKey);
+      void specActions.selectFileKey(fileKey);
     },
-    [isCurrentViewLoading, specs.selectFileKey],
+    [isCurrentViewLoading, specActions.selectFileKey],
   );
 
   const reloadDocumentFromViewer = useCallback((): void => {
@@ -929,8 +945,8 @@ function SpecViewAppContent(): ReactElement {
       return;
     }
 
-    void specs.reloadDocument();
-  }, [isCurrentViewLoading, specs.reloadDocument]);
+    void specActions.reloadDocument();
+  }, [isCurrentViewLoading, specActions.reloadDocument]);
 
   useKeyboardShortcuts({
     onNextFile: () => selectAdjacentFile("next"),
@@ -969,11 +985,11 @@ function SpecViewAppContent(): ReactElement {
         >
           <div className="left-navigation-panel">
             <WorkspaceSidebarSection
-              currentWorkspacePath={workspace.workspacePath}
+              currentWorkspacePath={activeWorkspaceRoot}
               isOpen={
                 workspaceSidebarSectionPreference.isWorkspaceSidebarSectionOpen
               }
-              isBusy={workspace.isLoading || isBrowsingWorkspace}
+              isBusy={isWorkspaceOpening || isBrowsingWorkspace}
               recentWorkspaces={recentWorkspaces.recentWorkspaces}
               onBrowse={() => {
                 void browseWorkspace();
@@ -987,9 +1003,9 @@ function SpecViewAppContent(): ReactElement {
               onRemoveWorkspace={recentWorkspaces.removeWorkspace}
             />
             <SpecTree
-              state={specs.specTreeState}
-              selectedSpecId={specs.selectedSpecId}
-              archivingSpecId={specs.archivingSpecId}
+              state={specState.specTreeState}
+              selectedSpecId={specState.selection.specId}
+              archivingSpecId={specState.archivingSpecId}
               isLoading={isCurrentViewLoading}
               onSelectSpec={selectSpecFromTree}
               onArchiveSpec={archiveSpecFromTree}
@@ -1000,15 +1016,15 @@ function SpecViewAppContent(): ReactElement {
         <WorkspaceLayout.Main>
           <WorkspaceLayout.Toolbar>
             <WorkspaceToolbar
-              workspacePath={workspace.workspacePath}
+              workspacePath={activeWorkspaceRoot}
               inputValue={workspaceInput}
-              isLoading={workspace.isLoading}
+              isLoading={isWorkspaceOpening}
               isBrowsing={isBrowsingWorkspace}
               errorMessage={toolbarErrorMessage}
               canRefresh={
-                workspace.workspace !== null &&
-                specs.selectedSpecId !== null &&
-                specs.selectedFileKey !== null &&
+                currentWorkspace !== null &&
+                specState.selection.specId !== null &&
+                specState.selection.fileKey !== null &&
                 !isCurrentViewLoading
               }
               onInputChange={setWorkspaceInput}
@@ -1024,8 +1040,8 @@ function SpecViewAppContent(): ReactElement {
           </WorkspaceLayout.Toolbar>
           <WorkspaceLayout.Tabs>
             <SpecTabs
-              spec={specs.selectedSpec}
-              selectedFileKey={specs.selectedFileKey}
+              spec={specSelectors.selectedSpec}
+              selectedFileKey={specState.selection.fileKey}
               isSelectionDisabled={isCurrentViewLoading}
               onSelectFile={selectFileFromTabs}
             />
@@ -1045,9 +1061,9 @@ function SpecViewAppContent(): ReactElement {
               />
             ) : (
               <MarkdownViewer
-                state={specs.documentState}
-                selectedSpecLabel={specs.selectedSpec?.label ?? null}
-                selectedFileLabel={specs.selectedFile?.label ?? null}
+                state={specState.documentState}
+                selectedSpecLabel={specSelectors.selectedSpec?.label ?? null}
+                selectedFileLabel={specSelectors.selectedFile?.label ?? null}
                 comments={comments.comments}
                 activeCommentId={activeCommentId}
                 isAddingComment={isAddingComment}
@@ -1063,9 +1079,7 @@ function SpecViewAppContent(): ReactElement {
                 onDeleteComment={deleteInlineComment}
                 onSelectComment={selectComment}
                 onAnchorDisplayStatesChange={updateCommentAnchorDisplayStates}
-                onFirstReadable={() => {
-                  setReadableDocumentKey(currentDocumentKey);
-                }}
+                onFirstReadable={documentReadiness.markCurrentDocumentReadable}
               />
             )}
           </WorkspaceLayout.Viewer>
@@ -1093,7 +1107,7 @@ function SpecViewAppContent(): ReactElement {
             userReviewPanel={
               <SpecViewUserReviewPanel
                 comments={comments.comments}
-                correlationId={specs.documentState.correlationId ?? null}
+                correlationId={specState.documentState.correlationId ?? null}
                 workspaceMode={userReviewWorkspaceMode}
                 onWorkspaceModeChange={setUserReviewWorkspaceMode}
               />
@@ -1184,22 +1198,6 @@ function formatCommentExportSuccessMessage(
 /** @returns The number of unresolved comments in the active sidebar list. */
 function countOpenComments(comments: readonly { status: string }[]): number {
   return comments.filter((comment) => comment.status === "open").length;
-}
-
-/** @returns A stable identity for the document load that must become readable. */
-function createDocumentReadableKey(
-  state: ReturnType<typeof useSpecs>["documentState"],
-): string | null {
-  if (state.status !== "ready") {
-    return null;
-  }
-
-  return [
-    state.workspacePath,
-    state.specId,
-    state.fileKey,
-    state.correlationId ?? "no-correlation",
-  ].join("\u0000");
 }
 
 /** Copies generated prompt text to the browser clipboard. */

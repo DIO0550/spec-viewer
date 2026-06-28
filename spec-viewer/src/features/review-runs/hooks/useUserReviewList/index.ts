@@ -8,10 +8,7 @@ import {
 } from "@/features/review-runs/domain/userReviewListState";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import { listUserReviews as listUserReviewsViaGateway } from "@/features/review-runs/infra/userReviewGateway";
-import {
-  normalizeCommandError,
-  type UserReviewCommands,
-} from "@/shared/api/tauri";
+import { toIpcCommandError, type UserReviewCommands } from "@/shared/api/tauri";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 import {
   createPerformanceCorrelationId,
@@ -174,7 +171,7 @@ export function useUserReviewList(
           requestVersion: startedRequestVersion,
           state: UserReviewListState.error(
             activeTarget,
-            normalizeCommandError(error),
+            toIpcCommandError(error),
           ),
         };
       });

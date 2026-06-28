@@ -8,11 +8,11 @@ import {
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
 import { CommentId } from "@/features/comments/types/comment";
-import type { NormalizedCommandError } from "@/shared/types/ipc";
+import type { IpcCommandError } from "@/shared/types/ipc";
 
 const commentId = CommentId.fromString;
 
-const commandError: NormalizedCommandError = {
+const commandError: IpcCommandError = {
   code: "commentRepository",
   message: "Comment operation failed.",
   raw: "Comment operation failed.",

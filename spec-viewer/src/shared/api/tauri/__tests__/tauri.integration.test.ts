@@ -5,7 +5,7 @@ import {
   archiveSpec,
   listSpecs,
   loadWorkspace,
-  normalizeCommandError,
+  toIpcCommandError,
   readSpecFile,
   validateWorkspaceDirectory,
 } from "@/shared/api/tauri";
@@ -128,13 +128,13 @@ test("archiveSpecはarchive_specへworkspacePathとspecIdを渡す", async () =>
   });
 });
 
-test("normalizeCommandErrorはCommandError DTOを安定したエラーに変換する", () => {
+test("toIpcCommandErrorはCommandError DTOを安定したエラーに変換する", () => {
   const rawError = {
     code: "configLoad",
     message: "failed to load workspace config",
   };
 
-  const result = normalizeCommandError(rawError);
+  const result = toIpcCommandError(rawError);
 
   expect(result).toEqual({
     code: "configLoad",
@@ -143,13 +143,13 @@ test("normalizeCommandErrorはCommandError DTOを安定したエラーに変換�
   });
 });
 
-test("normalizeCommandErrorはspec archiveエラーを保持する", () => {
+test("toIpcCommandErrorはspec archiveエラーを保持する", () => {
   const rawError = {
     code: "specArchive",
     message: "failed to archive spec",
   };
 
-  const result = normalizeCommandError(rawError);
+  const result = toIpcCommandError(rawError);
 
   expect(result).toEqual({
     code: "specArchive",
@@ -158,13 +158,13 @@ test("normalizeCommandErrorはspec archiveエラーを保持する", () => {
   });
 });
 
-test("normalizeCommandErrorはcomment系CommandError DTOも保持する", () => {
+test("toIpcCommandErrorはcomment系CommandError DTOも保持する", () => {
   const rawError = {
     code: "commentRepository",
     message: "failed to update comment store",
   };
 
-  const result = normalizeCommandError(rawError);
+  const result = toIpcCommandError(rawError);
 
   expect(result).toEqual({
     code: "commentRepository",

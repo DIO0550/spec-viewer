@@ -8,10 +8,7 @@ import {
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import { archiveUserReview as archiveUserReviewViaGateway } from "@/features/review-runs/infra/userReviewGateway";
 import type { UserReviewListEventWithSelectionId } from "@/features/review-runs/hooks/useUserReviewList";
-import {
-  normalizeCommandError,
-  type UserReviewCommands,
-} from "@/shared/api/tauri";
+import { toIpcCommandError, type UserReviewCommands } from "@/shared/api/tauri";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 
 type SelectionId = string;
@@ -114,7 +111,7 @@ export function useArchiveUserReview(
             selectionId: startedSelectionId,
             state: UserReviewArchiveState.error(
               payload,
-              normalizeCommandError(error),
+              toIpcCommandError(error),
             ),
           };
         });

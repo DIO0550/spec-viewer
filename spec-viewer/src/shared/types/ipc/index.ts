@@ -34,12 +34,12 @@ export type CommandErrorCode =
   | "userReviewExport"
   | "fileWatch";
 
-export type CommandError = Readonly<{
+export type CommandErrorDto = Readonly<{
   code: CommandErrorCode;
   message: string;
 }>;
 
-export type NormalizedCommandError = Readonly<{
+export type IpcCommandError = Readonly<{
   code: CommandErrorCode | "unknown";
   message: string;
   raw: unknown;

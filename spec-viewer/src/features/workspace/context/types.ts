@@ -1,32 +1,27 @@
 import type { ReactNode } from "react";
 
+import type { WorkspaceError } from "@/features/workspace/domain/workspaceError";
 import type { Workspace } from "@/features/workspace/types/workspace";
-import type { NormalizedCommandError } from "@/shared/types/ipc";
 
 export type WorkspaceState =
   | Readonly<{
       status: "idle";
-      workspacePath: null;
-      workspace: null;
+    }>
+  | Readonly<{
+      status: "opening";
+      requestedPath: string;
+      currentWorkspace: Workspace | null;
       error: null;
     }>
   | Readonly<{
-      status: "loading";
-      workspacePath: string;
-      workspace: Workspace | null;
-      error: null;
-    }>
-  | Readonly<{
-      status: "ready";
-      workspacePath: string;
+      status: "opened";
       workspace: Workspace;
-      error: NormalizedCommandError | null;
+      lastOpenError: WorkspaceError | null;
     }>
   | Readonly<{
-      status: "error";
-      workspacePath: string;
-      workspace: null;
-      error: NormalizedCommandError;
+      status: "failed";
+      requestedPath: string;
+      error: WorkspaceError;
     }>;
 
 export type LoadWorkspaceCommand = (
@@ -42,17 +37,17 @@ export type LoadWorkspaceOptions = Readonly<{
   onWorkspaceLoaded?: (workspace: Workspace) => void;
 }>;
 
-export type WorkspaceContextValue = Readonly<{
-  state: WorkspaceState;
-  workspacePath: string | null;
-  workspace: Workspace | null;
-  isLoading: boolean;
-  error: NormalizedCommandError | null;
+export type WorkspaceActions = Readonly<{
   load: (
     selectedDirectory: string,
     options?: LoadWorkspaceOptions,
   ) => Promise<boolean>;
   reset: () => void;
+}>;
+
+export type WorkspaceContextValue = Readonly<{
+  state: WorkspaceState;
+  actions: WorkspaceActions;
 }>;
 
 export type WorkspaceProviderProps = Readonly<{

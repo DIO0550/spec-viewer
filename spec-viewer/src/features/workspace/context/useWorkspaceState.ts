@@ -1,21 +1,21 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
+import { selectWorkspace } from "@/features/workspace/context/selectors";
 import type {
   LoadWorkspaceOptions,
   UseWorkspaceStateOptions,
+  WorkspaceActions,
   WorkspaceContextValue,
   WorkspaceState,
 } from "@/features/workspace/context/types";
+import { toWorkspaceError } from "@/features/workspace/domain/workspaceError";
 import {
   loadWorkspace as defaultLoadWorkspace,
-  normalizeCommandError,
+  toIpcCommandError,
 } from "@/shared/api/tauri";
 
 const initialWorkspaceState: WorkspaceState = {
   status: "idle",
-  workspacePath: null,
-  workspace: null,
-  error: null,
 };
 
 /** @returns Workspace loading state and actions for selecting/resetting a workspace. */
@@ -42,13 +42,13 @@ export function useWorkspaceState(
       const previousState = stateRef.current;
       const preservedWorkspace =
         loadOptions.preserveCurrentWorkspace === true
-          ? previousState.workspace
+          ? selectWorkspace(previousState)
           : null;
 
       updateState({
-        status: "loading",
-        workspacePath: selectedDirectory,
-        workspace: preservedWorkspace,
+        status: "opening",
+        requestedPath: selectedDirectory,
+        currentWorkspace: preservedWorkspace,
         error: null,
       });
 
@@ -60,10 +60,9 @@ export function useWorkspaceState(
         }
 
         updateState({
-          status: "ready",
-          workspacePath: workspace.root,
+          status: "opened",
           workspace,
-          error: null,
+          lastOpenError: null,
         });
         loadOptions.onWorkspaceLoaded?.(workspace);
         return true;
@@ -72,23 +71,21 @@ export function useWorkspaceState(
           return false;
         }
 
-        const normalizedError = normalizeCommandError(error);
+        const workspaceError = toWorkspaceError(toIpcCommandError(error));
 
         if (preservedWorkspace !== null) {
           updateState({
-            status: "ready",
-            workspacePath: preservedWorkspace.root,
+            status: "opened",
             workspace: preservedWorkspace,
-            error: normalizedError,
+            lastOpenError: workspaceError,
           });
           return false;
         }
 
         updateState({
-          status: "error",
-          workspacePath: selectedDirectory,
-          workspace: null,
-          error: normalizedError,
+          status: "failed",
+          requestedPath: selectedDirectory,
+          error: workspaceError,
         });
         return false;
       }
@@ -101,13 +98,16 @@ export function useWorkspaceState(
     updateState(initialWorkspaceState);
   }, [updateState]);
 
+  const actions: WorkspaceActions = useMemo(
+    () => ({
+      load,
+      reset,
+    }),
+    [load, reset],
+  );
+
   return {
     state,
-    workspacePath: state.workspacePath,
-    workspace: state.workspace,
-    isLoading: state.status === "loading",
-    error: state.error,
-    load,
-    reset,
+    actions,
   };
 }

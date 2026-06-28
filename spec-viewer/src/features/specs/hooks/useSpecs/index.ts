@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { SpecDocumentState as SpecDocumentStateFactory } from "@/features/specs/domain/specDocumentState";
 import type { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
@@ -6,21 +6,26 @@ import { SpecNode as SpecNodeDomain } from "@/features/specs/domain/specNode";
 import { SpecTree as SpecTreeDomain } from "@/features/specs/domain/specTree";
 import { SpecTreeState as SpecTreeStateFactory } from "@/features/specs/domain/specTreeState";
 import type { SpecTreeState } from "@/features/specs/domain/specTreeState";
+import {
+  buildSpecsSelectors,
+  type SpecsSelectors,
+} from "@/features/specs/hooks/useSpecs/selectors";
+import type {
+  SpecsActions,
+  SpecsState,
+  UseSpecsResult,
+} from "@/features/specs/hooks/useSpecs/types";
 import * as specGateway from "@/features/specs/infra/specGateway";
-import { normalizeCommandError, specCommands } from "@/shared/api/tauri";
+import { toIpcCommandError, specCommands } from "@/shared/api/tauri";
 import {
   createPerformanceCorrelationId,
   startPerformanceSpan,
 } from "@/shared/lib/performance";
-import type { NormalizedCommandError } from "@/shared/types/ipc";
-import type {
-  SpecFile,
-  SpecFileKey,
-  SpecNode,
-} from "@/features/specs/types/spec";
+import type { SpecFileKey } from "@/features/specs/types/spec";
 
 export type { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
 export type { SpecTreeState } from "@/features/specs/domain/specTreeState";
+export type { UseSpecsResult } from "@/features/specs/hooks/useSpecs/types";
 
 export type SpecSelectionChange = Readonly<{
   workspacePath: string | null;
@@ -31,24 +36,6 @@ export type SpecSelectionChange = Readonly<{
 export type UseSpecsOptions = Readonly<{
   workspacePath: string | null;
   onSelectionChange?: (selection: SpecSelectionChange) => void;
-}>;
-
-export type UseSpecsResult = Readonly<{
-  specTreeState: SpecTreeState;
-  documentState: SpecDocumentState;
-  selectedSpecId: string | null;
-  selectedSpec: SpecNode | null;
-  selectedFileKey: SpecFileKey | null;
-  selectedFile: SpecFile | null;
-  isLoading: boolean;
-  archivingSpecId: string | null;
-  archiveSpecError: NormalizedCommandError | null;
-  archiveSpec: (specId: string) => Promise<boolean>;
-  reloadSpecs: () => Promise<boolean>;
-  selectSpec: (specId: string) => Promise<void>;
-  selectFileKey: (fileKey: SpecFileKey) => Promise<void>;
-  reloadDocument: () => Promise<boolean>;
-  resetSelection: () => void;
 }>;
 
 const initialSpecTreeState: SpecTreeState = SpecTreeStateFactory.idle();
@@ -64,22 +51,13 @@ type ResolvedSelection = ReturnType<typeof SpecTreeDomain.resolveSelection>;
 
 type ShouldCommitState = () => boolean;
 
-type SpecsState = Readonly<{
-  specTreeState: SpecTreeState;
-  documentState: SpecDocumentState;
-  selectedSpecId: string | null;
-  selectedFileKey: SpecFileKey | null;
-  isLoading: boolean;
-  activeOperationId: string | null;
-  archivingSpecId: string | null;
-  archiveSpecError: NormalizedCommandError | null;
-}>;
-
 const initialSpecsState: SpecsState = {
   specTreeState: initialSpecTreeState,
   documentState: initialDocumentState,
-  selectedSpecId: null,
-  selectedFileKey: null,
+  selection: {
+    specId: null,
+    fileKey: null,
+  },
   isLoading: false,
   activeOperationId: null,
   archivingSpecId: null,
@@ -97,15 +75,9 @@ function createSpecLoadOperationId(): string {
 export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
   const { onSelectionChange, workspacePath } = options;
   const [state, setState] = useState<SpecsState>(initialSpecsState);
-  const {
-    archiveSpecError,
-    archivingSpecId,
-    documentState,
-    isLoading,
-    selectedFileKey,
-    selectedSpecId,
-    specTreeState,
-  } = state;
+  const { isLoading, selection, specTreeState } = state;
+  const selectedSpecId = selection.specId;
+  const selectedFileKey = selection.fileKey;
 
   const commitLoadState = useCallback(
     (
@@ -176,8 +148,10 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
       ...currentState,
       archivingSpecId: null,
       documentState: SpecDocumentStateFactory.idle(workspacePath),
-      selectedFileKey: null,
-      selectedSpecId: null,
+      selection: {
+        specId: null,
+        fileKey: null,
+      },
     }));
     onSelectionChange?.({
       workspacePath,
@@ -272,7 +246,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
             activeWorkspacePath,
             specId,
             fileKey,
-            normalizeCommandError(error),
+            toIpcCommandError(error),
             correlationId,
           ),
         }));
@@ -295,8 +269,10 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
 
       commitLoadState(operationId, (currentState) => ({
         ...currentState,
-        selectedFileKey: selection.fileKey,
-        selectedSpecId: selection.spec?.id ?? null,
+        selection: {
+          specId: selection.spec?.id ?? null,
+          fileKey: selection.fileKey,
+        },
       }));
       onSelectionChange?.({
         workspacePath: activeWorkspacePath,
@@ -337,8 +313,10 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
         commitLoadState(operationId, (currentState) => ({
           ...currentState,
           documentState: SpecDocumentStateFactory.idle(null),
-          selectedFileKey: null,
-          selectedSpecId: null,
+          selection: {
+            specId: null,
+            fileKey: null,
+          },
           specTreeState: initialSpecTreeState,
         }));
         onSelectionChange?.({
@@ -388,11 +366,13 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
         commitLoadState(operationId, (currentState) => ({
           ...currentState,
           documentState: SpecDocumentStateFactory.idle(activeWorkspacePath),
-          selectedFileKey: null,
-          selectedSpecId: null,
+          selection: {
+            specId: null,
+            fileKey: null,
+          },
           specTreeState: SpecTreeStateFactory.failed(
             activeWorkspacePath,
-            normalizeCommandError(error),
+            toIpcCommandError(error),
           ),
         }));
         onSelectionChange?.({
@@ -429,8 +409,10 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
       archivingSpecId: null,
       documentState: SpecDocumentStateFactory.idle(workspacePath),
       isLoading: workspacePath !== null,
-      selectedFileKey: null,
-      selectedSpecId: null,
+      selection: {
+        specId: null,
+        fileKey: null,
+      },
       specTreeState:
         workspacePath === null
           ? initialSpecTreeState
@@ -467,14 +449,6 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
   }, [finishLoad, loadSpecTree, onSelectionChange, workspacePath]);
 
   const tree = specTreeState.tree;
-  const selectedSpec =
-    tree === null || selectedSpecId === null
-      ? null
-      : SpecTreeDomain.findNode(tree, selectedSpecId);
-  const selectedFile = SpecNodeDomain.selectedFile(
-    selectedSpec,
-    selectedFileKey,
-  );
 
   const selectSpec = useCallback(
     async (specId: string): Promise<void> => {
@@ -490,8 +464,10 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
         const defaultFileKey = SpecNodeDomain.firstFileKey(nextSpec);
         commitLoadState(operationId, (currentState) => ({
           ...currentState,
-          selectedFileKey: defaultFileKey,
-          selectedSpecId: specId,
+          selection: {
+            specId,
+            fileKey: defaultFileKey,
+          },
         }));
         onSelectionChange?.({
           workspacePath: activeWorkspacePath,
@@ -539,7 +515,10 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
 
         commitLoadState(operationId, (currentState) => ({
           ...currentState,
-          selectedFileKey: fileKey,
+          selection: {
+            ...currentState.selection,
+            fileKey,
+          },
         }));
         onSelectionChange?.({
           workspacePath: activeWorkspacePath,
@@ -609,7 +588,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
         } catch (error) {
           commitLoadState(operationId, (currentState) => ({
             ...currentState,
-            archiveSpecError: normalizeCommandError(error),
+            archiveSpecError: toIpcCommandError(error),
           }));
           return false;
         } finally {
@@ -630,21 +609,32 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
     ],
   );
 
+  const selectors: SpecsSelectors = useMemo(
+    () => buildSpecsSelectors(state),
+    [state],
+  );
+  const actions: SpecsActions = useMemo(
+    () => ({
+      archiveSpec,
+      reloadSpecs,
+      selectSpec,
+      selectFileKey,
+      reloadDocument,
+      resetSelection,
+    }),
+    [
+      archiveSpec,
+      reloadDocument,
+      reloadSpecs,
+      resetSelection,
+      selectFileKey,
+      selectSpec,
+    ],
+  );
+
   return {
-    specTreeState,
-    documentState,
-    selectedSpecId,
-    selectedSpec,
-    selectedFileKey,
-    selectedFile,
-    isLoading,
-    archivingSpecId,
-    archiveSpecError,
-    archiveSpec,
-    reloadSpecs,
-    selectSpec,
-    selectFileKey,
-    reloadDocument,
-    resetSelection,
+    state,
+    actions,
+    selectors,
   };
 }

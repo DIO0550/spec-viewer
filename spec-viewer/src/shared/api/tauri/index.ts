@@ -3,11 +3,11 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 
 import type {
-  CommandError,
+  CommandErrorDto,
   CommandName,
   CommandRequest,
   CommandResponse,
-  NormalizedCommandError,
+  IpcCommandError,
 } from "@/shared/types/ipc";
 import type {
   AddCommentRequest,
@@ -271,9 +271,9 @@ export const commentCommands: CommentCommands = {
   toggleCommentResolved,
 };
 
-/** @returns A stable command error shape for UI state and messages. */
-export function normalizeCommandError(error: unknown): NormalizedCommandError {
-  if (isCommandError(error)) {
+/** @returns A stable IPC command error shape for UI state and messages. */
+export function toIpcCommandError(error: unknown): IpcCommandError {
+  if (isCommandErrorDto(error)) {
     return {
       code: error.code,
       message: error.message,
@@ -312,12 +312,12 @@ async function invokeCommand<Name extends CommandName>(
   try {
     return await invoke<CommandResponse<Name>>(name, { request });
   } catch (error) {
-    throw normalizeCommandError(error);
+    throw toIpcCommandError(error);
   }
 }
 
-/** @returns True when an unknown value matches the backend CommandError DTO. */
-function isCommandError(error: unknown): error is CommandError {
+/** @returns True when an unknown value matches the backend command error DTO. */
+function isCommandErrorDto(error: unknown): error is CommandErrorDto {
   if (!isRecord(error)) {
     return false;
   }
@@ -331,7 +331,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /** @returns True when an unknown value is a known backend command error code. */
-function isCommandErrorCode(value: unknown): value is CommandError["code"] {
+function isCommandErrorCode(value: unknown): value is CommandErrorDto["code"] {
   return (
     value === "invalidRequest" ||
     value === "workspaceDetection" ||

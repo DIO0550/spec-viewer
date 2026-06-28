@@ -6,7 +6,7 @@ import {
 } from "@/features/review-runs/domain/userReviewOperation";
 import type { CreateUserReviewPayload } from "@/features/review-runs/domain/userReviewOperation";
 import type { UserReview } from "@/features/review-runs/types/userReviewIpc";
-import type { NormalizedCommandError } from "@/shared/types/ipc";
+import type { IpcCommandError } from "@/shared/types/ipc";
 
 const userReview = createUserReview();
 const createPayload: CreateUserReviewPayload = {
@@ -14,7 +14,7 @@ const createPayload: CreateUserReviewPayload = {
   workspaceMode: "currentWorkspace",
 };
 const archivePayload = { userReviewId: "run-1" };
-const error: NormalizedCommandError = {
+const error: IpcCommandError = {
   message: "failed",
   code: "unknown",
   raw: "failed",
