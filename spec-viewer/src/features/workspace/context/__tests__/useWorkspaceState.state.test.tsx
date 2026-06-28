@@ -1,6 +1,21 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { expect, test, vi } from "vitest";
+import { beforeEach, expect, test, vi } from "vitest";
+
+import type { Workspace } from "@/features/workspace/types/workspace";
+
+const loadWorkspaceMock = vi.hoisted(() =>
+  vi.fn<(selectedDirectory: string) => Promise<Workspace>>(),
+);
+
+vi.mock("@/shared/api/tauri", async (importActual) => {
+  const actual = await importActual<typeof import("@/shared/api/tauri")>();
+
+  return {
+    ...actual,
+    loadWorkspace: loadWorkspaceMock,
+  };
+});
 
 import {
   selectActiveWorkspaceRoot,
@@ -9,7 +24,6 @@ import {
   selectWorkspaceError,
   useWorkspaceState,
 } from "@/features/workspace/context";
-import type { Workspace } from "@/features/workspace/types/workspace";
 
 const workspace: Workspace = {
   root: "/workspace/spec-reviewer",
@@ -17,9 +31,21 @@ const workspace: Workspace = {
   files: [{ key: "tasks", label: "Tasks", fileName: "tasks.md" }],
 };
 
+const otherWorkspace: Workspace = {
+  root: "/workspace/other",
+  kind: "plugin-workspace",
+  files: [{ key: "tasks", label: "Tasks", fileName: "tasks.md" }],
+};
+
 type HookResult<Result> = Readonly<{
   current: Result;
   unmount: () => void;
+}>;
+
+type Deferred<Value> = Readonly<{
+  promise: Promise<Value>;
+  resolve: (value: Value) => void;
+  reject: (reason: unknown) => void;
 }>;
 
 function renderHook<Result>(hook: () => Result): HookResult<Result> {
@@ -48,10 +74,23 @@ function renderHook<Result>(hook: () => Result): HookResult<Result> {
   };
 }
 
-test("useWorkspaceStateは初期状態を未選択として返す", () => {
-  const loadWorkspace = vi.fn();
+function createDeferred<Value>(): Deferred<Value> {
+  let resolve!: (value: Value) => void;
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<Value>((nextResolve, nextReject) => {
+    resolve = nextResolve;
+    reject = nextReject;
+  });
 
-  const result = renderHook(() => useWorkspaceState({ loadWorkspace }));
+  return { promise, resolve, reject };
+}
+
+beforeEach(() => {
+  loadWorkspaceMock.mockReset();
+});
+
+test("useWorkspaceStateは初期状態を未選択として返す", () => {
+  const result = renderHook(() => useWorkspaceState());
 
   expect(result.current.state.status).toBe("idle");
   expect(selectActiveWorkspaceRoot(result.current.state)).toBeNull();
@@ -60,18 +99,22 @@ test("useWorkspaceStateは初期状態を未選択として返す", () => {
   expect(selectWorkspaceError(result.current.state)).toBeNull();
   expect(typeof result.current.actions.load).toBe("function");
   expect(typeof result.current.actions.reset).toBe("function");
+  expect(loadWorkspaceMock).not.toHaveBeenCalled();
   result.unmount();
 });
 
 test("useWorkspaceStateは選択したworkspaceを読み込み成功状態にする", async () => {
-  const loadWorkspace = vi.fn().mockResolvedValue(workspace);
+  loadWorkspaceMock.mockResolvedValue(workspace);
   const onWorkspaceLoaded = vi.fn();
-  const result = renderHook(() => useWorkspaceState({ loadWorkspace }));
+  const result = renderHook(() => useWorkspaceState());
 
   await act(async () => {
-    await result.current.actions.load("/workspace/spec-reviewer", {
-      onWorkspaceLoaded,
-    });
+    const isLoaded = await result.current.actions.load(
+      "/workspace/spec-reviewer",
+      { onWorkspaceLoaded },
+    );
+
+    expect(isLoaded).toBe(true);
   });
 
   expect(result.current.state).toEqual({
@@ -80,14 +123,14 @@ test("useWorkspaceStateは選択したworkspaceを読み込み成功状態にす
     lastOpenError: null,
   });
   expect(selectActiveWorkspaceRoot(result.current.state)).toBe(workspace.root);
-  expect(loadWorkspace).toHaveBeenCalledWith("/workspace/spec-reviewer");
+  expect(loadWorkspaceMock).toHaveBeenCalledWith("/workspace/spec-reviewer");
   expect(onWorkspaceLoaded).toHaveBeenCalledWith(workspace);
   result.unmount();
 });
 
 test("useWorkspaceStateは読み込み失敗をWorkspaceError状態にする", async () => {
-  const loadWorkspace = vi.fn().mockRejectedValue("missing workspace");
-  const result = renderHook(() => useWorkspaceState({ loadWorkspace }));
+  loadWorkspaceMock.mockRejectedValue("missing workspace");
+  const result = renderHook(() => useWorkspaceState());
 
   await act(async () => {
     await result.current.actions.load("/workspace/missing");
@@ -114,11 +157,10 @@ test("useWorkspaceStateは読み込み失敗をWorkspaceError状態にする", a
 });
 
 test("useWorkspaceStateは指定時に読み込み失敗後も現在のworkspaceを保持する", async () => {
-  const loadWorkspace = vi
-    .fn()
+  loadWorkspaceMock
     .mockResolvedValueOnce(workspace)
     .mockRejectedValueOnce("unsupported workspace");
-  const result = renderHook(() => useWorkspaceState({ loadWorkspace }));
+  const result = renderHook(() => useWorkspaceState());
 
   await act(async () => {
     await result.current.actions.load("/workspace/spec-reviewer");
@@ -146,5 +188,107 @@ test("useWorkspaceStateは指定時に読み込み失敗後も現在のworkspace
     },
   });
   expect(selectActiveWorkspaceRoot(result.current.state)).toBe(workspace.root);
+  result.unmount();
+});
+
+test("useWorkspaceStateは古いload成功で最新workspace stateを上書きしない", async () => {
+  const firstLoad = createDeferred<Workspace>();
+  const firstOnWorkspaceLoaded = vi.fn();
+  const secondOnWorkspaceLoaded = vi.fn();
+  loadWorkspaceMock
+    .mockReturnValueOnce(firstLoad.promise)
+    .mockResolvedValueOnce(otherWorkspace);
+  const result = renderHook(() => useWorkspaceState());
+
+  let firstResult!: Promise<boolean>;
+  act(() => {
+    firstResult = result.current.actions.load("/workspace/spec-reviewer", {
+      onWorkspaceLoaded: firstOnWorkspaceLoaded,
+    });
+  });
+
+  await act(async () => {
+    const isLoaded = await result.current.actions.load("/workspace/other", {
+      onWorkspaceLoaded: secondOnWorkspaceLoaded,
+    });
+
+    expect(isLoaded).toBe(true);
+  });
+
+  await act(async () => {
+    firstLoad.resolve(workspace);
+    const isLoaded = await firstResult;
+
+    expect(isLoaded).toBe(false);
+  });
+
+  expect(result.current.state).toEqual({
+    status: "opened",
+    workspace: otherWorkspace,
+    lastOpenError: null,
+  });
+  expect(firstOnWorkspaceLoaded).not.toHaveBeenCalled();
+  expect(secondOnWorkspaceLoaded).toHaveBeenCalledWith(otherWorkspace);
+  result.unmount();
+});
+
+test("useWorkspaceStateはreset後のload成功でidle stateを上書きしない", async () => {
+  const load = createDeferred<Workspace>();
+  const onWorkspaceLoaded = vi.fn();
+  loadWorkspaceMock.mockReturnValue(load.promise);
+  const result = renderHook(() => useWorkspaceState());
+
+  let loadResult!: Promise<boolean>;
+  act(() => {
+    loadResult = result.current.actions.load("/workspace/spec-reviewer", {
+      onWorkspaceLoaded,
+    });
+  });
+
+  act(() => {
+    result.current.actions.reset();
+  });
+
+  await act(async () => {
+    load.resolve(workspace);
+    const isLoaded = await loadResult;
+
+    expect(isLoaded).toBe(false);
+  });
+
+  expect(result.current.state).toEqual({ status: "idle" });
+  expect(onWorkspaceLoaded).not.toHaveBeenCalled();
+  result.unmount();
+});
+
+test("useWorkspaceStateは古いload失敗で最新workspace stateを上書きしない", async () => {
+  const firstLoad = createDeferred<Workspace>();
+  loadWorkspaceMock
+    .mockReturnValueOnce(firstLoad.promise)
+    .mockResolvedValueOnce(otherWorkspace);
+  const result = renderHook(() => useWorkspaceState());
+
+  let firstResult!: Promise<boolean>;
+  act(() => {
+    firstResult = result.current.actions.load("/workspace/missing");
+  });
+
+  await act(async () => {
+    await result.current.actions.load("/workspace/other");
+  });
+
+  await act(async () => {
+    firstLoad.reject("missing workspace");
+    const isLoaded = await firstResult;
+
+    expect(isLoaded).toBe(false);
+  });
+
+  expect(result.current.state).toEqual({
+    status: "opened",
+    workspace: otherWorkspace,
+    lastOpenError: null,
+  });
+  expect(selectWorkspaceError(result.current.state)).toBeNull();
   result.unmount();
 });
