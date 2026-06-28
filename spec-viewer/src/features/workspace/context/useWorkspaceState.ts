@@ -12,7 +12,7 @@ import {
   loadWorkspace as defaultLoadWorkspace,
   toIpcCommandError,
 } from "@/shared/api/tauri";
-import { createGeneration } from "@/shared/lib/generation";
+import { createGeneration } from "@/domains/generation";
 
 const initialWorkspaceState: WorkspaceState = {
   status: "idle",
