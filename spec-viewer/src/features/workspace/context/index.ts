@@ -12,9 +12,7 @@ export {
 } from "@/features/workspace/context/selectors";
 export { useWorkspaceState } from "@/features/workspace/context/useWorkspaceState";
 export type {
-  LoadWorkspaceCommand,
   LoadWorkspaceOptions,
-  UseWorkspaceStateOptions,
   WorkspaceActions,
   WorkspaceContextValue,
   WorkspaceProviderProps,

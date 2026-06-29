@@ -24,14 +24,6 @@ export type WorkspaceState =
       error: WorkspaceError;
     }>;
 
-export type LoadWorkspaceCommand = (
-  selectedDirectory: string,
-) => Promise<Workspace>;
-
-export type UseWorkspaceStateOptions = Readonly<{
-  loadWorkspace?: LoadWorkspaceCommand;
-}>;
-
 export type LoadWorkspaceOptions = Readonly<{
   preserveCurrentWorkspace?: boolean;
   onWorkspaceLoaded?: (workspace: Workspace) => void;
