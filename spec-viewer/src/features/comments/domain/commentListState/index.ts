@@ -1,5 +1,5 @@
+import type { CommentFeatureError } from "@/features/comments/domain/commentError";
 import type { Comment } from "@/features/comments/types/comment";
-import type { IpcCommandError } from "@/shared/types/ipc";
 
 export type CommentListIdleState = Readonly<{
   status: "idle";
@@ -28,7 +28,7 @@ export type CommentListEmptyState = Readonly<{
 export type CommentListErrorState = Readonly<{
   status: "error";
   comments: readonly [];
-  error: IpcCommandError;
+  error: CommentFeatureError;
 }>;
 
 export type CommentListState =
@@ -78,7 +78,7 @@ export const CommentListState = {
     };
   },
 
-  error: (error: IpcCommandError): CommentListErrorState => ({
+  error: (error: CommentFeatureError): CommentListErrorState => ({
     status: "error",
     comments: [],
     error,

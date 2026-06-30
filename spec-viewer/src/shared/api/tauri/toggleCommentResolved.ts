@@ -1,10 +1,111 @@
-import type { Comment, CommentStatusRequest } from "@/features/comments/types/comment";
+import type {
+  Comment,
+  CommentStatusRequest,
+} from "@/features/comments/types/comment";
 
 import { invokeTauriCommand } from "./invokeTauriCommand";
+import { isRecord } from "./isRecord";
+
+export const TOGGLE_COMMENT_RESOLVED_COMMAND =
+  "toggle_comment_resolved" as const;
+
+export type ToggleCommentResolvedCommandName =
+  typeof TOGGLE_COMMENT_RESOLVED_COMMAND;
+export type ToggleCommentResolvedCommandRequest = CommentStatusRequest;
+export type ToggleCommentResolvedCommandResponse = Comment;
+export type ToggleCommentResolvedCommandErrorCode =
+  | "invalidRequest"
+  | "workspaceDetection"
+  | "configLoad"
+  | "markdownRead"
+  | "invalidComment"
+  | "commentRepository"
+  | "unexpected"
+  | "unknown";
+
+export type ToggleCommentResolvedCommandError = Readonly<{
+  command: ToggleCommentResolvedCommandName;
+  code: ToggleCommentResolvedCommandErrorCode;
+  message: string;
+  raw: unknown;
+}>;
+
+export type ToggleCommentResolvedCommandContract = Readonly<{
+  name: ToggleCommentResolvedCommandName;
+  request: ToggleCommentResolvedCommandRequest;
+  response: ToggleCommentResolvedCommandResponse;
+  error: ToggleCommentResolvedCommandError;
+}>;
+
+export const ToggleCommentResolvedCommandError = {
+  /** @returns A command-specific toggle_comment_resolved error parsed from an unknown value. */
+  fromUnknown(error: unknown): ToggleCommentResolvedCommandError {
+    if (
+      isRecord(error) &&
+      ToggleCommentResolvedCommandError.isCode(error.code) &&
+      typeof error.message === "string"
+    ) {
+      return {
+        command: TOGGLE_COMMENT_RESOLVED_COMMAND,
+        code: error.code,
+        message: error.message,
+        raw: error,
+      };
+    }
+
+    if (error instanceof Error) {
+      return ToggleCommentResolvedCommandError.unknown(error.message, error);
+    }
+
+    if (typeof error === "string") {
+      return ToggleCommentResolvedCommandError.unknown(error, error);
+    }
+
+    return ToggleCommentResolvedCommandError.unknown(
+      "Unknown toggle_comment_resolved failure",
+      error,
+    );
+  },
+
+  /** @returns An unknown toggle_comment_resolved command error preserving the raw payload. */
+  unknown(message: string, raw: unknown): ToggleCommentResolvedCommandError {
+    return {
+      command: TOGGLE_COMMENT_RESOLVED_COMMAND,
+      code: "unknown",
+      message,
+      raw,
+    };
+  },
+
+  /** @returns True when the value is a known toggle_comment_resolved backend error code. */
+  isCode(
+    value: unknown,
+  ): value is Exclude<ToggleCommentResolvedCommandErrorCode, "unknown"> {
+    return (
+      value === "invalidRequest" ||
+      value === "workspaceDetection" ||
+      value === "configLoad" ||
+      value === "markdownRead" ||
+      value === "invalidComment" ||
+      value === "commentRepository" ||
+      value === "unexpected"
+    );
+  },
+} as const;
 
 /** @returns The comment after toggling its resolved status. */
 export async function toggleCommentResolved(
   request: CommentStatusRequest,
-): Promise<Comment> {
-  return invokeTauriCommand("toggle_comment_resolved", request);
+): Promise<ToggleCommentResolvedCommandResponse> {
+  const commandRequest: ToggleCommentResolvedCommandRequest = request;
+
+  return invokeTauriCommand<
+    ToggleCommentResolvedCommandResponse,
+    ToggleCommentResolvedCommandRequest,
+    ToggleCommentResolvedCommandError
+  >(
+    TOGGLE_COMMENT_RESOLVED_COMMAND,
+    commandRequest,
+    ToggleCommentResolvedCommandError.fromUnknown,
+  );
 }

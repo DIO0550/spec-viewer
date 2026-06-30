@@ -3,7 +3,8 @@ import { expect, test } from "vitest";
 import { CommentListState } from "@/features/comments/domain/commentListState";
 import type { Comment, CommentAnchor } from "@/features/comments/types/comment";
 import { CommentId } from "@/features/comments/types/comment";
-import type { IpcCommandError } from "@/shared/types/ipc";
+import { AddCommentCommandError } from "@/shared/api/tauri/addComment";
+import type { CommentFeatureError } from "@/features/comments/domain/commentError";
 
 const commentId = CommentId.fromString;
 
@@ -35,10 +36,16 @@ const updatedComment: Comment = {
   updatedAt: "2026-05-05T10:15:00Z",
 };
 
-const commandError: IpcCommandError = {
+const commandError = AddCommentCommandError.fromUnknown({
   code: "commentRepository",
   message: "Comment operation failed.",
-  raw: "Comment operation failed.",
+});
+
+const featureError: CommentFeatureError = {
+  feature: "comments",
+  code: "commentRepository",
+  message: "Comment operation failed.",
+  cause: commandError,
 };
 
 test("CommentListState.idleはscope未選択の一覧状態を生成する", () => {
@@ -74,10 +81,10 @@ test("CommentListState.loadedはコメントがあればready状態を生成す�
 });
 
 test("CommentListState.errorは正規化済みエラーを保持する", () => {
-  expect(CommentListState.error(commandError)).toEqual({
+  expect(CommentListState.error(featureError)).toEqual({
     status: "error",
     comments: [],
-    error: commandError,
+    error: featureError,
   });
 });
 
@@ -102,7 +109,7 @@ test.each([
   [CommentListState.loaded([]), true],
   [CommentListState.idle(), false],
   [CommentListState.loading(), false],
-  [CommentListState.error(commandError), false],
+  [CommentListState.error(featureError), false],
 ] as const)("CommentListState.isLoadedはreadyとempty状態だけを判定する", (state, expected) => {
   expect(CommentListState.isLoaded(state)).toBe(expected);
 });
@@ -124,7 +131,7 @@ test.each([
   [CommentListState.loaded([comment]), [], "empty"],
   [CommentListState.loaded([]), [updatedComment], "ready"],
   [CommentListState.loading(), [updatedComment], "ready"],
-  [CommentListState.error(commandError), [updatedComment], "ready"],
+  [CommentListState.error(featureError), [updatedComment], "ready"],
 ] as const)("CommentListState.applyTransformはidle以外の一覧を変換してloaded状態へ正規化する", (currentState, nextComments, expectedStatus) => {
   const result = CommentListState.applyTransform(
     currentState,
@@ -148,7 +155,7 @@ test.each([
   [CommentListState.idle(), () => [updatedComment]],
   [CommentListState.loaded([comment]), () => [updatedComment]],
   [CommentListState.loaded([]), () => [updatedComment]],
-  [CommentListState.error(commandError), () => [updatedComment]],
+  [CommentListState.error(featureError), () => [updatedComment]],
   [CommentListState.loading(), (comments: readonly Comment[]) => comments],
 ] as const)("CommentListState.applyTransformはloading中の参照変更以外でrequestを無効化しない", (currentState, transform) => {
   const result = CommentListState.applyTransform(currentState, transform);

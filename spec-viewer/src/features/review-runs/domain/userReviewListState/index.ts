@@ -6,7 +6,7 @@ import {
 import type { UserReview } from "@/features/review-runs/domain/userReview";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import type { UserReviewListProblem } from "@/features/review-runs/types/userReviewIpc";
-import type { IpcCommandError } from "@/shared/types/ipc";
+import type { UserReviewFeatureError } from "@/features/review-runs/domain/userReviewError";
 
 export type UserReviewListIdleState = Readonly<{
   status: "idle";
@@ -50,7 +50,7 @@ export type UserReviewListErrorState = Readonly<{
   active: readonly [];
   archived: readonly [];
   problems: readonly [];
-  error: IpcCommandError;
+  error: UserReviewFeatureError;
 }>;
 
 export type UserReviewListState =
@@ -134,7 +134,7 @@ export const UserReviewListState = {
   /** @returns Error list state for a failed target load. */
   error(
     target: UserReviewTarget,
-    error: IpcCommandError,
+    error: UserReviewFeatureError,
   ): UserReviewListErrorState {
     return {
       status: "error",

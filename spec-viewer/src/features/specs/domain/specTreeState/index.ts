@@ -2,7 +2,7 @@ import {
   SpecTree,
   type SpecTree as SpecTreeType,
 } from "@/features/specs/domain/specTree";
-import type { IpcCommandError } from "@/shared/types/ipc";
+import type { SpecFeatureError } from "@/features/specs/domain/specError";
 
 export type SpecTreeState =
   | Readonly<{
@@ -33,7 +33,7 @@ export type SpecTreeState =
       status: "error";
       workspacePath: string;
       tree: null;
-      error: IpcCommandError;
+      error: SpecFeatureError;
     }>;
 
 export const SpecTreeState = {
@@ -81,10 +81,10 @@ export const SpecTreeState = {
 
   /**
    * @param workspacePath - Active workspace path
-   * @param error - Normalized command error
+   * @param error - Feature-level spec error
    * @returns Error state for a failed tree load.
    */
-  failed: (workspacePath: string, error: IpcCommandError): SpecTreeState => ({
+  failed: (workspacePath: string, error: SpecFeatureError): SpecTreeState => ({
     status: "error",
     workspacePath,
     tree: null,

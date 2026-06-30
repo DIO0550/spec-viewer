@@ -6,11 +6,80 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::{
-    app::use_cases::LoadWorkspaceResult,
+    app::use_cases::{AppUseCaseError, LoadWorkspaceResult},
     domain::workspace::{WorkspaceConfig, WorkspaceFileMapping, WorkspaceLayout},
 };
 
-use super::{CommandError, CommandResult, CommandState};
+use super::{CommandError, CommandState};
+
+pub type LoadWorkspaceCommandResult<T> = Result<T, WorkspaceCommandError>;
+pub type ValidateWorkspaceDirectoryCommandResult<T> = Result<T, WorkspaceCommandError>;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceCommandError {
+    code: WorkspaceCommandErrorCode,
+    message: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum WorkspaceCommandErrorCode {
+    InvalidRequest,
+    WorkspaceDetection,
+    ConfigLoad,
+    Unexpected,
+}
+
+impl WorkspaceCommandError {
+    fn new(code: WorkspaceCommandErrorCode, message: impl Into<String>) -> Self {
+        Self {
+            code,
+            message: message.into(),
+        }
+    }
+
+    fn from_app_error(error: AppUseCaseError) -> Self {
+        let code = match error {
+            AppUseCaseError::WorkspaceDetection { .. } => {
+                WorkspaceCommandErrorCode::WorkspaceDetection
+            }
+            AppUseCaseError::ConfigLoad { .. } => WorkspaceCommandErrorCode::ConfigLoad,
+            AppUseCaseError::SpecTreeScan { .. }
+            | AppUseCaseError::SpecArchive { .. }
+            | AppUseCaseError::MarkdownRead { .. }
+            | AppUseCaseError::InvalidSpec { .. }
+            | AppUseCaseError::InvalidComment { .. }
+            | AppUseCaseError::CommentRepository { .. }
+            | AppUseCaseError::ReviewRunExport { .. } => WorkspaceCommandErrorCode::Unexpected,
+        };
+
+        Self::new(code, error.to_string())
+    }
+
+    fn from_command_error(error: CommandError) -> Self {
+        let code = match error.code() {
+            "invalidRequest" => WorkspaceCommandErrorCode::InvalidRequest,
+            "workspaceDetection" => WorkspaceCommandErrorCode::WorkspaceDetection,
+            "configLoad" => WorkspaceCommandErrorCode::ConfigLoad,
+            _ => WorkspaceCommandErrorCode::Unexpected,
+        };
+
+        Self::new(code, error.message())
+    }
+}
+
+impl From<AppUseCaseError> for WorkspaceCommandError {
+    fn from(error: AppUseCaseError) -> Self {
+        Self::from_app_error(error)
+    }
+}
+
+impl From<CommandError> for WorkspaceCommandError {
+    fn from(error: CommandError) -> Self {
+        Self::from_command_error(error)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -89,7 +158,7 @@ impl WorkspaceFileMappingResponse {
 pub fn load_workspace(
     state: State<'_, CommandState>,
     request: LoadWorkspaceRequest,
-) -> CommandResult<WorkspaceResponse> {
+) -> LoadWorkspaceCommandResult<WorkspaceResponse> {
     let workspace = state
         .use_cases()
         .load_workspace(&request.selected_directory)?;
@@ -100,7 +169,7 @@ pub fn load_workspace(
 #[tauri::command]
 pub fn validate_workspace_directory(
     request: ValidateWorkspaceDirectoryRequest,
-) -> CommandResult<ValidateWorkspaceDirectoryResponse> {
+) -> ValidateWorkspaceDirectoryCommandResult<ValidateWorkspaceDirectoryResponse> {
     let trimmed_path = request.path.trim();
 
     if trimmed_path.is_empty() {
@@ -120,10 +189,9 @@ pub fn validate_workspace_directory(
                 is_directory: false,
             })
         }
-        Err(error) => Err(CommandError::invalid_request(format!(
-            "failed to inspect dropped path: {}",
-            error
-        ))),
+        Err(error) => Err(WorkspaceCommandError::from_command_error(
+            CommandError::invalid_request(format!("failed to inspect dropped path: {}", error)),
+        )),
     }
 }
 
@@ -170,6 +238,18 @@ mod tests {
         spec::SpecFileKey,
         workspace::{WorkspaceConfig, WorkspaceFileMapping, WorkspaceKind, WorkspaceRoot},
     };
+
+    #[test]
+    fn workspace_command_error_serializes_known_codes() {
+        let error = WorkspaceCommandError::new(
+            WorkspaceCommandErrorCode::WorkspaceDetection,
+            "workspace missing",
+        );
+        let value = serde_json::to_value(error).expect("error should serialize");
+
+        assert_eq!("workspaceDetection", value["code"]);
+        assert_eq!("workspace missing", value["message"]);
+    }
 
     #[test]
     fn workspace_response_serializes_layout_and_config_without_domain_types() {

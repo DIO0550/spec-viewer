@@ -1,27 +1,22 @@
 import { invoke } from "@tauri-apps/api/core";
 
-import type {
-  CommandName,
-  CommandRequest,
-  CommandResponse,
-  IpcCommandError,
-} from "@/shared/types/ipc";
+type CommandErrorFactory<CommandError> = (error: unknown) => CommandError;
 
-import { toIpcCommandError } from "./toIpcCommandError";
-
-type CommandErrorMapper = (error: IpcCommandError) => IpcCommandError;
-
-const identityCommandError: CommandErrorMapper = (error) => error;
-
-/** @returns The typed response from the named Tauri command. */
-export async function invokeTauriCommand<Name extends CommandName>(
-  name: Name,
-  request: CommandRequest<Name>,
-  mapError: CommandErrorMapper = identityCommandError,
-): Promise<CommandResponse<Name>> {
+/**
+ * @param name - Tauri command name to invoke.
+ * @param request - Command-local request payload.
+ * @param createError - Command-local parser for rejected IPC payloads.
+ * @returns The typed response from the named Tauri command.
+ * @throws The command-local error returned by createError when invoke rejects.
+ */
+export async function invokeTauriCommand<Response, Request, CommandError>(
+  name: string,
+  request: Request,
+  createError: CommandErrorFactory<CommandError>,
+): Promise<Response> {
   try {
-    return await invoke<CommandResponse<Name>>(name, { request });
+    return await invoke<Response>(name, { request });
   } catch (error) {
-    throw mapError(toIpcCommandError(error));
+    throw createError(error);
   }
 }

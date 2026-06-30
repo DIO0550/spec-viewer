@@ -6,10 +6,12 @@ import {
   type CreateUserReviewPayload,
   type UserReviewCreateState as UserReviewCreateStateType,
 } from "@/features/review-runs/domain/userReviewOperation";
+import { UserReviewFeatureError } from "@/features/review-runs/domain/userReviewError";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import { createUserReview as createUserReviewViaGateway } from "@/features/review-runs/infra/userReviewGateway";
 import type { UserReviewListEventWithSelectionId } from "@/features/review-runs/hooks/useUserReviewList";
-import { toIpcCommandError, type UserReviewCommands } from "@/shared/api/tauri";
+import type { UserReviewCommands } from "@/shared/api/tauri";
+import { CreateUserReviewCommandError } from "@/shared/api/tauri/createUserReview";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 
 type SelectionId = string;
@@ -120,7 +122,9 @@ export function useCreateUserReview(
             selectionId: startedSelectionId,
             state: UserReviewCreateState.error(
               payload,
-              toIpcCommandError(error),
+              UserReviewFeatureError.fromCommandError(
+                CreateUserReviewCommandError.fromUnknown(error),
+              ),
             ),
           };
         });

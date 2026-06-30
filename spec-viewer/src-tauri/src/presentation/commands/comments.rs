@@ -23,6 +23,161 @@ use crate::{
 
 use super::{CommandError, CommandResult, CommandState};
 
+pub type AddCommentCommandResult<T> = Result<T, AddCommentCommandError>;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AddCommentCommandError {
+    code: AddCommentCommandErrorCode,
+    message: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum AddCommentCommandErrorCode {
+    InvalidRequest,
+    WorkspaceDetection,
+    ConfigLoad,
+    InvalidComment,
+    CommentRepository,
+    Unexpected,
+}
+
+impl AddCommentCommandError {
+    fn new(code: AddCommentCommandErrorCode, message: impl Into<String>) -> Self {
+        Self {
+            code,
+            message: message.into(),
+        }
+    }
+
+    fn from_app_error(error: AppUseCaseError) -> Self {
+        let code = match error {
+            AppUseCaseError::WorkspaceDetection { .. } => {
+                AddCommentCommandErrorCode::WorkspaceDetection
+            }
+            AppUseCaseError::ConfigLoad { .. } => AddCommentCommandErrorCode::ConfigLoad,
+            AppUseCaseError::InvalidComment { .. } => AddCommentCommandErrorCode::InvalidComment,
+            AppUseCaseError::CommentRepository { .. } => {
+                AddCommentCommandErrorCode::CommentRepository
+            }
+            AppUseCaseError::SpecTreeScan { .. }
+            | AppUseCaseError::SpecArchive { .. }
+            | AppUseCaseError::MarkdownRead { .. }
+            | AppUseCaseError::InvalidSpec { .. }
+            | AppUseCaseError::ReviewRunExport { .. } => AddCommentCommandErrorCode::Unexpected,
+        };
+
+        Self::new(code, error.to_string())
+    }
+
+    fn from_command_error(error: CommandError) -> Self {
+        if error.code() == "invalidRequest" {
+            return Self::new(AddCommentCommandErrorCode::InvalidRequest, error.message());
+        }
+
+        Self::new(AddCommentCommandErrorCode::Unexpected, error.message())
+    }
+
+    pub fn code(&self) -> AddCommentCommandErrorCode {
+        self.code
+    }
+
+    pub fn message(&self) -> &str {
+        &self.message
+    }
+}
+
+impl From<CommentDomainError> for AddCommentCommandError {
+    fn from(error: CommentDomainError) -> Self {
+        Self::from_app_error(AppUseCaseError::from(error))
+    }
+}
+
+pub type CommentCommandResult<T> = Result<T, CommentCommandError>;
+pub type ListCommentsCommandResult<T> = CommentCommandResult<T>;
+pub type UpdateCommentCommandResult<T> = CommentCommandResult<T>;
+pub type DeleteCommentCommandResult<T> = CommentCommandResult<T>;
+pub type CommentStatusCommandResult<T> = CommentCommandResult<T>;
+pub type ExportCommentsCommandResult<T> = CommentCommandResult<T>;
+pub type GenerateLlmPromptCommandResult<T> = CommentCommandResult<T>;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CommentCommandError {
+    code: CommentCommandErrorCode,
+    message: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum CommentCommandErrorCode {
+    InvalidRequest,
+    WorkspaceDetection,
+    ConfigLoad,
+    MarkdownRead,
+    InvalidComment,
+    CommentRepository,
+    Unexpected,
+}
+
+impl CommentCommandError {
+    fn new(code: CommentCommandErrorCode, message: impl Into<String>) -> Self {
+        Self {
+            code,
+            message: message.into(),
+        }
+    }
+
+    fn from_app_error(error: AppUseCaseError) -> Self {
+        let code = match error {
+            AppUseCaseError::WorkspaceDetection { .. } => {
+                CommentCommandErrorCode::WorkspaceDetection
+            }
+            AppUseCaseError::ConfigLoad { .. } => CommentCommandErrorCode::ConfigLoad,
+            AppUseCaseError::MarkdownRead { .. } => CommentCommandErrorCode::MarkdownRead,
+            AppUseCaseError::InvalidComment { .. } => CommentCommandErrorCode::InvalidComment,
+            AppUseCaseError::CommentRepository { .. } => CommentCommandErrorCode::CommentRepository,
+            AppUseCaseError::SpecTreeScan { .. }
+            | AppUseCaseError::SpecArchive { .. }
+            | AppUseCaseError::InvalidSpec { .. }
+            | AppUseCaseError::ReviewRunExport { .. } => CommentCommandErrorCode::Unexpected,
+        };
+
+        Self::new(code, error.to_string())
+    }
+
+    fn from_command_error(error: CommandError) -> Self {
+        let code = match error.code() {
+            "invalidRequest" => CommentCommandErrorCode::InvalidRequest,
+            "workspaceDetection" => CommentCommandErrorCode::WorkspaceDetection,
+            "configLoad" => CommentCommandErrorCode::ConfigLoad,
+            "markdownRead" => CommentCommandErrorCode::MarkdownRead,
+            "invalidComment" => CommentCommandErrorCode::InvalidComment,
+            "commentRepository" => CommentCommandErrorCode::CommentRepository,
+            _ => CommentCommandErrorCode::Unexpected,
+        };
+
+        Self::new(code, error.message())
+    }
+
+    pub fn code(&self) -> CommentCommandErrorCode {
+        self.code
+    }
+}
+
+impl From<AppUseCaseError> for CommentCommandError {
+    fn from(error: AppUseCaseError) -> Self {
+        Self::from_app_error(error)
+    }
+}
+
+impl From<CommandError> for CommentCommandError {
+    fn from(error: CommandError) -> Self {
+        Self::from_command_error(error)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ListCommentsRequest {
@@ -358,7 +513,7 @@ impl GenerateLlmPromptResponse {
 pub fn list_comments(
     state: State<'_, CommandState>,
     request: ListCommentsRequest,
-) -> CommandResult<ListCommentsResponse> {
+) -> ListCommentsCommandResult<ListCommentsResponse> {
     let file_key = parse_file_key(&request.file_key)?;
     let status_filter = parse_status_filter(request.status_filter.as_deref())?;
     let workspace = state
@@ -410,16 +565,20 @@ pub fn list_comments(
 pub fn add_comment(
     state: State<'_, CommandState>,
     request: AddCommentRequest,
-) -> CommandResult<CommentResponse> {
-    let anchor = request.anchor.into_domain()?;
+) -> AddCommentCommandResult<CommentResponse> {
+    let anchor = request
+        .anchor
+        .into_domain()
+        .map_err(AddCommentCommandError::from_command_error)?;
     let workspace = state
         .use_cases()
         .load_workspace(&request.workspace_path)
-        .map_err(CommandError::from)?;
+        .map_err(AddCommentCommandError::from_app_error)?;
     let comment = state
         .use_cases()
         .comment_use_cases(&workspace)
-        .add_comment(&request.spec_id, anchor, request.body)?;
+        .add_comment(&request.spec_id, anchor, request.body)
+        .map_err(AddCommentCommandError::from_app_error)?;
 
     Ok(CommentResponse::from(&comment))
 }
@@ -428,7 +587,7 @@ pub fn add_comment(
 pub fn update_comment(
     state: State<'_, CommandState>,
     request: UpdateCommentRequest,
-) -> CommandResult<CommentResponse> {
+) -> UpdateCommentCommandResult<CommentResponse> {
     let file_key = parse_file_key(&request.file_key)?;
     let workspace = state
         .use_cases()
@@ -451,7 +610,7 @@ pub fn update_comment(
 pub fn delete_comment(
     state: State<'_, CommandState>,
     request: DeleteCommentRequest,
-) -> CommandResult<DeleteCommentResponse> {
+) -> DeleteCommentCommandResult<DeleteCommentResponse> {
     let file_key = parse_file_key(&request.file_key)?;
     let workspace = state
         .use_cases()
@@ -470,7 +629,7 @@ pub fn delete_comment(
 pub fn resolve_comment(
     state: State<'_, CommandState>,
     request: CommentStatusRequest,
-) -> CommandResult<CommentResponse> {
+) -> CommentStatusCommandResult<CommentResponse> {
     update_comment_status(state, request, CommentStatusAction::Resolve)
 }
 
@@ -478,7 +637,7 @@ pub fn resolve_comment(
 pub fn reopen_comment(
     state: State<'_, CommandState>,
     request: CommentStatusRequest,
-) -> CommandResult<CommentResponse> {
+) -> CommentStatusCommandResult<CommentResponse> {
     update_comment_status(state, request, CommentStatusAction::Reopen)
 }
 
@@ -486,7 +645,7 @@ pub fn reopen_comment(
 pub fn toggle_comment_resolved(
     state: State<'_, CommandState>,
     request: CommentStatusRequest,
-) -> CommandResult<CommentResponse> {
+) -> CommentStatusCommandResult<CommentResponse> {
     update_comment_status(state, request, CommentStatusAction::Toggle)
 }
 
@@ -494,7 +653,7 @@ pub fn toggle_comment_resolved(
 pub fn export_comments(
     state: State<'_, CommandState>,
     request: ExportCommentsRequest,
-) -> CommandResult<ExportCommentsResponse> {
+) -> ExportCommentsCommandResult<ExportCommentsResponse> {
     let workspace = state
         .use_cases()
         .load_workspace(&request.workspace_path)
@@ -514,14 +673,19 @@ pub fn export_comments(
 pub fn generate_llm_prompt(
     state: State<'_, CommandState>,
     request: GenerateLlmPromptRequest,
-) -> CommandResult<GenerateLlmPromptResponse> {
+) -> GenerateLlmPromptCommandResult<GenerateLlmPromptResponse> {
     let workspace = state
         .use_cases()
         .load_workspace(&request.workspace_path)
         .map_err(CommandError::from)?;
     let generated_at = Utc::now();
 
-    build_llm_prompt(state.use_cases(), &workspace, &request, generated_at)
+    Ok(build_llm_prompt(
+        state.use_cases(),
+        &workspace,
+        &request,
+        generated_at,
+    )?)
 }
 
 impl From<Vec<CommentAnchorResolution>> for ListCommentsResponse {
@@ -757,7 +921,7 @@ fn update_comment_status(
     state: State<'_, CommandState>,
     request: CommentStatusRequest,
     action: CommentStatusAction,
-) -> CommandResult<CommentResponse> {
+) -> UpdateCommentCommandResult<CommentResponse> {
     let file_key = parse_file_key(&request.file_key)?;
     let workspace = state
         .use_cases()
@@ -871,7 +1035,7 @@ fn build_llm_prompt(
     workspace: &crate::app::use_cases::LoadWorkspaceResult,
     request: &GenerateLlmPromptRequest,
     generated_at: DateTime<Utc>,
-) -> CommandResult<GenerateLlmPromptResponse> {
+) -> GenerateLlmPromptCommandResult<GenerateLlmPromptResponse> {
     let files = match &request.target {
         ExportCommentsTargetRequest::File { spec_id, file_key } => {
             let file_key = parse_file_key(file_key)?;
@@ -1753,6 +1917,109 @@ mod tests {
             "ambiguous_fuzzy_candidates",
             anchor_resolution_reason_to_response(AnchorResolutionReason::AmbiguousFuzzyCandidates)
         );
+    }
+
+    #[test]
+    fn comment_command_error_serializes_known_codes() {
+        let cases = [
+            (CommentCommandErrorCode::InvalidRequest, "invalidRequest"),
+            (
+                CommentCommandErrorCode::WorkspaceDetection,
+                "workspaceDetection",
+            ),
+            (CommentCommandErrorCode::ConfigLoad, "configLoad"),
+            (CommentCommandErrorCode::MarkdownRead, "markdownRead"),
+            (CommentCommandErrorCode::InvalidComment, "invalidComment"),
+            (
+                CommentCommandErrorCode::CommentRepository,
+                "commentRepository",
+            ),
+            (CommentCommandErrorCode::Unexpected, "unexpected"),
+        ];
+
+        for (code, expected_code) in cases {
+            let value = serde_json::to_value(CommentCommandError::new(code, "failure"))
+                .expect("error should serialize");
+
+            assert_eq!(expected_code, value["code"]);
+            assert_eq!("failure", value["message"]);
+        }
+    }
+
+    #[test]
+    fn comment_command_error_maps_command_error_codes() {
+        let error = CommentCommandError::from_command_error(CommandError::invalid_request(
+            "unsupported file key: notes",
+        ));
+
+        assert_eq!(CommentCommandErrorCode::InvalidRequest, error.code());
+    }
+
+    #[test]
+    fn add_comment_command_error_serializes_known_codes() {
+        let cases = [
+            (AddCommentCommandErrorCode::InvalidComment, "invalidComment"),
+            (
+                AddCommentCommandErrorCode::CommentRepository,
+                "commentRepository",
+            ),
+            (
+                AddCommentCommandErrorCode::WorkspaceDetection,
+                "workspaceDetection",
+            ),
+            (AddCommentCommandErrorCode::ConfigLoad, "configLoad"),
+            (AddCommentCommandErrorCode::Unexpected, "unexpected"),
+        ];
+
+        for (code, expected_code) in cases {
+            let error = AddCommentCommandError::new(code, "mapped failure");
+            let value = serde_json::to_value(error).expect("error should serialize");
+
+            assert_eq!(expected_code, value["code"]);
+            assert_eq!("mapped failure", value["message"]);
+        }
+    }
+
+    #[test]
+    fn add_comment_command_error_maps_app_use_case_errors() {
+        let cases = [
+            (
+                AppUseCaseError::InvalidComment {
+                    message: "comment body is required".to_string(),
+                },
+                AddCommentCommandErrorCode::InvalidComment,
+            ),
+            (
+                AppUseCaseError::CommentRepository {
+                    message: "comments json is locked".to_string(),
+                },
+                AddCommentCommandErrorCode::CommentRepository,
+            ),
+            (
+                AppUseCaseError::WorkspaceDetection {
+                    message: "missing workspace".to_string(),
+                },
+                AddCommentCommandErrorCode::WorkspaceDetection,
+            ),
+            (
+                AppUseCaseError::ConfigLoad {
+                    message: "invalid config".to_string(),
+                },
+                AddCommentCommandErrorCode::ConfigLoad,
+            ),
+            (
+                AppUseCaseError::MarkdownRead {
+                    message: "unexpected dependency error".to_string(),
+                },
+                AddCommentCommandErrorCode::Unexpected,
+            ),
+        ];
+
+        for (app_error, expected_code) in cases {
+            let error = AddCommentCommandError::from_app_error(app_error);
+
+            assert_eq!(expected_code, error.code());
+        }
     }
 
     #[test]

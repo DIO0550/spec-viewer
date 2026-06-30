@@ -4,10 +4,104 @@ import type {
 } from "@/features/specs/types/spec";
 
 import { invokeTauriCommand } from "./invokeTauriCommand";
+import { isRecord } from "./isRecord";
+
+export const READ_SPEC_FILE_COMMAND = "read_spec_file" as const;
+
+export type ReadSpecFileCommandName = typeof READ_SPEC_FILE_COMMAND;
+export type ReadSpecFileCommandRequest = ReadSpecFileRequest;
+export type ReadSpecFileCommandResponse = SpecDocument;
+export type ReadSpecFileCommandErrorCode =
+  | "invalidRequest"
+  | "workspaceDetection"
+  | "configLoad"
+  | "markdownRead"
+  | "invalidSpec"
+  | "unexpected"
+  | "unknown";
+
+export type ReadSpecFileCommandError = Readonly<{
+  command: ReadSpecFileCommandName;
+  code: ReadSpecFileCommandErrorCode;
+  message: string;
+  raw: unknown;
+}>;
+
+export type ReadSpecFileCommandContract = Readonly<{
+  name: ReadSpecFileCommandName;
+  request: ReadSpecFileCommandRequest;
+  response: ReadSpecFileCommandResponse;
+  error: ReadSpecFileCommandError;
+}>;
+
+export const ReadSpecFileCommandError = {
+  /** @returns A command-specific read_spec_file error parsed from an unknown value. */
+  fromUnknown(error: unknown): ReadSpecFileCommandError {
+    if (
+      isRecord(error) &&
+      ReadSpecFileCommandError.isCode(error.code) &&
+      typeof error.message === "string"
+    ) {
+      return {
+        command: READ_SPEC_FILE_COMMAND,
+        code: error.code,
+        message: error.message,
+        raw: error,
+      };
+    }
+
+    if (error instanceof Error) {
+      return ReadSpecFileCommandError.unknown(error.message, error);
+    }
+
+    if (typeof error === "string") {
+      return ReadSpecFileCommandError.unknown(error, error);
+    }
+
+    return ReadSpecFileCommandError.unknown(
+      "Unknown read_spec_file failure",
+      error,
+    );
+  },
+
+  /** @returns An unknown read_spec_file command error preserving the raw payload. */
+  unknown(message: string, raw: unknown): ReadSpecFileCommandError {
+    return {
+      command: READ_SPEC_FILE_COMMAND,
+      code: "unknown",
+      message,
+      raw,
+    };
+  },
+
+  /** @returns True when the value is a known read_spec_file backend error code. */
+  isCode(
+    value: unknown,
+  ): value is Exclude<ReadSpecFileCommandErrorCode, "unknown"> {
+    return (
+      value === "invalidRequest" ||
+      value === "workspaceDetection" ||
+      value === "configLoad" ||
+      value === "markdownRead" ||
+      value === "invalidSpec" ||
+      value === "unexpected"
+    );
+  },
+} as const;
 
 /** @returns Markdown contents or missing-file metadata for a spec file. */
 export async function readSpecFile(
   request: ReadSpecFileRequest,
-): Promise<SpecDocument> {
-  return invokeTauriCommand("read_spec_file", request);
+): Promise<ReadSpecFileCommandResponse> {
+  const commandRequest: ReadSpecFileCommandRequest = request;
+
+  return invokeTauriCommand<
+    ReadSpecFileCommandResponse,
+    ReadSpecFileCommandRequest,
+    ReadSpecFileCommandError
+  >(
+    READ_SPEC_FILE_COMMAND,
+    commandRequest,
+    ReadSpecFileCommandError.fromUnknown,
+  );
 }

@@ -173,7 +173,7 @@ test("toIpcCommandErrorはcomment系CommandError DTOも保持する", () => {
   });
 });
 
-test("loadWorkspaceはinvoke失敗時に正規化済みエラーでrejectする", async () => {
+test("loadWorkspaceはinvoke失敗時にcommand固有のworkspaceエラーでrejectする", async () => {
   const rawError = {
     code: "workspaceDetection",
     message: "workspace root was not found",
@@ -182,6 +182,7 @@ test("loadWorkspaceはinvoke失敗時に正規化済みエラーでrejectする"
   invokeMock.mockRejectedValue(rawError);
 
   await expect(loadWorkspace("/workspace/missing")).rejects.toEqual({
+    command: "load_workspace",
     code: "workspaceDetection",
     message: "workspace root was not found",
     raw: rawError,

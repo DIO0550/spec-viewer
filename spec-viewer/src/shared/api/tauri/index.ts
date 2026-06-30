@@ -1,4 +1,8 @@
-export { addComment } from "./addComment";
+export {
+  ADD_COMMENT_COMMAND,
+  AddCommentCommandError,
+  addComment,
+} from "./addComment";
 export { archiveSpec } from "./archiveSpec";
 export { archiveUserReview } from "./archiveUserReview";
 export { commentCommands } from "./commentCommands";
@@ -28,6 +32,14 @@ export { updateComment } from "./updateComment";
 export { userReviewCommands } from "./userReviewCommands";
 export { validateWorkspaceDirectory } from "./validateWorkspaceDirectory";
 
+export type {
+  AddCommentCommandContract,
+  AddCommentCommandError as AddCommentCommandErrorType,
+  AddCommentCommandErrorCode,
+  AddCommentCommandName,
+  AddCommentCommandRequest,
+  AddCommentCommandResponse,
+} from "./addComment";
 export type { CommentCommands } from "./commentCommands";
 export type { SpecCommands } from "./specCommands";
 export type { UserReviewCommands } from "./userReviewCommands";

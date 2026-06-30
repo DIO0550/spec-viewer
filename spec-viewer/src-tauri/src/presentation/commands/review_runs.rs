@@ -24,6 +24,86 @@ use crate::{
 
 use super::{CommandError, CommandResult, CommandState};
 
+pub type CreateUserReviewCommandResult<T> = Result<T, ReviewRunCommandError>;
+pub type ListUserReviewsCommandResult<T> = Result<T, ReviewRunCommandError>;
+pub type ArchiveUserReviewCommandResult<T> = Result<T, ReviewRunCommandError>;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReviewRunCommandError {
+    code: ReviewRunCommandErrorCode,
+    message: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ReviewRunCommandErrorCode {
+    InvalidRequest,
+    WorkspaceDetection,
+    ConfigLoad,
+    InvalidSpec,
+    InvalidComment,
+    CommentRepository,
+    UserReviewExport,
+    Unexpected,
+}
+
+impl ReviewRunCommandError {
+    fn new(code: ReviewRunCommandErrorCode, message: impl Into<String>) -> Self {
+        Self {
+            code,
+            message: message.into(),
+        }
+    }
+
+    fn from_app_error(error: AppUseCaseError) -> Self {
+        let code = match error {
+            AppUseCaseError::WorkspaceDetection { .. } => {
+                ReviewRunCommandErrorCode::WorkspaceDetection
+            }
+            AppUseCaseError::ConfigLoad { .. } => ReviewRunCommandErrorCode::ConfigLoad,
+            AppUseCaseError::InvalidSpec { .. } => ReviewRunCommandErrorCode::InvalidSpec,
+            AppUseCaseError::InvalidComment { .. } => ReviewRunCommandErrorCode::InvalidComment,
+            AppUseCaseError::CommentRepository { .. } => {
+                ReviewRunCommandErrorCode::CommentRepository
+            }
+            AppUseCaseError::ReviewRunExport { .. } => ReviewRunCommandErrorCode::UserReviewExport,
+            AppUseCaseError::SpecTreeScan { .. }
+            | AppUseCaseError::SpecArchive { .. }
+            | AppUseCaseError::MarkdownRead { .. } => ReviewRunCommandErrorCode::Unexpected,
+        };
+
+        Self::new(code, error.to_string())
+    }
+
+    fn from_command_error(error: CommandError) -> Self {
+        let code = match error.code() {
+            "invalidRequest" => ReviewRunCommandErrorCode::InvalidRequest,
+            "workspaceDetection" => ReviewRunCommandErrorCode::WorkspaceDetection,
+            "configLoad" => ReviewRunCommandErrorCode::ConfigLoad,
+            "invalidSpec" => ReviewRunCommandErrorCode::InvalidSpec,
+            "invalidComment" => ReviewRunCommandErrorCode::InvalidComment,
+            "commentRepository" => ReviewRunCommandErrorCode::CommentRepository,
+            "userReviewExport" => ReviewRunCommandErrorCode::UserReviewExport,
+            _ => ReviewRunCommandErrorCode::Unexpected,
+        };
+
+        Self::new(code, error.message())
+    }
+}
+
+impl From<AppUseCaseError> for ReviewRunCommandError {
+    fn from(error: AppUseCaseError) -> Self {
+        Self::from_app_error(error)
+    }
+}
+
+impl From<CommandError> for ReviewRunCommandError {
+    fn from(error: CommandError) -> Self {
+        Self::from_command_error(error)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateUserReviewRequest {
@@ -145,7 +225,7 @@ pub enum UserReviewWorkspaceResponse {
 pub fn create_user_review(
     state: State<'_, CommandState>,
     request: CreateUserReviewRequest,
-) -> CommandResult<CreateUserReviewResponse> {
+) -> CreateUserReviewCommandResult<CreateUserReviewResponse> {
     let workspace = state
         .use_cases()
         .load_workspace(&request.workspace_path)
@@ -171,7 +251,7 @@ pub fn create_user_review(
 pub fn list_user_reviews(
     state: State<'_, CommandState>,
     request: ListUserReviewsRequest,
-) -> CommandResult<ListUserReviewsResponse> {
+) -> ListUserReviewsCommandResult<ListUserReviewsResponse> {
     let workspace = state
         .use_cases()
         .load_workspace(&request.workspace_path)
@@ -232,7 +312,7 @@ pub fn list_user_reviews(
 pub fn archive_user_review(
     state: State<'_, CommandState>,
     request: ArchiveUserReviewRequest,
-) -> CommandResult<ArchiveUserReviewResponse> {
+) -> ArchiveUserReviewCommandResult<ArchiveUserReviewResponse> {
     let workspace = state
         .use_cases()
         .load_workspace(&request.workspace_path)

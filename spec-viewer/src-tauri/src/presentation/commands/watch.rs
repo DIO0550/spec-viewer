@@ -10,10 +10,82 @@ use crate::{
         FileWatchChange, FileWatchFailure, FileWatchNotification, FileWatchRegistration,
         FileWatchTargetKind,
     },
+    app::use_cases::AppUseCaseError,
     domain::spec::SpecFileKey,
 };
 
-use super::{CommandError, CommandResult, CommandState};
+use super::{CommandError, CommandState};
+
+pub type StartSpecFileWatchCommandResult<T> = Result<T, WatchCommandError>;
+pub type StopSpecFileWatchCommandResult<T> = Result<T, WatchCommandError>;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WatchCommandError {
+    code: WatchCommandErrorCode,
+    message: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum WatchCommandErrorCode {
+    InvalidRequest,
+    WorkspaceDetection,
+    ConfigLoad,
+    InvalidSpec,
+    FileWatch,
+    Unexpected,
+}
+
+impl WatchCommandError {
+    fn new(code: WatchCommandErrorCode, message: impl Into<String>) -> Self {
+        Self {
+            code,
+            message: message.into(),
+        }
+    }
+
+    fn from_app_error(error: AppUseCaseError) -> Self {
+        let code = match error {
+            AppUseCaseError::WorkspaceDetection { .. } => WatchCommandErrorCode::WorkspaceDetection,
+            AppUseCaseError::ConfigLoad { .. } => WatchCommandErrorCode::ConfigLoad,
+            AppUseCaseError::InvalidSpec { .. } => WatchCommandErrorCode::InvalidSpec,
+            AppUseCaseError::SpecTreeScan { .. }
+            | AppUseCaseError::SpecArchive { .. }
+            | AppUseCaseError::MarkdownRead { .. }
+            | AppUseCaseError::InvalidComment { .. }
+            | AppUseCaseError::CommentRepository { .. }
+            | AppUseCaseError::ReviewRunExport { .. } => WatchCommandErrorCode::Unexpected,
+        };
+
+        Self::new(code, error.to_string())
+    }
+
+    fn from_command_error(error: CommandError) -> Self {
+        let code = match error.code() {
+            "invalidRequest" => WatchCommandErrorCode::InvalidRequest,
+            "workspaceDetection" => WatchCommandErrorCode::WorkspaceDetection,
+            "configLoad" => WatchCommandErrorCode::ConfigLoad,
+            "invalidSpec" => WatchCommandErrorCode::InvalidSpec,
+            "fileWatch" => WatchCommandErrorCode::FileWatch,
+            _ => WatchCommandErrorCode::Unexpected,
+        };
+
+        Self::new(code, error.message())
+    }
+}
+
+impl From<AppUseCaseError> for WatchCommandError {
+    fn from(error: AppUseCaseError) -> Self {
+        Self::from_app_error(error)
+    }
+}
+
+impl From<CommandError> for WatchCommandError {
+    fn from(error: CommandError) -> Self {
+        Self::from_command_error(error)
+    }
+}
 
 const SPEC_FILE_WATCH_CHANGED_EVENT: &str = "spec-file-watch://changed";
 const SPEC_FILE_WATCH_ERROR_EVENT: &str = "spec-file-watch://error";
@@ -72,7 +144,7 @@ pub fn start_spec_file_watch(
     app_handle: AppHandle,
     state: State<'_, CommandState>,
     request: StartSpecFileWatchRequest,
-) -> CommandResult<StartSpecFileWatchResponse> {
+) -> StartSpecFileWatchCommandResult<StartSpecFileWatchResponse> {
     let file_key = SpecFileKey::from_str(&request.file_key).map_err(|_| {
         CommandError::invalid_request(format!("unsupported file key: {}", request.file_key))
     })?;
@@ -100,7 +172,7 @@ pub fn start_spec_file_watch(
 pub fn stop_spec_file_watch(
     state: State<'_, CommandState>,
     _request: StopSpecFileWatchRequest,
-) -> CommandResult<StopSpecFileWatchResponse> {
+) -> StopSpecFileWatchCommandResult<StopSpecFileWatchResponse> {
     state.file_watch_manager().stop();
 
     Ok(StopSpecFileWatchResponse { stopped: true })
@@ -197,6 +269,15 @@ mod tests {
     };
 
     use super::*;
+
+    #[test]
+    fn watch_command_error_serializes_known_codes() {
+        let error = WatchCommandError::new(WatchCommandErrorCode::FileWatch, "watch failed");
+        let value = serde_json::to_value(error).expect("error should serialize");
+
+        assert_eq!("fileWatch", value["code"]);
+        assert_eq!("watch failed", value["message"]);
+    }
 
     #[test]
     fn watch_registration_response_uses_frontend_friendly_fields() {

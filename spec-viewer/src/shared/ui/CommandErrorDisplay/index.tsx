@@ -1,10 +1,13 @@
 import { AlertTriangle } from "lucide-react";
 
-import type { IpcCommandError } from "@/shared/types/ipc";
+type DisplayableCommandError = Readonly<{
+  code: string;
+  message: string;
+}>;
 
 type Props = Readonly<{
   title: string;
-  error: IpcCommandError;
+  error: DisplayableCommandError;
   actionLabel?: string;
   isActionDisabled?: boolean;
   onAction?: () => void;

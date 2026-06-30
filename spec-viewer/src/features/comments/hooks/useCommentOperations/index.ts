@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
 
+import type { CommentCommands } from "@/shared/api/tauri";
+import { AddCommentCommandError } from "@/shared/api/tauri/addComment";
+import { DeleteCommentCommandError } from "@/shared/api/tauri/deleteComment";
+import { ReopenCommentCommandError } from "@/shared/api/tauri/reopenComment";
+import { ResolveCommentCommandError } from "@/shared/api/tauri/resolveComment";
+import { ToggleCommentResolvedCommandError } from "@/shared/api/tauri/toggleCommentResolved";
+import { UpdateCommentCommandError } from "@/shared/api/tauri/updateComment";
+
 import {
   CommentOperationFailedState,
   CommentOperationIdleState,
@@ -7,6 +15,8 @@ import {
   type CommentOperationKind,
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
+import { CommentFeatureError } from "@/features/comments/domain/commentError";
+import type { CommentFeatureError as CommentFeatureErrorType } from "@/features/comments/domain/commentError";
 import { Comments } from "@/features/comments/domain/comments";
 import type { CommentScope } from "@/features/comments/domain/commentScope";
 import type { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
@@ -23,8 +33,6 @@ import type {
   CommentAnchor,
   CommentId,
 } from "@/features/comments/types/comment";
-import { toIpcCommandError, type CommentCommands } from "@/shared/api/tauri";
-import type { IpcCommandError } from "@/shared/types/ipc";
 
 export type AddCommentInput = Readonly<{
   anchor: CommentAnchor;
@@ -71,7 +79,7 @@ type CommentOperationEvent =
       type: "operationFailed";
       operation: CommentOperationKind;
       commentId: CommentId | null;
-      error: IpcCommandError;
+      error: CommentFeatureErrorType;
     }>
   | Readonly<{ type: "operationInvalidated" }>;
 
@@ -154,7 +162,7 @@ export function useCommentOperations(
         type: "operationFailed",
         operation,
         commentId,
-        error: toIpcCommandError(error),
+        error: toCommentFeatureError(operation, error),
       });
     },
     [],
@@ -477,6 +485,45 @@ function commentOperationReducer(
       );
     default:
       return assertNever(event);
+  }
+}
+
+/**
+ * @param operation - Comment operation that rejected.
+ * @param error - Unknown rejected value from the command boundary.
+ * @returns Feature-level comment error for operation state.
+ */
+function toCommentFeatureError(
+  operation: CommentOperationKind,
+  error: unknown,
+): CommentFeatureErrorType {
+  switch (operation) {
+    case "add":
+      return CommentFeatureError.fromCommandError(
+        AddCommentCommandError.fromUnknown(error),
+      );
+    case "update":
+      return CommentFeatureError.fromCommandError(
+        UpdateCommentCommandError.fromUnknown(error),
+      );
+    case "delete":
+      return CommentFeatureError.fromCommandError(
+        DeleteCommentCommandError.fromUnknown(error),
+      );
+    case "resolve":
+      return CommentFeatureError.fromCommandError(
+        ResolveCommentCommandError.fromUnknown(error),
+      );
+    case "reopen":
+      return CommentFeatureError.fromCommandError(
+        ReopenCommentCommandError.fromUnknown(error),
+      );
+    case "toggle":
+      return CommentFeatureError.fromCommandError(
+        ToggleCommentResolvedCommandError.fromUnknown(error),
+      );
+    default:
+      return assertNever(operation);
   }
 }
 

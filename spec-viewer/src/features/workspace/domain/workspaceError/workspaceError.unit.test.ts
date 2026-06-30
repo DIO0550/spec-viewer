@@ -1,7 +1,6 @@
 import { expect, test } from "vitest";
 
 import { toWorkspaceError } from "@/features/workspace/domain/workspaceError";
-import type { IpcCommandError } from "@/shared/types/ipc";
 
 test.each([
   ["invalidRequest", "invalidSelection"],
@@ -9,7 +8,7 @@ test.each([
   ["configLoad", "configLoadFailed"],
   ["unknown", "unknown"],
 ] as const)("toWorkspaceErrorは%sをworkspace reason %sへ写す", (code, expectedReason) => {
-  const cause: IpcCommandError = {
+  const cause = {
     code,
     message: "workspace failed",
     raw: { code },

@@ -76,11 +76,13 @@ import { WorkspaceLayout } from "@/shared/ui";
 import {
   exportComments,
   generateLlmPrompt,
-  toIpcCommandError,
   selectCommentExportDestination,
   selectWorkspaceDirectory,
   validateWorkspaceDirectory,
 } from "@/shared/api/tauri";
+import { ExportCommentsCommandError } from "@/shared/api/tauri/exportComments";
+import { GenerateLlmPromptCommandError } from "@/shared/api/tauri/generateLlmPrompt";
+import { ValidateWorkspaceDirectoryCommandError } from "@/shared/api/tauri/validateWorkspaceDirectory";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 import { uiText } from "@/shared/lib/uiText";
 
@@ -290,7 +292,7 @@ function SpecViewAppContent(): ReactElement {
 
       await loadWorkspacePath(selectedDirectory);
     } catch (error) {
-      setDialogErrorMessage(toIpcCommandError(error).message);
+      setDialogErrorMessage(getUnknownErrorMessage(error));
     } finally {
       setIsBrowsingWorkspace(false);
     }
@@ -336,7 +338,9 @@ function SpecViewAppContent(): ReactElement {
           preserveCurrentWorkspace: true,
         });
       } catch (error) {
-        setDropErrorMessage(toIpcCommandError(error).message);
+        setDropErrorMessage(
+          ValidateWorkspaceDirectoryCommandError.fromUnknown(error).message,
+        );
       }
     },
     [isBrowsingWorkspace, loadWorkspacePath, isWorkspaceOpening],
@@ -374,7 +378,9 @@ function SpecViewAppContent(): ReactElement {
       } catch (error) {
         recentWorkspaces.removeWorkspace(selectedDirectory);
         setDialogErrorMessage(
-          `${missingSavedWorkspaceMessage} ${toIpcCommandError(error).message}`,
+          `${missingSavedWorkspaceMessage} ${
+            ValidateWorkspaceDirectoryCommandError.fromUnknown(error).message
+          }`,
         );
         setWorkspaceInput(activeWorkspaceRoot ?? "");
       }
@@ -545,7 +551,7 @@ function SpecViewAppContent(): ReactElement {
         setCommentExportState({
           status: "error",
           operation: target.scope,
-          message: toIpcCommandError(error).message,
+          message: ExportCommentsCommandError.fromUnknown(error).message,
         });
       }
     },
@@ -612,7 +618,7 @@ function SpecViewAppContent(): ReactElement {
         setCommentExportState({
           status: "error",
           operation: target.scope,
-          message: toIpcCommandError(error).message,
+          message: GenerateLlmPromptCommandError.fromUnknown(error).message,
         });
       }
     },
@@ -688,7 +694,7 @@ function SpecViewAppContent(): ReactElement {
       setCommentExportState({
         status: "error",
         operation: "mcpFeedback",
-        message: toIpcCommandError(error).message,
+        message: getUnknownErrorMessage(error),
       });
     }
   }, [
@@ -783,7 +789,7 @@ function SpecViewAppContent(): ReactElement {
         return true;
       } catch (error) {
         setDialogErrorMessage(
-          `${failureMessage} ${toIpcCommandError(error).message}`,
+          `${failureMessage} ${getUnknownErrorMessage(error)}`,
         );
         return false;
       }
@@ -1178,6 +1184,28 @@ function SpecViewUserReviewPanel(
 }
 
 /** @returns The first or last comment index when no comment is active yet. */
+/** @returns A readable message from non-command UI errors. */
+function getUnknownErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === "string") {
+    return error;
+  }
+
+  if (isRecord(error) && typeof error.message === "string") {
+    return error.message;
+  }
+
+  return "Unknown failure";
+}
+
+/** @returns True when an unknown value is a non-null object record. */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
 function selectFallbackCommentIndex(
   direction: NavigationDirection,
   commentCount: number,

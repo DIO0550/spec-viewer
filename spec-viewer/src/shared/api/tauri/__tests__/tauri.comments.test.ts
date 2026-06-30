@@ -11,6 +11,7 @@ import type {
 import { CommentId } from "@/features/comments/types/comment";
 import {
   addComment,
+  AddCommentCommandError,
   commentCommands,
   deleteComment,
   listComments,
@@ -124,7 +125,7 @@ test("deleteCommentはdelete_commentへ削除requestを渡す", async () => {
   });
 });
 
-test("addCommentはinvoke失敗時に正規化済みcommentエラーでrejectする", async () => {
+test("addCommentはinvoke失敗時にcommand固有のcommentエラーでrejectする", async () => {
   const rawError = {
     code: "invalidComment",
     message: "comment body is required",
@@ -133,8 +134,43 @@ test("addCommentはinvoke失敗時に正規化済みcommentエラーでrejectす
   invokeMock.mockRejectedValue(rawError);
 
   await expect(addComment(addRequest)).rejects.toEqual({
+    command: "add_comment",
     code: "invalidComment",
     message: "comment body is required",
+    raw: rawError,
+  });
+});
+
+test.each([
+  ["invalidComment"],
+  ["workspaceDetection"],
+  ["configLoad"],
+  ["commentRepository"],
+  ["unexpected"],
+] as const)("AddCommentCommandError.fromUnknownはknown payload %sを保持する", (code) => {
+  const rawError = {
+    code,
+    message: `${code} failure`,
+  };
+
+  expect(AddCommentCommandError.fromUnknown(rawError)).toEqual({
+    command: "add_comment",
+    code,
+    message: `${code} failure`,
+    raw: rawError,
+  });
+});
+
+test.each([
+  [{ code: "other", message: "other failure" }, "Unknown add_comment failure"],
+  [new Error("native failure"), "native failure"],
+  ["string failure", "string failure"],
+  [null, "Unknown add_comment failure"],
+] as const)("AddCommentCommandError.fromUnknownはunknown payloadをunknown codeへ寄せる", (rawError, message) => {
+  expect(AddCommentCommandError.fromUnknown(rawError)).toEqual({
+    command: "add_comment",
+    code: "unknown",
+    message,
     raw: rawError,
   });
 });
