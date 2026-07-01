@@ -65,6 +65,7 @@ function isCommandErrorCode(value: unknown): value is CommandErrorDto["code"] {
     value === "invalidComment" ||
     value === "commentRepository" ||
     value === "userReviewExport" ||
-    value === "fileWatch"
+    value === "fileWatch" ||
+    value === "unexpected"
   );
 }

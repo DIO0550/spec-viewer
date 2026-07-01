@@ -173,6 +173,21 @@ test("toIpcCommandErrorはcomment系CommandError DTOも保持する", () => {
   });
 });
 
+test("toIpcCommandErrorはunexpected CommandError DTOも保持する", () => {
+  const rawError = {
+    code: "unexpected",
+    message: "unexpected command failure",
+  };
+
+  const result = toIpcCommandError(rawError);
+
+  expect(result).toEqual({
+    code: "unexpected",
+    message: "unexpected command failure",
+    raw: rawError,
+  });
+});
+
 test("loadWorkspaceはinvoke失敗時にcommand固有のworkspaceエラーでrejectする", async () => {
   const rawError = {
     code: "workspaceDetection",
