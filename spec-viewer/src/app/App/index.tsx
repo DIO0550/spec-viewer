@@ -1193,16 +1193,16 @@ function getUnknownErrorMessage(error: unknown): string {
     return error;
   }
 
-  if (isRecord(error) && typeof error.message === "string") {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof error.message === "string"
+  ) {
     return error.message;
   }
 
   return "Unknown failure";
-}
-
-/** @returns True when an unknown value is a non-null object record. */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }
 
 /** @returns The first or last comment index when no comment is active yet. */
