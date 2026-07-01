@@ -680,12 +680,7 @@ pub fn generate_llm_prompt(
         .map_err(CommandError::from)?;
     let generated_at = Utc::now();
 
-    Ok(build_llm_prompt(
-        state.use_cases(),
-        &workspace,
-        &request,
-        generated_at,
-    )?)
+    build_llm_prompt(state.use_cases(), &workspace, &request, generated_at)
 }
 
 impl From<Vec<CommentAnchorResolution>> for ListCommentsResponse {
