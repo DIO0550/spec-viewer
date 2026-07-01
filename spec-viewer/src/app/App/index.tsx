@@ -1183,7 +1183,6 @@ function SpecViewUserReviewPanel(
   );
 }
 
-/** @returns The first or last comment index when no comment is active yet. */
 /** @returns A readable message from non-command UI errors. */
 function getUnknownErrorMessage(error: unknown): string {
   if (error instanceof Error) {
@@ -1206,6 +1205,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+/** @returns The first or last comment index when no comment is active yet. */
 function selectFallbackCommentIndex(
   direction: NavigationDirection,
   commentCount: number,
