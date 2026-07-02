@@ -29,7 +29,7 @@ export function CommandErrorDisplay({
         <p>{error.message}</p>
         <dl className="command-error__details">
           <div>
-            <dt>Command</dt>
+            <dt>Code</dt>
             <dd>{error.code}</dd>
           </div>
         </dl>
