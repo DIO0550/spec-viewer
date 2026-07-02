@@ -9,6 +9,7 @@ import {
   readSpecFile,
   validateWorkspaceDirectory,
 } from "@/shared/api/tauri";
+import { LoadWorkspaceCommandError } from "@/shared/api/tauri/loadWorkspace";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
@@ -202,4 +203,15 @@ test("loadWorkspaceはinvoke失敗時にcommand固有のworkspaceエラーでrej
     message: "workspace root was not found",
     raw: rawError,
   });
+});
+
+test("LoadWorkspaceCommandError.fromUnknownは正規化済みunknownエラーのmessageを保持する", () => {
+  const normalizedError = LoadWorkspaceCommandError.unknown(
+    "workspace could not be selected",
+    { cause: "dialog cancelled" },
+  );
+
+  expect(LoadWorkspaceCommandError.fromUnknown(normalizedError)).toEqual(
+    normalizedError,
+  );
 });

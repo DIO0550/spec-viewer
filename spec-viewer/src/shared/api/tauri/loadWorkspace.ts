@@ -37,6 +37,20 @@ export const LoadWorkspaceCommandError = {
   fromUnknown(error: unknown): LoadWorkspaceCommandError {
     if (
       isRecord(error) &&
+      error.command === LOAD_WORKSPACE_COMMAND &&
+      LoadWorkspaceCommandError.isCommandErrorCode(error.code) &&
+      typeof error.message === "string"
+    ) {
+      return {
+        command: LOAD_WORKSPACE_COMMAND,
+        code: error.code,
+        message: error.message,
+        raw: error.raw,
+      };
+    }
+
+    if (
+      isRecord(error) &&
       LoadWorkspaceCommandError.isCode(error.code) &&
       typeof error.message === "string"
     ) {
@@ -70,6 +84,11 @@ export const LoadWorkspaceCommandError = {
       message,
       raw,
     };
+  },
+
+  /** @returns True when the value is a load_workspace command error code. */
+  isCommandErrorCode(value: unknown): value is LoadWorkspaceCommandErrorCode {
+    return LoadWorkspaceCommandError.isCode(value) || value === "unknown";
   },
 
   /** @returns True when the value is a known load_workspace backend error code. */
