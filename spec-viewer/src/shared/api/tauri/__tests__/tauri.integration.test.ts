@@ -10,6 +10,7 @@ import {
   validateWorkspaceDirectory,
 } from "@/shared/api/tauri";
 import { LoadWorkspaceCommandError } from "@/shared/api/tauri/loadWorkspace";
+import { ListSpecsCommandError } from "@/shared/api/tauri/listSpecs";
 import { ValidateWorkspaceDirectoryCommandError } from "@/shared/api/tauri/validateWorkspaceDirectory";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -226,4 +227,15 @@ test("ValidateWorkspaceDirectoryCommandError.fromUnknownは正規化済みunknow
   expect(
     ValidateWorkspaceDirectoryCommandError.fromUnknown(normalizedError),
   ).toEqual(normalizedError);
+});
+
+test("ListSpecsCommandError.fromUnknownは正規化済みunknownエラーのmessageを保持する", () => {
+  const normalizedError = ListSpecsCommandError.unknown(
+    "spec tree could not be scanned",
+    { cause: "invalid workspace" },
+  );
+
+  expect(ListSpecsCommandError.fromUnknown(normalizedError)).toEqual(
+    normalizedError,
+  );
 });

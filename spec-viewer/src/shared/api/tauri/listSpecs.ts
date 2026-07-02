@@ -35,6 +35,20 @@ export const ListSpecsCommandError = {
   fromUnknown(error: unknown): ListSpecsCommandError {
     if (
       isRecord(error) &&
+      error.command === LIST_SPECS_COMMAND &&
+      ListSpecsCommandError.isCommandErrorCode(error.code) &&
+      typeof error.message === "string"
+    ) {
+      return {
+        command: LIST_SPECS_COMMAND,
+        code: error.code,
+        message: error.message,
+        raw: error.raw,
+      };
+    }
+
+    if (
+      isRecord(error) &&
       ListSpecsCommandError.isCode(error.code) &&
       typeof error.message === "string"
     ) {
@@ -65,6 +79,11 @@ export const ListSpecsCommandError = {
       message,
       raw,
     };
+  },
+
+  /** @returns True when the value is a list_specs command error code. */
+  isCommandErrorCode(value: unknown): value is ListSpecsCommandErrorCode {
+    return ListSpecsCommandError.isCode(value) || value === "unknown";
   },
 
   /** @returns True when the value is a known list_specs backend error code. */
