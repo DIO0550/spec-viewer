@@ -16,6 +16,7 @@ import {
   toIpcCommandError,
 } from "@/shared/api/tauri";
 import { CreateUserReviewCommandError } from "@/shared/api/tauri/createUserReview";
+import { ListUserReviewsCommandError } from "@/shared/api/tauri/listUserReviews";
 import { CommentId } from "@/features/comments/types/comment";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -128,6 +129,22 @@ test("listUserReviewsはlist_user_reviewsへrequestを渡す", async () => {
   expect(result.active).toEqual([response.userReview]);
   expect(invokeMock).toHaveBeenCalledWith("list_user_reviews", {
     request: listRequest,
+  });
+});
+
+test("ListUserReviewsCommandErrorはinvalidSpecを保持する", () => {
+  const rawError = {
+    code: "invalidSpec",
+    message: "invalid review run target spec",
+  };
+
+  const result = ListUserReviewsCommandError.fromUnknown(rawError);
+
+  expect(result).toEqual({
+    command: "list_user_reviews",
+    code: "invalidSpec",
+    message: "invalid review run target spec",
+    raw: rawError,
   });
 });
 
