@@ -72,11 +72,13 @@ impl AddCommentCommandError {
     }
 
     fn from_command_error(error: CommandError) -> Self {
-        if error.code() == "invalidRequest" {
-            return Self::new(AddCommentCommandErrorCode::InvalidRequest, error.message());
-        }
+        let code = match error.code() {
+            "invalidRequest" => AddCommentCommandErrorCode::InvalidRequest,
+            "invalidComment" => AddCommentCommandErrorCode::InvalidComment,
+            _ => AddCommentCommandErrorCode::Unexpected,
+        };
 
-        Self::new(AddCommentCommandErrorCode::Unexpected, error.message())
+        Self::new(code, error.message())
     }
 
     pub fn code(&self) -> AddCommentCommandErrorCode {
@@ -1948,6 +1950,21 @@ mod tests {
         ));
 
         assert_eq!(CommentCommandErrorCode::InvalidRequest, error.code());
+    }
+
+    #[test]
+    fn add_comment_command_error_maps_invalid_comment_command_error() {
+        let error = AddCommentCommandError::from_command_error(CommandError::from(
+            AppUseCaseError::InvalidComment {
+                message: "anchor text hash is empty".to_string(),
+            },
+        ));
+
+        assert_eq!(AddCommentCommandErrorCode::InvalidComment, error.code());
+        assert_eq!(
+            "invalid comment input: anchor text hash is empty",
+            error.message()
+        );
     }
 
     #[test]
