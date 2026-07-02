@@ -39,6 +39,20 @@ export const AddCommentCommandError = {
   fromUnknown(error: unknown): AddCommentCommandError {
     if (
       isRecord(error) &&
+      error.command === ADD_COMMENT_COMMAND &&
+      AddCommentCommandError.isCommandErrorCode(error.code) &&
+      typeof error.message === "string"
+    ) {
+      return {
+        command: ADD_COMMENT_COMMAND,
+        code: error.code,
+        message: error.message,
+        raw: error.raw,
+      };
+    }
+
+    if (
+      isRecord(error) &&
       AddCommentCommandError.isCode(error.code) &&
       typeof error.message === "string"
     ) {
@@ -69,6 +83,11 @@ export const AddCommentCommandError = {
       message,
       raw,
     };
+  },
+
+  /** @returns True when the value is an add_comment command error code. */
+  isCommandErrorCode(value: unknown): value is AddCommentCommandErrorCode {
+    return AddCommentCommandError.isCode(value) || value === "unknown";
   },
 
   /** @returns True when the value is a known add_comment backend error code. */

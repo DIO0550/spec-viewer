@@ -174,3 +174,14 @@ test.each([
     raw: rawError,
   });
 });
+
+test("AddCommentCommandError.fromUnknownは正規化済みunknownエラーのmessageを保持する", () => {
+  const normalizedError = AddCommentCommandError.unknown(
+    "comment could not be saved",
+    { cause: "offline" },
+  );
+
+  expect(AddCommentCommandError.fromUnknown(normalizedError)).toEqual(
+    normalizedError,
+  );
+});
