@@ -40,6 +40,20 @@ export const ExportCommentsCommandError = {
   fromUnknown(error: unknown): ExportCommentsCommandError {
     if (
       isRecord(error) &&
+      error.command === EXPORT_COMMENTS_COMMAND &&
+      ExportCommentsCommandError.isCommandErrorCode(error.code) &&
+      typeof error.message === "string"
+    ) {
+      return {
+        command: EXPORT_COMMENTS_COMMAND,
+        code: error.code,
+        message: error.message,
+        raw: error.raw,
+      };
+    }
+
+    if (
+      isRecord(error) &&
       ExportCommentsCommandError.isCode(error.code) &&
       typeof error.message === "string"
     ) {
@@ -73,6 +87,11 @@ export const ExportCommentsCommandError = {
       message,
       raw,
     };
+  },
+
+  /** @returns True when the value is a export_comments command error code. */
+  isCommandErrorCode(value: unknown): value is ExportCommentsCommandErrorCode {
+    return ExportCommentsCommandError.isCode(value) || value === "unknown";
   },
 
   /** @returns True when the value is a known export_comments backend error code. */

@@ -40,6 +40,20 @@ export const ReopenCommentCommandError = {
   fromUnknown(error: unknown): ReopenCommentCommandError {
     if (
       isRecord(error) &&
+      error.command === REOPEN_COMMENT_COMMAND &&
+      ReopenCommentCommandError.isCommandErrorCode(error.code) &&
+      typeof error.message === "string"
+    ) {
+      return {
+        command: REOPEN_COMMENT_COMMAND,
+        code: error.code,
+        message: error.message,
+        raw: error.raw,
+      };
+    }
+
+    if (
+      isRecord(error) &&
       ReopenCommentCommandError.isCode(error.code) &&
       typeof error.message === "string"
     ) {
@@ -73,6 +87,11 @@ export const ReopenCommentCommandError = {
       message,
       raw,
     };
+  },
+
+  /** @returns True when the value is a reopen_comment command error code. */
+  isCommandErrorCode(value: unknown): value is ReopenCommentCommandErrorCode {
+    return ReopenCommentCommandError.isCode(value) || value === "unknown";
   },
 
   /** @returns True when the value is a known reopen_comment backend error code. */

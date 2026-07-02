@@ -39,6 +39,20 @@ export const ArchiveSpecCommandError = {
   fromUnknown(error: unknown): ArchiveSpecCommandError {
     if (
       isRecord(error) &&
+      error.command === ARCHIVE_SPEC_COMMAND &&
+      ArchiveSpecCommandError.isCommandErrorCode(error.code) &&
+      typeof error.message === "string"
+    ) {
+      return {
+        command: ARCHIVE_SPEC_COMMAND,
+        code: error.code,
+        message: error.message,
+        raw: error.raw,
+      };
+    }
+
+    if (
+      isRecord(error) &&
       ArchiveSpecCommandError.isCode(error.code) &&
       typeof error.message === "string"
     ) {
@@ -72,6 +86,11 @@ export const ArchiveSpecCommandError = {
       message,
       raw,
     };
+  },
+
+  /** @returns True when the value is a archive_spec command error code. */
+  isCommandErrorCode(value: unknown): value is ArchiveSpecCommandErrorCode {
+    return ArchiveSpecCommandError.isCode(value) || value === "unknown";
   },
 
   /** @returns True when the value is a known archive_spec backend error code. */

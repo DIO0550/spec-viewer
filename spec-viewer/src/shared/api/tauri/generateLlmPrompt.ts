@@ -40,6 +40,20 @@ export const GenerateLlmPromptCommandError = {
   fromUnknown(error: unknown): GenerateLlmPromptCommandError {
     if (
       isRecord(error) &&
+      error.command === GENERATE_LLM_PROMPT_COMMAND &&
+      GenerateLlmPromptCommandError.isCommandErrorCode(error.code) &&
+      typeof error.message === "string"
+    ) {
+      return {
+        command: GENERATE_LLM_PROMPT_COMMAND,
+        code: error.code,
+        message: error.message,
+        raw: error.raw,
+      };
+    }
+
+    if (
+      isRecord(error) &&
       GenerateLlmPromptCommandError.isCode(error.code) &&
       typeof error.message === "string"
     ) {
@@ -73,6 +87,11 @@ export const GenerateLlmPromptCommandError = {
       message,
       raw,
     };
+  },
+
+  /** @returns True when the value is a generate_llm_prompt command error code. */
+  isCommandErrorCode(value: unknown): value is GenerateLlmPromptCommandErrorCode {
+    return GenerateLlmPromptCommandError.isCode(value) || value === "unknown";
   },
 
   /** @returns True when the value is a known generate_llm_prompt backend error code. */

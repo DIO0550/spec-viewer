@@ -42,6 +42,20 @@ export const ToggleCommentResolvedCommandError = {
   fromUnknown(error: unknown): ToggleCommentResolvedCommandError {
     if (
       isRecord(error) &&
+      error.command === TOGGLE_COMMENT_RESOLVED_COMMAND &&
+      ToggleCommentResolvedCommandError.isCommandErrorCode(error.code) &&
+      typeof error.message === "string"
+    ) {
+      return {
+        command: TOGGLE_COMMENT_RESOLVED_COMMAND,
+        code: error.code,
+        message: error.message,
+        raw: error.raw,
+      };
+    }
+
+    if (
+      isRecord(error) &&
       ToggleCommentResolvedCommandError.isCode(error.code) &&
       typeof error.message === "string"
     ) {
@@ -75,6 +89,11 @@ export const ToggleCommentResolvedCommandError = {
       message,
       raw,
     };
+  },
+
+  /** @returns True when the value is a toggle_comment_resolved command error code. */
+  isCommandErrorCode(value: unknown): value is ToggleCommentResolvedCommandErrorCode {
+    return ToggleCommentResolvedCommandError.isCode(value) || value === "unknown";
   },
 
   /** @returns True when the value is a known toggle_comment_resolved backend error code. */

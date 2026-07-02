@@ -41,6 +41,20 @@ export const ArchiveUserReviewCommandError = {
   fromUnknown(error: unknown): ArchiveUserReviewCommandError {
     if (
       isRecord(error) &&
+      error.command === ARCHIVE_USER_REVIEW_COMMAND &&
+      ArchiveUserReviewCommandError.isCommandErrorCode(error.code) &&
+      typeof error.message === "string"
+    ) {
+      return {
+        command: ARCHIVE_USER_REVIEW_COMMAND,
+        code: error.code,
+        message: error.message,
+        raw: error.raw,
+      };
+    }
+
+    if (
+      isRecord(error) &&
       ArchiveUserReviewCommandError.isCode(error.code) &&
       typeof error.message === "string"
     ) {
@@ -74,6 +88,11 @@ export const ArchiveUserReviewCommandError = {
       message,
       raw,
     };
+  },
+
+  /** @returns True when the value is a archive_user_review command error code. */
+  isCommandErrorCode(value: unknown): value is ArchiveUserReviewCommandErrorCode {
+    return ArchiveUserReviewCommandError.isCode(value) || value === "unknown";
   },
 
   /** @returns True when the value is a known archive_user_review backend error code. */

@@ -160,6 +160,17 @@ test("ListUserReviewsCommandErrorはinvalidSpecを保持する", () => {
   });
 });
 
+test("ListUserReviewsCommandError.fromUnknownは正規化済みunknownエラーのmessageを保持する", () => {
+  const normalizedError = ListUserReviewsCommandError.unknown(
+    "review runs could not be listed",
+    { cause: "scan failed" },
+  );
+
+  expect(ListUserReviewsCommandError.fromUnknown(normalizedError)).toEqual(
+    normalizedError,
+  );
+});
+
 test("archiveUserReviewはarchive_user_reviewへrequestを渡す", async () => {
   invokeMock.mockReset();
   invokeMock.mockResolvedValue(archiveResponse);
@@ -186,6 +197,17 @@ test("ArchiveUserReviewCommandErrorはinvalidSpecを保持する", () => {
     message: "invalid review run target spec",
     raw: rawError,
   });
+});
+
+test("ArchiveUserReviewCommandError.fromUnknownは正規化済みunknownエラーのmessageを保持する", () => {
+  const normalizedError = ArchiveUserReviewCommandError.unknown(
+    "review run could not be archived",
+    { cause: "archive failed" },
+  );
+
+  expect(ArchiveUserReviewCommandError.fromUnknown(normalizedError)).toEqual(
+    normalizedError,
+  );
 });
 
 test("toIpcCommandErrorはreview run exportエラーを保持する", () => {

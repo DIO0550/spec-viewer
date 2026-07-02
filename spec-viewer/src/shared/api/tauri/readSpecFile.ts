@@ -39,6 +39,20 @@ export const ReadSpecFileCommandError = {
   fromUnknown(error: unknown): ReadSpecFileCommandError {
     if (
       isRecord(error) &&
+      error.command === READ_SPEC_FILE_COMMAND &&
+      ReadSpecFileCommandError.isCommandErrorCode(error.code) &&
+      typeof error.message === "string"
+    ) {
+      return {
+        command: READ_SPEC_FILE_COMMAND,
+        code: error.code,
+        message: error.message,
+        raw: error.raw,
+      };
+    }
+
+    if (
+      isRecord(error) &&
       ReadSpecFileCommandError.isCode(error.code) &&
       typeof error.message === "string"
     ) {
@@ -72,6 +86,11 @@ export const ReadSpecFileCommandError = {
       message,
       raw,
     };
+  },
+
+  /** @returns True when the value is a read_spec_file command error code. */
+  isCommandErrorCode(value: unknown): value is ReadSpecFileCommandErrorCode {
+    return ReadSpecFileCommandError.isCode(value) || value === "unknown";
   },
 
   /** @returns True when the value is a known read_spec_file backend error code. */

@@ -40,6 +40,20 @@ export const UpdateCommentCommandError = {
   fromUnknown(error: unknown): UpdateCommentCommandError {
     if (
       isRecord(error) &&
+      error.command === UPDATE_COMMENT_COMMAND &&
+      UpdateCommentCommandError.isCommandErrorCode(error.code) &&
+      typeof error.message === "string"
+    ) {
+      return {
+        command: UPDATE_COMMENT_COMMAND,
+        code: error.code,
+        message: error.message,
+        raw: error.raw,
+      };
+    }
+
+    if (
+      isRecord(error) &&
       UpdateCommentCommandError.isCode(error.code) &&
       typeof error.message === "string"
     ) {
@@ -73,6 +87,11 @@ export const UpdateCommentCommandError = {
       message,
       raw,
     };
+  },
+
+  /** @returns True when the value is a update_comment command error code. */
+  isCommandErrorCode(value: unknown): value is UpdateCommentCommandErrorCode {
+    return UpdateCommentCommandError.isCode(value) || value === "unknown";
   },
 
   /** @returns True when the value is a known update_comment backend error code. */

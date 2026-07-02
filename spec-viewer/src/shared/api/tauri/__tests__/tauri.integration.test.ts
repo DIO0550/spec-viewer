@@ -10,6 +10,8 @@ import {
   validateWorkspaceDirectory,
 } from "@/shared/api/tauri";
 import { LoadWorkspaceCommandError } from "@/shared/api/tauri/loadWorkspace";
+import { ArchiveSpecCommandError } from "@/shared/api/tauri/archiveSpec";
+import { ReadSpecFileCommandError } from "@/shared/api/tauri/readSpecFile";
 import { ListSpecsCommandError } from "@/shared/api/tauri/listSpecs";
 import { ValidateWorkspaceDirectoryCommandError } from "@/shared/api/tauri/validateWorkspaceDirectory";
 
@@ -236,6 +238,28 @@ test("ListSpecsCommandError.fromUnknownは正規化済みunknownエラーのmess
   );
 
   expect(ListSpecsCommandError.fromUnknown(normalizedError)).toEqual(
+    normalizedError,
+  );
+});
+
+test("ReadSpecFileCommandError.fromUnknownは正規化済みunknownエラーのmessageを保持する", () => {
+  const normalizedError = ReadSpecFileCommandError.unknown(
+    "spec file could not be read",
+    { cause: "missing file" },
+  );
+
+  expect(ReadSpecFileCommandError.fromUnknown(normalizedError)).toEqual(
+    normalizedError,
+  );
+});
+
+test("ArchiveSpecCommandError.fromUnknownは正規化済みunknownエラーのmessageを保持する", () => {
+  const normalizedError = ArchiveSpecCommandError.unknown(
+    "spec could not be archived",
+    { cause: "archive failed" },
+  );
+
+  expect(ArchiveSpecCommandError.fromUnknown(normalizedError)).toEqual(
     normalizedError,
   );
 });

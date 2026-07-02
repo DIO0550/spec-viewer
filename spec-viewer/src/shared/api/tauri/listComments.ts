@@ -40,6 +40,20 @@ export const ListCommentsCommandError = {
   fromUnknown(error: unknown): ListCommentsCommandError {
     if (
       isRecord(error) &&
+      error.command === LIST_COMMENTS_COMMAND &&
+      ListCommentsCommandError.isCommandErrorCode(error.code) &&
+      typeof error.message === "string"
+    ) {
+      return {
+        command: LIST_COMMENTS_COMMAND,
+        code: error.code,
+        message: error.message,
+        raw: error.raw,
+      };
+    }
+
+    if (
+      isRecord(error) &&
       ListCommentsCommandError.isCode(error.code) &&
       typeof error.message === "string"
     ) {
@@ -73,6 +87,11 @@ export const ListCommentsCommandError = {
       message,
       raw,
     };
+  },
+
+  /** @returns True when the value is a list_comments command error code. */
+  isCommandErrorCode(value: unknown): value is ListCommentsCommandErrorCode {
+    return ListCommentsCommandError.isCode(value) || value === "unknown";
   },
 
   /** @returns True when the value is a known list_comments backend error code. */

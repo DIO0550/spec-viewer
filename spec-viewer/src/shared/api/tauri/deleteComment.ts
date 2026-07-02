@@ -40,6 +40,20 @@ export const DeleteCommentCommandError = {
   fromUnknown(error: unknown): DeleteCommentCommandError {
     if (
       isRecord(error) &&
+      error.command === DELETE_COMMENT_COMMAND &&
+      DeleteCommentCommandError.isCommandErrorCode(error.code) &&
+      typeof error.message === "string"
+    ) {
+      return {
+        command: DELETE_COMMENT_COMMAND,
+        code: error.code,
+        message: error.message,
+        raw: error.raw,
+      };
+    }
+
+    if (
+      isRecord(error) &&
       DeleteCommentCommandError.isCode(error.code) &&
       typeof error.message === "string"
     ) {
@@ -73,6 +87,11 @@ export const DeleteCommentCommandError = {
       message,
       raw,
     };
+  },
+
+  /** @returns True when the value is a delete_comment command error code. */
+  isCommandErrorCode(value: unknown): value is DeleteCommentCommandErrorCode {
+    return DeleteCommentCommandError.isCode(value) || value === "unknown";
   },
 
   /** @returns True when the value is a known delete_comment backend error code. */

@@ -40,6 +40,20 @@ export const ResolveCommentCommandError = {
   fromUnknown(error: unknown): ResolveCommentCommandError {
     if (
       isRecord(error) &&
+      error.command === RESOLVE_COMMENT_COMMAND &&
+      ResolveCommentCommandError.isCommandErrorCode(error.code) &&
+      typeof error.message === "string"
+    ) {
+      return {
+        command: RESOLVE_COMMENT_COMMAND,
+        code: error.code,
+        message: error.message,
+        raw: error.raw,
+      };
+    }
+
+    if (
+      isRecord(error) &&
       ResolveCommentCommandError.isCode(error.code) &&
       typeof error.message === "string"
     ) {
@@ -73,6 +87,11 @@ export const ResolveCommentCommandError = {
       message,
       raw,
     };
+  },
+
+  /** @returns True when the value is a resolve_comment command error code. */
+  isCommandErrorCode(value: unknown): value is ResolveCommentCommandErrorCode {
+    return ResolveCommentCommandError.isCode(value) || value === "unknown";
   },
 
   /** @returns True when the value is a known resolve_comment backend error code. */

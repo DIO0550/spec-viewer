@@ -41,6 +41,20 @@ export const ListUserReviewsCommandError = {
   fromUnknown(error: unknown): ListUserReviewsCommandError {
     if (
       isRecord(error) &&
+      error.command === LIST_USER_REVIEWS_COMMAND &&
+      ListUserReviewsCommandError.isCommandErrorCode(error.code) &&
+      typeof error.message === "string"
+    ) {
+      return {
+        command: LIST_USER_REVIEWS_COMMAND,
+        code: error.code,
+        message: error.message,
+        raw: error.raw,
+      };
+    }
+
+    if (
+      isRecord(error) &&
       ListUserReviewsCommandError.isCode(error.code) &&
       typeof error.message === "string"
     ) {
@@ -74,6 +88,11 @@ export const ListUserReviewsCommandError = {
       message,
       raw,
     };
+  },
+
+  /** @returns True when the value is a list_user_reviews command error code. */
+  isCommandErrorCode(value: unknown): value is ListUserReviewsCommandErrorCode {
+    return ListUserReviewsCommandError.isCode(value) || value === "unknown";
   },
 
   /** @returns True when the value is a known list_user_reviews backend error code. */
