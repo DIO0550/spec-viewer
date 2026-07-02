@@ -15,6 +15,7 @@ import {
   listUserReviews,
   toIpcCommandError,
 } from "@/shared/api/tauri";
+import { ArchiveUserReviewCommandError } from "@/shared/api/tauri/archiveUserReview";
 import { CreateUserReviewCommandError } from "@/shared/api/tauri/createUserReview";
 import { ListUserReviewsCommandError } from "@/shared/api/tauri/listUserReviews";
 import { CommentId } from "@/features/comments/types/comment";
@@ -157,6 +158,22 @@ test("archiveUserReviewはarchive_user_reviewへrequestを渡す", async () => {
   expect(result.userReview.status).toBe("archived");
   expect(invokeMock).toHaveBeenCalledWith("archive_user_review", {
     request: archiveRequest,
+  });
+});
+
+test("ArchiveUserReviewCommandErrorはinvalidSpecを保持する", () => {
+  const rawError = {
+    code: "invalidSpec",
+    message: "invalid review run target spec",
+  };
+
+  const result = ArchiveUserReviewCommandError.fromUnknown(rawError);
+
+  expect(result).toEqual({
+    command: "archive_user_review",
+    code: "invalidSpec",
+    message: "invalid review run target spec",
+    raw: rawError,
   });
 });
 
