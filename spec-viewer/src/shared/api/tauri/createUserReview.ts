@@ -41,6 +41,20 @@ export const CreateUserReviewCommandError = {
   fromUnknown(error: unknown): CreateUserReviewCommandError {
     if (
       isRecord(error) &&
+      error.command === CREATE_USER_REVIEW_COMMAND &&
+      CreateUserReviewCommandError.isCommandErrorCode(error.code) &&
+      typeof error.message === "string"
+    ) {
+      return {
+        command: CREATE_USER_REVIEW_COMMAND,
+        code: error.code,
+        message: error.message,
+        raw: error.raw,
+      };
+    }
+
+    if (
+      isRecord(error) &&
       CreateUserReviewCommandError.isCode(error.code) &&
       typeof error.message === "string"
     ) {
@@ -74,6 +88,13 @@ export const CreateUserReviewCommandError = {
       message,
       raw,
     };
+  },
+
+  /** @returns True when the value is a create_user_review command error code. */
+  isCommandErrorCode(
+    value: unknown,
+  ): value is CreateUserReviewCommandErrorCode {
+    return CreateUserReviewCommandError.isCode(value) || value === "unknown";
   },
 
   /** @returns True when the value is a known create_user_review backend error code. */

@@ -121,6 +121,17 @@ test("CreateUserReviewCommandErrorはinvalidSpecを保持する", () => {
   });
 });
 
+test("CreateUserReviewCommandError.fromUnknownは正規化済みunknownエラーのmessageを保持する", () => {
+  const normalizedError = CreateUserReviewCommandError.unknown(
+    "review bundle could not be created",
+    { cause: "export failed" },
+  );
+
+  expect(CreateUserReviewCommandError.fromUnknown(normalizedError)).toEqual(
+    normalizedError,
+  );
+});
+
 test("listUserReviewsはlist_user_reviewsへrequestを渡す", async () => {
   invokeMock.mockReset();
   invokeMock.mockResolvedValue(listResponse);
