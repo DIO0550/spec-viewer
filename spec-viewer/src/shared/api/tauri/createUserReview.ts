@@ -15,6 +15,7 @@ export type CreateUserReviewCommandErrorCode =
   | "invalidRequest"
   | "workspaceDetection"
   | "configLoad"
+  | "invalidSpec"
   | "invalidComment"
   | "commentRepository"
   | "userReviewExport"
@@ -83,6 +84,7 @@ export const CreateUserReviewCommandError = {
       value === "invalidRequest" ||
       value === "workspaceDetection" ||
       value === "configLoad" ||
+      value === "invalidSpec" ||
       value === "invalidComment" ||
       value === "commentRepository" ||
       value === "userReviewExport" ||
