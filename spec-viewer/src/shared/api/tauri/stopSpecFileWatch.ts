@@ -39,6 +39,20 @@ export const StopSpecFileWatchCommandError = {
   fromUnknown(error: unknown): StopSpecFileWatchCommandError {
     if (
       isRecord(error) &&
+      error.command === STOP_SPEC_FILE_WATCH_COMMAND &&
+      StopSpecFileWatchCommandError.isCommandErrorCode(error.code) &&
+      typeof error.message === "string"
+    ) {
+      return {
+        command: STOP_SPEC_FILE_WATCH_COMMAND,
+        code: error.code,
+        message: error.message,
+        raw: error.raw,
+      };
+    }
+
+    if (
+      isRecord(error) &&
       StopSpecFileWatchCommandError.isCode(error.code) &&
       typeof error.message === "string"
     ) {
@@ -72,6 +86,11 @@ export const StopSpecFileWatchCommandError = {
       message,
       raw,
     };
+  },
+
+  /** @returns True when the value is a stop_spec_file_watch command error code. */
+  isCommandErrorCode(value: unknown): value is StopSpecFileWatchCommandErrorCode {
+    return StopSpecFileWatchCommandError.isCode(value) || value === "unknown";
   },
 
   /** @returns True when the value is a known stop_spec_file_watch backend error code. */
