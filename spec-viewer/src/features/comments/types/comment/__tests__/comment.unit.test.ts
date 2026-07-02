@@ -36,6 +36,14 @@ test("addCommentのper-command contractはcomment DTOと一致する", () => {
   expectTypeOf<AddCommentCommandResponse>().toEqualTypeOf<Comment>();
 });
 
+test("tauri barrelはaddComment error型を同名exportとして公開する", () => {
+  expectTypeOf<
+    import("@/shared/api/tauri").AddCommentCommandError
+  >().toEqualTypeOf<
+    import("@/shared/api/tauri/addComment").AddCommentCommandError
+  >();
+});
+
 test("migration中はlegacy CommandRequest compatibility shimもadd_comment DTOを保持する", () => {
   expectTypeOf<
     CommandRequest<"add_comment">

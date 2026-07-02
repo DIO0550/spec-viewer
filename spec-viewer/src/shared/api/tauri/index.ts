@@ -34,7 +34,6 @@ export { validateWorkspaceDirectory } from "./validateWorkspaceDirectory";
 
 export type {
   AddCommentCommandContract,
-  AddCommentCommandError as AddCommentCommandErrorType,
   AddCommentCommandErrorCode,
   AddCommentCommandName,
   AddCommentCommandRequest,
