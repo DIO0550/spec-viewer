@@ -10,6 +10,7 @@ import {
   validateWorkspaceDirectory,
 } from "@/shared/api/tauri";
 import { LoadWorkspaceCommandError } from "@/shared/api/tauri/loadWorkspace";
+import { ValidateWorkspaceDirectoryCommandError } from "@/shared/api/tauri/validateWorkspaceDirectory";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
@@ -214,4 +215,15 @@ test("LoadWorkspaceCommandError.fromUnknownは正規化済みunknownエラーの
   expect(LoadWorkspaceCommandError.fromUnknown(normalizedError)).toEqual(
     normalizedError,
   );
+});
+
+test("ValidateWorkspaceDirectoryCommandError.fromUnknownは正規化済みunknownエラーのmessageを保持する", () => {
+  const normalizedError = ValidateWorkspaceDirectoryCommandError.unknown(
+    "workspace path could not be checked",
+    { cause: "permission denied" },
+  );
+
+  expect(
+    ValidateWorkspaceDirectoryCommandError.fromUnknown(normalizedError),
+  ).toEqual(normalizedError);
 });

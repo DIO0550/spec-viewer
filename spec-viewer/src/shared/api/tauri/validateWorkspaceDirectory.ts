@@ -41,6 +41,20 @@ export const ValidateWorkspaceDirectoryCommandError = {
   fromUnknown(error: unknown): ValidateWorkspaceDirectoryCommandError {
     if (
       isRecord(error) &&
+      error.command === VALIDATE_WORKSPACE_DIRECTORY_COMMAND &&
+      ValidateWorkspaceDirectoryCommandError.isCommandErrorCode(error.code) &&
+      typeof error.message === "string"
+    ) {
+      return {
+        command: VALIDATE_WORKSPACE_DIRECTORY_COMMAND,
+        code: error.code,
+        message: error.message,
+        raw: error.raw,
+      };
+    }
+
+    if (
+      isRecord(error) &&
       ValidateWorkspaceDirectoryCommandError.isCode(error.code) &&
       typeof error.message === "string"
     ) {
@@ -80,6 +94,16 @@ export const ValidateWorkspaceDirectoryCommandError = {
       message,
       raw,
     };
+  },
+
+  /** @returns True when the value is a validate_workspace_directory command error code. */
+  isCommandErrorCode(
+    value: unknown,
+  ): value is ValidateWorkspaceDirectoryCommandErrorCode {
+    return (
+      ValidateWorkspaceDirectoryCommandError.isCode(value) ||
+      value === "unknown"
+    );
   },
 
   /** @returns True when the value is a known validate_workspace_directory backend error code. */
