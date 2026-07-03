@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import {
-  commentCommands as defaultCommentCommands,
-  toIpcCommandError,
-  type CommentCommands,
-} from "@/shared/api/tauri";
+import { commentCommands as defaultCommentCommands } from "@/shared/api/tauri";
+import type { CommentCommands } from "@/shared/api/tauri";
+import { ListCommentsCommandError } from "@/shared/api/tauri/listComments";
 import {
   resolvePerformanceCorrelationId,
   startPerformanceSpan,
 } from "@/shared/lib/performance";
+import { CommentFeatureError } from "@/features/comments/domain/commentError";
+import type { CommentFeatureError as CommentFeatureErrorType } from "@/features/comments/domain/commentError";
 import type { CommentScope } from "@/features/comments/domain/commentScope";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import {
@@ -26,7 +26,6 @@ import {
 } from "@/features/comments/hooks/useCommentOperations";
 import type { CommentId } from "@/features/comments/types/comment";
 import type { Comment } from "@/features/comments/types/comment";
-import type { IpcCommandError } from "@/shared/types/ipc";
 
 export type { CommentListState } from "@/features/comments/domain/commentListState";
 export type {
@@ -52,8 +51,8 @@ export type UseCommentsResult = Readonly<{
   isLoading: boolean;
   isSaving: boolean;
   isEmpty: boolean;
-  error: IpcCommandError | null;
-  operationError: IpcCommandError | null;
+  error: CommentFeatureErrorType | null;
+  operationError: CommentFeatureErrorType | null;
   reloadComments: () => Promise<boolean>;
   addComment: (input: AddCommentInput) => Promise<Comment | null>;
   updateComment: (input: UpdateCommentInput) => Promise<Comment | null>;
@@ -161,7 +160,13 @@ export function useComments({
         return false;
       }
 
-      setListState(CommentListState.error(toIpcCommandError(error)));
+      setListState(
+        CommentListState.error(
+          CommentFeatureError.fromCommandError(
+            ListCommentsCommandError.fromUnknown(error),
+          ),
+        ),
+      );
       return false;
     }
   }, [

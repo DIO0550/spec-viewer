@@ -9,8 +9,17 @@ import type {
   UpdateCommentRequest,
 } from "@/features/comments/types/comment";
 import { CommentId } from "@/features/comments/types/comment";
+import { DeleteCommentCommandError } from "@/shared/api/tauri/deleteComment";
+import { ExportCommentsCommandError } from "@/shared/api/tauri/exportComments";
+import { GenerateLlmPromptCommandError } from "@/shared/api/tauri/generateLlmPrompt";
+import { ListCommentsCommandError } from "@/shared/api/tauri/listComments";
+import { ReopenCommentCommandError } from "@/shared/api/tauri/reopenComment";
+import { ResolveCommentCommandError } from "@/shared/api/tauri/resolveComment";
+import { ToggleCommentResolvedCommandError } from "@/shared/api/tauri/toggleCommentResolved";
+import { UpdateCommentCommandError } from "@/shared/api/tauri/updateComment";
 import {
   addComment,
+  AddCommentCommandError,
   commentCommands,
   deleteComment,
   listComments,
@@ -124,7 +133,7 @@ test("deleteCommentはdelete_commentへ削除requestを渡す", async () => {
   });
 });
 
-test("addCommentはinvoke失敗時に正規化済みcommentエラーでrejectする", async () => {
+test("addCommentはinvoke失敗時にcommand固有のcommentエラーでrejectする", async () => {
   const rawError = {
     code: "invalidComment",
     message: "comment body is required",
@@ -133,8 +142,142 @@ test("addCommentはinvoke失敗時に正規化済みcommentエラーでrejectす
   invokeMock.mockRejectedValue(rawError);
 
   await expect(addComment(addRequest)).rejects.toEqual({
+    command: "add_comment",
     code: "invalidComment",
     message: "comment body is required",
     raw: rawError,
   });
+});
+
+test.each([
+  ["invalidComment"],
+  ["workspaceDetection"],
+  ["configLoad"],
+  ["commentRepository"],
+  ["unexpected"],
+] as const)("AddCommentCommandError.fromUnknownはknown payload %sを保持する", (code) => {
+  const rawError = {
+    code,
+    message: `${code} failure`,
+  };
+
+  expect(AddCommentCommandError.fromUnknown(rawError)).toEqual({
+    command: "add_comment",
+    code,
+    message: `${code} failure`,
+    raw: rawError,
+  });
+});
+
+test.each([
+  [{ code: "other", message: "other failure" }, "Unknown add_comment failure"],
+  [new Error("native failure"), "native failure"],
+  ["string failure", "string failure"],
+  [null, "Unknown add_comment failure"],
+] as const)("AddCommentCommandError.fromUnknownはunknown payloadをunknown codeへ寄せる", (rawError, message) => {
+  expect(AddCommentCommandError.fromUnknown(rawError)).toEqual({
+    command: "add_comment",
+    code: "unknown",
+    message,
+    raw: rawError,
+  });
+});
+
+test("AddCommentCommandError.fromUnknownは正規化済みunknownエラーのmessageを保持する", () => {
+  const normalizedError = AddCommentCommandError.unknown(
+    "comment could not be saved",
+    { cause: "offline" },
+  );
+
+  expect(AddCommentCommandError.fromUnknown(normalizedError)).toEqual(
+    normalizedError,
+  );
+});
+
+test("ListCommentsCommandError.fromUnknownは正規化済みunknownエラーのmessageを保持する", () => {
+  const normalizedError = ListCommentsCommandError.unknown(
+    "comments could not be loaded",
+    { cause: "store unavailable" },
+  );
+
+  expect(ListCommentsCommandError.fromUnknown(normalizedError)).toEqual(
+    normalizedError,
+  );
+});
+
+test("UpdateCommentCommandError.fromUnknownは正規化済みunknownエラーのmessageを保持する", () => {
+  const normalizedError = UpdateCommentCommandError.unknown(
+    "comment could not be updated",
+    { cause: "conflict" },
+  );
+
+  expect(UpdateCommentCommandError.fromUnknown(normalizedError)).toEqual(
+    normalizedError,
+  );
+});
+
+test("DeleteCommentCommandError.fromUnknownは正規化済みunknownエラーのmessageを保持する", () => {
+  const normalizedError = DeleteCommentCommandError.unknown(
+    "comment could not be deleted",
+    { cause: "missing comment" },
+  );
+
+  expect(DeleteCommentCommandError.fromUnknown(normalizedError)).toEqual(
+    normalizedError,
+  );
+});
+
+test("ResolveCommentCommandError.fromUnknownは正規化済みunknownエラーのmessageを保持する", () => {
+  const normalizedError = ResolveCommentCommandError.unknown(
+    "comment could not be resolved",
+    { cause: "write failed" },
+  );
+
+  expect(ResolveCommentCommandError.fromUnknown(normalizedError)).toEqual(
+    normalizedError,
+  );
+});
+
+test("ReopenCommentCommandError.fromUnknownは正規化済みunknownエラーのmessageを保持する", () => {
+  const normalizedError = ReopenCommentCommandError.unknown(
+    "comment could not be reopened",
+    { cause: "write failed" },
+  );
+
+  expect(ReopenCommentCommandError.fromUnknown(normalizedError)).toEqual(
+    normalizedError,
+  );
+});
+
+test("ToggleCommentResolvedCommandError.fromUnknownは正規化済みunknownエラーのmessageを保持する", () => {
+  const normalizedError = ToggleCommentResolvedCommandError.unknown(
+    "comment status could not be toggled",
+    { cause: "write failed" },
+  );
+
+  expect(ToggleCommentResolvedCommandError.fromUnknown(normalizedError)).toEqual(
+    normalizedError,
+  );
+});
+
+test("ExportCommentsCommandError.fromUnknownは正規化済みunknownエラーのmessageを保持する", () => {
+  const normalizedError = ExportCommentsCommandError.unknown(
+    "comments could not be exported",
+    { cause: "markdown failed" },
+  );
+
+  expect(ExportCommentsCommandError.fromUnknown(normalizedError)).toEqual(
+    normalizedError,
+  );
+});
+
+test("GenerateLlmPromptCommandError.fromUnknownは正規化済みunknownエラーのmessageを保持する", () => {
+  const normalizedError = GenerateLlmPromptCommandError.unknown(
+    "prompt could not be generated",
+    { cause: "markdown failed" },
+  );
+
+  expect(GenerateLlmPromptCommandError.fromUnknown(normalizedError)).toEqual(
+    normalizedError,
+  );
 });

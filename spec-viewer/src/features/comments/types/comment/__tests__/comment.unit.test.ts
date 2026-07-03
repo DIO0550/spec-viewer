@@ -1,5 +1,9 @@
 import { expectTypeOf, test } from "vitest";
 
+import type {
+  AddCommentCommandRequest,
+  AddCommentCommandResponse,
+} from "@/shared/api/tauri/addComment";
 import type { CommandRequest, CommandResponse } from "@/shared/types/ipc";
 import type {
   AddCommentRequest,
@@ -27,10 +31,26 @@ test("types/commentのCommentはdomain Commentの互換exportとして扱える"
   expectTypeOf<Comment>().toEqualTypeOf<DomainComment>();
 });
 
-test("comment command payloadsはP2.8 DTOと一致する", () => {
+test("addCommentのper-command contractはcomment DTOと一致する", () => {
+  expectTypeOf<AddCommentCommandRequest>().toEqualTypeOf<AddCommentRequest>();
+  expectTypeOf<AddCommentCommandResponse>().toEqualTypeOf<Comment>();
+});
+
+test("tauri barrelはaddComment error型を同名exportとして公開する", () => {
+  expectTypeOf<
+    import("@/shared/api/tauri").AddCommentCommandError
+  >().toEqualTypeOf<
+    import("@/shared/api/tauri/addComment").AddCommentCommandError
+  >();
+});
+
+test("migration中はlegacy CommandRequest compatibility shimもadd_comment DTOを保持する", () => {
   expectTypeOf<
     CommandRequest<"add_comment">
   >().toEqualTypeOf<AddCommentRequest>();
+});
+
+test("comment command payloadsはP2.8 DTOと一致する", () => {
   expectTypeOf<
     CommandResponse<"list_comments">
   >().toEqualTypeOf<ListCommentsResponse>();

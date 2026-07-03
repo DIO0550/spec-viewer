@@ -143,6 +143,7 @@ test("useWorkspaceStateは読み込み失敗をWorkspaceError状態にする", a
       reason: "unknown",
       message: "missing workspace",
       cause: {
+        command: "load_workspace",
         code: "unknown",
         message: "missing workspace",
         raw: "missing workspace",
@@ -181,6 +182,7 @@ test("useWorkspaceStateは指定時に読み込み失敗後も現在のworkspace
       reason: "unknown",
       message: "unsupported workspace",
       cause: {
+        command: "load_workspace",
         code: "unknown",
         message: "unsupported workspace",
         raw: "unsupported workspace",

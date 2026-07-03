@@ -9,6 +9,11 @@ import {
   readSpecFile,
   validateWorkspaceDirectory,
 } from "@/shared/api/tauri";
+import { LoadWorkspaceCommandError } from "@/shared/api/tauri/loadWorkspace";
+import { ArchiveSpecCommandError } from "@/shared/api/tauri/archiveSpec";
+import { ReadSpecFileCommandError } from "@/shared/api/tauri/readSpecFile";
+import { ListSpecsCommandError } from "@/shared/api/tauri/listSpecs";
+import { ValidateWorkspaceDirectoryCommandError } from "@/shared/api/tauri/validateWorkspaceDirectory";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
@@ -173,7 +178,22 @@ test("toIpcCommandErrorはcomment系CommandError DTOも保持する", () => {
   });
 });
 
-test("loadWorkspaceはinvoke失敗時に正規化済みエラーでrejectする", async () => {
+test("toIpcCommandErrorはunexpected CommandError DTOも保持する", () => {
+  const rawError = {
+    code: "unexpected",
+    message: "unexpected command failure",
+  };
+
+  const result = toIpcCommandError(rawError);
+
+  expect(result).toEqual({
+    code: "unexpected",
+    message: "unexpected command failure",
+    raw: rawError,
+  });
+});
+
+test("loadWorkspaceはinvoke失敗時にcommand固有のworkspaceエラーでrejectする", async () => {
   const rawError = {
     code: "workspaceDetection",
     message: "workspace root was not found",
@@ -182,8 +202,64 @@ test("loadWorkspaceはinvoke失敗時に正規化済みエラーでrejectする"
   invokeMock.mockRejectedValue(rawError);
 
   await expect(loadWorkspace("/workspace/missing")).rejects.toEqual({
+    command: "load_workspace",
     code: "workspaceDetection",
     message: "workspace root was not found",
     raw: rawError,
   });
+});
+
+test("LoadWorkspaceCommandError.fromUnknownは正規化済みunknownエラーのmessageを保持する", () => {
+  const normalizedError = LoadWorkspaceCommandError.unknown(
+    "workspace could not be selected",
+    { cause: "dialog cancelled" },
+  );
+
+  expect(LoadWorkspaceCommandError.fromUnknown(normalizedError)).toEqual(
+    normalizedError,
+  );
+});
+
+test("ValidateWorkspaceDirectoryCommandError.fromUnknownは正規化済みunknownエラーのmessageを保持する", () => {
+  const normalizedError = ValidateWorkspaceDirectoryCommandError.unknown(
+    "workspace path could not be checked",
+    { cause: "permission denied" },
+  );
+
+  expect(
+    ValidateWorkspaceDirectoryCommandError.fromUnknown(normalizedError),
+  ).toEqual(normalizedError);
+});
+
+test("ListSpecsCommandError.fromUnknownは正規化済みunknownエラーのmessageを保持する", () => {
+  const normalizedError = ListSpecsCommandError.unknown(
+    "spec tree could not be scanned",
+    { cause: "invalid workspace" },
+  );
+
+  expect(ListSpecsCommandError.fromUnknown(normalizedError)).toEqual(
+    normalizedError,
+  );
+});
+
+test("ReadSpecFileCommandError.fromUnknownは正規化済みunknownエラーのmessageを保持する", () => {
+  const normalizedError = ReadSpecFileCommandError.unknown(
+    "spec file could not be read",
+    { cause: "missing file" },
+  );
+
+  expect(ReadSpecFileCommandError.fromUnknown(normalizedError)).toEqual(
+    normalizedError,
+  );
+});
+
+test("ArchiveSpecCommandError.fromUnknownは正規化済みunknownエラーのmessageを保持する", () => {
+  const normalizedError = ArchiveSpecCommandError.unknown(
+    "spec could not be archived",
+    { cause: "archive failed" },
+  );
+
+  expect(ArchiveSpecCommandError.fromUnknown(normalizedError)).toEqual(
+    normalizedError,
+  );
 });

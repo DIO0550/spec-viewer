@@ -1,32 +1,61 @@
 import type {
-  AddCommentRequest,
-  Comment,
-  CommentStatusRequest,
-  DeleteCommentRequest,
-  DeleteCommentResponse,
-  ListCommentsRequest,
-  ListCommentsResponse,
-  UpdateCommentRequest,
-} from "@/features/comments/types/comment";
-
+  AddCommentCommandRequest,
+  AddCommentCommandResponse,
+} from "./addComment";
 import { addComment } from "./addComment";
+import type {
+  DeleteCommentCommandRequest,
+  DeleteCommentCommandResponse,
+} from "./deleteComment";
 import { deleteComment } from "./deleteComment";
+import type {
+  ListCommentsCommandRequest,
+  ListCommentsCommandResponse,
+} from "./listComments";
 import { listComments } from "./listComments";
+import type {
+  ReopenCommentCommandRequest,
+  ReopenCommentCommandResponse,
+} from "./reopenComment";
 import { reopenComment } from "./reopenComment";
+import type {
+  ResolveCommentCommandRequest,
+  ResolveCommentCommandResponse,
+} from "./resolveComment";
 import { resolveComment } from "./resolveComment";
+import type {
+  ToggleCommentResolvedCommandRequest,
+  ToggleCommentResolvedCommandResponse,
+} from "./toggleCommentResolved";
 import { toggleCommentResolved } from "./toggleCommentResolved";
+import type {
+  UpdateCommentCommandRequest,
+  UpdateCommentCommandResponse,
+} from "./updateComment";
 import { updateComment } from "./updateComment";
 
 export type CommentCommands = Readonly<{
-  listComments: (request: ListCommentsRequest) => Promise<ListCommentsResponse>;
-  addComment: (request: AddCommentRequest) => Promise<Comment>;
-  updateComment: (request: UpdateCommentRequest) => Promise<Comment>;
+  listComments: (
+    request: ListCommentsCommandRequest,
+  ) => Promise<ListCommentsCommandResponse>;
+  addComment: (
+    request: AddCommentCommandRequest,
+  ) => Promise<AddCommentCommandResponse>;
+  updateComment: (
+    request: UpdateCommentCommandRequest,
+  ) => Promise<UpdateCommentCommandResponse>;
   deleteComment: (
-    request: DeleteCommentRequest,
-  ) => Promise<DeleteCommentResponse>;
-  resolveComment: (request: CommentStatusRequest) => Promise<Comment>;
-  reopenComment: (request: CommentStatusRequest) => Promise<Comment>;
-  toggleCommentResolved: (request: CommentStatusRequest) => Promise<Comment>;
+    request: DeleteCommentCommandRequest,
+  ) => Promise<DeleteCommentCommandResponse>;
+  resolveComment: (
+    request: ResolveCommentCommandRequest,
+  ) => Promise<ResolveCommentCommandResponse>;
+  reopenComment: (
+    request: ReopenCommentCommandRequest,
+  ) => Promise<ReopenCommentCommandResponse>;
+  toggleCommentResolved: (
+    request: ToggleCommentResolvedCommandRequest,
+  ) => Promise<ToggleCommentResolvedCommandResponse>;
 }>;
 
 export const commentCommands: CommentCommands = {

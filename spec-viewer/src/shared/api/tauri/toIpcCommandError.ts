@@ -2,7 +2,10 @@ import type { CommandErrorDto, IpcCommandError } from "@/shared/types/ipc";
 
 const UNKNOWN_COMMAND_ERROR_MESSAGE = "Unknown IPC command failure";
 
-/** @returns A stable IPC command error shape for UI state and messages. */
+/**
+ * @deprecated Use each command file's command-specific error companion instead.
+ * @returns A stable IPC command error shape for existing compatibility callers.
+ */
 export function toIpcCommandError(error: unknown): IpcCommandError {
   if (isCommandErrorDto(error)) {
     return {
@@ -62,6 +65,7 @@ function isCommandErrorCode(value: unknown): value is CommandErrorDto["code"] {
     value === "invalidComment" ||
     value === "commentRepository" ||
     value === "userReviewExport" ||
-    value === "fileWatch"
+    value === "fileWatch" ||
+    value === "unexpected"
   );
 }

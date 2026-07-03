@@ -1,4 +1,4 @@
-import type { IpcCommandError } from "@/shared/types/ipc";
+import type { LoadWorkspaceCommandError } from "@/shared/api/tauri/loadWorkspace";
 
 export type WorkspaceErrorReason =
   | "invalidSelection"
@@ -6,14 +6,22 @@ export type WorkspaceErrorReason =
   | "configLoadFailed"
   | "unknown";
 
+export type LegacyWorkspaceCommandError = Readonly<{
+  code: LoadWorkspaceCommandError["code"] | string;
+  message: string;
+  raw: unknown;
+}>;
+
 export type WorkspaceError = Readonly<{
   reason: WorkspaceErrorReason;
   message: string;
-  cause: IpcCommandError;
+  cause: LoadWorkspaceCommandError | LegacyWorkspaceCommandError;
 }>;
 
-/** @returns A workspace-domain error converted from a low-level IPC error. */
-export function toWorkspaceError(error: IpcCommandError): WorkspaceError {
+/** @returns A workspace-domain error converted from a load_workspace command error. */
+export function toWorkspaceError(
+  error: LoadWorkspaceCommandError | LegacyWorkspaceCommandError,
+): WorkspaceError {
   return {
     reason: toWorkspaceErrorReason(error.code),
     message: error.message,
@@ -21,9 +29,9 @@ export function toWorkspaceError(error: IpcCommandError): WorkspaceError {
   };
 }
 
-/** @returns The workspace-domain reason for a low-level command code. */
+/** @returns The workspace-domain reason for a load_workspace command code. */
 function toWorkspaceErrorReason(
-  code: IpcCommandError["code"],
+  code: (LoadWorkspaceCommandError | LegacyWorkspaceCommandError)["code"],
 ): WorkspaceErrorReason {
   if (code === "invalidRequest") {
     return "invalidSelection";

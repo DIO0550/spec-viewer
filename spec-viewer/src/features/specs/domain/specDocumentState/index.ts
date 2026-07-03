@@ -1,6 +1,6 @@
 import type { SpecFileKey } from "@/features/specs/domain/specFile";
 import type { SpecDocument } from "@/features/specs/types/spec";
-import type { IpcCommandError } from "@/shared/types/ipc";
+import type { SpecFeatureError } from "@/features/specs/domain/specError";
 
 export type SpecDocumentState =
   | Readonly<{
@@ -46,7 +46,7 @@ export type SpecDocumentState =
       fileKey: SpecFileKey;
       correlationId?: string;
       document: null;
-      error: IpcCommandError;
+      error: SpecFeatureError;
     }>;
 
 type CorrelationFields = Readonly<{ correlationId?: string }>;
@@ -121,7 +121,7 @@ export const SpecDocumentState = {
    * @param workspacePath - Active workspace path
    * @param specId - Selected spec id
    * @param fileKey - Selected file key
-   * @param error - Normalized command error
+   * @param error - Feature-level spec error
    * @param correlationId - Optional performance correlation id
    * @returns Error document state.
    */
@@ -129,7 +129,7 @@ export const SpecDocumentState = {
     workspacePath: string,
     specId: string,
     fileKey: SpecFileKey,
-    error: IpcCommandError,
+    error: SpecFeatureError,
     correlationId?: string,
   ): SpecDocumentState => ({
     status: "error",

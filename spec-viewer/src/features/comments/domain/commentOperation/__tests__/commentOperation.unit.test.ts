@@ -8,14 +8,21 @@ import {
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
 import { CommentId } from "@/features/comments/types/comment";
-import type { IpcCommandError } from "@/shared/types/ipc";
+import { AddCommentCommandError } from "@/shared/api/tauri/addComment";
+import type { CommentFeatureError } from "@/features/comments/domain/commentError";
 
 const commentId = CommentId.fromString;
 
-const commandError: IpcCommandError = {
+const commandError = AddCommentCommandError.fromUnknown({
   code: "commentRepository",
   message: "Comment operation failed.",
-  raw: "Comment operation failed.",
+});
+
+const featureError: CommentFeatureError = {
+  feature: "comments",
+  code: "commentRepository",
+  message: "Comment operation failed.",
+  cause: commandError,
 };
 
 test("CommentOperationIdleState.createは操作していない状態を生成する", () => {
@@ -43,13 +50,13 @@ test("CommentOperationFailedState.createは失敗した操作種別とエラー�
     CommentOperationFailedState.create(
       "delete",
       commentId("cmt_target"),
-      commandError,
+      featureError,
     ),
   ).toEqual({
     status: "error",
     operation: "delete",
     commentId: commentId("cmt_target"),
-    error: commandError,
+    error: featureError,
   });
 });
 
@@ -72,7 +79,7 @@ test("CommentOperationSavingState.isはsaving状態だけを判定する", () =>
   const failedState: CommentOperationState = CommentOperationFailedState.create(
     "resolve",
     commentId("cmt_target"),
-    commandError,
+    featureError,
   );
 
   expect(CommentOperationSavingState.is(savingState)).toBe(true);
@@ -83,7 +90,7 @@ test("CommentOperationFailedState.isはerror状態だけを判定する", () => 
   const failedState: CommentOperationState = CommentOperationFailedState.create(
     "toggle",
     commentId("cmt_target"),
-    commandError,
+    featureError,
   );
   const idleState: CommentOperationState = CommentOperationIdleState.create();
 
@@ -127,10 +134,10 @@ test("CommentOperationFailedState.errorOfは失敗状態のエラーだけを取
   const failedState: CommentOperationState = CommentOperationFailedState.create(
     "update",
     commentId("cmt_target"),
-    commandError,
+    featureError,
   );
 
-  expect(CommentOperationFailedState.errorOf(failedState)).toBe(commandError);
+  expect(CommentOperationFailedState.errorOf(failedState)).toBe(featureError);
   expect(
     CommentOperationFailedState.errorOf(CommentOperationIdleState.create()),
   ).toBeNull();
@@ -140,11 +147,11 @@ test("CommentOperationFailedState.errorForは失敗した操作種別に一致�
   const failedState: CommentOperationState = CommentOperationFailedState.create(
     "add",
     null,
-    commandError,
+    featureError,
   );
 
   expect(CommentOperationFailedState.errorFor(failedState, "add")).toBe(
-    commandError,
+    featureError,
   );
   expect(
     CommentOperationFailedState.errorFor(failedState, "update"),

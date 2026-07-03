@@ -5,10 +5,12 @@ import {
   UserReviewArchiveState,
   type UserReviewArchiveState as UserReviewArchiveStateType,
 } from "@/features/review-runs/domain/userReviewOperation";
+import { UserReviewFeatureError } from "@/features/review-runs/domain/userReviewError";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import { archiveUserReview as archiveUserReviewViaGateway } from "@/features/review-runs/infra/userReviewGateway";
 import type { UserReviewListEventWithSelectionId } from "@/features/review-runs/hooks/useUserReviewList";
-import { toIpcCommandError, type UserReviewCommands } from "@/shared/api/tauri";
+import type { UserReviewCommands } from "@/shared/api/tauri";
+import { ArchiveUserReviewCommandError } from "@/shared/api/tauri/archiveUserReview";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 
 type SelectionId = string;
@@ -111,7 +113,9 @@ export function useArchiveUserReview(
             selectionId: startedSelectionId,
             state: UserReviewArchiveState.error(
               payload,
-              toIpcCommandError(error),
+              UserReviewFeatureError.fromCommandError(
+                ArchiveUserReviewCommandError.fromUnknown(error),
+              ),
             ),
           };
         });

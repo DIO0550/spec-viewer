@@ -6,9 +6,11 @@ import {
   type UserReviewListEvent,
   type UserReviewListState as UserReviewListStateType,
 } from "@/features/review-runs/domain/userReviewListState";
+import { UserReviewFeatureError } from "@/features/review-runs/domain/userReviewError";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import { listUserReviews as listUserReviewsViaGateway } from "@/features/review-runs/infra/userReviewGateway";
-import { toIpcCommandError, type UserReviewCommands } from "@/shared/api/tauri";
+import type { UserReviewCommands } from "@/shared/api/tauri";
+import { ListUserReviewsCommandError } from "@/shared/api/tauri/listUserReviews";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 import {
   createPerformanceCorrelationId,
@@ -171,7 +173,9 @@ export function useUserReviewList(
           requestVersion: startedRequestVersion,
           state: UserReviewListState.error(
             activeTarget,
-            toIpcCommandError(error),
+            UserReviewFeatureError.fromCommandError(
+              ListUserReviewsCommandError.fromUnknown(error),
+            ),
           ),
         };
       });

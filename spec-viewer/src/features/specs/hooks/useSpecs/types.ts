@@ -2,7 +2,7 @@ import type { SpecDocumentState } from "@/features/specs/domain/specDocumentStat
 import type { SpecTreeState } from "@/features/specs/domain/specTreeState";
 import type { SpecsSelectors } from "@/features/specs/hooks/useSpecs/selectors";
 import type { SpecFileKey } from "@/features/specs/types/spec";
-import type { IpcCommandError } from "@/shared/types/ipc";
+import type { SpecFeatureError } from "@/features/specs/domain/specError";
 
 export type SpecSelectionState = Readonly<{
   specId: string | null;
@@ -16,7 +16,7 @@ export type SpecsState = Readonly<{
   isLoading: boolean;
   activeOperationId: string | null;
   archivingSpecId: string | null;
-  archiveSpecError: IpcCommandError | null;
+  archiveSpecError: SpecFeatureError | null;
 }>;
 
 export type SpecsActions = Readonly<{

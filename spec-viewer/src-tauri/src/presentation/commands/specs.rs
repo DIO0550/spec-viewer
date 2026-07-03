@@ -8,8 +8,8 @@ use tauri::State;
 use crate::{
     app::services::performance::{emit_span, start_span, PerformanceContext},
     app::use_cases::{
-        AppMarkdownDocument, AppMissingMarkdownFile, ArchiveSpecResult, LoadWorkspaceResult,
-        ReadSpecFileResult,
+        AppMarkdownDocument, AppMissingMarkdownFile, AppUseCaseError, ArchiveSpecResult,
+        LoadWorkspaceResult, ReadSpecFileResult,
     },
     domain::spec::{
         MarkdownBlock, MarkdownBlockSourceRange, SpecDocumentFormat, SpecFile, SpecFileKey,
@@ -18,6 +18,82 @@ use crate::{
 };
 
 use super::{CommandError, CommandResult, CommandState};
+
+pub type ListSpecsCommandResult<T> = Result<T, SpecCommandError>;
+pub type ReadSpecFileCommandResult<T> = Result<T, SpecCommandError>;
+pub type ArchiveSpecCommandResult<T> = Result<T, SpecCommandError>;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SpecCommandError {
+    code: SpecCommandErrorCode,
+    message: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum SpecCommandErrorCode {
+    InvalidRequest,
+    WorkspaceDetection,
+    ConfigLoad,
+    SpecTreeScan,
+    SpecArchive,
+    MarkdownRead,
+    InvalidSpec,
+    Unexpected,
+}
+
+impl SpecCommandError {
+    fn new(code: SpecCommandErrorCode, message: impl Into<String>) -> Self {
+        Self {
+            code,
+            message: message.into(),
+        }
+    }
+
+    fn from_app_error(error: AppUseCaseError) -> Self {
+        let code = match error {
+            AppUseCaseError::WorkspaceDetection { .. } => SpecCommandErrorCode::WorkspaceDetection,
+            AppUseCaseError::ConfigLoad { .. } => SpecCommandErrorCode::ConfigLoad,
+            AppUseCaseError::SpecTreeScan { .. } => SpecCommandErrorCode::SpecTreeScan,
+            AppUseCaseError::SpecArchive { .. } => SpecCommandErrorCode::SpecArchive,
+            AppUseCaseError::MarkdownRead { .. } => SpecCommandErrorCode::MarkdownRead,
+            AppUseCaseError::InvalidSpec { .. } => SpecCommandErrorCode::InvalidSpec,
+            AppUseCaseError::InvalidComment { .. }
+            | AppUseCaseError::CommentRepository { .. }
+            | AppUseCaseError::ReviewRunExport { .. } => SpecCommandErrorCode::Unexpected,
+        };
+
+        Self::new(code, error.to_string())
+    }
+
+    fn from_command_error(error: CommandError) -> Self {
+        let code = match error.code() {
+            "invalidRequest" => SpecCommandErrorCode::InvalidRequest,
+            "workspaceDetection" => SpecCommandErrorCode::WorkspaceDetection,
+            "configLoad" => SpecCommandErrorCode::ConfigLoad,
+            "specTreeScan" => SpecCommandErrorCode::SpecTreeScan,
+            "specArchive" => SpecCommandErrorCode::SpecArchive,
+            "markdownRead" => SpecCommandErrorCode::MarkdownRead,
+            "invalidSpec" => SpecCommandErrorCode::InvalidSpec,
+            _ => SpecCommandErrorCode::Unexpected,
+        };
+
+        Self::new(code, error.message())
+    }
+}
+
+impl From<AppUseCaseError> for SpecCommandError {
+    fn from(error: AppUseCaseError) -> Self {
+        Self::from_app_error(error)
+    }
+}
+
+impl From<CommandError> for SpecCommandError {
+    fn from(error: CommandError) -> Self {
+        Self::from_command_error(error)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -224,7 +300,7 @@ impl MarkdownBlockSourceRangeResponse {
 pub fn list_specs(
     state: State<'_, CommandState>,
     request: ListSpecsRequest,
-) -> CommandResult<SpecTreeResponse> {
+) -> ListSpecsCommandResult<SpecTreeResponse> {
     let workspace = load_workspace(state.use_cases(), &request.workspace_path)?;
     let result = state.use_cases().list_specs(&workspace)?;
 
@@ -235,7 +311,7 @@ pub fn list_specs(
 pub fn read_spec_file(
     state: State<'_, CommandState>,
     request: ReadSpecFileRequest,
-) -> CommandResult<ReadSpecFileResponse> {
+) -> ReadSpecFileCommandResult<ReadSpecFileResponse> {
     let key = SpecFileKey::from_str(&request.file_key).map_err(|_| {
         CommandError::invalid_request(format!("unsupported file key: {}", request.file_key))
     })?;
@@ -270,7 +346,7 @@ pub fn read_spec_file(
 pub fn archive_spec(
     state: State<'_, CommandState>,
     request: ArchiveSpecRequest,
-) -> CommandResult<ArchiveSpecResponse> {
+) -> ArchiveSpecCommandResult<ArchiveSpecResponse> {
     let workspace = load_workspace(state.use_cases(), &request.workspace_path)?;
     let result = state
         .use_cases()

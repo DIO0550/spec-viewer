@@ -1,7 +1,7 @@
 import type { CommentId } from "@/features/comments/types/comment";
 import type { UserReview } from "@/features/review-runs/domain/userReview";
 import type { UserReviewWorkspaceMode } from "@/features/review-runs/types/userReviewIpc";
-import type { IpcCommandError } from "@/shared/types/ipc";
+import type { UserReviewFeatureError } from "@/features/review-runs/domain/userReviewError";
 
 export type AsyncOperationState<TPayload, TResult> =
   | Readonly<{
@@ -19,7 +19,7 @@ export type AsyncOperationState<TPayload, TResult> =
   | Readonly<{
       status: "error";
       payload: TPayload;
-      error: IpcCommandError;
+      error: UserReviewFeatureError;
     }>;
 
 export type CreateUserReviewPayload = Readonly<{
@@ -69,12 +69,12 @@ export const UserReviewCreateState = {
 
   /**
    * @param payload - Input used for the failed create operation.
-   * @param error - Normalized command error.
+   * @param error - Feature-level user review error.
    * @returns Failed create operation state.
    */
   error(
     payload: CreateUserReviewPayload,
-    error: IpcCommandError,
+    error: UserReviewFeatureError,
   ): UserReviewCreateState {
     return { status: "error", payload, error };
   },
@@ -108,12 +108,12 @@ export const UserReviewArchiveState = {
 
   /**
    * @param payload - Input used for the failed archive operation.
-   * @param error - Normalized command error.
+   * @param error - Feature-level user review error.
    * @returns Failed archive operation state.
    */
   error(
     payload: ArchiveUserReviewPayload,
-    error: IpcCommandError,
+    error: UserReviewFeatureError,
   ): UserReviewArchiveState {
     return { status: "error", payload, error };
   },

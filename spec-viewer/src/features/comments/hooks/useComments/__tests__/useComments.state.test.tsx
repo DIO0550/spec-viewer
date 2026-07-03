@@ -275,9 +275,15 @@ test("useCommentsは読み込み失敗をerror状態として返す", async () =
   expect(result.current.listState).toMatchObject({
     status: "error",
     error: {
+      feature: "comments",
       code: "unknown",
       message: "comment load failed",
-      raw: "comment load failed",
+      cause: {
+        command: "list_comments",
+        code: "unknown",
+        message: "comment load failed",
+        raw: "comment load failed",
+      },
     },
   });
   result.unmount();
@@ -733,9 +739,15 @@ test("useCommentsはresolve toggle失敗時に楽観更新を巻き戻す", asyn
     operation: "toggle",
     commentId: commentId("cmt_1"),
     error: {
+      feature: "comments",
       code: "unknown",
       message: "toggle failed",
-      raw: "toggle failed",
+      cause: {
+        command: "toggle_comment_resolved",
+        code: "unknown",
+        message: "toggle failed",
+        raw: "toggle failed",
+      },
     },
   });
   result.unmount();

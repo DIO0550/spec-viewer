@@ -1,9 +1,16 @@
 import { invoke } from "@tauri-apps/api/core";
 import { expect, test, vi } from "vitest";
 
-import type { Comment, CommentStatusRequest } from "@/features/comments/types/comment";
+import type {
+  Comment,
+  CommentStatusRequest,
+} from "@/features/comments/types/comment";
 import { CommentId } from "@/features/comments/types/comment";
-import { resolveComment, reopenComment, toggleCommentResolved } from "@/shared/api/tauri";
+import {
+  resolveComment,
+  reopenComment,
+  toggleCommentResolved,
+} from "@/shared/api/tauri";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),

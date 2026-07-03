@@ -8,10 +8,8 @@ import type {
   WorkspaceState,
 } from "@/features/workspace/context/types";
 import { toWorkspaceError } from "@/features/workspace/domain/workspaceError";
-import {
-  loadWorkspace as defaultLoadWorkspace,
-  toIpcCommandError,
-} from "@/shared/api/tauri";
+import { loadWorkspace as defaultLoadWorkspace } from "@/shared/api/tauri";
+import { LoadWorkspaceCommandError } from "@/shared/api/tauri/loadWorkspace";
 import { createGeneration, type Generation } from "@/domains/generation";
 
 const initialWorkspaceState: WorkspaceState = {
@@ -67,7 +65,9 @@ export function useWorkspaceState(): WorkspaceContextValue {
           return false;
         }
 
-        const workspaceError = toWorkspaceError(toIpcCommandError(error));
+        const workspaceError = toWorkspaceError(
+          LoadWorkspaceCommandError.fromUnknown(error),
+        );
 
         if (preservedWorkspace !== null) {
           updateState({

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { SpecDocumentState as SpecDocumentStateFactory } from "@/features/specs/domain/specDocumentState";
 import type { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
+import { SpecFeatureError } from "@/features/specs/domain/specError";
 import { SpecNode as SpecNodeDomain } from "@/features/specs/domain/specNode";
 import { SpecTree as SpecTreeDomain } from "@/features/specs/domain/specTree";
 import { SpecTreeState as SpecTreeStateFactory } from "@/features/specs/domain/specTreeState";
@@ -16,7 +17,10 @@ import type {
   UseSpecsResult,
 } from "@/features/specs/hooks/useSpecs/types";
 import * as specGateway from "@/features/specs/infra/specGateway";
-import { toIpcCommandError, specCommands } from "@/shared/api/tauri";
+import { specCommands } from "@/shared/api/tauri";
+import { ArchiveSpecCommandError } from "@/shared/api/tauri/archiveSpec";
+import { ListSpecsCommandError } from "@/shared/api/tauri/listSpecs";
+import { ReadSpecFileCommandError } from "@/shared/api/tauri/readSpecFile";
 import {
   createPerformanceCorrelationId,
   startPerformanceSpan,
@@ -246,7 +250,9 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
             activeWorkspacePath,
             specId,
             fileKey,
-            toIpcCommandError(error),
+            SpecFeatureError.fromCommandError(
+              ReadSpecFileCommandError.fromUnknown(error),
+            ),
             correlationId,
           ),
         }));
@@ -372,7 +378,9 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
           },
           specTreeState: SpecTreeStateFactory.failed(
             activeWorkspacePath,
-            toIpcCommandError(error),
+            SpecFeatureError.fromCommandError(
+              ListSpecsCommandError.fromUnknown(error),
+            ),
           ),
         }));
         onSelectionChange?.({
@@ -588,7 +596,9 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
         } catch (error) {
           commitLoadState(operationId, (currentState) => ({
             ...currentState,
-            archiveSpecError: toIpcCommandError(error),
+            archiveSpecError: SpecFeatureError.fromCommandError(
+              ArchiveSpecCommandError.fromUnknown(error),
+            ),
           }));
           return false;
         } finally {

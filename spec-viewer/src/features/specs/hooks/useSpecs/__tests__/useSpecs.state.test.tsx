@@ -1170,9 +1170,15 @@ test("useSpecsはarchive error stateを保持して現在のtreeを維持する"
 
   expect(archived).toBe(false);
   expect(result.current.state.archiveSpecError).toEqual({
+    feature: "specs",
     code: "unknown",
     message: "archive failed",
-    raw: archiveError,
+    cause: {
+      command: "archive_spec",
+      code: "unknown",
+      message: "archive failed",
+      raw: archiveError,
+    },
   });
   expect(result.current.state.archivingSpecId).toBeNull();
   expect(result.current.state.specTreeState.status).toBe("ready");
@@ -1200,9 +1206,15 @@ test("useSpecsはlistSpecs errorでtreeをerrorにしてselectionをresetする"
     workspacePath: "/workspace/spec-reviewer",
     tree: null,
     error: {
+      feature: "specs",
       code: "unknown",
       message: "scan failed",
-      raw: scanError,
+      cause: {
+        command: "list_specs",
+        code: "unknown",
+        message: "scan failed",
+        raw: scanError,
+      },
     },
   });
   expect(result.current.state.selection.specId).toBeNull();
@@ -1235,9 +1247,15 @@ test("useSpecsはreadSpecFile errorでdocumentをerrorにしてtree selectionを
       specId: "phase-1-viewer",
       fileKey: "tasks",
       error: {
+        feature: "specs",
         code: "unknown",
         message: "read failed",
-        raw: readError,
+        cause: {
+          command: "read_spec_file",
+          code: "unknown",
+          message: "read failed",
+          raw: readError,
+        },
       },
     }),
   );

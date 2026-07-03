@@ -15,6 +15,9 @@ import {
   listUserReviews,
   toIpcCommandError,
 } from "@/shared/api/tauri";
+import { ArchiveUserReviewCommandError } from "@/shared/api/tauri/archiveUserReview";
+import { CreateUserReviewCommandError } from "@/shared/api/tauri/createUserReview";
+import { ListUserReviewsCommandError } from "@/shared/api/tauri/listUserReviews";
 import { CommentId } from "@/features/comments/types/comment";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -102,6 +105,33 @@ test("createUserReviewはcreate_user_reviewへrequestを渡す", async () => {
   });
 });
 
+test("CreateUserReviewCommandErrorはinvalidSpecを保持する", () => {
+  const rawError = {
+    code: "invalidSpec",
+    message: "invalid review run target spec",
+  };
+
+  const result = CreateUserReviewCommandError.fromUnknown(rawError);
+
+  expect(result).toEqual({
+    command: "create_user_review",
+    code: "invalidSpec",
+    message: "invalid review run target spec",
+    raw: rawError,
+  });
+});
+
+test("CreateUserReviewCommandError.fromUnknownは正規化済みunknownエラーのmessageを保持する", () => {
+  const normalizedError = CreateUserReviewCommandError.unknown(
+    "review bundle could not be created",
+    { cause: "export failed" },
+  );
+
+  expect(CreateUserReviewCommandError.fromUnknown(normalizedError)).toEqual(
+    normalizedError,
+  );
+});
+
 test("listUserReviewsはlist_user_reviewsへrequestを渡す", async () => {
   invokeMock.mockReset();
   invokeMock.mockResolvedValue(listResponse);
@@ -114,6 +144,33 @@ test("listUserReviewsはlist_user_reviewsへrequestを渡す", async () => {
   });
 });
 
+test("ListUserReviewsCommandErrorはinvalidSpecを保持する", () => {
+  const rawError = {
+    code: "invalidSpec",
+    message: "invalid review run target spec",
+  };
+
+  const result = ListUserReviewsCommandError.fromUnknown(rawError);
+
+  expect(result).toEqual({
+    command: "list_user_reviews",
+    code: "invalidSpec",
+    message: "invalid review run target spec",
+    raw: rawError,
+  });
+});
+
+test("ListUserReviewsCommandError.fromUnknownは正規化済みunknownエラーのmessageを保持する", () => {
+  const normalizedError = ListUserReviewsCommandError.unknown(
+    "review runs could not be listed",
+    { cause: "scan failed" },
+  );
+
+  expect(ListUserReviewsCommandError.fromUnknown(normalizedError)).toEqual(
+    normalizedError,
+  );
+});
+
 test("archiveUserReviewはarchive_user_reviewへrequestを渡す", async () => {
   invokeMock.mockReset();
   invokeMock.mockResolvedValue(archiveResponse);
@@ -124,6 +181,33 @@ test("archiveUserReviewはarchive_user_reviewへrequestを渡す", async () => {
   expect(invokeMock).toHaveBeenCalledWith("archive_user_review", {
     request: archiveRequest,
   });
+});
+
+test("ArchiveUserReviewCommandErrorはinvalidSpecを保持する", () => {
+  const rawError = {
+    code: "invalidSpec",
+    message: "invalid review run target spec",
+  };
+
+  const result = ArchiveUserReviewCommandError.fromUnknown(rawError);
+
+  expect(result).toEqual({
+    command: "archive_user_review",
+    code: "invalidSpec",
+    message: "invalid review run target spec",
+    raw: rawError,
+  });
+});
+
+test("ArchiveUserReviewCommandError.fromUnknownは正規化済みunknownエラーのmessageを保持する", () => {
+  const normalizedError = ArchiveUserReviewCommandError.unknown(
+    "review run could not be archived",
+    { cause: "archive failed" },
+  );
+
+  expect(ArchiveUserReviewCommandError.fromUnknown(normalizedError)).toEqual(
+    normalizedError,
+  );
 });
 
 test("toIpcCommandErrorはreview run exportエラーを保持する", () => {
