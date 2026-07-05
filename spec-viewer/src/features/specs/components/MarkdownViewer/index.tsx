@@ -1,29 +1,8 @@
 import {
-  type ComponentPropsWithoutRef,
-  type AriaRole,
-  type CSSProperties,
-  type FormEvent,
-  type KeyboardEvent,
-  type KeyboardEventHandler,
-  type MouseEvent,
-  type MouseEventHandler,
-  type ReactElement,
-  type ReactNode,
-  type RefObject,
-  cloneElement,
-  isValidElement,
-  useEffect,
-  useId,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import {
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   LoaderCircle,
   MessageSquare,
   MessageSquarePlus,
@@ -37,29 +16,44 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
+import {
+  type AriaRole,
+  type ComponentPropsWithoutRef,
+  type CSSProperties,
+  cloneElement,
+  type FormEvent,
+  isValidElement,
+  type KeyboardEvent,
+  type KeyboardEventHandler,
+  type MouseEvent,
+  type MouseEventHandler,
+  type ReactElement,
+  type ReactNode,
+  type RefObject,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
-
-import { useMarkdownTextSelection } from "@/features/comments/hooks/useMarkdownTextSelection";
-import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
+import { AddCommentPopover } from "@/features/comments/components/AddCommentPopover";
 import {
-  createViewerResetKey,
-  useViewerReset,
-} from "@/features/specs/hooks/useViewerReset";
+  CommentOperationIdleState,
+  type CommentOperationKind,
+  CommentOperationSavingState,
+  type CommentOperationState,
+} from "@/features/comments/domain/commentOperation";
+import { useMarkdownTextSelection } from "@/features/comments/hooks/useMarkdownTextSelection";
 import {
   createCommentAnchorDraftFromBlock,
   createTextHash,
 } from "@/features/comments/lib/comment-anchor-draft";
-import {
-  CommentOperationIdleState,
-  CommentOperationSavingState,
-  type CommentOperationKind,
-  type CommentOperationState,
-} from "@/features/comments/domain/commentOperation";
-import { uiText } from "@/shared/lib/uiText";
-import { recordPerformancePoint } from "@/shared/lib/performance";
 import type {
+  AddCommentSubmitInput,
   Comment,
   CommentAnchor,
   CommentAnchorDisplayState,
@@ -68,21 +62,26 @@ import type {
   CommentBlockType,
   CommentId,
   CommentSelectionBounds,
-  AddCommentSubmitInput,
 } from "@/features/comments/types/comment";
+import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
+import {
+  createViewerResetKey,
+  useViewerReset,
+} from "@/features/specs/hooks/useViewerReset";
 import type {
   MarkdownBlockMetadata,
   MarkdownBlockType,
 } from "@/features/specs/types/spec";
-import { AddCommentPopover } from "@/features/comments/components/AddCommentPopover";
-import { CommandErrorDisplay } from "@/shared/ui/CommandErrorDisplay";
-import { EmptyState } from "@/shared/ui/EmptyState";
-import { LoadingSkeleton } from "@/shared/ui/LoadingSkeleton";
 import {
   createHtmlSearchIndex,
   findHtmlSearchMatches,
   highlightHtmlDocument,
 } from "@/lib/htmlDocumentSearch";
+import { recordPerformancePoint } from "@/shared/lib/performance";
+import { uiText } from "@/shared/lib/uiText";
+import { CommandErrorDisplay } from "@/shared/ui/CommandErrorDisplay";
+import { EmptyState } from "@/shared/ui/EmptyState";
+import { LoadingSkeleton } from "@/shared/ui/LoadingSkeleton";
 
 type BlockType = "heading" | "paragraph" | "list-item" | "table" | "code";
 
@@ -107,6 +106,10 @@ type BlockMetadata = Readonly<{
 }>;
 
 type BlockIndexer = Readonly<{
+  /**
+   * Returns the next indexed block for the given block type.
+   * @param blockType - The Markdown block type being indexed.
+   */
   next: (blockType: BlockType) => IndexedBlock;
 }>;
 
@@ -195,6 +198,7 @@ type Props = Readonly<{
   isUpdatingComment?: boolean;
   operationState?: CommentOperationState;
   isCommentScopeReady?: boolean;
+  /** Reloads the current spec document. */
   onReload: () => void;
   onAddComment?: (input: AddCommentSubmitInput) => Promise<boolean>;
   onUpdateComment?: (commentId: CommentId, body: string) => Promise<boolean>;
@@ -411,6 +415,10 @@ export function MarkdownViewer({
     setActiveEditDraft(draft);
   };
 
+  /**
+   * Starts a new comment anchor draft from a rendered Markdown block.
+   * @param block - The block element the draft should anchor to.
+   */
   const createBlockDraft = (block: HTMLElement): void => {
     if (state.status !== "ready" || state.document.format === "html") {
       return;
@@ -430,6 +438,11 @@ export function MarkdownViewer({
     clearBrowserSelection();
   };
 
+  /**
+   * Submits a new comment and closes the anchor draft when it is saved.
+   * @param input - The comment submission payload.
+   * @returns Whether the comment was saved.
+   */
   const addComment = async (input: AddCommentSubmitInput): Promise<boolean> => {
     if (onAddComment === undefined) {
       return false;
@@ -444,6 +457,12 @@ export function MarkdownViewer({
     return wasSaved;
   };
 
+  /**
+   * Updates an existing comment body and closes the edit draft on success.
+   * @param commentId - The identifier of the comment to update.
+   * @param body - The new comment body text.
+   * @returns Whether the comment was saved.
+   */
   const updateComment = async (
     commentId: CommentId,
     body: string,
@@ -461,6 +480,11 @@ export function MarkdownViewer({
     return wasSaved;
   };
 
+  /**
+   * Resolves the given comment through the resolve handler.
+   * @param commentId - The identifier of the comment to resolve.
+   * @returns Whether the comment was resolved.
+   */
   const resolveComment = async (commentId: CommentId): Promise<boolean> => {
     if (onResolveComment === undefined) {
       return false;
@@ -469,6 +493,11 @@ export function MarkdownViewer({
     return onResolveComment(commentId);
   };
 
+  /**
+   * Reopens the given comment through the reopen handler.
+   * @param commentId - The identifier of the comment to reopen.
+   * @returns Whether the comment was reopened.
+   */
   const reopenComment = async (commentId: CommentId): Promise<boolean> => {
     if (onReopenComment === undefined) {
       return false;
@@ -477,6 +506,11 @@ export function MarkdownViewer({
     return onReopenComment(commentId);
   };
 
+  /**
+   * Deletes the given comment and closes the edit draft on success.
+   * @param commentId - The identifier of the comment to delete.
+   * @returns Whether the comment was deleted.
+   */
   const deleteComment = async (commentId: CommentId): Promise<boolean> => {
     if (onDeleteComment === undefined) {
       return false;
@@ -491,28 +525,33 @@ export function MarkdownViewer({
     return wasDeleted;
   };
 
+  /** Moves the active document search selection to the previous match. */
   const goToPreviousDocumentSearchMatch = (): void => {
     setActiveDocumentSearchIndex((currentIndex) =>
       getPreviousDocumentSearchIndex(currentIndex, documentSearchMatchCount),
     );
   };
 
+  /** Moves the active document search selection to the next match. */
   const goToNextDocumentSearchMatch = (): void => {
     setActiveDocumentSearchIndex((currentIndex) =>
       getNextDocumentSearchIndex(currentIndex, documentSearchMatchCount),
     );
   };
 
+  /** Clears the active document search query. */
   const clearDocumentSearch = (): void => {
     setDocumentSearchQuery("");
   };
 
+  /** Decreases the HTML preview zoom by one step. */
   const decreaseHtmlZoom = (): void => {
     setHtmlZoomPercent((currentZoomPercent) =>
       clampHtmlZoomPercent(currentZoomPercent - HTML_ZOOM_STEP_PERCENT),
     );
   };
 
+  /** Increases the HTML preview zoom by one step. */
   const increaseHtmlZoom = (): void => {
     setHtmlZoomPercent((currentZoomPercent) =>
       clampHtmlZoomPercent(currentZoomPercent + HTML_ZOOM_STEP_PERCENT),
@@ -739,15 +778,24 @@ type DocumentSearchControlProps = Readonly<{
   matchCount: number;
   activeMatchIndex: number;
   disabled: boolean;
+  /**
+   * Handles changes to the document search query.
+   * @param query - The updated search query text.
+   */
   onQueryChange: (query: string) => void;
+  /** Selects the previous document search match. */
   onPrevious: () => void;
+  /** Selects the next document search match. */
   onNext: () => void;
+  /** Clears the document search query. */
   onClear: () => void;
 }>;
 
 type HtmlZoomControlProps = Readonly<{
   zoomPercent: number;
+  /** Decreases the HTML preview zoom by one step. */
   onDecrease: () => void;
+  /** Increases the HTML preview zoom by one step. */
   onIncrease: () => void;
 }>;
 
@@ -887,7 +935,10 @@ function DocumentSearchControl({
   );
 }
 
-/** @returns Normalized document search query used for matching. */
+/**
+ * @param query - The raw search query text.
+ * @returns Normalized document search query used for matching.
+ */
 function normalizeDocumentSearchQuery(query: string): string {
   return query.trim().toLocaleLowerCase();
 }
@@ -924,7 +975,11 @@ function countRenderedDocumentSearchMatches({
   return renderedRoot.querySelectorAll("[data-document-search-match]").length;
 }
 
-/** @returns Active search index constrained to the available match count. */
+/**
+ * @param index - The desired search match index.
+ * @param matchCount - The total number of available matches.
+ * @returns Active search index constrained to the available match count.
+ */
 function clampDocumentSearchIndex(index: number, matchCount: number): number {
   if (matchCount <= 0) {
     return 0;
@@ -1082,7 +1137,10 @@ function HtmlDocument({
   );
 }
 
-/** @returns Sandbox policy for the HTML preview iframe. */
+/**
+ * @param path - The source path of the HTML document.
+ * @returns Sandbox policy for the HTML preview iframe.
+ */
 function createHtmlPreviewSandbox(path: string): string {
   if (isScriptEnabledHtmlPath(path)) {
     return HTML_PREVIEW_SCRIPT_SANDBOX;
@@ -1091,7 +1149,10 @@ function createHtmlPreviewSandbox(path: string): string {
   return HTML_PREVIEW_DEFAULT_SANDBOX;
 }
 
-/** @returns Whether the HTML preview path is a generated document that needs scripts. */
+/**
+ * @param path - The source path of the HTML document.
+ * @returns Whether the HTML preview path is a generated document that needs scripts.
+ */
 function isScriptEnabledHtmlPath(path: string): boolean {
   const fileName = getPathFileName(path).toLocaleLowerCase();
 
@@ -1149,7 +1210,10 @@ function createHtmlPreviewDocument({
   ].join("");
 }
 
-/** @returns HTML contents with document-provided base tags removed. */
+/**
+ * @param contents - The raw HTML document contents.
+ * @returns HTML contents with document-provided base tags removed.
+ */
 function removeHtmlBaseElements(contents: string): string {
   return contents.replace(/<base\b[^>]*>/gi, "");
 }
@@ -1198,7 +1262,10 @@ function isSameDocumentHtmlLinkPath(
   return getPathFileName(hrefPath) === sourceFileName;
 }
 
-/** @returns The final path segment from a slash-delimited path. */
+/**
+ * @param path - The slash-delimited path to inspect.
+ * @returns The final path segment from a slash-delimited path.
+ */
 function getPathFileName(path: string): string {
   const normalizedPath = path.split(/[?#]/, 1)[0] ?? "";
   const pathSegments = normalizedPath.split("/").filter(Boolean);
@@ -1206,7 +1273,10 @@ function getPathFileName(path: string): string {
   return pathSegments[pathSegments.length - 1] ?? normalizedPath;
 }
 
-/** @returns Meta and CSS that make arbitrary HTML previews fit the iframe. */
+/**
+ * @param zoomPercent - The current HTML preview zoom percentage.
+ * @returns Meta and CSS that make arbitrary HTML previews fit the iframe.
+ */
 function createHtmlPreviewHead(zoomPercent: number): string {
   const zoomScale = zoomPercent / 100;
 
@@ -1241,7 +1311,10 @@ function createHtmlPreviewHead(zoomPercent: number): string {
   ].join("");
 }
 
-/** @returns A zoom percentage clamped to the supported HTML preview range. */
+/**
+ * @param zoomPercent - The requested zoom percentage.
+ * @returns A zoom percentage clamped to the supported HTML preview range.
+ */
 function clampHtmlZoomPercent(zoomPercent: number): number {
   return Math.min(
     HTML_ZOOM_MAX_PERCENT,
@@ -1249,12 +1322,18 @@ function clampHtmlZoomPercent(zoomPercent: number): number {
   );
 }
 
-/** @returns A user-facing zoom percentage label. */
+/**
+ * @param zoomPercent - The zoom percentage to format.
+ * @returns A user-facing zoom percentage label.
+ */
 function formatHtmlZoomPercent(zoomPercent: number): string {
   return `${zoomPercent}%`;
 }
 
-/** @returns A compact CSS number for the HTML preview zoom scale. */
+/**
+ * @param zoomScale - The zoom scale factor to format.
+ * @returns A compact CSS number for the HTML preview zoom scale.
+ */
 function formatHtmlZoomScale(zoomScale: number): string {
   return Number(zoomScale.toFixed(2)).toString();
 }
@@ -1437,7 +1516,10 @@ function createResolvedAnchorDisplayStatus({
   return resolution.status;
 }
 
-/** @returns The backend text hash for a rendered block, or a legacy fallback hash. */
+/**
+ * @param block - The rendered block element to read the hash from.
+ * @returns The backend text hash for a rendered block, or a legacy fallback hash.
+ */
 function readRenderedBlockTextHash(block: HTMLElement): string {
   const textHash = block.dataset.textHash;
 
@@ -1592,7 +1674,10 @@ function createCommentBlockAnnotations({
   }));
 }
 
-/** @returns The rendered block key that should receive a comment highlight. */
+/**
+ * @param comment - The comment whose anchor determines the highlight target.
+ * @returns The rendered block key that should receive a comment highlight.
+ */
 function createCommentHighlightBlockKey(comment: Comment): string | null {
   const target = comment.anchorResolution?.target;
 
@@ -1742,7 +1827,10 @@ function isReliableRangeHighlight({
   return comment.anchor.charRange.end > comment.anchor.charRange.start;
 }
 
-/** @returns The subdued or prominent state for an exact range highlight. */
+/**
+ * @param comment - The comment backing the range highlight.
+ * @returns The subdued or prominent state for an exact range highlight.
+ */
 function selectExactRangeState(comment: Comment): CommentHighlightState {
   return comment.resolved ? "resolved" : "open";
 }
@@ -1877,7 +1965,11 @@ function mapMarkdownBlockTypeToBlockType(
   return blockTypeMap[blockType] ?? null;
 }
 
-/** @returns A stable key for one rendered Markdown block. */
+/**
+ * @param blockType - The Markdown block type.
+ * @param blockIndex - The zero-based index of the block within the render.
+ * @returns A stable key for one rendered Markdown block.
+ */
 function createBlockKey(blockType: BlockType, blockIndex: number): string {
   return `${blockType}:${blockIndex}`;
 }
@@ -2099,7 +2191,15 @@ function createMarkdownComponents({
         </MarkdownCommentableBlock>
       );
     },
+    /**
+     * Renders anchors with safe external navigation defaults.
+     * @param props - React Markdown props for the anchor element.
+     */
     a: ({ node: _node, ...props }) => <SafeMarkdownLink {...props} />,
+    /**
+     * Renders task-list inputs as read-only controls.
+     * @param props - React Markdown props for the input element.
+     */
     input: ({ node: _node, ...props }) => <ReadOnlyMarkdownInput {...props} />,
   };
 }
@@ -2318,7 +2418,10 @@ function formatCommentAnnotationStatus(
 
 const COMMENT_PREVIEW_MAX_LENGTH = 84;
 
-/** @returns A compact single-line preview for a comment body. */
+/**
+ * @param body - The full comment body text.
+ * @returns A compact single-line preview for a comment body.
+ */
 function createCommentPreview(body: string): string {
   const normalizedBody = body.replace(/\s+/g, " ").trim();
 
@@ -2635,6 +2738,10 @@ function CommentRangeHighlightSpan({
 
 type TextSelectionCommentButtonProps = Readonly<{
   draft: CommentAnchorDraft | null;
+  /**
+   * Creates a comment draft from the current text selection.
+   * @param draft - The anchor draft derived from the selection.
+   */
   onCreateDraft: (draft: CommentAnchorDraft) => void;
 }>;
 
@@ -2672,7 +2779,12 @@ type CommentAnchorDraftPopoverProps = Readonly<{
   isSaving: boolean;
   errorMessage: string | null;
   isScopeReady: boolean;
+  /**
+   * Submits the pending comment anchor draft.
+   * @param input - The comment submission payload.
+   */
   onSubmit: (input: AddCommentSubmitInput) => Promise<boolean>;
+  /** Cancels the pending comment anchor draft. */
   onCancel: () => void;
 }>;
 
@@ -2706,7 +2818,10 @@ function CommentAnchorDraftPopover({
   );
 }
 
-/** @returns Stable identity for remounting the add-comment form when target changes. */
+/**
+ * @param draft - The comment anchor draft to derive the key from.
+ * @returns Stable identity for remounting the add-comment form when target changes.
+ */
 function createCommentAnchorDraftKey(draft: CommentAnchorDraft): string {
   const { anchor } = draft;
 
@@ -2720,7 +2835,10 @@ function createCommentAnchorDraftKey(draft: CommentAnchorDraft): string {
   ].join(":");
 }
 
-/** @returns Whether the comment should be rendered in the left Markdown viewer. */
+/**
+ * @param comment - The comment to evaluate for viewer visibility.
+ * @returns Whether the comment should be rendered in the left Markdown viewer.
+ */
 function isVisibleInMarkdownViewer(comment: Comment): boolean {
   return !comment.resolved;
 }
@@ -2752,10 +2870,28 @@ type CommentEditPopoverProps = Readonly<{
   draft: CommentEditDraft | null;
   isSaving: boolean;
   operationState: CommentOperationState;
+  /**
+   * Submits an edited comment body.
+   * @param commentId - The identifier of the comment being edited.
+   * @param body - The updated comment body text.
+   */
   onSubmit: (commentId: CommentId, body: string) => Promise<boolean>;
+  /**
+   * Resolves the edited comment.
+   * @param commentId - The identifier of the comment to resolve.
+   */
   onResolveComment: (commentId: CommentId) => Promise<boolean>;
+  /**
+   * Reopens the edited comment.
+   * @param commentId - The identifier of the comment to reopen.
+   */
   onReopenComment: (commentId: CommentId) => Promise<boolean>;
+  /**
+   * Deletes the edited comment.
+   * @param commentId - The identifier of the comment to delete.
+   */
   onDeleteComment: (commentId: CommentId) => Promise<boolean>;
+  /** Cancels the comment edit. */
   onCancel: () => void;
 }>;
 
@@ -2788,7 +2924,10 @@ function getCommentOperationErrorMessage(
   return operationState.error.message;
 }
 
-/** @returns Human-readable block type text for the edit anchor preview. */
+/**
+ * @param blockType - The raw block type identifier.
+ * @returns Human-readable block type text for the edit anchor preview.
+ */
 function formatEditBlockType(blockType: string): string {
   return blockType.replace(/_/g, " ");
 }
@@ -3158,7 +3297,10 @@ function createFloatingPopoverStyle(
   };
 }
 
-/** @returns Viewport-clamped top offset for the comment dialog. */
+/**
+ * @param bounds - The selection bounds the dialog anchors to.
+ * @returns Viewport-clamped top offset for the comment dialog.
+ */
 function createPopoverTop(bounds: CommentSelectionBounds): number {
   const preferredBelow = bounds.top + bounds.height + 10;
   const availableBelow =
@@ -3173,7 +3315,10 @@ function createPopoverTop(bounds: CommentSelectionBounds): number {
   return Math.max(FLOATING_VIEWPORT_MARGIN, preferredAbove);
 }
 
-/** @returns Viewport-clamped left offset for the comment dialog. */
+/**
+ * @param bounds - The selection bounds the dialog anchors to.
+ * @returns Viewport-clamped left offset for the comment dialog.
+ */
 function createPopoverLeft(bounds: CommentSelectionBounds): number {
   const maxLeft =
     window.innerWidth -
@@ -3205,14 +3350,20 @@ function clearBrowserSelection(): void {
   document.getSelection()?.removeAllRanges();
 }
 
-/** @returns The UTF-8 byte length matching persisted Markdown file size semantics. */
+/**
+ * @param value - The string to measure.
+ * @returns The UTF-8 byte length matching persisted Markdown file size semantics.
+ */
 function getUtf8ByteLength(value: string): number {
   return new TextEncoder().encode(value).byteLength;
 }
 
 type LinkProps = ComponentPropsWithoutRef<"a">;
 
-/** @returns A Markdown link with safe external navigation defaults. */
+/**
+ * @param props - Anchor element props, including the optional href.
+ * @returns A Markdown link with safe external navigation defaults.
+ */
 function SafeMarkdownLink({ href, ...props }: LinkProps) {
   const isExternalLink =
     typeof href === "string" &&
@@ -3287,7 +3438,10 @@ function MarkdownListItem({
 
 type InputProps = ComponentPropsWithoutRef<"input">;
 
-/** @returns A read-only input for rendered Markdown task list items. */
+/**
+ * @param props - Input element props, including the optional type.
+ * @returns A read-only input for rendered Markdown task list items.
+ */
 function ReadOnlyMarkdownInput({ type, ...props }: InputProps) {
   if (type !== "checkbox") {
     return <input type={type} {...props} />;

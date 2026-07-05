@@ -1,25 +1,16 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
-
-import type { CommentCommands } from "@/shared/api/tauri";
-import { AddCommentCommandError } from "@/shared/api/tauri/addComment";
-import { DeleteCommentCommandError } from "@/shared/api/tauri/deleteComment";
-import { ReopenCommentCommandError } from "@/shared/api/tauri/reopenComment";
-import { ResolveCommentCommandError } from "@/shared/api/tauri/resolveComment";
-import { ToggleCommentResolvedCommandError } from "@/shared/api/tauri/toggleCommentResolved";
-import { UpdateCommentCommandError } from "@/shared/api/tauri/updateComment";
-
+import type { CommentFeatureError as CommentFeatureErrorType } from "@/features/comments/domain/commentError";
+import { CommentFeatureError } from "@/features/comments/domain/commentError";
 import {
   CommentOperationFailedState,
   CommentOperationIdleState,
-  CommentOperationSavingState,
   type CommentOperationKind,
+  CommentOperationSavingState,
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
-import { CommentFeatureError } from "@/features/comments/domain/commentError";
-import type { CommentFeatureError as CommentFeatureErrorType } from "@/features/comments/domain/commentError";
-import { Comments } from "@/features/comments/domain/comments";
 import type { CommentScope } from "@/features/comments/domain/commentScope";
 import type { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
+import { Comments } from "@/features/comments/domain/comments";
 import {
   addComment as addCommentViaGateway,
   deleteComment as deleteCommentViaGateway,
@@ -33,6 +24,13 @@ import type {
   CommentAnchor,
   CommentId,
 } from "@/features/comments/types/comment";
+import type { CommentCommands } from "@/shared/api/tauri";
+import { AddCommentCommandError } from "@/shared/api/tauri/addComment";
+import { DeleteCommentCommandError } from "@/shared/api/tauri/deleteComment";
+import { ReopenCommentCommandError } from "@/shared/api/tauri/reopenComment";
+import { ResolveCommentCommandError } from "@/shared/api/tauri/resolveComment";
+import { ToggleCommentResolvedCommandError } from "@/shared/api/tauri/toggleCommentResolved";
+import { UpdateCommentCommandError } from "@/shared/api/tauri/updateComment";
 
 export type AddCommentInput = Readonly<{
   anchor: CommentAnchor;
@@ -54,17 +52,25 @@ export type UseCommentOperationsOptions = Readonly<{
   statusFilter: CommentStatusFilter;
   commands: CommentCommands;
   currentComments: readonly Comment[];
+  /** @param transform - Transform applied to the active scope comment list. */
   updateCurrentScopeComments: (transform: CommentListTransform) => void;
+  /** Reloads comments for the active scope. */
   reloadComments: () => Promise<boolean>;
 }>;
 
 export type UseCommentOperationsResult = Readonly<{
   operationState: CommentOperationState;
+  /** @param input - Anchor and body for the new comment. */
   addComment: (input: AddCommentInput) => Promise<Comment | null>;
+  /** @param input - Comment id and new body for the update. */
   updateComment: (input: UpdateCommentInput) => Promise<Comment | null>;
+  /** @param commentId - Id of the comment to delete. */
   deleteComment: (commentId: CommentId) => Promise<boolean>;
+  /** @param commentId - Id of the comment to resolve. */
   resolveComment: (commentId: CommentId) => Promise<Comment | null>;
+  /** @param commentId - Id of the comment to reopen. */
   reopenComment: (commentId: CommentId) => Promise<Comment | null>;
+  /** @param commentId - Id of the comment to toggle. */
   toggleCommentResolved: (commentId: CommentId) => Promise<Comment | null>;
 }>;
 

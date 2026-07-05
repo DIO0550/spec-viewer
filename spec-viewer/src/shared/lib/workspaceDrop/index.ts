@@ -59,7 +59,10 @@ export function extractBrowserDropPaths(
     .filter((path): path is string => path !== null);
 }
 
-/** @returns A filesystem path from a plain-text drop, when present. */
+/**
+ * @param rawPath - プレーンテキストのドロップから得た生のパス文字列。
+ * @returns A filesystem path from a plain-text drop, when present.
+ */
 function normalizeDroppedTextPath(rawPath: string): string | null {
   const trimmedPath = rawPath.trim();
 
@@ -78,7 +81,10 @@ function normalizeDroppedTextPath(rawPath: string): string | null {
   }
 }
 
-/** @returns A Tauri-provided file path from a dropped File object, when present. */
+/**
+ * @param file - ドロップされた File オブジェクト。
+ * @returns A Tauri-provided file path from a dropped File object, when present.
+ */
 function readDroppedFilePath(file: File): string | null {
   const path = readStringProperty(file, "path");
 
@@ -89,7 +95,11 @@ function readDroppedFilePath(file: File): string | null {
   return null;
 }
 
-/** @returns A string property from an unknown object shape. */
+/**
+ * @param value - 参照元の未知の値。
+ * @param key - 読み出す文字列プロパティのキー。
+ * @returns A string property from an unknown object shape.
+ */
 function readStringProperty(value: unknown, key: string): string | null {
   if (typeof value !== "object" || value === null) {
     return null;

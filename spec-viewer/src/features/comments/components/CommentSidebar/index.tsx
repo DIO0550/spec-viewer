@@ -9,13 +9,12 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useId, useState } from "react";
-
+import { CommentThread } from "@/features/comments/components/CommentThread";
+import type { CommentListState } from "@/features/comments/domain/commentListState";
 import {
   CommentOperationFailedState,
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
-import type { CommentListState } from "@/features/comments/domain/commentListState";
-import { uiText } from "@/shared/lib/uiText";
 import type {
   ApplyWithAiPlaceholderState,
   Comment,
@@ -26,8 +25,8 @@ import type {
   CommentExportScope,
   CommentId,
 } from "@/features/comments/types/comment";
+import { uiText } from "@/shared/lib/uiText";
 import { CommandErrorDisplay } from "@/shared/ui/CommandErrorDisplay";
-import { CommentThread } from "@/features/comments/components/CommentThread";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { LoadingSkeleton } from "@/shared/ui/LoadingSkeleton";
 
@@ -37,11 +36,33 @@ type Props = Readonly<{
   exportState?: CommentExportState;
   activeCommentId: CommentId | null;
   anchorDisplayStates?: readonly CommentAnchorDisplayState[];
+  /**
+   * Selects the given comment.
+   * @param commentId - The comment to select.
+   */
   onSelectComment: (commentId: CommentId) => void;
+  /**
+   * Marks the given comment as resolved.
+   * @param commentId - The comment to resolve.
+   */
   onResolveComment: (commentId: CommentId) => void;
+  /**
+   * Reopens the given resolved comment.
+   * @param commentId - The comment to reopen.
+   */
   onReopenComment: (commentId: CommentId) => void;
+  /**
+   * Deletes the given comment.
+   * @param commentId - The comment to delete.
+   */
   onDeleteComment: (commentId: CommentId) => void;
+  /**
+   * Updates the given comment's body.
+   * @param commentId - The comment to update.
+   * @param body - The new comment body text.
+   */
   onUpdateComment: (commentId: CommentId, body: string) => void;
+  /** Reloads the comment list. */
   onReload: () => void;
   onExportComments?: (scope: CommentExportScope) => void;
   onCopyLlmPrompt?: (scope: CommentExportScope) => void;
@@ -343,7 +364,12 @@ type CommentSearchControlProps = Readonly<{
   searchQuery: string;
   resultCount: number;
   scopeCount: number;
+  /**
+   * Updates the current search query.
+   * @param query - The new search query text.
+   */
   onSearchQueryChange: (query: string) => void;
+  /** Clears the current search query. */
   onClearSearch: () => void;
 }>;
 
@@ -404,7 +430,12 @@ type HeaderProps = Readonly<{
   showFilters: boolean;
   showExportControls: boolean;
   exportState: CommentExportState;
+  /**
+   * Changes the active display filter.
+   * @param filter - The filter to activate.
+   */
   onFilterChange: (filter: CommentDisplayFilter) => void;
+  /** Reloads the comment list. */
   onReload: () => void;
   onExportComments?: (scope: CommentExportScope) => void;
   onCopyLlmPrompt?: (scope: CommentExportScope) => void;
@@ -680,7 +711,10 @@ type CommentExportFeedbackProps = Readonly<{
   exportState: CommentExportState;
 }>;
 
-/** @returns A compact status message for the latest comment export attempt. */
+/**
+ * @param props - Wrapper carrying the latest comment export state.
+ * @returns A compact status message for the latest comment export attempt.
+ */
 function CommentExportFeedback({ exportState }: CommentExportFeedbackProps) {
   if (exportState.status === "idle" || exportState.status === "saving") {
     return null;
@@ -700,7 +734,10 @@ type OperationErrorMessageProps = Readonly<{
   operationState: CommentOperationState;
 }>;
 
-/** @returns A compact operation error, or null when the latest operation succeeded. */
+/**
+ * @param props - Wrapper carrying the latest comment operation state.
+ * @returns A compact operation error, or null when the latest operation succeeded.
+ */
 function OperationErrorMessage({ operationState }: OperationErrorMessageProps) {
   const operationError = CommentOperationFailedState.errorOf(operationState);
 
@@ -727,10 +764,31 @@ type SectionProps = Readonly<{
   searchQuery: string;
   operationState: CommentOperationState;
   emptyMessage: string;
+  /**
+   * Selects the given comment.
+   * @param commentId - The comment to select.
+   */
   onSelectComment: (commentId: CommentId) => void;
+  /**
+   * Marks the given comment as resolved.
+   * @param commentId - The comment to resolve.
+   */
   onResolveComment: (commentId: CommentId) => void;
+  /**
+   * Reopens the given resolved comment.
+   * @param commentId - The comment to reopen.
+   */
   onReopenComment: (commentId: CommentId) => void;
+  /**
+   * Deletes the given comment.
+   * @param commentId - The comment to delete.
+   */
   onDeleteComment: (commentId: CommentId) => void;
+  /**
+   * Updates the given comment's body.
+   * @param commentId - The comment to update.
+   * @param body - The new comment body text.
+   */
   onUpdateComment: (commentId: CommentId, body: string) => void;
 }>;
 
@@ -877,12 +935,18 @@ function formatAnchorDisplayStatus(
   return statusLabels[status];
 }
 
-/** @returns A case-insensitive query with redundant whitespace collapsed. */
+/**
+ * @param query - The raw search query to normalize.
+ * @returns A case-insensitive query with redundant whitespace collapsed.
+ */
 function normalizeCommentSearchQuery(query: string): string {
   return query.trim().replace(/\s+/g, " ").toLocaleLowerCase();
 }
 
-/** @returns A compact result count label for the search field. */
+/**
+ * @param resultCount - The number of matching search results.
+ * @returns A compact result count label for the search field.
+ */
 function formatSearchResultCount(resultCount: number): string {
   if (resultCount === 1) {
     return "1件";
@@ -891,7 +955,10 @@ function formatSearchResultCount(resultCount: number): string {
   return `${resultCount}件`;
 }
 
-/** @returns Comments split by open and resolved display sections. */
+/**
+ * @param comments - The comments to split into display groups.
+ * @returns Comments split by open and resolved display sections.
+ */
 function groupCommentsByStatus(comments: readonly Comment[]): CommentGroups {
   return {
     openComments: comments.filter((comment) => !comment.resolved),
@@ -1008,7 +1075,10 @@ function createCommentSectionModels(
   ];
 }
 
-/** @returns A readable label for the selected filter. */
+/**
+ * @param filter - The display filter to label.
+ * @returns A readable label for the selected filter.
+ */
 function formatFilterLabel(filter: CommentDisplayFilter): string {
   const option = commentFilterOptions.find(
     (filterOption) => filterOption.filter === filter,
@@ -1017,7 +1087,10 @@ function formatFilterLabel(filter: CommentDisplayFilter): string {
   return option?.label ?? filter;
 }
 
-/** @returns Section title for a filtered comment list. */
+/**
+ * @param filter - The display filter to build a section title for.
+ * @returns Section title for a filtered comment list.
+ */
 function formatSectionTitle(filter: CommentDisplayFilter): string {
   if (filter === "open" || filter === "resolved") {
     return formatFilterLabel(filter);

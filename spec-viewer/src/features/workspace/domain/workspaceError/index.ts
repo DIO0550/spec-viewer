@@ -31,6 +31,7 @@ export function toWorkspaceError(
 
 /** @returns The workspace-domain reason for a load_workspace command code. */
 function toWorkspaceErrorReason(
+  /** @param code - 変換対象の load_workspace コマンドエラーコード。 */
   code: (LoadWorkspaceCommandError | LegacyWorkspaceCommandError)["code"],
 ): WorkspaceErrorReason {
   if (code === "invalidRequest") {

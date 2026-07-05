@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { UserReview } from "@/features/review-runs/domain/userReview";
+import { UserReviewFeatureError } from "@/features/review-runs/domain/userReviewError";
 import {
-  UserReviewCreateState,
   type CreateUserReviewPayload,
+  UserReviewCreateState,
   type UserReviewCreateState as UserReviewCreateStateType,
 } from "@/features/review-runs/domain/userReviewOperation";
-import { UserReviewFeatureError } from "@/features/review-runs/domain/userReviewError";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
-import { createUserReview as createUserReviewViaGateway } from "@/features/review-runs/infra/userReviewGateway";
 import type { UserReviewListEventWithSelectionId } from "@/features/review-runs/hooks/useUserReviewList";
+import { createUserReview as createUserReviewViaGateway } from "@/features/review-runs/infra/userReviewGateway";
 import type { UserReviewCommands } from "@/shared/api/tauri";
 import { CreateUserReviewCommandError } from "@/shared/api/tauri/createUserReview";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
@@ -23,6 +23,7 @@ export type UseCreateUserReviewOptions = Readonly<{
   target: UserReviewTarget | null;
   selectionId: SelectionId;
   commands: UserReviewCommands;
+  /** Handles a list event. @param event - The user review list event. */
   onUserReviewEvent: (event: UserReviewListEventWithSelectionId) => void;
 }>;
 
@@ -33,6 +34,7 @@ type SelectionIdCreateState = Readonly<{
 
 export type UseCreateUserReviewResult = Readonly<{
   createState: UserReviewCreateStateType;
+  /** Creates a user review. @param input - The create-review input. */
   createUserReview: (
     input: CreateUserReviewInput,
   ) => Promise<UserReview | null>;

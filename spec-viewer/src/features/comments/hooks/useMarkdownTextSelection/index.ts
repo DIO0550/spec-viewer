@@ -11,6 +11,7 @@ type UseMarkdownTextSelectionOptions = Readonly<{
 
 type UseMarkdownTextSelectionResult = Readonly<{
   selectionDraft: CommentAnchorDraft | null;
+  /** Clears the current selection draft. */
   clearSelectionDraft: () => void;
 }>;
 
@@ -96,7 +97,11 @@ function isRangeEndpointInsideRoot(
   );
 }
 
-/** @returns true when the node or its parent element belongs to the root. */
+/**
+ * @param root - Rendered Markdown root element.
+ * @param node - Selection node to test for membership in the root.
+ * @returns true when the node or its parent element belongs to the root.
+ */
 function containsSelectionNode(root: HTMLElement, node: Node): boolean {
   if (node.nodeType === Node.ELEMENT_NODE) {
     return root.contains(node);

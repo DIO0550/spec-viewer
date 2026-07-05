@@ -7,6 +7,7 @@ import { EmptyState } from "@/shared/ui/EmptyState";
 type Props = Readonly<{
   isOpening: boolean;
   recentWorkspaces?: readonly RecentWorkspace[];
+  /** ネイティブのワークスペース選択ダイアログを開く。 */
   onOpenWorkspace: () => void;
   onOpenRecentWorkspace?: (path: string) => void;
   onRemoveRecentWorkspace?: (path: string) => void;

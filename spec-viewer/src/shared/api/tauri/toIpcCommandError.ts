@@ -4,6 +4,7 @@ const UNKNOWN_COMMAND_ERROR_MESSAGE = "Unknown IPC command failure";
 
 /**
  * @deprecated Use each command file's command-specific error companion instead.
+ * @param error - Unknown value thrown by an IPC command invocation.
  * @returns A stable IPC command error shape for existing compatibility callers.
  */
 export function toIpcCommandError(error: unknown): IpcCommandError {
@@ -38,7 +39,10 @@ export function toIpcCommandError(error: unknown): IpcCommandError {
   };
 }
 
-/** @returns True when an unknown value matches the backend command error DTO. */
+/**
+ * @param error - Unknown value to test against the command error DTO shape.
+ * @returns True when an unknown value matches the backend command error DTO.
+ */
 function isCommandErrorDto(error: unknown): error is CommandErrorDto {
   if (!isRecord(error)) {
     return false;
@@ -47,12 +51,18 @@ function isCommandErrorDto(error: unknown): error is CommandErrorDto {
   return isCommandErrorCode(error.code) && typeof error.message === "string";
 }
 
-/** @returns True when an unknown value is a non-null object record. */
+/**
+ * @param value - Unknown value to test.
+ * @returns True when an unknown value is a non-null object record.
+ */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-/** @returns True when an unknown value is a known backend command error code. */
+/**
+ * @param value - Unknown value to test against known error codes.
+ * @returns True when an unknown value is a known backend command error code.
+ */
 function isCommandErrorCode(value: unknown): value is CommandErrorDto["code"] {
   return (
     value === "invalidRequest" ||

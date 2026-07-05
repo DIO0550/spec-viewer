@@ -11,10 +11,15 @@ type Props = Readonly<{
   isBrowsing: boolean;
   errorMessage: string | null;
   canRefresh: boolean;
+  /** @param nextValue - 変更後のワークスペースパス入力値。 */
   onInputChange: (nextValue: string) => void;
+  /** ディレクトリ選択ダイアログを開く。 */
   onBrowse: () => void;
+  /** 入力欄のパスからワークスペースを読み込む。 */
   onLoad: () => void;
+  /** 現在のワークスペースを再読み込みする。 */
   onRefresh: () => void;
+  /** ワークスペースの状態をリセットする。 */
   onReset: () => void;
 }>;
 

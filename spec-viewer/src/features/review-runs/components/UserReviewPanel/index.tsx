@@ -9,18 +9,6 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useId, useState } from "react";
-
-import type {
-  UserReviewCreateState,
-  UserReviewArchiveState,
-  UserReviewListState,
-  UserReviewTargetScope,
-} from "@/features/review-runs/hooks/useUserReviews";
-import type {
-  ReviewSourceFile,
-  UserReview,
-  UserReviewWorkspace,
-} from "@/features/review-runs/domain/userReview";
 import {
   canArchiveUserReview,
   canCreateUserReview,
@@ -32,6 +20,17 @@ import {
   formatProblemState,
   formatUserReviewSummary,
 } from "@/features/review-runs/components/userReviewPanelPresenter";
+import type {
+  ReviewSourceFile,
+  UserReview,
+  UserReviewWorkspace,
+} from "@/features/review-runs/domain/userReview";
+import type {
+  UserReviewArchiveState,
+  UserReviewCreateState,
+  UserReviewListState,
+  UserReviewTargetScope,
+} from "@/features/review-runs/hooks/useUserReviews";
 import type { UserReviewWorkspaceMode } from "@/features/review-runs/types/userReviewIpc";
 
 type Props = Readonly<{
@@ -41,11 +40,17 @@ type Props = Readonly<{
   listState: UserReviewListState;
   createState: UserReviewCreateState;
   archiveState: UserReviewArchiveState;
+  /** Changes the review target scope. @param scope - The new target scope. */
   onTargetScopeChange: (scope: UserReviewTargetScope) => void;
+  /** Changes the workspace mode. @param mode - The new workspace mode. */
   onWorkspaceModeChange: (mode: UserReviewWorkspaceMode) => void;
+  /** Creates a new user review. */
   onCreateUserReview: () => void;
+  /** Archives a user review. @param userReviewId - ID of the review to archive. */
   onArchiveUserReview: (userReviewId: string) => void;
+  /** Refreshes the user review list. */
   onRefreshUserReviews: () => void;
+  /** Copies a folder path. @param path - The path to copy to the clipboard. */
   onCopyPath: (path: string) => Promise<void>;
 }>;
 
@@ -277,7 +282,9 @@ type UserReviewListProps = Readonly<{
   listState: UserReviewListState;
   activeReviews: readonly UserReview[];
   archiveState: UserReviewArchiveState;
+  /** Copies a folder path. @param path - The path to copy to the clipboard. */
   onCopyPath: (path: string) => void;
+  /** Archives a user review. @param userReviewId - ID of the review to archive. */
   onArchiveUserReview: (userReviewId: string) => void;
 }>;
 
@@ -367,7 +374,11 @@ type UserReviewProblemsProps = Readonly<{
   problems: UserReviewListState["problems"];
 }>;
 
-/** @returns Malformed or missing review run folders that need manual attention. */
+/**
+ * @param props - Component props.
+ * @param props.problems - Malformed or missing review run folder problems.
+ * @returns Malformed or missing review run folders that need manual attention.
+ */
 function UserReviewProblems({ problems }: UserReviewProblemsProps) {
   if (problems.length === 0) {
     return null;
@@ -388,7 +399,11 @@ type UserReviewSummaryProps = Readonly<{
   run: UserReview;
 }>;
 
-/** @returns Result summary and warnings captured from status/result files. */
+/**
+ * @param props - Component props.
+ * @param props.run - The user review to summarize.
+ * @returns Result summary and warnings captured from status/result files.
+ */
 function UserReviewSummary({ run }: UserReviewSummaryProps) {
   if (run.summary === null && run.warnings.length === 0) {
     return null;
@@ -411,6 +426,7 @@ function UserReviewSummary({ run }: UserReviewSummaryProps) {
 type UserReviewActionsProps = Readonly<{
   run: UserReview;
   archiveState: UserReviewArchiveState;
+  /** Archives a user review. @param userReviewId - ID of the review to archive. */
   onArchiveUserReview: (userReviewId: string) => void;
 }>;
 
@@ -454,7 +470,11 @@ type SourceFileSummaryProps = Readonly<{
   sourceFiles: readonly ReviewSourceFile[];
 }>;
 
-/** @returns A compact source file list for the review bundle. */
+/**
+ * @param props - Component props.
+ * @param props.sourceFiles - Source files included in the review bundle.
+ * @returns A compact source file list for the review bundle.
+ */
 function SourceFileSummary({ sourceFiles }: SourceFileSummaryProps) {
   return (
     <ul className="review-run-panel__source-files" aria-label="対象ファイル">
@@ -472,10 +492,12 @@ type WorkspaceSummaryProps = Readonly<{
   workspace: UserReviewWorkspace;
 }>;
 
-/** @returns Worktree metadata when the review uses an isolated checkout. */
-function WorkspaceSummary({
-  workspace,
-}: WorkspaceSummaryProps) {
+/**
+ * @param props - Component props.
+ * @param props.workspace - The workspace metadata for the review.
+ * @returns Worktree metadata when the review uses an isolated checkout.
+ */
+function WorkspaceSummary({ workspace }: WorkspaceSummaryProps) {
   if (workspace.mode === "currentWorkspace") {
     return null;
   }
@@ -500,7 +522,10 @@ function WorkspaceSummary({
   );
 }
 
-/** @returns True when the user confirms the irreversible active-to-archive move. */
+/**
+ * @param run - The user review to be archived.
+ * @returns True when the user confirms the irreversible active-to-archive move.
+ */
 function confirmArchiveUserReview(run: UserReview): boolean {
   return window.confirm(
     `完了済みレビュー ${run.id} をアーカイブします。activeフォルダからarchiveフォルダへ移動します。`,

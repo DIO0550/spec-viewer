@@ -6,6 +6,7 @@ export type DocumentReadiness = Readonly<{
   currentDocumentKey: string | null;
   isDocumentReadable: boolean;
   isHtmlDocument: boolean;
+  /** Marks the current document as readable. */
   markCurrentDocumentReadable: () => void;
 }>;
 

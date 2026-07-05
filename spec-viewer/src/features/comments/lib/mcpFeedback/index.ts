@@ -106,7 +106,11 @@ function createSpecSkillMcpFeedbackComment(
   };
 }
 
-/** @returns A singular or plural comment count label. */
+/**
+ * @param count - Number of comments used to choose singular or plural.
+ * @param label - Descriptive label placed before the count suffix.
+ * @returns A singular or plural comment count label.
+ */
 function formatCommentCount(count: number, label: string): string {
   const suffix = count === 1 ? "comment" : "comments";
 

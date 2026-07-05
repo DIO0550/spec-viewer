@@ -1,8 +1,8 @@
-import type { Comment, CommentId } from "@/features/comments/types/comment";
 import {
   CommentStatusFilter,
   type CommentStatusFilter as CommentStatusFilterType,
 } from "@/features/comments/domain/commentStatusFilter";
+import type { Comment, CommentId } from "@/features/comments/types/comment";
 
 declare const commentsBrand: unique symbol;
 
@@ -132,7 +132,10 @@ function shouldDisplay(
   return CommentStatusFilter.matches(statusFilter, comment.status);
 }
 
-/** @returns Comment with resolved state inverted. */
+/**
+ * @param comment - Comment whose resolved state should be inverted.
+ * @returns Comment with resolved state inverted.
+ */
 function toggleResolved(comment: Comment): Comment {
   if (comment.resolved) {
     return { ...comment, status: "open", resolved: false };

@@ -36,6 +36,9 @@ export type CommentOperationState =
   | CommentOperationFailedState;
 
 export const CommentOperationIdleState = {
+  /**
+   * @returns A fresh idle comment operation state.
+   */
   create: (): CommentOperationIdleState => ({
     status: "idle",
     operation: null,
@@ -43,11 +46,20 @@ export const CommentOperationIdleState = {
     error: null,
   }),
 
+  /**
+   * @param state - The comment operation state to test.
+   * @returns True when the state is idle.
+   */
   is: (state: CommentOperationState): state is CommentOperationIdleState =>
     state.status === "idle",
 } as const;
 
 export const CommentOperationSavingState = {
+  /**
+   * @param operation - The operation kind being saved.
+   * @param commentId - The target comment id, or null when not comment-scoped.
+   * @returns A saving comment operation state.
+   */
   create: (
     operation: CommentOperationKind,
     commentId: CommentId | null,
@@ -58,15 +70,29 @@ export const CommentOperationSavingState = {
     error: null,
   }),
 
+  /**
+   * @param state - The comment operation state to test.
+   * @returns True when the state is saving.
+   */
   is: (state: CommentOperationState): state is CommentOperationSavingState =>
     state.status === "saving",
 
+  /**
+   * @param state - The comment operation state to test.
+   * @param operation - The operation kind to match against.
+   * @returns True when the state is saving the given operation.
+   */
   matchesOperation: (
     state: CommentOperationState,
     operation: CommentOperationKind,
   ): boolean =>
     CommentOperationSavingState.is(state) && state.operation === operation,
 
+  /**
+   * @param state - The comment operation state to test.
+   * @param commentId - The comment id to match against.
+   * @returns True when the state is saving for the given comment.
+   */
   isForComment: (
     state: CommentOperationState,
     commentId: Comment["id"],
@@ -75,6 +101,12 @@ export const CommentOperationSavingState = {
 } as const;
 
 export const CommentOperationFailedState = {
+  /**
+   * @param operation - The operation kind that failed.
+   * @param commentId - The target comment id, or null when not comment-scoped.
+   * @param error - The feature error describing the failure.
+   * @returns A failed comment operation state.
+   */
   create: (
     operation: CommentOperationKind,
     commentId: CommentId | null,
@@ -86,18 +118,36 @@ export const CommentOperationFailedState = {
     error,
   }),
 
+  /**
+   * @param state - The comment operation state to test.
+   * @returns True when the state is a failure.
+   */
   is: (state: CommentOperationState): state is CommentOperationFailedState =>
     state.status === "error",
 
+  /**
+   * @param state - The comment operation state to test.
+   * @param operation - The operation kind to match against.
+   * @returns True when the state failed for the given operation.
+   */
   matchesOperation: (
     state: CommentOperationState,
     operation: CommentOperationKind,
   ): boolean =>
     CommentOperationFailedState.is(state) && state.operation === operation,
 
+  /**
+   * @param state - The comment operation state to inspect.
+   * @returns The failure error, or null when the state is not a failure.
+   */
   errorOf: (state: CommentOperationState): CommentFeatureError | null =>
     CommentOperationFailedState.is(state) ? state.error : null,
 
+  /**
+   * @param state - The comment operation state to inspect.
+   * @param operation - The operation kind to match against.
+   * @returns The failure error for the given operation, or null otherwise.
+   */
   errorFor: (
     state: CommentOperationState,
     operation: CommentOperationKind,

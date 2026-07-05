@@ -2,7 +2,10 @@ import type { WorkspaceState } from "@/features/workspace/context/types";
 import type { WorkspaceError } from "@/features/workspace/domain/workspaceError";
 import type { Workspace } from "@/features/workspace/types/workspace";
 
-/** @returns The active or preserved workspace stored in workspace state. */
+/**
+ * @param state - Current workspace state.
+ * @returns The active or preserved workspace stored in workspace state.
+ */
 export function selectWorkspace(state: WorkspaceState): Workspace | null {
   if (state.status === "opened") {
     return state.workspace;
@@ -50,7 +53,10 @@ export function selectWorkspaceError(
   return null;
 }
 
-/** @returns True when a workspace open request is currently in progress. */
+/**
+ * @param state - Current workspace state.
+ * @returns True when a workspace open request is currently in progress.
+ */
 export function selectIsWorkspaceOpening(state: WorkspaceState): boolean {
   return state.status === "opening";
 }

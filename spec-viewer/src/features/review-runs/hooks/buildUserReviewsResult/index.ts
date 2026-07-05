@@ -11,15 +11,18 @@ import type { UseUserReviewsResult } from "@/features/review-runs/hooks/useUserR
 type UserReviewsListResultInput = Readonly<{
   target: UserReviewTarget | null;
   listState: UserReviewListState;
+  /** Reloads the user review list. */
   reloadUserReviews: () => Promise<boolean>;
 }>;
 
 type UserReviewsOperationResultInput = Readonly<{
   createState: UserReviewCreateState;
   archiveState: UserReviewArchiveState;
+  /** Creates a user review. @param input - The create-review input. */
   createUserReview: (
     input: CreateUserReviewInput,
   ) => Promise<UserReview | null>;
+  /** Archives a user review. @param userReviewId - ID of the review to archive. */
   archiveUserReview: (userReviewId: string) => Promise<UserReview | null>;
 }>;
 
@@ -38,12 +41,8 @@ type UserReviewsResultBuilder = (
  */
 export const buildUserReviewsResult: UserReviewsResultBuilder = (input) => {
   const { target, listState, reloadUserReviews } = input.list;
-  const {
-    createState,
-    archiveState,
-    createUserReview,
-    archiveUserReview,
-  } = input.operations;
+  const { createState, archiveState, createUserReview, archiveUserReview } =
+    input.operations;
 
   return {
     target,

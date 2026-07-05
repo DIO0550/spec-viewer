@@ -30,10 +30,17 @@ export type LoadWorkspaceOptions = Readonly<{
 }>;
 
 export type WorkspaceActions = Readonly<{
+  /**
+   * 選択したディレクトリからワークスペースを読み込む。
+   * @param selectedDirectory - 開くワークスペースの絶対パス。
+   * @param options - 読み込み挙動のオプション（現在保持・読み込み後コールバック）。
+   * @returns 読み込みに成功したかどうか。
+   */
   load: (
     selectedDirectory: string,
     options?: LoadWorkspaceOptions,
   ) => Promise<boolean>;
+  /** 現在のワークスペースを初期状態へ戻す。 */
   reset: () => void;
 }>;
 

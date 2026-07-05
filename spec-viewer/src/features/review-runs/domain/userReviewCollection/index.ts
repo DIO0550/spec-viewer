@@ -1,8 +1,8 @@
 import {
-  UserReview,
   type ArchivedUserReview,
-  type UserReview as UserReviewType,
   type NonArchivedUserReview,
+  UserReview,
+  type UserReview as UserReviewType,
 } from "@/features/review-runs/domain/userReview";
 import type { UserReviewListProblem } from "@/features/review-runs/types/userReviewIpc";
 
@@ -81,8 +81,14 @@ export const UserReviewCollection = {
   },
 } as const;
 
-/** @returns Non-archived user review or throws for an invalid active entry. */
-function toNonArchivedReview(userReview: UserReviewType): NonArchivedUserReview {
+/**
+ * @param userReview - The user review to narrow to a non-archived review.
+ * @returns Non-archived user review or throws for an invalid active entry.
+ * @throws When the review is archived and cannot join the active collection.
+ */
+function toNonArchivedReview(
+  userReview: UserReviewType,
+): NonArchivedUserReview {
   if (UserReview.isArchived(userReview)) {
     throw new Error(
       `Archived user review cannot be placed in active collection: ${userReview.id}`,
@@ -92,7 +98,11 @@ function toNonArchivedReview(userReview: UserReviewType): NonArchivedUserReview 
   return userReview;
 }
 
-/** @returns Archived user review or throws for an invalid archived entry. */
+/**
+ * @param userReview - The user review to narrow to an archived review.
+ * @returns Archived user review or throws for an invalid archived entry.
+ * @throws When the review is non-archived and cannot join the archived collection.
+ */
 function toArchivedReview(userReview: UserReviewType): ArchivedUserReview {
   if (UserReview.isNonArchived(userReview)) {
     throw new Error(

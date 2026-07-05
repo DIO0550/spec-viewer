@@ -26,7 +26,10 @@ type TextRange = Readonly<{
 
 const excludedSearchNodeSelector = "script, style, template, head, noscript";
 
-/** @returns A searchable index built from visible HTML body text. */
+/**
+ * @param contents - Raw HTML document string to index.
+ * @returns A searchable index built from visible HTML body text.
+ */
 export function createHtmlSearchIndex(contents: string): HtmlSearchIndex {
   const document = parseHtmlDocument(contents);
   const textNodes = collectSearchableTextNodes(document);
@@ -37,7 +40,11 @@ export function createHtmlSearchIndex(contents: string): HtmlSearchIndex {
   };
 }
 
-/** @returns Non-overlapping HTML search matches in document order. */
+/**
+ * @param index - Searchable index built by createHtmlSearchIndex.
+ * @param query - Raw search query string.
+ * @returns Non-overlapping HTML search matches in document order.
+ */
 export function findHtmlSearchMatches(
   index: HtmlSearchIndex,
   query: string,
@@ -66,7 +73,12 @@ export function findHtmlSearchMatches(
   return matches;
 }
 
-/** @returns HTML with body-text search matches wrapped in mark elements. */
+/**
+ * @param contents - Raw HTML document string.
+ * @param query - Raw search query string.
+ * @param activeMatchIndex - Index of the match to mark as active.
+ * @returns HTML with body-text search matches wrapped in mark elements.
+ */
 export function highlightHtmlDocument(
   contents: string,
   query: string,
@@ -112,15 +124,26 @@ export function highlightHtmlDocument(
   return serializeHtmlDocument(document);
 }
 
-/** @returns A trimmed, case-insensitive search string with stable whitespace. */
+/**
+ * @param query - Raw search query string.
+ * @returns A trimmed, case-insensitive search string with stable whitespace.
+ */
 export function normalizeHtmlSearchQuery(query: string): string {
   return query.trim().replace(/\s+/g, " ").toLocaleLowerCase();
 }
 
+/**
+ * @param contents - Raw HTML document string.
+ * @returns A parsed DOM document.
+ */
 function parseHtmlDocument(contents: string): Document {
   return new DOMParser().parseFromString(contents, "text/html");
 }
 
+/**
+ * @param document - Parsed DOM document to walk.
+ * @returns Searchable text nodes from the document body in document order.
+ */
 function collectSearchableTextNodes(document: Document): readonly Text[] {
   const body = document.body;
 
@@ -143,10 +166,18 @@ function collectSearchableTextNodes(document: Document): readonly Text[] {
   return textNodes;
 }
 
+/**
+ * @param textNode - Text node to test.
+ * @returns True when the node is not inside an excluded element.
+ */
 function isSearchableTextNode(textNode: Text): boolean {
   return textNode.parentElement?.closest(excludedSearchNodeSelector) === null;
 }
 
+/**
+ * @param textNodes - Searchable text nodes in document order.
+ * @returns Normalized text and per-character source positions.
+ */
 function createNormalizedTextMap(
   textNodes: readonly Text[],
 ): NormalizedTextMap {
@@ -192,6 +223,10 @@ function createNormalizedTextMap(
   };
 }
 
+/**
+ * Appends a single collapsed whitespace character to the normalized buffer.
+ * @param params - Normalized buffers plus the source node index and offset.
+ */
 function appendNormalizedWhitespace({
   normalizedCharacters,
   positions,
@@ -215,6 +250,11 @@ function appendNormalizedWhitespace({
   positions.push({ nodeIndex, offset });
 }
 
+/**
+ * @param matches - Search matches over the normalized text.
+ * @param positions - Per-character source positions for the normalized text.
+ * @returns Text ranges grouped by source text-node index.
+ */
 function createTextRangesByNode(
   matches: readonly HtmlSearchMatch[],
   positions: readonly NormalizedTextPosition[],
@@ -228,6 +268,12 @@ function createTextRangesByNode(
   return rangesByNode;
 }
 
+/**
+ * Adds the ranges covered by a single match to the per-node range map.
+ * @param rangesByNode - Accumulated ranges grouped by source text-node index.
+ * @param match - Match whose covered characters should be appended.
+ * @param positions - Per-character source positions for the normalized text.
+ */
 function appendMatchRanges(
   rangesByNode: Map<number, TextRange[]>,
   match: HtmlSearchMatch,
@@ -266,6 +312,12 @@ function appendMatchRanges(
   }
 }
 
+/**
+ * Appends a range to the list for a source text-node index.
+ * @param rangesByNode - Accumulated ranges grouped by source text-node index.
+ * @param nodeIndex - Source text-node index to append to.
+ * @param range - Range to append.
+ */
 function appendRange(
   rangesByNode: Map<number, TextRange[]>,
   nodeIndex: number,
@@ -276,6 +328,12 @@ function appendRange(
   rangesByNode.set(nodeIndex, ranges);
 }
 
+/**
+ * Replaces the last range in the list for a source text-node index.
+ * @param rangesByNode - Accumulated ranges grouped by source text-node index.
+ * @param nodeIndex - Source text-node index to update.
+ * @param range - Range that replaces the current last range.
+ */
 function replaceLastRange(
   rangesByNode: Map<number, TextRange[]>,
   nodeIndex: number,
@@ -286,6 +344,10 @@ function replaceLastRange(
   rangesByNode.set(nodeIndex, ranges);
 }
 
+/**
+ * Wraps each match range within a text node in a mark element.
+ * @param params - Document, target text node, ranges, and active match index.
+ */
 function applyTextRanges({
   document,
   textNode,
@@ -320,6 +382,10 @@ function applyTextRanges({
   }
 }
 
+/**
+ * @param document - DOM document to serialize.
+ * @returns The serialized HTML including any doctype.
+ */
 function serializeHtmlDocument(document: Document): string {
   const doctype =
     document.doctype === null ? "" : `<!doctype ${document.doctype.name}>`;

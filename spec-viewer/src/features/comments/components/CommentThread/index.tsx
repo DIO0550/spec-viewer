@@ -18,13 +18,13 @@ import {
   CommentOperationSavingState,
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
-import { uiText } from "@/shared/lib/uiText";
 import type {
   Comment,
   CommentAnchorDisplayStatus,
   CommentId,
 } from "@/features/comments/types/comment";
 import { CommentId as CommentIdValue } from "@/features/comments/types/comment";
+import { uiText } from "@/shared/lib/uiText";
 
 const emptyBodyMessage = uiText.commentThread.emptyBody;
 
@@ -34,10 +34,31 @@ type Props = Readonly<{
   anchorDisplayStatus: CommentAnchorDisplayStatus;
   searchQuery?: string;
   operationState: CommentOperationState;
+  /**
+   * Selects the given comment.
+   * @param commentId - The comment to select.
+   */
   onSelectComment: (commentId: CommentId) => void;
+  /**
+   * Updates the given comment's body.
+   * @param commentId - The comment to update.
+   * @param body - The new comment body text.
+   */
   onUpdateComment: (commentId: CommentId, body: string) => void;
+  /**
+   * Marks the given comment as resolved.
+   * @param commentId - The comment to resolve.
+   */
   onResolveComment: (commentId: CommentId) => void;
+  /**
+   * Reopens the given resolved comment.
+   * @param commentId - The comment to reopen.
+   */
   onReopenComment: (commentId: CommentId) => void;
+  /**
+   * Deletes the given comment.
+   * @param commentId - The comment to delete.
+   */
   onDeleteComment: (commentId: CommentId) => void;
 }>;
 
@@ -384,7 +405,10 @@ type HighlightedTextProps = Readonly<{
   searchQuery: string;
 }>;
 
-/** @returns Text with every search query occurrence marked for visual scanning. */
+/**
+ * @param props - Text to render and the search query to highlight within it.
+ * @returns Text with every search query occurrence marked for visual scanning.
+ */
 function HighlightedText({ text, searchQuery }: HighlightedTextProps) {
   if (searchQuery.length === 0) {
     return text;
@@ -419,14 +443,20 @@ function HighlightedText({ text, searchQuery }: HighlightedTextProps) {
   return <>{segments}</>;
 }
 
-/** @returns A compact title for the selected Markdown anchor. */
+/**
+ * @param comment - The comment whose anchor title is formatted.
+ * @returns A compact title for the selected Markdown anchor.
+ */
 function formatAnchorTitle(comment: Comment): string {
   return `${formatBlockType(comment.anchor.blockType)} block ${
     comment.anchor.blockIndex + 1
   }`;
 }
 
-/** @returns A readable label for persisted Markdown block types. */
+/**
+ * @param blockType - The raw block type identifier to format.
+ * @returns A readable label for persisted Markdown block types.
+ */
 function formatBlockType(blockType: string): string {
   return blockType
     .split("_")
@@ -434,7 +464,10 @@ function formatBlockType(blockType: string): string {
     .join(" ");
 }
 
-/** @returns The visible anchor reconciliation status, or null for exact anchors. */
+/**
+ * @param status - The anchor reconciliation status to format.
+ * @returns The visible anchor reconciliation status, or null for exact anchors.
+ */
 function formatAnchorDisplayStatus(
   status: CommentAnchorDisplayStatus,
 ): string | null {
@@ -455,7 +488,10 @@ function formatAnchorDisplayStatus(
   return statusLabels[status];
 }
 
-/** @returns A readable local timestamp, falling back to the raw ISO value. */
+/**
+ * @param timestamp - The ISO timestamp string to format.
+ * @returns A readable local timestamp, falling back to the raw ISO value.
+ */
 function formatCommentTimestamp(timestamp: string): string {
   const date = new Date(timestamp);
 

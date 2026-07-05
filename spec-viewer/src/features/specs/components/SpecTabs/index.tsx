@@ -7,6 +7,7 @@ type Props = Readonly<{
   spec: SpecNode | null;
   selectedFileKey: SpecFileKey | null;
   isSelectionDisabled?: boolean;
+  /** Selects a file tab. @param fileKey - Key of the file to select. */
   onSelectFile: (fileKey: SpecFileKey) => void;
 }>;
 

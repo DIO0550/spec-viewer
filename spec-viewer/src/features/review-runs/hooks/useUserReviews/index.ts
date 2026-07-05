@@ -12,21 +12,21 @@ import {
 } from "@/features/review-runs/domain/userReviewTarget";
 import { buildUserReviewsResult } from "@/features/review-runs/hooks/buildUserReviewsResult";
 import {
-  useArchiveUserReview,
   type UseArchiveUserReviewResult,
+  useArchiveUserReview,
 } from "@/features/review-runs/hooks/useArchiveUserReview";
 import {
-  useCreateUserReview,
   type CreateUserReviewInput,
   type UseCreateUserReviewResult,
+  useCreateUserReview,
 } from "@/features/review-runs/hooks/useCreateUserReview";
 import { useUserReviewList } from "@/features/review-runs/hooks/useUserReviewList";
+import type { SpecFileKey } from "@/features/specs/types/spec";
 import {
   userReviewCommands as defaultUserReviewCommands,
   type UserReviewCommands,
 } from "@/shared/api/tauri";
 import type { WorkspacePath } from "@/shared/domain/workspacePath";
-import type { SpecFileKey } from "@/features/specs/types/spec";
 
 export type { UserReviewListState } from "@/features/review-runs/domain/userReviewListState";
 export type {
@@ -61,10 +61,13 @@ export type UseUserReviewsResult = Readonly<{
   archiveState: UserReviewArchiveState;
   activeReviews: readonly UserReview[];
   archivedReviews: readonly UserReview[];
+  /** Reloads the user review list. */
   reloadUserReviews: () => Promise<boolean>;
+  /** Creates a user review. @param input - The create-review input. */
   createUserReview: (
     input: CreateUserReviewInput,
   ) => Promise<UserReview | null>;
+  /** Archives a user review. @param userReviewId - ID of the review to archive. */
   archiveUserReview: (userReviewId: string) => Promise<UserReview | null>;
 }>;
 
