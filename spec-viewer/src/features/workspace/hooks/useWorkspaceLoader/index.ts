@@ -106,11 +106,14 @@ export function useWorkspaceLoader(
    * ドロップ結果を状態へ適用する（ディレクトリでない/例外時はエラー表示）。
    * @param outcome - openDroppedWorkspacePath の判定結果。
    */
-  const applyDropOutcome = (outcome: OpenDroppedWorkspaceOutcome): void => {
-    if (outcome.type === "notDirectory" || outcome.type === "dropException") {
-      setDropErrorMessage(outcome.dropMessage);
-    }
-  };
+  const applyDropOutcome = useCallback(
+    (outcome: OpenDroppedWorkspaceOutcome): void => {
+      if (outcome.type === "notDirectory" || outcome.type === "dropException") {
+        setDropErrorMessage(outcome.dropMessage);
+      }
+    },
+    [],
+  );
 
   const applyRecentOutcome = useCallback(
     (outcome: OpenRecentWorkspaceOutcome): void => {
@@ -213,10 +216,9 @@ export function useWorkspaceLoader(
     recentWorkspaces.lastActiveWorkspacePath,
   ]);
 
-  const workspaceDrop = useWorkspaceDrop({
-    isDisabled: isWorkspaceOpening || isBrowsingWorkspace,
-    /** @param path - ドロップされたワークスペースディレクトリパス。 */
-    onDropWorkspacePath: (path) => {
+  // 参照安定化して useWorkspaceDrop の毎レンダー再購読を防ぐ（onWatcherError と同じ方針）。
+  const handleDropWorkspacePath = useCallback(
+    (path: string): void => {
       void workspaceLoaderFlow
         .openDroppedWorkspacePath(
           path,
@@ -225,6 +227,12 @@ export function useWorkspaceLoader(
         )
         .then(applyDropOutcome);
     },
+    [applyDropOutcome, flowIo, isBrowsingWorkspace, isWorkspaceOpening],
+  );
+
+  const workspaceDrop = useWorkspaceDrop({
+    isDisabled: isWorkspaceOpening || isBrowsingWorkspace,
+    onDropWorkspacePath: handleDropWorkspacePath,
     onInvalidDrop: setDropErrorMessage,
     subscribeDragDropEvents: options.subscribeDragDropEvents,
   });
