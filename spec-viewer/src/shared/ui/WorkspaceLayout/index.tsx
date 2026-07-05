@@ -5,14 +5,14 @@ import {
   PanelRightOpen,
 } from "lucide-react";
 import {
-  createContext,
-  useContext,
   type CSSProperties,
+  createContext,
   type KeyboardEvent,
   type PointerEvent,
   type ReactElement,
   type ReactNode,
   type RefObject,
+  useContext,
   useRef,
 } from "react";
 
@@ -74,15 +74,18 @@ type WorkspaceLayoutContextValue = Readonly<{
   bodyRef: RefObject<HTMLDivElement | null>;
   isResizingLeftNavigationRef: RefObject<boolean>;
   isResizingCommentsSidebarRef: RefObject<boolean>;
+  /** Closes the left navigation panel. */
   closeLeftNavigation: () => void;
+  /** Opens the left navigation panel. */
   openLeftNavigation: () => void;
+  /** Closes the comments sidebar. */
   closeCommentsSidebar: () => void;
+  /** Opens the comments sidebar. */
   openCommentsSidebar: () => void;
 }>;
 
-const WorkspaceLayoutContext = createContext<WorkspaceLayoutContextValue | null>(
-  null,
-);
+const WorkspaceLayoutContext =
+  createContext<WorkspaceLayoutContextValue | null>(null);
 
 /** @returns Compound workspace layout components. */
 export const WorkspaceLayout = {
@@ -302,6 +305,10 @@ function WorkspaceLayoutLeftNavigation(
     </div>
   );
 
+  /**
+   * Resizes the left navigation to match a pointer x coordinate.
+   * @param clientX - Pointer x coordinate in viewport pixels.
+   */
   const resizeLeftNavigationFromPointer = (clientX: number): void => {
     const body = layout.bodyRef.current;
 
@@ -314,6 +321,10 @@ function WorkspaceLayoutLeftNavigation(
     layout.leftNavigation.onWidthChange(nextWidth);
   };
 
+  /**
+   * Begins a left navigation resize gesture on pointer down.
+   * @param event - Pointer down event on the resize handle.
+   */
   const startLeftNavigationResize = (
     event: PointerEvent<HTMLButtonElement>,
   ): void => {
@@ -327,6 +338,10 @@ function WorkspaceLayoutLeftNavigation(
     resizeLeftNavigationFromPointer(event.clientX);
   };
 
+  /**
+   * Continues an active left navigation resize on pointer move.
+   * @param event - Pointer move event on the resize handle.
+   */
   const continueLeftNavigationResize = (
     event: PointerEvent<HTMLButtonElement>,
   ): void => {
@@ -338,6 +353,10 @@ function WorkspaceLayoutLeftNavigation(
     resizeLeftNavigationFromPointer(event.clientX);
   };
 
+  /**
+   * Ends a left navigation resize gesture on pointer up or cancel.
+   * @param event - Pointer up/cancel event on the resize handle.
+   */
   const stopLeftNavigationResize = (
     event: PointerEvent<HTMLButtonElement>,
   ): void => {
@@ -345,6 +364,10 @@ function WorkspaceLayoutLeftNavigation(
     event.currentTarget.releasePointerCapture?.(event.pointerId);
   };
 
+  /**
+   * Adjusts the left navigation width from keyboard arrow/Home/End keys.
+   * @param event - Keyboard event on the resize handle.
+   */
   const resizeLeftNavigationWithKeyboard = (
     event: KeyboardEvent<HTMLButtonElement>,
   ): void => {
@@ -456,6 +479,10 @@ function WorkspaceLayoutComments(
   const { children } = props;
   const layout = useWorkspaceLayoutContext();
 
+  /**
+   * Resizes the comments sidebar to match a pointer x coordinate.
+   * @param clientX - Pointer x coordinate in viewport pixels.
+   */
   const resizeSidebarFromPointer = (clientX: number): void => {
     const body = layout.bodyRef.current;
 
@@ -468,9 +495,11 @@ function WorkspaceLayoutComments(
     layout.commentsSidebar.onWidthChange(nextWidth);
   };
 
-  const startSidebarResize = (
-    event: PointerEvent<HTMLButtonElement>,
-  ): void => {
+  /**
+   * Begins a comments sidebar resize gesture on pointer down.
+   * @param event - Pointer down event on the resize handle.
+   */
+  const startSidebarResize = (event: PointerEvent<HTMLButtonElement>): void => {
     if (layout.commentsSidebar.onWidthChange === undefined) {
       return;
     }
@@ -481,6 +510,10 @@ function WorkspaceLayoutComments(
     resizeSidebarFromPointer(event.clientX);
   };
 
+  /**
+   * Continues an active comments sidebar resize on pointer move.
+   * @param event - Pointer move event on the resize handle.
+   */
   const continueSidebarResize = (
     event: PointerEvent<HTMLButtonElement>,
   ): void => {
@@ -492,11 +525,19 @@ function WorkspaceLayoutComments(
     resizeSidebarFromPointer(event.clientX);
   };
 
+  /**
+   * Ends a comments sidebar resize gesture on pointer up or cancel.
+   * @param event - Pointer up/cancel event on the resize handle.
+   */
   const stopSidebarResize = (event: PointerEvent<HTMLButtonElement>): void => {
     layout.isResizingCommentsSidebarRef.current = false;
     event.currentTarget.releasePointerCapture?.(event.pointerId);
   };
 
+  /**
+   * Adjusts the comments sidebar width from keyboard arrow/Home/End keys.
+   * @param event - Keyboard event on the resize handle.
+   */
   const resizeSidebarWithKeyboard = (
     event: KeyboardEvent<HTMLButtonElement>,
   ): void => {
@@ -586,7 +627,10 @@ function WorkspaceLayoutComments(
   );
 }
 
-/** @returns Context for WorkspaceLayout compound components. */
+/**
+ * @returns Context for WorkspaceLayout compound components.
+ * @throws If used outside of a WorkspaceLayout.Root provider.
+ */
 function useWorkspaceLayoutContext(): WorkspaceLayoutContextValue {
   const context = useContext(WorkspaceLayoutContext);
 

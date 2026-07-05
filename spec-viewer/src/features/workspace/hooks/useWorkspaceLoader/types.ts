@@ -22,11 +22,16 @@ export type WorkspaceLoaderCommands = Readonly<{
  * 直前に合成したラッパーとして組み立てる。flow は結果値だけを読む。
  */
 export type WorkspaceLoaderFlowIo = Readonly<{
-  /** validateWorkspaceDirectory の薄いラッパー。flow は isDirectory のみ読む（構造的最小型）。 */
+  /**
+   * validateWorkspaceDirectory の薄いラッパー。flow は isDirectory のみ読む（構造的最小型）。
+   * @param path - 検証対象のワークスペースディレクトリパス。
+   */
   validate: (path: string) => Promise<Readonly<{ isDirectory: boolean }>>;
   /**
    * workspace.actions.load の薄いラッパー（`onWorkspaceLoaded: recordWorkspace` を pre-bind 済み）。
    * Provider 内 catch 済みのため reject しない。
+   * @param path - 読み込むワークスペースディレクトリパス。
+   * @param preserveCurrentWorkspace - 失敗時に現在のワークスペースを保持するか。
    */
   load: (path: string, preserveCurrentWorkspace: boolean) => Promise<boolean>;
 }>;
@@ -68,7 +73,10 @@ export type OpenRecentWorkspaceOutcome =
   | (Readonly<{ type: "recentException" }> & RecentWorkspaceFailure);
 
 export type UseWorkspaceLoaderOptions = Readonly<{
-  /** 共有エラースロット（App の useState）の setState をそのまま。null でクリア。 */
+  /**
+   * 共有エラースロット（App の useState）の setState をそのまま。null でクリア。
+   * @param message - 表示するエラーメッセージ。null でクリア。
+   */
   onError: (message: string | null) => void;
   /** テスト用 DI（デフォルト実装付き）。 */
   commands?: WorkspaceLoaderCommands;
@@ -94,10 +102,15 @@ export type UseWorkspaceLoaderResult = Readonly<{
     isDraggingWorkspace: boolean;
   }>;
   actions: Readonly<{
+    /** @param value - ワークスペースパス入力欄の新しい値。 */
     setWorkspaceInput: (value: string) => void;
+    /** ネイティブのディレクトリ選択ダイアログを開いてワークスペースを読み込む。 */
     browseWorkspace: () => Promise<void>;
+    /** 入力欄のパスからワークスペースを読み込む。 */
     loadWorkspace: () => void;
+    /** @param path - 開く最近使用したワークスペースのパス。 */
     openRecentWorkspacePath: (path: string) => Promise<void>;
+    /** 現在のワークスペースと入力・エラー状態をリセットする。 */
     resetWorkspace: () => void;
   }>;
   /**

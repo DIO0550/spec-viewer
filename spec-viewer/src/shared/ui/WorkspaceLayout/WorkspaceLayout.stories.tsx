@@ -1,22 +1,20 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState, type ComponentProps, type ReactNode } from "react";
-
-import { ThemeProvider } from "@/features/preferences";
+import { type ComponentProps, type ReactNode, useState } from "react";
 import { fn } from "storybook/test";
-
 import {
+  type Comment,
   CommentSidebar,
   createTextHash,
-  type Comment,
 } from "@/features/comments";
 import { CommentId } from "@/features/comments/types/comment";
+import { ThemeProvider } from "@/features/preferences";
 import type {
-  SpecDocumentState,
-  SpecTreeState,
   SpecDocument,
+  SpecDocumentState,
   SpecFileKey,
   SpecNode,
   SpecTreeData as SpecTreeShape,
+  SpecTreeState,
 } from "@/features/specs";
 import { MarkdownViewer, SpecTabs, SpecTree } from "@/features/specs";
 import {
@@ -193,7 +191,10 @@ type WorkspaceLayoutStoryProps = Readonly<{
   onCommentsWidthChange?: (width: number) => void;
 }>;
 
-/** @returns WorkspaceLayout composed for Storybook controls. */
+/**
+ * @param props - Storybook control props for the composed layout.
+ * @returns WorkspaceLayout composed for Storybook controls.
+ */
 function WorkspaceLayoutStory(props: WorkspaceLayoutStoryProps) {
   const {
     toolbar,

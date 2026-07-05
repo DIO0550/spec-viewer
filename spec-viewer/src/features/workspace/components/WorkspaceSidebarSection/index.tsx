@@ -9,9 +9,13 @@ type Props = Readonly<{
   isOpen: boolean;
   isBusy: boolean;
   recentWorkspaces: readonly RecentWorkspace[];
+  /** ディレクトリ選択ダイアログを開く。 */
   onBrowse: () => void;
+  /** ワークスペース切替セクションの開閉を切り替える。 */
   onToggleOpen: () => void;
+  /** @param path - 開く最近使用したワークスペースのパス。 */
   onOpenWorkspace: (path: string) => void;
+  /** @param path - 一覧から削除する最近使用したワークスペースのパス。 */
   onRemoveWorkspace: (path: string) => void;
 }>;
 

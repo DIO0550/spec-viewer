@@ -10,6 +10,7 @@ import { getUnknownErrorMessage } from "@/shared/lib/errorMessage";
 
 type RefreshCurrentViewOptions = Readonly<{
   failureMessage: string;
+  /** Runs the reload work, resolving to whether it succeeded. */
   run: () => Promise<boolean>;
 }>;
 
@@ -17,10 +18,14 @@ export type UseViewRefreshOptions = Readonly<{
   selection: SpecViewResetKeys;
   isCurrentViewLoading: boolean;
   reload: Readonly<{
+    /** Reloads the current document. */
     document: () => Promise<boolean>;
+    /** Reloads the spec list. */
     specs: () => Promise<boolean>;
+    /** Reloads the comments. */
     comments: () => Promise<boolean>;
   }>;
+  /** Reports an error message, or clears it. @param message - Error message, or null to clear. */
   onError: (message: string | null) => void;
   watcher?: Readonly<{
     startWatch?: StartSpecFileWatchCommand;
@@ -30,6 +35,7 @@ export type UseViewRefreshOptions = Readonly<{
 }>;
 
 export type UseViewRefreshResult = Readonly<{
+  /** Manually refreshes the current view. */
   refreshCurrentViewManually: () => Promise<void>;
 }>;
 
@@ -82,6 +88,7 @@ export function useViewRefresh(
 
       await refreshCurrentView({
         failureMessage: autoReloadFailureMessage,
+        /** Reloads the current document and its comments. */
         run: async () => {
           const isDocumentReloaded = await reload.document();
           const areCommentsReloaded = await reload.comments();
@@ -98,6 +105,7 @@ export function useViewRefresh(
 
       await refreshCurrentView({
         failureMessage: autoReloadFailureMessage,
+        /** Reloads the spec list and comments. */
         run: async () => {
           const areSpecsReloaded = await reload.specs();
           const areCommentsReloaded = await reload.comments();
@@ -118,6 +126,7 @@ export function useViewRefresh(
 
     await refreshCurrentView({
       failureMessage: manualReloadFailureMessage,
+      /** Reloads the spec list and comments. */
       run: async () => {
         const areSpecsReloaded = await reload.specs();
         const areCommentsReloaded = await reload.comments();

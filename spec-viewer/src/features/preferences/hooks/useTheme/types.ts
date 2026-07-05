@@ -10,6 +10,10 @@ export type ResolvedTheme = ThemeAppearance;
 export type ThemeContextValue = Readonly<{
   themeMode: ThemeModeType;
   resolvedTheme: ResolvedTheme;
+  /**
+   * Updates the active theme mode.
+   * @param nextThemeMode - The theme mode to switch to.
+   */
   setThemeMode: (nextThemeMode: ThemeModeType) => void;
 }>;
 

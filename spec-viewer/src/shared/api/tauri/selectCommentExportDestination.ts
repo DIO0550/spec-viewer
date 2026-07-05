@@ -1,4 +1,4 @@
-import { save, type SaveDialogOptions } from "@tauri-apps/plugin-dialog";
+import { type SaveDialogOptions, save } from "@tauri-apps/plugin-dialog";
 
 import type { ExportCommentsTarget } from "@/features/comments/types/comment";
 
@@ -50,7 +50,10 @@ function createCommentExportDefaultFileName(
   return `${specId}-${target.fileKey}-comments.md`;
 }
 
-/** @returns A file-system-safe path component for save dialog defaults. */
+/**
+ * @param value - Raw path component to sanitize.
+ * @returns A file-system-safe path component for save dialog defaults.
+ */
 function sanitizeExportPathPart(value: string): string {
   const sanitized = value.trim().replace(INVALID_PATH_CHARS_PATTERN, "-");
 

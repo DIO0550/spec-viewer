@@ -10,7 +10,10 @@ export type SpecsSelectors = Readonly<{
   canReloadDocument: boolean;
 }>;
 
-/** @returns Derived values for the current specs hook state. */
+/**
+ * @param state - The current specs hook state.
+ * @returns Derived values for the current specs hook state.
+ */
 export function buildSpecsSelectors(state: SpecsState): SpecsSelectors {
   const tree = state.specTreeState.tree;
   const selectedSpec =

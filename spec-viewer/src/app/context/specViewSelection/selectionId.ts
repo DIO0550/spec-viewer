@@ -15,6 +15,10 @@ export type SpecViewSelection = Readonly<{
   targetScope: SpecViewTargetScope;
 }>;
 
+/**
+ * @param selection - Current workspace and spec view selection.
+ * @returns Stable id for the selected target (spec, file, or none).
+ */
 function createTargetId(selection: SpecViewSelection): string {
   if (selection.specId === null) {
     return "none";

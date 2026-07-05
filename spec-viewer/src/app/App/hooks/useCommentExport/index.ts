@@ -55,8 +55,11 @@ export type UseCommentExportOptions = Readonly<{
 
 export type UseCommentExportResult = Readonly<{
   commentExportState: CommentExportState;
+  /** Exports comments for a scope. @param scope - Export scope (workspace/spec/file). */
   exportCommentScope: (scope: CommentExportScope) => void;
+  /** Copies the LLM prompt for a scope. @param scope - Export scope (workspace/spec/file). */
   copyLlmPromptScope: (scope: CommentExportScope) => void;
+  /** Copies the MCP feedback dry-run payload for the current file. */
   copyMcpFeedbackPayload: () => Promise<void>;
 }>;
 

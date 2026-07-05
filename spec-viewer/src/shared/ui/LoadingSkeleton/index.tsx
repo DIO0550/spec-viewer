@@ -8,7 +8,11 @@ type SkeletonRow = Readonly<{
   width: "short" | "medium" | "long" | "full";
 }>;
 
-/** @returns A stable loading placeholder with an accessible status label. */
+/**
+ * A stable loading placeholder with an accessible status label.
+ * @param props - Component props: label, rows and optional className.
+ * @returns A stable loading placeholder with an accessible status label.
+ */
 export function LoadingSkeleton({ label, rows, className }: Props) {
   const classNames =
     className === undefined

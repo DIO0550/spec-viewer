@@ -8,6 +8,7 @@ export type UseUserReviewWorkspaceModeOptions = Readonly<{
 
 export type UseUserReviewWorkspaceModeResult = Readonly<{
   workspaceMode: UserReviewWorkspaceMode;
+  /** Sets the workspace mode. @param mode - New user review workspace mode. */
   setWorkspaceMode: (mode: UserReviewWorkspaceMode) => void;
 }>;
 

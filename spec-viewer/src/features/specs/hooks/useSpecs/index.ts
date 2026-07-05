@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-
-import { SpecDocumentState as SpecDocumentStateFactory } from "@/features/specs/domain/specDocumentState";
 import type { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
+import { SpecDocumentState as SpecDocumentStateFactory } from "@/features/specs/domain/specDocumentState";
 import { SpecFeatureError } from "@/features/specs/domain/specError";
 import { SpecNode as SpecNodeDomain } from "@/features/specs/domain/specNode";
 import { SpecTree as SpecTreeDomain } from "@/features/specs/domain/specTree";
-import { SpecTreeState as SpecTreeStateFactory } from "@/features/specs/domain/specTreeState";
 import type { SpecTreeState } from "@/features/specs/domain/specTreeState";
+import { SpecTreeState as SpecTreeStateFactory } from "@/features/specs/domain/specTreeState";
 import {
   buildSpecsSelectors,
   type SpecsSelectors,
@@ -17,6 +16,7 @@ import type {
   UseSpecsResult,
 } from "@/features/specs/hooks/useSpecs/types";
 import * as specGateway from "@/features/specs/infra/specGateway";
+import type { SpecFileKey } from "@/features/specs/types/spec";
 import { specCommands } from "@/shared/api/tauri";
 import { ArchiveSpecCommandError } from "@/shared/api/tauri/archiveSpec";
 import { ListSpecsCommandError } from "@/shared/api/tauri/listSpecs";
@@ -25,7 +25,6 @@ import {
   createPerformanceCorrelationId,
   startPerformanceSpan,
 } from "@/shared/lib/performance";
-import type { SpecFileKey } from "@/features/specs/types/spec";
 
 export type { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
 export type { SpecTreeState } from "@/features/specs/domain/specTreeState";
@@ -75,7 +74,10 @@ function createSpecLoadOperationId(): string {
     .slice(2)}`;
 }
 
-/** @returns Spec tree, selection, and Markdown loading state for a workspace. */
+/**
+ * @param options - Hook options including the workspace path and selection callback.
+ * @returns Spec tree, selection, and Markdown loading state for a workspace.
+ */
 export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
   const { onSelectionChange, workspacePath } = options;
   const [state, setState] = useState<SpecsState>(initialSpecsState);
@@ -408,6 +410,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
   useEffect(() => {
     const operationId = createSpecLoadOperationId();
     let cancelled = false;
+    /** @returns Whether this effect run is still active and may commit state. */
     const canCommit = (): boolean => !cancelled;
 
     setState((currentState) => ({

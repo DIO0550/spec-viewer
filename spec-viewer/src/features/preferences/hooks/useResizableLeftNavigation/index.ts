@@ -10,8 +10,17 @@ type UseResizableLeftNavigationResult = Readonly<{
   leftNavigationWidth: number;
   minLeftNavigationWidth: number;
   maxLeftNavigationWidth: number;
+  /**
+   * Sets the left navigation to an absolute width.
+   * @param width - Target width in pixels.
+   */
   resizeLeftNavigationTo: (width: number) => void;
+  /**
+   * Adjusts the left navigation width by a relative delta.
+   * @param delta - Width change in pixels.
+   */
   resizeLeftNavigationBy: (delta: number) => void;
+  /** Resets the left navigation to its default width. */
   resetLeftNavigationWidth: () => void;
 }>;
 
@@ -116,7 +125,10 @@ function clampLeftNavigationWidth(
   );
 }
 
-/** @returns Stored left navigation width or a sane default for the viewport. */
+/**
+ * @param viewportWidth - Current viewport width in pixels.
+ * @returns Stored left navigation width or a sane default for the viewport.
+ */
 function readStoredLeftNavigationWidth(viewportWidth: number): number {
   const constraints = createLeftNavigationWidthConstraints(viewportWidth);
 
@@ -140,7 +152,10 @@ function readStoredLeftNavigationWidth(viewportWidth: number): number {
   }
 }
 
-/** Persists the left navigation width when storage is available. */
+/**
+ * Persists the left navigation width when storage is available.
+ * @param leftNavigationWidth - Width in pixels to persist.
+ */
 function writeStoredLeftNavigationWidth(leftNavigationWidth: number): void {
   if (typeof window === "undefined") {
     return;

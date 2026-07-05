@@ -1,41 +1,39 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-
-import { commentCommands as defaultCommentCommands } from "@/shared/api/tauri";
-import type { CommentCommands } from "@/shared/api/tauri";
-import { ListCommentsCommandError } from "@/shared/api/tauri/listComments";
-import {
-  resolvePerformanceCorrelationId,
-  startPerformanceSpan,
-} from "@/shared/lib/performance";
-import { CommentFeatureError } from "@/features/comments/domain/commentError";
 import type { CommentFeatureError as CommentFeatureErrorType } from "@/features/comments/domain/commentError";
-import type { CommentScope } from "@/features/comments/domain/commentScope";
-import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
+import { CommentFeatureError } from "@/features/comments/domain/commentError";
 import {
   CommentListState,
   type CommentListState as CommentListStateType,
 } from "@/features/comments/domain/commentListState";
 import type { CommentOperationState } from "@/features/comments/domain/commentOperation";
-import { listComments as listCommentsViaGateway } from "@/features/comments/infra/commentGateway";
+import type { CommentScope } from "@/features/comments/domain/commentScope";
+import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import { buildCommentsResult } from "@/features/comments/hooks/buildCommentsResult";
 import {
-  useCommentOperations,
   type AddCommentInput,
   type CommentListTransform,
   type UpdateCommentInput,
+  useCommentOperations,
 } from "@/features/comments/hooks/useCommentOperations";
-import type { CommentId } from "@/features/comments/types/comment";
-import type { Comment } from "@/features/comments/types/comment";
+import { listComments as listCommentsViaGateway } from "@/features/comments/infra/commentGateway";
+import type { Comment, CommentId } from "@/features/comments/types/comment";
+import type { CommentCommands } from "@/shared/api/tauri";
+import { commentCommands as defaultCommentCommands } from "@/shared/api/tauri";
+import { ListCommentsCommandError } from "@/shared/api/tauri/listComments";
+import {
+  resolvePerformanceCorrelationId,
+  startPerformanceSpan,
+} from "@/shared/lib/performance";
 
 export type { CommentListState } from "@/features/comments/domain/commentListState";
+export type {
+  CommentOperationKind,
+  CommentOperationState,
+} from "@/features/comments/domain/commentOperation";
 export type {
   AddCommentInput,
   UpdateCommentInput,
 } from "@/features/comments/hooks/useCommentOperations";
-export {
-  type CommentOperationKind,
-  type CommentOperationState,
-} from "@/features/comments/domain/commentOperation";
 
 export type UseCommentsOptions = Readonly<{
   scope: CommentScope | null;
@@ -53,12 +51,19 @@ export type UseCommentsResult = Readonly<{
   isEmpty: boolean;
   error: CommentFeatureErrorType | null;
   operationError: CommentFeatureErrorType | null;
+  /** Reloads comments for the active scope. */
   reloadComments: () => Promise<boolean>;
+  /** @param input - Anchor and body for the new comment. */
   addComment: (input: AddCommentInput) => Promise<Comment | null>;
+  /** @param input - Comment id and new body for the update. */
   updateComment: (input: UpdateCommentInput) => Promise<Comment | null>;
+  /** @param commentId - Id of the comment to delete. */
   deleteComment: (commentId: CommentId) => Promise<boolean>;
+  /** @param commentId - Id of the comment to resolve. */
   resolveComment: (commentId: CommentId) => Promise<Comment | null>;
+  /** @param commentId - Id of the comment to reopen. */
   reopenComment: (commentId: CommentId) => Promise<Comment | null>;
+  /** @param commentId - Id of the comment to toggle. */
   toggleCommentResolved: (commentId: CommentId) => Promise<Comment | null>;
 }>;
 

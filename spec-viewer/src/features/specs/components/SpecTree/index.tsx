@@ -8,8 +8,8 @@ import {
 import { type KeyboardEvent, useEffect, useState } from "react";
 
 import type { SpecTreeState } from "@/features/specs/hooks/useSpecs";
-import { uiText } from "@/shared/lib/uiText";
 import type { SpecNode } from "@/features/specs/types/spec";
+import { uiText } from "@/shared/lib/uiText";
 import { CommandErrorDisplay } from "@/shared/ui/CommandErrorDisplay";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { LoadingSkeleton } from "@/shared/ui/LoadingSkeleton";
@@ -22,8 +22,10 @@ type Props = Readonly<{
   selectedSpecId: string | null;
   archivingSpecId?: string | null;
   isLoading?: boolean;
+  /** Selects a spec. @param specId - ID of the spec to select. */
   onSelectSpec: (specId: string) => void;
   onArchiveSpec?: (specId: string) => void;
+  /** Reloads the spec tree. */
   onReload: () => void;
 }>;
 
@@ -194,8 +196,10 @@ type SpecTreeItemProps = Readonly<{
   archivingSpecId: string | null;
   isSelectionDisabled: boolean;
   isArchiveDisabled: boolean;
+  /** Selects a spec. @param specId - ID of the spec to select. */
   onSelectSpec: (specId: string) => void;
   onArchiveSpec?: (specId: string) => void;
+  /** Toggles expansion of a spec. @param specId - ID of the spec to toggle. */
   onToggleExpanded: (specId: string) => void;
 }>;
 
@@ -329,7 +333,10 @@ function SpecTreeItem({
   );
 }
 
-/** @returns Whether this tree node represents an archiveable spec directory. */
+/**
+ * @param node - The spec tree node to test.
+ * @returns Whether this tree node represents an archiveable spec directory.
+ */
 function isArchivableSpecNode(node: SpecNode): boolean {
   return !node.id.endsWith("/.specs");
 }
@@ -337,6 +344,7 @@ function isArchivableSpecNode(node: SpecNode): boolean {
 type TreeItemKeyDownOptions = Readonly<{
   hasChildren: boolean;
   isExpanded: boolean;
+  /** Toggles expansion of the current tree item. */
   onToggleExpanded: () => void;
 }>;
 
@@ -460,7 +468,10 @@ function findParentTreeItemIndex(
   return null;
 }
 
-/** @returns The aria tree level for a rendered tree item. */
+/**
+ * @param item - The rendered tree item element, if present.
+ * @returns The aria tree level for a rendered tree item.
+ */
 function readTreeItemLevel(item: HTMLButtonElement | undefined): number {
   if (item === undefined) {
     return 1;

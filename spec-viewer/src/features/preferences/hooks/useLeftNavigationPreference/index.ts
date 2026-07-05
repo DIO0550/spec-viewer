@@ -4,7 +4,9 @@ const leftNavigationPreferenceStorageKey = "spec-reviewer.left-navigation-open";
 
 type UseLeftNavigationPreferenceResult = Readonly<{
   isLeftNavigationOpen: boolean;
+  /** Opens the left navigation and persists the preference. */
   openLeftNavigation: () => void;
+  /** Closes the left navigation and persists the preference. */
   closeLeftNavigation: () => void;
 }>;
 

@@ -1,18 +1,17 @@
 import { useCallback, useState } from "react";
-
+import type { Workspace } from "@/features/workspace/types/workspace";
 import {
   clearLastActiveWorkspacePath,
   clearStoredRecentWorkspaces,
+  type RecentWorkspace,
+  type RecentWorkspaceStorage,
   readLastActiveWorkspacePath,
   readRecentWorkspaces,
   recordRecentWorkspace,
   removeRecentWorkspace,
-  type RecentWorkspace,
-  type RecentWorkspaceStorage,
   writeLastActiveWorkspacePath,
   writeRecentWorkspaces,
 } from "@/shared/lib/recentWorkspaces";
-import type { Workspace } from "@/features/workspace/types/workspace";
 
 export type UseRecentWorkspacesOptions = Readonly<{
   storage?: RecentWorkspaceStorage | null;
@@ -21,8 +20,11 @@ export type UseRecentWorkspacesOptions = Readonly<{
 export type UseRecentWorkspacesResult = Readonly<{
   recentWorkspaces: readonly RecentWorkspace[];
   lastActiveWorkspacePath: string | null;
+  /** @param workspace - 最近使用した一覧へ記録するワークスペース。 */
   recordWorkspace: (workspace: Workspace) => void;
+  /** @param path - 一覧から削除するワークスペースのパス。 */
   removeWorkspace: (path: string) => void;
+  /** 最近使用したワークスペースをすべて消去する。 */
   clearWorkspaces: () => void;
 }>;
 

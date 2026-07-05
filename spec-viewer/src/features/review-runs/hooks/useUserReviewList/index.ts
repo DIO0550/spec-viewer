@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { UserReviewCollection } from "@/features/review-runs/domain/userReviewCollection";
+import { UserReviewFeatureError } from "@/features/review-runs/domain/userReviewError";
 import {
-  UserReviewListState,
   type UserReviewListEvent,
+  UserReviewListState,
   type UserReviewListState as UserReviewListStateType,
 } from "@/features/review-runs/domain/userReviewListState";
-import { UserReviewFeatureError } from "@/features/review-runs/domain/userReviewError";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import { listUserReviews as listUserReviewsViaGateway } from "@/features/review-runs/infra/userReviewGateway";
 import type { UserReviewCommands } from "@/shared/api/tauri";
@@ -34,7 +34,9 @@ export type UseUserReviewListOptions = Readonly<{
 
 export type UseUserReviewListResult = Readonly<{
   listState: UserReviewListStateType;
+  /** Reloads the user review list. */
   reloadUserReviews: () => Promise<boolean>;
+  /** Applies a list event. @param event - The user review list event to apply. */
   applyUserReviewEvent: (event: UserReviewListEventWithSelectionId) => void;
 }>;
 

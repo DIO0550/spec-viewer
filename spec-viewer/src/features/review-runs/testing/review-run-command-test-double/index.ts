@@ -1,4 +1,3 @@
-import type { UserReviewCommands } from "@/shared/api/tauri";
 import type {
   ArchiveUserReviewRequest,
   ArchiveUserReviewResponse,
@@ -8,6 +7,7 @@ import type {
   ListUserReviewsResponse,
   UserReview,
 } from "@/features/review-runs/types/userReviewIpc";
+import type { UserReviewCommands } from "@/shared/api/tauri";
 
 export type UserReviewCommandTestDoubleResponses = Readonly<{
   createUserReview?: CreateUserReviewResponse;
@@ -70,10 +70,12 @@ export function createUserReviewCommandTestDouble(
       archiveUserReview: archiveUserReviewCalls,
     },
     commands: {
+      /** Records and answers a create call. @param request - The create request. */
       createUserReview: async (request) => {
         createUserReviewCalls.push(request);
         return responses.createUserReview ?? { userReview: defaultUserReview };
       },
+      /** Records and answers a list call. @param request - The list request. */
       listUserReviews: async (request) => {
         listUserReviewsCalls.push(request);
         return (
@@ -84,6 +86,7 @@ export function createUserReviewCommandTestDouble(
           }
         );
       },
+      /** Records and answers an archive call. @param request - The archive request. */
       archiveUserReview: async (request) => {
         archiveUserReviewCalls.push(request);
         return (

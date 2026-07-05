@@ -19,11 +19,17 @@ export type SpecViewCommentSidebarProps = Readonly<{
   operationState: CommentOperationState;
   activeCommentId: CommentId | null;
   anchorDisplayStates: readonly CommentAnchorDisplayState[];
+  /** Selects a comment. @param commentId - Id of the comment to select. */
   onSelectComment: (commentId: CommentId) => void;
+  /** Resolves a comment. @param commentId - Id of the comment to resolve. */
   onResolveComment: (commentId: CommentId) => void;
+  /** Reopens a comment. @param commentId - Id of the comment to reopen. */
   onReopenComment: (commentId: CommentId) => void;
+  /** Deletes a comment. @param commentId - Id of the comment to delete. */
   onDeleteComment: (commentId: CommentId) => void;
+  /** Updates a comment body. @param commentId - Id of the target comment. @param body - New comment body. */
   onUpdateComment: (commentId: CommentId, body: string) => Promise<boolean>;
+  /** Reloads the comment list. */
   onReloadComments: () => void;
 }>;
 

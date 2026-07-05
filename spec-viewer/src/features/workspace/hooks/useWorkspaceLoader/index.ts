@@ -72,6 +72,10 @@ export function useWorkspaceLoader(
 
   // io ラッパー: 各 IPC 呼び出しの直前に「クリア + input 更新」を合成する（途中経過の等価維持）。
   const flowIo: WorkspaceLoaderFlowIo = useMemo(() => {
+    /**
+     * 各 IPC 呼び出しの直前にエラー表示をクリアし、入力欄へパスを反映する。
+     * @param path - 開こうとしているワークスペースディレクトリパス。
+     */
     const applyOpenProgress = (path: string): void => {
       onError(null);
       setDropErrorMessage(null);
@@ -79,10 +83,15 @@ export function useWorkspaceLoader(
     };
 
     return {
+      /** @param path - 検証対象のワークスペースディレクトリパス。 */
       validate: (path) => {
         applyOpenProgress(path);
         return validateWorkspaceDirectory(path);
       },
+      /**
+       * @param path - 読み込むワークスペースディレクトリパス。
+       * @param preserveCurrentWorkspace - 失敗時に現在のワークスペースを保持するか。
+       */
       load: (path, preserveCurrentWorkspace) => {
         applyOpenProgress(path);
         return workspaceLoad(path, {
@@ -93,6 +102,10 @@ export function useWorkspaceLoader(
     };
   }, [onError, recordWorkspace, validateWorkspaceDirectory, workspaceLoad]);
 
+  /**
+   * ドロップ結果を状態へ適用する（ディレクトリでない/例外時はエラー表示）。
+   * @param outcome - openDroppedWorkspacePath の判定結果。
+   */
   const applyDropOutcome = (outcome: OpenDroppedWorkspaceOutcome): void => {
     if (outcome.type === "notDirectory" || outcome.type === "dropException") {
       setDropErrorMessage(outcome.dropMessage);
@@ -114,6 +127,7 @@ export function useWorkspaceLoader(
     [onError, removeWorkspace],
   );
 
+  /** ネイティブのディレクトリ選択ダイアログを開き、選択したワークスペースを読み込む。 */
   const browseWorkspace = async (): Promise<void> => {
     if (
       workspaceLoaderFlow.isEntryGuarded({
@@ -142,6 +156,7 @@ export function useWorkspaceLoader(
     }
   };
 
+  /** 入力欄のパスからワークスペースを読み込む。 */
   const loadWorkspace = (): void => {
     void workspaceLoaderFlow.openWorkspaceFromInput(workspaceInput, flowIo);
   };
@@ -165,6 +180,7 @@ export function useWorkspaceLoader(
     ],
   );
 
+  /** 現在のワークスペースと入力・エラー状態をリセットする。 */
   const resetWorkspace = (): void => {
     setWorkspaceInput("");
     onError(null);
@@ -199,6 +215,7 @@ export function useWorkspaceLoader(
 
   const workspaceDrop = useWorkspaceDrop({
     isDisabled: isWorkspaceOpening || isBrowsingWorkspace,
+    /** @param path - ドロップされたワークスペースディレクトリパス。 */
     onDropWorkspacePath: (path) => {
       void workspaceLoaderFlow
         .openDroppedWorkspacePath(

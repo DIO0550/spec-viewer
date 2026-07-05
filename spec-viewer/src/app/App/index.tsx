@@ -55,6 +55,11 @@ import { WorkspacePath } from "@/shared/domain/workspacePath";
 import { uiText } from "@/shared/lib/uiText";
 import { WorkspaceLayout } from "@/shared/ui";
 
+/**
+ * Application root that wires the theme, workspace and selection providers.
+ *
+ * @returns The root application element.
+ */
 function App(): ReactElement {
   return (
     <ThemeProvider>
@@ -69,6 +74,11 @@ function App(): ReactElement {
   );
 }
 
+/**
+ * Main spec view content that composes workspace, spec and comment state.
+ *
+ * @returns The spec viewer content element.
+ */
 function SpecViewAppContent(): ReactElement {
   // 共有エラースロット: フック化せず素の useState。setState は参照安定なのでそのまま渡せる。
   const [dialogErrorMessage, setDialogErrorMessage] = useState<string | null>(
@@ -181,6 +191,7 @@ function SpecViewAppContent(): ReactElement {
   }, [resetKeys.fileKey, resetKeys.specId, resetKeys.workspaceRoot]);
 
   // resetWorkspace のドメイン横断副作用を明示的な合成で維持する。
+  /** Clears the active comment and resets the workspace. */
   const resetWorkspace = (): void => {
     commentSelection.clearActiveComment();
     workspaceLoader.actions.resetWorkspace();

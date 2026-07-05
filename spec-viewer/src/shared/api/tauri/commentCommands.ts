@@ -35,24 +35,52 @@ import type {
 import { updateComment } from "./updateComment";
 
 export type CommentCommands = Readonly<{
+  /**
+   * Lists comments for a spec file.
+   * @param request - List comments command request.
+   */
   listComments: (
     request: ListCommentsCommandRequest,
   ) => Promise<ListCommentsCommandResponse>;
+  /**
+   * Adds a new comment.
+   * @param request - Add comment command request.
+   */
   addComment: (
     request: AddCommentCommandRequest,
   ) => Promise<AddCommentCommandResponse>;
+  /**
+   * Updates an existing comment.
+   * @param request - Update comment command request.
+   */
   updateComment: (
     request: UpdateCommentCommandRequest,
   ) => Promise<UpdateCommentCommandResponse>;
+  /**
+   * Deletes a comment.
+   * @param request - Delete comment command request.
+   */
   deleteComment: (
     request: DeleteCommentCommandRequest,
   ) => Promise<DeleteCommentCommandResponse>;
+  /**
+   * Marks a comment as resolved.
+   * @param request - Resolve comment command request.
+   */
   resolveComment: (
     request: ResolveCommentCommandRequest,
   ) => Promise<ResolveCommentCommandResponse>;
+  /**
+   * Reopens a resolved comment.
+   * @param request - Reopen comment command request.
+   */
   reopenComment: (
     request: ReopenCommentCommandRequest,
   ) => Promise<ReopenCommentCommandResponse>;
+  /**
+   * Toggles a comment's resolved state.
+   * @param request - Toggle comment resolved command request.
+   */
   toggleCommentResolved: (
     request: ToggleCommentResolvedCommandRequest,
   ) => Promise<ToggleCommentResolvedCommandResponse>;

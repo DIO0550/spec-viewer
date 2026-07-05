@@ -12,7 +12,9 @@ export type UseSpecViewKeyboardNavigationOptions = Readonly<{
   isCurrentViewLoading: boolean;
   selectedSpec: NavigableSpec | null;
   selectedFileKey: SpecFileKey | null;
+  /** Selects a spec file. @param fileKey - Key of the file to select. */
   selectFileKey: (fileKey: SpecFileKey) => Promise<unknown>;
+  /** Selects the adjacent comment. @param direction - Navigation direction. */
   selectAdjacentComment: (direction: NavigationDirection) => boolean;
 }>;
 
@@ -64,9 +66,13 @@ export function useSpecViewKeyboardNavigation(
   );
 
   useKeyboardShortcuts({
+    /** Navigates to the next file. */
     onNextFile: () => selectAdjacentFile("next"),
+    /** Navigates to the previous file. */
     onPreviousFile: () => selectAdjacentFile("previous"),
+    /** Navigates to the next comment. */
     onNextComment: () => selectAdjacentComment("next"),
+    /** Navigates to the previous comment. */
     onPreviousComment: () => selectAdjacentComment("previous"),
   });
 }
