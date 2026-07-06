@@ -1,20 +1,14 @@
 import {
   CheckCircle2,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   LoaderCircle,
   MessageSquare,
   MessageSquarePlus,
   Pencil,
-  RefreshCcw,
   RotateCcw,
-  Search,
   Send,
   Trash2,
   X,
-  ZoomIn,
-  ZoomOut,
 } from "lucide-react";
 import {
   type AriaRole,
@@ -79,9 +73,11 @@ import {
 } from "@/lib/htmlDocumentSearch";
 import { recordPerformancePoint } from "@/shared/lib/performance";
 import { uiText } from "@/shared/lib/uiText";
-import { CommandErrorDisplay } from "@/shared/ui/CommandErrorDisplay";
-import { EmptyState } from "@/shared/ui/EmptyState";
-import { LoadingSkeleton } from "@/shared/ui/LoadingSkeleton";
+import { MarkdownViewerHeader } from "./MarkdownViewerHeader";
+import {
+  MarkdownViewerPanel,
+  MarkdownViewerStatusPanel,
+} from "./MarkdownViewerStatusPanel";
 
 type BlockType = "heading" | "paragraph" | "list-item" | "table" | "code";
 
@@ -563,161 +559,66 @@ export function MarkdownViewer({
     [activeEditDraft, visibleViewerComments],
   );
 
-  if (state.status === "idle") {
+  if (
+    state.status !== "ready" ||
+    state.document.contents === null ||
+    state.document.contents.trim().length === 0
+  ) {
     return (
-      <section
-        ref={panelRef}
-        id="markdown-viewer-panel"
-        className="markdown-viewer markdown-viewer--center"
-        role="tabpanel"
-        tabIndex={-1}
-      >
-        <EmptyState
-          title={
-            selectedSpecLabel === null
-              ? uiText.markdown.chooseSpec
-              : uiText.markdown.chooseFile
-          }
-          description={uiText.markdown.idleDescription}
-        />
-      </section>
-    );
-  }
-
-  if (state.status === "loading") {
-    return (
-      <section
-        ref={panelRef}
-        id="markdown-viewer-panel"
-        className="markdown-viewer"
-        role="tabpanel"
-        aria-live="polite"
-        tabIndex={-1}
-      >
-        <LoadingSkeleton
-          className="markdown-loading-skeleton"
-          label={uiText.markdown.loading}
-          rows={[
-            { width: "short" },
-            { width: "long" },
-            { width: "medium" },
-            { width: "full" },
-            { width: "full" },
-            { width: "medium" },
-            { width: "long" },
-          ]}
-        />
-      </section>
-    );
-  }
-
-  if (state.status === "error") {
-    return (
-      <section
-        ref={panelRef}
-        id="markdown-viewer-panel"
-        className="markdown-viewer markdown-viewer--center"
-        role="tabpanel"
-        tabIndex={-1}
-      >
-        <CommandErrorDisplay
-          title={uiText.markdown.loadError}
-          error={state.error}
-          actionLabel={uiText.sidebar.retry}
-          onAction={onReload}
-        />
-      </section>
-    );
-  }
-
-  if (state.status === "missing") {
-    return (
-      <section
-        ref={panelRef}
-        id="markdown-viewer-panel"
-        className="markdown-viewer markdown-viewer--center"
-        role="tabpanel"
-        tabIndex={-1}
-      >
-        <EmptyState
-          title={uiText.markdown.missingTitle}
-          description={`${state.document.path} ${uiText.markdown.missingDescription}`}
-        />
-      </section>
+      <MarkdownViewerStatusPanel
+        state={state}
+        selectedSpecLabel={selectedSpecLabel}
+        panelRef={panelRef}
+        onReload={onReload}
+      />
     );
   }
 
   const contents = state.document.contents;
 
-  if (contents === null || contents.trim().length === 0) {
-    return (
-      <section
-        ref={panelRef}
-        id="markdown-viewer-panel"
-        className="markdown-viewer markdown-viewer--center"
-        role="tabpanel"
-        tabIndex={-1}
-      >
-        <EmptyState
-          title={uiText.markdown.emptyTitle}
-          description={state.document.path}
-        />
-      </section>
-    );
-  }
-
   return (
-    <article
-      ref={panelRef}
-      id="markdown-viewer-panel"
-      className={
-        state.document.format === "html"
-          ? "markdown-viewer markdown-viewer--html"
-          : "markdown-viewer"
-      }
-      data-comment-dialog-open={
+    <MarkdownViewerPanel
+      as="article"
+      panelRef={panelRef}
+      variant={state.document.format === "html" ? "html" : "default"}
+      dataCommentDialogOpen={
         activeAnchorDraft !== null || activeEditDraft !== null
           ? "true"
           : undefined
       }
-      role="tabpanel"
-      tabIndex={-1}
     >
-      <header className="markdown-viewer__header">
-        <div>
-          <p className="markdown-viewer__eyebrow">{selectedSpecLabel}</p>
-          <h1>{selectedFileLabel ?? state.fileKey}</h1>
-          <p className="markdown-viewer__path">{state.document.path}</p>
-        </div>
-        <div className="markdown-viewer__actions">
-          {isHtmlDocument ? (
-            <HtmlZoomControl
-              zoomPercent={htmlZoomPercent}
-              onDecrease={decreaseHtmlZoom}
-              onIncrease={increaseHtmlZoom}
-            />
-          ) : null}
-          <DocumentSearchControl
-            query={documentSearchQuery}
-            matchCount={documentSearchMatchCount}
-            activeMatchIndex={activeDocumentSearchIndex}
-            disabled={false}
-            onQueryChange={setDocumentSearchQuery}
-            onPrevious={goToPreviousDocumentSearchMatch}
-            onNext={goToNextDocumentSearchMatch}
-            onClear={clearDocumentSearch}
-          />
-          <button
-            className="icon-button"
-            type="button"
-            aria-label={uiText.markdown.reload}
-            title={uiText.markdown.reload}
-            onClick={onReload}
-          >
-            <RefreshCcw aria-hidden="true" size={16} />
-          </button>
-        </div>
-      </header>
+      <MarkdownViewerHeader
+        selectedSpecLabel={selectedSpecLabel}
+        selectedFileLabel={selectedFileLabel}
+        fileKey={state.fileKey}
+        path={state.document.path}
+        htmlZoom={
+          isHtmlDocument
+            ? {
+                zoomPercentLabel: formatHtmlZoomPercent(htmlZoomPercent),
+                canDecrease: htmlZoomPercent > HTML_ZOOM_MIN_PERCENT,
+                canIncrease: htmlZoomPercent < HTML_ZOOM_MAX_PERCENT,
+                onDecrease: decreaseHtmlZoom,
+                onIncrease: increaseHtmlZoom,
+              }
+            : null
+        }
+        documentSearch={{
+          query: documentSearchQuery,
+          statusText: formatDocumentSearchStatus({
+            hasQuery: normalizedDocumentSearchQuery.length > 0,
+            matchCount: documentSearchMatchCount,
+            activeMatchIndex: activeDocumentSearchIndex,
+          }),
+          hasMatches: documentSearchMatchCount > 0,
+          disabled: false,
+          onQueryChange: setDocumentSearchQuery,
+          onPrevious: goToPreviousDocumentSearchMatch,
+          onNext: goToNextDocumentSearchMatch,
+          onClear: clearDocumentSearch,
+        }}
+        onReload={onReload}
+      />
       {state.document.format === "html" ? (
         <HtmlDocument
           contents={contents}
@@ -769,169 +670,7 @@ export function MarkdownViewer({
           />
         </>
       )}
-    </article>
-  );
-}
-
-type DocumentSearchControlProps = Readonly<{
-  query: string;
-  matchCount: number;
-  activeMatchIndex: number;
-  disabled: boolean;
-  /**
-   * Handles changes to the document search query.
-   * @param query - The updated search query text.
-   */
-  onQueryChange: (query: string) => void;
-  /** Selects the previous document search match. */
-  onPrevious: () => void;
-  /** Selects the next document search match. */
-  onNext: () => void;
-  /** Clears the document search query. */
-  onClear: () => void;
-}>;
-
-type HtmlZoomControlProps = Readonly<{
-  zoomPercent: number;
-  /** Decreases the HTML preview zoom by one step. */
-  onDecrease: () => void;
-  /** Increases the HTML preview zoom by one step. */
-  onIncrease: () => void;
-}>;
-
-/** @returns Zoom controls for sandboxed HTML document previews. */
-function HtmlZoomControl({
-  zoomPercent,
-  onDecrease,
-  onIncrease,
-}: HtmlZoomControlProps) {
-  return (
-    <div
-      className="html-zoom-control"
-      aria-label={uiText.markdown.htmlZoomControls}
-    >
-      <button
-        className="icon-button"
-        type="button"
-        aria-label={uiText.markdown.decreaseHtmlZoom}
-        title={uiText.markdown.decreaseHtmlZoom}
-        disabled={zoomPercent <= HTML_ZOOM_MIN_PERCENT}
-        onClick={onDecrease}
-      >
-        <ZoomOut aria-hidden="true" size={15} />
-      </button>
-      <output
-        className="html-zoom-control__value"
-        aria-label={uiText.markdown.htmlZoomPercent}
-      >
-        {formatHtmlZoomPercent(zoomPercent)}
-      </output>
-      <button
-        className="icon-button"
-        type="button"
-        aria-label={uiText.markdown.increaseHtmlZoom}
-        title={uiText.markdown.increaseHtmlZoom}
-        disabled={zoomPercent >= HTML_ZOOM_MAX_PERCENT}
-        onClick={onIncrease}
-      >
-        <ZoomIn aria-hidden="true" size={15} />
-      </button>
-    </div>
-  );
-}
-
-/** @returns Sticky document search controls for the current Markdown file. */
-function DocumentSearchControl({
-  query,
-  matchCount,
-  activeMatchIndex,
-  disabled,
-  onQueryChange,
-  onPrevious,
-  onNext,
-  onClear,
-}: DocumentSearchControlProps) {
-  const inputId = useId();
-  const normalizedQuery = normalizeDocumentSearchQuery(query);
-  const hasQuery = normalizedQuery.length > 0;
-  const hasMatches = matchCount > 0;
-  const statusText = formatDocumentSearchStatus({
-    hasQuery,
-    matchCount,
-    activeMatchIndex,
-  });
-  const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
-    if (event.key !== "Enter" || !hasMatches) {
-      return;
-    }
-
-    event.preventDefault();
-
-    if (event.shiftKey) {
-      onPrevious();
-      return;
-    }
-
-    onNext();
-  };
-
-  return (
-    <div className="markdown-document-search">
-      <label className="markdown-document-search__label" htmlFor={inputId}>
-        <Search aria-hidden="true" size={14} />
-        {uiText.markdown.search}
-      </label>
-      <div className="markdown-document-search__field">
-        <input
-          id={inputId}
-          aria-label={uiText.markdown.search}
-          type="search"
-          value={query}
-          disabled={disabled}
-          placeholder={uiText.markdown.searchPlaceholder}
-          onInput={(event) => {
-            onQueryChange(event.currentTarget.value);
-          }}
-          onKeyDown={handleInputKeyDown}
-        />
-        {query.length === 0 ? null : (
-          <button
-            className="icon-button markdown-document-search__clear"
-            type="button"
-            aria-label={uiText.markdown.clearSearch}
-            title={uiText.markdown.clearSearch}
-            onClick={onClear}
-          >
-            <X aria-hidden="true" size={13} />
-          </button>
-        )}
-      </div>
-      <span className="markdown-document-search__count" aria-live="polite">
-        {statusText}
-      </span>
-      <div className="markdown-document-search__navigation">
-        <button
-          className="icon-button"
-          type="button"
-          aria-label={uiText.markdown.previousSearchMatch}
-          title={uiText.markdown.previousSearchMatch}
-          disabled={!hasMatches}
-          onClick={onPrevious}
-        >
-          <ChevronLeft aria-hidden="true" size={14} />
-        </button>
-        <button
-          className="icon-button"
-          type="button"
-          aria-label={uiText.markdown.nextSearchMatch}
-          title={uiText.markdown.nextSearchMatch}
-          disabled={!hasMatches}
-          onClick={onNext}
-        >
-          <ChevronRight aria-hidden="true" size={14} />
-        </button>
-      </div>
-    </div>
+    </MarkdownViewerPanel>
   );
 }
 
