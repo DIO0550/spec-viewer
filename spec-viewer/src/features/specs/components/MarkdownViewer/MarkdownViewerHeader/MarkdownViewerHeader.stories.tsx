@@ -77,7 +77,7 @@ export const EdgeCases: Story = {
   args: {
     selectedSpecLabel: null,
     selectedFileLabel: null,
-    fileKey: "implementation-plan",
+    fileKey: "impl",
     path: "/workspace/spec-reviewer/.plugin-workspace/.specs/063-markdown-viewer-components/implementation-plan.md",
     documentSearch: {
       query: "missing phrase",

@@ -1,5 +1,6 @@
 import { RefreshCcw } from "lucide-react";
 
+import type { SpecFileKey } from "@/features/specs/types/spec";
 import { uiText } from "@/shared/lib/uiText";
 import {
   DocumentSearchControl,
@@ -10,7 +11,7 @@ import { HtmlZoomControl, type HtmlZoomControlProps } from "./HtmlZoomControl";
 export type MarkdownViewerHeaderProps = Readonly<{
   selectedSpecLabel: string | null;
   selectedFileLabel: string | null;
-  fileKey: string;
+  fileKey: SpecFileKey;
   path: string;
   htmlZoom: HtmlZoomControlProps | null;
   documentSearch: DocumentSearchControlProps;
