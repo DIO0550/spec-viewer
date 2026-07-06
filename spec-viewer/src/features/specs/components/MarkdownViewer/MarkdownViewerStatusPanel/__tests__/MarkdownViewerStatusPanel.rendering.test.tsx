@@ -5,10 +5,8 @@ import { expect, test, vi } from "vitest";
 
 import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
 import type { SpecDocument } from "@/features/specs/types/spec";
-import {
-  MarkdownViewerPanel,
-  MarkdownViewerStatusPanel,
-} from "@/features/specs/components/MarkdownViewer/MarkdownViewerStatusPanel";
+import { MarkdownViewerPanel } from "@/features/specs/components/MarkdownViewer/MarkdownViewerPanel";
+import { MarkdownViewerStatusPanel } from "@/features/specs/components/MarkdownViewer/MarkdownViewerStatusPanel";
 
 const workspacePath = "/workspace/spec-reviewer";
 

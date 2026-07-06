@@ -74,10 +74,8 @@ import {
 import { recordPerformancePoint } from "@/shared/lib/performance";
 import { uiText } from "@/shared/lib/uiText";
 import { MarkdownViewerHeader } from "./MarkdownViewerHeader";
-import {
-  MarkdownViewerPanel,
-  MarkdownViewerStatusPanel,
-} from "./MarkdownViewerStatusPanel";
+import { MarkdownViewerPanel } from "./MarkdownViewerPanel";
+import { MarkdownViewerStatusPanel } from "./MarkdownViewerStatusPanel";
 
 type BlockType = "heading" | "paragraph" | "list-item" | "table" | "code";
 
