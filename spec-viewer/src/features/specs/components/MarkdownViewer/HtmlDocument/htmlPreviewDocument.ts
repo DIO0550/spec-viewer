@@ -108,8 +108,8 @@ export function rewriteSameDocumentHtmlLinks(
   const sourceFileName = getPathFileName(sourcePath);
 
   return contents.replace(
-    /\bhref=(["'])([^"']+)["']/gi,
-    (attribute, quote: string, href: string) => {
+    /(^|\s)href=(["'])([^"']+)["']/gi,
+    (attribute, prefix: string, quote: string, href: string) => {
       const hashIndex = href.indexOf("#");
 
       if (hashIndex < 0) {
@@ -123,7 +123,7 @@ export function rewriteSameDocumentHtmlLinks(
         return attribute;
       }
 
-      return `href=${quote}${hrefHash}${quote}`;
+      return `${prefix}href=${quote}${hrefHash}${quote}`;
     },
   );
 }

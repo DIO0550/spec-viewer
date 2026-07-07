@@ -60,6 +60,7 @@ test.each([
   ['<a href="other.html#preview">Other</a>'],
   ['<a href="https://example.com/other.html#preview">External</a>'],
   ['<a href="tasks.html">No hash</a>'],
+  ['<a data-href="tasks.html#preview">Preview</a>'],
 ])("rewriteSameDocumentHtmlLinksは対象外hrefを変更しない", (input) => {
   expect(
     rewriteSameDocumentHtmlLinks(input, "/workspace/docs/tasks.html"),
