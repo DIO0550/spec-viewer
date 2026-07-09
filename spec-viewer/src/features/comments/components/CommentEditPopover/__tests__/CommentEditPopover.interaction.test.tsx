@@ -15,8 +15,8 @@ import {
 import type { Comment, CommentId } from "@/features/comments/types/comment";
 import { CommentId as CommentIdValue } from "@/features/comments/types/comment";
 
-const commentId = CommentIdValue.fromString;
-const idleOperationState = CommentOperationIdleState.create();
+const CommentIdFromString = CommentIdValue.fromString;
+const IdleOperationState = CommentOperationIdleState.create();
 
 type RenderResult = Readonly<{
   container: HTMLDivElement;
@@ -55,7 +55,7 @@ function renderComponent(component: ReactNode): RenderResult {
 }
 
 function createComment(overrides: Partial<Comment> = {}): Comment {
-  const id = overrides.id ?? commentId("cmt_edit");
+  const id = overrides.id ?? CommentIdFromString("cmt_edit");
   const resolved = overrides.resolved ?? false;
 
   return {
@@ -96,7 +96,7 @@ function createProps(
     draft: createDraft(),
     style: { top: 10, left: 20 },
     isSaving: false,
-    operationState: idleOperationState,
+    operationState: IdleOperationState,
     onSubmit: vi.fn().mockResolvedValue(true),
     onResolveComment: vi.fn().mockResolvedValue(true),
     onReopenComment: vi.fn().mockResolvedValue(true),
@@ -190,7 +190,7 @@ test("CommentEditPopoverはdraft=nullでは描画せずhandlerを実行しない
     draft: null,
     operationState: CommentOperationSavingState.create(
       "update",
-      commentId("cmt_edit"),
+      CommentIdFromString("cmt_edit"),
     ),
     onCancel,
   });
@@ -223,7 +223,7 @@ test("CommentEditPopoverは初期表示でariaとstyleを渡しtextareaへfocus�
 });
 
 test("CommentEditPopoverはsame comment rerenderで編集中の本文を維持する", () => {
-  const sameCommentId = commentId("cmt_same");
+  const sameCommentId = CommentIdFromString("cmt_same");
   const result = renderPopover({ draft: createDraft({ id: sameCommentId }) });
   const textarea = findTextarea(result.container);
 
@@ -237,9 +237,9 @@ test("CommentEditPopoverはsame comment rerenderで編集中の本文を維持�
 });
 
 test("CommentEditPopoverは別commentへ切り替わると本文とvalidationと削除確認をresetする", async () => {
-  const firstDraft = createDraft({ id: commentId("cmt_first") });
+  const firstDraft = createDraft({ id: CommentIdFromString("cmt_first") });
   const secondDraft = createDraft({
-    id: commentId("cmt_second"),
+    id: CommentIdFromString("cmt_second"),
     body: "Second body",
   });
   const result = renderPopover({ draft: firstDraft });
@@ -297,7 +297,10 @@ test("CommentEditPopoverはtrim済み本文をsubmitし空本文を保存しな�
     findButtonContainingText(result.container, "保存").click();
   });
 
-  expect(onSubmit).toHaveBeenCalledWith(commentId("cmt_edit"), "Updated body");
+  expect(onSubmit).toHaveBeenCalledWith(
+    CommentIdFromString("cmt_edit"),
+    "Updated body",
+  );
   result.unmount();
 });
 
@@ -326,7 +329,9 @@ test("CommentEditPopoverは未解決コメントのresolve handlerを呼ぶ", as
     findButtonContainingText(result.container, "解決する").click();
   });
 
-  expect(onResolveComment).toHaveBeenCalledWith(commentId("cmt_edit"));
+  expect(onResolveComment).toHaveBeenCalledWith(
+    CommentIdFromString("cmt_edit"),
+  );
   result.unmount();
 });
 
@@ -341,7 +346,7 @@ test("CommentEditPopoverは解決済みコメントのreopen handlerを呼ぶ", 
     findButtonContainingText(result.container, "再オープン").click();
   });
 
-  expect(onReopenComment).toHaveBeenCalledWith(commentId("cmt_edit"));
+  expect(onReopenComment).toHaveBeenCalledWith(CommentIdFromString("cmt_edit"));
   result.unmount();
 });
 
@@ -381,7 +386,7 @@ test("CommentEditPopoverはdelete confirmationから削除を実行しcancelで�
     confirmDeleteButton.click();
   });
 
-  expect(onDeleteComment).toHaveBeenCalledWith(commentId("cmt_edit"));
+  expect(onDeleteComment).toHaveBeenCalledWith(CommentIdFromString("cmt_edit"));
   result.unmount();
 });
 
@@ -412,7 +417,7 @@ test("CommentEditPopoverはbusy中にdismissalと操作ボタンを無効化す�
   const result = renderPopover({
     operationState: CommentOperationSavingState.create(
       "resolve",
-      commentId("cmt_edit"),
+      CommentIdFromString("cmt_edit"),
     ),
     onCancel,
   });
@@ -441,7 +446,7 @@ test("CommentEditPopoverはoperation errorをcommentIdとoperationでscopeする
   const result = renderPopover({
     operationState: createOperationErrorState(
       "delete",
-      commentId("cmt_edit"),
+      CommentIdFromString("cmt_edit"),
       "対象コメントの削除に失敗しました。",
     ),
   });
@@ -453,7 +458,7 @@ test("CommentEditPopoverはoperation errorをcommentIdとoperationでscopeする
   rerenderPopover(result, {
     operationState: createOperationErrorState(
       "delete",
-      commentId("cmt_other"),
+      CommentIdFromString("cmt_other"),
       "別コメントの削除に失敗しました。",
     ),
   });
@@ -465,7 +470,7 @@ test("CommentEditPopoverはoperation errorをcommentIdとoperationでscopeする
   rerenderPopover(result, {
     operationState: createOperationErrorState(
       "add",
-      commentId("cmt_edit"),
+      CommentIdFromString("cmt_edit"),
       "追加失敗は編集に表示しません。",
     ),
   });
@@ -535,7 +540,10 @@ test("CommentEditPopoverはsubmit Promise解決前に別commentへ切り替わ�
     findButtonContainingText(result.container, "保存").click();
   });
   rerenderPopover(result, {
-    draft: createDraft({ id: commentId("cmt_next"), body: "Next body" }),
+    draft: createDraft({
+      id: CommentIdFromString("cmt_next"),
+      body: "Next body",
+    }),
   });
   await act(async () => {
     deferred.resolve(false);
@@ -546,7 +554,10 @@ test("CommentEditPopoverはsubmit Promise解決前に別commentへ切り替わ�
   expect(result.container.textContent).not.toContain(
     "コメントを更新できませんでした。再試行してください。",
   );
-  expect(onSubmit).toHaveBeenCalledWith(commentId("cmt_edit"), "Pending body");
+  expect(onSubmit).toHaveBeenCalledWith(
+    CommentIdFromString("cmt_edit"),
+    "Pending body",
+  );
   result.unmount();
 });
 
@@ -567,6 +578,9 @@ test("CommentEditPopoverはsubmit Promise解決前にdraft=nullになっても�
   });
 
   expect(result.container.firstElementChild).toBeNull();
-  expect(onSubmit).toHaveBeenCalledWith(commentId("cmt_edit"), "Pending body");
+  expect(onSubmit).toHaveBeenCalledWith(
+    CommentIdFromString("cmt_edit"),
+    "Pending body",
+  );
   result.unmount();
 });

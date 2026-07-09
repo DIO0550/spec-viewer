@@ -60,12 +60,12 @@ type Props = Readonly<{
   onCancel: () => void;
 }>;
 
-const emptyEditBodyMessage = uiText.commentThread.emptyBody;
-const failedUpdateMessage =
+const EmptyEditBodyMessage = uiText.commentThread.emptyBody;
+const FailedUpdateMessage =
   "コメントを更新できませんでした。再試行してください。";
-const failedStatusActionMessage =
+const FailedStatusActionMessage =
   "コメントの状態を変更できませんでした。再試行してください。";
-const failedDeleteMessage =
+const FailedDeleteMessage =
   "コメントを削除できませんでした。再試行してください。";
 
 /** @returns Operation error message scoped to one comment and selected operations. */
@@ -173,7 +173,7 @@ export function CommentEditPopover({
     }
 
     if (trimmedBody.length === 0) {
-      setValidationMessage(emptyEditBodyMessage);
+      setValidationMessage(EmptyEditBodyMessage);
       return;
     }
 
@@ -187,7 +187,7 @@ export function CommentEditPopover({
     }
 
     if (!wasSaved) {
-      setValidationMessage(failedUpdateMessage);
+      setValidationMessage(FailedUpdateMessage);
     }
   };
 
@@ -208,7 +208,7 @@ export function CommentEditPopover({
     }
 
     if (!wasChanged) {
-      setValidationMessage(failedStatusActionMessage);
+      setValidationMessage(FailedStatusActionMessage);
     }
   };
 
@@ -245,7 +245,7 @@ export function CommentEditPopover({
     }
 
     if (!wasDeleted) {
-      setValidationMessage(failedDeleteMessage);
+      setValidationMessage(FailedDeleteMessage);
     }
   };
 

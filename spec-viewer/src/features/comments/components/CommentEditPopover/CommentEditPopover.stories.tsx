@@ -10,10 +10,10 @@ import {
 import type { Comment } from "@/features/comments/types/comment";
 import { CommentId } from "@/features/comments/types/comment";
 
-const defaultCommentId = CommentId.fromString("cmt_story_edit");
+const DefaultCommentId = CommentId.fromString("cmt_story_edit");
 
-const defaultComment: Comment = {
-  id: defaultCommentId,
+const DefaultComment: Comment = {
+  id: DefaultCommentId,
   anchor: {
     fileKey: "tasks",
     blockType: "paragraph",
@@ -33,14 +33,14 @@ const defaultComment: Comment = {
   updatedAt: "2026-05-05T10:00:00Z",
 };
 
-const defaultDraft = {
-  comment: defaultComment,
+const DefaultDraft = {
+  comment: DefaultComment,
 };
 
-const meta: Meta<typeof CommentEditPopover> = {
+const StoryMeta: Meta<typeof CommentEditPopover> = {
   component: CommentEditPopover,
   args: {
-    draft: defaultDraft,
+    draft: DefaultDraft,
     style: {
       top: 24,
       left: 24,
@@ -65,7 +65,7 @@ const meta: Meta<typeof CommentEditPopover> = {
   },
 };
 
-export default meta;
+export default StoryMeta;
 
 type Story = StoryObj<typeof CommentEditPopover>;
 
@@ -75,7 +75,7 @@ export const Busy: Story = {
   args: {
     operationState: CommentOperationSavingState.create(
       "update",
-      defaultCommentId,
+      DefaultCommentId,
     ),
   },
 };
@@ -84,7 +84,7 @@ export const Error: Story = {
   args: {
     operationState: CommentOperationFailedState.create(
       "update",
-      defaultCommentId,
+      DefaultCommentId,
       {
         feature: "comments",
         code: "unknown",
@@ -113,7 +113,7 @@ export const DeleteFailure: Story = {
   args: {
     operationState: CommentOperationFailedState.create(
       "delete",
-      defaultCommentId,
+      DefaultCommentId,
       {
         feature: "comments",
         code: "unknown",
