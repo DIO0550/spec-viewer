@@ -88,10 +88,9 @@ function createReadyState(
   contents: string | null,
   blocks: readonly MarkdownBlockMetadata[] = [],
   format: SpecDocument["format"] = "markdown",
-  documentPath: string =
-    format === "html"
-      ? "/workspace/spec-reviewer/docs/plans/tasks.html"
-      : "/workspace/spec-reviewer/docs/plans/tasks.md",
+  documentPath: string = format === "html"
+    ? "/workspace/spec-reviewer/docs/plans/tasks.html"
+    : "/workspace/spec-reviewer/docs/plans/tasks.md",
 ): SpecDocumentState {
   const document: SpecDocument = {
     key: "tasks",
@@ -751,10 +750,13 @@ test("MarkdownViewerは既存コメントを本文右側のカードから編集
   expect(onSelectComment).not.toHaveBeenCalled();
   expect(result.container.textContent).toContain("コメント編集");
 
-  const editor = result.container.querySelector(
-    ".add-comment-popover textarea",
-  ) as HTMLTextAreaElement;
+  const editPopover = result.container.querySelector(
+    ".add-comment-popover",
+  ) as HTMLElement;
+  const editor = editPopover.querySelector("textarea") as HTMLTextAreaElement;
 
+  expect(editPopover.style.top).toBe("10px");
+  expect(editPopover.style.left).toBe("8px");
   expect(editor.value).toBe("cmt_open body");
 
   await act(async () => {
@@ -776,6 +778,7 @@ test("MarkdownViewerは既存コメントを本文右側のカードから編集
     commentId("cmt_open"),
     "Updated inline comment body",
   );
+  expect(result.container.querySelector(".add-comment-popover")).toBeNull();
   expect(
     result.container.querySelector(".markdown-block-comment-button"),
   ).not.toBeNull();
@@ -1024,6 +1027,7 @@ test("MarkdownViewerは編集ポップオーバーの削除確認後にコメン
   });
 
   expect(onDeleteComment).toHaveBeenCalledWith(commentId("cmt_delete"));
+  expect(result.container.querySelector(".add-comment-popover")).toBeNull();
   result.unmount();
 });
 
