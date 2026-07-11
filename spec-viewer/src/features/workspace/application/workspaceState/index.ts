@@ -1,5 +1,4 @@
 import type { GenerationToken } from "@/features/workspace/application/generation";
-import { selectWorkspace } from "@/features/workspace/application/workspaceSelectors";
 import type { Workspace } from "@/features/workspace/domain/workspace";
 import type { WorkspaceError } from "@/features/workspace/domain/workspaceError";
 
@@ -135,7 +134,7 @@ function reduceOpenRequested(
   event: Extract<WorkspaceStateEvent, { type: "openRequested" }>,
 ): WorkspaceStateMachine {
   const currentWorkspace = event.preserveCurrentWorkspace
-    ? selectWorkspace(current.state)
+    ? currentWorkspaceFromState(current.state)
     : null;
 
   return {
@@ -147,6 +146,19 @@ function reduceOpenRequested(
     },
     activeRequestId: event.requestId,
   };
+}
+
+/** @returns The workspace preserved by the current state, if one exists. */
+function currentWorkspaceFromState(state: WorkspaceState): Workspace | null {
+  if (state.status === "opened") {
+    return state.workspace;
+  }
+
+  if (state.status === "opening") {
+    return state.currentWorkspace;
+  }
+
+  return null;
 }
 
 /** @returns True when a completion belongs to the active opening request. */
