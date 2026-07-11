@@ -1,98 +1,70 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useReducer, useRef } from "react";
 
-import { selectWorkspace } from "@/features/workspace/context/selectors";
+import {
+  createGeneration,
+  type Generation,
+} from "@/features/workspace/application/generation";
+import { WorkspaceState } from "@/features/workspace/application/workspaceState";
 import type {
   LoadWorkspaceOptions,
   WorkspaceActions,
   WorkspaceContextValue,
-  WorkspaceState,
 } from "@/features/workspace/context/types";
 import { toWorkspaceError } from "@/features/workspace/domain/workspaceError";
 import { loadWorkspace as defaultLoadWorkspace } from "@/shared/api/tauri";
 import { LoadWorkspaceCommandError } from "@/shared/api/tauri/loadWorkspace";
-import { createGeneration, type Generation } from "@/domains/generation";
-
-const initialWorkspaceState: WorkspaceState = {
-  status: "idle",
-};
 
 /** @returns Workspace loading state and actions for selecting/resetting a workspace. */
 export function useWorkspaceState(): WorkspaceContextValue {
   const generationRef = useRef<Generation>(createGeneration());
-  const stateRef = useRef<WorkspaceState>(initialWorkspaceState);
-  const [state, setState] = useState<WorkspaceState>(initialWorkspaceState);
+  const [machine, dispatch] = useReducer(
+    WorkspaceState.reduce,
+    WorkspaceState.initial(),
+  );
   const generation = generationRef.current;
-
-  const updateState = useCallback((nextState: WorkspaceState): void => {
-    stateRef.current = nextState;
-    setState(nextState);
-  }, []);
 
   const load = useCallback(
     async (
       selectedDirectory: string,
       loadOptions: LoadWorkspaceOptions = {},
     ): Promise<boolean> => {
-      const token = generation.next();
-      const preservedWorkspace =
-        loadOptions.preserveCurrentWorkspace === true
-          ? selectWorkspace(stateRef.current)
-          : null;
-
-      updateState({
-        status: "opening",
-        requestedPath: selectedDirectory,
-        currentWorkspace: preservedWorkspace,
-        error: null,
-      });
+      const requestId = generation.next();
+      dispatch(
+        WorkspaceState.openRequested({
+          requestId,
+          requestedPath: selectedDirectory,
+          preserveCurrentWorkspace:
+            loadOptions.preserveCurrentWorkspace === true,
+        }),
+      );
 
       try {
         const workspace = await defaultLoadWorkspace(selectedDirectory);
+        dispatch(WorkspaceState.openSucceeded({ requestId, workspace }));
 
-        if (!generation.isCurrent(token)) {
+        if (!generation.isCurrent(requestId)) {
           return false;
         }
 
-        updateState({
-          status: "opened",
-          workspace,
-          lastOpenError: null,
-        });
         loadOptions.onWorkspaceLoaded?.(workspace);
         return true;
       } catch (error) {
-        if (!generation.isCurrent(token)) {
-          return false;
-        }
-
         const workspaceError = toWorkspaceError(
           LoadWorkspaceCommandError.fromUnknown(error),
         );
-
-        if (preservedWorkspace !== null) {
-          updateState({
-            status: "opened",
-            workspace: preservedWorkspace,
-            lastOpenError: workspaceError,
-          });
-          return false;
-        }
-
-        updateState({
-          status: "failed",
-          requestedPath: selectedDirectory,
-          error: workspaceError,
-        });
+        dispatch(
+          WorkspaceState.openFailed({ requestId, error: workspaceError }),
+        );
         return false;
       }
     },
-    [generation, updateState],
+    [generation],
   );
 
   const reset = useCallback((): void => {
     generation.invalidate();
-    updateState(initialWorkspaceState);
-  }, [generation, updateState]);
+    dispatch(WorkspaceState.reset());
+  }, [generation]);
 
   const actions: WorkspaceActions = useMemo(
     () => ({
@@ -103,7 +75,7 @@ export function useWorkspaceState(): WorkspaceContextValue {
   );
 
   return {
-    state,
+    state: machine.state,
     actions,
   };
 }
