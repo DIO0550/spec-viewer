@@ -13,6 +13,10 @@ import type {
   ListUserReviewsResponse,
   UserReview,
 } from "@/features/review-runs/types/userReviewIpc";
+import {
+  SpecViewSelection,
+  type SpecViewSelection as SpecViewSelectionType,
+} from "@/features/specs/domain/specViewSelection";
 import type { SpecFileKey } from "@/features/specs/types/spec";
 import {
   useUserReviews,
@@ -122,23 +126,34 @@ function renderHook<Props, Result>(
   };
 }
 
+/** @returns Valid aggregate assembled through explicit selection transitions. */
+function createSelection(props: HookProps): SpecViewSelectionType {
+  if (props.workspacePath === null) {
+    return SpecViewSelection.empty();
+  }
+
+  let selection = SpecViewSelection.selectWorkspace(
+    SpecViewSelection.empty(),
+    WorkspacePath.fromString(props.workspacePath),
+  );
+  if (props.specId === null) {
+    return selection;
+  }
+
+  selection = SpecViewSelection.selectSpec(selection, props.specId);
+  if (props.fileKey !== null) {
+    selection = SpecViewSelection.selectFile(selection, props.fileKey);
+  }
+
+  return SpecViewSelection.selectTargetScope(selection, props.targetScope);
+}
+
 function renderUseUserReviews(props: HookProps) {
   return renderHook(
-    ({ workspacePath, specId, fileKey, targetScope, selectionId, commands }) =>
+    (currentProps) =>
       useUserReviews({
-        selectionSnapshot: {
-          selection: {
-            workspacePath:
-              workspacePath === null
-                ? null
-                : WorkspacePath.fromString(workspacePath),
-            specId,
-            fileKey,
-            targetScope,
-          },
-          selectionId,
-        },
-        commands,
+        selection: createSelection(currentProps),
+        commands: currentProps.commands,
       }),
     props,
   );
@@ -383,7 +398,7 @@ test("useUserReviewsはloading中のcreate成功を古いlist responseで上書�
   result.unmount();
 });
 
-test("useUserReviewsはselectionId変更後に完了したcreateを現在listへ反映しない", async () => {
+test("useUserReviewsはselection変更後に完了したcreateを現在listへ反映しない", async () => {
   const createRunDeferred = createDeferred<CreateUserReviewResponse>();
   const commands: UserReviewCommands = {
     listUserReviews: vi.fn().mockResolvedValue({
@@ -411,9 +426,9 @@ test("useUserReviewsはselectionId変更後に完了したcreateを現在listへ
   result.rerender({
     workspacePath: "/workspace/spec-reviewer",
     specId: "auth",
-    fileKey: "tasks",
+    fileKey: "impl",
     targetScope: "file",
-    selectionId: "/workspace/spec-reviewer:file:auth:tasks:next",
+    selectionId: "/workspace/spec-reviewer:file:auth:impl",
     commands,
   });
   await flushAsyncEffects();
@@ -428,7 +443,7 @@ test("useUserReviewsはselectionId変更後に完了したcreateを現在listへ
   result.unmount();
 });
 
-test("useUserReviewsはselectionId変更後に完了したarchiveを現在listへ反映しない", async () => {
+test("useUserReviewsはselection変更後に完了したarchiveを現在listへ反映しない", async () => {
   const archiveDeferred = createDeferred<ArchiveUserReviewResponse>();
   const commands: UserReviewCommands = {
     listUserReviews: vi.fn().mockResolvedValue({
@@ -453,9 +468,9 @@ test("useUserReviewsはselectionId変更後に完了したarchiveを現在list�
   result.rerender({
     workspacePath: "/workspace/spec-reviewer",
     specId: "auth",
-    fileKey: "tasks",
+    fileKey: "impl",
     targetScope: "file",
-    selectionId: "/workspace/spec-reviewer:file:auth:tasks:next",
+    selectionId: "/workspace/spec-reviewer:file:auth:impl",
     commands,
   });
   await flushAsyncEffects();

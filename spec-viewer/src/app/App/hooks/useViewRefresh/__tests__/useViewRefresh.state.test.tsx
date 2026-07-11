@@ -2,7 +2,8 @@ import type { Event as TauriEvent } from "@tauri-apps/api/event";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-import type { SpecViewResetKeys } from "@/app/App/hooks/types";
+import { SpecViewSelection } from "@/features/specs/domain/specViewSelection";
+import { WorkspacePath } from "@/shared/domain/workspacePath";
 import {
   type UseViewRefreshOptions,
   useViewRefresh,
@@ -19,11 +20,12 @@ import {
 } from "@/features/specs/types/watch";
 import { getUnknownErrorMessage } from "@/shared/lib/errorMessage";
 
-const selection: SpecViewResetKeys = {
-  workspaceRoot: "/workspace",
+const workspacePath = WorkspacePath.fromString("/workspace");
+const selection = SpecViewSelection.synchronize(SpecViewSelection.empty(), {
+  workspacePath,
   specId: "spec-1",
   fileKey: "impl",
-};
+});
 
 const startResponse = {
   workspacePath: "/workspace",
@@ -197,9 +199,23 @@ test("手動リフレッシュ例外で連結メッセージがonErrorへ渡る"
 });
 
 test.each([
-  ["workspaceRoot null", { ...selection, workspaceRoot: null }, false],
-  ["specId null", { ...selection, specId: null }, false],
-  ["fileKey null", { ...selection, fileKey: null }, false],
+  ["workspace未選択", SpecViewSelection.empty(), false],
+  [
+    "spec未選択",
+    SpecViewSelection.selectWorkspace(SpecViewSelection.empty(), workspacePath),
+    false,
+  ],
+  [
+    "file未選択",
+    SpecViewSelection.selectSpec(
+      SpecViewSelection.selectWorkspace(
+        SpecViewSelection.empty(),
+        workspacePath,
+      ),
+      "spec-1",
+    ),
+    false,
+  ],
   ["loading中", selection, true],
 ])("手動リフレッシュのガード（%s）ではreloadが呼ばれない", async (_label, guardSelection, isLoading) => {
   const reload = createReload();

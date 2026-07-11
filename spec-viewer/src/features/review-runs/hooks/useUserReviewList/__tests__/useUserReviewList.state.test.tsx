@@ -3,6 +3,10 @@ import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
+import {
+  SelectionIdentity,
+  SpecViewSelection,
+} from "@/features/specs/domain/specViewSelection";
 import { useUserReviewList } from "@/features/review-runs/hooks/useUserReviewList";
 import type {
   ListUserReviewsResponse,
@@ -10,6 +14,17 @@ import type {
 } from "@/features/review-runs/types/userReviewIpc";
 import type { UserReviewCommands } from "@/shared/api/tauri";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
+
+/** @returns Branded identity generated through the selection aggregate. */
+function createSelectionIdentity(seed: string): SelectionIdentity {
+  const selection = SpecViewSelection.synchronize(SpecViewSelection.empty(), {
+    workspacePath: WorkspacePath.fromString(seed),
+    specId: "auth",
+    fileKey: "tasks",
+  });
+
+  return SelectionIdentity.fromSelection(selection);
+}
 import { configurePerformanceLoggerForTest } from "@/shared/lib/performance";
 
 type HookProps = Readonly<{
@@ -101,7 +116,7 @@ function renderUseUserReviewList(props: HookProps) {
       useUserReviewList({
         commands,
         target,
-        selectionId,
+        selectionIdentity: createSelectionIdentity(selectionId),
         workspacePath:
           workspacePath === null
             ? null
@@ -257,7 +272,9 @@ test("useUserReviewListはidentity不一致のlist eventを反映しない", asy
   await flushAsyncEffects();
   act(() => {
     result.current.applyUserReviewEvent({
-      selectionId: "/workspace/other:file:auth:tasks",
+      selectionIdentity: createSelectionIdentity(
+        "/workspace/other:file:auth:tasks",
+      ),
       event: {
         type: "reviewCreated",
         review: activeRun,
@@ -285,7 +302,7 @@ test("useUserReviewListはloading中のeventを古いlist responseで上書き�
 
   act(() => {
     result.current.applyUserReviewEvent({
-      selectionId: selectionId,
+      selectionIdentity: createSelectionIdentity(selectionId),
       event: {
         type: "reviewCreated",
         review: activeRun,

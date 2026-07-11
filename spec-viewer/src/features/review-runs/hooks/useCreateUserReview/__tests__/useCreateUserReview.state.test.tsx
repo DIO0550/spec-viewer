@@ -4,10 +4,25 @@ import { expect, test, vi } from "vitest";
 
 import { CommentId } from "@/features/comments/types/comment";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
+import {
+  SelectionIdentity,
+  SpecViewSelection,
+} from "@/features/specs/domain/specViewSelection";
 import { useCreateUserReview } from "@/features/review-runs/hooks/useCreateUserReview";
 import type { UserReview } from "@/features/review-runs/types/userReviewIpc";
 import type { UserReviewCommands } from "@/shared/api/tauri";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
+
+/** @returns Branded identity generated through the selection aggregate. */
+function createSelectionIdentity(seed: string): SelectionIdentity {
+  const selection = SpecViewSelection.synchronize(SpecViewSelection.empty(), {
+    workspacePath: WorkspacePath.fromString(seed),
+    specId: "auth",
+    fileKey: "tasks",
+  });
+
+  return SelectionIdentity.fromSelection(selection);
+}
 
 type HookResult<Props, Result> = Readonly<{
   current: Result;
@@ -66,7 +81,7 @@ function renderUseCreateUserReview(props: HookProps) {
         commands,
         workspacePath: WorkspacePath.fromString(workspacePath),
         target,
-        selectionId,
+        selectionIdentity: createSelectionIdentity(selectionId),
         onUserReviewEvent,
       }),
     props,
@@ -157,7 +172,9 @@ test("useCreateUserReviewはcreate成功後にreviewCreated eventを発行する
 
   expect(result.current.createState.status).toBe("success");
   expect(onUserReviewEvent).toHaveBeenCalledWith({
-    selectionId: "/workspace/spec-reviewer:file:auth:tasks",
+    selectionIdentity: createSelectionIdentity(
+      "/workspace/spec-reviewer:file:auth:tasks",
+    ),
     event: {
       type: "reviewCreated",
       review: activeRun,
@@ -238,7 +255,9 @@ test("useCreateUserReviewは同一identityの古いcreate完了を反映しな�
   });
   expect(onUserReviewEvent).toHaveBeenCalledTimes(1);
   expect(onUserReviewEvent).toHaveBeenCalledWith({
-    selectionId: "/workspace/spec-reviewer:file:auth:tasks",
+    selectionIdentity: createSelectionIdentity(
+      "/workspace/spec-reviewer:file:auth:tasks",
+    ),
     event: {
       type: "reviewCreated",
       review: secondActiveRun,

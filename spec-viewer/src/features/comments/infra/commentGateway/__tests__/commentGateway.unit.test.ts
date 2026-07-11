@@ -9,19 +9,28 @@ import {
   toggleCommentResolved,
   updateComment,
 } from "@/features/comments/infra/commentGateway";
-import type { CommentScope } from "@/features/comments/domain/commentScope";
+import {
+  CommentScope,
+  type CommentScope as CommentScopeType,
+} from "@/features/comments/domain/commentScope";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import { createCommentCommandTestDouble } from "@/features/comments/testing/comment-command-test-double";
 import type { Comment, CommentAnchor } from "@/features/comments/types/comment";
 import { CommentId } from "@/features/comments/types/comment";
+import { SpecViewSelection } from "@/features/specs/domain/specViewSelection";
+import { WorkspacePath } from "@/shared/domain/workspacePath";
 
 const commentId = CommentId.fromString;
 
-const scope: CommentScope = {
-  workspacePath: "/workspace/spec-reviewer",
-  specId: "phase-2-comments",
-  fileKey: "tasks",
-};
+const scopeSelection = SpecViewSelection.synchronize(
+  SpecViewSelection.empty(),
+  {
+    workspacePath: WorkspacePath.fromString("/workspace/spec-reviewer"),
+    specId: "phase-2-comments",
+    fileKey: "tasks",
+  },
+);
+const scope = CommentScope.fromSelection(scopeSelection) as CommentScopeType;
 
 const anchor: CommentAnchor = {
   fileKey: "tasks",

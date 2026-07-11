@@ -3,10 +3,25 @@ import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
+import {
+  SelectionIdentity,
+  SpecViewSelection,
+} from "@/features/specs/domain/specViewSelection";
 import { useArchiveUserReview } from "@/features/review-runs/hooks/useArchiveUserReview";
 import type { UserReview } from "@/features/review-runs/types/userReviewIpc";
 import type { UserReviewCommands } from "@/shared/api/tauri";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
+
+/** @returns Branded identity generated through the selection aggregate. */
+function createSelectionIdentity(seed: string): SelectionIdentity {
+  const selection = SpecViewSelection.synchronize(SpecViewSelection.empty(), {
+    workspacePath: WorkspacePath.fromString(seed),
+    specId: "auth",
+    fileKey: "tasks",
+  });
+
+  return SelectionIdentity.fromSelection(selection);
+}
 
 type HookResult<Props, Result> = Readonly<{
   current: Result;
@@ -65,7 +80,7 @@ function renderUseArchiveUserReview(props: HookProps) {
         commands,
         workspacePath: WorkspacePath.fromString(workspacePath),
         target,
-        selectionId,
+        selectionIdentity: createSelectionIdentity(selectionId),
         onUserReviewEvent,
       }),
     props,
@@ -153,7 +168,9 @@ test("useArchiveUserReviewはarchive成功後にreviewArchived eventを発行す
 
   expect(result.current.archiveState.status).toBe("success");
   expect(onUserReviewEvent).toHaveBeenCalledWith({
-    selectionId: "/workspace/spec-reviewer:file:auth:tasks",
+    selectionIdentity: createSelectionIdentity(
+      "/workspace/spec-reviewer:file:auth:tasks",
+    ),
     event: {
       type: "reviewArchived",
       review: archivedRun,
@@ -225,7 +242,9 @@ test("useArchiveUserReviewは同一identityの古いarchive完了を反映しな
   });
   expect(onUserReviewEvent).toHaveBeenCalledTimes(1);
   expect(onUserReviewEvent).toHaveBeenCalledWith({
-    selectionId: "/workspace/spec-reviewer:file:auth:tasks",
+    selectionIdentity: createSelectionIdentity(
+      "/workspace/spec-reviewer:file:auth:tasks",
+    ),
     event: {
       type: "reviewArchived",
       review: secondArchivedRun,

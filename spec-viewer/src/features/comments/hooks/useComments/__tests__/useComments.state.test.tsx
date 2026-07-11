@@ -12,9 +12,14 @@ import type {
 } from "@/features/comments/types/comment";
 import { CommentId } from "@/features/comments/types/comment";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
-import type { CommentScope } from "@/features/comments/domain/commentScope";
+import {
+  CommentScope,
+  type CommentScope as CommentScopeType,
+} from "@/features/comments/domain/commentScope";
 import { useCommentOperations } from "@/features/comments/hooks/useCommentOperations";
 import { useComments } from "@/features/comments/hooks/useComments";
+import { SpecViewSelection } from "@/features/specs/domain/specViewSelection";
+import { WorkspacePath } from "@/shared/domain/workspacePath";
 
 const commentId = CommentId.fromString;
 
@@ -61,19 +66,23 @@ const optimisticResolvedComment: Comment = {
   resolved: true,
 };
 
-const tasksScope: CommentScope = {
-  workspacePath: "/workspace/spec-reviewer",
-  specId: "phase-2-comments",
-  fileKey: "tasks",
-};
+function createCommentScope(
+  fileKey: CommentScopeType["fileKey"],
+): CommentScopeType {
+  const selection = SpecViewSelection.synchronize(SpecViewSelection.empty(), {
+    workspacePath: WorkspacePath.fromString("/workspace/spec-reviewer"),
+    specId: "phase-2-comments",
+    fileKey,
+  });
 
-const designScope: CommentScope = {
-  ...tasksScope,
-  fileKey: "design",
-};
+  return CommentScope.fromSelection(selection) as CommentScopeType;
+}
+
+const tasksScope = createCommentScope("tasks");
+const designScope = createCommentScope("design");
 
 type HookProps = Readonly<{
-  scope: CommentScope | null;
+  scope: CommentScopeType | null;
   statusFilter?: CommentStatusFilter;
   commands: CommentCommands;
 }>;
@@ -636,7 +645,7 @@ test("useCommentOperationsはscope未選択時にtoggleの楽観更新を行わ�
     () =>
       useCommentOperations({
         scope: null,
-        scopeKey: "no-scope",
+        selectionIdentity: null,
         statusFilter: CommentStatusFilter.All,
         commands,
         currentComments: [firstComment],
@@ -673,12 +682,8 @@ test("useCommentOperationsはreloadComments変更時に進行中operationを無�
       reloadComments,
     }: Readonly<{ reloadComments: () => Promise<boolean> }>) =>
       useCommentOperations({
-        scope: {
-          workspacePath: "/workspace/spec-reviewer",
-          specId: "phase-2-comments",
-          fileKey: "tasks",
-        },
-        scopeKey: "/workspace/spec-reviewer:phase-2-comments:tasks",
+        scope: tasksScope,
+        selectionIdentity: tasksScope.selectionIdentity,
         statusFilter: CommentStatusFilter.All,
         commands,
         currentComments: [],

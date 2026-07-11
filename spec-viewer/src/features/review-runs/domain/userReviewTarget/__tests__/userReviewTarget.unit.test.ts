@@ -1,62 +1,49 @@
 import { expect, test } from "vitest";
 
-import {
-  UserReviewTarget,
-  UserReviewTargetIdentity,
-} from "@/features/review-runs/domain/userReviewTarget";
+import { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
+import { SpecViewSelection } from "@/features/specs/domain/specViewSelection";
+import { WorkspacePath } from "@/shared/domain/workspacePath";
 
-test("UserReviewTarget.createはfile scopeのtargetを作成する", () => {
-  const target = UserReviewTarget.create({
+const workspacePath = WorkspacePath.fromString("/workspace/spec-reviewer");
+
+test("UserReviewTarget.fromSelectionはfile scopeのtargetを作成する", () => {
+  const selection = SpecViewSelection.synchronize(SpecViewSelection.empty(), {
+    workspacePath,
     specId: "auth",
     fileKey: "tasks",
-    targetScope: "file",
   });
 
-  expect(target).toEqual({
+  expect(UserReviewTarget.fromSelection(selection)).toEqual({
     scope: "file",
     specId: "auth",
     fileKey: "tasks",
   });
 });
 
-test("UserReviewTarget.createはspec scopeならfileKeyなしでtargetを作成する", () => {
-  const target = UserReviewTarget.create({
-    specId: "auth",
-    fileKey: null,
-    targetScope: "spec",
-  });
+test("UserReviewTarget.fromSelectionはspec scopeならfileKeyなしでtargetを作成する", () => {
+  const fileSelection = SpecViewSelection.synchronize(
+    SpecViewSelection.empty(),
+    {
+      workspacePath,
+      specId: "auth",
+      fileKey: "tasks",
+    },
+  );
+  const selection = SpecViewSelection.selectTargetScope(fileSelection, "spec");
 
-  expect(target).toEqual({
+  expect(UserReviewTarget.fromSelection(selection)).toEqual({
     scope: "spec",
     specId: "auth",
   });
 });
 
-test("UserReviewTarget.createはfile scopeのfileKeyが未選択ならnullを返す", () => {
-  const target = UserReviewTarget.create({
-    specId: "auth",
-    fileKey: null,
-    targetScope: "file",
-  });
-
-  expect(target).toBeNull();
-});
-
-test("UserReviewTargetIdentity.createはtargetのscope差分を表す", () => {
-  const fileIdentity = UserReviewTargetIdentity.create({
-    scope: "file",
-    specId: "auth",
-    fileKey: "tasks",
-  });
-  const specIdentity = UserReviewTargetIdentity.create({
-    scope: "spec",
-    specId: "auth",
-  });
-
-  expect(UserReviewTargetIdentity.equals(fileIdentity, specIdentity)).toBe(
-    false,
-  );
-  expect(UserReviewTargetIdentity.equals(fileIdentity, fileIdentity)).toBe(
-    true,
-  );
+test.each([
+  SpecViewSelection.empty(),
+  SpecViewSelection.selectWorkspace(SpecViewSelection.empty(), workspacePath),
+  SpecViewSelection.selectSpec(
+    SpecViewSelection.selectWorkspace(SpecViewSelection.empty(), workspacePath),
+    "auth",
+  ),
+])("UserReviewTarget.fromSelectionはincomplete selectionならnullを返す", (selection) => {
+  expect(UserReviewTarget.fromSelection(selection)).toBeNull();
 });
