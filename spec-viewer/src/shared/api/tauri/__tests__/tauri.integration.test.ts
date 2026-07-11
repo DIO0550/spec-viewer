@@ -37,6 +37,23 @@ test("loadWorkspaceはload_workspaceへ選択ディレクトリを渡す", async
   });
 });
 
+test("loadWorkspaceは不正なworkspace DTOをunknown command errorとして拒否する", async () => {
+  const rawDto = {
+    root: "/workspace/spec-reviewer",
+    kind: "unsupported",
+    files: [],
+  };
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue(rawDto);
+
+  await expect(loadWorkspace("/workspace/spec-reviewer")).rejects.toEqual({
+    command: "load_workspace",
+    code: "unknown",
+    message: "Workspace kind is not supported",
+    raw: rawDto,
+  });
+});
+
 test("validateWorkspaceDirectoryはvalidate_workspace_directoryへpathを渡す", async () => {
   invokeMock.mockReset();
   invokeMock.mockResolvedValue({ isDirectory: true });
