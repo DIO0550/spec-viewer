@@ -1,15 +1,15 @@
-import { act } from "react";
+import { act, useLayoutEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
 import { CommentId } from "@/features/comments/types/comment";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
+import { useCreateUserReview } from "@/features/review-runs/hooks/useCreateUserReview";
+import type { UserReview } from "@/features/review-runs/types/userReviewIpc";
 import {
   SelectionIdentity,
   SpecViewSelection,
 } from "@/features/specs/domain/specViewSelection";
-import { useCreateUserReview } from "@/features/review-runs/hooks/useCreateUserReview";
-import type { UserReview } from "@/features/review-runs/types/userReviewIpc";
 import type { UserReviewCommands } from "@/shared/api/tauri";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 
@@ -27,6 +27,10 @@ function createSelectionIdentity(seed: string): SelectionIdentity {
 type HookResult<Props, Result> = Readonly<{
   current: Result;
   rerender: (nextProps: Props) => void;
+  rerenderBeforePassiveEffects: (
+    nextProps: Props,
+    beforePassiveEffects: () => void,
+  ) => Promise<void>;
   unmount: () => void;
 }>;
 
@@ -38,9 +42,13 @@ function renderHook<Props, Result>(
   const root = createRoot(container);
   const props = { current: initialProps };
   const result = { current: undefined as Result };
+  const commitCallbacks: Array<() => void> = [];
 
   function TestComponent(): null {
     result.current = hook(props.current);
+    useLayoutEffect(() => {
+      commitCallbacks.shift()?.();
+    });
     return null;
   }
 
@@ -55,6 +63,19 @@ function renderHook<Props, Result>(
     rerender: (nextProps: Props) => {
       props.current = nextProps;
       act(() => {
+        root.render(<TestComponent />);
+      });
+    },
+    rerenderBeforePassiveEffects: (
+      nextProps: Props,
+      beforePassiveEffects: () => void,
+    ) => {
+      props.current = nextProps;
+      return new Promise<void>((resolve) => {
+        commitCallbacks.push(() => {
+          beforePassiveEffects();
+          resolve();
+        });
         root.render(<TestComponent />);
       });
     },
@@ -263,5 +284,41 @@ test("useCreateUserReviewは同一identityの古いcreate完了を反映しな�
       review: secondActiveRun,
     },
   });
+  result.unmount();
+});
+
+test("selection変更renderのpassive effect前にcreateが完了してもeventを発行しない", async () => {
+  const pendingCreate = createDeferred<{ userReview: UserReview }>();
+  const commands: UserReviewCommands = {
+    listUserReviews: vi.fn(),
+    createUserReview: vi.fn().mockReturnValue(pendingCreate.promise),
+    archiveUserReview: vi.fn(),
+  };
+  const onUserReviewEvent = vi.fn();
+  const result = renderUseCreateUserReview({
+    commands,
+    workspacePath: "/workspace/spec-reviewer",
+    selectionId: "/workspace/spec-reviewer:file:auth:tasks",
+    onUserReviewEvent,
+  });
+  const createPromise = result.current.createUserReview({
+    commentIds: [CommentId.fromString("cmt_1")],
+    workspaceMode: "currentWorkspace",
+  });
+
+  await result.rerenderBeforePassiveEffects(
+    {
+      commands,
+      workspacePath: "/workspace/other",
+      selectionId: "/workspace/other:file:auth:tasks",
+      onUserReviewEvent,
+    },
+    () => {
+      pendingCreate.resolve({ userReview: activeRun });
+    },
+  );
+  await createPromise;
+
+  expect(onUserReviewEvent).not.toHaveBeenCalled();
   result.unmount();
 });

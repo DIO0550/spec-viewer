@@ -2,12 +2,11 @@ import type { Event as TauriEvent } from "@tauri-apps/api/event";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-import { SpecViewSelection } from "@/features/specs/domain/specViewSelection";
-import { WorkspacePath } from "@/shared/domain/workspacePath";
 import {
   type UseViewRefreshOptions,
   useViewRefresh,
 } from "@/app/App/hooks/useViewRefresh";
+import { SpecViewSelection } from "@/features/specs/domain/specViewSelection";
 import type {
   SpecFileWatchSubscriber,
   StartSpecFileWatchCommand,
@@ -18,6 +17,7 @@ import {
   SPEC_FILE_WATCH_ERROR_EVENT,
   type SpecFileWatchChangeKind,
 } from "@/features/specs/types/watch";
+import { WorkspacePath } from "@/shared/domain/workspacePath";
 import { getUnknownErrorMessage } from "@/shared/lib/errorMessage";
 
 const workspacePath = WorkspacePath.fromString("/workspace");
@@ -344,6 +344,54 @@ test("watcherエラーイベントで監視失敗メッセージとevent.message
   expect(onError).toHaveBeenCalledWith(
     "ファイル監視に失敗しました。内容が古い可能性があります。watch died",
   );
+  hook.unmount();
+});
+
+test("selection変更後に旧watch handlerを呼んでも旧documentをreloadしない", async () => {
+  const handlers: WatchHandlers = new Map();
+  const reload = createReload();
+  const watcher = createWatcher(handlers);
+  const hook = renderHook({
+    selection,
+    isCurrentViewLoading: false,
+    reload,
+    onError: vi.fn(),
+    watcher,
+  });
+  await flush();
+  const previousChangedHandler = handlers.get(SPEC_FILE_WATCH_CHANGED_EVENT);
+  const nextSelection = SpecViewSelection.synchronize(
+    SpecViewSelection.empty(),
+    {
+      workspacePath,
+      specId: "spec-2",
+      fileKey: "impl",
+    },
+  );
+
+  hook.rerender({
+    selection: nextSelection,
+    isCurrentViewLoading: false,
+    reload,
+    onError: vi.fn(),
+    watcher,
+  });
+  await flush();
+  act(() => {
+    previousChangedHandler?.({
+      payload: {
+        workspacePath: "/workspace",
+        specId: "spec-1",
+        fileKey: "impl",
+        changeKind: "markdown",
+        path: "/workspace/spec-1/impl.md",
+      },
+    } as TauriEvent<unknown>);
+  });
+  await flush();
+
+  expect(reload.document).not.toHaveBeenCalled();
+  expect(reload.comments).not.toHaveBeenCalled();
   hook.unmount();
 });
 

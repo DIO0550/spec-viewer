@@ -1,14 +1,14 @@
-import { act } from "react";
+import { act, useLayoutEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
+import { useArchiveUserReview } from "@/features/review-runs/hooks/useArchiveUserReview";
+import type { UserReview } from "@/features/review-runs/types/userReviewIpc";
 import {
   SelectionIdentity,
   SpecViewSelection,
 } from "@/features/specs/domain/specViewSelection";
-import { useArchiveUserReview } from "@/features/review-runs/hooks/useArchiveUserReview";
-import type { UserReview } from "@/features/review-runs/types/userReviewIpc";
 import type { UserReviewCommands } from "@/shared/api/tauri";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 
@@ -26,6 +26,10 @@ function createSelectionIdentity(seed: string): SelectionIdentity {
 type HookResult<Props, Result> = Readonly<{
   current: Result;
   rerender: (nextProps: Props) => void;
+  rerenderBeforePassiveEffects: (
+    nextProps: Props,
+    beforePassiveEffects: () => void,
+  ) => Promise<void>;
   unmount: () => void;
 }>;
 
@@ -37,9 +41,13 @@ function renderHook<Props, Result>(
   const root = createRoot(container);
   const props = { current: initialProps };
   const result = { current: undefined as Result };
+  const commitCallbacks: Array<() => void> = [];
 
   function TestComponent(): null {
     result.current = hook(props.current);
+    useLayoutEffect(() => {
+      commitCallbacks.shift()?.();
+    });
     return null;
   }
 
@@ -54,6 +62,19 @@ function renderHook<Props, Result>(
     rerender: (nextProps: Props) => {
       props.current = nextProps;
       act(() => {
+        root.render(<TestComponent />);
+      });
+    },
+    rerenderBeforePassiveEffects: (
+      nextProps: Props,
+      beforePassiveEffects: () => void,
+    ) => {
+      props.current = nextProps;
+      return new Promise<void>((resolve) => {
+        commitCallbacks.push(() => {
+          beforePassiveEffects();
+          resolve();
+        });
         root.render(<TestComponent />);
       });
     },
@@ -250,5 +271,38 @@ test("useArchiveUserReviewは同一identityの古いarchive完了を反映しな
       review: secondArchivedRun,
     },
   });
+  result.unmount();
+});
+
+test("selection変更renderのpassive effect前にarchiveが完了してもeventを発行しない", async () => {
+  const archiveDeferred = createDeferred<{ userReview: UserReview }>();
+  const commands: UserReviewCommands = {
+    listUserReviews: vi.fn(),
+    createUserReview: vi.fn(),
+    archiveUserReview: vi.fn().mockReturnValue(archiveDeferred.promise),
+  };
+  const onUserReviewEvent = vi.fn();
+  const result = renderUseArchiveUserReview({
+    commands,
+    workspacePath: "/workspace/spec-reviewer",
+    selectionId: "/workspace/spec-reviewer:file:auth:tasks",
+    onUserReviewEvent,
+  });
+  const archivePromise = result.current.archiveUserReview("review-active");
+
+  await result.rerenderBeforePassiveEffects(
+    {
+      commands,
+      workspacePath: "/workspace/other",
+      selectionId: "/workspace/other:file:auth:tasks",
+      onUserReviewEvent,
+    },
+    () => {
+      archiveDeferred.resolve({ userReview: archivedRun });
+    },
+  );
+  await archivePromise;
+
+  expect(onUserReviewEvent).not.toHaveBeenCalled();
   result.unmount();
 });
