@@ -1,5 +1,5 @@
 import type { Event as TauriEvent } from "@tauri-apps/api/event";
-import { act } from "react";
+import { act, useLayoutEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 import {
@@ -67,6 +67,10 @@ async function flush(): Promise<void> {
 function renderHook(options: UseViewRefreshOptions): {
   current: () => ReturnType<typeof useViewRefresh>;
   rerender: (next: UseViewRefreshOptions) => void;
+  rerenderBeforePassiveEffects: (
+    next: UseViewRefreshOptions,
+    beforePassiveEffects: () => void,
+  ) => Promise<void>;
   unmount: () => void;
 } {
   const container = document.createElement("div");
@@ -74,11 +78,15 @@ function renderHook(options: UseViewRefreshOptions): {
   const result = {
     current: undefined as unknown as ReturnType<typeof useViewRefresh>,
   };
+  const commitCallbacks: Array<() => void> = [];
 
   function TestComponent(
     props: Readonly<{ options: UseViewRefreshOptions }>,
   ): null {
     result.current = useViewRefresh(props.options);
+    useLayoutEffect(() => {
+      commitCallbacks.shift()?.();
+    });
     return null;
   }
 
@@ -93,6 +101,14 @@ function renderHook(options: UseViewRefreshOptions): {
         root.render(<TestComponent options={next} />);
       });
     },
+    rerenderBeforePassiveEffects: (next, beforePassiveEffects) =>
+      new Promise<void>((resolve) => {
+        commitCallbacks.push(() => {
+          beforePassiveEffects();
+          resolve();
+        });
+        root.render(<TestComponent options={next} />);
+      }),
     unmount: () => {
       act(() => {
         root.unmount();
@@ -347,7 +363,7 @@ test("watcherエラーイベントで監視失敗メッセージとevent.message
   hook.unmount();
 });
 
-test("selection変更後に旧watch handlerを呼んでも旧documentをreloadしない", async () => {
+test("selection変更commit後のpassive effect前に旧watch eventを受けてもreloadしない", async () => {
   const handlers: WatchHandlers = new Map();
   const reload = createReload();
   const watcher = createWatcher(handlers);
@@ -369,25 +385,26 @@ test("selection変更後に旧watch handlerを呼んでも旧documentをreload�
     },
   );
 
-  hook.rerender({
-    selection: nextSelection,
-    isCurrentViewLoading: false,
-    reload,
-    onError: vi.fn(),
-    watcher,
-  });
-  await flush();
-  act(() => {
-    previousChangedHandler?.({
-      payload: {
-        workspacePath: "/workspace",
-        specId: "spec-1",
-        fileKey: "impl",
-        changeKind: "markdown",
-        path: "/workspace/spec-1/impl.md",
-      },
-    } as TauriEvent<unknown>);
-  });
+  await hook.rerenderBeforePassiveEffects(
+    {
+      selection: nextSelection,
+      isCurrentViewLoading: false,
+      reload,
+      onError: vi.fn(),
+      watcher,
+    },
+    () => {
+      previousChangedHandler?.({
+        payload: {
+          workspacePath: "/workspace",
+          specId: "spec-1",
+          fileKey: "impl",
+          changeKind: "markdown",
+          path: "/workspace/spec-1/impl.md",
+        },
+      } as TauriEvent<unknown>);
+    },
+  );
   await flush();
 
   expect(reload.document).not.toHaveBeenCalled();
