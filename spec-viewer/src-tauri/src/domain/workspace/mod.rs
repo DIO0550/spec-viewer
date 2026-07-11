@@ -11,6 +11,41 @@ pub use config::{
     WorkspaceConfigError, WorkspaceConfigSource, WorkspaceFileMapping,
 };
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct WorkspaceRelativePath {
+    value: String,
+}
+
+impl WorkspaceRelativePath {
+    pub fn new(value: impl Into<String>) -> Result<Self, WorkspaceDomainError> {
+        let value = value.into();
+        let has_unsafe_segment = value
+            .split('/')
+            .any(|segment| segment.is_empty() || matches!(segment, "." | ".."));
+
+        if value.starts_with('/')
+            || value.contains('\\')
+            || value.contains('\0')
+            || value.contains(':')
+            || has_unsafe_segment
+        {
+            return Err(WorkspaceDomainError::InvalidRelativePath { value });
+        }
+
+        Ok(Self { value })
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.value
+    }
+}
+
+impl fmt::Display for WorkspaceRelativePath {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct WorkspaceRoot {
     value: String,
@@ -103,6 +138,8 @@ impl WorkspaceLayout {
 
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 pub enum WorkspaceDomainError {
+    #[error("workspace-relative path is invalid: {value}")]
+    InvalidRelativePath { value: String },
     #[error("workspace root is required")]
     MissingRoot,
     #[error("unsupported workspace layout: {layout}")]
