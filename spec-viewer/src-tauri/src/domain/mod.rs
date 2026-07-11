@@ -3,4 +3,5 @@
 pub mod comment;
 pub mod review_run;
 pub mod spec;
+pub mod user_review;
 pub mod workspace;
