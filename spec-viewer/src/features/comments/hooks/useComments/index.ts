@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import type { CommentFeatureError as CommentFeatureErrorType } from "@/features/comments/domain/commentError";
 import { CommentFeatureError } from "@/features/comments/domain/commentError";
 import {
@@ -92,8 +98,10 @@ export function useComments({
     CommentListState.idle(),
   );
 
-  activeListSelectionIdentityRef.current = selectionIdentity;
-  activeListStatusFilterRef.current = statusFilter;
+  useLayoutEffect(() => {
+    activeListSelectionIdentityRef.current = selectionIdentity;
+    activeListStatusFilterRef.current = statusFilter;
+  }, [selectionIdentity, statusFilter]);
 
   const isLatestListRequest = useCallback(
     (requestId: number): boolean => listRequestIdRef.current === requestId,
@@ -200,7 +208,6 @@ export function useComments({
     isLatestListRequest,
     isSameListScopeResult,
     scope,
-    selectionIdentity,
     statusFilter,
   ]);
 

@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useReducer, useRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useReducer,
+  useRef,
+} from "react";
 import type { CommentFeatureError as CommentFeatureErrorType } from "@/features/comments/domain/commentError";
 import { CommentFeatureError } from "@/features/comments/domain/commentError";
 import {
@@ -10,10 +16,6 @@ import {
 } from "@/features/comments/domain/commentOperation";
 import type { CommentScope } from "@/features/comments/domain/commentScope";
 import type { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
-import {
-  SelectionIdentity,
-  type SelectionIdentity as SelectionIdentityType,
-} from "@/features/specs/domain/specViewSelection";
 import { Comments } from "@/features/comments/domain/comments";
 import {
   addComment as addCommentViaGateway,
@@ -28,6 +30,10 @@ import type {
   CommentAnchor,
   CommentId,
 } from "@/features/comments/types/comment";
+import {
+  SelectionIdentity,
+  type SelectionIdentity as SelectionIdentityType,
+} from "@/features/specs/domain/specViewSelection";
 import type { CommentCommands } from "@/shared/api/tauri";
 import { AddCommentCommandError } from "@/shared/api/tauri/addComment";
 import { DeleteCommentCommandError } from "@/shared/api/tauri/deleteComment";
@@ -126,8 +132,10 @@ export function useCommentOperations(
     initialOperationState,
   );
 
-  activeSelectionIdentityRef.current = selectionIdentity;
-  activeStatusFilterRef.current = statusFilter;
+  useLayoutEffect(() => {
+    activeSelectionIdentityRef.current = selectionIdentity;
+    activeStatusFilterRef.current = statusFilter;
+  }, [selectionIdentity, statusFilter]);
 
   const beginOperation = useCallback(
     (
@@ -183,6 +191,10 @@ export function useCommentOperations(
   );
 
   useEffect(() => {
+    // Each committed operation context invalidates work started by its predecessor.
+    void reloadComments;
+    void selectionIdentity;
+    void statusFilter;
     operationRequestIdRef.current += 1;
     dispatchOperation({ type: "operationInvalidated" });
   }, [reloadComments, selectionIdentity, statusFilter]);
