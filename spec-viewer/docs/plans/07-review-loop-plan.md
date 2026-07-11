@@ -1,5 +1,11 @@
 # Review Loop Export Plan
 
+> **Historical plan:** The folder-bundle and worktree model in this document is
+> superseded for new user-review development by
+> [ADR 001](../design/adr-001-user-review-single-json.md) and the
+> [single-JSON migration plan](./09-user-review-json-plan.md). Existing folder
+> bundles remain legacy data and must not be silently migrated or deleted.
+
 ## Goal
 
 Add a provider-independent review loop that lets users turn Markdown comments into a filesystem user-review bundle, hand that bundle to an implementation AI agent, and archive the bundle after the AI has completed the requested fixes.
