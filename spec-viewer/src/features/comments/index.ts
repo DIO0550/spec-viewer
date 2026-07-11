@@ -1,4 +1,8 @@
 export { AddCommentPopover } from "@/features/comments/components/AddCommentPopover";
+export {
+  CommentEditPopover,
+  type CommentEditPopoverDraft,
+} from "@/features/comments/components/CommentEditPopover";
 export { Comment } from "@/features/comments/domain/comment";
 export { Comments } from "@/features/comments/domain/comments";
 export { CommentSidebar } from "@/features/comments/components/CommentSidebar";

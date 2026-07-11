@@ -1,23 +1,16 @@
 import {
   CheckCircle2,
   ChevronDown,
-  LoaderCircle,
   MessageSquare,
   MessageSquarePlus,
   Pencil,
-  RotateCcw,
-  Send,
-  Trash2,
-  X,
 } from "lucide-react";
 import {
   type AriaRole,
   type ComponentPropsWithoutRef,
   type CSSProperties,
   cloneElement,
-  type FormEvent,
   isValidElement,
-  type KeyboardEvent,
   type KeyboardEventHandler,
   type MouseEvent,
   type MouseEventHandler,
@@ -34,11 +27,9 @@ import {
 import ReactMarkdown, { type Components } from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
-import { AddCommentPopover } from "@/features/comments/components/AddCommentPopover";
+import { AddCommentPopover, CommentEditPopover } from "@/features/comments";
 import {
   CommentOperationIdleState,
-  type CommentOperationKind,
-  CommentOperationSavingState,
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
 import { useMarkdownTextSelection } from "@/features/comments/hooks/useMarkdownTextSelection";
@@ -554,6 +545,10 @@ export function MarkdownViewer({
     () => createVisibleCommentEditDraft(activeEditDraft, visibleViewerComments),
     [activeEditDraft, visibleViewerComments],
   );
+  const editPopoverStyle =
+    visibleEditDraft === null
+      ? null
+      : createFloatingPopoverStyle(visibleEditDraft.selectionBounds);
 
   if (
     state.status !== "ready" ||
@@ -655,7 +650,12 @@ export function MarkdownViewer({
             onCancel={closeAnchorDraft}
           />
           <CommentEditPopover
-            draft={visibleEditDraft}
+            draft={
+              visibleEditDraft === null
+                ? null
+                : { comment: visibleEditDraft.comment }
+            }
+            style={editPopoverStyle}
             isSaving={isUpdatingComment}
             operationState={operationState}
             onSubmit={updateComment}
@@ -2366,391 +2366,6 @@ function createVisibleCommentEditDraft(
     ...draft,
     comment: currentComment,
   };
-}
-
-type CommentEditPopoverProps = Readonly<{
-  draft: CommentEditDraft | null;
-  isSaving: boolean;
-  operationState: CommentOperationState;
-  /**
-   * Submits an edited comment body.
-   * @param commentId - The identifier of the comment being edited.
-   * @param body - The updated comment body text.
-   */
-  onSubmit: (commentId: CommentId, body: string) => Promise<boolean>;
-  /**
-   * Resolves the edited comment.
-   * @param commentId - The identifier of the comment to resolve.
-   */
-  onResolveComment: (commentId: CommentId) => Promise<boolean>;
-  /**
-   * Reopens the edited comment.
-   * @param commentId - The identifier of the comment to reopen.
-   */
-  onReopenComment: (commentId: CommentId) => Promise<boolean>;
-  /**
-   * Deletes the edited comment.
-   * @param commentId - The identifier of the comment to delete.
-   */
-  onDeleteComment: (commentId: CommentId) => Promise<boolean>;
-  /** Cancels the comment edit. */
-  onCancel: () => void;
-}>;
-
-const emptyEditBodyMessage = uiText.commentThread.emptyBody;
-const failedUpdateMessage =
-  "コメントを更新できませんでした。再試行してください。";
-const failedStatusActionMessage =
-  "コメントの状態を変更できませんでした。再試行してください。";
-const failedDeleteMessage =
-  "コメントを削除できませんでした。再試行してください。";
-
-/** @returns Operation error message scoped to one comment and selected operations. */
-function getCommentOperationErrorMessage(
-  operationState: CommentOperationState,
-  commentId: CommentId,
-  operations: readonly CommentOperationKind[],
-): string | null {
-  if (operationState.status !== "error") {
-    return null;
-  }
-
-  if (operationState.commentId !== commentId) {
-    return null;
-  }
-
-  if (!operations.includes(operationState.operation)) {
-    return null;
-  }
-
-  return operationState.error.message;
-}
-
-/**
- * @param blockType - The raw block type identifier.
- * @returns Human-readable block type text for the edit anchor preview.
- */
-function formatEditBlockType(blockType: string): string {
-  return blockType.replace(/_/g, " ");
-}
-
-/** @returns A floating form for editing an existing Markdown comment. */
-function CommentEditPopover({
-  draft,
-  isSaving,
-  operationState,
-  onSubmit,
-  onResolveComment,
-  onReopenComment,
-  onDeleteComment,
-  onCancel,
-}: CommentEditPopoverProps) {
-  const titleId = useId();
-  const textareaId = useId();
-  const hintId = useId();
-  const errorId = useId();
-  const popoverRef = useRef<HTMLElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const previousDraftCommentIdRef = useRef<CommentId | null>(null);
-  const [body, setBody] = useState(draft?.comment.body ?? "");
-  const [validationMessage, setValidationMessage] = useState<string | null>(
-    null,
-  );
-  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
-  const trimmedBody = body.trim();
-  const commentId = draft?.comment.id ?? null;
-  const isOperatingComment =
-    commentId === null
-      ? false
-      : CommentOperationSavingState.isForComment(operationState, commentId);
-  const isBusy = isSaving || isOperatingComment;
-  const scopedOperationErrorMessage =
-    commentId === null
-      ? null
-      : getCommentOperationErrorMessage(operationState, commentId, [
-          "update",
-          "resolve",
-          "reopen",
-          "delete",
-        ]);
-  const visibleErrorMessage = validationMessage ?? scopedOperationErrorMessage;
-  const isSubmitDisabled = isBusy || trimmedBody.length === 0;
-  const describedBy =
-    visibleErrorMessage === null ? hintId : `${hintId} ${errorId}`;
-
-  useEffect(() => {
-    const nextDraftCommentId = draft?.comment.id ?? null;
-
-    if (previousDraftCommentIdRef.current === nextDraftCommentId) {
-      return;
-    }
-
-    previousDraftCommentIdRef.current = nextDraftCommentId;
-    setBody(draft?.comment.body ?? "");
-    setValidationMessage(null);
-    setIsConfirmingDelete(false);
-    textareaRef.current?.focus();
-  }, [draft]);
-
-  useEffect(() => {
-    const closeWhenClickingOutside = (event: globalThis.MouseEvent): void => {
-      if (draft === null) {
-        return;
-      }
-
-      if (isBusy) {
-        return;
-      }
-
-      const target = event.target;
-
-      if (!(target instanceof Node)) {
-        return;
-      }
-
-      if (popoverRef.current?.contains(target)) {
-        return;
-      }
-
-      onCancel();
-    };
-
-    document.addEventListener("mousedown", closeWhenClickingOutside);
-
-    return () => {
-      document.removeEventListener("mousedown", closeWhenClickingOutside);
-    };
-  }, [draft, isBusy, onCancel]);
-
-  if (draft === null) {
-    return null;
-  }
-
-  const submitComment = async (): Promise<void> => {
-    if (trimmedBody.length === 0) {
-      setValidationMessage(emptyEditBodyMessage);
-      return;
-    }
-
-    setValidationMessage(null);
-    const wasSaved = await onSubmit(draft.comment.id, trimmedBody);
-
-    if (!wasSaved) {
-      setValidationMessage(failedUpdateMessage);
-    }
-  };
-
-  const toggleResolved = async (): Promise<void> => {
-    setValidationMessage(null);
-    const wasChanged = draft.comment.resolved
-      ? await onReopenComment(draft.comment.id)
-      : await onResolveComment(draft.comment.id);
-
-    if (!wasChanged) {
-      setValidationMessage(failedStatusActionMessage);
-    }
-  };
-
-  const requestDelete = (): void => {
-    setValidationMessage(null);
-    setIsConfirmingDelete(true);
-  };
-
-  const cancelDelete = (): void => {
-    setValidationMessage(null);
-    setIsConfirmingDelete(false);
-  };
-
-  const confirmDelete = async (): Promise<void> => {
-    setValidationMessage(null);
-    const wasDeleted = await onDeleteComment(draft.comment.id);
-
-    if (!wasDeleted) {
-      setValidationMessage(failedDeleteMessage);
-    }
-  };
-
-  const submitForm = (event: FormEvent<HTMLFormElement>): void => {
-    event.preventDefault();
-    void submitComment();
-  };
-
-  const handleTextareaKeyDown = (
-    event: KeyboardEvent<HTMLTextAreaElement>,
-  ): void => {
-    if (isBusy) {
-      return;
-    }
-
-    if (event.key === "Escape") {
-      event.preventDefault();
-      onCancel();
-      return;
-    }
-
-    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-      event.preventDefault();
-      void submitComment();
-    }
-  };
-
-  const handleDialogKeyDown = (event: KeyboardEvent<HTMLElement>): void => {
-    if (event.defaultPrevented || event.key !== "Escape" || isBusy) {
-      return;
-    }
-
-    event.preventDefault();
-    onCancel();
-  };
-
-  const statusActionLabel = draft.comment.resolved
-    ? uiText.commentThread.reopen
-    : uiText.commentThread.resolve;
-
-  return (
-    <aside
-      ref={popoverRef}
-      className="add-comment-popover add-comment-popover--edit"
-      style={createFloatingPopoverStyle(draft.selectionBounds)}
-      role="dialog"
-      aria-labelledby={titleId}
-      onKeyDown={handleDialogKeyDown}
-    >
-      <header className="add-comment-popover__header">
-        <div>
-          <span className="add-comment-popover__eyebrow">
-            <Pencil aria-hidden="true" size={14} />
-            既存コメント
-          </span>
-          <h2 id={titleId} className="add-comment-popover__title">
-            コメント編集
-          </h2>
-        </div>
-        <button
-          className="icon-button add-comment-popover__close-button"
-          type="button"
-          aria-label="コメント編集をキャンセル"
-          onClick={onCancel}
-          disabled={isBusy}
-        >
-          <X aria-hidden="true" size={14} />
-        </button>
-      </header>
-      <form className="add-comment-popover__form" onSubmit={submitForm}>
-        <div className="add-comment-popover__body">
-          <blockquote>{draft.comment.anchor.textSnippet}</blockquote>
-          <label className="add-comment-popover__label" htmlFor={textareaId}>
-            {uiText.sidebar.comments}
-          </label>
-          <textarea
-            id={textareaId}
-            ref={textareaRef}
-            value={body}
-            rows={4}
-            aria-describedby={describedBy}
-            aria-invalid={visibleErrorMessage !== null}
-            placeholder="レビューコメントを書く..."
-            onInput={(event) => {
-              setBody(event.currentTarget.value);
-              setValidationMessage(null);
-            }}
-            onKeyDown={handleTextareaKeyDown}
-            disabled={isBusy}
-          />
-          <p id={hintId} className="add-comment-popover__hint">
-            {formatEditBlockType(draft.comment.anchor.blockType)}
-            {uiText.commentThread.block} {draft.comment.anchor.blockIndex + 1},{" "}
-            {uiText.commentThread.chars} {draft.comment.anchor.charRange.start}-
-            {draft.comment.anchor.charRange.end}
-          </p>
-          {visibleErrorMessage === null ? null : (
-            <p id={errorId} className="add-comment-popover__error" role="alert">
-              {visibleErrorMessage}
-            </p>
-          )}
-          {isConfirmingDelete ? (
-            <div className="add-comment-popover__confirm" role="alert">
-              <p>{uiText.commentThread.confirmDelete}</p>
-              <div className="add-comment-popover__confirm-actions">
-                <button
-                  className="button button--danger"
-                  type="button"
-                  aria-label={`${uiText.commentThread.confirmDeleteAction} ${draft.comment.id}`}
-                  disabled={isBusy}
-                  onClick={() => {
-                    void confirmDelete();
-                  }}
-                >
-                  {uiText.commentThread.delete}
-                </button>
-                <button
-                  className="button button--secondary"
-                  type="button"
-                  aria-label={`${uiText.commentThread.cancelDeleteAction} ${draft.comment.id}`}
-                  disabled={isBusy}
-                  onClick={cancelDelete}
-                >
-                  {uiText.commentThread.cancel}
-                </button>
-              </div>
-            </div>
-          ) : null}
-        </div>
-        <div className="add-comment-popover__status-actions">
-          <button
-            className="button button--secondary"
-            type="button"
-            disabled={isBusy}
-            onClick={() => {
-              void toggleResolved();
-            }}
-          >
-            {draft.comment.resolved ? (
-              <RotateCcw aria-hidden="true" size={15} />
-            ) : (
-              <CheckCircle2 aria-hidden="true" size={15} />
-            )}
-            {statusActionLabel}
-          </button>
-          <button
-            className="button button--danger"
-            type="button"
-            disabled={isBusy || isConfirmingDelete}
-            onClick={requestDelete}
-          >
-            <Trash2 aria-hidden="true" size={15} />
-            {uiText.commentThread.delete}
-          </button>
-        </div>
-        <div className="add-comment-popover__actions">
-          <button
-            className="button button--secondary"
-            type="button"
-            onClick={onCancel}
-            disabled={isBusy}
-          >
-            {uiText.commentThread.cancel}
-          </button>
-          <button
-            className="button button--primary"
-            type="submit"
-            disabled={isSubmitDisabled}
-          >
-            {isSaving ? (
-              <LoaderCircle
-                className="add-comment-popover__saving-icon"
-                aria-hidden="true"
-                size={15}
-              />
-            ) : (
-              <Send aria-hidden="true" size={15} />
-            )}
-            {uiText.commentThread.save}
-          </button>
-        </div>
-      </form>
-    </aside>
-  );
 }
 
 type FloatingKind = "button" | "popover";
