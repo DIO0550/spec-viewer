@@ -701,6 +701,20 @@ mod tests {
     }
 
     #[test]
+    fn comment_restore_rejects_updated_timestamp_before_created_timestamp() {
+        let result = Comment::restore(
+            CommentId::new("comment-1").expect("id should be valid"),
+            anchor_for_file(SpecFileKey::Impl),
+            CommentBody::new("Done").expect("body should be valid"),
+            CommentStatus::Resolved,
+            timestamp(2),
+            timestamp(1),
+        );
+
+        assert_eq!(Err(CommentDomainError::UpdatedBeforeCreated), result);
+    }
+
+    #[test]
     fn comment_rejects_updated_timestamp_before_created_timestamp() {
         let result = Comment::new(
             CommentId::new("comment-1").expect("id should be valid"),
@@ -736,11 +750,102 @@ mod tests {
     }
 
     #[test]
-    fn comment_rejects_updates_before_created_timestamp() {
+    fn comment_rejects_mutation_timestamp_before_created_timestamp() {
         let mut comment = comment_with_id("comment-1");
         let result = comment.resolve(timestamp(0));
 
         assert_eq!(Err(CommentDomainError::UpdatedBeforeCreated), result);
+    }
+
+    #[test]
+    fn comment_rejects_body_update_before_current_updated_timestamp() {
+        let mut comment = comment_with_id("comment-1");
+        comment
+            .update_body(
+                CommentBody::new("Latest body").expect("body should be valid"),
+                timestamp(3),
+            )
+            .expect("first update should be valid");
+
+        let result = comment.update_body(
+            CommentBody::new("Stale body").expect("body should be valid"),
+            timestamp(2),
+        );
+
+        assert_eq!(
+            Err(CommentDomainError::UpdatedAtRollback {
+                current: timestamp(3),
+                attempted: timestamp(2),
+            }),
+            result
+        );
+        assert_eq!("Latest body", comment.body().as_str());
+        assert_eq!(timestamp(3), comment.updated_at());
+    }
+
+    #[test]
+    fn comment_rejects_resolve_before_current_updated_timestamp() {
+        let mut comment = comment_with_id("comment-1");
+        comment
+            .update_body(
+                CommentBody::new("Latest body").expect("body should be valid"),
+                timestamp(3),
+            )
+            .expect("body update should be valid");
+
+        let result = comment.resolve(timestamp(2));
+
+        assert_eq!(
+            Err(CommentDomainError::UpdatedAtRollback {
+                current: timestamp(3),
+                attempted: timestamp(2),
+            }),
+            result
+        );
+        assert_eq!(CommentStatus::Open, comment.status());
+        assert_eq!(timestamp(3), comment.updated_at());
+    }
+
+    #[test]
+    fn comment_rejects_reopen_before_current_updated_timestamp() {
+        let mut comment = comment_with_id("comment-1");
+        comment
+            .resolve(timestamp(3))
+            .expect("resolve should be valid");
+
+        let result = comment.reopen(timestamp(2));
+
+        assert_eq!(
+            Err(CommentDomainError::UpdatedAtRollback {
+                current: timestamp(3),
+                attempted: timestamp(2),
+            }),
+            result
+        );
+        assert_eq!(CommentStatus::Resolved, comment.status());
+        assert_eq!(timestamp(3), comment.updated_at());
+    }
+
+    #[test]
+    fn comment_accepts_body_and_status_updates_at_current_updated_timestamp() {
+        let mut comment = comment_with_id("comment-1");
+
+        comment
+            .update_body(
+                CommentBody::new("Updated body").expect("body should be valid"),
+                timestamp(1),
+            )
+            .expect("equal body update timestamp should be valid");
+        comment
+            .resolve(timestamp(1))
+            .expect("equal resolve timestamp should be valid");
+        comment
+            .reopen(timestamp(1))
+            .expect("equal reopen timestamp should be valid");
+
+        assert_eq!("Updated body", comment.body().as_str());
+        assert_eq!(CommentStatus::Open, comment.status());
+        assert_eq!(timestamp(1), comment.updated_at());
     }
 
     #[test]
