@@ -1,5 +1,6 @@
 //! Repository contract for persisted comments.
 
+use chrono::{DateTime, Utc};
 use thiserror::Error;
 
 use crate::domain::spec::{SpecFileKey, SpecId};
@@ -114,6 +115,12 @@ pub enum CommentRepositoryError {
     DuplicateComment { id: CommentId },
     #[error("comment not found: {id}")]
     CommentNotFound { id: CommentId },
+    #[error("comment update {attempted} is older than persisted timestamp {current} for {id}")]
+    StaleUpdate {
+        id: CommentId,
+        current: DateTime<Utc>,
+        attempted: DateTime<Utc>,
+    },
     #[error(
         "comment belongs to file {actual_file_key} but repository scope is {expected_file_key}"
     )]
@@ -134,6 +141,14 @@ impl CommentRepositoryError {
 
     pub fn not_found(id: CommentId) -> Self {
         Self::CommentNotFound { id }
+    }
+
+    pub fn stale_update(id: CommentId, current: DateTime<Utc>, attempted: DateTime<Utc>) -> Self {
+        Self::StaleUpdate {
+            id,
+            current,
+            attempted,
+        }
     }
 
     pub fn scope_mismatch(expected_file_key: SpecFileKey, actual_file_key: SpecFileKey) -> Self {

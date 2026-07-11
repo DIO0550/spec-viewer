@@ -4,6 +4,7 @@ use std::{
     collections::{HashMap, HashSet},
     fs, io,
     path::Path,
+    sync::{Mutex, MutexGuard},
 };
 
 use serde_json::{Map, Value};
@@ -12,8 +13,8 @@ use uuid::Uuid;
 use crate::{
     domain::{
         comment::{
-            Comment, CommentId, CommentListQuery, CommentRepository, CommentRepositoryError,
-            CommentScope,
+            Comment, CommentDomainError, CommentId, CommentListQuery, CommentRepository,
+            CommentRepositoryError, CommentScope,
         },
         spec::SpecFileKey,
         workspace::WorkspaceLayout,
@@ -23,6 +24,8 @@ use crate::{
         comments::{deserialize_comments, serialize_comments, CommentJsonError},
     },
 };
+
+static COMMENT_STORE_LOCK: Mutex<()> = Mutex::new(());
 
 #[derive(Debug, Clone)]
 pub struct JsonCommentRepository {
@@ -109,6 +112,7 @@ impl JsonCommentRepository {
 
 impl CommentRepository for JsonCommentRepository {
     fn list(&self, query: &CommentListQuery) -> Result<Vec<Comment>, CommentRepositoryError> {
+        let _store_guard = lock_comment_store()?;
         let state = self.load(query.scope())?;
 
         Ok(state
@@ -123,6 +127,7 @@ impl CommentRepository for JsonCommentRepository {
         scope: &CommentScope,
         comment: Comment,
     ) -> Result<Comment, CommentRepositoryError> {
+        let _store_guard = lock_comment_store()?;
         ensure_scope_contains(scope, &comment)?;
 
         let mut state = self.load(scope)?;
@@ -145,6 +150,7 @@ impl CommentRepository for JsonCommentRepository {
         scope: &CommentScope,
         comment: Comment,
     ) -> Result<Comment, CommentRepositoryError> {
+        let _store_guard = lock_comment_store()?;
         ensure_scope_contains(scope, &comment)?;
 
         let mut state = self.load(scope)?;
@@ -153,6 +159,9 @@ impl CommentRepository for JsonCommentRepository {
             .iter_mut()
             .find(|existing| existing.id() == comment.id())
             .ok_or_else(|| CommentRepositoryError::not_found(comment.id().clone()))?;
+        existing
+            .ensure_update_time(comment.updated_at())
+            .map_err(|source| stale_update_error(existing, &comment, source))?;
 
         *existing = comment.clone();
         self.write(&state, &state.comments)?;
@@ -161,6 +170,7 @@ impl CommentRepository for JsonCommentRepository {
     }
 
     fn delete(&self, scope: &CommentScope, id: &CommentId) -> Result<(), CommentRepositoryError> {
+        let _store_guard = lock_comment_store()?;
         let mut state = self.load(scope)?;
         let initial_len = state.comments.len();
         state.comments.retain(|comment| comment.id() != id);
@@ -179,6 +189,32 @@ struct CommentFileState {
     file_key: SpecFileKey,
     comments: Vec<Comment>,
     previous_json: Option<Value>,
+}
+
+fn lock_comment_store() -> Result<MutexGuard<'static, ()>, CommentRepositoryError> {
+    COMMENT_STORE_LOCK
+        .lock()
+        .map_err(|_| CommentRepositoryError::unavailable("comment store lock is poisoned"))
+}
+
+fn stale_update_error(
+    existing: &Comment,
+    attempted: &Comment,
+    source: CommentDomainError,
+) -> CommentRepositoryError {
+    match source {
+        CommentDomainError::UpdatedAtRollback { current, attempted } => {
+            CommentRepositoryError::stale_update(existing.id().clone(), current, attempted)
+        }
+        CommentDomainError::UpdatedBeforeCreated => CommentRepositoryError::stale_update(
+            existing.id().clone(),
+            existing.updated_at(),
+            attempted.updated_at(),
+        ),
+        source => CommentRepositoryError::invalid_data(format!(
+            "comment replacement timestamp validation failed: {source}"
+        )),
+    }
 }
 
 fn ensure_scope_contains(

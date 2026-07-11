@@ -410,7 +410,10 @@ impl Comment {
         Ok(())
     }
 
-    fn ensure_update_time(&self, updated_at: DateTime<Utc>) -> Result<(), CommentDomainError> {
+    pub(crate) fn ensure_update_time(
+        &self,
+        updated_at: DateTime<Utc>,
+    ) -> Result<(), CommentDomainError> {
         if updated_at < self.created_at {
             return Err(CommentDomainError::UpdatedBeforeCreated);
         }
