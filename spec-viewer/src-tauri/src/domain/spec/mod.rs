@@ -1,5 +1,11 @@
 //! Spec document and tree domain concepts.
 
+mod format_policy;
+
+pub use format_policy::{
+    SpecFileCandidateNameStrategy, SpecFileCandidateRule, SpecFileFormatPolicy,
+};
+
 use std::{fmt, str::FromStr};
 
 use thiserror::Error;
