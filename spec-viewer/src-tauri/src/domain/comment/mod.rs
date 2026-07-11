@@ -415,6 +415,13 @@ impl Comment {
             return Err(CommentDomainError::UpdatedBeforeCreated);
         }
 
+        if updated_at < self.updated_at {
+            return Err(CommentDomainError::UpdatedAtRollback {
+                current: self.updated_at,
+                attempted: updated_at,
+            });
+        }
+
         Ok(())
     }
 }
@@ -471,6 +478,13 @@ pub enum CommentDomainError {
     InvalidCharRange { start: usize, end: usize },
     #[error("comment updated timestamp cannot be before created timestamp")]
     UpdatedBeforeCreated,
+    #[error(
+        "comment updated timestamp {attempted} cannot be before current updated timestamp {current}"
+    )]
+    UpdatedAtRollback {
+        current: DateTime<Utc>,
+        attempted: DateTime<Utc>,
+    },
     #[error("duplicate comment id in thread: {id}")]
     DuplicateCommentId { id: CommentId },
 }
