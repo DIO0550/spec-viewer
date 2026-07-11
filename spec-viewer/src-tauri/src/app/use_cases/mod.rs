@@ -14,14 +14,14 @@ use crate::{
     },
     domain::{
         comment::{CommentDomainError, CommentRepositoryError},
-        spec::{MarkdownBlock, SpecDocumentFormat, SpecDomainError},
+        spec::{MarkdownBlock, SpecDocumentFormat, SpecDomainError, SpecId},
         spec::{SpecFileKey, SpecNode},
         workspace::{WorkspaceConfig, WorkspaceLayout},
     },
     infrastructure::{
         filesystem::{
             archive_spec_directory, spec_directory_path, FilesystemSpecTreeScanner,
-            FilesystemWorkspaceDetector, SafeSpecPathError, SpecArchiveError, SpecTreeScanError,
+            FilesystemWorkspaceDetector, SpecArchiveError, SpecTreeScanError,
             WorkspaceDetectionError,
         },
         markdown::{
@@ -120,10 +120,11 @@ impl FilesystemAppUseCases {
         workspace: &LoadWorkspaceResult,
         spec_id: &str,
     ) -> Result<ArchiveSpecResult, AppUseCaseError> {
-        let archive_path = archive_spec_directory(workspace.layout(), spec_id)?;
+        let spec_id = SpecId::new(spec_id)?;
+        let archive_path = archive_spec_directory(workspace.layout(), &spec_id)?;
 
         Ok(ArchiveSpecResult::new(
-            spec_id,
+            spec_id.as_str(),
             archive_path.to_string_lossy().into_owned(),
         ))
     }
@@ -270,7 +271,8 @@ fn spec_config_for_directory<ConfigLoader>(
 where
     ConfigLoader: LoadWorkspaceConfig,
 {
-    let spec_directory = spec_directory_path(layout, spec_id)?;
+    let spec_id = SpecId::new(spec_id)?;
+    let spec_directory = spec_directory_path(layout, &spec_id);
     let Some(spec_override) = config_loader.load_spec_config_override(&spec_directory)? else {
         return Ok(workspace_config.clone());
     };
@@ -576,14 +578,6 @@ impl From<SpecTreeScanError> for AppUseCaseError {
     }
 }
 
-impl From<SafeSpecPathError> for AppUseCaseError {
-    fn from(source: SafeSpecPathError) -> Self {
-        Self::InvalidSpec {
-            message: source.to_string(),
-        }
-    }
-}
-
 impl From<SpecArchiveError> for AppUseCaseError {
     fn from(source: SpecArchiveError) -> Self {
         Self::SpecArchive {
@@ -816,7 +810,7 @@ mod tests {
             config_with_mapping(SpecFileKey::Tasks, "tasks.md"),
         );
         let spec = SpecNode::leaf(
-            "auth",
+            SpecId::new("auth").expect("spec id should be valid"),
             "auth",
             vec![
                 SpecFile::new(SpecFileKey::Tasks, "tasks.md", SpecFileStatus::Present)

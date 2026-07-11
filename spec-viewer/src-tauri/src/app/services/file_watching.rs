@@ -16,7 +16,7 @@ use thiserror::Error;
 
 use crate::{
     app::use_cases::{AppUseCaseError, LoadWorkspaceResult},
-    domain::spec::SpecFileKey,
+    domain::spec::{SpecFileKey, SpecId},
     domain::workspace::WorkspaceConfig,
     infrastructure::{
         filesystem::spec_directory_path,
@@ -162,12 +162,21 @@ pub fn plan_file_watch(
     spec_id: &str,
     file_key: SpecFileKey,
 ) -> Result<FileWatchPlan, AppUseCaseError> {
-    let resolved_document_path =
-        resolve_spec_document_path(workspace.layout(), effective_config, spec_id, file_key)?;
+    let spec_id = SpecId::new(spec_id)?;
+    let resolved_document_path = resolve_spec_document_path(
+        workspace.layout(),
+        effective_config,
+        spec_id.as_str(),
+        file_key,
+    )?;
     let config_path = config_file_path(workspace.layout());
     let spec_override_config_path =
-        spec_override_config_file_path(&spec_directory_path(workspace.layout(), spec_id)?);
-    let scope = FileWatchScope::new(workspace.layout().root().as_str(), spec_id, file_key);
+        spec_override_config_file_path(&spec_directory_path(workspace.layout(), &spec_id));
+    let scope = FileWatchScope::new(
+        workspace.layout().root().as_str(),
+        spec_id.as_str(),
+        file_key,
+    );
     let mut targets = vec![FileWatchTarget::required(
         FileWatchTargetKind::Markdown,
         resolved_document_path.path().to_path_buf(),

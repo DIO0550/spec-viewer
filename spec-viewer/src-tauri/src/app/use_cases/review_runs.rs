@@ -29,7 +29,7 @@ use crate::{
         workspace::{WorkspaceLayout, WorkspaceRoot},
     },
     infrastructure::{
-        filesystem::{safe_relative_spec_path, spec_directory_path},
+        filesystem::spec_directory_path,
         git::{GitReviewWorktreeError, GitReviewWorktreeService},
         persistence::{
             review_run_paths::{
@@ -629,7 +629,7 @@ fn collect_target_files(
         }]),
         UserReviewRunTarget::Spec { spec_id } => {
             let specs = use_cases.list_specs(workspace)?.into_specs();
-            let spec = find_spec_node(&specs, spec_id.as_str()).ok_or_else(|| {
+            let spec = find_spec_node(&specs, spec_id).ok_or_else(|| {
                 AppUseCaseError::ReviewRunExport {
                     message: format!("unknown spec id: {spec_id}"),
                 }
@@ -654,7 +654,7 @@ fn collect_target_files(
 
 fn target_file_from_spec_file(spec: &SpecNode, file: &SpecFile) -> ReviewRunTargetFile {
     ReviewRunTargetFile {
-        spec_id: SpecId::new(spec.id()).expect("spec tree ids should be valid domain values"),
+        spec_id: spec.id().clone(),
         spec_label: spec.label().to_string(),
         file_key: file.key(),
         file_label: file.display_label().to_string(),
@@ -703,8 +703,7 @@ fn collect_bundle_files(
                 .collect::<Vec<_>>();
             let source_relative_path =
                 relative_workspace_path(workspace.layout().root().as_str(), document.path())?;
-            let context_relative_path =
-                context_snapshot_path(file.spec_id.as_str(), file.file_key)?;
+            let context_relative_path = context_snapshot_path(&file.spec_id, file.file_key)?;
 
             Ok(ReviewRunBundleFile {
                 spec_id: file.spec_id.clone(),
@@ -995,18 +994,18 @@ fn relocate_bundle_files_to_workspace(
 }
 
 fn context_snapshot_path(
-    spec_id: &str,
+    spec_id: &SpecId,
     file_key: SpecFileKey,
 ) -> Result<ReviewRunRelativePath, AppUseCaseError> {
-    let spec_path = safe_relative_spec_path(spec_id)?;
-    let relative = Path::new("context")
-        .join(spec_path)
-        .join(format!("{}.md", file_key.as_str()));
-
-    ReviewRunRelativePath::new(relative.to_string_lossy()).map_err(AppUseCaseError::from)
+    ReviewRunRelativePath::new(format!(
+        "context/{}/{}.md",
+        spec_id.as_str(),
+        file_key.as_str()
+    ))
+    .map_err(AppUseCaseError::from)
 }
 
-fn find_spec_node<'a>(specs: &'a [SpecNode], spec_id: &str) -> Option<&'a SpecNode> {
+fn find_spec_node<'a>(specs: &'a [SpecNode], spec_id: &SpecId) -> Option<&'a SpecNode> {
     specs.iter().find_map(|spec| {
         if spec.id() == spec_id {
             return Some(spec);
@@ -1183,7 +1182,7 @@ fn review_run_state_directory(
     spec_id: &SpecId,
     state: ReviewRunFolderState,
 ) -> Result<PathBuf, AppUseCaseError> {
-    Ok(spec_directory_path(layout, spec_id.as_str())?
+    Ok(spec_directory_path(layout, spec_id)
         .join(USER_REVIEW_DIRECTORY)
         .join(state.directory_name()))
 }

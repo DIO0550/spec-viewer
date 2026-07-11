@@ -50,11 +50,7 @@ impl ReviewRunPathResolver {
         run_id: &UserReviewRunId,
         state: ReviewRunFolderState,
     ) -> Result<ReviewRunPath, ReviewRunPathError> {
-        let spec_directory = spec_directory_path(layout, spec_id.as_str()).map_err(|_| {
-            ReviewRunPathError::InvalidSpecId {
-                spec_id: spec_id.as_str().to_string(),
-            }
-        })?;
+        let spec_directory = spec_directory_path(layout, spec_id);
         let user_review_directory = spec_directory.join(USER_REVIEW_DIRECTORY);
         let active_directory = user_review_directory.join(ACTIVE_REVIEW_RUN_DIRECTORY);
         let archive_directory = user_review_directory.join(ARCHIVE_REVIEW_RUN_DIRECTORY);
@@ -122,8 +118,6 @@ impl ReviewRunPath {
 
 #[derive(Debug, Error)]
 pub enum ReviewRunPathError {
-    #[error("review run spec id is invalid: {spec_id}")]
-    InvalidSpecId { spec_id: String },
     #[error("review run path escapes the selected spec folder: {path}")]
     PathEscapesUserReviewDirectory { path: String },
 }
@@ -209,28 +203,5 @@ mod tests {
         assert!(path
             .run_directory()
             .starts_with(path.user_review_directory()));
-    }
-
-    #[test]
-    fn rejects_spec_ids_that_escape_user_review_root() {
-        let workspace = TestWorkspace::new("/workspace/project");
-        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
-        let run_id =
-            UserReviewRunId::new("2026-05-06T120000Z-spec").expect("run id should be valid");
-
-        for spec_id in ["../escape", "/tmp/spec", "spec\\path"] {
-            let spec_id = SpecId::new(spec_id).expect("spec id domain allows raw identifier");
-            let result = ReviewRunPathResolver::new().resolve(
-                &layout,
-                &spec_id,
-                &run_id,
-                ReviewRunFolderState::Active,
-            );
-
-            assert!(matches!(
-                result,
-                Err(ReviewRunPathError::InvalidSpecId { .. })
-            ));
-        }
     }
 }

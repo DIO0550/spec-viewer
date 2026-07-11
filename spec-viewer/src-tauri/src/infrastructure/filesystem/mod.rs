@@ -2,13 +2,16 @@
 
 use std::{
     fs, io,
-    path::{Component, Path, PathBuf},
+    path::{Path, PathBuf},
 };
 
 use thiserror::Error;
 
 use crate::domain::{
-    spec::{SpecDocumentFormat, SpecDomainError, SpecFile, SpecFileKey, SpecFileStatus, SpecNode},
+    spec::{
+        SpecDocumentFormat, SpecDomainError, SpecFile, SpecFileKey, SpecFileStatus, SpecId,
+        SpecNode,
+    },
     workspace::{
         WorkspaceConfig, WorkspaceDomainError, WorkspaceKind, WorkspaceLayout, WorkspaceRoot,
     },
@@ -118,10 +121,16 @@ impl FilesystemSpecTreeScanner {
             let children = scan_child_directories(&root.path, &id, config)?;
 
             if let Some(label) = root.label {
+                let spec_id =
+                    SpecId::new(id.clone()).map_err(|source| SpecTreeScanError::InvalidNode {
+                        id: id.clone(),
+                        path: display_path(&root.path),
+                        source,
+                    })?;
                 let node =
-                    SpecNode::new(id.clone(), label, Vec::new(), children).map_err(|source| {
+                    SpecNode::new(spec_id, label, Vec::new(), children).map_err(|source| {
                         SpecTreeScanError::InvalidNode {
-                            id,
+                            id: id.clone(),
                             path: display_path(&root.path),
                             source,
                         }
@@ -222,62 +231,37 @@ pub fn spec_root_path(layout: &WorkspaceLayout) -> PathBuf {
     PathBuf::from(layout.root().as_str()).join(spec_root_directory_for_kind(layout.kind()))
 }
 
-pub fn safe_relative_spec_path(spec_id: &str) -> Result<PathBuf, SafeSpecPathError> {
-    let trimmed = spec_id.trim();
-
-    if trimmed.is_empty() || trimmed.contains('\\') || trimmed.contains('\0') {
-        return Err(SafeSpecPathError::InvalidSpecId {
-            spec_id: spec_id.to_string(),
-        });
-    }
-
+fn spec_relative_path(spec_id: &SpecId) -> PathBuf {
     let mut path = PathBuf::new();
-    let mut component_count = 0;
 
-    for component in Path::new(trimmed).components() {
-        let Component::Normal(name) = component else {
-            return Err(SafeSpecPathError::InvalidSpecId {
-                spec_id: spec_id.to_string(),
-            });
-        };
-
-        path.push(name);
-        component_count += 1;
+    for segment in spec_id.segments() {
+        path.push(segment);
     }
 
-    if component_count == 0 {
-        return Err(SafeSpecPathError::InvalidSpecId {
-            spec_id: spec_id.to_string(),
-        });
-    }
-
-    Ok(path)
+    path
 }
 
-pub fn spec_directory_path(
-    layout: &WorkspaceLayout,
-    spec_id: &str,
-) -> Result<PathBuf, SafeSpecPathError> {
-    let relative_spec_path = safe_relative_spec_path(spec_id)?;
+pub fn spec_directory_path(layout: &WorkspaceLayout, spec_id: &SpecId) -> PathBuf {
+    let relative_spec_path = spec_relative_path(spec_id);
 
     if let Ok(path_under_source_group) =
         relative_spec_path.strip_prefix(spec_root_directory_for_kind(layout.kind()))
     {
-        return Ok(spec_root_path(layout).join(path_under_source_group));
+        return spec_root_path(layout).join(path_under_source_group);
     }
 
     if is_claude_plugin_worktree_spec_path(&relative_spec_path) {
-        return Ok(PathBuf::from(layout.root().as_str()).join(relative_spec_path));
+        return PathBuf::from(layout.root().as_str()).join(relative_spec_path);
     }
 
-    Ok(spec_root_path(layout).join(relative_spec_path))
+    spec_root_path(layout).join(relative_spec_path)
 }
 
 pub fn archive_spec_directory(
     layout: &WorkspaceLayout,
-    spec_id: &str,
+    spec_id: &SpecId,
 ) -> Result<PathBuf, SpecArchiveError> {
-    let relative_spec_path = safe_relative_spec_path(spec_id).map_err(SpecArchiveError::from)?;
+    let relative_spec_path = spec_relative_path(spec_id);
     let archive_paths = archive_spec_paths(layout, &relative_spec_path)?;
 
     if archive_paths.relative_spec_path.as_os_str().is_empty() {
@@ -683,7 +667,13 @@ fn scan_spec_directory(
     let files = scan_spec_files(directory, &effective_config)?;
     let children = scan_child_directories(directory, &id, config)?;
 
-    SpecNode::new(id.clone(), label, files, children).map_err(|source| {
+    let spec_id = SpecId::new(id.clone()).map_err(|source| SpecTreeScanError::InvalidNode {
+        id: id.clone(),
+        path: display_path(directory),
+        source,
+    })?;
+
+    SpecNode::new(spec_id, label, files, children).map_err(|source| {
         SpecTreeScanError::InvalidNode {
             id,
             path: display_path(directory),
@@ -814,18 +804,10 @@ pub enum SpecTreeScanError {
     },
 }
 
-#[derive(Debug, Error, Clone, PartialEq, Eq)]
-pub enum SafeSpecPathError {
-    #[error("spec id is invalid: {spec_id}")]
-    InvalidSpecId { spec_id: String },
-}
-
 #[derive(Debug, Error)]
 pub enum SpecArchiveError {
     #[error("spec id cannot be archived because it is a source group root: {spec_id}")]
     SourceGroupRoot { spec_id: String },
-    #[error("spec id cannot be archived because it is invalid: {source}")]
-    InvalidSpecId { source: SafeSpecPathError },
     #[error("spec archive source is invalid: {spec_id}")]
     InvalidArchiveSource { spec_id: String },
     #[error("spec directory does not exist: {path}")]
@@ -844,12 +826,6 @@ pub enum SpecArchiveError {
         archive_path: String,
         source: io::Error,
     },
-}
-
-impl From<SafeSpecPathError> for SpecArchiveError {
-    fn from(source: SafeSpecPathError) -> Self {
-        Self::InvalidSpecId { source }
-    }
 }
 
 #[cfg(test)]
@@ -912,6 +888,9 @@ mod tests {
         fn drop(&mut self) {
             let _ = fs::remove_dir_all(&self.root);
         }
+    }
+    fn spec_id(value: &str) -> SpecId {
+        SpecId::new(value).expect("test spec id should be valid")
     }
 
     #[test]
@@ -1309,8 +1288,9 @@ mod tests {
         workspace.write_file(".plugin-workspace/.specs/auth/tasks.md", "# Tasks");
         let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
 
-        let archive_path = archive_spec_directory(&layout, ".plugin-workspace/.specs/auth")
-            .expect("spec should be archived");
+        let archive_path =
+            archive_spec_directory(&layout, &spec_id(".plugin-workspace/.specs/auth"))
+                .expect("spec should be archived");
 
         assert_eq!(
             workspace
@@ -1336,8 +1316,9 @@ mod tests {
         workspace.write_file(".plugin-workspace/.specs/.archive/auth/tasks.md", "# Old");
         let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
 
-        let archive_path = archive_spec_directory(&layout, ".plugin-workspace/.specs/auth")
-            .expect("spec should be archived with suffix");
+        let archive_path =
+            archive_spec_directory(&layout, &spec_id(".plugin-workspace/.specs/auth"))
+                .expect("spec should be archived with suffix");
 
         assert_eq!(
             workspace
@@ -1357,7 +1338,7 @@ mod tests {
         workspace.create_dir(PLUGIN_WORKSPACE_SPECS_DIR);
         let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
 
-        let result = archive_spec_directory(&layout, ".plugin-workspace/.specs");
+        let result = archive_spec_directory(&layout, &spec_id(".plugin-workspace/.specs"));
 
         assert!(matches!(
             result,
@@ -1416,10 +1397,13 @@ mod tests {
             .expect("spec-driven-dev tree should be scanned");
 
         let root = &tree[0];
-        assert_eq!(PLUGIN_WORKSPACE_SPECS_DIR, root.id());
+        assert_eq!(PLUGIN_WORKSPACE_SPECS_DIR, root.id().as_str());
         assert_eq!("ルート", root.label());
         let issue = &root.children()[0];
-        assert_eq!(".plugin-workspace/.specs/021-issue-262", issue.id());
+        assert_eq!(
+            ".plugin-workspace/.specs/021-issue-262",
+            issue.id().as_str()
+        );
         assert_eq!(
             vec![".plugin-workspace/.specs/021-issue-262/code-review"],
             node_ids(issue.children())
@@ -1468,7 +1452,7 @@ mod tests {
         let worktree = &tree[0];
         assert_eq!(
             ".claude/worktrees/feature-auth/.plugin-worktree/.specs",
-            worktree.id()
+            worktree.id().as_str()
         );
         assert_eq!("feature-auth (.plugin-worktree)", worktree.label());
         assert_eq!(
@@ -1520,7 +1504,7 @@ mod tests {
         let worktree = &tree[0];
         assert_eq!(
             ".claude/worktrees/doccom-be/.plugin-workspace/.specs",
-            worktree.id()
+            worktree.id().as_str()
         );
         assert_eq!("doccom-be (.plugin-workspace)", worktree.label());
         assert_eq!(
@@ -1548,9 +1532,8 @@ mod tests {
 
         let path = spec_directory_path(
             &layout,
-            ".claude/worktrees/feature-auth/.plugin-worktree/.specs/auth",
-        )
-        .expect("worktree spec id should resolve");
+            &spec_id(".claude/worktrees/feature-auth/.plugin-worktree/.specs/auth"),
+        );
 
         assert_eq!(
             workspace
@@ -1567,9 +1550,8 @@ mod tests {
 
         let path = spec_directory_path(
             &layout,
-            ".claude/worktrees/doccom-be/.plugin-workspace/.specs/019-be-doc-comments",
-        )
-        .expect("plugin workspace spec id should resolve");
+            &spec_id(".claude/worktrees/doccom-be/.plugin-workspace/.specs/019-be-doc-comments"),
+        );
 
         assert_eq!(
             workspace
@@ -1584,8 +1566,7 @@ mod tests {
         let workspace = TestWorkspace::new("root-plugin-workspace-source-group-spec-path");
         let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
 
-        let path = spec_directory_path(&layout, ".plugin-workspace/.specs/auth")
-            .expect("root source group spec id should resolve");
+        let path = spec_directory_path(&layout, &spec_id(".plugin-workspace/.specs/auth"));
 
         assert_eq!(workspace.root().join(".plugin-workspace/.specs/auth"), path);
     }
@@ -1643,7 +1624,7 @@ mod tests {
         let auth = &root.children()[0];
         let checkout = &root.children()[1];
 
-        assert_eq!(".plugin-workspace/.specs/auth", auth.id());
+        assert_eq!(".plugin-workspace/.specs/auth", auth.id().as_str());
         assert_eq!(
             Some(("auth-tasks.md", SpecFileStatus::Present)),
             auth.file_for_key(SpecFileKey::Tasks)
@@ -1682,7 +1663,7 @@ mod tests {
     }
 
     fn node_ids(nodes: &[SpecNode]) -> Vec<&str> {
-        nodes.iter().map(SpecNode::id).collect()
+        nodes.iter().map(|node| node.id().as_str()).collect()
     }
 
     fn file_statuses(node: &SpecNode) -> Vec<(SpecFileKey, SpecFileStatus)> {

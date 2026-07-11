@@ -14,7 +14,7 @@ use thiserror::Error;
 
 use crate::{
     domain::{
-        spec::{MarkdownBlock, SpecDocumentFormat, SpecFileKey},
+        spec::{MarkdownBlock, SpecDocumentFormat, SpecFileKey, SpecId},
         workspace::{WorkspaceConfig, WorkspaceLayout},
     },
     infrastructure::{
@@ -233,10 +233,10 @@ pub fn resolve_spec_document_path(
     let mapping = config
         .file_for_key(key)
         .ok_or(MarkdownReadError::MissingFileMapping { key })?;
-    let spec_directory =
-        spec_directory_path(layout, spec_id).map_err(|_| MarkdownReadError::InvalidSpecId {
-            spec_id: spec_id.to_string(),
-        })?;
+    let spec_id = SpecId::new(spec_id).map_err(|_| MarkdownReadError::InvalidSpecId {
+        spec_id: spec_id.to_string(),
+    })?;
+    let spec_directory = spec_directory_path(layout, &spec_id);
     let configured_path = spec_directory.join(mapping.file_name());
     let candidates = spec_file_path_candidates(key, &configured_path);
     let preferred = candidates
@@ -358,7 +358,7 @@ fn display_path(path: &Path) -> String {
 mod tests {
     use std::{
         env, fs,
-        path::{Path, PathBuf},
+        path::PathBuf,
         time::{SystemTime, UNIX_EPOCH},
     };
 
@@ -367,7 +367,6 @@ mod tests {
         spec::SpecFileKey,
         workspace::{WorkspaceConfig, WorkspaceKind, WorkspaceRoot},
     };
-    use crate::infrastructure::filesystem::safe_relative_spec_path;
 
     const SPECS_DIR: &str = ".plugin-workspace/.specs";
 
@@ -856,13 +855,5 @@ mod tests {
             result,
             Err(MarkdownReadError::UnreadableFile { path, .. }) if path.ends_with("auth/tasks.md")
         ));
-    }
-
-    #[test]
-    fn safe_relative_spec_path_allows_nested_spec_ids() {
-        let path =
-            safe_relative_spec_path("auth/code-review").expect("nested spec id should be allowed");
-
-        assert_eq!(Path::new("auth/code-review"), path);
     }
 }
