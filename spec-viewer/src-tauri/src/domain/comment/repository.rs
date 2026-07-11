@@ -275,4 +275,18 @@ mod tests {
             CommentRepositoryError::scope_mismatch(SpecFileKey::Tasks, SpecFileKey::Impl)
         );
     }
+
+    #[test]
+    fn repository_error_keeps_stale_update_identity_and_timestamps() {
+        let id = CommentId::new("comment-1").expect("id should be valid");
+
+        assert_eq!(
+            CommentRepositoryError::StaleUpdate {
+                id: id.clone(),
+                current: timestamp(3),
+                attempted: timestamp(2),
+            },
+            CommentRepositoryError::stale_update(id, timestamp(3), timestamp(2))
+        );
+    }
 }

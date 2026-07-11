@@ -1680,7 +1680,7 @@ fn invalid_comment(error: CommentDomainError) -> CommandError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::comment::{CommentBody, CommentId};
+    use crate::domain::comment::{CommentBody, CommentId, CommentRepositoryError};
 
     fn timestamp(second: u32) -> DateTime<Utc> {
         DateTime::parse_from_rfc3339(&format!("2026-05-05T10:00:{second:02}Z"))
@@ -1966,6 +1966,24 @@ mod tests {
         assert_eq!("invalidComment", value["code"]);
         assert_eq!(
             "invalid comment input: comment updated timestamp 2026-05-05 10:00:05 UTC cannot be before current updated timestamp 2026-05-05 10:00:06 UTC",
+            value["message"]
+        );
+    }
+
+    #[test]
+    fn comment_command_error_maps_persisted_timestamp_conflict_to_repository_error() {
+        let error =
+            CommentCommandError::from(AppUseCaseError::from(CommentRepositoryError::stale_update(
+                CommentId::new("cmt_1").expect("id should be valid"),
+                timestamp(6),
+                timestamp(5),
+            )));
+
+        let value = serde_json::to_value(error).expect("error should serialize");
+
+        assert_eq!("commentRepository", value["code"]);
+        assert_eq!(
+            "failed to persist comments: comment update 2026-05-05 10:00:05 UTC is older than persisted timestamp 2026-05-05 10:00:06 UTC for cmt_1",
             value["message"]
         );
     }

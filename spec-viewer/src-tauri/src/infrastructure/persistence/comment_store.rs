@@ -436,6 +436,8 @@ mod tests {
     use std::{
         env, fs,
         path::PathBuf,
+        sync::{Arc, Barrier},
+        thread,
         time::{SystemTime, UNIX_EPOCH},
     };
 
@@ -662,6 +664,129 @@ mod tests {
             repository
                 .list(&CommentListQuery::new(scope))
                 .expect("updated comments should list")
+        );
+    }
+
+    #[test]
+    fn update_rejects_older_timestamp_without_overwriting_newer_persisted_comment() {
+        let workspace = TestWorkspace::new("stale-update");
+        let repository = workspace.repository();
+        let scope = scope("auth-flow", SpecFileKey::Impl);
+        let initial = comment(
+            "cmt_stale",
+            SpecFileKey::Impl,
+            "Initial body",
+            CommentStatus::Open,
+            1,
+        );
+        let newer = comment(
+            "cmt_stale",
+            SpecFileKey::Impl,
+            "Newer body",
+            CommentStatus::Resolved,
+            3,
+        );
+        let stale = comment(
+            "cmt_stale",
+            SpecFileKey::Impl,
+            "Stale body",
+            CommentStatus::Open,
+            2,
+        );
+        repository
+            .add(&scope, initial)
+            .expect("initial comment should be added");
+        repository
+            .update(&scope, newer.clone())
+            .expect("newer comment should be persisted");
+
+        let result = repository.update(&scope, stale.clone());
+
+        assert_eq!(
+            Err(CommentRepositoryError::StaleUpdate {
+                id: stale.id().clone(),
+                current: timestamp(3),
+                attempted: timestamp(2),
+            }),
+            result
+        );
+        assert_eq!(
+            vec![newer],
+            repository
+                .list(&CommentListQuery::new(scope))
+                .expect("newer persisted comment should remain")
+        );
+    }
+
+    #[test]
+    fn concurrent_updates_keep_the_greatest_persisted_timestamp() {
+        let workspace = TestWorkspace::new("concurrent-update");
+        let repository = workspace.repository();
+        let scope = scope("auth-flow", SpecFileKey::Impl);
+        repository
+            .add(
+                &scope,
+                comment(
+                    "cmt_concurrent",
+                    SpecFileKey::Impl,
+                    "Initial body",
+                    CommentStatus::Open,
+                    1,
+                ),
+            )
+            .expect("initial comment should be added");
+
+        let barrier = Arc::new(Barrier::new(3));
+        let stale_repository = repository.clone();
+        let stale_scope = scope.clone();
+        let stale_barrier = barrier.clone();
+        let stale = comment(
+            "cmt_concurrent",
+            SpecFileKey::Impl,
+            "Stale body",
+            CommentStatus::Open,
+            2,
+        );
+        let stale_for_thread = stale.clone();
+        let stale_update = thread::spawn(move || {
+            stale_barrier.wait();
+            stale_repository.update(&stale_scope, stale_for_thread)
+        });
+        let newer_repository = repository.clone();
+        let newer_scope = scope.clone();
+        let newer_barrier = barrier.clone();
+        let newer = comment(
+            "cmt_concurrent",
+            SpecFileKey::Impl,
+            "Newer body",
+            CommentStatus::Resolved,
+            3,
+        );
+        let newer_for_thread = newer.clone();
+        let newer_update = thread::spawn(move || {
+            newer_barrier.wait();
+            newer_repository.update(&newer_scope, newer_for_thread)
+        });
+
+        barrier.wait();
+        let stale_result = stale_update.join().expect("stale thread should finish");
+        let newer_result = newer_update.join().expect("newer thread should finish");
+
+        assert!(
+            stale_result == Ok(stale.clone())
+                || stale_result
+                    == Err(CommentRepositoryError::StaleUpdate {
+                        id: stale.id().clone(),
+                        current: timestamp(3),
+                        attempted: timestamp(2),
+                    })
+        );
+        assert_eq!(Ok(newer.clone()), newer_result);
+        assert_eq!(
+            vec![newer],
+            repository
+                .list(&CommentListQuery::new(scope))
+                .expect("greatest timestamp should remain")
         );
     }
 
