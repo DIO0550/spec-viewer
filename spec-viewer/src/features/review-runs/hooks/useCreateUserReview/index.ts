@@ -8,9 +8,9 @@ import {
   type UserReviewCreateState as UserReviewCreateStateType,
 } from "@/features/review-runs/domain/userReviewOperation";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
-import type { SelectionIdentity } from "@/features/specs/domain/specViewSelection";
 import type { UserReviewListEventWithSelectionIdentity } from "@/features/review-runs/hooks/useUserReviewList";
 import { createUserReview as createUserReviewViaGateway } from "@/features/review-runs/infra/userReviewGateway";
+import { SelectionIdentity } from "@/features/specs/domain/specViewSelection";
 import type { UserReviewCommands } from "@/shared/api/tauri";
 import { CreateUserReviewCommandError } from "@/shared/api/tauri/createUserReview";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
@@ -29,6 +29,11 @@ export type UseCreateUserReviewOptions = Readonly<{
 type SelectionIdentityCreateState = Readonly<{
   selectionIdentity: SelectionIdentity;
   state: UserReviewCreateStateType;
+}>;
+
+type CreateRequestToken = Readonly<{
+  requestId: number;
+  selectionIdentity: SelectionIdentity;
 }>;
 
 export type UseCreateUserReviewResult = Readonly<{
@@ -51,11 +56,27 @@ export function useCreateUserReview(
     workspacePath,
   } = options;
   const requestIdRef = useRef(0);
+  const activeSelectionIdentityRef = useRef(selectionIdentity);
   const [createViewState, setCreateViewState] =
     useState<SelectionIdentityCreateState>({
       selectionIdentity,
       state: UserReviewCreateState.idle(),
     });
+  activeSelectionIdentityRef.current = selectionIdentity;
+
+  /**
+   * @param request - Request token captured before invoking the gateway.
+   * @returns Whether the request still belongs to the latest rendered selection.
+   */
+  const isCurrentRequest = useCallback(
+    (request: CreateRequestToken): boolean =>
+      requestIdRef.current === request.requestId &&
+      SelectionIdentity.equals(
+        activeSelectionIdentityRef.current,
+        request.selectionIdentity,
+      ),
+    [],
+  );
 
   useEffect(() => {
     requestIdRef.current += 1;
@@ -76,11 +97,13 @@ export function useCreateUserReview(
       }
 
       const payload = input;
-      const startedSelectionIdentity = selectionIdentity;
-      const startedRequestId = requestIdRef.current + 1;
-      requestIdRef.current = startedRequestId;
+      const request: CreateRequestToken = {
+        requestId: requestIdRef.current + 1,
+        selectionIdentity,
+      };
+      requestIdRef.current = request.requestId;
       setCreateViewState({
-        selectionIdentity: startedSelectionIdentity,
+        selectionIdentity: request.selectionIdentity,
         state: UserReviewCreateState.saving(payload),
       });
 
@@ -92,40 +115,46 @@ export function useCreateUserReview(
           payload,
         );
 
+        if (!isCurrentRequest(request)) {
+          return null;
+        }
+
         setCreateViewState((current) => {
           if (
-            current.selectionIdentity !== startedSelectionIdentity ||
-            requestIdRef.current !== startedRequestId
+            current.selectionIdentity !== request.selectionIdentity ||
+            !isCurrentRequest(request)
           ) {
             return current;
           }
 
           return {
-            selectionIdentity: startedSelectionIdentity,
+            selectionIdentity: request.selectionIdentity,
             state: UserReviewCreateState.success(payload, response.userReview),
           };
         });
-        if (requestIdRef.current === startedRequestId) {
-          onUserReviewEvent({
-            selectionIdentity: startedSelectionIdentity,
-            event: {
-              type: "reviewCreated",
-              review: response.userReview,
-            },
-          });
-        }
+        onUserReviewEvent({
+          selectionIdentity: request.selectionIdentity,
+          event: {
+            type: "reviewCreated",
+            review: response.userReview,
+          },
+        });
         return response.userReview;
       } catch (error) {
+        if (!isCurrentRequest(request)) {
+          return null;
+        }
+
         setCreateViewState((current) => {
           if (
-            current.selectionIdentity !== startedSelectionIdentity ||
-            requestIdRef.current !== startedRequestId
+            current.selectionIdentity !== request.selectionIdentity ||
+            !isCurrentRequest(request)
           ) {
             return current;
           }
 
           return {
-            selectionIdentity: startedSelectionIdentity,
+            selectionIdentity: request.selectionIdentity,
             state: UserReviewCreateState.error(
               payload,
               UserReviewFeatureError.fromCommandError(
@@ -137,7 +166,14 @@ export function useCreateUserReview(
         return null;
       }
     },
-    [commands, onUserReviewEvent, target, selectionIdentity, workspacePath],
+    [
+      commands,
+      isCurrentRequest,
+      onUserReviewEvent,
+      target,
+      selectionIdentity,
+      workspacePath,
+    ],
   );
 
   const createState =

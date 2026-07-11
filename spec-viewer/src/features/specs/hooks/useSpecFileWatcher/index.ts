@@ -1,9 +1,11 @@
 import { listen, type Event as TauriEvent } from "@tauri-apps/api/event";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import {
   SelectionIdentity,
+  type SelectionIdentity as SelectionIdentityType,
   SpecViewSelection,
   type SpecViewSelection as SpecViewSelectionType,
+  type SpecViewTargetScope,
 } from "@/features/specs/domain/specViewSelection";
 import type {
   SpecFileWatchChangedEvent,
@@ -55,9 +57,22 @@ export function useSpecFileWatcher(options: UseSpecFileWatcherOptions): void {
   const startWatch = options.startWatch ?? defaultStartSpecFileWatch;
   const stopWatch = options.stopWatch ?? defaultStopSpecFileWatch;
   const subscribe = options.subscribe ?? listen;
+  const { fileKey, specId, targetScope, workspacePath } = options.selection;
+  const activeWatchTarget = SpecViewSelection.watchTarget(options.selection);
+  const activeSelectionIdentityRef = useRef<SelectionIdentityType | null>(
+    activeWatchTarget?.selectionIdentity ?? null,
+  );
+  activeSelectionIdentityRef.current =
+    activeWatchTarget?.selectionIdentity ?? null;
 
   useEffect(() => {
-    const scope = createSpecFileWatchScope(options.selection);
+    const selectionSnapshot: SpecViewSelectionType = {
+      workspacePath,
+      specId,
+      fileKey,
+      targetScope,
+    };
+    const scope = createSpecFileWatchScope(selectionSnapshot);
     if (scope === null) {
       return;
     }
@@ -73,9 +88,11 @@ export function useSpecFileWatcher(options: UseSpecFileWatcherOptions): void {
           SPEC_FILE_WATCH_CHANGED_EVENT,
           (event) => {
             if (
-              !isSpecFileWatchEventForSelection(
+              !isActive ||
+              !isSpecFileWatchEventForSelectionIdentity(
                 event.payload,
-                options.selection,
+                targetScope,
+                activeSelectionIdentityRef.current,
               )
             ) {
               return;
@@ -93,9 +110,11 @@ export function useSpecFileWatcher(options: UseSpecFileWatcherOptions): void {
           SPEC_FILE_WATCH_ERROR_EVENT,
           (event) => {
             if (
-              !isSpecFileWatchEventForSelection(
+              !isActive ||
+              !isSpecFileWatchEventForSelectionIdentity(
                 event.payload,
-                options.selection,
+                targetScope,
+                activeSelectionIdentityRef.current,
               )
             ) {
               return;
@@ -149,13 +168,13 @@ export function useSpecFileWatcher(options: UseSpecFileWatcherOptions): void {
     options.onConfigChange,
     options.onMarkdownChange,
     options.onWatcherError,
-    options.selection.fileKey,
-    options.selection.specId,
-    options.selection.targetScope,
-    options.selection.workspacePath,
+    fileKey,
+    specId,
     startWatch,
     stopWatch,
     subscribe,
+    targetScope,
+    workspacePath,
   ]);
 }
 
@@ -173,6 +192,28 @@ export function isSpecFileWatchEventForSelection(
     return false;
   }
 
+  return isSpecFileWatchEventForSelectionIdentity(
+    event,
+    selection.targetScope,
+    watchTarget.selectionIdentity,
+  );
+}
+
+/**
+ * @param event - Watch event to validate.
+ * @param targetScope - Scope captured by the listener generation.
+ * @param currentSelectionIdentity - Latest identity observed during render.
+ * @returns True when the listener is still aligned with the latest selection.
+ */
+function isSpecFileWatchEventForSelectionIdentity(
+  event: SpecFileWatchChangedEvent | SpecFileWatchErrorEvent,
+  targetScope: SpecViewTargetScope,
+  currentSelectionIdentity: SelectionIdentityType | null,
+): boolean {
+  if (currentSelectionIdentity === null) {
+    return false;
+  }
+
   const eventFileSelection = SpecViewSelection.synchronize(
     SpecViewSelection.empty(),
     {
@@ -183,11 +224,11 @@ export function isSpecFileWatchEventForSelection(
   );
   const eventSelection = SpecViewSelection.selectTargetScope(
     eventFileSelection,
-    selection.targetScope,
+    targetScope,
   );
 
   return SelectionIdentity.equals(
-    watchTarget.selectionIdentity,
+    currentSelectionIdentity,
     SelectionIdentity.fromSelection(eventSelection),
   );
 }

@@ -7,9 +7,9 @@ import {
   type UserReviewArchiveState as UserReviewArchiveStateType,
 } from "@/features/review-runs/domain/userReviewOperation";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
-import type { SelectionIdentity } from "@/features/specs/domain/specViewSelection";
 import type { UserReviewListEventWithSelectionIdentity } from "@/features/review-runs/hooks/useUserReviewList";
 import { archiveUserReview as archiveUserReviewViaGateway } from "@/features/review-runs/infra/userReviewGateway";
+import { SelectionIdentity } from "@/features/specs/domain/specViewSelection";
 import type { UserReviewCommands } from "@/shared/api/tauri";
 import { ArchiveUserReviewCommandError } from "@/shared/api/tauri/archiveUserReview";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
@@ -26,6 +26,11 @@ export type UseArchiveUserReviewOptions = Readonly<{
 type SelectionIdentityArchiveState = Readonly<{
   selectionIdentity: SelectionIdentity;
   state: UserReviewArchiveStateType;
+}>;
+
+type ArchiveRequestToken = Readonly<{
+  requestId: number;
+  selectionIdentity: SelectionIdentity;
 }>;
 
 export type UseArchiveUserReviewResult = Readonly<{
@@ -46,11 +51,27 @@ export function useArchiveUserReview(
     workspacePath,
   } = options;
   const requestIdRef = useRef(0);
+  const activeSelectionIdentityRef = useRef(selectionIdentity);
   const [archiveViewState, setArchiveViewState] =
     useState<SelectionIdentityArchiveState>({
       selectionIdentity,
       state: UserReviewArchiveState.idle(),
     });
+  activeSelectionIdentityRef.current = selectionIdentity;
+
+  /**
+   * @param request - Request token captured before invoking the gateway.
+   * @returns Whether the request still belongs to the latest rendered selection.
+   */
+  const isCurrentRequest = useCallback(
+    (request: ArchiveRequestToken): boolean =>
+      requestIdRef.current === request.requestId &&
+      SelectionIdentity.equals(
+        activeSelectionIdentityRef.current,
+        request.selectionIdentity,
+      ),
+    [],
+  );
 
   useEffect(() => {
     requestIdRef.current += 1;
@@ -67,11 +88,13 @@ export function useArchiveUserReview(
       }
 
       const payload = { userReviewId };
-      const startedSelectionIdentity = selectionIdentity;
-      const startedRequestId = requestIdRef.current + 1;
-      requestIdRef.current = startedRequestId;
+      const request: ArchiveRequestToken = {
+        requestId: requestIdRef.current + 1,
+        selectionIdentity,
+      };
+      requestIdRef.current = request.requestId;
       setArchiveViewState({
-        selectionIdentity: startedSelectionIdentity,
+        selectionIdentity: request.selectionIdentity,
         state: UserReviewArchiveState.saving(payload),
       });
 
@@ -83,40 +106,46 @@ export function useArchiveUserReview(
           payload.userReviewId,
         );
 
+        if (!isCurrentRequest(request)) {
+          return null;
+        }
+
         setArchiveViewState((current) => {
           if (
-            current.selectionIdentity !== startedSelectionIdentity ||
-            requestIdRef.current !== startedRequestId
+            current.selectionIdentity !== request.selectionIdentity ||
+            !isCurrentRequest(request)
           ) {
             return current;
           }
 
           return {
-            selectionIdentity: startedSelectionIdentity,
+            selectionIdentity: request.selectionIdentity,
             state: UserReviewArchiveState.success(payload, response.userReview),
           };
         });
-        if (requestIdRef.current === startedRequestId) {
-          onUserReviewEvent({
-            selectionIdentity: startedSelectionIdentity,
-            event: {
-              type: "reviewArchived",
-              review: response.userReview,
-            },
-          });
-        }
+        onUserReviewEvent({
+          selectionIdentity: request.selectionIdentity,
+          event: {
+            type: "reviewArchived",
+            review: response.userReview,
+          },
+        });
         return response.userReview;
       } catch (error) {
+        if (!isCurrentRequest(request)) {
+          return null;
+        }
+
         setArchiveViewState((current) => {
           if (
-            current.selectionIdentity !== startedSelectionIdentity ||
-            requestIdRef.current !== startedRequestId
+            current.selectionIdentity !== request.selectionIdentity ||
+            !isCurrentRequest(request)
           ) {
             return current;
           }
 
           return {
-            selectionIdentity: startedSelectionIdentity,
+            selectionIdentity: request.selectionIdentity,
             state: UserReviewArchiveState.error(
               payload,
               UserReviewFeatureError.fromCommandError(
@@ -128,7 +157,14 @@ export function useArchiveUserReview(
         return null;
       }
     },
-    [commands, onUserReviewEvent, target, selectionIdentity, workspacePath],
+    [
+      commands,
+      isCurrentRequest,
+      onUserReviewEvent,
+      target,
+      selectionIdentity,
+      workspacePath,
+    ],
   );
 
   const archiveState =
