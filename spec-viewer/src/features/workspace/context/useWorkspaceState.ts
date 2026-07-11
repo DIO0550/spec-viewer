@@ -40,13 +40,13 @@ export function useWorkspaceState(): WorkspaceContextValue {
 
       try {
         const workspace = await defaultLoadWorkspace(selectedDirectory);
-        dispatch(WorkspaceState.openSucceeded({ requestId, workspace }));
 
         if (!generation.isCurrent(requestId)) {
           return false;
         }
 
         loadOptions.onWorkspaceLoaded?.(workspace);
+        dispatch(WorkspaceState.openSucceeded({ requestId, workspace }));
         return true;
       } catch (error) {
         const workspaceError = toWorkspaceError(
