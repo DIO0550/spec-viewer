@@ -1,16 +1,30 @@
-import type {
-  LoadWorkspaceRequest,
+import {
   Workspace,
-} from "@/features/workspace/types/workspace";
+  type Workspace as WorkspaceAggregate,
+} from "@/features/workspace/domain/workspace";
+import type { LoadWorkspaceRequest } from "@/features/workspace/types/workspace";
 
 import { invokeTauriCommand } from "./invokeTauriCommand";
 import { isRecord } from "./isRecord";
 
 export const LOAD_WORKSPACE_COMMAND = "load_workspace" as const;
 
+export type WorkspaceFileMappingDto = Readonly<{
+  key: string;
+  label: string;
+  fileName: string;
+  configSource?: string;
+}>;
+
+export type WorkspaceDto = Readonly<{
+  root: string;
+  kind: string;
+  files: readonly WorkspaceFileMappingDto[];
+}>;
+
 export type LoadWorkspaceCommandName = typeof LOAD_WORKSPACE_COMMAND;
 export type LoadWorkspaceCommandRequest = LoadWorkspaceRequest;
-export type LoadWorkspaceCommandResponse = Workspace;
+export type LoadWorkspaceCommandResponse = WorkspaceDto;
 export type LoadWorkspaceCommandErrorCode =
   | "invalidRequest"
   | "workspaceDetection"
@@ -107,11 +121,10 @@ export const LoadWorkspaceCommandError = {
 /** @returns Loaded workspace metadata for the selected directory. */
 export async function loadWorkspace(
   selectedDirectory: string,
-): Promise<LoadWorkspaceCommandResponse> {
+): Promise<WorkspaceAggregate> {
   const commandRequest: LoadWorkspaceCommandRequest = { selectedDirectory };
-
-  return invokeTauriCommand<
-    LoadWorkspaceCommandResponse,
+  const dto = await invokeTauriCommand<
+    unknown,
     LoadWorkspaceCommandRequest,
     LoadWorkspaceCommandError
   >(
@@ -119,4 +132,11 @@ export async function loadWorkspace(
     commandRequest,
     LoadWorkspaceCommandError.fromUnknown,
   );
+
+  const result = Workspace.fromDto(dto);
+  if (!result.ok) {
+    throw LoadWorkspaceCommandError.unknown(result.error.message, dto);
+  }
+
+  return result.workspace;
 }

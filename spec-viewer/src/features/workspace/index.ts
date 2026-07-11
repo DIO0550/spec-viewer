@@ -5,7 +5,7 @@ export { WorkspaceToolbar } from "@/features/workspace/components/WorkspaceToolb
 export type {
   Workspace,
   WorkspaceKind,
-} from "@/features/workspace/types/workspace";
+} from "@/features/workspace/domain/workspace";
 export type {
   WorkspaceActions,
   WorkspaceContextValue,
