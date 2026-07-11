@@ -95,10 +95,11 @@ function SpecViewAppContent(): ReactElement {
     useWorkspaceSidebarSectionPreference();
   const resizableLeftNavigation = useResizableLeftNavigation();
   const sidebarPreference = useSidebarPreference();
-  const { selectSpecView } = useSpecViewSelection();
+  const { selection: specViewSelection, synchronizeSelection } =
+    useSpecViewSelection();
   const selectCurrentSpecView = useCallback(
     (selection: SpecSelectionChange): void => {
-      selectSpecView({
+      synchronizeSelection({
         workspacePath:
           selection.workspacePath === null
             ? null
@@ -107,7 +108,7 @@ function SpecViewAppContent(): ReactElement {
         fileKey: selection.fileKey,
       });
     },
-    [selectSpecView],
+    [synchronizeSelection],
   );
   const specs = useSpecs({
     workspacePath: activeWorkspaceRoot,
@@ -118,25 +119,23 @@ function SpecViewAppContent(): ReactElement {
   const specSelectors = specs.selectors;
   const isCurrentViewLoading = specSelectors.isLoading;
   const documentReadiness = useDocumentReadiness(specState.documentState);
-  const commentScope = useMemo(
-    () =>
-      CommentScope.create({
-        workspacePath: activeWorkspaceRoot,
-        specId: specState.selection.specId,
-        fileKey:
-          documentReadiness.isHtmlDocument ||
-          !documentReadiness.isDocumentReadable
-            ? null
-            : specState.selection.fileKey,
-      }),
-    [
-      documentReadiness.isDocumentReadable,
-      documentReadiness.isHtmlDocument,
-      specState.selection.fileKey,
-      specState.selection.specId,
-      activeWorkspaceRoot,
-    ],
-  );
+  const commentScope = useMemo(() => {
+    if (
+      documentReadiness.isHtmlDocument ||
+      !documentReadiness.isDocumentReadable
+    ) {
+      return null;
+    }
+
+    return CommentScope.fromSelection(specViewSelection);
+  }, [
+    documentReadiness.isDocumentReadable,
+    documentReadiness.isHtmlDocument,
+    specViewSelection.fileKey,
+    specViewSelection.specId,
+    specViewSelection.targetScope,
+    specViewSelection.workspacePath,
+  ]);
   const comments = useComments({
     scope: commentScope,
     statusFilter: CommentStatusFilter.All,
@@ -167,7 +166,7 @@ function SpecViewAppContent(): ReactElement {
   });
 
   const viewRefresh = useViewRefresh({
-    selection: resetKeys,
+    selection: specViewSelection,
     isCurrentViewLoading,
     reload: {
       document: specActions.reloadDocument,

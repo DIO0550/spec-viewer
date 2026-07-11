@@ -6,10 +6,11 @@ import type {
   UserReviewArchiveState,
   UserReviewCreateState,
 } from "@/features/review-runs/domain/userReviewOperation";
+import { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import {
-  UserReviewTarget,
-  type UserReviewTargetScope,
-} from "@/features/review-runs/domain/userReviewTarget";
+  SelectionIdentity,
+  type SpecViewSelection,
+} from "@/features/specs/domain/specViewSelection";
 import { buildUserReviewsResult } from "@/features/review-runs/hooks/buildUserReviewsResult";
 import {
   type UseArchiveUserReviewResult,
@@ -21,12 +22,10 @@ import {
   useCreateUserReview,
 } from "@/features/review-runs/hooks/useCreateUserReview";
 import { useUserReviewList } from "@/features/review-runs/hooks/useUserReviewList";
-import type { SpecFileKey } from "@/features/specs/types/spec";
 import {
   userReviewCommands as defaultUserReviewCommands,
   type UserReviewCommands,
 } from "@/shared/api/tauri";
-import type { WorkspacePath } from "@/shared/domain/workspacePath";
 
 export type { UserReviewListState } from "@/features/review-runs/domain/userReviewListState";
 export type {
@@ -36,20 +35,10 @@ export type {
 export type { UserReviewTargetScope } from "@/features/review-runs/domain/userReviewTarget";
 export type { CreateUserReviewInput } from "@/features/review-runs/hooks/useCreateUserReview";
 
-export type UserReviewsSelectionInput = Readonly<{
-  workspacePath: WorkspacePath | null;
-  specId: string | null;
-  fileKey: SpecFileKey | null;
-  targetScope: UserReviewTargetScope;
-}>;
-
-export type UserReviewsSelectionSnapshot = Readonly<{
-  selection: UserReviewsSelectionInput;
-  selectionId: string;
-}>;
+export type UserReviewsSelectionInput = SpecViewSelection;
 
 export type UseUserReviewsOptions = Readonly<{
-  selectionSnapshot: UserReviewsSelectionSnapshot;
+  selection: SpecViewSelection;
   correlationId?: string | null;
   commands?: UserReviewCommands;
 }>;
@@ -76,35 +65,44 @@ export function useUserReviews(
   options: UseUserReviewsOptions,
 ): UseUserReviewsResult {
   const commands = options.commands ?? defaultUserReviewCommands;
-  const { selection, selectionId } = options.selectionSnapshot;
+  const selection = options.selection;
+  const selectionIdentity = useMemo(
+    () => SelectionIdentity.fromSelection(selection),
+    [
+      selection.fileKey,
+      selection.specId,
+      selection.targetScope,
+      selection.workspacePath,
+    ],
+  );
   const target = useMemo(
-    () =>
-      UserReviewTarget.create({
-        specId: selection.specId,
-        fileKey: selection.fileKey,
-        targetScope: selection.targetScope,
-      }),
-    [selection.fileKey, selection.specId, selection.targetScope],
+    () => UserReviewTarget.fromSelection(selection),
+    [
+      selection.fileKey,
+      selection.specId,
+      selection.targetScope,
+      selection.workspacePath,
+    ],
   );
   const list = useUserReviewList({
     commands,
     target,
     workspacePath: selection.workspacePath,
-    selectionId,
+    selectionIdentity,
     correlationId: options.correlationId,
   });
 
   const create: UseCreateUserReviewResult = useCreateUserReview({
     workspacePath: selection.workspacePath,
     target,
-    selectionId,
+    selectionIdentity,
     commands,
     onUserReviewEvent: list.applyUserReviewEvent,
   });
   const archive: UseArchiveUserReviewResult = useArchiveUserReview({
     workspacePath: selection.workspacePath,
     target,
-    selectionId,
+    selectionIdentity,
     commands,
     onUserReviewEvent: list.applyUserReviewEvent,
   });

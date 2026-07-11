@@ -10,6 +10,10 @@ import {
 } from "@/features/comments/domain/commentOperation";
 import type { CommentScope } from "@/features/comments/domain/commentScope";
 import type { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
+import {
+  SelectionIdentity,
+  type SelectionIdentity as SelectionIdentityType,
+} from "@/features/specs/domain/specViewSelection";
 import { Comments } from "@/features/comments/domain/comments";
 import {
   addComment as addCommentViaGateway,
@@ -48,7 +52,7 @@ export type CommentListTransform = (
 
 export type UseCommentOperationsOptions = Readonly<{
   scope: CommentScope | null;
-  scopeKey: string;
+  selectionIdentity: SelectionIdentityType | null;
   statusFilter: CommentStatusFilter;
   commands: CommentCommands;
   currentComments: readonly Comment[];
@@ -91,7 +95,8 @@ type CommentOperationEvent =
 
 type AsyncOperationToken = Readonly<{
   requestId: number;
-  scopeKey: string;
+  selectionIdentity: SelectionIdentityType;
+  statusFilter: CommentStatusFilter;
 }>;
 
 const initialOperationState: CommentOperationState =
@@ -109,25 +114,27 @@ export function useCommentOperations(
     currentComments,
     reloadComments,
     scope,
-    scopeKey,
+    selectionIdentity,
     statusFilter,
     updateCurrentScopeComments,
   } = options;
   const operationRequestIdRef = useRef(0);
-  const activeOperationScopeKeyRef = useRef(scopeKey);
+  const activeSelectionIdentityRef = useRef(selectionIdentity);
+  const activeStatusFilterRef = useRef(statusFilter);
   const [operationState, dispatchOperation] = useReducer(
     commentOperationReducer,
     initialOperationState,
   );
 
-  activeOperationScopeKeyRef.current = scopeKey;
+  activeSelectionIdentityRef.current = selectionIdentity;
+  activeStatusFilterRef.current = statusFilter;
 
   const beginOperation = useCallback(
     (
       operation: CommentOperationKind,
       commentId: CommentId | null,
     ): AsyncOperationToken | null => {
-      if (scope === null) {
+      if (scope === null || selectionIdentity === null) {
         return null;
       }
 
@@ -139,9 +146,9 @@ export function useCommentOperations(
         commentId,
       });
 
-      return createOperationToken(requestId, scopeKey);
+      return createOperationToken(requestId, selectionIdentity, statusFilter);
     },
-    [scope, scopeKey],
+    [scope, selectionIdentity, statusFilter],
   );
 
   const canApplyOperationResult = useCallback(
@@ -149,7 +156,8 @@ export function useCommentOperations(
       isMatchingOperationToken(
         token,
         operationRequestIdRef.current,
-        activeOperationScopeKeyRef.current,
+        activeSelectionIdentityRef.current,
+        activeStatusFilterRef.current,
       ),
     [],
   );
@@ -177,7 +185,7 @@ export function useCommentOperations(
   useEffect(() => {
     operationRequestIdRef.current += 1;
     dispatchOperation({ type: "operationInvalidated" });
-  }, [reloadComments, scopeKey]);
+  }, [reloadComments, selectionIdentity, statusFilter]);
 
   const addComment = useCallback(
     async (input: AddCommentInput): Promise<Comment | null> => {
@@ -546,28 +554,38 @@ function assertNever(value: never): never {
 
 /**
  * @param requestId - Operation request id.
- * @param scopeKey - Scope key captured when the request started.
+ * @param selectionIdentity - Selection captured when the operation started.
+ * @param statusFilter - Comment filter captured when the operation started.
  * @returns Token used to reject stale operation results.
  */
 function createOperationToken(
   requestId: number,
-  scopeKey: string,
+  selectionIdentity: SelectionIdentityType,
+  statusFilter: CommentStatusFilter,
 ): AsyncOperationToken {
-  return { requestId, scopeKey };
+  return { requestId, selectionIdentity, statusFilter };
 }
 
 /**
  * @param token - Captured operation token.
  * @param latestRequestId - Most recent operation request id.
- * @param currentScopeKey - Current active scope key.
+ * @param currentIdentity - Current active selection identity.
+ * @param currentStatusFilter - Current active comment filter.
  * @returns True when the async operation still belongs to the current scope.
  */
 function isMatchingOperationToken(
   token: AsyncOperationToken,
   latestRequestId: number,
-  currentScopeKey: string,
+  currentIdentity: SelectionIdentityType | null,
+  currentStatusFilter: CommentStatusFilter,
 ): boolean {
+  if (currentIdentity === null) {
+    return false;
+  }
+
   return (
-    token.requestId === latestRequestId && token.scopeKey === currentScopeKey
+    token.requestId === latestRequestId &&
+    token.statusFilter === currentStatusFilter &&
+    SelectionIdentity.equals(token.selectionIdentity, currentIdentity)
   );
 }

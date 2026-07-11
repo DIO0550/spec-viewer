@@ -7,25 +7,24 @@ import {
   type UserReviewArchiveState as UserReviewArchiveStateType,
 } from "@/features/review-runs/domain/userReviewOperation";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
-import type { UserReviewListEventWithSelectionId } from "@/features/review-runs/hooks/useUserReviewList";
+import type { SelectionIdentity } from "@/features/specs/domain/specViewSelection";
+import type { UserReviewListEventWithSelectionIdentity } from "@/features/review-runs/hooks/useUserReviewList";
 import { archiveUserReview as archiveUserReviewViaGateway } from "@/features/review-runs/infra/userReviewGateway";
 import type { UserReviewCommands } from "@/shared/api/tauri";
 import { ArchiveUserReviewCommandError } from "@/shared/api/tauri/archiveUserReview";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 
-type SelectionId = string;
-
 export type UseArchiveUserReviewOptions = Readonly<{
   workspacePath: WorkspacePath | null;
   target: UserReviewTarget | null;
-  selectionId: SelectionId;
+  selectionIdentity: SelectionIdentity;
   commands: UserReviewCommands;
   /** Handles a list event. @param event - The user review list event. */
-  onUserReviewEvent: (event: UserReviewListEventWithSelectionId) => void;
+  onUserReviewEvent: (event: UserReviewListEventWithSelectionIdentity) => void;
 }>;
 
-type SelectionIdArchiveState = Readonly<{
-  selectionId: SelectionId;
+type SelectionIdentityArchiveState = Readonly<{
+  selectionIdentity: SelectionIdentity;
   state: UserReviewArchiveStateType;
 }>;
 
@@ -39,22 +38,27 @@ export type UseArchiveUserReviewResult = Readonly<{
 export function useArchiveUserReview(
   options: UseArchiveUserReviewOptions,
 ): UseArchiveUserReviewResult {
-  const { commands, onUserReviewEvent, target, selectionId, workspacePath } =
-    options;
+  const {
+    commands,
+    onUserReviewEvent,
+    target,
+    selectionIdentity,
+    workspacePath,
+  } = options;
   const requestIdRef = useRef(0);
   const [archiveViewState, setArchiveViewState] =
-    useState<SelectionIdArchiveState>({
-      selectionId,
+    useState<SelectionIdentityArchiveState>({
+      selectionIdentity,
       state: UserReviewArchiveState.idle(),
     });
 
   useEffect(() => {
     requestIdRef.current += 1;
     setArchiveViewState({
-      selectionId,
+      selectionIdentity,
       state: UserReviewArchiveState.idle(),
     });
-  }, [selectionId]);
+  }, [selectionIdentity]);
 
   const archiveUserReview = useCallback(
     async (userReviewId: string): Promise<UserReview | null> => {
@@ -63,11 +67,11 @@ export function useArchiveUserReview(
       }
 
       const payload = { userReviewId };
-      const startedSelectionId = selectionId;
+      const startedSelectionIdentity = selectionIdentity;
       const startedRequestId = requestIdRef.current + 1;
       requestIdRef.current = startedRequestId;
       setArchiveViewState({
-        selectionId: startedSelectionId,
+        selectionIdentity: startedSelectionIdentity,
         state: UserReviewArchiveState.saving(payload),
       });
 
@@ -81,20 +85,20 @@ export function useArchiveUserReview(
 
         setArchiveViewState((current) => {
           if (
-            current.selectionId !== startedSelectionId ||
+            current.selectionIdentity !== startedSelectionIdentity ||
             requestIdRef.current !== startedRequestId
           ) {
             return current;
           }
 
           return {
-            selectionId: startedSelectionId,
+            selectionIdentity: startedSelectionIdentity,
             state: UserReviewArchiveState.success(payload, response.userReview),
           };
         });
         if (requestIdRef.current === startedRequestId) {
           onUserReviewEvent({
-            selectionId: startedSelectionId,
+            selectionIdentity: startedSelectionIdentity,
             event: {
               type: "reviewArchived",
               review: response.userReview,
@@ -105,14 +109,14 @@ export function useArchiveUserReview(
       } catch (error) {
         setArchiveViewState((current) => {
           if (
-            current.selectionId !== startedSelectionId ||
+            current.selectionIdentity !== startedSelectionIdentity ||
             requestIdRef.current !== startedRequestId
           ) {
             return current;
           }
 
           return {
-            selectionId: startedSelectionId,
+            selectionIdentity: startedSelectionIdentity,
             state: UserReviewArchiveState.error(
               payload,
               UserReviewFeatureError.fromCommandError(
@@ -124,11 +128,11 @@ export function useArchiveUserReview(
         return null;
       }
     },
-    [commands, onUserReviewEvent, target, selectionId, workspacePath],
+    [commands, onUserReviewEvent, target, selectionIdentity, workspacePath],
   );
 
   const archiveState =
-    archiveViewState.selectionId === selectionId
+    archiveViewState.selectionIdentity === selectionIdentity
       ? archiveViewState.state
       : UserReviewArchiveState.idle();
 

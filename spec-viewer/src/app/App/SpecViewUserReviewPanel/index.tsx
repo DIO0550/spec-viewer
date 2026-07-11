@@ -28,12 +28,9 @@ export function SpecViewUserReviewPanel(
   const { workspaceMode, setWorkspaceMode } = useUserReviewWorkspaceMode({
     resetKeys: props.resetKeys,
   });
-  const { selection, setTargetScope, selectionId } = useSpecViewSelection();
+  const { selection, selectTargetScope } = useSpecViewSelection();
   const userReviews = useUserReviews({
-    selectionSnapshot: {
-      selection,
-      selectionId,
-    },
+    selection,
     correlationId,
   });
 
@@ -45,7 +42,7 @@ export function SpecViewUserReviewPanel(
       listState={userReviews.listState}
       createState={userReviews.createState}
       archiveState={userReviews.archiveState}
-      onTargetScopeChange={setTargetScope}
+      onTargetScopeChange={selectTargetScope}
       onWorkspaceModeChange={setWorkspaceMode}
       onCreateUserReview={() => {
         const openCommentIds = comments

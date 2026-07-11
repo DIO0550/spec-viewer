@@ -146,7 +146,9 @@ export function createListCommentsRequest(
   correlationId: string | null,
 ): ListCommentsRequest {
   const request: ListCommentsRequest = {
-    ...scope,
+    workspacePath: scope.workspacePath,
+    specId: scope.specId,
+    fileKey: scope.fileKey,
     statusFilter: CommentStatusFilter.toString(statusFilter),
   };
 
@@ -170,7 +172,9 @@ export function createStatusRequest(
   commentId: CommentId,
 ): CommentStatusRequest {
   return {
-    ...scope,
+    workspacePath: scope.workspacePath,
+    specId: scope.specId,
+    fileKey: scope.fileKey,
     commentId,
   };
 }

@@ -1,6 +1,10 @@
 import { listen, type Event as TauriEvent } from "@tauri-apps/api/event";
 import { useEffect } from "react";
-import type { SpecFileKey } from "@/features/specs/types/spec";
+import {
+  SelectionIdentity,
+  SpecViewSelection,
+  type SpecViewSelection as SpecViewSelectionType,
+} from "@/features/specs/domain/specViewSelection";
 import type {
   SpecFileWatchChangedEvent,
   SpecFileWatchErrorEvent,
@@ -16,6 +20,7 @@ import {
   startSpecFileWatch as defaultStartSpecFileWatch,
   stopSpecFileWatch as defaultStopSpecFileWatch,
 } from "@/shared/api/tauri";
+import { WorkspacePath } from "@/shared/domain/workspacePath";
 
 export type StartSpecFileWatchCommand = (
   request: StartSpecFileWatchRequest,
@@ -29,16 +34,10 @@ export type SpecFileWatchSubscriber = <Payload>(
   handler: (event: TauriEvent<Payload>) => void,
 ) => Promise<() => void>;
 
-export type SpecFileWatchScope = Readonly<{
-  workspacePath: string;
-  specId: string;
-  fileKey: SpecFileKey;
-}>;
+export type SpecFileWatchScope = StartSpecFileWatchRequest;
 
 export type UseSpecFileWatcherOptions = Readonly<{
-  workspacePath: string | null;
-  specId: string | null;
-  fileKey: SpecFileKey | null;
+  selection: SpecViewSelectionType;
   /** Called on Markdown change. @param event - The file watch change event. */
   onMarkdownChange: (event: SpecFileWatchChangedEvent) => void | Promise<void>;
   onConfigChange?: (event: SpecFileWatchChangedEvent) => void | Promise<void>;
@@ -50,7 +49,7 @@ export type UseSpecFileWatcherOptions = Readonly<{
 
 /**
  * Keeps the backend file watcher aligned with the selected spec file.
- * @param options - Selection, callbacks, and command overrides for the watcher.
+ * @param options - Selection aggregate, callbacks, and command overrides.
  */
 export function useSpecFileWatcher(options: UseSpecFileWatcherOptions): void {
   const startWatch = options.startWatch ?? defaultStartSpecFileWatch;
@@ -58,12 +57,7 @@ export function useSpecFileWatcher(options: UseSpecFileWatcherOptions): void {
   const subscribe = options.subscribe ?? listen;
 
   useEffect(() => {
-    const scope = createSpecFileWatchScope({
-      workspacePath: options.workspacePath,
-      specId: options.specId,
-      fileKey: options.fileKey,
-    });
-
+    const scope = createSpecFileWatchScope(options.selection);
     if (scope === null) {
       return;
     }
@@ -78,7 +72,12 @@ export function useSpecFileWatcher(options: UseSpecFileWatcherOptions): void {
         unlistenChanged = await subscribe<SpecFileWatchChangedEvent>(
           SPEC_FILE_WATCH_CHANGED_EVENT,
           (event) => {
-            if (!isSpecFileWatchEventForScope(event.payload, scope)) {
+            if (
+              !isSpecFileWatchEventForSelection(
+                event.payload,
+                options.selection,
+              )
+            ) {
               return;
             }
 
@@ -93,7 +92,12 @@ export function useSpecFileWatcher(options: UseSpecFileWatcherOptions): void {
         unlistenError = await subscribe<SpecFileWatchErrorEvent>(
           SPEC_FILE_WATCH_ERROR_EVENT,
           (event) => {
-            if (!isSpecFileWatchEventForScope(event.payload, scope)) {
+            if (
+              !isSpecFileWatchEventForSelection(
+                event.payload,
+                options.selection,
+              )
+            ) {
               return;
             }
 
@@ -142,47 +146,67 @@ export function useSpecFileWatcher(options: UseSpecFileWatcherOptions): void {
       void stopWatch();
     };
   }, [
-    options.fileKey,
     options.onConfigChange,
     options.onMarkdownChange,
     options.onWatcherError,
-    options.specId,
-    options.workspacePath,
+    options.selection.fileKey,
+    options.selection.specId,
+    options.selection.targetScope,
+    options.selection.workspacePath,
     startWatch,
     stopWatch,
     subscribe,
   ]);
 }
 
-/** @returns True when a watch event belongs to the selected file scope. */
-export function isSpecFileWatchEventForScope(
+/**
+ * @param event - Watch event to validate.
+ * @param selection - Current selection aggregate.
+ * @returns True when the event belongs to the same branded selection identity.
+ */
+export function isSpecFileWatchEventForSelection(
   event: SpecFileWatchChangedEvent | SpecFileWatchErrorEvent,
-  scope: SpecFileWatchScope,
+  selection: SpecViewSelectionType,
 ): boolean {
-  return (
-    event.workspacePath === scope.workspacePath &&
-    event.specId === scope.specId &&
-    event.fileKey === scope.fileKey
+  const watchTarget = SpecViewSelection.watchTarget(selection);
+  if (watchTarget === null) {
+    return false;
+  }
+
+  const eventFileSelection = SpecViewSelection.synchronize(
+    SpecViewSelection.empty(),
+    {
+      workspacePath: WorkspacePath.fromString(event.workspacePath),
+      specId: event.specId,
+      fileKey: event.fileKey,
+    },
+  );
+  const eventSelection = SpecViewSelection.selectTargetScope(
+    eventFileSelection,
+    selection.targetScope,
+  );
+
+  return SelectionIdentity.equals(
+    watchTarget.selectionIdentity,
+    SelectionIdentity.fromSelection(eventSelection),
   );
 }
 
-/** @returns Complete watch scope, or null while the selection is incomplete. */
-function createSpecFileWatchScope(options: {
-  workspacePath: string | null;
-  specId: string | null;
-  fileKey: SpecFileKey | null;
-}): SpecFileWatchScope | null {
-  if (
-    options.workspacePath === null ||
-    options.specId === null ||
-    options.fileKey === null
-  ) {
+/**
+ * @param selection - Current selection aggregate.
+ * @returns Complete watch scope, or null while the selection is incomplete.
+ */
+function createSpecFileWatchScope(
+  selection: SpecViewSelectionType,
+): SpecFileWatchScope | null {
+  const target = SpecViewSelection.watchTarget(selection);
+  if (target === null) {
     return null;
   }
 
   return {
-    workspacePath: options.workspacePath,
-    specId: options.specId,
-    fileKey: options.fileKey,
+    workspacePath: WorkspacePath.toString(target.workspacePath),
+    specId: target.specId,
+    fileKey: target.fileKey,
   };
 }

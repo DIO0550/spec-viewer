@@ -8,6 +8,7 @@ import {
   type UserReviewListState as UserReviewListStateType,
 } from "@/features/review-runs/domain/userReviewListState";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
+import type { SelectionIdentity } from "@/features/specs/domain/specViewSelection";
 import { listUserReviews as listUserReviewsViaGateway } from "@/features/review-runs/infra/userReviewGateway";
 import type { UserReviewCommands } from "@/shared/api/tauri";
 import { ListUserReviewsCommandError } from "@/shared/api/tauri/listUserReviews";
@@ -17,10 +18,8 @@ import {
   startPerformanceSpan,
 } from "@/shared/lib/performance";
 
-type SelectionId = string;
-
-export type UserReviewListEventWithSelectionId = Readonly<{
-  selectionId: SelectionId;
+export type UserReviewListEventWithSelectionIdentity = Readonly<{
+  selectionIdentity: SelectionIdentity;
   event: UserReviewListEvent;
 }>;
 
@@ -28,7 +27,7 @@ export type UseUserReviewListOptions = Readonly<{
   commands: UserReviewCommands;
   target: UserReviewTarget | null;
   workspacePath: WorkspacePath | null;
-  selectionId: SelectionId;
+  selectionIdentity: SelectionIdentity;
   correlationId?: string | null;
 }>;
 
@@ -37,11 +36,13 @@ export type UseUserReviewListResult = Readonly<{
   /** Reloads the user review list. */
   reloadUserReviews: () => Promise<boolean>;
   /** Applies a list event. @param event - The user review list event to apply. */
-  applyUserReviewEvent: (event: UserReviewListEventWithSelectionId) => void;
+  applyUserReviewEvent: (
+    event: UserReviewListEventWithSelectionIdentity,
+  ) => void;
 }>;
 
-type SelectionIdListState = Readonly<{
-  selectionId: SelectionId;
+type SelectionIdentityListState = Readonly<{
+  selectionIdentity: SelectionIdentity;
   requestVersion: number;
   state: UserReviewListStateType;
 }>;
@@ -50,32 +51,38 @@ type SelectionIdListState = Readonly<{
 export function useUserReviewList(
   options: UseUserReviewListOptions,
 ): UseUserReviewListResult {
-  const { commands, correlationId, target, selectionId, workspacePath } =
+  const { commands, correlationId, target, selectionIdentity, workspacePath } =
     options;
   const requestVersionRef = useRef(0);
-  const [listViewState, setListViewState] = useState<SelectionIdListState>({
-    selectionId,
-    requestVersion: requestVersionRef.current,
-    state: UserReviewListState.idle(),
-  });
+  const [listViewState, setListViewState] =
+    useState<SelectionIdentityListState>({
+      selectionIdentity,
+      requestVersion: requestVersionRef.current,
+      state: UserReviewListState.idle(),
+    });
 
   const applyUserReviewEvent = useCallback(
-    (eventWithSelectionId: UserReviewListEventWithSelectionId): void => {
+    (
+      eventWithSelectionIdentity: UserReviewListEventWithSelectionIdentity,
+    ): void => {
       setListViewState((current) => {
-        if (current.selectionId !== eventWithSelectionId.selectionId) {
+        if (
+          current.selectionIdentity !==
+          eventWithSelectionIdentity.selectionIdentity
+        ) {
           return current;
         }
 
         const result = UserReviewListState.reduceUserReviewEvent(
           current.state,
-          eventWithSelectionId.event,
+          eventWithSelectionIdentity.event,
         );
         const requestVersion = result.invalidatesInFlightListRequest
           ? current.requestVersion + 1
           : current.requestVersion;
 
         return {
-          selectionId: current.selectionId,
+          selectionIdentity: current.selectionIdentity,
           requestVersion,
           state: result.state,
         };
@@ -86,13 +93,13 @@ export function useUserReviewList(
 
   const reloadUserReviews = useCallback(async (): Promise<boolean> => {
     const activeTarget = target;
-    const startedSelectionId = selectionId;
+    const startedSelectionIdentity = selectionIdentity;
     const startedRequestVersion = requestVersionRef.current + 1;
     requestVersionRef.current = startedRequestVersion;
 
     if (workspacePath === null || activeTarget === null) {
       setListViewState({
-        selectionId: startedSelectionId,
+        selectionIdentity: startedSelectionIdentity,
         requestVersion: startedRequestVersion,
         state: UserReviewListState.idle(),
       });
@@ -100,7 +107,7 @@ export function useUserReviewList(
     }
 
     setListViewState({
-      selectionId: startedSelectionId,
+      selectionIdentity: startedSelectionIdentity,
       requestVersion: startedRequestVersion,
       state: UserReviewListState.loading(activeTarget),
     });
@@ -137,14 +144,14 @@ export function useUserReviewList(
 
       setListViewState((current) => {
         if (
-          current.selectionId !== startedSelectionId ||
+          current.selectionIdentity !== startedSelectionIdentity ||
           current.requestVersion !== startedRequestVersion
         ) {
           return current;
         }
 
         return {
-          selectionId: startedSelectionId,
+          selectionIdentity: startedSelectionIdentity,
           requestVersion: startedRequestVersion,
           state: UserReviewListState.loaded(
             activeTarget,
@@ -164,14 +171,14 @@ export function useUserReviewList(
 
       setListViewState((current) => {
         if (
-          current.selectionId !== startedSelectionId ||
+          current.selectionIdentity !== startedSelectionIdentity ||
           current.requestVersion !== startedRequestVersion
         ) {
           return current;
         }
 
         return {
-          selectionId: startedSelectionId,
+          selectionIdentity: startedSelectionIdentity,
           requestVersion: startedRequestVersion,
           state: UserReviewListState.error(
             activeTarget,
@@ -183,14 +190,14 @@ export function useUserReviewList(
       });
       return false;
     }
-  }, [commands, correlationId, target, selectionId, workspacePath]);
+  }, [commands, correlationId, target, selectionIdentity, workspacePath]);
 
   useEffect(() => {
     void reloadUserReviews();
   }, [reloadUserReviews]);
 
   const listState =
-    listViewState.selectionId === selectionId
+    listViewState.selectionIdentity === selectionIdentity
       ? listViewState.state
       : UserReviewListState.idle();
 

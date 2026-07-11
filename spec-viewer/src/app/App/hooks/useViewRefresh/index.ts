@@ -1,5 +1,8 @@
 import { useCallback } from "react";
-import type { SpecViewResetKeys } from "@/app/App/hooks/types";
+import {
+  SpecViewSelection,
+  type SpecViewSelection as SpecViewSelectionType,
+} from "@/features/specs/domain/specViewSelection";
 import { useSpecFileWatcher } from "@/features/specs";
 import type {
   SpecFileWatchSubscriber,
@@ -15,7 +18,7 @@ type RefreshCurrentViewOptions = Readonly<{
 }>;
 
 export type UseViewRefreshOptions = Readonly<{
-  selection: SpecViewResetKeys;
+  selection: SpecViewSelectionType;
   isCurrentViewLoading: boolean;
   reload: Readonly<{
     /** Reloads the current document. */
@@ -52,9 +55,8 @@ export function useViewRefresh(
   options: UseViewRefreshOptions,
 ): UseViewRefreshResult {
   const { selection, isCurrentViewLoading, reload, onError, watcher } = options;
-  const workspaceRoot = selection.workspaceRoot;
-  const specId = selection.specId;
-  const fileKey = selection.fileKey;
+  const isFileTargetSelected =
+    SpecViewSelection.watchTarget(selection) !== null;
 
   const refreshCurrentView = useCallback(
     async ({
@@ -115,12 +117,7 @@ export function useViewRefresh(
     }, [isCurrentViewLoading, refreshCurrentView, reload]);
 
   const refreshCurrentViewManually = useCallback(async (): Promise<void> => {
-    if (
-      workspaceRoot === null ||
-      specId === null ||
-      fileKey === null ||
-      isCurrentViewLoading
-    ) {
+    if (!isFileTargetSelected || isCurrentViewLoading) {
       return;
     }
 
@@ -133,14 +130,7 @@ export function useViewRefresh(
         return areSpecsReloaded && areCommentsReloaded;
       },
     });
-  }, [
-    fileKey,
-    isCurrentViewLoading,
-    refreshCurrentView,
-    reload,
-    specId,
-    workspaceRoot,
-  ]);
+  }, [isCurrentViewLoading, isFileTargetSelected, refreshCurrentView, reload]);
 
   const handleWatcherError = useCallback(
     (event: Readonly<{ message: string }>): void => {
@@ -152,9 +142,7 @@ export function useViewRefresh(
   );
 
   useSpecFileWatcher({
-    workspacePath: workspaceRoot,
-    specId,
-    fileKey,
+    selection,
     onMarkdownChange: reloadCurrentMarkdownFromWatcher,
     onConfigChange: reloadWorkspaceConfigFromWatcher,
     onWatcherError: handleWatcherError,
