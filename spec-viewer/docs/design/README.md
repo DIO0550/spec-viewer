@@ -10,3 +10,7 @@ This folder captures design inputs used to shape `spec-reviewer`.
 
 The HTML file references `design-canvas.jsx` and `variations.jsx`, but those files are not present in the workspace. The available embedded brief still provides product direction, layout requirements, and visual exploration names.
 
+## Architecture
+
+- [Frontend architecture guidelines](./frontend-architecture-guidelines.md)
+
