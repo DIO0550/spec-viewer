@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 
 import type { UserReview } from "@/features/review-runs/domain/userReview";
 import { UserReviewFeatureError } from "@/features/review-runs/domain/userReviewError";
@@ -57,11 +63,14 @@ export function useArchiveUserReview(
       selectionIdentity,
       state: UserReviewArchiveState.idle(),
     });
-  activeSelectionIdentityRef.current = selectionIdentity;
+
+  useLayoutEffect(() => {
+    activeSelectionIdentityRef.current = selectionIdentity;
+  }, [selectionIdentity]);
 
   /**
    * @param request - Request token captured before invoking the gateway.
-   * @returns Whether the request still belongs to the latest rendered selection.
+   * @returns Whether the request still belongs to the latest committed selection.
    */
   const isCurrentRequest = useCallback(
     (request: ArchiveRequestToken): boolean =>

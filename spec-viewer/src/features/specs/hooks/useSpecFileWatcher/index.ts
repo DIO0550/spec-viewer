@@ -1,5 +1,5 @@
 import { listen, type Event as TauriEvent } from "@tauri-apps/api/event";
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import {
   SelectionIdentity,
   type SelectionIdentity as SelectionIdentityType,
@@ -49,6 +49,21 @@ export type UseSpecFileWatcherOptions = Readonly<{
   subscribe?: SpecFileWatchSubscriber;
 }>;
 
+let specFileWatchLifecycleQueue: Promise<void> = Promise.resolve();
+
+/**
+ * Serializes commands that mutate the backend's single global watcher.
+ * @param operation - Watcher lifecycle operation to append.
+ * @returns The queued operation result for generation-local error handling.
+ */
+function enqueueSpecFileWatchLifecycleOperation(
+  operation: () => Promise<void>,
+): Promise<void> {
+  const queuedOperation = specFileWatchLifecycleQueue.then(operation);
+  specFileWatchLifecycleQueue = queuedOperation.catch(() => undefined);
+  return queuedOperation;
+}
+
 /**
  * Keeps the backend file watcher aligned with the selected spec file.
  * @param options - Selection aggregate, callbacks, and command overrides.
@@ -59,11 +74,14 @@ export function useSpecFileWatcher(options: UseSpecFileWatcherOptions): void {
   const subscribe = options.subscribe ?? listen;
   const { fileKey, specId, targetScope, workspacePath } = options.selection;
   const activeWatchTarget = SpecViewSelection.watchTarget(options.selection);
+  const activeSelectionIdentity = activeWatchTarget?.selectionIdentity ?? null;
   const activeSelectionIdentityRef = useRef<SelectionIdentityType | null>(
-    activeWatchTarget?.selectionIdentity ?? null,
+    activeSelectionIdentity,
   );
-  activeSelectionIdentityRef.current =
-    activeWatchTarget?.selectionIdentity ?? null;
+
+  useLayoutEffect(() => {
+    activeSelectionIdentityRef.current = activeSelectionIdentity;
+  }, [activeSelectionIdentity]);
 
   useEffect(() => {
     const selectionSnapshot: SpecViewSelectionType = {
@@ -133,7 +151,13 @@ export function useSpecFileWatcher(options: UseSpecFileWatcherOptions): void {
           return;
         }
 
-        await startWatch(scope);
+        await enqueueSpecFileWatchLifecycleOperation(async () => {
+          if (!isActive) {
+            return;
+          }
+
+          await startWatch(scope);
+        });
       } catch (error) {
         unlistenChanged?.();
         unlistenError?.();
@@ -151,10 +175,6 @@ export function useSpecFileWatcher(options: UseSpecFileWatcherOptions): void {
               : "File watcher failed to start",
         });
       }
-
-      if (!isActive) {
-        await stopWatch();
-      }
     };
 
     void startCurrentWatch();
@@ -162,7 +182,9 @@ export function useSpecFileWatcher(options: UseSpecFileWatcherOptions): void {
     return () => {
       isActive = false;
       cleanupListeners?.();
-      void stopWatch();
+      void enqueueSpecFileWatchLifecycleOperation(async () => {
+        await stopWatch();
+      }).catch(() => undefined);
     };
   }, [
     options.onConfigChange,
@@ -202,8 +224,8 @@ export function isSpecFileWatchEventForSelection(
 /**
  * @param event - Watch event to validate.
  * @param targetScope - Scope captured by the listener generation.
- * @param currentSelectionIdentity - Latest identity observed during render.
- * @returns True when the listener is still aligned with the latest selection.
+ * @param currentSelectionIdentity - Latest identity from a committed selection.
+ * @returns True when the listener is still aligned with the committed selection.
  */
 function isSpecFileWatchEventForSelectionIdentity(
   event: SpecFileWatchChangedEvent | SpecFileWatchErrorEvent,
