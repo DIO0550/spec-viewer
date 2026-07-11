@@ -604,6 +604,54 @@ mod tests {
     }
 
     #[test]
+    fn spec_id_rejects_unsafe_path_components() {
+        for value in [
+            "../escape",
+            "spec//child",
+            "spec/",
+            "spec:child",
+            "C:spec",
+            "/tmp/spec",
+            "spec\\path",
+            "spec\0path",
+            ".",
+            "./spec",
+            "spec/../escape",
+            "auth/../../outside",
+            "spec/./child",
+            "C:/tmp/spec",
+            "//server/spec",
+        ] {
+            assert_eq!(
+                Err(SpecDomainError::UnsafeSpecId {
+                    value: value.to_string(),
+                }),
+                SpecId::new(value),
+                "{value} should be rejected"
+            );
+        }
+    }
+
+    #[test]
+    fn spec_id_exposes_validated_segments() {
+        let id = SpecId::new("parent/child").expect("nested spec id should be valid");
+
+        assert_eq!(vec!["parent", "child"], id.segments().collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn spec_id_accepts_safe_dot_names() {
+        for value in [".hidden", "group/a..b", "COM10"] {
+            assert_eq!(
+                value,
+                SpecId::new(value)
+                    .expect("safe dot name should be valid")
+                    .as_str()
+            );
+        }
+    }
+
+    #[test]
     fn spec_file_key_lists_default_keys_in_tab_order() {
         assert_eq!(
             &[

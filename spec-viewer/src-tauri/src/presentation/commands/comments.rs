@@ -2032,6 +2032,12 @@ mod tests {
     fn add_comment_command_error_maps_app_use_case_errors() {
         let cases = [
             (
+                AppUseCaseError::InvalidSpec {
+                    message: "unsafe spec id".to_string(),
+                },
+                AddCommentCommandErrorCode::InvalidRequest,
+            ),
+            (
                 AppUseCaseError::InvalidComment {
                     message: "comment body is required".to_string(),
                 },
@@ -2068,6 +2074,16 @@ mod tests {
 
             assert_eq!(expected_code, error.code());
         }
+    }
+
+    #[test]
+    fn comment_command_error_maps_invalid_spec_to_invalid_request() {
+        let error = CommentCommandError::from_app_error(AppUseCaseError::InvalidSpec {
+            message: "unsafe spec id".to_string(),
+        });
+
+        assert_eq!(CommentCommandErrorCode::InvalidRequest, error.code());
+        assert_eq!("invalid spec input: unsafe spec id", error.message);
     }
 
     #[test]
