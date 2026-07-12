@@ -172,6 +172,59 @@ A type or policy belongs in `shared/domain/` only when all of these are true:
 Generic helpers without domain meaning belong in `shared/lib/`. Shared UI belongs
 in `shared/ui/`; neither location is automatically part of the Shared Kernel.
 
+### Approved Shared Kernel registry
+
+Issue #106 admits the following narrow leaves. Consumers import the exact leaf;
+`shared/domain` does not expose an aggregate barrel.
+
+| Public leaf | Vocabulary | Canonical owner | Why the meaning is shared |
+| --- | --- | --- | --- |
+| `shared/domain/specFileKey` | `SpecFileKey` | Shared Kernel / #106 | Specs, comments, and review runs identify the same logical planning document. |
+| `shared/domain/specId` | `SpecId` | Shared Kernel / #106 | Selection, comment, watch, and review targets refer to the same spec identity. |
+| `shared/domain/commentId` | `CommentId` | Shared Kernel / #106 | Comments own the aggregate, while review bundles preserve those same comment identities. |
+| `shared/domain/isoDateTime` | `IsoDateTimeString` | Shared Kernel / #106 | Comment and review records exchange the same persisted timestamp vocabulary. Runtime decoding remains owned by #110 and aggregate validation by #120. |
+| `shared/domain/specViewSelection` | `SpecViewSelection`, `SelectionIdentity`, `SpecViewFileTarget`, `SpecViewReviewTarget` | Shared Kernel / #106, behavior from #128 | App composition, specs watching, comments, and review runs must share one selection transition and stale-result identity rule. |
+
+`WorkspacePath` remains the pre-existing Shared Kernel path identity used by the
+selection aggregate. The registry does not admit similarly shaped feature DTOs.
+The following projections remain with their feature owner:
+
+| Projection | Owner and public boundary | Why it is not Shared Kernel |
+| --- | --- | --- |
+| `CommentScope` | comments / `@/features/comments` | It projects a selected file into comment-list and mutation inputs. |
+| `ExportCommentsTarget` | comments / `@/features/comments` | It is a comments export transport shape and includes workspace export. |
+| `UserReviewTarget` | review-runs / `@/features/review-runs` | It is a review command projection. Its raw DTO-compatible `specId` remains until #110 separates DTO decoding from domain identities. |
+| Watch command and subscriber types | specs / `@/features/specs` | They are specs infrastructure ports, not domain vocabulary. |
+| `ThemeMode` | preferences / `@/features/preferences` | It is a preferences-owned policy exposed for UI composition. |
+
+### Issue #106 acceptance boundary
+
+Issue #106 removes all 42 waivers it owns: 30 cross-feature deep imports, nine
+domain dependency violations, and three package-cycle edges. It adds no replacement
+waiver.
+
+The literal repository-wide cross-feature deep-import count is not yet zero.
+`features/specs/components/MarkdownViewer/index.tsx` retains five exact deep-import
+waivers and the `features/specs -> features/comments` cycle waiver owned by #108.
+Those six entries predate #106 and remain visible in `waivers.json`; moving comment
+composition out of MarkdownViewer belongs to #108. The #104 ledger must therefore
+not claim repository-wide zero until #108 removes them.
+
+### PR #28 supersede map
+
+[PR #28](https://github.com/DIO0550/spec-viewer/pull/28) is conflicting and is not
+merged or cherry-picked. Its useful boundary intent is reapplied against the current
+architecture in small, issue-owned changes:
+
+| PR #28 work | Current owner / replacement |
+| --- | --- |
+| `a72ad162` shared timestamp and file-key types | #106 uses the approved `shared/domain/isoDateTime` and `shared/domain/specFileKey` leaves rather than a miscellaneous `shared/types` barrel. |
+| `e5633e5` specs/comments import changes | #106 assigns canonical owners and exposes comments/specs non-domain APIs from each feature root. |
+| `c238816` review-runs import changes | #106 uses exact Shared Kernel leaves and keeps `UserReviewTarget` as a review-owned projection instead of deriving it from a comments DTO. |
+| MarkdownViewer/comments integration follow-up | #108 owns the app-composition extraction and its six exact waivers. |
+| `shared/api/tauri` reverse-dependency follow-up | #107 owns feature-specific Tauri adapters and its existing exact waivers. |
+| Bulk test renames, lint formatting, accessibility changes, and JSDoc commits | Not reused by #106; they are unrelated to the ownership migration and would expand its behavioral surface. |
+
 ## Automated checks
 
 Run the checks from `spec-viewer/`:
