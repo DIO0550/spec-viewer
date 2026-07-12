@@ -105,27 +105,25 @@ impl FilesystemAppUseCases {
     pub fn plan_file_watch(
         &self,
         workspace: &LoadWorkspaceResult,
-        spec_id: &str,
+        spec_id: &SpecId,
         key: SpecFileKey,
     ) -> Result<FileWatchPlan, AppUseCaseError> {
-        let spec_id = SpecId::new(spec_id)?;
         let effective_config = spec_config_for_directory(
             &self.config_loader,
             workspace.layout(),
             workspace.config(),
-            &spec_id,
+            spec_id,
         )?;
 
-        plan_file_watch(workspace, &effective_config, spec_id.as_str(), key)
+        plan_file_watch(workspace, &effective_config, spec_id, key)
     }
 
     pub fn archive_spec(
         &self,
         workspace: &LoadWorkspaceResult,
-        spec_id: &str,
+        spec_id: &SpecId,
     ) -> Result<ArchiveSpecResult, AppUseCaseError> {
-        let spec_id = SpecId::new(spec_id)?;
-        let archive_path = archive_spec_directory(workspace.layout(), &spec_id)?;
+        let archive_path = archive_spec_directory(workspace.layout(), spec_id)?;
 
         Ok(ArchiveSpecResult::new(
             spec_id.as_str(),
@@ -136,15 +134,14 @@ impl FilesystemAppUseCases {
     pub fn read_spec_file_cached(
         &self,
         workspace: &LoadWorkspaceResult,
-        spec_id: &str,
+        spec_id: &SpecId,
         key: SpecFileKey,
     ) -> Result<ReadSpecFileResult, AppUseCaseError> {
-        let spec_id = SpecId::new(spec_id)?;
         let effective_config = spec_config_for_directory(
             &self.config_loader,
             workspace.layout(),
             workspace.config(),
-            &spec_id,
+            spec_id,
         )?;
 
         self.markdown_cache
@@ -152,7 +149,7 @@ impl FilesystemAppUseCases {
                 &self.markdown_reader,
                 workspace.layout(),
                 &effective_config,
-                spec_id.as_str(),
+                spec_id,
                 key,
             )
             .map(ReadSpecFileResult::from)
@@ -162,7 +159,7 @@ impl FilesystemAppUseCases {
     pub fn read_spec_blocks_cached(
         &self,
         workspace: &LoadWorkspaceResult,
-        spec_id: &str,
+        spec_id: &SpecId,
         key: SpecFileKey,
     ) -> Result<Vec<MarkdownBlock>, AppUseCaseError> {
         match self.read_spec_file_cached(workspace, spec_id, key)? {
@@ -206,19 +203,18 @@ where
     pub fn read_spec_file(
         &self,
         workspace: &LoadWorkspaceResult,
-        spec_id: &str,
+        spec_id: &SpecId,
         key: SpecFileKey,
     ) -> Result<ReadSpecFileResult, AppUseCaseError> {
-        let spec_id = SpecId::new(spec_id)?;
         let effective_config = spec_config_for_directory(
             &self.config_loader,
             workspace.layout(),
             workspace.config(),
-            &spec_id,
+            spec_id,
         )?;
 
         self.markdown_reader
-            .read_spec_file(workspace.layout(), &effective_config, &spec_id, key)
+            .read_spec_file(workspace.layout(), &effective_config, spec_id, key)
             .map_err(AppUseCaseError::from)
     }
 }

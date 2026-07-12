@@ -14,7 +14,7 @@ use crate::{
     domain::spec::SpecFileKey,
 };
 
-use super::{CommandError, CommandState};
+use super::{parse_spec_id, CommandError, CommandState};
 
 pub type StartSpecFileWatchCommandResult<T> = Result<T, WatchCommandError>;
 pub type StopSpecFileWatchCommandResult<T> = Result<T, WatchCommandError>;
@@ -152,9 +152,10 @@ pub fn start_spec_file_watch(
         .use_cases()
         .load_workspace(&request.workspace_path)
         .map_err(CommandError::from)?;
+    let spec_id = parse_spec_id(&request.spec_id)?;
     let plan = state
         .use_cases()
-        .plan_file_watch(&workspace, &request.spec_id, file_key)
+        .plan_file_watch(&workspace, &spec_id, file_key)
         .map_err(CommandError::from)?;
     let use_cases = state.use_cases().clone();
     let registration = state

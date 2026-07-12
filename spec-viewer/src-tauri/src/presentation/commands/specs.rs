@@ -17,7 +17,7 @@ use crate::{
     },
 };
 
-use super::{CommandError, CommandResult, CommandState};
+use super::{parse_spec_id, CommandError, CommandResult, CommandState};
 
 pub type ListSpecsCommandResult<T> = Result<T, SpecCommandError>;
 pub type ReadSpecFileCommandResult<T> = Result<T, SpecCommandError>;
@@ -316,6 +316,7 @@ pub fn read_spec_file(
         CommandError::invalid_request(format!("unsupported file key: {}", request.file_key))
     })?;
     let workspace = load_workspace(state.use_cases(), &request.workspace_path)?;
+    let spec_id = parse_spec_id(&request.spec_id)?;
     let performance_context = request
         .correlation_id
         .as_ref()
@@ -325,7 +326,7 @@ pub fn read_spec_file(
         .map(|context| start_span(context, "command.read_spec_file"));
     let result = state
         .use_cases()
-        .read_spec_file_cached(&workspace, &request.spec_id, key)
+        .read_spec_file_cached(&workspace, &spec_id, key)
         .map_err(CommandError::from);
 
     if let (Some(context), Some(end_span)) = (performance_context.as_ref(), end_span) {
@@ -348,9 +349,8 @@ pub fn archive_spec(
     request: ArchiveSpecRequest,
 ) -> ArchiveSpecCommandResult<ArchiveSpecResponse> {
     let workspace = load_workspace(state.use_cases(), &request.workspace_path)?;
-    let result = state
-        .use_cases()
-        .archive_spec(&workspace, &request.spec_id)?;
+    let spec_id = parse_spec_id(&request.spec_id)?;
+    let result = state.use_cases().archive_spec(&workspace, &spec_id)?;
 
     Ok(ArchiveSpecResponse::from(result))
 }

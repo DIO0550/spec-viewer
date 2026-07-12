@@ -36,9 +36,9 @@ use crate::{
                 ReviewRunFolderState, ReviewRunPathResolver, USER_REVIEW_DIRECTORY,
             },
             review_run_schema::{
-                ReviewRunExecutionTargetDocument, ReviewRunManifestDocument,
-                ReviewRunSourceFileDocument, ReviewRunStatusDocument, ReviewRunStatusValue,
-                ReviewRunTargetDocument,
+                parse_persisted_spec_id, ReviewRunExecutionTargetDocument,
+                ReviewRunManifestDocument, ReviewRunSourceFileDocument, ReviewRunStatusDocument,
+                ReviewRunStatusValue, ReviewRunTargetDocument,
             },
             review_run_writer::{
                 ReviewRunBundleDocument, ReviewRunBundleWriter, ReviewRunContextSnapshot,
@@ -677,7 +677,7 @@ fn collect_bundle_files(
         .iter()
         .map(|file| {
             let document =
-                match use_cases.read_spec_file(workspace, file.spec_id.as_str(), file.file_key)? {
+                match use_cases.read_spec_file(workspace, &file.spec_id, file.file_key)? {
                     ReadSpecFileResult::Found(document) => document,
                     ReadSpecFileResult::Missing(missing) => {
                         return Err(AppUseCaseError::ReviewRunExport {
@@ -1437,11 +1437,11 @@ fn review_run_target_from_document(
 ) -> Result<UserReviewRunTarget, AppUseCaseError> {
     match target {
         ReviewRunTargetDocument::File { spec_id, file_key } => Ok(UserReviewRunTarget::file(
-            SpecId::new(spec_id)?,
+            parse_persisted_spec_id(spec_id)?,
             SpecFileKey::from_str(&file_key)?,
         )),
         ReviewRunTargetDocument::Spec { spec_id } => {
-            Ok(UserReviewRunTarget::spec(SpecId::new(spec_id)?))
+            Ok(UserReviewRunTarget::spec(parse_persisted_spec_id(spec_id)?))
         }
     }
 }
@@ -1469,7 +1469,7 @@ fn review_run_source_file_from_document(
     source_file: ReviewRunSourceFileDocument,
 ) -> Result<UserReviewSourceFile, AppUseCaseError> {
     Ok(UserReviewSourceFile::new(
-        SpecId::new(source_file.spec_id)?,
+        parse_persisted_spec_id(source_file.spec_id)?,
         SpecFileKey::from_str(&source_file.file_key)?,
         ReviewRunRelativePath::new(source_file.relative_path)?,
     ))

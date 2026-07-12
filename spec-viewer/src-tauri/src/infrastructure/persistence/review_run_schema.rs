@@ -3,7 +3,14 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::domain::review_run::USER_REVIEW_MANIFEST_SCHEMA_VERSION;
+use crate::domain::{
+    review_run::USER_REVIEW_MANIFEST_SCHEMA_VERSION,
+    spec::{SpecDomainError, SpecId},
+};
+
+pub fn parse_persisted_spec_id(value: impl Into<String>) -> Result<SpecId, SpecDomainError> {
+    SpecId::new(value)
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

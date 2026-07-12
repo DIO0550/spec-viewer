@@ -143,7 +143,7 @@ impl MarkdownDocumentCache {
         reader: &FilesystemMarkdownReader,
         layout: &WorkspaceLayout,
         config: &WorkspaceConfig,
-        spec_id: &str,
+        spec_id: &SpecId,
         key: SpecFileKey,
     ) -> Result<MarkdownReadResult, MarkdownReadError> {
         let resolved_path = resolve_spec_document_path(layout, config, spec_id, key)?;
@@ -243,7 +243,7 @@ impl FileStamp {
 
 fn create_cache_key(
     layout: &WorkspaceLayout,
-    spec_id: &str,
+    spec_id: &SpecId,
     file_key: SpecFileKey,
     document_path: &Path,
 ) -> Result<MarkdownCacheKey, MarkdownReadError> {
@@ -261,9 +261,7 @@ fn create_cache_key(
 
     Ok(MarkdownCacheKey {
         workspace_root: canonical_root,
-        spec_id: SpecId::new(spec_id).map_err(|source| MarkdownReadError::InvalidSpecId {
-            spec_id: source.to_string(),
-        })?,
+        spec_id: spec_id.clone(),
         file_key,
         document_path: canonical_document,
     })

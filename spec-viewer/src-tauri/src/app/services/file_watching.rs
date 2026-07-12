@@ -159,19 +159,14 @@ impl FileWatchPlan {
 pub fn plan_file_watch(
     workspace: &LoadWorkspaceResult,
     effective_config: &WorkspaceConfig,
-    spec_id: &str,
+    spec_id: &SpecId,
     file_key: SpecFileKey,
 ) -> Result<FileWatchPlan, AppUseCaseError> {
-    let spec_id = SpecId::new(spec_id)?;
-    let resolved_document_path = resolve_spec_document_path(
-        workspace.layout(),
-        effective_config,
-        spec_id.as_str(),
-        file_key,
-    )?;
+    let resolved_document_path =
+        resolve_spec_document_path(workspace.layout(), effective_config, spec_id, file_key)?;
     let config_path = config_file_path(workspace.layout());
     let spec_override_config_path =
-        spec_override_config_file_path(&spec_directory_path(workspace.layout(), &spec_id));
+        spec_override_config_file_path(&spec_directory_path(workspace.layout(), spec_id));
     let scope = FileWatchScope::new(
         workspace.layout().root().as_str(),
         spec_id.as_str(),

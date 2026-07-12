@@ -40,7 +40,7 @@ impl FilesystemMarkdownReader {
         &self,
         layout: &WorkspaceLayout,
         config: &WorkspaceConfig,
-        spec_id: &str,
+        spec_id: &SpecId,
         key: SpecFileKey,
     ) -> Result<MarkdownReadResult, MarkdownReadError> {
         let resolved_path = resolve_spec_document_path(layout, config, spec_id, key)?;
@@ -97,7 +97,7 @@ impl ReadSpecFile for FilesystemMarkdownReader {
         spec_id: &SpecId,
         key: SpecFileKey,
     ) -> Result<ReadSpecFileResult, SpecFileReadPortError> {
-        self.read(layout, config, spec_id.as_str(), key)
+        self.read(layout, config, spec_id, key)
             .map(ReadSpecFileResult::from)
             .map_err(|source| SpecFileReadPortError::new(source.to_string()))
     }
@@ -232,8 +232,6 @@ impl ResolvedSpecDocumentPath {
 pub enum MarkdownReadError {
     #[error("workspace config does not define a file for key: {key}")]
     MissingFileMapping { key: SpecFileKey },
-    #[error("spec id is invalid: {spec_id}")]
-    InvalidSpecId { spec_id: String },
     #[error("workspace root is unavailable: {path}")]
     WorkspaceRootUnavailable { path: String, source: io::Error },
     #[error("failed to inspect markdown path: {path}")]
@@ -254,7 +252,7 @@ pub enum MarkdownReadError {
 pub fn markdown_file_path(
     layout: &WorkspaceLayout,
     config: &WorkspaceConfig,
-    spec_id: &str,
+    spec_id: &SpecId,
     key: SpecFileKey,
 ) -> Result<PathBuf, MarkdownReadError> {
     resolve_spec_document_path(layout, config, spec_id, key).map(|resolved_path| resolved_path.path)
@@ -263,16 +261,13 @@ pub fn markdown_file_path(
 pub fn resolve_spec_document_path(
     layout: &WorkspaceLayout,
     config: &WorkspaceConfig,
-    spec_id: &str,
+    spec_id: &SpecId,
     key: SpecFileKey,
 ) -> Result<ResolvedSpecDocumentPath, MarkdownReadError> {
     let mapping = config
         .file_for_key(key)
         .ok_or(MarkdownReadError::MissingFileMapping { key })?;
-    let spec_id = SpecId::new(spec_id).map_err(|_| MarkdownReadError::InvalidSpecId {
-        spec_id: spec_id.to_string(),
-    })?;
-    let spec_directory = spec_directory_path(layout, &spec_id);
+    let spec_directory = spec_directory_path(layout, spec_id);
     let configured_path = spec_directory.join(mapping.file_name());
     let candidates = spec_file_path_candidates(key, &configured_path);
     let preferred = candidates

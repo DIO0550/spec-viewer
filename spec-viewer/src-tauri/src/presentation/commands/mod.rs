@@ -14,6 +14,11 @@ use crate::app::{
     services::file_watching::FileWatchManager,
     use_cases::{AppUseCaseError, FilesystemAppUseCases},
 };
+use crate::domain::spec::SpecId;
+
+pub(super) fn parse_spec_id(value: &str) -> Result<SpecId, AppUseCaseError> {
+    SpecId::new(value).map_err(AppUseCaseError::from)
+}
 
 pub type CommandResult<T> = Result<T, CommandError>;
 
