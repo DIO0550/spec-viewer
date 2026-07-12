@@ -633,7 +633,7 @@ mod tests {
         );
 
         let result = use_cases
-            .read_spec_file(&workspace, "auth", SpecFileKey::Tasks)
+            .read_spec_file(&workspace, &spec_id("auth"), SpecFileKey::Tasks)
             .expect("spec file should be read");
 
         assert_eq!(ReadSpecFileResult::Found(document), result);
@@ -718,7 +718,7 @@ mod tests {
         );
 
         use_cases
-            .read_spec_file(&workspace, "auth", SpecFileKey::Tasks)
+            .read_spec_file(&workspace, &spec_id("auth"), SpecFileKey::Tasks)
             .expect("spec file read should resolve override");
 
         assert_eq!(
@@ -748,7 +748,7 @@ mod tests {
         );
 
         let result = use_cases
-            .read_spec_file(&workspace, "auth", SpecFileKey::Tasks)
+            .read_spec_file(&workspace, &spec_id("auth"), SpecFileKey::Tasks)
             .expect("missing file should be a result");
 
         assert_eq!(ReadSpecFileResult::Missing(missing), result);
@@ -785,6 +785,10 @@ mod tests {
         markdown_reader: MarkdownReader,
     ) -> AppUseCases<Detector, ConfigLoader, SpecTreeScanner, MarkdownReader> {
         AppUseCases::new(detector, config_loader, spec_tree_scanner, markdown_reader)
+    }
+
+    fn spec_id(value: &str) -> SpecId {
+        SpecId::new(value).expect("spec id should be valid")
     }
 
     fn workspace_layout(kind: WorkspaceKind) -> WorkspaceLayout {

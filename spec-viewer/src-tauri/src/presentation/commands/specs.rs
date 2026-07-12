@@ -622,4 +622,17 @@ mod tests {
         assert_eq!("/workspace/auth/tasks.html", response.path());
         assert!(response.blocks().is_empty());
     }
+
+    #[test]
+    fn spec_id_parser_preserves_invalid_spec_ipc_code() {
+        let error = parse_spec_id("../outside").expect_err("unsafe spec id should fail");
+        let error = SpecCommandError::from_app_error(error);
+        let value = serde_json::to_value(error).expect("error should serialize");
+
+        assert_eq!("invalidSpec", value["code"]);
+        assert_eq!(
+            "invalid spec input: spec id contains an unsafe path: ../outside",
+            value["message"]
+        );
+    }
 }

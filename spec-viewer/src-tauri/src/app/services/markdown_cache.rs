@@ -327,6 +327,10 @@ mod tests {
         }
     }
 
+    fn spec_id(value: &str) -> SpecId {
+        SpecId::new(value).expect("spec id should be valid")
+    }
+
     #[test]
     fn cache_returns_fresh_document_when_mtime_and_size_match() {
         let workspace = TestWorkspace::new("hit");
@@ -335,15 +339,23 @@ mod tests {
         let reader = FilesystemMarkdownReader::new();
         let layout = workspace.layout();
         let config = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
+        let spec_id = SpecId::new("auth").expect("spec id should be valid");
 
         let first = cache
-            .read_spec_file(&reader, &layout, &config, "auth", SpecFileKey::Tasks)
+            .read_spec_file(&reader, &layout, &config, &spec_id, SpecFileKey::Tasks)
             .expect("first read should succeed");
         let second = cache
-            .read_spec_file(&reader, &layout, &config, "auth", SpecFileKey::Tasks)
+            .read_spec_file(&reader, &layout, &config, &spec_id, SpecFileKey::Tasks)
             .expect("second read should succeed");
 
         assert_eq!(first, second);
+        let entries = cache.entries.read().expect("cache lock should be readable");
+        let cache_key = entries
+            .documents
+            .keys()
+            .next()
+            .expect("cache key should exist");
+        assert_eq!(&spec_id, &cache_key.spec_id);
     }
 
     #[test]
@@ -357,7 +369,13 @@ mod tests {
         let document_path = workspace.path(".plugin-workspace/.specs/auth/tasks.md");
 
         cache
-            .read_spec_file(&reader, &layout, &config, "auth", SpecFileKey::Tasks)
+            .read_spec_file(
+                &reader,
+                &layout,
+                &config,
+                &spec_id("auth"),
+                SpecFileKey::Tasks,
+            )
             .expect("read should populate cache");
         cache.invalidate_path(document_path.as_path());
 
@@ -375,7 +393,13 @@ mod tests {
         let config = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
 
         cache
-            .read_spec_file(&reader, &layout, &config, "auth", SpecFileKey::Tasks)
+            .read_spec_file(
+                &reader,
+                &layout,
+                &config,
+                &spec_id("auth"),
+                SpecFileKey::Tasks,
+            )
             .expect("read should populate cache");
         cache.clear_workspace(workspace.root.as_path());
 
@@ -392,13 +416,16 @@ mod tests {
         let config = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
 
         for index in 0..=MAX_CACHE_ENTRY_COUNT {
-            let spec_id = format!("auth-{index}");
-            fs::create_dir_all(workspace.path(&format!(".plugin-workspace/.specs/{spec_id}")))
-                .expect("spec directory should be created");
+            let spec_id_value = format!("auth-{index}");
+            fs::create_dir_all(
+                workspace.path(&format!(".plugin-workspace/.specs/{spec_id_value}")),
+            )
+            .expect("spec directory should be created");
             workspace.write(
-                &format!(".plugin-workspace/.specs/{spec_id}/tasks.md"),
+                &format!(".plugin-workspace/.specs/{spec_id_value}/tasks.md"),
                 "# Tasks",
             );
+            let spec_id = spec_id(&spec_id_value);
             cache
                 .read_spec_file(&reader, &layout, &config, &spec_id, SpecFileKey::Tasks)
                 .expect("read should populate cache");

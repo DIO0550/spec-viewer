@@ -281,6 +281,15 @@ mod tests {
     }
 
     #[test]
+    fn spec_id_parser_preserves_watch_invalid_spec_ipc_code() {
+        let error = parse_spec_id("../outside").expect_err("unsafe spec id should fail");
+        let error = WatchCommandError::from_app_error(error);
+        let value = serde_json::to_value(error).expect("error should serialize");
+
+        assert_eq!("invalidSpec", value["code"]);
+    }
+
+    #[test]
     fn watch_registration_response_uses_frontend_friendly_fields() {
         let registration = FileWatchRegistrationTestBuilder::new().build();
 

@@ -401,6 +401,10 @@ mod tests {
 
     const SPECS_DIR: &str = ".plugin-workspace/.specs";
 
+    fn spec_id(value: &str) -> SpecId {
+        SpecId::new(value).expect("spec id should be valid")
+    }
+
     struct TestWorkspace {
         root: PathBuf,
     }
@@ -461,7 +465,7 @@ mod tests {
             .read(
                 &workspace.layout(),
                 &WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace),
-                "auth",
+                &spec_id("auth"),
                 SpecFileKey::Tasks,
             )
             .expect("markdown file should be readable");
@@ -504,7 +508,7 @@ mod tests {
             .read(
                 &workspace.layout(),
                 &WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace),
-                "auth",
+                &spec_id("auth"),
                 SpecFileKey::Tasks,
             )
             .expect("html fallback should be readable");
@@ -530,7 +534,7 @@ mod tests {
             .read(
                 &workspace.layout(),
                 &WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace),
-                "auth",
+                &spec_id("auth"),
                 SpecFileKey::Tasks,
             )
             .expect("markdown should be readable");
@@ -558,7 +562,7 @@ mod tests {
             .read(
                 &workspace.layout(),
                 &WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace),
-                "auth",
+                &spec_id("auth"),
                 SpecFileKey::TechReference,
             )
             .expect("tech reference should be readable");
@@ -583,7 +587,7 @@ mod tests {
             .read(
                 &workspace.layout(),
                 &WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace),
-                "auth",
+                &spec_id("auth"),
                 SpecFileKey::TechReference,
             )
             .expect("tech reference markdown fallback should be readable");
@@ -615,7 +619,7 @@ mod tests {
             .read(
                 &workspace.layout(),
                 &WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace),
-                "auth",
+                &spec_id("auth"),
                 SpecFileKey::Requirements,
             )
             .expect("requirements should be readable");
@@ -640,7 +644,7 @@ mod tests {
             .read(
                 &workspace.layout(),
                 &WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace),
-                "auth",
+                &spec_id("auth"),
                 SpecFileKey::TechReference,
             )
             .expect("missing tech reference should be a UI-friendly result");
@@ -675,7 +679,7 @@ mod tests {
             .read(
                 &workspace.layout(),
                 &config,
-                "auth",
+                &spec_id("auth"),
                 SpecFileKey::TechReference,
             )
             .expect("tech reference override should be readable");
@@ -706,7 +710,12 @@ mod tests {
             .expect("config should be valid");
 
         let result = FilesystemMarkdownReader::new()
-            .read(&workspace.layout(), &config, "auth", SpecFileKey::Tasks)
+            .read(
+                &workspace.layout(),
+                &config,
+                &spec_id("auth"),
+                SpecFileKey::Tasks,
+            )
             .expect("configured html should be readable");
 
         match result {
@@ -732,7 +741,12 @@ mod tests {
             .expect("config should be valid");
 
         let result = FilesystemMarkdownReader::new()
-            .read(&workspace.layout(), &config, "auth", SpecFileKey::Tasks)
+            .read(
+                &workspace.layout(),
+                &config,
+                &spec_id("auth"),
+                SpecFileKey::Tasks,
+            )
             .expect("renamed markdown file should be readable");
 
         match result {
@@ -754,7 +768,7 @@ mod tests {
             .read(
                 &workspace.layout(),
                 &WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace),
-                "auth",
+                &spec_id("auth"),
                 SpecFileKey::Tasks,
             )
             .expect("empty markdown file should be readable");
@@ -777,7 +791,7 @@ mod tests {
             .read(
                 &workspace.layout(),
                 &WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace),
-                "auth",
+                &spec_id("auth"),
                 SpecFileKey::Tasks,
             )
             .expect("missing markdown file should be a UI-friendly result");
@@ -790,41 +804,6 @@ mod tests {
                 assert!(missing.path().ends_with("auth/tasks.md"));
             }
         }
-    }
-
-    #[test]
-    fn rejects_parent_path_traversal_in_spec_id() {
-        let workspace = TestWorkspace::new("traversal");
-        workspace.write_file("outside/tasks.md", "secret");
-
-        let result = FilesystemMarkdownReader::new().read(
-            &workspace.layout(),
-            &WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace),
-            "../outside",
-            SpecFileKey::Tasks,
-        );
-
-        assert!(matches!(
-            result,
-            Err(MarkdownReadError::InvalidSpecId { spec_id }) if spec_id == "../outside"
-        ));
-    }
-
-    #[test]
-    fn rejects_absolute_spec_id() {
-        let workspace = TestWorkspace::new("absolute");
-
-        let result = FilesystemMarkdownReader::new().read(
-            &workspace.layout(),
-            &WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace),
-            "/tmp/spec",
-            SpecFileKey::Tasks,
-        );
-
-        assert!(matches!(
-            result,
-            Err(MarkdownReadError::InvalidSpecId { spec_id }) if spec_id == "/tmp/spec"
-        ));
     }
 
     #[cfg(unix)]
@@ -845,7 +824,7 @@ mod tests {
         let result = FilesystemMarkdownReader::new().read(
             &workspace.layout(),
             &WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace),
-            "auth",
+            &spec_id("auth"),
             SpecFileKey::Tasks,
         );
 
@@ -863,7 +842,7 @@ mod tests {
         let result = FilesystemMarkdownReader::new().read(
             &workspace.layout(),
             &WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace),
-            "auth",
+            &spec_id("auth"),
             SpecFileKey::Tasks,
         );
 
@@ -878,7 +857,7 @@ mod tests {
         let result = FilesystemMarkdownReader::new().read(
             &workspace.layout(),
             &WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace),
-            "auth",
+            &spec_id("auth"),
             SpecFileKey::Tasks,
         );
 
