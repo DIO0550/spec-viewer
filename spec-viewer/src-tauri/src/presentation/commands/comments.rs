@@ -2177,6 +2177,40 @@ mod tests {
     }
 
     #[test]
+    fn presentation_parsers_preserve_comment_ipc_error_codes() {
+        let spec_error = parse_spec_id("../secret").expect_err("unsafe spec id should fail");
+        let general_error = CommandError::from(spec_error.clone());
+        let comment_error = CommentCommandError::from_app_error(spec_error);
+
+        assert_eq!("invalidSpec", general_error.code());
+        assert_eq!(
+            CommentCommandErrorCode::InvalidRequest,
+            comment_error.code()
+        );
+
+        let id_error = parse_comment_id("   ").expect_err("missing comment id should fail");
+        let value = serde_json::to_value(CommentCommandError::from_app_error(id_error))
+            .expect("error should serialize");
+
+        assert_eq!("invalidComment", value["code"]);
+
+        let body_error = parse_comment_body("   ").expect_err("missing comment body should fail");
+        let value = serde_json::to_value(AddCommentCommandError::from_app_error(body_error))
+            .expect("error should serialize");
+
+        assert_eq!("invalidComment", value["code"]);
+    }
+
+    #[test]
+    fn comment_command_error_keeps_invalid_spec_compatibility_through_command_error() {
+        let error = CommentCommandError::from_command_error(CommandError::from(
+            parse_spec_id("../secret").expect_err("unsafe spec id should fail"),
+        ));
+
+        assert_eq!(CommentCommandErrorCode::InvalidRequest, error.code());
+    }
+
+    #[test]
     fn delete_comment_response_confirms_delete_action() {
         let response = DeleteCommentResponse { deleted: true };
 
