@@ -153,11 +153,14 @@ pub fn decode_user_review_record(
 pub fn decode_user_review_document(contents: &str) -> Result<UserReview, UserReviewRecordProblem> {
     let unique_value = serde_json::from_str::<UniqueJsonValue>(contents)
         .map_err(|error| malformed_record(error.to_string()))?;
-    let schema_version = unique_value
+    let root = unique_value
         .0
         .as_object()
-        .and_then(|object| object.get("schemaVersion"))
-        .and_then(Value::as_str)
+        .ok_or_else(|| malformed_record("document root must be an object"))?;
+    let schema_version = root
+        .get("schemaVersion")
+        .ok_or_else(|| malformed_record("schemaVersion is required"))?
+        .as_str()
         .ok_or_else(|| malformed_record("schemaVersion must be a string"))?;
 
     if schema_version != USER_REVIEW_DOCUMENT_SCHEMA_VERSION {
