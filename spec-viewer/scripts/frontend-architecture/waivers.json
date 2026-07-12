@@ -2,180 +2,6 @@
   "waivers": [
     {
       "rule": "cross-feature-deep-import",
-      "source": "app/App/hooks/useCommentSelection/index.ts",
-      "specifier": "@/features/comments/domain/commentListState",
-      "issue": 106
-    },
-    {
-      "rule": "cross-feature-deep-import",
-      "source": "app/App/hooks/useViewRefresh/index.ts",
-      "specifier": "@/features/specs/domain/specViewSelection",
-      "issue": 106
-    },
-    {
-      "rule": "cross-feature-deep-import",
-      "source": "app/App/hooks/useViewRefresh/index.ts",
-      "specifier": "@/features/specs/hooks/useSpecFileWatcher",
-      "issue": 106
-    },
-    {
-      "rule": "cross-feature-deep-import",
-      "source": "app/App/index.tsx",
-      "specifier": "@/features/comments/domain/commentScope",
-      "issue": 106
-    },
-    {
-      "rule": "cross-feature-deep-import",
-      "source": "app/App/index.tsx",
-      "specifier": "@/features/comments/domain/commentStatusFilter",
-      "issue": 106
-    },
-    {
-      "rule": "cross-feature-deep-import",
-      "source": "app/App/SpecViewCommentSidebar/index.tsx",
-      "specifier": "@/features/comments/domain/commentListState",
-      "issue": 106
-    },
-    {
-      "rule": "cross-feature-deep-import",
-      "source": "app/context/specViewSelection/index.tsx",
-      "specifier": "@/features/specs/domain/specViewSelection",
-      "issue": 106
-    },
-    {
-      "rule": "cross-feature-deep-import",
-      "source": "app/context/specViewSelection/types.ts",
-      "specifier": "@/features/specs/domain/specViewSelection",
-      "issue": 106
-    },
-    {
-      "rule": "cross-feature-deep-import",
-      "source": "app/context/specViewSelection/useSpecViewSelectionState.ts",
-      "specifier": "@/features/specs/domain/specViewSelection",
-      "issue": 106
-    },
-    {
-      "rule": "cross-feature-deep-import",
-      "source": "features/comments/domain/commentScope/index.ts",
-      "specifier": "@/features/specs/domain/specViewSelection",
-      "issue": 106
-    },
-    {
-      "rule": "cross-feature-deep-import",
-      "source": "features/comments/domain/commentScope/index.ts",
-      "specifier": "@/features/specs/types/spec",
-      "issue": 106
-    },
-    {
-      "rule": "cross-feature-deep-import",
-      "source": "features/comments/hooks/useCommentOperations/index.ts",
-      "specifier": "@/features/specs/domain/specViewSelection",
-      "issue": 106
-    },
-    {
-      "rule": "cross-feature-deep-import",
-      "source": "features/comments/hooks/useComments/index.ts",
-      "specifier": "@/features/specs/domain/specViewSelection",
-      "issue": 106
-    },
-    {
-      "rule": "cross-feature-deep-import",
-      "source": "features/comments/hooks/useMarkdownTextSelection/index.ts",
-      "specifier": "@/features/specs/types/spec",
-      "issue": 106
-    },
-    {
-      "rule": "cross-feature-deep-import",
-      "source": "features/comments/lib/comment-anchor-draft/index.ts",
-      "specifier": "@/features/specs/types/spec",
-      "issue": 106
-    },
-    {
-      "rule": "cross-feature-deep-import",
-      "source": "features/comments/lib/mcpFeedback/index.ts",
-      "specifier": "@/features/specs/types/spec",
-      "issue": 106
-    },
-    {
-      "rule": "cross-feature-deep-import",
-      "source": "features/comments/types/comment/index.ts",
-      "specifier": "@/features/specs/types/spec",
-      "issue": 106
-    },
-    {
-      "rule": "cross-feature-deep-import",
-      "source": "features/review-runs/domain/reviewBundleFile/index.ts",
-      "specifier": "@/features/specs/types/spec",
-      "issue": 106
-    },
-    {
-      "rule": "cross-feature-deep-import",
-      "source": "features/review-runs/domain/userReview/index.ts",
-      "specifier": "@/features/comments/types/comment",
-      "issue": 106
-    },
-    {
-      "rule": "cross-feature-deep-import",
-      "source": "features/review-runs/domain/userReview/index.ts",
-      "specifier": "@/features/specs/types/spec",
-      "issue": 106
-    },
-    {
-      "rule": "cross-feature-deep-import",
-      "source": "features/review-runs/domain/userReviewOperation/index.ts",
-      "specifier": "@/features/comments/types/comment",
-      "issue": 106
-    },
-    {
-      "rule": "cross-feature-deep-import",
-      "source": "features/review-runs/domain/userReviewTarget/index.ts",
-      "specifier": "@/features/comments/types/comment",
-      "issue": 106
-    },
-    {
-      "rule": "cross-feature-deep-import",
-      "source": "features/review-runs/domain/userReviewTarget/index.ts",
-      "specifier": "@/features/specs/domain/specViewSelection",
-      "issue": 106
-    },
-    {
-      "rule": "cross-feature-deep-import",
-      "source": "features/review-runs/hooks/useArchiveUserReview/index.ts",
-      "specifier": "@/features/specs/domain/specViewSelection",
-      "issue": 106
-    },
-    {
-      "rule": "cross-feature-deep-import",
-      "source": "features/review-runs/hooks/useCreateUserReview/index.ts",
-      "specifier": "@/features/specs/domain/specViewSelection",
-      "issue": 106
-    },
-    {
-      "rule": "cross-feature-deep-import",
-      "source": "features/review-runs/hooks/useUserReviewList/index.ts",
-      "specifier": "@/features/specs/domain/specViewSelection",
-      "issue": 106
-    },
-    {
-      "rule": "cross-feature-deep-import",
-      "source": "features/review-runs/hooks/useUserReviews/index.ts",
-      "specifier": "@/features/specs/domain/specViewSelection",
-      "issue": 106
-    },
-    {
-      "rule": "cross-feature-deep-import",
-      "source": "features/review-runs/infra/userReviewGateway/index.ts",
-      "specifier": "@/features/comments/types/comment",
-      "issue": 106
-    },
-    {
-      "rule": "cross-feature-deep-import",
-      "source": "features/review-runs/types/userReviewIpc/index.ts",
-      "specifier": "@/features/comments/types/comment",
-      "issue": 106
-    },
-    {
-      "rule": "cross-feature-deep-import",
       "source": "features/specs/components/MarkdownViewer/index.tsx",
       "specifier": "@/features/comments/components/AddCommentPopover",
       "issue": 108
@@ -205,12 +31,6 @@
       "issue": 108
     },
     {
-      "rule": "cross-feature-deep-import",
-      "source": "features/workspace/components/WorkspaceToolbar/index.tsx",
-      "specifier": "@/features/preferences/domain/theme",
-      "issue": 106
-    },
-    {
       "rule": "domain-forbidden-dependency",
       "source": "features/comments/domain/comment/index.ts",
       "specifier": "@/features/comments/types/comment",
@@ -236,42 +56,6 @@
     },
     {
       "rule": "domain-forbidden-dependency",
-      "source": "features/comments/domain/commentScope/index.ts",
-      "specifier": "@/features/specs/domain/specViewSelection",
-      "issue": 106
-    },
-    {
-      "rule": "domain-forbidden-dependency",
-      "source": "features/comments/domain/commentScope/index.ts",
-      "specifier": "@/features/specs/types/spec",
-      "issue": 106
-    },
-    {
-      "rule": "domain-forbidden-dependency",
-      "source": "features/preferences/domain/theme/index.ts",
-      "specifier": "@/types/utilityTypes",
-      "issue": 106
-    },
-    {
-      "rule": "domain-forbidden-dependency",
-      "source": "features/review-runs/domain/reviewBundleFile/index.ts",
-      "specifier": "@/features/specs/types/spec",
-      "issue": 106
-    },
-    {
-      "rule": "domain-forbidden-dependency",
-      "source": "features/review-runs/domain/userReview/index.ts",
-      "specifier": "@/features/comments/types/comment",
-      "issue": 106
-    },
-    {
-      "rule": "domain-forbidden-dependency",
-      "source": "features/review-runs/domain/userReview/index.ts",
-      "specifier": "@/features/specs/types/spec",
-      "issue": 106
-    },
-    {
-      "rule": "domain-forbidden-dependency",
       "source": "features/review-runs/domain/userReviewCollection/index.ts",
       "specifier": "@/features/review-runs/types/userReviewIpc",
       "issue": 110
@@ -285,26 +69,8 @@
     {
       "rule": "domain-forbidden-dependency",
       "source": "features/review-runs/domain/userReviewOperation/index.ts",
-      "specifier": "@/features/comments/types/comment",
-      "issue": 106
-    },
-    {
-      "rule": "domain-forbidden-dependency",
-      "source": "features/review-runs/domain/userReviewOperation/index.ts",
       "specifier": "@/features/review-runs/types/userReviewIpc",
       "issue": 110
-    },
-    {
-      "rule": "domain-forbidden-dependency",
-      "source": "features/review-runs/domain/userReviewTarget/index.ts",
-      "specifier": "@/features/comments/types/comment",
-      "issue": 106
-    },
-    {
-      "rule": "domain-forbidden-dependency",
-      "source": "features/review-runs/domain/userReviewTarget/index.ts",
-      "specifier": "@/features/specs/domain/specViewSelection",
-      "issue": 106
     },
     {
       "rule": "domain-forbidden-dependency",
@@ -411,26 +177,8 @@
     {
       "rule": "package-cycle-dependency",
       "source": "features/comments",
-      "specifier": "features/specs",
-      "issue": 106
-    },
-    {
-      "rule": "package-cycle-dependency",
-      "source": "features/comments",
       "specifier": "shared",
       "issue": 107
-    },
-    {
-      "rule": "package-cycle-dependency",
-      "source": "features/review-runs",
-      "specifier": "features/comments",
-      "issue": 106
-    },
-    {
-      "rule": "package-cycle-dependency",
-      "source": "features/review-runs",
-      "specifier": "features/specs",
-      "issue": 106
     },
     {
       "rule": "package-cycle-dependency",
