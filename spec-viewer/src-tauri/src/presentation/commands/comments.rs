@@ -983,8 +983,8 @@ fn build_comment_export(
         }
         ExportCommentsTargetRequest::Spec { spec_id } => {
             let parsed_spec_id = parse_spec_id(spec_id)?;
-            let specs = use_cases.list_specs(workspace)?.into_specs();
-            let spec = find_spec_node(&specs, &parsed_spec_id).ok_or_else(|| {
+            let tree = use_cases.list_specs(workspace)?.into_tree();
+            let spec = tree.find(&parsed_spec_id).ok_or_else(|| {
                 CommandError::invalid_request(format!("unknown spec id: {spec_id}"))
             })?;
             let files = export_comment_files_for_spec(use_cases, workspace, spec)?;
@@ -1004,10 +1004,9 @@ fn build_comment_export(
             })
         }
         ExportCommentsTargetRequest::Workspace => {
-            let specs = use_cases.list_specs(workspace)?.into_specs();
-            let files = specs
-                .iter()
-                .flat_map(|spec| collect_spec_nodes(spec).into_iter())
+            let tree = use_cases.list_specs(workspace)?.into_tree();
+            let files = tree
+                .reviewable_nodes()
                 .map(|spec| export_comment_files_for_spec(use_cases, workspace, spec))
                 .collect::<CommandResult<Vec<_>>>()?
                 .into_iter()
@@ -1056,18 +1055,16 @@ fn build_llm_prompt(
         }
         ExportCommentsTargetRequest::Spec { spec_id } => {
             let parsed_spec_id = parse_spec_id(spec_id)?;
-            let specs = use_cases.list_specs(workspace)?.into_specs();
-            let spec = find_spec_node(&specs, &parsed_spec_id).ok_or_else(|| {
+            let tree = use_cases.list_specs(workspace)?.into_tree();
+            let spec = tree.find(&parsed_spec_id).ok_or_else(|| {
                 CommandError::invalid_request(format!("unknown spec id: {spec_id}"))
             })?;
 
             prompt_files_for_spec(use_cases, workspace, spec)?
         }
         ExportCommentsTargetRequest::Workspace => {
-            let specs = use_cases.list_specs(workspace)?.into_specs();
-            specs
-                .iter()
-                .flat_map(|spec| collect_spec_nodes(spec).into_iter())
+            let tree = use_cases.list_specs(workspace)?.into_tree();
+            tree.reviewable_nodes()
                 .map(|spec| prompt_files_for_spec(use_cases, workspace, spec))
                 .collect::<CommandResult<Vec<_>>>()?
                 .into_iter()
@@ -1198,30 +1195,6 @@ fn prompt_file(
         unresolved_comments,
         orphaned_comments,
     })
-}
-
-fn find_spec_node<'a>(specs: &'a [SpecNode], spec_id: &SpecId) -> Option<&'a SpecNode> {
-    specs.iter().find_map(|spec| {
-        if spec.id() == spec_id {
-            return Some(spec);
-        }
-
-        find_spec_node(spec.children(), spec_id)
-    })
-}
-
-fn collect_spec_nodes(spec: &SpecNode) -> Vec<&SpecNode> {
-    let mut nodes = Vec::new();
-
-    if !spec.files().is_empty() {
-        nodes.push(spec);
-    }
-
-    for child in spec.children() {
-        nodes.extend(collect_spec_nodes(child));
-    }
-
-    nodes
 }
 
 fn count_exported_comments(files: &[ExportedCommentFile]) -> usize {

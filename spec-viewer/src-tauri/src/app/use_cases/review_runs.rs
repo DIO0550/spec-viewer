@@ -628,12 +628,12 @@ fn collect_target_files(
             file_label: file_key.display_label().to_string(),
         }]),
         UserReviewRunTarget::Spec { spec_id } => {
-            let specs = use_cases.list_specs(workspace)?.into_specs();
-            let spec = find_spec_node(&specs, spec_id).ok_or_else(|| {
-                AppUseCaseError::ReviewRunExport {
+            let tree = use_cases.list_specs(workspace)?.into_tree();
+            let spec = tree
+                .find(spec_id)
+                .ok_or_else(|| AppUseCaseError::ReviewRunExport {
                     message: format!("unknown spec id: {spec_id}"),
-                }
-            })?;
+                })?;
             let files = spec
                 .files()
                 .iter()
@@ -1003,16 +1003,6 @@ fn context_snapshot_path(
         file_key.as_str()
     ))
     .map_err(AppUseCaseError::from)
-}
-
-fn find_spec_node<'a>(specs: &'a [SpecNode], spec_id: &SpecId) -> Option<&'a SpecNode> {
-    specs.iter().find_map(|spec| {
-        if spec.id() == spec_id {
-            return Some(spec);
-        }
-
-        find_spec_node(spec.children(), spec_id)
-    })
 }
 
 fn format_target(target: &UserReviewRunTarget) -> String {

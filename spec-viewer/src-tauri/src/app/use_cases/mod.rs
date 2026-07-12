@@ -14,11 +14,12 @@ use crate::{
         comment::{CommentDomainError, CommentRepositoryError},
         spec::{
             MarkdownBlock, ReadSpecFile, ScanSpecTree, SpecDomainError, SpecFileKey,
-            SpecFileReadPortError, SpecId, SpecNode, SpecTreeScanPortError,
+            SpecFileReadPortError, SpecId, SpecNode, SpecTree, SpecTreeAssembler,
+            SpecTreeAssemblyError, SpecTreeScanPortError,
         },
         workspace::{
             DetectWorkspace, LoadWorkspaceConfig, WorkspaceConfig, WorkspaceConfigLoadPortError,
-            WorkspaceDetectionPortError, WorkspaceLayout,
+            WorkspaceDetectionPortError, WorkspaceLayout, WorkspaceTopology,
         },
     },
     infrastructure::{
@@ -87,7 +88,7 @@ impl Default for FilesystemAppUseCases {
         Self::new(
             FilesystemWorkspaceDetector::new(),
             WorkspaceConfigLoader::new(),
-            FilesystemSpecTreeScanner::new(),
+            FilesystemSpecTreeScanner::new(WorkspaceConfigLoader::new()),
             FilesystemMarkdownReader::new(),
         )
     }
@@ -193,11 +194,16 @@ where
         &self,
         workspace: &LoadWorkspaceResult,
     ) -> Result<ListSpecsResult, AppUseCaseError> {
-        let specs = self
+        let facts = self
             .spec_tree_scanner
             .scan_spec_tree(workspace.layout(), workspace.config())?;
+        let tree = SpecTreeAssembler::new(WorkspaceTopology::default()).assemble(
+            workspace.layout().kind(),
+            workspace.config(),
+            facts,
+        )?;
 
-        Ok(ListSpecsResult::new(specs))
+        Ok(ListSpecsResult::from_tree(tree))
     }
 
     pub fn read_spec_file(
@@ -257,20 +263,34 @@ impl LoadWorkspaceResult {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ListSpecsResult {
-    specs: Vec<SpecNode>,
+    tree: SpecTree,
 }
 
 impl ListSpecsResult {
     pub fn new(specs: Vec<SpecNode>) -> Self {
-        Self { specs }
+        Self {
+            tree: SpecTree::new(specs),
+        }
+    }
+
+    pub fn from_tree(tree: SpecTree) -> Self {
+        Self { tree }
     }
 
     pub fn specs(&self) -> &[SpecNode] {
-        &self.specs
+        self.tree.roots()
+    }
+
+    pub fn tree(&self) -> &SpecTree {
+        &self.tree
+    }
+
+    pub fn into_tree(self) -> SpecTree {
+        self.tree
     }
 
     pub fn into_specs(self) -> Vec<SpecNode> {
-        self.specs
+        self.tree.into_roots()
     }
 }
 
@@ -344,6 +364,14 @@ impl From<SpecTreeScanPortError> for AppUseCaseError {
     }
 }
 
+impl From<SpecTreeAssemblyError> for AppUseCaseError {
+    fn from(source: SpecTreeAssemblyError) -> Self {
+        Self::SpecTreeScan {
+            message: source.to_string(),
+        }
+    }
+}
+
 impl From<SpecFileReadPortError> for AppUseCaseError {
     fn from(source: SpecFileReadPortError) -> Self {
         Self::MarkdownRead {
@@ -401,7 +429,10 @@ mod tests {
 
     use super::*;
     use crate::domain::{
-        spec::{SpecFile, SpecFileStatus},
+        spec::{
+            SpecDirectoryFact, SpecDocumentFormat, SpecFile, SpecFileFact, SpecFileStatus,
+            SpecRootFact, SpecTreeFacts,
+        },
         workspace::{
             SpecConfigOverride, WorkspaceConfig, WorkspaceConfigSource, WorkspaceFileMapping,
             WorkspaceKind, WorkspaceLayout, WorkspaceRoot,
@@ -446,7 +477,7 @@ mod tests {
 
     #[derive(Debug, Clone)]
     struct FakeSpecTreeScanner {
-        result: Result<Vec<SpecNode>, SpecTreeScanPortError>,
+        result: Result<SpecTreeFacts, SpecTreeScanPortError>,
     }
 
     impl ScanSpecTree for FakeSpecTreeScanner {
@@ -454,7 +485,7 @@ mod tests {
             &self,
             _layout: &WorkspaceLayout,
             _config: &WorkspaceConfig,
-        ) -> Result<Vec<SpecNode>, SpecTreeScanPortError> {
+        ) -> Result<SpecTreeFacts, SpecTreeScanPortError> {
             self.result.clone()
         }
     }
@@ -484,7 +515,7 @@ mod tests {
             &self,
             _layout: &WorkspaceLayout,
             _config: &WorkspaceConfig,
-        ) -> Result<Vec<SpecNode>, SpecTreeScanPortError> {
+        ) -> Result<SpecTreeFacts, SpecTreeScanPortError> {
             panic!("spec tree scanner should not be called")
         }
     }
@@ -583,7 +614,7 @@ mod tests {
             config_with_mapping(SpecFileKey::Tasks, "tasks.md"),
         );
         let spec = SpecNode::leaf(
-            SpecId::new("auth").expect("spec id should be valid"),
+            SpecId::new(".plugin-workspace/.specs/auth").expect("spec id should be valid"),
             "auth",
             vec![
                 SpecFile::new(SpecFileKey::Tasks, "tasks.md", SpecFileStatus::Present)
@@ -591,6 +622,26 @@ mod tests {
             ],
         )
         .expect("spec node should be valid");
+        let root = SpecNode::source_group(
+            SpecId::new(".plugin-workspace/.specs").expect("root id should be valid"),
+            "ルート",
+            vec![spec.clone()],
+        )
+        .expect("root node should be valid");
+        let facts = SpecTreeFacts::new(vec![SpecRootFact::new(
+            ".plugin-workspace/.specs",
+            vec![SpecDirectoryFact::new(
+                "auth",
+                vec![SpecFileFact::new(
+                    SpecFileKey::Tasks,
+                    "tasks.md",
+                    SpecFileStatus::Present,
+                    SpecDocumentFormat::Markdown,
+                    WorkspaceConfigSource::WorkspaceConfig,
+                )],
+                Vec::new(),
+            )],
+        )]);
         let use_cases = app_use_cases(
             FakeWorkspaceDetector {
                 result: Ok(workspace.layout().clone()),
@@ -598,9 +649,7 @@ mod tests {
             FakeConfigLoader {
                 result: Ok(workspace.config().clone()),
             },
-            FakeSpecTreeScanner {
-                result: Ok(vec![spec.clone()]),
-            },
+            FakeSpecTreeScanner { result: Ok(facts) },
             PanicMarkdownReader,
         );
 
@@ -608,7 +657,7 @@ mod tests {
             .list_specs(&workspace)
             .expect("specs should be listed");
 
-        assert_eq!(&[spec], result.specs());
+        assert_eq!(&[root], result.specs());
     }
 
     #[test]
