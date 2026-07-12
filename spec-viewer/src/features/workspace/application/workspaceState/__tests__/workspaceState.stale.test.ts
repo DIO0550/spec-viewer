@@ -3,7 +3,8 @@ import { expect, test } from "vitest";
 import { createGeneration } from "@/features/workspace/application/generation";
 import { WorkspaceState } from "@/features/workspace/application/workspaceState";
 import type { Workspace } from "@/features/workspace/domain/workspace";
-import type { WorkspaceError } from "@/features/workspace/domain/workspaceError";
+import type { WorkspaceFeatureError } from "@/features/workspace/application/workspaceError";
+import { toWorkspaceFeatureError } from "@/features/workspace/infra/tauri/workspaceErrorMapper";
 
 const workspace: Workspace = {
   root: "/workspace/spec-reviewer",
@@ -17,15 +18,10 @@ const otherWorkspace: Workspace = {
   files: [],
 };
 
-const workspaceError: WorkspaceError = {
-  reason: "detectionFailed",
+const workspaceError: WorkspaceFeatureError = toWorkspaceFeatureError({
+  code: "workspaceDetection",
   message: "not a workspace",
-  cause: {
-    code: "workspaceDetection",
-    message: "not a workspace",
-    raw: "not a workspace",
-  },
-};
+});
 
 test("WorkspaceStateはreset前のstale成功eventを無視する", () => {
   const requestId = createGeneration().next();

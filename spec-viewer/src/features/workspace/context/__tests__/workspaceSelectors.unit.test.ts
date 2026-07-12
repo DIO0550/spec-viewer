@@ -8,6 +8,7 @@ import {
   selectWorkspaceError,
   type WorkspaceState,
 } from "@/features/workspace/context";
+import { toWorkspaceFeatureError } from "@/features/workspace/infra/tauri/workspaceErrorMapper";
 import type { Workspace } from "@/features/workspace/types/workspace";
 
 const workspace: Workspace = {
@@ -19,15 +20,10 @@ const workspace: Workspace = {
 const failedState: WorkspaceState = {
   status: "failed",
   requestedPath: "/workspace/missing",
-  error: {
-    reason: "detectionFailed",
+  error: toWorkspaceFeatureError({
+    code: "workspaceDetection",
     message: "not a workspace",
-    cause: {
-      code: "workspaceDetection",
-      message: "not a workspace",
-      raw: "not a workspace",
-    },
-  },
+  }),
 };
 
 test("workspace selectorsはopenedのactive rootをworkspace.rootから導出する", () => {

@@ -13,8 +13,8 @@ import type {
 } from "@/features/comments/hooks/useComments";
 import type { Comment, CommentAnchor } from "@/features/comments/types/comment";
 import { CommentId } from "@/features/comments/types/comment";
-import { AddCommentCommandError } from "@/features/comments/infra/tauri/addComment";
-import type { CommentFeatureError } from "@/features/comments/domain/commentError";
+import type { CommentFeatureError } from "@/features/comments/application/commentError";
+import { toCommentFeatureError } from "@/features/comments/infra/tauri/commentErrorMapper";
 
 const commentId = CommentId.fromString;
 
@@ -40,17 +40,10 @@ const comment: Comment = {
   updatedAt: "2026-05-05T10:00:00Z",
 };
 
-const commandError = AddCommentCommandError.fromUnknown({
+const featureError: CommentFeatureError = toCommentFeatureError("add", {
   code: "commentRepository",
   message: "Comment operation failed.",
 });
-
-const featureError: CommentFeatureError = {
-  feature: "comments",
-  code: "commentRepository",
-  message: "Comment operation failed.",
-  cause: commandError,
-};
 
 function createCommentOperations(
   operationState: UseCommentOperationsResult["operationState"] = CommentOperationIdleState.create(),

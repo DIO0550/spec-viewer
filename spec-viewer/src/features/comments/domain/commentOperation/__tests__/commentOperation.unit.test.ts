@@ -8,22 +8,10 @@ import {
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
 import { CommentId } from "@/features/comments/types/comment";
-import { AddCommentCommandError } from "@/features/comments/infra/tauri/addComment";
-import type { CommentFeatureError } from "@/features/comments/domain/commentError";
 
 const commentId = CommentId.fromString;
 
-const commandError = AddCommentCommandError.fromUnknown({
-  code: "commentRepository",
-  message: "Comment operation failed.",
-});
-
-const featureError: CommentFeatureError = {
-  feature: "comments",
-  code: "commentRepository",
-  message: "Comment operation failed.",
-  cause: commandError,
-};
+const featureError = { kind: "commentFailure" } as const;
 
 test("CommentOperationIdleState.createは操作していない状態を生成する", () => {
   expect(CommentOperationIdleState.create()).toEqual({

@@ -15,7 +15,12 @@ import type {
   SpecTreeData as SpecTreeShape,
   SpecTreeState,
 } from "@/features/specs";
-import { MarkdownViewer, SpecTabs, SpecTree } from "@/features/specs";
+import {
+  MarkdownViewer,
+  SpecTabs,
+  SpecTree,
+  toSpecFeatureError,
+} from "@/features/specs";
 import {
   WorkspaceSidebarSection,
   WorkspaceToolbar,
@@ -370,11 +375,10 @@ export const Error: Story = {
       status: "error",
       workspacePath,
       tree: null,
-      error: {
+      error: toSpecFeatureError("list", {
         code: "specTreeScan",
         message: "Spec directory could not be scanned.",
-        raw: "Spec directory could not be scanned.",
-      },
+      }),
     },
     documentState: {
       status: "error",
@@ -382,11 +386,10 @@ export const Error: Story = {
       specId: sampleSpec.id,
       fileKey: "tasks",
       document: null,
-      error: {
+      error: toSpecFeatureError("read", {
         code: "markdownRead",
         message: "Markdown file could not be read.",
-        raw: "Markdown file could not be read.",
-      },
+      }),
     },
     selectedSpec: sampleSpec,
     selectedFileKey: "tasks",

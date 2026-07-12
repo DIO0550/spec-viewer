@@ -4,6 +4,7 @@ import { beforeEach, expect, test, vi } from "vitest";
 
 import type { SpecDocument, SpecTree } from "@/features/specs/types/spec";
 import type { SpecCommands } from "@/features/specs/application/ports/specCommands";
+import { toSpecFeatureError } from "@/features/specs/infra/tauri/specErrorMapper";
 import { useSpecs } from "@/features/specs/hooks/useSpecs";
 
 const specCommandMocks = vi.hoisted(() => ({
@@ -1170,17 +1171,9 @@ test("useSpecsはarchive error stateを保持して現在のtreeを維持する"
   });
 
   expect(archived).toBe(false);
-  expect(result.current.state.archiveSpecError).toEqual({
-    feature: "specs",
-    code: "unknown",
-    message: "archive failed",
-    cause: {
-      command: "archive_spec",
-      code: "unknown",
-      message: "archive failed",
-      raw: archiveError,
-    },
-  });
+  expect(result.current.state.archiveSpecError).toEqual(
+    toSpecFeatureError("archive", archiveError),
+  );
   expect(result.current.state.archivingSpecId).toBeNull();
   expect(result.current.state.specTreeState.status).toBe("ready");
   expect(result.current.state.selection.specId).toBe("phase-1-viewer");
@@ -1206,17 +1199,7 @@ test("useSpecsはlistSpecs errorでtreeをerrorにしてselectionをresetする"
     status: "error",
     workspacePath: "/workspace/spec-reviewer",
     tree: null,
-    error: {
-      feature: "specs",
-      code: "unknown",
-      message: "scan failed",
-      cause: {
-        command: "list_specs",
-        code: "unknown",
-        message: "scan failed",
-        raw: scanError,
-      },
-    },
+    error: toSpecFeatureError("list", scanError),
   });
   expect(result.current.state.selection.specId).toBeNull();
   expect(result.current.state.selection.fileKey).toBeNull();
@@ -1247,17 +1230,7 @@ test("useSpecsはreadSpecFile errorでdocumentをerrorにしてtree selectionを
       workspacePath: "/workspace/spec-reviewer",
       specId: "phase-1-viewer",
       fileKey: "tasks",
-      error: {
-        feature: "specs",
-        code: "unknown",
-        message: "read failed",
-        cause: {
-          command: "read_spec_file",
-          code: "unknown",
-          message: "read failed",
-          raw: readError,
-        },
-      },
+      error: toSpecFeatureError("read", readError),
     }),
   );
   result.unmount();

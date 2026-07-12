@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { createRef } from "react";
 import { fn } from "storybook/test";
 
+import { toSpecFeatureError } from "@/features/specs";
 import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
 import type { SpecDocument } from "@/features/specs/types/spec";
 import { MarkdownViewerStatusPanel } from "./index";
@@ -45,11 +46,10 @@ const errorState: SpecDocumentState = {
   specId: "phase-1-viewer",
   fileKey: "tasks",
   document: null,
-  error: {
+  error: toSpecFeatureError("read", {
     code: "markdownRead",
     message: "Markdown file could not be read.",
-    raw: "Markdown file could not be read.",
-  },
+  }),
 };
 
 const missingState: SpecDocumentState = {

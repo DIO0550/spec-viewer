@@ -10,6 +10,7 @@ import type {
 } from "@/features/review-runs/hooks/useUserReviews";
 import type { UserReview } from "@/features/review-runs/types/userReviewIpc";
 import { UserReviewPanel } from "@/features/review-runs/components/UserReviewPanel";
+import { toUserReviewFeatureError } from "@/features/review-runs/infra/tauri/userReviewErrorMapper";
 
 const activeRunBranchName =
   "spec-reviewer/2026-05-06T120000Z-file-tasks-abcdef12";
@@ -146,11 +147,10 @@ test("UserReviewPanelは作成エラーを日本語alertで表示する", () => 
     createState: {
       status: "error",
       payload: { commentIds: [], workspaceMode: "currentWorkspace" },
-      error: {
+      error: toUserReviewFeatureError("create", {
         code: "userReviewExport",
         message: "source files have uncommitted changes",
-        raw: {},
-      },
+      }),
     },
   });
 

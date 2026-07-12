@@ -12,7 +12,12 @@ import type {
   SpecNode,
   SpecTreeData as SpecTreeShape,
 } from "@/features/specs";
-import { MarkdownViewer, SpecTabs, SpecTree } from "@/features/specs";
+import {
+  MarkdownViewer,
+  SpecTabs,
+  SpecTree,
+  toSpecFeatureError,
+} from "@/features/specs";
 import { WorkspaceToolbar } from "@/features/workspace";
 import { WorkspaceLayout } from "@/shared/ui/WorkspaceLayout";
 
@@ -778,11 +783,10 @@ test.each([
       status: "error",
       workspacePath,
       tree: null,
-      error: {
+      error: toSpecFeatureError("list", {
         code: "specTreeScan",
         message: "Spec directory could not be scanned.",
-        raw: "Spec directory could not be scanned.",
-      },
+      }),
     } satisfies SpecTreeState,
   ],
   [
@@ -874,11 +878,10 @@ test.each([
       status: "error",
       workspacePath,
       tree: null,
-      error: {
+      error: toSpecFeatureError("list", {
         code: "specTreeScan",
         message: "Spec directory could not be scanned.",
-        raw: "Spec directory could not be scanned.",
-      },
+      }),
     } satisfies SpecTreeState,
   ],
   [

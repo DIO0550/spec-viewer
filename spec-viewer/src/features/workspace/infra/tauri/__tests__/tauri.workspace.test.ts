@@ -43,7 +43,7 @@ test("loadWorkspaceは不正なworkspace DTOをunknown command errorとして拒
     command: "load_workspace",
     code: "unknown",
     message: "Workspace kind is not supported",
-    raw: rawDto,
+    cause: rawDto,
   });
 });
 
@@ -71,7 +71,7 @@ test("loadWorkspaceはinvoke失敗時にcommand固有のworkspaceエラーでrej
     command: "load_workspace",
     code: "workspaceDetection",
     message: "workspace root was not found",
-    raw: rawError,
+    cause: rawError,
   });
 });
 

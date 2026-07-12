@@ -3,8 +3,6 @@ import { expect, test } from "vitest";
 import { CommentListState } from "@/features/comments/domain/commentListState";
 import type { Comment, CommentAnchor } from "@/features/comments/types/comment";
 import { CommentId } from "@/features/comments/types/comment";
-import { AddCommentCommandError } from "@/features/comments/infra/tauri/addComment";
-import type { CommentFeatureError } from "@/features/comments/domain/commentError";
 
 const commentId = CommentId.fromString;
 
@@ -36,17 +34,7 @@ const updatedComment: Comment = {
   updatedAt: "2026-05-05T10:15:00Z",
 };
 
-const commandError = AddCommentCommandError.fromUnknown({
-  code: "commentRepository",
-  message: "Comment operation failed.",
-});
-
-const featureError: CommentFeatureError = {
-  feature: "comments",
-  code: "commentRepository",
-  message: "Comment operation failed.",
-  cause: commandError,
-};
+const featureError = { kind: "commentFailure" } as const;
 
 test("CommentListState.idleはscope未選択の一覧状態を生成する", () => {
   expect(CommentListState.idle()).toEqual({

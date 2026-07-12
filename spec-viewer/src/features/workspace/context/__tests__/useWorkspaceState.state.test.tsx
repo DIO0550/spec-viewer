@@ -2,6 +2,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { beforeEach, expect, test, vi } from "vitest";
 
+import { toWorkspaceFeatureError } from "@/features/workspace/infra/tauri/workspaceErrorMapper";
 import type { Workspace } from "@/features/workspace/types/workspace";
 
 const loadWorkspaceMock = vi.hoisted(() =>
@@ -148,7 +149,7 @@ test("useWorkspaceStateは読み込み後callbackの例外をopen失敗状態に
     status: "failed",
     requestedPath: "/workspace/spec-reviewer",
     error: {
-      reason: "unknown",
+      reason: "unexpectedFailure",
       message: "recent workspace storage failed",
     },
   });
@@ -166,16 +167,7 @@ test("useWorkspaceStateは読み込み失敗をWorkspaceError状態にする", a
   expect(result.current.state).toEqual({
     status: "failed",
     requestedPath: "/workspace/missing",
-    error: {
-      reason: "unknown",
-      message: "missing workspace",
-      cause: {
-        command: "load_workspace",
-        code: "unknown",
-        message: "missing workspace",
-        raw: "missing workspace",
-      },
-    },
+    error: toWorkspaceFeatureError("missing workspace"),
   });
   expect(selectActiveWorkspaceRoot(result.current.state)).toBeNull();
   expect(selectWorkspaceError(result.current.state)?.message).toBe(
@@ -205,16 +197,7 @@ test("useWorkspaceStateは指定時に読み込み失敗後も現在のworkspace
   expect(result.current.state).toEqual({
     status: "opened",
     workspace,
-    lastOpenError: {
-      reason: "unknown",
-      message: "unsupported workspace",
-      cause: {
-        command: "load_workspace",
-        code: "unknown",
-        message: "unsupported workspace",
-        raw: "unsupported workspace",
-      },
-    },
+    lastOpenError: toWorkspaceFeatureError("unsupported workspace"),
   });
   expect(selectActiveWorkspaceRoot(result.current.state)).toBe(workspace.root);
   result.unmount();

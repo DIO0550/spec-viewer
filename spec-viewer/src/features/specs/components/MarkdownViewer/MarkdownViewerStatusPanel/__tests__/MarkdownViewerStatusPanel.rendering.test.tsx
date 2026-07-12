@@ -3,6 +3,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
+import { toSpecFeatureError } from "@/features/specs";
 import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
 import type { SpecDocument } from "@/features/specs/types/spec";
 import { MarkdownViewerPanel } from "@/features/specs/components/MarkdownViewer/MarkdownViewerPanel";
@@ -173,11 +174,10 @@ test("MarkdownViewerStatusPanelはerror状態でretryをonReloadへ委譲する"
         specId: "phase-1-viewer",
         fileKey: "tasks",
         document: null,
-        error: {
+        error: toSpecFeatureError("read", {
           code: "markdownRead",
           message: "Markdown file could not be read.",
-          raw: "Markdown file could not be read.",
-        },
+        }),
       }}
       selectedSpecLabel="Phase 1 Viewer"
       panelRef={createRef<HTMLElement>()}

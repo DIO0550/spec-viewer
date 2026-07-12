@@ -116,7 +116,7 @@ test("CreateUserReviewCommandErrorはinvalidSpecを保持する", () => {
     command: "create_user_review",
     code: "invalidSpec",
     message: "invalid review run target spec",
-    raw: rawError,
+    cause: rawError,
   });
 });
 
@@ -155,7 +155,7 @@ test("ListUserReviewsCommandErrorはinvalidSpecを保持する", () => {
     command: "list_user_reviews",
     code: "invalidSpec",
     message: "invalid review run target spec",
-    raw: rawError,
+    cause: rawError,
   });
 });
 
@@ -194,7 +194,7 @@ test("ArchiveUserReviewCommandErrorはinvalidSpecを保持する", () => {
     command: "archive_user_review",
     code: "invalidSpec",
     message: "invalid review run target spec",
-    raw: rawError,
+    cause: rawError,
   });
 });
 

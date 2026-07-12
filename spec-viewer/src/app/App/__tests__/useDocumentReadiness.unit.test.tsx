@@ -8,7 +8,10 @@ import {
   type DocumentReadiness,
 } from "@/app/App/useDocumentReadiness";
 import { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
-import type { SpecDocumentState as SpecDocumentStateType } from "@/features/specs";
+import {
+  type SpecDocumentState as SpecDocumentStateType,
+  toSpecFeatureError,
+} from "@/features/specs";
 
 const markdownDocument = {
   key: "tasks",
@@ -128,11 +131,12 @@ test.each([
     true,
   ],
   [
-    SpecDocumentState.failed("/workspace/spec-reviewer", "phase-1", "tasks", {
-      code: "unknown",
-      message: "failed",
-      raw: "failed",
-    }),
+    SpecDocumentState.failed(
+      "/workspace/spec-reviewer",
+      "phase-1",
+      "tasks",
+      toSpecFeatureError("read", new Error("failed")),
+    ),
     false,
     false,
   ],

@@ -145,7 +145,7 @@ test("addCommentはinvoke失敗時にcommand固有のcommentエラーでreject�
     command: "add_comment",
     code: "invalidComment",
     message: "comment body is required",
-    raw: rawError,
+    cause: rawError,
   });
 });
 
@@ -165,7 +165,7 @@ test.each([
     command: "add_comment",
     code,
     message: `${code} failure`,
-    raw: rawError,
+    cause: rawError,
   });
 });
 
@@ -179,7 +179,7 @@ test.each([
     command: "add_comment",
     code: "unknown",
     message,
-    raw: rawError,
+    cause: rawError,
   });
 });
 

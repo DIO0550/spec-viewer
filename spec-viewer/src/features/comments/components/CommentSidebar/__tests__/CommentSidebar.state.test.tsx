@@ -15,7 +15,7 @@ import {
   type CommentExportState,
   CommentSidebar,
 } from "@/features/comments/components/CommentSidebar";
-import { AddCommentCommandError } from "@/features/comments/infra/tauri/addComment";
+import { toCommentFeatureError } from "@/features/comments/infra/tauri/commentErrorMapper";
 
 const commentId = CommentIdValue.fromString;
 
@@ -301,15 +301,10 @@ test("CommentSidebarは読み込み失敗をalertで表示して再読み込み�
       listState={{
         status: "error",
         comments: [],
-        error: {
-          feature: "comments",
+        error: toCommentFeatureError("list", {
           code: "commentRepository",
           message: "Comment store could not be read.",
-          cause: AddCommentCommandError.fromUnknown({
-            code: "commentRepository",
-            message: "Comment store could not be read.",
-          }),
-        },
+        }),
       }}
       operationState={{
         status: "idle",

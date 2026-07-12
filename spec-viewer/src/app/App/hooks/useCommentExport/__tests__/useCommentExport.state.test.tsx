@@ -16,8 +16,7 @@ import type {
   GenerateLlmPromptResponse,
 } from "@/features/comments/types/comment";
 import { CommentId as CommentIdValue } from "@/features/comments/types/comment";
-import { ExportCommentsCommandError } from "@/features/comments";
-import { GenerateLlmPromptCommandError } from "@/features/comments";
+import { toCommentFeatureError } from "@/features/comments";
 import { getUnknownErrorMessage } from "@/shared/lib/errorMessage";
 
 const commentId = CommentIdValue.fromString;
@@ -220,7 +219,7 @@ test("export失敗でerror状態とExportCommentsCommandErrorのメッセージ�
   expect(hook.current.commentExportState).toEqual({
     status: "error",
     operation: "workspace",
-    message: ExportCommentsCommandError.fromUnknown(failure).message,
+    message: toCommentFeatureError("export", failure).message,
   });
   hook.unmount();
 });
@@ -279,7 +278,7 @@ test("LLM prompt生成失敗でerror状態とGenerateLlmPromptCommandErrorのメ
   expect(hook.current.commentExportState).toEqual({
     status: "error",
     operation: "workspace",
-    message: GenerateLlmPromptCommandError.fromUnknown(failure).message,
+    message: toCommentFeatureError("generatePrompt", failure).message,
   });
   hook.unmount();
 });
