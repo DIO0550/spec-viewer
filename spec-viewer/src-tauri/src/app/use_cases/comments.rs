@@ -58,18 +58,19 @@ where
 {
     pub fn list_comments(
         &self,
-        spec_id: &str,
+        spec_id: &SpecId,
         file_key: SpecFileKey,
         status_filter: CommentStatusFilter,
     ) -> Result<Vec<Comment>, AppUseCaseError> {
-        let query = CommentListQuery::with_status_filter(scope(spec_id, file_key)?, status_filter);
+        let scope = CommentScope::new(spec_id.clone(), file_key);
+        let query = CommentListQuery::with_status_filter(scope, status_filter);
 
         self.repository.list(&query).map_err(AppUseCaseError::from)
     }
 
     pub fn resolve_comment_anchors(
         &self,
-        spec_id: &str,
+        spec_id: &SpecId,
         file_key: SpecFileKey,
         status_filter: CommentStatusFilter,
         current_blocks: &[MarkdownBlock],
@@ -85,16 +86,16 @@ where
 
     pub fn add_comment(
         &self,
-        spec_id: &str,
+        spec_id: &SpecId,
         anchor: CommentAnchor,
-        body: impl Into<String>,
+        body: CommentBody,
     ) -> Result<Comment, AppUseCaseError> {
-        let scope = scope(spec_id, anchor.file_key())?;
+        let scope = CommentScope::new(spec_id.clone(), anchor.file_key());
         let now = self.clock.now();
         let comment = Comment::new(
             self.id_generator.generate_comment_id()?,
             anchor,
-            CommentBody::new(body)?,
+            body,
             now,
             now,
         )?;
@@ -106,16 +107,15 @@ where
 
     pub fn update_comment(
         &self,
-        spec_id: &str,
+        spec_id: &SpecId,
         file_key: SpecFileKey,
-        id: &str,
-        body: impl Into<String>,
+        id: &CommentId,
+        body: CommentBody,
     ) -> Result<Comment, AppUseCaseError> {
-        let scope = scope(spec_id, file_key)?;
-        let id = CommentId::new(id)?;
-        let mut comment = self.get_comment(&scope, &id)?;
+        let scope = CommentScope::new(spec_id.clone(), file_key);
+        let mut comment = self.get_comment(&scope, id)?;
 
-        comment.update_body(CommentBody::new(body)?, self.clock.now())?;
+        comment.update_body(body, self.clock.now())?;
 
         self.repository
             .update(&scope, comment)
@@ -124,59 +124,56 @@ where
 
     pub fn delete_comment(
         &self,
-        spec_id: &str,
+        spec_id: &SpecId,
         file_key: SpecFileKey,
-        id: &str,
+        id: &CommentId,
     ) -> Result<(), AppUseCaseError> {
-        let scope = scope(spec_id, file_key)?;
-        let id = CommentId::new(id)?;
+        let scope = CommentScope::new(spec_id.clone(), file_key);
 
         self.repository
-            .delete(&scope, &id)
+            .delete(&scope, id)
             .map_err(AppUseCaseError::from)
     }
 
     pub fn resolve_comment(
         &self,
-        spec_id: &str,
+        spec_id: &SpecId,
         file_key: SpecFileKey,
-        id: &str,
+        id: &CommentId,
     ) -> Result<Comment, AppUseCaseError> {
         self.set_comment_resolved(spec_id, file_key, id, true)
     }
 
     pub fn reopen_comment(
         &self,
-        spec_id: &str,
+        spec_id: &SpecId,
         file_key: SpecFileKey,
-        id: &str,
+        id: &CommentId,
     ) -> Result<Comment, AppUseCaseError> {
         self.set_comment_resolved(spec_id, file_key, id, false)
     }
 
     pub fn toggle_comment_resolved(
         &self,
-        spec_id: &str,
+        spec_id: &SpecId,
         file_key: SpecFileKey,
-        id: &str,
+        id: &CommentId,
     ) -> Result<Comment, AppUseCaseError> {
-        let scope = scope(spec_id, file_key)?;
-        let id = CommentId::new(id)?;
-        let comment = self.get_comment(&scope, &id)?;
+        let scope = CommentScope::new(spec_id.clone(), file_key);
+        let comment = self.get_comment(&scope, id)?;
 
-        self.set_comment_resolved(spec_id, file_key, id.as_str(), !comment.is_resolved())
+        self.set_comment_resolved(spec_id, file_key, id, !comment.is_resolved())
     }
 
     fn set_comment_resolved(
         &self,
-        spec_id: &str,
+        spec_id: &SpecId,
         file_key: SpecFileKey,
-        id: &str,
+        id: &CommentId,
         resolved: bool,
     ) -> Result<Comment, AppUseCaseError> {
-        let scope = scope(spec_id, file_key)?;
-        let id = CommentId::new(id)?;
-        let mut comment = self.get_comment(&scope, &id)?;
+        let scope = CommentScope::new(spec_id.clone(), file_key);
+        let mut comment = self.get_comment(&scope, id)?;
         let now = self.clock.now();
 
         if resolved {
@@ -328,10 +325,6 @@ impl GetCurrentTime for UtcCommentClock {
     fn now(&self) -> DateTime<Utc> {
         Utc::now()
     }
-}
-
-fn scope(spec_id: &str, file_key: SpecFileKey) -> Result<CommentScope, AppUseCaseError> {
-    Ok(CommentScope::new(SpecId::new(spec_id)?, file_key))
 }
 
 fn resolve_comment_anchor(

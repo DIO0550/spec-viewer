@@ -688,7 +688,7 @@ fn collect_bundle_files(
             let resolutions = use_cases
                 .comment_use_cases(workspace)
                 .resolve_comment_anchors(
-                    file.spec_id.as_str(),
+                    &file.spec_id,
                     file.file_key,
                     CommentStatusFilter::All,
                     document.blocks(),
