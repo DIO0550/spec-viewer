@@ -1,7 +1,5 @@
-import type { ArrayValueOf } from "@/types/utilityTypes";
-
 const themeAppearances = ["light", "dark"] as const;
-export type ThemeAppearance = ArrayValueOf<typeof themeAppearances>;
+export type ThemeAppearance = (typeof themeAppearances)[number];
 
 export const ThemeAppearance = {
   defaultValue: "light" as ThemeAppearance,
@@ -14,7 +12,7 @@ export const ThemeAppearance = {
 };
 
 const themeModes = ["system", ...themeAppearances] as const;
-export type ThemeMode = ArrayValueOf<typeof themeModes>;
+export type ThemeMode = (typeof themeModes)[number];
 
 export const ThemeMode = {
   defaultValue: "system" as ThemeMode,

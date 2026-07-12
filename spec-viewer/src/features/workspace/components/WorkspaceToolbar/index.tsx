@@ -1,7 +1,5 @@
 import { FolderOpen, RefreshCw, RotateCcw, SunMoon } from "lucide-react";
-
-import { useTheme } from "@/features/preferences";
-import { ThemeMode } from "@/features/preferences/domain/theme";
+import { ThemeMode, useTheme } from "@/features/preferences";
 import { uiText } from "@/shared/lib/uiText";
 
 type Props = Readonly<{
