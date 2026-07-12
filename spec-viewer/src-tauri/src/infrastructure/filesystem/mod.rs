@@ -9,8 +9,8 @@ use thiserror::Error;
 
 use crate::domain::{
     spec::{
-        ScanSpecTree, SpecDirectoryFact, SpecDocumentFormat, SpecFileFact, SpecFileKey,
-        SpecFileStatus, SpecId, SpecRootFact, SpecTreeAssembler, SpecTreeFacts,
+        ScanSpecTree, SpecArchiveTarget, SpecDirectoryFact, SpecDocumentFormat, SpecFileFact,
+        SpecFileKey, SpecFileStatus, SpecId, SpecRootFact, SpecTreeAssembler, SpecTreeFacts,
         SpecTreeScanPortError,
     },
     workspace::{
@@ -238,16 +238,6 @@ pub fn spec_root_path(layout: &WorkspaceLayout) -> PathBuf {
     PathBuf::from(layout.root().as_str()).join(topology.primary_spec_root(layout.kind()).as_str())
 }
 
-fn spec_relative_path(spec_id: &SpecId) -> PathBuf {
-    let mut path = PathBuf::new();
-
-    for segment in spec_id.segments() {
-        path.push(segment);
-    }
-
-    path
-}
-
 pub fn spec_directory_path(layout: &WorkspaceLayout, spec_id: &SpecId) -> PathBuf {
     let location = WorkspaceTopology::default()
         .locate_spec(layout.kind(), spec_id.as_str())
@@ -258,16 +248,9 @@ pub fn spec_directory_path(layout: &WorkspaceLayout, spec_id: &SpecId) -> PathBu
 
 pub fn archive_spec_directory(
     layout: &WorkspaceLayout,
-    spec_id: &SpecId,
+    target: &SpecArchiveTarget,
 ) -> Result<PathBuf, SpecArchiveError> {
-    let relative_spec_path = spec_relative_path(spec_id);
-    let archive_paths = archive_spec_paths(layout, &relative_spec_path)?;
-
-    if archive_paths.relative_spec_path.as_os_str().is_empty() {
-        return Err(SpecArchiveError::SourceGroupRoot {
-            spec_id: spec_id.to_string(),
-        });
-    }
+    let archive_paths = archive_spec_paths(layout, target)?;
 
     let metadata =
         fs::metadata(&archive_paths.source_path).map_err(|source| match source.kind() {
@@ -320,14 +303,14 @@ struct ArchiveSpecPaths {
 
 fn archive_spec_paths(
     layout: &WorkspaceLayout,
-    relative_spec_path: &Path,
+    target: &SpecArchiveTarget,
 ) -> Result<ArchiveSpecPaths, SpecArchiveError> {
     let workspace_root = PathBuf::from(layout.root().as_str());
-    let relative_spec_id = display_path(relative_spec_path);
+    let relative_spec_id = target.spec_id().as_str();
     let location = WorkspaceTopology::default()
-        .locate_spec(layout.kind(), &relative_spec_id)
+        .locate_spec(layout.kind(), relative_spec_id)
         .map_err(|_| SpecArchiveError::InvalidArchiveSource {
-            spec_id: relative_spec_id,
+            spec_id: relative_spec_id.to_string(),
         })?;
 
     Ok(ArchiveSpecPaths {
@@ -723,8 +706,6 @@ pub enum SpecTreeScanError {
 
 #[derive(Debug, Error)]
 pub enum SpecArchiveError {
-    #[error("spec id cannot be archived because it is a source group root: {spec_id}")]
-    SourceGroupRoot { spec_id: String },
     #[error("spec archive source is invalid: {spec_id}")]
     InvalidArchiveSource { spec_id: String },
     #[error("spec directory does not exist: {path}")]
@@ -1194,71 +1175,6 @@ mod tests {
         assert_eq!("tasks.md", tasks.file_name());
         assert_eq!(SpecFileStatus::Present, tasks.status());
         assert_eq!(SpecDocumentFormat::Html, tasks.format());
-    }
-
-    #[test]
-    fn archive_spec_directory_moves_plugin_workspace_spec_to_hidden_archive() {
-        let workspace = TestWorkspace::new("archive-plugin-workspace-spec");
-        workspace.create_dir(PLUGIN_WORKSPACE_SPECS_DIR);
-        workspace.write_file(".plugin-workspace/.specs/auth/tasks.md", "# Tasks");
-        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
-
-        let archive_path =
-            archive_spec_directory(&layout, &spec_id(".plugin-workspace/.specs/auth"))
-                .expect("spec should be archived");
-
-        assert_eq!(
-            workspace
-                .root()
-                .join(".plugin-workspace/.specs/.archive/auth"),
-            archive_path
-        );
-        assert!(!workspace
-            .root()
-            .join(".plugin-workspace/.specs/auth")
-            .exists());
-        assert!(workspace
-            .root()
-            .join(".plugin-workspace/.specs/.archive/auth/tasks.md")
-            .exists());
-    }
-
-    #[test]
-    fn archive_spec_directory_uses_suffix_when_archive_destination_exists() {
-        let workspace = TestWorkspace::new("archive-plugin-workspace-spec-conflict");
-        workspace.create_dir(PLUGIN_WORKSPACE_SPECS_DIR);
-        workspace.write_file(".plugin-workspace/.specs/auth/tasks.md", "# New");
-        workspace.write_file(".plugin-workspace/.specs/.archive/auth/tasks.md", "# Old");
-        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
-
-        let archive_path =
-            archive_spec_directory(&layout, &spec_id(".plugin-workspace/.specs/auth"))
-                .expect("spec should be archived with suffix");
-
-        assert_eq!(
-            workspace
-                .root()
-                .join(".plugin-workspace/.specs/.archive/auth-1"),
-            archive_path
-        );
-        assert!(workspace
-            .root()
-            .join(".plugin-workspace/.specs/.archive/auth-1/tasks.md")
-            .exists());
-    }
-
-    #[test]
-    fn archive_spec_directory_rejects_source_group_root() {
-        let workspace = TestWorkspace::new("archive-source-group-root");
-        workspace.create_dir(PLUGIN_WORKSPACE_SPECS_DIR);
-        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
-
-        let result = archive_spec_directory(&layout, &spec_id(".plugin-workspace/.specs"));
-
-        assert!(matches!(
-            result,
-            Err(SpecArchiveError::SourceGroupRoot { .. })
-        ));
     }
 
     #[test]
