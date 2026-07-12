@@ -95,3 +95,64 @@ fn create_rejects_an_archived_aggregate_without_publishing_a_record() {
     assert!(!workspace.active_record_path(review.id()).exists());
     assert!(!workspace.archive_record_path(review.id()).exists());
 }
+
+#[cfg(unix)]
+#[test]
+fn create_rejects_a_user_review_directory_symlink_escape_without_writing_outside() {
+    use std::os::unix::fs::symlink;
+
+    use uuid::Uuid;
+
+    let workspace = TestWorkspace::new("create-symlink-escape");
+    let repository = workspace.repository();
+    let review = active_review(5, "Do not write through the symlink");
+    let outside = std::env::temp_dir().join(format!(
+        "spec-reviewer-user-review-outside-{}",
+        Uuid::new_v4().simple()
+    ));
+    fs::create_dir_all(&outside).expect("outside directory should exist");
+    symlink(&outside, workspace.user_review_directory())
+        .expect("user-review path should be a symlink");
+
+    let result = repository.create(review.clone());
+    let outside_is_empty = fs::read_dir(&outside)
+        .expect("outside directory should remain readable")
+        .next()
+        .is_none();
+    fs::remove_dir_all(&outside).expect("outside directory should be cleaned");
+
+    assert_eq!(Err(UserReviewRepositoryError::Unavailable), result);
+    assert!(outside_is_empty);
+    assert!(!workspace.active_record_path(review.id()).exists());
+}
+
+#[cfg(unix)]
+#[test]
+fn create_treats_permission_denied_as_unavailable_instead_of_absent() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let workspace = TestWorkspace::new("create-permission-denied");
+    let repository = workspace.repository();
+    let existing = active_review(6, "Create the protected collection");
+    let attempted = active_review(7, "Must not treat an I/O error as absence");
+    create(&repository, existing);
+    let active_directory = workspace.active_directory();
+    let mut denied_permissions = fs::metadata(&active_directory)
+        .expect("active directory should exist")
+        .permissions();
+    denied_permissions.set_mode(0o000);
+    fs::set_permissions(&active_directory, denied_permissions)
+        .expect("active directory should become inaccessible");
+
+    let result = repository.create(attempted.clone());
+
+    let mut restored_permissions = fs::metadata(&active_directory)
+        .expect("active directory metadata should remain available")
+        .permissions();
+    restored_permissions.set_mode(0o700);
+    fs::set_permissions(&active_directory, restored_permissions)
+        .expect("active directory permissions should be restored");
+
+    assert_eq!(Err(UserReviewRepositoryError::Unavailable), result);
+    assert!(!workspace.active_record_path(attempted.id()).exists());
+}

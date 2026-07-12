@@ -3,6 +3,7 @@
 use std::{
     fs,
     path::{Path, PathBuf},
+    sync::Arc,
     time::Duration,
 };
 
@@ -19,7 +20,7 @@ use spec_reviewer_lib::{
     },
     infrastructure::persistence::{
         user_review_document::encode_user_review_document,
-        user_review_repository::JsonUserReviewRepository,
+        user_review_repository::{ArchiveMutationObserver, JsonUserReviewRepository},
     },
 };
 use uuid::Uuid;
@@ -53,6 +54,17 @@ impl TestWorkspace {
         JsonUserReviewRepository::new(
             self.layout.clone(),
             WorkspaceConfig::plugin_workspace_default(),
+        )
+    }
+
+    pub fn repository_with_archive_observer(
+        &self,
+        observer: Arc<dyn ArchiveMutationObserver>,
+    ) -> JsonUserReviewRepository {
+        JsonUserReviewRepository::with_archive_observer(
+            self.layout.clone(),
+            WorkspaceConfig::plugin_workspace_default(),
+            observer,
         )
     }
 
@@ -90,6 +102,32 @@ impl TestWorkspace {
         .expect("test review should be written");
     }
 
+    pub fn replace_review(&self, path: &Path, review: &UserReview) {
+        let parent = path.parent().expect("test record should have a parent");
+        let temporary_path = parent.join(format!(
+            ".external-replacement-{}.tmp",
+            Uuid::new_v4().simple()
+        ));
+        self.write_review(&temporary_path, review);
+        fs::rename(temporary_path, path).expect("test record replacement should be atomic");
+    }
+
+    pub fn capture_paths(&self) -> Vec<PathBuf> {
+        let Ok(entries) = fs::read_dir(self.active_directory()) else {
+            return Vec::new();
+        };
+        entries
+            .filter_map(Result::ok)
+            .filter(|entry| {
+                entry
+                    .file_name()
+                    .to_string_lossy()
+                    .starts_with(".user-review-capture-")
+            })
+            .map(|entry| entry.path())
+            .collect()
+    }
+
     pub fn write_raw(&self, path: &Path, contents: &str) {
         let parent = path.parent().expect("test record should have a parent");
         fs::create_dir_all(parent).expect("test record directory should be created");
@@ -100,7 +138,7 @@ impl TestWorkspace {
         directory.join(format!(".user-review-{id}-{}.tmp", nonce.simple()))
     }
 
-    fn user_review_directory(&self) -> PathBuf {
+    pub fn user_review_directory(&self) -> PathBuf {
         self.root
             .join(".plugin-workspace/.specs/001-auth-flow/user-review")
     }
@@ -182,4 +220,10 @@ pub fn create(repository: &impl UserReviewRepository, review: UserReview) -> Use
         .create(review)
         .expect("test review should be created")
         .into_user_review()
+}
+
+pub fn encoded_review(review: &UserReview) -> Vec<u8> {
+    encode_user_review_document(review)
+        .expect("test review should encode")
+        .into_bytes()
 }
