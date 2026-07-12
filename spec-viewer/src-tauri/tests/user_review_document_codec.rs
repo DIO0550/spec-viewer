@@ -118,6 +118,32 @@ fn malformed_json_is_reported_without_panicking() {
 }
 
 #[test]
+fn non_object_root_reports_the_root_shape_problem() {
+    assert_eq!(
+        Err(UserReviewRecordProblem::MalformedRecord {
+            reason: "document root must be an object".to_string(),
+        }),
+        decode_user_review_document("[]")
+    );
+}
+
+#[test]
+fn missing_schema_version_reports_the_required_field_problem() {
+    let payload = CANONICAL_V1.replacen(
+        "  \"schemaVersion\": \"spec-reviewer.user-review.v1\",\n",
+        "",
+        1,
+    );
+
+    assert_eq!(
+        Err(UserReviewRecordProblem::MalformedRecord {
+            reason: "schemaVersion is required".to_string(),
+        }),
+        decode_user_review_document(&payload)
+    );
+}
+
+#[test]
 fn active_document_with_archived_timestamp_is_malformed() {
     assert_malformed(&CANONICAL_V1.replacen(
         "\"archivedAt\": null",
