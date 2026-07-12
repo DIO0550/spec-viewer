@@ -30,9 +30,16 @@ pub struct UserReviewDocument {
     pub status: UserReviewStatusDocument,
     pub created_at: String,
     pub updated_at: String,
-    pub archived_at: Option<String>,
+    pub archived_at: UserReviewArchivedAtDocument,
     pub target: UserReviewTargetDocument,
     pub comments: Vec<UserReviewCommentDocument>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum UserReviewArchivedAtDocument {
+    Timestamp(String),
+    Null,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -187,7 +194,12 @@ impl From<&UserReview> for UserReviewDocument {
             status: review.status().into(),
             created_at: format_timestamp(review.created_at()),
             updated_at: format_timestamp(review.updated_at()),
-            archived_at: review.archived_at().map(format_timestamp),
+            archived_at: review
+                .archived_at()
+                .map(format_timestamp)
+                .map_or(UserReviewArchivedAtDocument::Null, |timestamp| {
+                    UserReviewArchivedAtDocument::Timestamp(timestamp)
+                }),
             target: review.target().into(),
             comments: review.comments().iter().map(Into::into).collect(),
         }
@@ -216,11 +228,12 @@ impl TryFrom<UserReviewDocument> for UserReview {
             .collect::<Result<Vec<_>, _>>()?;
         let created_at = parse_timestamp("createdAt", &document.created_at)?;
         let updated_at = parse_timestamp("updatedAt", &document.updated_at)?;
-        let archived_at = document
-            .archived_at
-            .as_deref()
-            .map(|value| parse_timestamp("archivedAt", value))
-            .transpose()?;
+        let archived_at = match document.archived_at {
+            UserReviewArchivedAtDocument::Timestamp(value) => {
+                Some(parse_timestamp("archivedAt", &value)?)
+            }
+            UserReviewArchivedAtDocument::Null => None,
+        };
 
         UserReview::restore(
             id,
