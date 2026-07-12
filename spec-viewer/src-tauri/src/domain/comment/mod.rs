@@ -8,6 +8,8 @@ use uuid::Uuid;
 
 use crate::domain::spec::{MarkdownBlock, MarkdownBlockType, SpecFileKey};
 
+#[cfg(test)]
+mod id_tests;
 mod repository;
 
 pub use repository::{
