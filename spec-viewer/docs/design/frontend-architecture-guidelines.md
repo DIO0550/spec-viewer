@@ -225,6 +225,31 @@ application ports. The sole production import of `@tauri-apps/api/core` is
 `shared/api/tauri/invokeTauriCommand.ts`; the architecture checker rejects any
 other production dependency on that raw transport module.
 
+### Issue #109 acceptance boundary
+
+Issue #109 leaves comments, specs, workspace, and review-runs domain errors with
+domain reasons only. Domain reasons do not reuse backend wire-code literals and
+contain no command name, localized/display message, raw payload, or Tauri command
+error type.
+
+Each feature has one Tauri error mapper that selects the command-specific parser,
+maps the parsed command code to a domain reason, and builds the application error
+used by hooks and presenters. Application errors retain the existing display
+`code` and `message`; the underlying command error is their `cause`. The
+command error keeps the rejected transport payload in its own `cause`, so
+diagnostic data remains at the infrastructure boundary.
+
+The backend migration in #77 is not required for this frontend boundary. Until it
+lands, the existing command names and known wire `code` / `message` payloads
+remain compatibility contracts covered by wrapper and mapper tests. Unknown and
+non-domain wire codes continue to use the established unknown display behavior.
+
+All 16 `domain-forbidden-dependency` waivers owned by #109 are removed. The five
+MarkdownViewer deep-import waivers owned by #108 remain exact and visible.
+Waivers owned by #110, #118, and #120 also remain unchanged; generic domain state
+containers accept application errors without absorbing their display or transport
+shape.
+
 ### PR #28 supersede map
 
 [PR #28](https://github.com/DIO0550/spec-viewer/pull/28) is conflicting and is not
