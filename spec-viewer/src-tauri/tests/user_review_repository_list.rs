@@ -17,8 +17,8 @@ use spec_reviewer_lib::{
 use uuid::Uuid;
 
 use support::user_review_repository::{
-    active_review, active_review_with_source_path, archived_review, create, encoded_review, target,
-    user_review_id, TestWorkspace,
+    active_review, active_review_with_source_path, archived_review, create, encoded_review,
+    oversized_encoded_review, target, user_review_id, TestWorkspace,
 };
 
 const CLEANUP_AGE: Duration = Duration::from_secs(60 * 60);
@@ -113,6 +113,36 @@ fn malformed_unsupported_and_legacy_records_do_not_block_valid_list_results() {
 }
 
 #[test]
+fn oversized_record_is_isolated_without_blocking_valid_list_results() {
+    let workspace = TestWorkspace::new("list-oversized-record");
+    let repository = workspace.repository();
+    let valid = active_review(33, "Keep listing this bounded review");
+    let oversized = active_review(34, "Reject this oversized review");
+    create(&repository, valid.clone());
+    let oversized_contents = oversized_encoded_review(&oversized);
+    let oversized_path = workspace.active_record_path(oversized.id());
+    workspace.write_bytes(&oversized_path, &oversized_contents);
+
+    let listed = repository
+        .list(&target())
+        .expect("oversized record should be isolated as a problem");
+
+    assert_eq!(vec![valid], listed.active());
+    assert!(listed.archived().is_empty());
+    assert_eq!(1, listed.problems().len());
+    assert_eq!(
+        UserReviewRecordProblemKind::MalformedRecord,
+        listed.problems()[0].kind()
+    );
+    assert_eq!(
+        oversized_contents.len() as u64,
+        fs::metadata(oversized_path)
+            .expect("oversized record should remain")
+            .len()
+    );
+}
+
+#[test]
 fn persisted_source_mapping_mismatch_is_isolated_as_a_malformed_record() {
     let workspace = TestWorkspace::new("persisted-source-mismatch");
     let repository = workspace.repository();
@@ -197,6 +227,16 @@ fn temp_cleanup_requires_owned_name_stale_age_and_valid_matching_content() {
         Uuid::new_v4(),
     );
     workspace.write_review(&mismatched_status_temp, &archived_temp_review);
+    let oversized_temp_review = active_review(35, "Oversized temp must remain");
+    let oversized_temp = workspace.known_temp_path(
+        &workspace.active_directory(),
+        oversized_temp_review.id(),
+        Uuid::new_v4(),
+    );
+    workspace.write_bytes(
+        &oversized_temp,
+        &oversized_encoded_review(&oversized_temp_review),
+    );
 
     repository
         .list(&target())
@@ -207,6 +247,7 @@ fn temp_cleanup_requires_owned_name_stale_age_and_valid_matching_content() {
     assert!(unknown_temp.exists());
     assert!(mismatched_id_temp.exists());
     assert!(mismatched_status_temp.exists());
+    assert!(oversized_temp.exists());
 
     workspace
         .repository_with_cleanup_age(Duration::ZERO)
@@ -218,6 +259,7 @@ fn temp_cleanup_requires_owned_name_stale_age_and_valid_matching_content() {
     assert!(unknown_temp.exists());
     assert!(mismatched_id_temp.exists());
     assert!(mismatched_status_temp.exists());
+    assert!(oversized_temp.exists());
 }
 
 #[test]

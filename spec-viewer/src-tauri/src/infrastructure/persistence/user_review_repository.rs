@@ -1248,3 +1248,50 @@ mod platform_contract_tests {
         let _sync: fn(&Dir) -> io::Result<()> = unsupported_platform::sync_directory;
     }
 }
+
+#[cfg(test)]
+mod bounded_reader_tests {
+    use std::io::Cursor;
+
+    use super::*;
+
+    struct PanicReader;
+
+    impl Read for PanicReader {
+        fn read(&mut self, _buffer: &mut [u8]) -> io::Result<usize> {
+            panic!("oversized metadata should be rejected before reading")
+        }
+    }
+
+    #[test]
+    fn bounded_reader_rejects_declared_oversize_before_reading() {
+        let error =
+            read_bounded_utf8(PanicReader, 5, 4).expect_err("declared oversize should be rejected");
+
+        assert_eq!(io::ErrorKind::InvalidData, error.kind());
+    }
+
+    #[test]
+    fn bounded_reader_detects_growth_beyond_the_checked_size() {
+        let error = read_bounded_utf8(Cursor::new(b"12345"), 4, 4)
+            .expect_err("growth beyond the limit should be rejected");
+
+        assert_eq!(io::ErrorKind::InvalidData, error.kind());
+    }
+
+    #[test]
+    fn bounded_reader_rejects_invalid_utf8() {
+        let error = read_bounded_utf8(Cursor::new([0xff]), 1, 4)
+            .expect_err("invalid UTF-8 should be rejected");
+
+        assert_eq!(io::ErrorKind::InvalidData, error.kind());
+    }
+
+    #[test]
+    fn bounded_reader_accepts_utf8_at_the_exact_limit() {
+        let contents = read_bounded_utf8(Cursor::new(b"1234"), 4, 4)
+            .expect("UTF-8 at the exact limit should be accepted");
+
+        assert_eq!("1234", contents);
+    }
+}

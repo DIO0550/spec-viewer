@@ -5,7 +5,7 @@ use std::fs;
 use spec_reviewer_lib::domain::user_review::{UserReviewRepository, UserReviewRepositoryError};
 
 use support::user_review_repository::{
-    active_review, archived_review, create, target, TestWorkspace,
+    active_review, archived_review, create, oversized_encoded_review, target, TestWorkspace,
 };
 
 #[test]
@@ -55,6 +55,32 @@ fn create_collision_never_overwrites_the_existing_record() {
         result
     );
     assert_eq!(before, after);
+}
+
+#[test]
+fn create_collision_preserves_an_oversized_existing_record() {
+    let workspace = TestWorkspace::new("create-oversized-collision");
+    let repository = workspace.repository();
+    let attempted = active_review(8, "Do not replace oversized storage");
+    let contents = oversized_encoded_review(&attempted);
+    let active_path = workspace.active_record_path(attempted.id());
+    workspace.write_bytes(&active_path, &contents);
+
+    let result = repository.create(attempted.clone());
+
+    assert_eq!(
+        Err(UserReviewRepositoryError::AlreadyExists {
+            id: attempted.id().clone(),
+        }),
+        result
+    );
+    assert_eq!(
+        contents.len() as u64,
+        fs::metadata(active_path)
+            .expect("oversized existing record should remain")
+            .len()
+    );
+    assert!(!workspace.archive_record_path(attempted.id()).exists());
 }
 
 #[test]

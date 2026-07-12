@@ -13,8 +13,8 @@ use spec_reviewer_lib::domain::user_review::{
 use spec_reviewer_lib::infrastructure::persistence::user_review_repository::ArchiveMutationObserver;
 
 use support::user_review_repository::{
-    active_review, archived_review, create, encoded_review, file_target, target, timestamp,
-    user_review_id, TestWorkspace,
+    active_review, archived_review, create, encoded_review, file_target, oversized_encoded_review,
+    target, timestamp, user_review_id, TestWorkspace,
 };
 
 #[derive(Clone)]
@@ -194,6 +194,27 @@ fn archive_rejects_a_target_mismatch_without_mutating_the_active_record() {
     assert_eq!(
         before,
         fs::read(workspace.active_record_path(active.id())).expect("active record should remain")
+    );
+    assert!(!workspace.archive_record_path(active.id()).exists());
+}
+
+#[test]
+fn archive_rejects_an_oversized_active_record_without_mutating_it() {
+    let workspace = TestWorkspace::new("archive-oversized-active");
+    let repository = workspace.repository();
+    let active = active_review(36, "Oversized active must remain untouched");
+    let contents = oversized_encoded_review(&active);
+    let active_path = workspace.active_record_path(active.id());
+    workspace.write_bytes(&active_path, &contents);
+
+    let result = repository.archive(active.id(), active.target(), timestamp(41));
+
+    assert_eq!(Err(UserReviewRepositoryError::Unavailable), result);
+    assert_eq!(
+        contents.len() as u64,
+        fs::metadata(active_path)
+            .expect("oversized active record should remain")
+            .len()
     );
     assert!(!workspace.archive_record_path(active.id()).exists());
 }

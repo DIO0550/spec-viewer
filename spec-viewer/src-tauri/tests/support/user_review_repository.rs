@@ -27,6 +27,7 @@ use uuid::Uuid;
 
 pub const SPEC_ID: &str = "001-auth-flow";
 pub const SOURCE_PATH: &str = ".plugin-workspace/.specs/001-auth-flow/tasks.md";
+pub const OVERSIZED_USER_REVIEW_DOCUMENT_BYTES: usize = 1024 * 1024 + 1;
 
 pub struct TestWorkspace {
     root: PathBuf,
@@ -185,6 +186,12 @@ impl TestWorkspace {
         fs::write(path, contents).expect("test record should be written");
     }
 
+    pub fn write_bytes(&self, path: &Path, contents: &[u8]) {
+        let parent = path.parent().expect("test record should have a parent");
+        fs::create_dir_all(parent).expect("test record directory should be created");
+        fs::write(path, contents).expect("test record bytes should be written");
+    }
+
     pub fn known_temp_path(&self, directory: &Path, id: &UserReviewId, nonce: Uuid) -> PathBuf {
         directory.join(format!(".user-review-{id}-{}.tmp", nonce.simple()))
     }
@@ -277,4 +284,10 @@ pub fn encoded_review(review: &UserReview) -> Vec<u8> {
     encode_user_review_document(review)
         .expect("test review should encode")
         .into_bytes()
+}
+
+pub fn oversized_encoded_review(review: &UserReview) -> Vec<u8> {
+    let mut contents = encoded_review(review);
+    contents.resize(OVERSIZED_USER_REVIEW_DOCUMENT_BYTES, b' ');
+    contents
 }
