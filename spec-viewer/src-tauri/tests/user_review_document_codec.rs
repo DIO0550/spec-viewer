@@ -127,6 +127,11 @@ fn active_document_with_archived_timestamp_is_malformed() {
 }
 
 #[test]
+fn missing_archived_at_field_is_malformed() {
+    assert_malformed(&CANONICAL_V1.replacen("  \"archivedAt\": null,\n", "", 1));
+}
+
+#[test]
 fn archived_document_without_archived_timestamp_is_malformed() {
     assert_malformed(&CANONICAL_V1.replacen(
         "\"status\": \"active\"",
