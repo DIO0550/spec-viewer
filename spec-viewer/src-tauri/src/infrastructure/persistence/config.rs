@@ -11,13 +11,14 @@ use serde::Deserialize;
 use thiserror::Error;
 
 use crate::domain::{
-    spec::{SpecDomainError, SpecFileKey},
+    spec::{SpecDomainError, SpecFileKey, SpecId},
     workspace::{
-        default_scan_excluded_directory_names, SpecConfigOverride, WorkspaceConfig,
-        WorkspaceConfigError, WorkspaceConfigSource, WorkspaceFileMapping, WorkspaceKind,
-        WorkspaceLayout,
+        default_scan_excluded_directory_names, LoadWorkspaceConfig, SpecConfigOverride,
+        WorkspaceConfig, WorkspaceConfigError, WorkspaceConfigLoadPortError, WorkspaceConfigSource,
+        WorkspaceFileMapping, WorkspaceKind, WorkspaceLayout,
     },
 };
+use crate::infrastructure::filesystem::spec_directory_path;
 
 const PLUGIN_WORKSPACE_CONFIG_FILE: &str = ".plugin-workspace/config.json";
 const PLUGIN_WORKTREE_CONFIG_FILE: &str = "config.json";
@@ -71,6 +72,27 @@ impl WorkspaceConfigLoader {
         };
 
         parse_spec_config_override(&contents, &path).map(Some)
+    }
+}
+
+impl LoadWorkspaceConfig for WorkspaceConfigLoader {
+    fn load_workspace_config(
+        &self,
+        layout: &WorkspaceLayout,
+    ) -> Result<WorkspaceConfig, WorkspaceConfigLoadPortError> {
+        self.load(layout)
+            .map_err(|source| WorkspaceConfigLoadPortError::new(source.to_string()))
+    }
+
+    fn load_spec_config_override(
+        &self,
+        layout: &WorkspaceLayout,
+        spec_id: &SpecId,
+    ) -> Result<Option<SpecConfigOverride>, WorkspaceConfigLoadPortError> {
+        let spec_directory = spec_directory_path(layout, spec_id);
+
+        self.load_spec_override_from_directory(&spec_directory)
+            .map_err(|source| WorkspaceConfigLoadPortError::new(source.to_string()))
     }
 }
 

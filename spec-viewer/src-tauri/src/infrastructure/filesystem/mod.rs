@@ -9,11 +9,12 @@ use thiserror::Error;
 
 use crate::domain::{
     spec::{
-        SpecDocumentFormat, SpecDomainError, SpecFile, SpecFileKey, SpecFileStatus, SpecId,
-        SpecNode,
+        ScanSpecTree, SpecDocumentFormat, SpecDomainError, SpecFile, SpecFileKey, SpecFileStatus,
+        SpecId, SpecNode, SpecTreeScanPortError,
     },
     workspace::{
-        WorkspaceConfig, WorkspaceDomainError, WorkspaceKind, WorkspaceLayout, WorkspaceRoot,
+        DetectWorkspace, WorkspaceConfig, WorkspaceDetectionPortError, WorkspaceDomainError,
+        WorkspaceKind, WorkspaceLayout, WorkspaceRoot,
     },
 };
 use crate::infrastructure::persistence::config::{ConfigLoadError, WorkspaceConfigLoader};
@@ -101,6 +102,16 @@ impl FilesystemWorkspaceDetector {
     }
 }
 
+impl DetectWorkspace for FilesystemWorkspaceDetector {
+    fn detect_workspace(
+        &self,
+        selected_directory: &str,
+    ) -> Result<WorkspaceLayout, WorkspaceDetectionPortError> {
+        self.detect(selected_directory)
+            .map_err(|source| WorkspaceDetectionPortError::new(source.to_string()))
+    }
+}
+
 #[derive(Debug, Clone, Copy, Default)]
 pub struct FilesystemSpecTreeScanner;
 
@@ -144,6 +155,24 @@ impl FilesystemSpecTreeScanner {
         }
 
         Ok(nodes)
+    }
+}
+
+impl ScanSpecTree for FilesystemSpecTreeScanner {
+    fn scan_spec_tree(
+        &self,
+        layout: &WorkspaceLayout,
+        config: &WorkspaceConfig,
+    ) -> Result<Vec<SpecNode>, SpecTreeScanPortError> {
+        self.scan(layout, config).map_err(|source| {
+            let message = source.to_string();
+
+            if matches!(source, SpecTreeScanError::ConfigOverrideLoad { .. }) {
+                return SpecTreeScanPortError::config_load(message);
+            }
+
+            SpecTreeScanPortError::scan(message)
+        })
     }
 }
 

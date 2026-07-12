@@ -14,7 +14,10 @@ use thiserror::Error;
 
 use crate::{
     domain::{
-        spec::{MarkdownBlock, SpecDocumentFormat, SpecFileKey, SpecId},
+        spec::{
+            MarkdownBlock, MissingSpecDocument, ReadSpecFile, ReadSpecFileResult, SpecDocument,
+            SpecDocumentFormat, SpecFileKey, SpecFileReadPortError, SpecId,
+        },
         workspace::{WorkspaceConfig, WorkspaceLayout},
     },
     infrastructure::{
@@ -86,6 +89,20 @@ impl FilesystemMarkdownReader {
     }
 }
 
+impl ReadSpecFile for FilesystemMarkdownReader {
+    fn read_spec_file(
+        &self,
+        layout: &WorkspaceLayout,
+        config: &WorkspaceConfig,
+        spec_id: &SpecId,
+        key: SpecFileKey,
+    ) -> Result<ReadSpecFileResult, SpecFileReadPortError> {
+        self.read(layout, config, spec_id.as_str(), key)
+            .map(ReadSpecFileResult::from)
+            .map_err(|source| SpecFileReadPortError::new(source.to_string()))
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MarkdownReadResult {
     Found(MarkdownDocument),
@@ -95,6 +112,25 @@ pub enum MarkdownReadResult {
 impl MarkdownReadResult {
     pub fn is_missing(&self) -> bool {
         matches!(self, Self::Missing(_))
+    }
+}
+
+impl From<MarkdownReadResult> for ReadSpecFileResult {
+    fn from(result: MarkdownReadResult) -> Self {
+        match result {
+            MarkdownReadResult::Found(document) => {
+                Self::Found(SpecDocument::with_format_and_blocks(
+                    document.key(),
+                    document.format(),
+                    document.path(),
+                    document.contents(),
+                    document.blocks().to_vec(),
+                ))
+            }
+            MarkdownReadResult::Missing(missing) => Self::Missing(
+                MissingSpecDocument::with_format(missing.key(), missing.format(), missing.path()),
+            ),
+        }
     }
 }
 
