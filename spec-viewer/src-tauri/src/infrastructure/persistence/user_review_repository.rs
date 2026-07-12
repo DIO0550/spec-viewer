@@ -43,6 +43,7 @@ use crate::{
 };
 
 const DEFAULT_TEMP_CLEANUP_AGE: Duration = Duration::from_secs(24 * 60 * 60);
+const MAX_USER_REVIEW_DOCUMENT_BYTES: u64 = 1024 * 1024;
 const TEMP_FILE_CREATE_ATTEMPTS: usize = 3;
 const TEMP_FILE_PREFIX: &str = ".user-review-";
 const TEMP_FILE_SUFFIX: &str = ".tmp";
@@ -276,10 +277,9 @@ impl JsonUserReviewRepository {
         if age < self.temp_cleanup_age {
             return false;
         }
-        let mut contents = String::new();
-        if file.read_to_string(&mut contents).is_err() {
+        let Ok(contents) = read_user_review_document(&mut file, &metadata) else {
             return false;
-        }
+        };
         let Ok(review) = decode_user_review_document(&contents) else {
             return false;
         };
@@ -427,8 +427,7 @@ impl JsonUserReviewRepository {
             return Err(UserReviewRepositoryError::Unavailable);
         }
 
-        let mut contents = String::new();
-        file.read_to_string(&mut contents)
+        let contents = read_user_review_document(&mut file, &metadata)
             .map_err(|_| UserReviewRepositoryError::Unavailable)?;
         let review = decode_user_review_document(&contents)
             .map_err(|_| UserReviewRepositoryError::Unavailable)?;
@@ -1004,9 +1003,36 @@ fn read_entry_to_string_no_follow(entry: &DirEntry) -> io::Result<String> {
             "user review record is not a regular file",
         ));
     }
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)?;
-    Ok(contents)
+
+    read_user_review_document(&mut file, &metadata)
+}
+
+fn read_user_review_document(file: &mut File, metadata: &Metadata) -> io::Result<String> {
+    read_bounded_utf8(file, metadata.len(), MAX_USER_REVIEW_DOCUMENT_BYTES)
+}
+
+fn read_bounded_utf8(reader: impl Read, declared_len: u64, limit: u64) -> io::Result<String> {
+    if declared_len > limit {
+        return Err(invalid_document_data("user review document is too large"));
+    }
+
+    let read_limit = limit
+        .checked_add(1)
+        .ok_or_else(|| invalid_document_data("user review document limit is invalid"))?;
+    let mut bytes = Vec::new();
+    reader.take(read_limit).read_to_end(&mut bytes)?;
+    let actual_len = u64::try_from(bytes.len())
+        .map_err(|_| invalid_document_data("user review document length is invalid"))?;
+    if actual_len > limit {
+        return Err(invalid_document_data("user review document grew too large"));
+    }
+
+    String::from_utf8(bytes)
+        .map_err(|_| invalid_document_data("user review document is not valid UTF-8"))
+}
+
+fn invalid_document_data(message: &'static str) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidData, message)
 }
 
 fn open_file_no_follow(directory: &Dir, name: &OsStr) -> io::Result<File> {
