@@ -60,6 +60,7 @@ test("domain modules reject React, Tauri, shared API, hooks, components, and inf
       import { useThing } from "@/features/alpha/hooks/useThing";
       import { Thing } from "@/features/alpha/components/Thing";
       import { repository } from "../infra/repository";
+      import type { CommandError } from "@/features/alpha/infra/tauri/command";
       export const model = [React, invoke, command, useThing, Thing, repository];
     `,
   });
@@ -70,13 +71,14 @@ test("domain modules reject React, Tauri, shared API, hooks, components, and inf
       ({ rule }) => rule === "domain-forbidden-dependency",
     );
 
-    assert.equal(violations.length, 6);
+    assert.equal(violations.length, 7);
     assert.deepEqual(
       violations.map(({ specifier }) => specifier),
       [
         "../infra/repository",
         "@/features/alpha/components/Thing",
         "@/features/alpha/hooks/useThing",
+        "@/features/alpha/infra/tauri/command",
         "@/shared/api/tauri",
         "@tauri-apps/api/core",
         "react",
