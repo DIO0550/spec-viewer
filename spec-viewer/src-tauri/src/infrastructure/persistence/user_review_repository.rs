@@ -2,19 +2,23 @@
 
 use std::{
     collections::{BTreeMap, BTreeSet},
-    ffi::OsStr,
-    fs::{self, File, OpenOptions},
-    io::{self, Write},
+    ffi::{OsStr, OsString},
+    io::{self, Read, Write},
     path::{Component, Path, PathBuf},
-    sync::{Mutex, MutexGuard},
+    sync::{Arc, Mutex, MutexGuard},
     time::{Duration, SystemTime},
 };
 
+use cap_std::{
+    ambient_authority,
+    fs::{Dir, DirEntry, File, Metadata, OpenOptions, OpenOptionsExt},
+};
 use chrono::{DateTime, Utc};
 use uuid::{Uuid, Variant, Version};
 
 use crate::{
     domain::{
+        spec::SpecId,
         user_review::{
             UserReview, UserReviewArchiveOutcome, UserReviewCreateOutcome, UserReviewId,
             UserReviewListOutcome, UserReviewRecordLocator, UserReviewRecordProblem,
@@ -31,7 +35,8 @@ use crate::{
                 UserReviewRecordProblem as DocumentRecordProblem,
             },
             user_review_paths::{
-                UserReviewCollection, UserReviewPathResolver, UserReviewStoragePaths,
+                UserReviewCollection, ACTIVE_USER_REVIEW_DIRECTORY, ARCHIVE_USER_REVIEW_DIRECTORY,
+                USER_REVIEW_DIRECTORY,
             },
         },
     },
@@ -41,15 +46,41 @@ const DEFAULT_TEMP_CLEANUP_AGE: Duration = Duration::from_secs(24 * 60 * 60);
 const TEMP_FILE_CREATE_ATTEMPTS: usize = 3;
 const TEMP_FILE_PREFIX: &str = ".user-review-";
 const TEMP_FILE_SUFFIX: &str = ".tmp";
+const CAPTURE_FILE_PREFIX: &str = ".user-review-capture-";
+const CLEANUP_FILE_PREFIX: &str = ".user-review-cleanup-";
 
 static USER_REVIEW_STORE_LOCK: Mutex<()> = Mutex::new(());
 
-#[derive(Debug, Clone)]
+#[doc(hidden)]
+pub trait ArchiveMutationObserver: Send + Sync {
+    fn before_archive_publish(&self) {}
+    fn after_archive_publish(&self) {}
+    fn after_active_capture(&self) {}
+}
+
+#[derive(Debug)]
+struct NoopArchiveMutationObserver;
+
+impl ArchiveMutationObserver for NoopArchiveMutationObserver {}
+
+#[derive(Clone)]
 pub struct JsonUserReviewRepository {
     layout: WorkspaceLayout,
     config: WorkspaceConfig,
-    path_resolver: UserReviewPathResolver,
     temp_cleanup_age: Duration,
+    archive_observer: Arc<dyn ArchiveMutationObserver>,
+}
+
+struct StoreDirectories {
+    spec_id: SpecId,
+    active: Option<Dir>,
+    archive: Option<Dir>,
+}
+
+struct WritableStoreDirectories {
+    spec_id: SpecId,
+    active: Dir,
+    archive: Dir,
 }
 
 impl JsonUserReviewRepository {
@@ -65,126 +96,179 @@ impl JsonUserReviewRepository {
         Self {
             layout,
             config,
-            path_resolver: UserReviewPathResolver::new(),
             temp_cleanup_age,
+            archive_observer: Arc::new(NoopArchiveMutationObserver),
         }
     }
 
-    fn resolve_paths(&self, target: &UserReviewTarget) -> UserReviewStoragePaths {
-        self.path_resolver.resolve(&self.layout, target.spec_id())
+    #[doc(hidden)]
+    pub fn with_archive_observer(
+        layout: WorkspaceLayout,
+        config: WorkspaceConfig,
+        archive_observer: Arc<dyn ArchiveMutationObserver>,
+    ) -> Self {
+        Self {
+            layout,
+            config,
+            temp_cleanup_age: DEFAULT_TEMP_CLEANUP_AGE,
+            archive_observer,
+        }
+    }
+
+    fn spec_relative_path(&self, spec_id: &SpecId) -> Result<PathBuf, UserReviewRepositoryError> {
+        let workspace_root = Path::new(self.layout.root().as_str());
+        spec_directory_path(&self.layout, spec_id)
+            .strip_prefix(workspace_root)
+            .map(Path::to_path_buf)
+            .map_err(|_| UserReviewRepositoryError::Unavailable)
+    }
+
+    fn open_spec_directory(&self, spec_id: &SpecId) -> Result<Dir, UserReviewRepositoryError> {
+        let workspace = Dir::open_ambient_dir(self.layout.root().as_str(), ambient_authority())
+            .map_err(|_| UserReviewRepositoryError::Unavailable)?;
+        let relative_spec_path = self.spec_relative_path(spec_id)?;
+
+        workspace
+            .open_dir(relative_spec_path)
+            .map_err(|_| UserReviewRepositoryError::Unavailable)
     }
 
     fn prepare_directories(
         &self,
-        paths: &UserReviewStoragePaths,
-    ) -> Result<(), UserReviewRepositoryError> {
-        self.validate_spec_directory(paths)?;
-        if !paths.has_lexical_containment() {
-            return Err(UserReviewRepositoryError::Unavailable);
-        }
-
-        ensure_not_symlink(paths.user_review_directory())?;
-        ensure_not_symlink(paths.active_directory())?;
-        ensure_not_symlink(paths.archive_directory())?;
-
-        fs::create_dir_all(paths.active_directory())
+        target: &UserReviewTarget,
+    ) -> Result<WritableStoreDirectories, UserReviewRepositoryError> {
+        let spec = self.open_spec_directory(target.spec_id())?;
+        spec.create_dir_all(Path::new(USER_REVIEW_DIRECTORY).join(ACTIVE_USER_REVIEW_DIRECTORY))
             .map_err(|_| UserReviewRepositoryError::Unavailable)?;
-        fs::create_dir_all(paths.archive_directory())
+        spec.create_dir_all(Path::new(USER_REVIEW_DIRECTORY).join(ARCHIVE_USER_REVIEW_DIRECTORY))
             .map_err(|_| UserReviewRepositoryError::Unavailable)?;
 
-        ensure_directory(paths.user_review_directory())?;
-        ensure_directory(paths.active_directory())?;
-        ensure_directory(paths.archive_directory())?;
+        let user_review = spec
+            .open_dir(USER_REVIEW_DIRECTORY)
+            .map_err(|_| UserReviewRepositoryError::Unavailable)?;
+        let active = user_review
+            .open_dir(ACTIVE_USER_REVIEW_DIRECTORY)
+            .map_err(|_| UserReviewRepositoryError::Unavailable)?;
+        let archive = user_review
+            .open_dir(ARCHIVE_USER_REVIEW_DIRECTORY)
+            .map_err(|_| UserReviewRepositoryError::Unavailable)?;
 
-        sync_directory(paths.spec_directory())
-            .map_err(|_| UserReviewRepositoryError::Unavailable)?;
-        sync_directory(paths.user_review_directory())
-            .map_err(|_| UserReviewRepositoryError::Unavailable)?;
-        sync_directory(paths.active_directory())
-            .map_err(|_| UserReviewRepositoryError::Unavailable)?;
-        sync_directory(paths.archive_directory())
-            .map_err(|_| UserReviewRepositoryError::Unavailable)
+        sync_directory(&spec).map_err(|_| UserReviewRepositoryError::Unavailable)?;
+        sync_directory(&user_review).map_err(|_| UserReviewRepositoryError::Unavailable)?;
+        sync_directory(&active).map_err(|_| UserReviewRepositoryError::Unavailable)?;
+        sync_directory(&archive).map_err(|_| UserReviewRepositoryError::Unavailable)?;
+
+        Ok(WritableStoreDirectories {
+            spec_id: target.spec_id().clone(),
+            active,
+            archive,
+        })
     }
 
-    fn validate_existing_paths(
+    fn existing_directories(
         &self,
-        paths: &UserReviewStoragePaths,
-    ) -> Result<(), UserReviewRepositoryError> {
-        self.validate_spec_directory(paths)?;
-        if !paths.has_lexical_containment() {
-            return Err(UserReviewRepositoryError::Unavailable);
-        }
+        target: &UserReviewTarget,
+    ) -> Result<StoreDirectories, UserReviewRepositoryError> {
+        let spec = self.open_spec_directory(target.spec_id())?;
+        let Some(user_review) = open_optional_directory(&spec, USER_REVIEW_DIRECTORY)? else {
+            return Ok(StoreDirectories {
+                spec_id: target.spec_id().clone(),
+                active: None,
+                archive: None,
+            });
+        };
+        let active = open_optional_directory(&user_review, ACTIVE_USER_REVIEW_DIRECTORY)?;
+        let archive = open_optional_directory(&user_review, ARCHIVE_USER_REVIEW_DIRECTORY)?;
 
-        ensure_not_symlink(paths.user_review_directory())?;
-        ensure_not_symlink(paths.active_directory())?;
-        ensure_not_symlink(paths.archive_directory())
+        Ok(StoreDirectories {
+            spec_id: target.spec_id().clone(),
+            active,
+            archive,
+        })
     }
 
-    fn validate_spec_directory(
-        &self,
-        paths: &UserReviewStoragePaths,
-    ) -> Result<(), UserReviewRepositoryError> {
-        let canonical_root = fs::canonicalize(self.layout.root().as_str())
-            .map_err(|_| UserReviewRepositoryError::Unavailable)?;
-        let canonical_spec = fs::canonicalize(paths.spec_directory())
-            .map_err(|_| UserReviewRepositoryError::Unavailable)?;
-
-        if !canonical_spec.starts_with(canonical_root) || !canonical_spec.is_dir() {
-            return Err(UserReviewRepositoryError::Unavailable);
+    fn cleanup_stale_temps(&self, spec_id: &SpecId, active: Option<&Dir>, archive: Option<&Dir>) {
+        if let Some(active) = active {
+            self.cleanup_collection_temps(spec_id, active, UserReviewCollection::Active);
         }
-
-        Ok(())
-    }
-
-    fn cleanup_stale_temps(&self, paths: &UserReviewStoragePaths) {
-        self.cleanup_collection_temps(paths, UserReviewCollection::Active);
-        self.cleanup_collection_temps(paths, UserReviewCollection::Archive);
+        if let Some(archive) = archive {
+            self.cleanup_collection_temps(spec_id, archive, UserReviewCollection::Archive);
+        }
     }
 
     fn cleanup_collection_temps(
         &self,
-        paths: &UserReviewStoragePaths,
+        spec_id: &SpecId,
+        directory: &Dir,
         collection: UserReviewCollection,
     ) {
-        let directory = paths.collection_directory(collection);
-        let Ok(entries) = fs::read_dir(directory) else {
+        let Ok(entries) = directory.entries() else {
             return;
         };
 
         for entry in entries.flatten() {
-            let Some((id, _nonce)) = parse_owned_temp_name(&entry.file_name()) else {
+            let file_name = entry.file_name();
+            let Some((id, _nonce)) = parse_owned_temp_name(&file_name) else {
                 continue;
             };
-            let Ok(metadata) = fs::symlink_metadata(entry.path()) else {
-                continue;
-            };
-            if !metadata.file_type().is_file() || metadata.file_type().is_symlink() {
+
+            if !self.temp_is_cleanup_eligible(spec_id, directory, &file_name, &id, collection) {
                 continue;
             }
-            let Some(age) = file_age(&metadata) else {
+            let Ok(Some(capture_name)) =
+                capture_cleanup_entry_no_replace(directory, &file_name, &id)
+            else {
                 continue;
             };
-            if age < self.temp_cleanup_age {
-                continue;
-            }
-            let Ok(contents) = fs::read_to_string(entry.path()) else {
-                continue;
-            };
-            let Ok(review) = decode_user_review_document(&contents) else {
-                continue;
-            };
-            if review.id() != &id
-                || !collection_matches_status(collection, review.status())
-                || review.target().spec_id() != paths.spec_id()
-                || !self.source_paths_match(&review)
-            {
+
+            if self.temp_is_cleanup_eligible(spec_id, directory, &capture_name, &id, collection) {
+                if directory.remove_file(&capture_name).is_ok() {
+                    let _ = sync_directory(directory);
+                }
                 continue;
             }
 
-            if fs::remove_file(entry.path()).is_ok() {
+            if rename_no_replace(directory, &capture_name, &file_name).is_ok() {
                 let _ = sync_directory(directory);
             }
         }
+    }
+
+    fn temp_is_cleanup_eligible(
+        &self,
+        spec_id: &SpecId,
+        directory: &Dir,
+        file_name: &OsStr,
+        id: &UserReviewId,
+        collection: UserReviewCollection,
+    ) -> bool {
+        let Ok(mut file) = open_file_no_follow(directory, file_name) else {
+            return false;
+        };
+        let Ok(metadata) = file.metadata() else {
+            return false;
+        };
+        if !metadata.is_file() {
+            return false;
+        }
+        let Some(age) = file_age(&metadata) else {
+            return false;
+        };
+        if age < self.temp_cleanup_age {
+            return false;
+        }
+        let mut contents = String::new();
+        if file.read_to_string(&mut contents).is_err() {
+            return false;
+        }
+        let Ok(review) = decode_user_review_document(&contents) else {
+            return false;
+        };
+
+        review.id() == id
+            && collection_matches_status(collection, review.status())
+            && review.target().spec_id() == spec_id
+            && self.source_paths_match(&review)
     }
 
     fn source_paths_match(&self, review: &UserReview) -> bool {
@@ -210,37 +294,30 @@ impl JsonUserReviewRepository {
 
     fn scan_collection(
         &self,
-        paths: &UserReviewStoragePaths,
+        spec_id: &SpecId,
+        directory: Option<&Dir>,
         collection: UserReviewCollection,
     ) -> Result<CollectionScan, UserReviewRepositoryError> {
-        let directory = paths.collection_directory(collection);
-        if !directory.exists() {
+        let Some(directory) = directory else {
             return Ok(CollectionScan::default());
-        }
-        ensure_directory(directory)?;
+        };
 
-        let entries =
-            fs::read_dir(directory).map_err(|_| UserReviewRepositoryError::Unavailable)?;
-        let mut entries = entries
+        let mut entries = directory
+            .entries()
+            .map_err(|_| UserReviewRepositoryError::Unavailable)?
             .collect::<Result<Vec<_>, _>>()
             .map_err(|_| UserReviewRepositoryError::Unavailable)?;
         entries.sort_by_key(|entry| entry.file_name());
 
         let mut scan = CollectionScan::default();
         for entry in entries {
-            let locator = locator_from_name(&entry.file_name())?;
-            let metadata = match fs::symlink_metadata(entry.path()) {
-                Ok(metadata) => metadata,
-                Err(_) => {
-                    scan.problems.push(UserReviewRecordProblem::new(
-                        locator,
-                        UserReviewRecordProblemKind::MalformedRecord,
-                    ));
-                    continue;
-                }
-            };
+            let file_name = entry.file_name();
+            let locator = locator_from_name(&file_name)?;
+            let file_type = entry
+                .file_type()
+                .map_err(|_| UserReviewRepositoryError::Unavailable)?;
 
-            if metadata.file_type().is_dir() {
+            if file_type.is_dir() {
                 scan.problems.push(UserReviewRecordProblem::new(
                     locator,
                     UserReviewRecordProblemKind::LegacyRecord,
@@ -248,14 +325,11 @@ impl JsonUserReviewRepository {
                 continue;
             }
 
-            let file_name = entry.file_name().to_string_lossy().into_owned();
-            if file_name.ends_with(TEMP_FILE_SUFFIX) {
+            let display_file_name = file_name.to_string_lossy().into_owned();
+            if display_file_name.ends_with(TEMP_FILE_SUFFIX) {
                 continue;
             }
-            if !metadata.file_type().is_file()
-                || metadata.file_type().is_symlink()
-                || !file_name.ends_with(".json")
-            {
+            if !file_type.is_file() || !display_file_name.ends_with(".json") {
                 scan.problems.push(UserReviewRecordProblem::new(
                     locator,
                     UserReviewRecordProblemKind::MalformedRecord,
@@ -263,7 +337,7 @@ impl JsonUserReviewRepository {
                 continue;
             }
 
-            let contents = match fs::read_to_string(entry.path()) {
+            let contents = match read_entry_to_string_no_follow(&entry) {
                 Ok(contents) => contents,
                 Err(_) => {
                     scan.problems.push(UserReviewRecordProblem::new(
@@ -284,9 +358,9 @@ impl JsonUserReviewRepository {
                 }
             };
             let expected_name = format!("{}.json", review.id());
-            if file_name != expected_name
+            if display_file_name != expected_name
                 || !collection_matches_status(collection, review.status())
-                || review.target().spec_id() != paths.spec_id()
+                || review.target().spec_id() != spec_id
                 || !self.source_paths_match(&review)
             {
                 scan.problems.push(UserReviewRecordProblem::new(
@@ -316,29 +390,32 @@ impl JsonUserReviewRepository {
 
     fn load_mutation_record(
         &self,
-        path: &Path,
+        directory: &Dir,
+        file_name: &OsStr,
         collection: UserReviewCollection,
         id: &UserReviewId,
+        require_canonical_name: bool,
     ) -> Result<Option<UserReview>, UserReviewRepositoryError> {
-        let metadata = match fs::symlink_metadata(path) {
-            Ok(metadata) => metadata,
+        let mut file = match open_file_no_follow(directory, file_name) {
+            Ok(file) => file,
             Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
             Err(_) => return Err(UserReviewRepositoryError::Unavailable),
         };
-        if !metadata.file_type().is_file() || metadata.file_type().is_symlink() {
+        let metadata = file
+            .metadata()
+            .map_err(|_| UserReviewRepositoryError::Unavailable)?;
+        if !metadata.is_file() {
             return Err(UserReviewRepositoryError::Unavailable);
         }
 
-        let contents =
-            fs::read_to_string(path).map_err(|_| UserReviewRepositoryError::Unavailable)?;
+        let mut contents = String::new();
+        file.read_to_string(&mut contents)
+            .map_err(|_| UserReviewRepositoryError::Unavailable)?;
         let review = decode_user_review_document(&contents)
             .map_err(|_| UserReviewRepositoryError::Unavailable)?;
         if review.id() != id
             || !collection_matches_status(collection, review.status())
-            || self
-                .resolve_paths(review.target())
-                .record_path(collection, id)
-                != path
+            || (require_canonical_name && file_name != record_file_name(id))
             || !self.source_paths_match(&review)
         {
             return Err(UserReviewRepositoryError::Unavailable);
@@ -347,13 +424,59 @@ impl JsonUserReviewRepository {
         Ok(Some(review))
     }
 
-    fn targeted_legacy_exists(&self, paths: &UserReviewStoragePaths, id: &UserReviewId) -> bool {
-        [UserReviewCollection::Active, UserReviewCollection::Archive]
-            .into_iter()
-            .any(|collection| {
-                fs::symlink_metadata(paths.legacy_record_path(collection, id))
-                    .is_ok_and(|metadata| metadata.file_type().is_dir())
-            })
+    fn targeted_legacy_exists(
+        &self,
+        active: &Dir,
+        archive: &Dir,
+        id: &UserReviewId,
+    ) -> Result<bool, UserReviewRepositoryError> {
+        Ok(entry_is_directory(active, OsStr::new(id.as_str()))?
+            || entry_is_directory(archive, OsStr::new(id.as_str()))?)
+    }
+
+    fn capture_active_after_archive(
+        &self,
+        active_directory: &Dir,
+        id: &UserReviewId,
+        expected_active: &UserReview,
+    ) -> Result<(), UserReviewRepositoryError> {
+        let record_name = record_file_name(id);
+        let Some(capture_name) = capture_entry_no_replace(active_directory, &record_name, id)?
+        else {
+            return Ok(());
+        };
+        self.archive_observer.after_active_capture();
+
+        let captured_matches = match self.load_mutation_record(
+            active_directory,
+            &capture_name,
+            UserReviewCollection::Active,
+            id,
+            false,
+        ) {
+            Ok(Some(captured)) => captured == *expected_active,
+            Ok(None) | Err(_) => false,
+        };
+
+        if captured_matches {
+            active_directory
+                .remove_file(&capture_name)
+                .map_err(|_| UserReviewRepositoryError::Unavailable)?;
+            sync_directory(active_directory).map_err(|_| UserReviewRepositoryError::Unavailable)?;
+            return Ok(());
+        }
+
+        match rename_no_replace(active_directory, &capture_name, &record_name) {
+            Ok(()) => {
+                sync_directory(active_directory)
+                    .map_err(|_| UserReviewRepositoryError::Unavailable)?;
+                Err(UserReviewRepositoryError::ConflictingCopies { id: id.clone() })
+            }
+            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {
+                Err(UserReviewRepositoryError::ConflictingCopies { id: id.clone() })
+            }
+            Err(_) => Err(UserReviewRepositoryError::Unavailable),
+        }
     }
 }
 
@@ -369,19 +492,23 @@ impl UserReviewRepository for JsonUserReviewRepository {
             });
         }
 
-        let paths = self.resolve_paths(review.target());
-        self.prepare_directories(&paths)?;
-        self.cleanup_stale_temps(&paths);
+        let directories = self.prepare_directories(review.target())?;
+        self.cleanup_stale_temps(
+            &directories.spec_id,
+            Some(&directories.active),
+            Some(&directories.archive),
+        );
 
-        if self.targeted_legacy_exists(&paths, review.id()) {
+        if self.targeted_legacy_exists(&directories.active, &directories.archive, review.id())? {
             return Err(UserReviewRepositoryError::LegacyRecord {
                 id: review.id().clone(),
             });
         }
 
-        let active_path = paths.record_path(UserReviewCollection::Active, review.id());
-        let archive_path = paths.record_path(UserReviewCollection::Archive, review.id());
-        if path_lexically_exists(&active_path) || path_lexically_exists(&archive_path) {
+        let record_name = record_file_name(review.id());
+        if entry_exists(&directories.active, &record_name)?
+            || entry_exists(&directories.archive, &record_name)?
+        {
             return Err(UserReviewRepositoryError::AlreadyExists {
                 id: review.id().clone(),
             });
@@ -389,12 +516,7 @@ impl UserReviewRepository for JsonUserReviewRepository {
 
         let contents = encode_user_review_document(&review)
             .map_err(|_| UserReviewRepositoryError::Unavailable)?;
-        match publish_no_replace(
-            paths.active_directory(),
-            &active_path,
-            review.id(),
-            &contents,
-        )? {
+        match publish_no_replace(&directories.active, &record_name, review.id(), &contents)? {
             PublishOutcome::Published => Ok(UserReviewCreateOutcome::new(review)),
             PublishOutcome::AlreadyExists => Err(UserReviewRepositoryError::AlreadyExists {
                 id: review.id().clone(),
@@ -407,12 +529,23 @@ impl UserReviewRepository for JsonUserReviewRepository {
         target: &UserReviewTarget,
     ) -> Result<UserReviewListOutcome, UserReviewRepositoryError> {
         let _guard = lock_user_review_store()?;
-        let paths = self.resolve_paths(target);
-        self.validate_existing_paths(&paths)?;
-        self.cleanup_stale_temps(&paths);
+        let directories = self.existing_directories(target)?;
+        self.cleanup_stale_temps(
+            &directories.spec_id,
+            directories.active.as_ref(),
+            directories.archive.as_ref(),
+        );
 
-        let mut active_scan = self.scan_collection(&paths, UserReviewCollection::Active)?;
-        let mut archive_scan = self.scan_collection(&paths, UserReviewCollection::Archive)?;
+        let mut active_scan = self.scan_collection(
+            &directories.spec_id,
+            directories.active.as_ref(),
+            UserReviewCollection::Active,
+        )?;
+        let mut archive_scan = self.scan_collection(
+            &directories.spec_id,
+            directories.archive.as_ref(),
+            UserReviewCollection::Archive,
+        )?;
         let mut problems = Vec::new();
         problems.append(&mut active_scan.problems);
         problems.append(&mut archive_scan.problems);
@@ -471,19 +604,32 @@ impl UserReviewRepository for JsonUserReviewRepository {
         archived_at: DateTime<Utc>,
     ) -> Result<UserReviewArchiveOutcome, UserReviewRepositoryError> {
         let _guard = lock_user_review_store()?;
-        let paths = self.resolve_paths(target);
-        self.prepare_directories(&paths)?;
-        self.cleanup_stale_temps(&paths);
+        let directories = self.prepare_directories(target)?;
+        self.cleanup_stale_temps(
+            &directories.spec_id,
+            Some(&directories.active),
+            Some(&directories.archive),
+        );
 
-        if self.targeted_legacy_exists(&paths, id) {
+        if self.targeted_legacy_exists(&directories.active, &directories.archive, id)? {
             return Err(UserReviewRepositoryError::LegacyRecord { id: id.clone() });
         }
 
-        let active_path = paths.record_path(UserReviewCollection::Active, id);
-        let archive_path = paths.record_path(UserReviewCollection::Archive, id);
-        let active = self.load_mutation_record(&active_path, UserReviewCollection::Active, id)?;
-        let archived =
-            self.load_mutation_record(&archive_path, UserReviewCollection::Archive, id)?;
+        let record_name = record_file_name(id);
+        let active = self.load_mutation_record(
+            &directories.active,
+            &record_name,
+            UserReviewCollection::Active,
+            id,
+            true,
+        )?;
+        let archived = self.load_mutation_record(
+            &directories.archive,
+            &record_name,
+            UserReviewCollection::Archive,
+            id,
+            true,
+        )?;
 
         match (active, archived) {
             (None, None) => Err(UserReviewRepositoryError::NotFound { id: id.clone() }),
@@ -496,41 +642,46 @@ impl UserReviewRepository for JsonUserReviewRepository {
                     return Err(UserReviewRepositoryError::ConflictingCopies { id: id.clone() });
                 }
                 ensure_target_matches(&archived, target)?;
+                self.capture_active_after_archive(&directories.active, id, &active)?;
                 let problem = duplicate_problem(id)?;
-                let _ = remove_active_after_archive(&active_path, paths.active_directory());
 
                 Ok(UserReviewArchiveOutcome::new(archived, vec![problem]))
             }
-            (Some(mut active), None) => {
-                ensure_target_matches(&active, target)?;
-                active
+            (Some(original_active), None) => {
+                ensure_target_matches(&original_active, target)?;
+                let mut desired_archive = original_active.clone();
+                desired_archive
                     .archive(id, target, archived_at)
                     .map_err(|_| UserReviewRepositoryError::InvalidState { id: id.clone() })?;
-                let contents = encode_user_review_document(&active)
+                let contents = encode_user_review_document(&desired_archive)
                     .map_err(|_| UserReviewRepositoryError::Unavailable)?;
 
-                match publish_no_replace(paths.archive_directory(), &archive_path, id, &contents)? {
-                    PublishOutcome::Published => {}
-                    PublishOutcome::AlreadyExists => {
-                        let persisted = self
-                            .load_mutation_record(&archive_path, UserReviewCollection::Archive, id)?
-                            .ok_or(UserReviewRepositoryError::Unavailable)?;
-                        if persisted != active {
-                            return Err(UserReviewRepositoryError::ConflictingCopies {
-                                id: id.clone(),
-                            });
+                self.archive_observer.before_archive_publish();
+                let (persisted_archive, problems) =
+                    match publish_no_replace(&directories.archive, &record_name, id, &contents)? {
+                        PublishOutcome::Published => (desired_archive, Vec::new()),
+                        PublishOutcome::AlreadyExists => {
+                            let persisted = self
+                                .load_mutation_record(
+                                    &directories.archive,
+                                    &record_name,
+                                    UserReviewCollection::Archive,
+                                    id,
+                                    true,
+                                )?
+                                .ok_or(UserReviewRepositoryError::Unavailable)?;
+                            if !is_recoverable_duplicate(&original_active, &persisted) {
+                                return Err(UserReviewRepositoryError::ConflictingCopies {
+                                    id: id.clone(),
+                                });
+                            }
+                            (persisted, vec![duplicate_problem(id)?])
                         }
-                    }
-                }
+                    };
+                self.archive_observer.after_archive_publish();
+                self.capture_active_after_archive(&directories.active, id, &original_active)?;
 
-                let removed = remove_active_after_archive(&active_path, paths.active_directory());
-                let problems = if removed {
-                    Vec::new()
-                } else {
-                    vec![duplicate_problem(id)?]
-                };
-
-                Ok(UserReviewArchiveOutcome::new(active, problems))
+                Ok(UserReviewArchiveOutcome::new(persisted_archive, problems))
             }
         }
     }
@@ -555,53 +706,42 @@ enum PublishOutcome {
 }
 
 fn publish_no_replace(
-    directory: &Path,
-    destination: &Path,
+    directory: &Dir,
+    destination: &OsStr,
     id: &UserReviewId,
     contents: &str,
 ) -> Result<PublishOutcome, UserReviewRepositoryError> {
-    let (mut temp_file, temp_path) = create_temp_file(directory, id)?;
+    let (mut temp_file, temp_name) = create_temp_file(directory, id)?;
     if temp_file.write_all(contents.as_bytes()).is_err()
         || temp_file.flush().is_err()
         || temp_file.sync_all().is_err()
     {
-        drop(temp_file);
-        let _ = fs::remove_file(temp_path);
         return Err(UserReviewRepositoryError::Unavailable);
     }
     drop(temp_file);
 
-    match fs::hard_link(&temp_path, destination) {
+    match rename_no_replace(directory, &temp_name, destination) {
         Ok(()) => {}
         Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {
-            let _ = fs::remove_file(temp_path);
             return Ok(PublishOutcome::AlreadyExists);
         }
-        Err(_) => {
-            let _ = fs::remove_file(temp_path);
-            return Err(UserReviewRepositoryError::Unavailable);
-        }
+        Err(_) => return Err(UserReviewRepositoryError::Unavailable),
     }
 
-    if sync_directory(directory).is_err() {
-        return Err(UserReviewRepositoryError::Unavailable);
-    }
-
-    if fs::remove_file(&temp_path).is_ok() {
-        let _ = sync_directory(directory);
-    }
+    sync_directory(directory).map_err(|_| UserReviewRepositoryError::Unavailable)?;
 
     Ok(PublishOutcome::Published)
 }
 
 fn create_temp_file(
-    directory: &Path,
+    directory: &Dir,
     id: &UserReviewId,
-) -> Result<(File, PathBuf), UserReviewRepositoryError> {
+) -> Result<(File, OsString), UserReviewRepositoryError> {
     for _ in 0..TEMP_FILE_CREATE_ATTEMPTS {
-        let path = directory.join(temp_file_name(id, Uuid::new_v4()));
-        match OpenOptions::new().write(true).create_new(true).open(&path) {
-            Ok(file) => return Ok((file, path)),
+        let name = OsString::from(temp_file_name(id, Uuid::new_v4()));
+        let options = create_new_file_options();
+        match directory.open_with(&name, &options) {
+            Ok(file) => return Ok((file, name)),
             Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
             Err(_) => return Err(UserReviewRepositoryError::Unavailable),
         }
@@ -639,9 +779,9 @@ fn parse_owned_temp_name(name: &OsStr) -> Option<(UserReviewId, Uuid)> {
     Some((id, nonce))
 }
 
-fn file_age(metadata: &fs::Metadata) -> Option<Duration> {
+fn file_age(metadata: &Metadata) -> Option<Duration> {
     SystemTime::now()
-        .duration_since(metadata.modified().ok()?)
+        .duration_since(metadata.modified().ok()?.into_std())
         .ok()
 }
 
@@ -675,14 +815,6 @@ fn ensure_target_matches(
     }
 
     Ok(())
-}
-
-fn remove_active_after_archive(path: &Path, directory: &Path) -> bool {
-    match fs::remove_file(path) {
-        Ok(()) => sync_directory(directory).is_ok(),
-        Err(error) if error.kind() == io::ErrorKind::NotFound => true,
-        Err(_) => false,
-    }
 }
 
 fn duplicate_problem(
@@ -745,26 +877,247 @@ fn slash_separated_relative_path(path: &Path) -> Option<String> {
     Some(segments.join("/"))
 }
 
-fn path_lexically_exists(path: &Path) -> bool {
-    fs::symlink_metadata(path).is_ok()
+fn record_file_name(id: &UserReviewId) -> OsString {
+    OsString::from(format!("{id}.json"))
 }
 
-fn ensure_not_symlink(path: &Path) -> Result<(), UserReviewRepositoryError> {
-    match fs::symlink_metadata(path) {
-        Ok(metadata) if metadata.file_type().is_symlink() => {
-            Err(UserReviewRepositoryError::Unavailable)
+fn capture_file_name(id: &UserReviewId, nonce: Uuid) -> OsString {
+    OsString::from(format!(
+        "{CAPTURE_FILE_PREFIX}{id}-{}{TEMP_FILE_SUFFIX}",
+        nonce.simple()
+    ))
+}
+
+fn capture_entry_no_replace(
+    directory: &Dir,
+    source: &OsStr,
+    id: &UserReviewId,
+) -> Result<Option<OsString>, UserReviewRepositoryError> {
+    for _ in 0..TEMP_FILE_CREATE_ATTEMPTS {
+        let capture = capture_file_name(id, Uuid::new_v4());
+        match rename_no_replace(directory, source, &capture) {
+            Ok(()) => {
+                sync_directory(directory).map_err(|_| UserReviewRepositoryError::Unavailable)?;
+                return Ok(Some(capture));
+            }
+            Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
+            Err(_) => return Err(UserReviewRepositoryError::Unavailable),
         }
-        Ok(_) => Ok(()),
-        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+    }
+
+    Err(UserReviewRepositoryError::Unavailable)
+}
+
+fn cleanup_capture_file_name(id: &UserReviewId, nonce: Uuid) -> OsString {
+    OsString::from(format!(
+        "{CLEANUP_FILE_PREFIX}{id}-{}{TEMP_FILE_SUFFIX}",
+        nonce.simple()
+    ))
+}
+
+fn capture_cleanup_entry_no_replace(
+    directory: &Dir,
+    source: &OsStr,
+    id: &UserReviewId,
+) -> io::Result<Option<OsString>> {
+    for _ in 0..TEMP_FILE_CREATE_ATTEMPTS {
+        let capture_name = cleanup_capture_file_name(id, Uuid::new_v4());
+        match rename_no_replace(directory, source, &capture_name) {
+            Ok(()) => {
+                sync_directory(directory)?;
+                return Ok(Some(capture_name));
+            }
+            Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
+            Err(error) => return Err(error),
+        }
+    }
+
+    Err(io::Error::new(
+        io::ErrorKind::AlreadyExists,
+        "could not reserve a cleanup capture name",
+    ))
+}
+
+fn entry_exists(directory: &Dir, name: &OsStr) -> Result<bool, UserReviewRepositoryError> {
+    match directory.symlink_metadata(name) {
+        Ok(_) => Ok(true),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
         Err(_) => Err(UserReviewRepositoryError::Unavailable),
     }
 }
 
-fn ensure_directory(path: &Path) -> Result<(), UserReviewRepositoryError> {
-    let metadata =
-        fs::symlink_metadata(path).map_err(|_| UserReviewRepositoryError::Unavailable)?;
-    if !metadata.file_type().is_dir() || metadata.file_type().is_symlink() {
-        return Err(UserReviewRepositoryError::Unavailable);
+fn entry_is_directory(directory: &Dir, name: &OsStr) -> Result<bool, UserReviewRepositoryError> {
+    match directory.symlink_metadata(name) {
+        Ok(metadata) => Ok(metadata.is_dir()),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
+        Err(_) => Err(UserReviewRepositoryError::Unavailable),
+    }
+}
+
+fn open_optional_directory(
+    parent: &Dir,
+    name: &str,
+) -> Result<Option<Dir>, UserReviewRepositoryError> {
+    match parent.open_dir(name) {
+        Ok(directory) => Ok(Some(directory)),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(None),
+        Err(_) => Err(UserReviewRepositoryError::Unavailable),
+    }
+}
+
+fn open_entry_no_follow(entry: &DirEntry) -> io::Result<(File, Metadata)> {
+    let options = read_only_file_options();
+    let file = entry.open_with(&options)?;
+    let metadata = file.metadata()?;
+    Ok((file, metadata))
+}
+
+fn read_entry_to_string_no_follow(entry: &DirEntry) -> io::Result<String> {
+    let (mut file, metadata) = open_entry_no_follow(entry)?;
+    if !metadata.is_file() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "user review record is not a regular file",
+        ));
+    }
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+    Ok(contents)
+}
+
+fn open_file_no_follow(directory: &Dir, name: &OsStr) -> io::Result<File> {
+    directory.open_with(name, &read_only_file_options())
+}
+
+fn read_only_file_options() -> OpenOptions {
+    let mut options = OpenOptions::new();
+    options.read(true);
+    configure_no_follow(&mut options);
+    options
+}
+
+fn create_new_file_options() -> OpenOptions {
+    let mut options = OpenOptions::new();
+    options.write(true).create_new(true);
+    configure_no_follow(&mut options);
+    options
+}
+
+#[cfg(unix)]
+fn configure_no_follow(options: &mut OpenOptions) {
+    options.custom_flags(rustix::fs::OFlags::NOFOLLOW.bits() as i32);
+}
+
+#[cfg(windows)]
+fn configure_no_follow(options: &mut OpenOptions) {
+    use windows_sys::Win32::Storage::FileSystem::FILE_FLAG_OPEN_REPARSE_POINT;
+
+    options.custom_flags(FILE_FLAG_OPEN_REPARSE_POINT);
+}
+
+#[cfg(any(
+    target_os = "linux",
+    target_os = "android",
+    target_vendor = "apple",
+    target_os = "redox"
+))]
+fn rename_no_replace(directory: &Dir, from: &OsStr, to: &OsStr) -> io::Result<()> {
+    Ok(rustix::fs::renameat_with(
+        directory,
+        from,
+        directory,
+        to,
+        rustix::fs::RenameFlags::NOREPLACE,
+    )?)
+}
+
+#[cfg(all(
+    unix,
+    not(any(
+        target_os = "linux",
+        target_os = "android",
+        target_vendor = "apple",
+        target_os = "redox"
+    ))
+))]
+fn rename_no_replace(_directory: &Dir, _from: &OsStr, _to: &OsStr) -> io::Result<()> {
+    Err(io::Error::new(
+        io::ErrorKind::Unsupported,
+        "atomic no-replace rename is unavailable on this platform",
+    ))
+}
+
+#[cfg(windows)]
+fn rename_no_replace(directory: &Dir, from: &OsStr, to: &OsStr) -> io::Result<()> {
+    use std::{
+        mem::size_of,
+        os::windows::{ffi::OsStrExt, io::AsRawHandle},
+    };
+    use windows_sys::{
+        Wdk::Storage::FileSystem::{
+            FileRenameInformation, NtSetInformationFile, FILE_INFORMATION_CLASS,
+        },
+        Win32::{
+            Foundation::{RtlNtStatusToDosError, HANDLE},
+            Storage::FileSystem::{
+                DELETE, FILE_FLAG_OPEN_REPARSE_POINT, FILE_SHARE_DELETE, FILE_SHARE_READ,
+                FILE_SHARE_WRITE,
+            },
+            System::IO::IO_STATUS_BLOCK,
+        },
+    };
+
+    const MAX_RENAME_UNITS: usize = 255;
+
+    #[repr(C)]
+    struct RenameInformation {
+        replace_if_exists: u32,
+        root_directory: HANDLE,
+        file_name_length: u32,
+        file_name: [u16; MAX_RENAME_UNITS],
+    }
+
+    let wide_name = to.encode_wide().collect::<Vec<_>>();
+    if wide_name.len() > MAX_RENAME_UNITS {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "user review record name is too long",
+        ));
+    }
+
+    let mut options = OpenOptions::new();
+    options
+        .access_mode(DELETE)
+        .share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE)
+        .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT);
+    let file = directory.open_with(from, &options)?;
+    let mut information = RenameInformation {
+        replace_if_exists: 0,
+        root_directory: directory.as_raw_handle() as HANDLE,
+        file_name_length: u32::try_from(wide_name.len() * size_of::<u16>())
+            .map_err(|_| io::Error::from(io::ErrorKind::InvalidInput))?,
+        file_name: [0; MAX_RENAME_UNITS],
+    };
+    information.file_name[..wide_name.len()].copy_from_slice(&wide_name);
+
+    let mut status_block = IO_STATUS_BLOCK::default();
+    // NtSetInformationFile is synchronous for this handle and supports a held
+    // RootDirectory, so neither side is resolved through a replaceable parent path.
+    let status = unsafe {
+        NtSetInformationFile(
+            file.as_raw_handle() as HANDLE,
+            &raw mut status_block,
+            (&raw const information).cast(),
+            u32::try_from(size_of::<RenameInformation>())
+                .map_err(|_| io::Error::from(io::ErrorKind::InvalidInput))?,
+            FileRenameInformation as FILE_INFORMATION_CLASS,
+        )
+    };
+    if status < 0 {
+        let error_code = unsafe { RtlNtStatusToDosError(status) };
+        return Err(io::Error::from_raw_os_error(error_code as i32));
     }
 
     Ok(())
@@ -777,23 +1130,18 @@ fn lock_user_review_store() -> Result<MutexGuard<'static, ()>, UserReviewReposit
 }
 
 #[cfg(unix)]
-fn sync_directory(path: &Path) -> io::Result<()> {
-    File::open(path)?.sync_all()
+fn sync_directory(directory: &Dir) -> io::Result<()> {
+    directory.open(".")?.sync_all()
 }
 
 #[cfg(windows)]
-fn sync_directory(path: &Path) -> io::Result<()> {
-    use std::os::windows::fs::OpenOptionsExt;
-
-    const FILE_FLAG_BACKUP_SEMANTICS: u32 = 0x0200_0000;
-    OpenOptions::new()
-        .read(true)
-        .custom_flags(FILE_FLAG_BACKUP_SEMANTICS)
-        .open(path)?
-        .sync_all()
+fn sync_directory(_directory: &Dir) -> io::Result<()> {
+    // Windows has no directory fsync equivalent. Record contents are flushed
+    // before the atomic rename, and NTFS journals the namespace transition.
+    Ok(())
 }
 
 #[cfg(not(any(unix, windows)))]
-fn sync_directory(_path: &Path) -> io::Result<()> {
-    Ok(())
+fn sync_directory(_directory: &Dir) -> io::Result<()> {
+    Err(io::Error::from(io::ErrorKind::Unsupported))
 }
