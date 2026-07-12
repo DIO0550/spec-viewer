@@ -4,7 +4,7 @@ use std::{
     fs,
     path::{Path, PathBuf},
     sync::Arc,
-    time::Duration,
+    time::{Duration, SystemTime},
 };
 
 use chrono::{DateTime, Utc};
@@ -68,6 +68,19 @@ impl TestWorkspace {
         )
     }
 
+    pub fn repository_with_cleanup_observer(
+        &self,
+        age: Duration,
+        observer: Arc<dyn ArchiveMutationObserver>,
+    ) -> JsonUserReviewRepository {
+        JsonUserReviewRepository::with_temp_cleanup_age_and_observer(
+            self.layout.clone(),
+            WorkspaceConfig::plugin_workspace_default(),
+            age,
+            observer,
+        )
+    }
+
     pub fn repository_with_cleanup_age(&self, age: Duration) -> JsonUserReviewRepository {
         JsonUserReviewRepository::with_temp_cleanup_age(
             self.layout.clone(),
@@ -112,6 +125,16 @@ impl TestWorkspace {
         fs::rename(temporary_path, path).expect("test record replacement should be atomic");
     }
 
+    pub fn replace_raw(&self, path: &Path, contents: &str) {
+        let parent = path.parent().expect("test record should have a parent");
+        let temporary_path = parent.join(format!(
+            ".external-replacement-{}.tmp",
+            Uuid::new_v4().simple()
+        ));
+        self.write_raw(&temporary_path, contents);
+        fs::rename(temporary_path, path).expect("test raw replacement should be atomic");
+    }
+
     pub fn capture_paths(&self) -> Vec<PathBuf> {
         let Ok(entries) = fs::read_dir(self.active_directory()) else {
             return Vec::new();
@@ -126,6 +149,34 @@ impl TestWorkspace {
             })
             .map(|entry| entry.path())
             .collect()
+    }
+
+    pub fn cleanup_capture_paths(&self) -> Vec<PathBuf> {
+        let Ok(entries) = fs::read_dir(self.active_directory()) else {
+            return Vec::new();
+        };
+        entries
+            .filter_map(Result::ok)
+            .filter(|entry| {
+                entry
+                    .file_name()
+                    .to_string_lossy()
+                    .starts_with(".user-review-cleanup-")
+            })
+            .map(|entry| entry.path())
+            .collect()
+    }
+
+    pub fn set_file_age(&self, path: &Path, age: Duration) {
+        let modified = SystemTime::now()
+            .checked_sub(age)
+            .expect("test file age should be representable");
+        let file = fs::OpenOptions::new()
+            .write(true)
+            .open(path)
+            .expect("test file should open for timestamp update");
+        file.set_times(fs::FileTimes::new().set_modified(modified))
+            .expect("test file timestamp should be updated");
     }
 
     pub fn write_raw(&self, path: &Path, contents: &str) {

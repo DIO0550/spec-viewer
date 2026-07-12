@@ -1202,3 +1202,23 @@ fn sync_directory(_directory: &Dir) -> io::Result<()> {
     // before the atomic rename, and NTFS journals the namespace transition.
     Ok(())
 }
+
+#[cfg(test)]
+mod platform_contract_tests {
+    use super::*;
+
+    #[test]
+    fn unsupported_platform_contract_is_complete_and_fails_closed() {
+        assert_eq!(
+            Err(UserReviewRepositoryError::Unavailable),
+            platform_support_result(false)
+        );
+        assert_eq!(Ok(()), platform_support_result(true));
+
+        let mut options = OpenOptions::new();
+        unsupported_platform::configure_no_follow(&mut options);
+        let _rename: fn(&Dir, &OsStr, &OsStr) -> io::Result<()> =
+            unsupported_platform::rename_no_replace;
+        let _sync: fn(&Dir) -> io::Result<()> = unsupported_platform::sync_directory;
+    }
+}

@@ -1,17 +1,74 @@
 mod support;
 
-use std::{fs, time::Duration};
+use std::{
+    fs,
+    sync::{Arc, Barrier},
+    thread,
+    time::Duration,
+};
 
 use spec_reviewer_lib::{
     domain::user_review::{UserReviewRecordProblemKind, UserReviewRepository},
-    infrastructure::persistence::user_review_document::encode_user_review_document,
+    infrastructure::persistence::{
+        user_review_document::encode_user_review_document,
+        user_review_repository::ArchiveMutationObserver,
+    },
 };
 use uuid::Uuid;
 
 use support::user_review_repository::{
-    active_review, active_review_with_source_path, archived_review, create, target, user_review_id,
-    TestWorkspace,
+    active_review, active_review_with_source_path, archived_review, create, encoded_review, target,
+    user_review_id, TestWorkspace,
 };
+
+const CLEANUP_AGE: Duration = Duration::from_secs(60 * 60);
+const STALE_AGE: Duration = Duration::from_secs(2 * 60 * 60);
+
+#[derive(Clone)]
+struct CleanupGate {
+    reached: Arc<Barrier>,
+    resume: Arc<Barrier>,
+}
+
+impl CleanupGate {
+    fn new() -> Self {
+        Self {
+            reached: Arc::new(Barrier::new(2)),
+            resume: Arc::new(Barrier::new(2)),
+        }
+    }
+
+    fn pause_cleanup(&self) {
+        self.reached.wait();
+        self.resume.wait();
+    }
+
+    fn run_while_paused(&self, action: impl FnOnce()) {
+        self.reached.wait();
+        action();
+        self.resume.wait();
+    }
+}
+
+#[derive(Default)]
+struct BlockingCleanupObserver {
+    after_validation: Option<CleanupGate>,
+    after_capture: Option<CleanupGate>,
+}
+
+impl ArchiveMutationObserver for BlockingCleanupObserver {
+    fn after_temp_cleanup_validation(&self) {
+        if let Some(gate) = &self.after_validation {
+            gate.pause_cleanup();
+        }
+    }
+
+    fn after_temp_cleanup_capture(&self) {
+        if let Some(gate) = &self.after_capture {
+            gate.pause_cleanup();
+        }
+    }
+}
 
 #[test]
 fn malformed_unsupported_and_legacy_records_do_not_block_valid_list_results() {
@@ -161,4 +218,118 @@ fn temp_cleanup_requires_owned_name_stale_age_and_valid_matching_content() {
     assert!(unknown_temp.exists());
     assert!(mismatched_id_temp.exists());
     assert!(mismatched_status_temp.exists());
+}
+
+#[test]
+fn temp_cleanup_restores_a_fresh_replacement_after_initial_validation() {
+    let workspace = TestWorkspace::new("temp-cleanup-fresh-replacement");
+    let after_validation = CleanupGate::new();
+    let repository = workspace.repository_with_cleanup_observer(
+        CLEANUP_AGE,
+        Arc::new(BlockingCleanupObserver {
+            after_validation: Some(after_validation.clone()),
+            ..BlockingCleanupObserver::default()
+        }),
+    );
+    let stale = active_review(30, "Initially stale temp");
+    let fresh = active_review(30, "Fresh concurrent replacement");
+    let temp_path =
+        workspace.known_temp_path(&workspace.active_directory(), stale.id(), Uuid::new_v4());
+    workspace.write_review(&temp_path, &stale);
+    workspace.set_file_age(&temp_path, STALE_AGE);
+
+    let cleanup = thread::spawn(move || repository.list(&target()));
+    after_validation.run_while_paused(|| {
+        workspace.replace_review(&temp_path, &fresh);
+    });
+    cleanup
+        .join()
+        .expect("cleanup thread should finish")
+        .expect("cleanup should remain best effort");
+
+    assert_eq!(
+        encoded_review(&fresh),
+        fs::read(&temp_path).expect("fresh replacement should be restored")
+    );
+    assert!(workspace.cleanup_capture_paths().is_empty());
+}
+
+#[test]
+fn temp_cleanup_restores_a_malformed_replacement_after_initial_validation() {
+    let workspace = TestWorkspace::new("temp-cleanup-malformed-replacement");
+    let after_validation = CleanupGate::new();
+    let repository = workspace.repository_with_cleanup_observer(
+        CLEANUP_AGE,
+        Arc::new(BlockingCleanupObserver {
+            after_validation: Some(after_validation.clone()),
+            ..BlockingCleanupObserver::default()
+        }),
+    );
+    let stale = active_review(31, "Initially valid temp");
+    let temp_path =
+        workspace.known_temp_path(&workspace.active_directory(), stale.id(), Uuid::new_v4());
+    workspace.write_review(&temp_path, &stale);
+    workspace.set_file_age(&temp_path, STALE_AGE);
+    let malformed = "{\"schemaVersion\":";
+
+    let cleanup = thread::spawn(move || repository.list(&target()));
+    after_validation.run_while_paused(|| {
+        workspace.replace_raw(&temp_path, malformed);
+        workspace.set_file_age(&temp_path, STALE_AGE);
+    });
+    cleanup
+        .join()
+        .expect("cleanup thread should finish")
+        .expect("cleanup should remain best effort");
+
+    assert_eq!(
+        malformed.as_bytes(),
+        fs::read(&temp_path).expect("malformed replacement should be restored")
+    );
+    assert!(workspace.cleanup_capture_paths().is_empty());
+}
+
+#[test]
+fn temp_cleanup_retains_canonical_and_capture_when_restore_collides() {
+    let workspace = TestWorkspace::new("temp-cleanup-restore-collision");
+    let after_capture = CleanupGate::new();
+    let repository = workspace.repository_with_cleanup_observer(
+        CLEANUP_AGE,
+        Arc::new(BlockingCleanupObserver {
+            after_capture: Some(after_capture.clone()),
+            ..BlockingCleanupObserver::default()
+        }),
+    );
+    let stale = active_review(32, "Initially valid temp");
+    let temp_path =
+        workspace.known_temp_path(&workspace.active_directory(), stale.id(), Uuid::new_v4());
+    workspace.write_review(&temp_path, &stale);
+    workspace.set_file_age(&temp_path, STALE_AGE);
+    let malformed_capture = "{\"schemaVersion\":";
+    let canonical_collision = "canonical concurrent temp";
+
+    let cleanup = thread::spawn(move || repository.list(&target()));
+    after_capture.run_while_paused(|| {
+        let capture_paths = workspace.cleanup_capture_paths();
+        if let Some(capture_path) = capture_paths.first() {
+            workspace.replace_raw(capture_path, malformed_capture);
+            workspace.set_file_age(capture_path, STALE_AGE);
+        }
+        workspace.write_raw(&temp_path, canonical_collision);
+    });
+    cleanup
+        .join()
+        .expect("cleanup thread should finish")
+        .expect("cleanup should remain best effort");
+    let capture_paths = workspace.cleanup_capture_paths();
+
+    assert_eq!(
+        canonical_collision.as_bytes(),
+        fs::read(&temp_path).expect("canonical colliding temp should remain")
+    );
+    assert_eq!(1, capture_paths.len());
+    assert_eq!(
+        malformed_capture.as_bytes(),
+        fs::read(&capture_paths[0]).expect("capture tombstone should remain")
+    );
 }
