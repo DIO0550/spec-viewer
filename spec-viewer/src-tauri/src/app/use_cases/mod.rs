@@ -13,9 +13,9 @@ use crate::{
     domain::{
         comment::{CommentDomainError, CommentRepositoryError},
         spec::{
-            MarkdownBlock, ReadSpecFile, ScanSpecTree, SpecDomainError, SpecFileKey,
-            SpecFileReadPortError, SpecId, SpecNode, SpecTree, SpecTreeAssembler,
-            SpecTreeAssemblyError, SpecTreeScanPortError,
+            MarkdownBlock, ReadSpecFile, ScanSpecTree, SpecArchivePolicy, SpecArchivePolicyError,
+            SpecDomainError, SpecFileKey, SpecFileReadPortError, SpecId, SpecNode, SpecTree,
+            SpecTreeAssembler, SpecTreeAssemblyError, SpecTreeScanPortError,
         },
         workspace::{
             DetectWorkspace, LoadWorkspaceConfig, WorkspaceConfig, WorkspaceConfigLoadPortError,
@@ -124,7 +124,9 @@ impl FilesystemAppUseCases {
         workspace: &LoadWorkspaceResult,
         spec_id: &SpecId,
     ) -> Result<ArchiveSpecResult, AppUseCaseError> {
-        let archive_path = archive_spec_directory(workspace.layout(), spec_id)?;
+        let tree = self.list_specs(workspace)?.into_tree();
+        let target = SpecArchivePolicy.target_for(&tree, spec_id)?;
+        let archive_path = archive_spec_directory(workspace.layout(), &target)?;
 
         Ok(ArchiveSpecResult::new(
             spec_id.as_str(),
@@ -382,6 +384,14 @@ impl From<SpecFileReadPortError> for AppUseCaseError {
 
 impl From<SpecArchiveError> for AppUseCaseError {
     fn from(source: SpecArchiveError) -> Self {
+        Self::SpecArchive {
+            message: source.to_string(),
+        }
+    }
+}
+
+impl From<SpecArchivePolicyError> for AppUseCaseError {
+    fn from(source: SpecArchivePolicyError) -> Self {
         Self::SpecArchive {
             message: source.to_string(),
         }
