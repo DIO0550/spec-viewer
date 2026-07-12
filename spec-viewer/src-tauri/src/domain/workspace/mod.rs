@@ -5,10 +5,14 @@ use std::fmt;
 use thiserror::Error;
 
 mod config;
+mod ports;
 
 pub use config::{
     default_scan_excluded_directory_names, SpecConfigOverride, WorkspaceConfig,
     WorkspaceConfigError, WorkspaceConfigSource, WorkspaceFileMapping,
+};
+pub use ports::{
+    DetectWorkspace, LoadWorkspaceConfig, WorkspaceConfigLoadPortError, WorkspaceDetectionPortError,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
