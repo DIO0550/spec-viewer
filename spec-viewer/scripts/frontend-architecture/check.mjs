@@ -12,6 +12,8 @@ const FEATURE_AGGREGATE_PATH_PATTERN =
   /^features(?:\/index(?:\.[cm]?[jt]sx?)?)?$/u;
 const DOMAIN_PATH_PATTERN = /^features\/[^/]+\/domain(?:\/|$)/u;
 const INTERNAL_ALIAS_PREFIX = "@/";
+const TAURI_CORE_MODULE = "@tauri-apps/api/core";
+const TAURI_TRANSPORT_KERNEL_PATH = "shared/api/tauri/invokeTauriCommand.ts";
 
 const toPosixPath = (value) => value.split(path.sep).join("/");
 
@@ -325,6 +327,21 @@ export const auditFrontendArchitecture = ({ sourceRoot, waivers }) => {
         targetPath === null ? null : packageName(targetPath);
       const targetsFeatureAggregate =
         targetPath !== null && FEATURE_AGGREGATE_PATH_PATTERN.test(targetPath);
+
+      if (
+        specifier === TAURI_CORE_MODULE &&
+        file.relativePath !== TAURI_TRANSPORT_KERNEL_PATH
+      ) {
+        detectedViolations.push(
+          createViolation({
+            rule: "raw-tauri-core-dependency",
+            source: file.relativePath,
+            specifier,
+            message:
+              "Raw Tauri core transport is owned by shared/api/tauri/invokeTauriCommand.ts.",
+          }),
+        );
+      }
 
       if (
         DOMAIN_PATH_PATTERN.test(file.relativePath) &&

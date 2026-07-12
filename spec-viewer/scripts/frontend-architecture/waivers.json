@@ -81,296 +81,98 @@
     {
       "rule": "domain-forbidden-dependency",
       "source": "features/comments/domain/commentError/index.ts",
-      "specifier": "@/shared/api/tauri/addComment",
+      "specifier": "@/features/comments/infra/tauri/addComment",
       "issue": 109
     },
     {
       "rule": "domain-forbidden-dependency",
       "source": "features/comments/domain/commentError/index.ts",
-      "specifier": "@/shared/api/tauri/deleteComment",
+      "specifier": "@/features/comments/infra/tauri/deleteComment",
       "issue": 109
     },
     {
       "rule": "domain-forbidden-dependency",
       "source": "features/comments/domain/commentError/index.ts",
-      "specifier": "@/shared/api/tauri/exportComments",
+      "specifier": "@/features/comments/infra/tauri/exportComments",
       "issue": 109
     },
     {
       "rule": "domain-forbidden-dependency",
       "source": "features/comments/domain/commentError/index.ts",
-      "specifier": "@/shared/api/tauri/generateLlmPrompt",
+      "specifier": "@/features/comments/infra/tauri/generateLlmPrompt",
       "issue": 109
     },
     {
       "rule": "domain-forbidden-dependency",
       "source": "features/comments/domain/commentError/index.ts",
-      "specifier": "@/shared/api/tauri/listComments",
+      "specifier": "@/features/comments/infra/tauri/listComments",
       "issue": 109
     },
     {
       "rule": "domain-forbidden-dependency",
       "source": "features/comments/domain/commentError/index.ts",
-      "specifier": "@/shared/api/tauri/reopenComment",
+      "specifier": "@/features/comments/infra/tauri/reopenComment",
       "issue": 109
     },
     {
       "rule": "domain-forbidden-dependency",
       "source": "features/comments/domain/commentError/index.ts",
-      "specifier": "@/shared/api/tauri/resolveComment",
+      "specifier": "@/features/comments/infra/tauri/resolveComment",
       "issue": 109
     },
     {
       "rule": "domain-forbidden-dependency",
       "source": "features/comments/domain/commentError/index.ts",
-      "specifier": "@/shared/api/tauri/toggleCommentResolved",
+      "specifier": "@/features/comments/infra/tauri/toggleCommentResolved",
       "issue": 109
     },
     {
       "rule": "domain-forbidden-dependency",
       "source": "features/comments/domain/commentError/index.ts",
-      "specifier": "@/shared/api/tauri/updateComment",
+      "specifier": "@/features/comments/infra/tauri/updateComment",
       "issue": 109
     },
     {
       "rule": "domain-forbidden-dependency",
       "source": "features/review-runs/domain/userReviewError/index.ts",
-      "specifier": "@/shared/api/tauri/archiveUserReview",
+      "specifier": "@/features/review-runs/infra/tauri/archiveUserReview",
       "issue": 109
     },
     {
       "rule": "domain-forbidden-dependency",
       "source": "features/review-runs/domain/userReviewError/index.ts",
-      "specifier": "@/shared/api/tauri/createUserReview",
+      "specifier": "@/features/review-runs/infra/tauri/createUserReview",
       "issue": 109
     },
     {
       "rule": "domain-forbidden-dependency",
       "source": "features/review-runs/domain/userReviewError/index.ts",
-      "specifier": "@/shared/api/tauri/listUserReviews",
+      "specifier": "@/features/review-runs/infra/tauri/listUserReviews",
       "issue": 109
     },
     {
       "rule": "domain-forbidden-dependency",
       "source": "features/specs/domain/specError/index.ts",
-      "specifier": "@/shared/api/tauri/archiveSpec",
+      "specifier": "@/features/specs/infra/tauri/archiveSpec",
       "issue": 109
     },
     {
       "rule": "domain-forbidden-dependency",
       "source": "features/specs/domain/specError/index.ts",
-      "specifier": "@/shared/api/tauri/listSpecs",
+      "specifier": "@/features/specs/infra/tauri/listSpecs",
       "issue": 109
     },
     {
       "rule": "domain-forbidden-dependency",
       "source": "features/specs/domain/specError/index.ts",
-      "specifier": "@/shared/api/tauri/readSpecFile",
+      "specifier": "@/features/specs/infra/tauri/readSpecFile",
       "issue": 109
     },
     {
       "rule": "domain-forbidden-dependency",
       "source": "features/workspace/domain/workspaceError/index.ts",
-      "specifier": "@/shared/api/tauri/loadWorkspace",
+      "specifier": "@/features/workspace/infra/tauri/loadWorkspace",
       "issue": 109
-    },
-    {
-      "rule": "package-cycle-dependency",
-      "source": "features/comments",
-      "specifier": "shared",
-      "issue": 107
-    },
-    {
-      "rule": "package-cycle-dependency",
-      "source": "features/review-runs",
-      "specifier": "shared",
-      "issue": 107
-    },
-    {
-      "rule": "package-cycle-dependency",
-      "source": "features/specs",
-      "specifier": "features/comments",
-      "issue": 108
-    },
-    {
-      "rule": "package-cycle-dependency",
-      "source": "features/specs",
-      "specifier": "shared",
-      "issue": 107
-    },
-    {
-      "rule": "package-cycle-dependency",
-      "source": "features/workspace",
-      "specifier": "shared",
-      "issue": 107
-    },
-    {
-      "rule": "package-cycle-dependency",
-      "source": "shared",
-      "specifier": "features/comments",
-      "issue": 107
-    },
-    {
-      "rule": "package-cycle-dependency",
-      "source": "shared",
-      "specifier": "features/review-runs",
-      "issue": 107
-    },
-    {
-      "rule": "package-cycle-dependency",
-      "source": "shared",
-      "specifier": "features/specs",
-      "issue": 107
-    },
-    {
-      "rule": "package-cycle-dependency",
-      "source": "shared",
-      "specifier": "features/workspace",
-      "issue": 107
-    },
-    {
-      "rule": "shared-feature-dependency",
-      "source": "shared/api/tauri/addComment.ts",
-      "specifier": "@/features/comments/types/comment",
-      "issue": 107
-    },
-    {
-      "rule": "shared-feature-dependency",
-      "source": "shared/api/tauri/archiveSpec.ts",
-      "specifier": "@/features/specs/types/spec",
-      "issue": 107
-    },
-    {
-      "rule": "shared-feature-dependency",
-      "source": "shared/api/tauri/archiveUserReview.ts",
-      "specifier": "@/features/review-runs/types/userReviewIpc",
-      "issue": 107
-    },
-    {
-      "rule": "shared-feature-dependency",
-      "source": "shared/api/tauri/createUserReview.ts",
-      "specifier": "@/features/review-runs/types/userReviewIpc",
-      "issue": 107
-    },
-    {
-      "rule": "shared-feature-dependency",
-      "source": "shared/api/tauri/deleteComment.ts",
-      "specifier": "@/features/comments/types/comment",
-      "issue": 107
-    },
-    {
-      "rule": "shared-feature-dependency",
-      "source": "shared/api/tauri/exportComments.ts",
-      "specifier": "@/features/comments/types/comment",
-      "issue": 107
-    },
-    {
-      "rule": "shared-feature-dependency",
-      "source": "shared/api/tauri/generateLlmPrompt.ts",
-      "specifier": "@/features/comments/types/comment",
-      "issue": 107
-    },
-    {
-      "rule": "shared-feature-dependency",
-      "source": "shared/api/tauri/listComments.ts",
-      "specifier": "@/features/comments/types/comment",
-      "issue": 107
-    },
-    {
-      "rule": "shared-feature-dependency",
-      "source": "shared/api/tauri/listSpecs.ts",
-      "specifier": "@/features/specs/types/spec",
-      "issue": 107
-    },
-    {
-      "rule": "shared-feature-dependency",
-      "source": "shared/api/tauri/listUserReviews.ts",
-      "specifier": "@/features/review-runs/types/userReviewIpc",
-      "issue": 107
-    },
-    {
-      "rule": "shared-feature-dependency",
-      "source": "shared/api/tauri/loadWorkspace.ts",
-      "specifier": "@/features/workspace/domain/workspace",
-      "issue": 107
-    },
-    {
-      "rule": "shared-feature-dependency",
-      "source": "shared/api/tauri/loadWorkspace.ts",
-      "specifier": "@/features/workspace/types/workspace",
-      "issue": 107
-    },
-    {
-      "rule": "shared-feature-dependency",
-      "source": "shared/api/tauri/readSpecFile.ts",
-      "specifier": "@/features/specs/types/spec",
-      "issue": 107
-    },
-    {
-      "rule": "shared-feature-dependency",
-      "source": "shared/api/tauri/reopenComment.ts",
-      "specifier": "@/features/comments/types/comment",
-      "issue": 107
-    },
-    {
-      "rule": "shared-feature-dependency",
-      "source": "shared/api/tauri/resolveComment.ts",
-      "specifier": "@/features/comments/types/comment",
-      "issue": 107
-    },
-    {
-      "rule": "shared-feature-dependency",
-      "source": "shared/api/tauri/selectCommentExportDestination.ts",
-      "specifier": "@/features/comments/types/comment",
-      "issue": 107
-    },
-    {
-      "rule": "shared-feature-dependency",
-      "source": "shared/api/tauri/specCommands.ts",
-      "specifier": "@/features/specs/types/spec",
-      "issue": 107
-    },
-    {
-      "rule": "shared-feature-dependency",
-      "source": "shared/api/tauri/startSpecFileWatch.ts",
-      "specifier": "@/features/specs/types/watch",
-      "issue": 107
-    },
-    {
-      "rule": "shared-feature-dependency",
-      "source": "shared/api/tauri/stopSpecFileWatch.ts",
-      "specifier": "@/features/specs/types/watch",
-      "issue": 107
-    },
-    {
-      "rule": "shared-feature-dependency",
-      "source": "shared/api/tauri/toggleCommentResolved.ts",
-      "specifier": "@/features/comments/types/comment",
-      "issue": 107
-    },
-    {
-      "rule": "shared-feature-dependency",
-      "source": "shared/api/tauri/updateComment.ts",
-      "specifier": "@/features/comments/types/comment",
-      "issue": 107
-    },
-    {
-      "rule": "shared-feature-dependency",
-      "source": "shared/api/tauri/userReviewCommands.ts",
-      "specifier": "@/features/review-runs/types/userReviewIpc",
-      "issue": 107
-    },
-    {
-      "rule": "shared-feature-dependency",
-      "source": "shared/api/tauri/validateWorkspaceDirectory.ts",
-      "specifier": "@/features/workspace/types/workspace",
-      "issue": 107
-    },
-    {
-      "rule": "shared-feature-dependency",
-      "source": "shared/lib/recentWorkspaces/index.ts",
-      "specifier": "@/features/workspace/types/workspace",
-      "issue": 107
     }
   ]
 }

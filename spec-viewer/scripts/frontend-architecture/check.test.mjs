@@ -366,6 +366,38 @@ test("shared-to-feature dependencies require an exact issue-owned waiver", () =>
   }
 });
 
+test("raw Tauri core transport is owned only by invokeTauriCommand", () => {
+  const root = createFixture({
+    "features/alpha/infra/tauri/command.ts": `
+      import { invoke } from "@tauri-apps/api/core";
+      export const command = () => invoke("alpha_command");
+    `,
+    "shared/api/tauri/invokeTauriCommand.ts": `
+      import { invoke } from "@tauri-apps/api/core";
+      export const invokeTauriCommand = (name) => invoke(name);
+    `,
+  });
+
+  try {
+    const audit = auditFrontendArchitecture({ sourceRoot: root, waivers: [] });
+    const violations = audit.violations.filter(
+      ({ rule }) => rule === "raw-tauri-core-dependency",
+    );
+
+    assert.deepEqual(
+      violations.map(({ source, specifier }) => ({ source, specifier })),
+      [
+        {
+          source: "features/alpha/infra/tauri/command.ts",
+          specifier: "@tauri-apps/api/core",
+        },
+      ],
+    );
+  } finally {
+    removeFixture(root);
+  }
+});
+
 test("package dependency cycles are reported as package-level edges", () => {
   const root = createFixture({
     "features/alpha/index.ts": `
