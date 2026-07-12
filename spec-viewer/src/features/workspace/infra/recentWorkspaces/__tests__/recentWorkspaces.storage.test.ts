@@ -10,7 +10,7 @@ import {
   writeRecentWorkspaces,
   type RecentWorkspace,
   type RecentWorkspaceStorage,
-} from "@/shared/lib/recentWorkspaces";
+} from "@/features/workspace/infra/recentWorkspaces";
 
 class MemoryStorage implements RecentWorkspaceStorage {
   private readonly values = new Map<string, string>();

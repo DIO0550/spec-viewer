@@ -15,7 +15,7 @@ import {
   type CommentExportState,
   CommentSidebar,
 } from "@/features/comments/components/CommentSidebar";
-import { AddCommentCommandError } from "@/shared/api/tauri/addComment";
+import { AddCommentCommandError } from "@/features/comments/infra/tauri/addComment";
 
 const commentId = CommentIdValue.fromString;
 

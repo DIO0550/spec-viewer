@@ -13,7 +13,7 @@ import type {
 } from "@/features/comments/hooks/useComments";
 import type { Comment, CommentAnchor } from "@/features/comments/types/comment";
 import { CommentId } from "@/features/comments/types/comment";
-import { AddCommentCommandError } from "@/shared/api/tauri/addComment";
+import { AddCommentCommandError } from "@/features/comments/infra/tauri/addComment";
 import type { CommentFeatureError } from "@/features/comments/domain/commentError";
 
 const commentId = CommentId.fromString;

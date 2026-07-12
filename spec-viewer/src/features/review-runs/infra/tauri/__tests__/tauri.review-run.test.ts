@@ -13,11 +13,10 @@ import {
   archiveUserReview,
   createUserReview,
   listUserReviews,
-  toIpcCommandError,
-} from "@/shared/api/tauri";
-import { ArchiveUserReviewCommandError } from "@/shared/api/tauri/archiveUserReview";
-import { CreateUserReviewCommandError } from "@/shared/api/tauri/createUserReview";
-import { ListUserReviewsCommandError } from "@/shared/api/tauri/listUserReviews";
+} from "@/features/review-runs/infra/tauri";
+import { ArchiveUserReviewCommandError } from "@/features/review-runs/infra/tauri/archiveUserReview";
+import { CreateUserReviewCommandError } from "@/features/review-runs/infra/tauri/createUserReview";
+import { ListUserReviewsCommandError } from "@/features/review-runs/infra/tauri/listUserReviews";
 import { CommentId } from "@/features/comments/types/comment";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -208,19 +207,4 @@ test("ArchiveUserReviewCommandError.fromUnknownは正規化済みunknownエラ�
   expect(ArchiveUserReviewCommandError.fromUnknown(normalizedError)).toEqual(
     normalizedError,
   );
-});
-
-test("toIpcCommandErrorはreview run exportエラーを保持する", () => {
-  const rawError = {
-    code: "userReviewExport",
-    message: "failed to export review run",
-  };
-
-  const result = toIpcCommandError(rawError);
-
-  expect(result).toEqual({
-    code: "userReviewExport",
-    message: "failed to export review run",
-    raw: rawError,
-  });
 });

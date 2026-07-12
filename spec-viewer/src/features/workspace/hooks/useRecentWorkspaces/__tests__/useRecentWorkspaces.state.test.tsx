@@ -2,7 +2,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test } from "vitest";
 
-import type { RecentWorkspaceStorage } from "@/shared/lib/recentWorkspaces";
+import type { RecentWorkspaceStorage } from "@/features/workspace/application/ports/recentWorkspaceStore";
 import { useRecentWorkspaces } from "@/features/workspace/hooks/useRecentWorkspaces";
 
 class MemoryStorage implements RecentWorkspaceStorage {

@@ -15,10 +15,10 @@ import {
   type UseWorkspaceLoaderResult,
   useWorkspaceLoader,
 } from "@/features/workspace/hooks/useWorkspaceLoader";
-import type { WorkspaceDragDropEvent } from "@/shared/api/tauri";
+import type { WorkspaceDragDropEvent } from "@/features/workspace/application/ports/workspaceDragDrop";
 import { getUnknownErrorMessage } from "@/shared/lib/errorMessage";
-import type { RecentWorkspaceStorage } from "@/shared/lib/recentWorkspaces";
-import { writeLastActiveWorkspacePath } from "@/shared/lib/recentWorkspaces";
+import type { RecentWorkspaceStorage } from "@/features/workspace/application/ports/recentWorkspaceStore";
+import { writeLastActiveWorkspacePath } from "@/features/workspace/infra/recentWorkspaces";
 
 class MemoryStorage implements RecentWorkspaceStorage {
   private readonly values = new Map<string, string>();

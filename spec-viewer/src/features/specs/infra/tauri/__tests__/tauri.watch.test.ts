@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 
-import { StartSpecFileWatchCommandError } from "@/shared/api/tauri/startSpecFileWatch";
-import { StopSpecFileWatchCommandError } from "@/shared/api/tauri/stopSpecFileWatch";
+import { StartSpecFileWatchCommandError } from "@/features/specs/infra/tauri/startSpecFileWatch";
+import { StopSpecFileWatchCommandError } from "@/features/specs/infra/tauri/stopSpecFileWatch";
 
 test("StartSpecFileWatchCommandError.fromUnknownは正規化済みunknownエラーのmessageを保持する", () => {
   const normalizedError = StartSpecFileWatchCommandError.unknown(

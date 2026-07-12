@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { isRecord } from "@/shared/api/tauri/isRecord";
+import { isRecord } from "@/shared/lib/isRecord";
 
 test("isRecordは配列をrecordとして扱わない", () => {
   expect(isRecord([])).toBe(false);

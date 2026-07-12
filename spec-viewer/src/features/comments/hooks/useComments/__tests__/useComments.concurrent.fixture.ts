@@ -12,7 +12,7 @@ import type {
   ListCommentsResponse,
 } from "@/features/comments/types/comment";
 import { CommentId } from "@/features/comments/types/comment";
-import type { CommentCommands } from "@/shared/api/tauri";
+import type { CommentCommands } from "@/features/comments/application/ports/commentCommands";
 import { SpecViewSelection } from "@/shared/domain/specViewSelection";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 

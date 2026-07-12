@@ -9,14 +9,14 @@ import type {
   UpdateCommentRequest,
 } from "@/features/comments/types/comment";
 import { CommentId } from "@/features/comments/types/comment";
-import { DeleteCommentCommandError } from "@/shared/api/tauri/deleteComment";
-import { ExportCommentsCommandError } from "@/shared/api/tauri/exportComments";
-import { GenerateLlmPromptCommandError } from "@/shared/api/tauri/generateLlmPrompt";
-import { ListCommentsCommandError } from "@/shared/api/tauri/listComments";
-import { ReopenCommentCommandError } from "@/shared/api/tauri/reopenComment";
-import { ResolveCommentCommandError } from "@/shared/api/tauri/resolveComment";
-import { ToggleCommentResolvedCommandError } from "@/shared/api/tauri/toggleCommentResolved";
-import { UpdateCommentCommandError } from "@/shared/api/tauri/updateComment";
+import { DeleteCommentCommandError } from "@/features/comments/infra/tauri/deleteComment";
+import { ExportCommentsCommandError } from "@/features/comments/infra/tauri/exportComments";
+import { GenerateLlmPromptCommandError } from "@/features/comments/infra/tauri/generateLlmPrompt";
+import { ListCommentsCommandError } from "@/features/comments/infra/tauri/listComments";
+import { ReopenCommentCommandError } from "@/features/comments/infra/tauri/reopenComment";
+import { ResolveCommentCommandError } from "@/features/comments/infra/tauri/resolveComment";
+import { ToggleCommentResolvedCommandError } from "@/features/comments/infra/tauri/toggleCommentResolved";
+import { UpdateCommentCommandError } from "@/features/comments/infra/tauri/updateComment";
 import {
   addComment,
   AddCommentCommandError,
@@ -24,7 +24,7 @@ import {
   deleteComment,
   listComments,
   updateComment,
-} from "@/shared/api/tauri";
+} from "@/features/comments/infra/tauri";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
@@ -255,9 +255,9 @@ test("ToggleCommentResolvedCommandError.fromUnknownは正規化済みunknownエ�
     { cause: "write failed" },
   );
 
-  expect(ToggleCommentResolvedCommandError.fromUnknown(normalizedError)).toEqual(
-    normalizedError,
-  );
+  expect(
+    ToggleCommentResolvedCommandError.fromUnknown(normalizedError),
+  ).toEqual(normalizedError);
 });
 
 test("ExportCommentsCommandError.fromUnknownは正規化済みunknownエラーのmessageを保持する", () => {

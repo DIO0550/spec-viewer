@@ -10,7 +10,7 @@ import {
   exportComments,
   generateLlmPrompt,
   selectCommentExportDestination,
-} from "@/shared/api/tauri";
+} from "@/features/comments/infra/tauri";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),

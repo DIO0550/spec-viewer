@@ -2,7 +2,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
-import type { WorkspaceDragDropEvent } from "@/shared/api/tauri";
+import type { WorkspaceDragDropEvent } from "@/features/workspace/application/ports/workspaceDragDrop";
 import {
   type SubscribeWorkspaceDragDropEvents,
   useWorkspaceDrop,

@@ -1,7 +1,12 @@
 import { expect, test, vi } from "vitest";
 
-import { archiveSpec, createReadSpecFileRequest, listSpecs, readSpecFile } from "@/features/specs/infra/specGateway";
-import type { SpecCommands } from "@/shared/api/tauri";
+import {
+  archiveSpec,
+  createReadSpecFileRequest,
+  listSpecs,
+  readSpecFile,
+} from "@/features/specs/infra/specGateway";
+import type { SpecCommands } from "@/features/specs/application/ports/specCommands";
 import type { SpecDocument, SpecTree } from "@/features/specs/types/spec";
 
 const tree: SpecTree = {
@@ -29,7 +34,9 @@ test("listSpecsはcommands.listSpecsへworkspacePathを委譲する", async () =
     archiveSpec: vi.fn().mockResolvedValue(archiveResponse),
   };
 
-  await expect(listSpecs(commands, "/workspace/spec-viewer")).resolves.toBe(tree);
+  await expect(listSpecs(commands, "/workspace/spec-viewer")).resolves.toBe(
+    tree,
+  );
 
   expect(commands.listSpecs).toHaveBeenCalledWith("/workspace/spec-viewer");
 });

@@ -7,7 +7,7 @@ import type {
   ListUserReviewsResponse,
   UserReview,
 } from "@/features/review-runs/types/userReviewIpc";
-import type { UserReviewCommands } from "@/shared/api/tauri";
+import type { UserReviewCommands } from "@/features/review-runs/application/ports/userReviewCommands";
 
 export type UserReviewCommandTestDoubleResponses = Readonly<{
   createUserReview?: CreateUserReviewResponse;

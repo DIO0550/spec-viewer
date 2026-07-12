@@ -3,8 +3,11 @@ import { expectTypeOf, test } from "vitest";
 import type {
   AddCommentCommandRequest,
   AddCommentCommandResponse,
-} from "@/shared/api/tauri/addComment";
-import type { CommandRequest, CommandResponse } from "@/shared/types/ipc";
+} from "@/features/comments/infra/tauri/addComment";
+import type { CommentCommands } from "@/features/comments/application/ports/commentCommands";
+import type { ListCommentsCommandResponse } from "@/features/comments/infra/tauri/listComments";
+import type { ToggleCommentResolvedCommandResponse } from "@/features/comments/infra/tauri/toggleCommentResolved";
+import type { CreateUserReviewCommandRequest } from "@/features/review-runs/infra/tauri/createUserReview";
 import type {
   AddCommentRequest,
   ApplyWithAiCommentSelectionInput,
@@ -38,25 +41,21 @@ test("addCommentのper-command contractはcomment DTOと一致する", () => {
 
 test("tauri barrelはaddComment error型を同名exportとして公開する", () => {
   expectTypeOf<
-    import("@/shared/api/tauri").AddCommentCommandError
+    import("@/features/comments/infra/tauri").AddCommentCommandError
   >().toEqualTypeOf<
-    import("@/shared/api/tauri/addComment").AddCommentCommandError
+    import("@/features/comments/infra/tauri/addComment").AddCommentCommandError
   >();
 });
 
-test("migration中はlegacy CommandRequest compatibility shimもadd_comment DTOを保持する", () => {
+test("CommentCommands portはadd_comment DTOを保持する", () => {
   expectTypeOf<
-    CommandRequest<"add_comment">
+    Parameters<CommentCommands["addComment"]>[0]
   >().toEqualTypeOf<AddCommentRequest>();
 });
 
-test("comment command payloadsはP2.8 DTOと一致する", () => {
-  expectTypeOf<
-    CommandResponse<"list_comments">
-  >().toEqualTypeOf<ListCommentsResponse>();
-  expectTypeOf<
-    CommandResponse<"toggle_comment_resolved">
-  >().toEqualTypeOf<Comment>();
+test("owner command contractsはcomment DTOと一致する", () => {
+  expectTypeOf<ListCommentsCommandResponse>().toEqualTypeOf<ListCommentsResponse>();
+  expectTypeOf<ToggleCommentResolvedCommandResponse>().toEqualTypeOf<Comment>();
 });
 
 test("comment view modelは状態フィルターとorphan表示状態を共有できる", () => {
@@ -119,9 +118,7 @@ test("MCP feedback pathはdry-run payloadとmanual copy operationを表現する
 });
 
 test("review run payloadはfile/spec targetと実行先を表現する", () => {
-  expectTypeOf<
-    CommandRequest<"create_user_review">
-  >().toEqualTypeOf<CreateUserReviewRequest>();
+  expectTypeOf<CreateUserReviewCommandRequest>().toEqualTypeOf<CreateUserReviewRequest>();
   expectTypeOf<UserReview>().toMatchTypeOf<{
     status: "active" | "inProgress" | "completed" | "archived";
     workspace:

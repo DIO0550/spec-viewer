@@ -8,8 +8,9 @@ const loadWorkspaceMock = vi.hoisted(() =>
   vi.fn<(selectedDirectory: string) => Promise<Workspace>>(),
 );
 
-vi.mock("@/shared/api/tauri", async (importActual) => {
-  const actual = await importActual<typeof import("@/shared/api/tauri")>();
+vi.mock("@/features/workspace/infra/tauri", async (importActual) => {
+  const actual =
+    await importActual<typeof import("@/features/workspace/infra/tauri")>();
 
   return {
     ...actual,
