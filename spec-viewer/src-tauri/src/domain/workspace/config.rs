@@ -256,6 +256,7 @@ fn validate_scan_excluded_directory_names(
             || matches!(trimmed, "." | "..")
             || trimmed.contains('/')
             || trimmed.contains('\\')
+            || trimmed.contains(':')
             || trimmed.contains('\0')
         {
             return Err(WorkspaceConfigError::UnsafeScanExcludedDirectoryName { name });
@@ -285,6 +286,7 @@ fn validate_safe_file_name(key: SpecFileKey, file_name: &str) -> Result<(), Work
         || matches!(file_name, "." | "..")
         || file_name.contains('/')
         || file_name.contains('\\')
+        || file_name.contains(':')
         || file_name.contains('\0')
     {
         return Err(WorkspaceConfigError::UnsafeFileName {
