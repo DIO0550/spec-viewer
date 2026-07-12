@@ -1,9 +1,11 @@
 //! Spec document and tree domain concepts.
 
+mod archive_policy;
 mod format_policy;
 mod ports;
 mod tree;
 
+pub use archive_policy::{SpecArchivePolicy, SpecArchivePolicyError, SpecArchiveTarget};
 pub use format_policy::{
     SpecFileCandidateNameStrategy, SpecFileCandidateRule, SpecFileFormatPolicy,
 };
