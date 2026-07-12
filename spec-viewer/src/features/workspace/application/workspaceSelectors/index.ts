@@ -1,6 +1,6 @@
 import type { WorkspaceState } from "@/features/workspace/application/workspaceState";
 import type { Workspace } from "@/features/workspace/domain/workspace";
-import type { WorkspaceError } from "@/features/workspace/domain/workspaceError";
+import type { WorkspaceFeatureError } from "@/features/workspace/application/workspaceError";
 
 /**
  * @param state - Current workspace application state.
@@ -38,10 +38,10 @@ export function selectRequestedWorkspacePath(
   return null;
 }
 
-/** @returns The workspace-domain error for display, if one exists. */
+/** @returns The workspace application error for display, if one exists. */
 export function selectWorkspaceError(
   state: WorkspaceState,
-): WorkspaceError | null {
+): WorkspaceFeatureError | null {
   if (state.status === "opened") {
     return state.lastOpenError;
   }

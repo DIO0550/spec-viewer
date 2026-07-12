@@ -1,4 +1,5 @@
 export { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
+export { toSpecFeatureError } from "@/features/specs/infra/tauri/specErrorMapper";
 export { SpecTabs } from "@/features/specs/components/SpecTabs";
 export { SpecTree } from "@/features/specs/components/SpecTree";
 export {

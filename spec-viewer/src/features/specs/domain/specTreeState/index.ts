@@ -2,9 +2,8 @@ import {
   SpecTree,
   type SpecTree as SpecTreeType,
 } from "@/features/specs/domain/specTree";
-import type { SpecFeatureError } from "@/features/specs/domain/specError";
 
-export type SpecTreeState =
+export type SpecTreeState<TError = unknown> =
   | Readonly<{
       status: "idle";
       workspacePath: null;
@@ -33,12 +32,12 @@ export type SpecTreeState =
       status: "error";
       workspacePath: string;
       tree: null;
-      error: SpecFeatureError;
+      error: TError;
     }>;
 
 export const SpecTreeState = {
   /** @returns Idle spec tree state for no selected workspace. */
-  idle: (): SpecTreeState => ({
+  idle: (): SpecTreeState<never> => ({
     status: "idle",
     workspacePath: null,
     tree: null,
@@ -49,7 +48,7 @@ export const SpecTreeState = {
    * @param workspacePath - Active workspace path
    * @returns Loading state for the workspace.
    */
-  loading: (workspacePath: string): SpecTreeState => ({
+  loading: (workspacePath: string): SpecTreeState<never> => ({
     status: "loading",
     workspacePath,
     tree: null,
@@ -61,7 +60,7 @@ export const SpecTreeState = {
    * @param tree - Loaded spec tree
    * @returns Ready or empty state based on the tree contents.
    */
-  loaded: (workspacePath: string, tree: SpecTreeType): SpecTreeState => {
+  loaded: (workspacePath: string, tree: SpecTreeType): SpecTreeState<never> => {
     if (SpecTree.isEmpty(tree)) {
       return {
         status: "empty",
@@ -84,7 +83,10 @@ export const SpecTreeState = {
    * @param error - Feature-level spec error
    * @returns Error state for a failed tree load.
    */
-  failed: (workspacePath: string, error: SpecFeatureError): SpecTreeState => ({
+  failed: <TError>(
+    workspacePath: string,
+    error: TError,
+  ): SpecTreeState<TError> => ({
     status: "error",
     workspacePath,
     tree: null,

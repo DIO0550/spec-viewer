@@ -1,4 +1,4 @@
-import type { CommentListState } from "@/features/comments/domain/commentListState";
+import type { CommentListFeatureState } from "@/features/comments/application/commentError";
 import {
   CommentOperationFailedState,
   CommentOperationSavingState,
@@ -7,7 +7,7 @@ import type { UseCommentOperationsResult } from "@/features/comments/hooks/useCo
 import type { UseCommentsResult } from "@/features/comments/hooks/useComments";
 
 type CommentsListResultInput = Readonly<{
-  listState: CommentListState;
+  listState: CommentListFeatureState;
   /** Reloads the comment list; resolves to true when the reload succeeds. */
   reloadComments: () => Promise<boolean>;
 }>;

@@ -11,9 +11,8 @@ import type {
   WorkspaceActions,
   WorkspaceContextValue,
 } from "@/features/workspace/context/types";
-import { toWorkspaceError } from "@/features/workspace/domain/workspaceError";
 import { loadWorkspace as defaultLoadWorkspace } from "@/features/workspace/infra/tauri";
-import { LoadWorkspaceCommandError } from "@/features/workspace/infra/tauri/loadWorkspace";
+import { toWorkspaceFeatureError } from "@/features/workspace/infra/tauri/workspaceErrorMapper";
 
 const loadWorkspace: LoadWorkspace = defaultLoadWorkspace;
 
@@ -52,9 +51,7 @@ export function useWorkspaceState(): WorkspaceContextValue {
         dispatch(WorkspaceState.openSucceeded({ requestId, workspace }));
         return true;
       } catch (error) {
-        const workspaceError = toWorkspaceError(
-          LoadWorkspaceCommandError.fromUnknown(error),
-        );
+        const workspaceError = toWorkspaceFeatureError(error);
         dispatch(
           WorkspaceState.openFailed({ requestId, error: workspaceError }),
         );

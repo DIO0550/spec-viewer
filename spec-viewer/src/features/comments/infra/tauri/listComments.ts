@@ -25,7 +25,7 @@ export type ListCommentsCommandError = Readonly<{
   command: ListCommentsCommandName;
   code: ListCommentsCommandErrorCode;
   message: string;
-  raw: unknown;
+  cause: unknown;
 }>;
 
 export type ListCommentsCommandContract = Readonly<{
@@ -48,7 +48,7 @@ export const ListCommentsCommandError = {
         command: LIST_COMMENTS_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error.raw,
+        cause: error.cause,
       };
     }
 
@@ -61,7 +61,7 @@ export const ListCommentsCommandError = {
         command: LIST_COMMENTS_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error,
+        cause: error,
       };
     }
 
@@ -79,13 +79,13 @@ export const ListCommentsCommandError = {
     );
   },
 
-  /** @returns An unknown list_comments command error preserving the raw payload. */
-  unknown(message: string, raw: unknown): ListCommentsCommandError {
+  /** @returns An unknown list_comments command error preserving the cause payload. */
+  unknown(message: string, cause: unknown): ListCommentsCommandError {
     return {
       command: LIST_COMMENTS_COMMAND,
       code: "unknown",
       message,
-      raw,
+      cause,
     };
   },
 

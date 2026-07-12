@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
-import { SpecDocumentState as SpecDocumentStateFactory } from "@/features/specs/domain/specDocumentState";
-import { SpecFeatureError } from "@/features/specs/domain/specError";
+import type { SpecDocumentFeatureState } from "@/features/specs/application/specError";
+import { SpecDocumentState as SpecDocumentFeatureStateFactory } from "@/features/specs/domain/specDocumentState";
 import { SpecNode as SpecNodeDomain } from "@/features/specs/domain/specNode";
 import { SpecTree as SpecTreeDomain } from "@/features/specs/domain/specTree";
-import type { SpecTreeState } from "@/features/specs/domain/specTreeState";
-import { SpecTreeState as SpecTreeStateFactory } from "@/features/specs/domain/specTreeState";
+import type { SpecTreeFeatureState } from "@/features/specs/application/specError";
+import { SpecTreeState as SpecTreeFeatureStateFactory } from "@/features/specs/domain/specTreeState";
 import {
   buildSpecsSelectors,
   type SpecsSelectors,
@@ -17,17 +16,15 @@ import type {
 } from "@/features/specs/hooks/useSpecs/types";
 import * as specGateway from "@/features/specs/infra/specGateway";
 import { specCommands } from "@/features/specs/infra/tauri";
-import { ArchiveSpecCommandError } from "@/features/specs/infra/tauri/archiveSpec";
-import { ListSpecsCommandError } from "@/features/specs/infra/tauri/listSpecs";
-import { ReadSpecFileCommandError } from "@/features/specs/infra/tauri/readSpecFile";
+import { toSpecFeatureError } from "@/features/specs/infra/tauri/specErrorMapper";
 import type { SpecFileKey } from "@/shared/domain/specFileKey";
 import {
   createPerformanceCorrelationId,
   startPerformanceSpan,
 } from "@/shared/lib/performance";
 
-export type { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
-export type { SpecTreeState } from "@/features/specs/domain/specTreeState";
+export type { SpecDocumentFeatureState as SpecDocumentState } from "@/features/specs/application/specError";
+export type { SpecTreeFeatureState as SpecTreeState } from "@/features/specs/application/specError";
 export type { UseSpecsResult } from "@/features/specs/hooks/useSpecs/types";
 
 export type SpecSelectionChange = Readonly<{
@@ -41,9 +38,10 @@ export type UseSpecsOptions = Readonly<{
   onSelectionChange?: (selection: SpecSelectionChange) => void;
 }>;
 
-const initialSpecTreeState: SpecTreeState = SpecTreeStateFactory.idle();
-const initialDocumentState: SpecDocumentState =
-  SpecDocumentStateFactory.idle(null);
+const initialSpecTreeFeatureState: SpecTreeFeatureState =
+  SpecTreeFeatureStateFactory.idle();
+const initialDocumentState: SpecDocumentFeatureState =
+  SpecDocumentFeatureStateFactory.idle(null);
 
 type PreferredSelection = Readonly<{
   specId: string | null;
@@ -55,7 +53,7 @@ type ResolvedSelection = ReturnType<typeof SpecTreeDomain.resolveSelection>;
 type ShouldCommitState = () => boolean;
 
 const initialSpecsState: SpecsState = {
-  specTreeState: initialSpecTreeState,
+  specTreeState: initialSpecTreeFeatureState,
   documentState: initialDocumentState,
   selection: {
     specId: null,
@@ -153,7 +151,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
     setState((currentState) => ({
       ...currentState,
       archivingSpecId: null,
-      documentState: SpecDocumentStateFactory.idle(workspacePath),
+      documentState: SpecDocumentFeatureStateFactory.idle(workspacePath),
       selection: {
         specId: null,
         fileKey: null,
@@ -181,7 +179,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
       if (activeWorkspacePath === null) {
         commitLoadState(operationId, (currentState) => ({
           ...currentState,
-          documentState: SpecDocumentStateFactory.idle(
+          documentState: SpecDocumentFeatureStateFactory.idle(
             activeWorkspacePath,
             specId,
             fileKey,
@@ -193,7 +191,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
       const correlationId = createPerformanceCorrelationId("document-read");
       commitLoadState(operationId, (currentState) => ({
         ...currentState,
-        documentState: SpecDocumentStateFactory.loading(
+        documentState: SpecDocumentFeatureStateFactory.loading(
           activeWorkspacePath,
           specId,
           fileKey,
@@ -228,7 +226,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
 
         commitLoadState(operationId, (currentState) => ({
           ...currentState,
-          documentState: SpecDocumentStateFactory.loaded(
+          documentState: SpecDocumentFeatureStateFactory.loaded(
             activeWorkspacePath,
             specId,
             fileKey,
@@ -248,13 +246,11 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
 
         commitLoadState(operationId, (currentState) => ({
           ...currentState,
-          documentState: SpecDocumentStateFactory.failed(
+          documentState: SpecDocumentFeatureStateFactory.failed(
             activeWorkspacePath,
             specId,
             fileKey,
-            SpecFeatureError.fromCommandError(
-              ReadSpecFileCommandError.fromUnknown(error),
-            ),
+            toSpecFeatureError("read", error),
             correlationId,
           ),
         }));
@@ -291,7 +287,8 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
       if (selection.spec === null || selection.fileKey === null) {
         commitLoadState(operationId, (currentState) => ({
           ...currentState,
-          documentState: SpecDocumentStateFactory.idle(activeWorkspacePath),
+          documentState:
+            SpecDocumentFeatureStateFactory.idle(activeWorkspacePath),
         }));
         return true;
       }
@@ -320,12 +317,12 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
       if (workspacePath === null) {
         commitLoadState(operationId, (currentState) => ({
           ...currentState,
-          documentState: SpecDocumentStateFactory.idle(null),
+          documentState: SpecDocumentFeatureStateFactory.idle(null),
           selection: {
             specId: null,
             fileKey: null,
           },
-          specTreeState: initialSpecTreeState,
+          specTreeState: initialSpecTreeFeatureState,
         }));
         onSelectionChange?.({
           workspacePath,
@@ -338,7 +335,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
       const activeWorkspacePath = workspacePath;
       commitLoadState(operationId, (currentState) => ({
         ...currentState,
-        specTreeState: SpecTreeStateFactory.loading(activeWorkspacePath),
+        specTreeState: SpecTreeFeatureStateFactory.loading(activeWorkspacePath),
       }));
 
       try {
@@ -353,7 +350,10 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
 
         commitLoadState(operationId, (currentState) => ({
           ...currentState,
-          specTreeState: SpecTreeStateFactory.loaded(activeWorkspacePath, tree),
+          specTreeState: SpecTreeFeatureStateFactory.loaded(
+            activeWorkspacePath,
+            tree,
+          ),
         }));
         const nextSelection = SpecTreeDomain.resolveSelection(
           tree,
@@ -373,16 +373,15 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
 
         commitLoadState(operationId, (currentState) => ({
           ...currentState,
-          documentState: SpecDocumentStateFactory.idle(activeWorkspacePath),
+          documentState:
+            SpecDocumentFeatureStateFactory.idle(activeWorkspacePath),
           selection: {
             specId: null,
             fileKey: null,
           },
-          specTreeState: SpecTreeStateFactory.failed(
+          specTreeState: SpecTreeFeatureStateFactory.failed(
             activeWorkspacePath,
-            SpecFeatureError.fromCommandError(
-              ListSpecsCommandError.fromUnknown(error),
-            ),
+            toSpecFeatureError("list", error),
           ),
         }));
         onSelectionChange?.({
@@ -418,7 +417,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
       activeOperationId: operationId,
       archiveSpecError: null,
       archivingSpecId: null,
-      documentState: SpecDocumentStateFactory.idle(workspacePath),
+      documentState: SpecDocumentFeatureStateFactory.idle(workspacePath),
       isLoading: workspacePath !== null,
       selection: {
         specId: null,
@@ -426,8 +425,8 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
       },
       specTreeState:
         workspacePath === null
-          ? initialSpecTreeState
-          : SpecTreeStateFactory.loading(workspacePath),
+          ? initialSpecTreeFeatureState
+          : SpecTreeFeatureStateFactory.loading(workspacePath),
     }));
     onSelectionChange?.({
       workspacePath,
@@ -489,7 +488,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
         if (defaultFileKey === null) {
           commitLoadState(operationId, (currentState) => ({
             ...currentState,
-            documentState: SpecDocumentStateFactory.idle(
+            documentState: SpecDocumentFeatureStateFactory.idle(
               activeWorkspacePath,
               specId,
             ),
@@ -599,9 +598,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
         } catch (error) {
           commitLoadState(operationId, (currentState) => ({
             ...currentState,
-            archiveSpecError: SpecFeatureError.fromCommandError(
-              ArchiveSpecCommandError.fromUnknown(error),
-            ),
+            archiveSpecError: toSpecFeatureError("archive", error),
           }));
           return false;
         } finally {

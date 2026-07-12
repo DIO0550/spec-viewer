@@ -5,14 +5,15 @@ import {
   useReducer,
   useRef,
 } from "react";
-import type { CommentFeatureError as CommentFeatureErrorType } from "@/features/comments/domain/commentError";
-import { CommentFeatureError } from "@/features/comments/domain/commentError";
+import type {
+  CommentFeatureError as CommentFeatureErrorType,
+  CommentOperationFeatureState,
+} from "@/features/comments/application/commentError";
 import {
   CommentOperationFailedState,
   CommentOperationIdleState,
   type CommentOperationKind,
   CommentOperationSavingState,
-  type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
 import type { CommentScope } from "@/features/comments/domain/commentScope";
 import type { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
@@ -31,12 +32,7 @@ import type {
   CommentId,
 } from "@/features/comments/types/comment";
 import type { CommentCommands } from "@/features/comments/application/ports/commentCommands";
-import { AddCommentCommandError } from "@/features/comments/infra/tauri/addComment";
-import { DeleteCommentCommandError } from "@/features/comments/infra/tauri/deleteComment";
-import { ReopenCommentCommandError } from "@/features/comments/infra/tauri/reopenComment";
-import { ResolveCommentCommandError } from "@/features/comments/infra/tauri/resolveComment";
-import { ToggleCommentResolvedCommandError } from "@/features/comments/infra/tauri/toggleCommentResolved";
-import { UpdateCommentCommandError } from "@/features/comments/infra/tauri/updateComment";
+import { toCommentFeatureError } from "@/features/comments/infra/tauri/commentErrorMapper";
 import {
   SelectionIdentity,
   type SelectionIdentity as SelectionIdentityType,
@@ -69,7 +65,7 @@ export type UseCommentOperationsOptions = Readonly<{
 }>;
 
 export type UseCommentOperationsResult = Readonly<{
-  operationState: CommentOperationState;
+  operationState: CommentOperationFeatureState;
   /** @param input - Anchor and body for the new comment. */
   addComment: (input: AddCommentInput) => Promise<Comment | null>;
   /** @param input - Comment id and new body for the update. */
@@ -105,7 +101,7 @@ type AsyncOperationToken = Readonly<{
   statusFilter: CommentStatusFilter;
 }>;
 
-const initialOperationState: CommentOperationState =
+const initialOperationState: CommentOperationFeatureState =
   CommentOperationIdleState.create();
 
 /**
@@ -491,9 +487,9 @@ export function useCommentOperations(
  * @returns Next operation state.
  */
 function commentOperationReducer(
-  _state: CommentOperationState,
+  _state: CommentOperationFeatureState,
   event: CommentOperationEvent,
-): CommentOperationState {
+): CommentOperationFeatureState {
   switch (event.type) {
     case "operationStarted":
       return CommentOperationSavingState.create(
@@ -511,45 +507,6 @@ function commentOperationReducer(
       );
     default:
       return assertNever(event);
-  }
-}
-
-/**
- * @param operation - Comment operation that rejected.
- * @param error - Unknown rejected value from the command boundary.
- * @returns Feature-level comment error for operation state.
- */
-function toCommentFeatureError(
-  operation: CommentOperationKind,
-  error: unknown,
-): CommentFeatureErrorType {
-  switch (operation) {
-    case "add":
-      return CommentFeatureError.fromCommandError(
-        AddCommentCommandError.fromUnknown(error),
-      );
-    case "update":
-      return CommentFeatureError.fromCommandError(
-        UpdateCommentCommandError.fromUnknown(error),
-      );
-    case "delete":
-      return CommentFeatureError.fromCommandError(
-        DeleteCommentCommandError.fromUnknown(error),
-      );
-    case "resolve":
-      return CommentFeatureError.fromCommandError(
-        ResolveCommentCommandError.fromUnknown(error),
-      );
-    case "reopen":
-      return CommentFeatureError.fromCommandError(
-        ReopenCommentCommandError.fromUnknown(error),
-      );
-    case "toggle":
-      return CommentFeatureError.fromCommandError(
-        ToggleCommentResolvedCommandError.fromUnknown(error),
-      );
-    default:
-      return assertNever(operation);
   }
 }
 

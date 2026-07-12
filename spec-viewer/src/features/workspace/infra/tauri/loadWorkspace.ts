@@ -36,7 +36,7 @@ export type LoadWorkspaceCommandError = Readonly<{
   command: LoadWorkspaceCommandName;
   code: LoadWorkspaceCommandErrorCode;
   message: string;
-  raw: unknown;
+  cause: unknown;
 }>;
 
 export type LoadWorkspaceCommandContract = Readonly<{
@@ -59,7 +59,7 @@ export const LoadWorkspaceCommandError = {
         command: LOAD_WORKSPACE_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error.raw,
+        cause: error.cause,
       };
     }
 
@@ -72,7 +72,7 @@ export const LoadWorkspaceCommandError = {
         command: LOAD_WORKSPACE_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error,
+        cause: error,
       };
     }
 
@@ -90,13 +90,13 @@ export const LoadWorkspaceCommandError = {
     );
   },
 
-  /** @returns An unknown load_workspace command error preserving the raw payload. */
-  unknown(message: string, raw: unknown): LoadWorkspaceCommandError {
+  /** @returns An unknown load_workspace command error preserving the cause payload. */
+  unknown(message: string, cause: unknown): LoadWorkspaceCommandError {
     return {
       command: LOAD_WORKSPACE_COMMAND,
       code: "unknown",
       message,
-      raw,
+      cause,
     };
   },
 

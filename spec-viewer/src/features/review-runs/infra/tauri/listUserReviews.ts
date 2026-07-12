@@ -26,7 +26,7 @@ export type ListUserReviewsCommandError = Readonly<{
   command: ListUserReviewsCommandName;
   code: ListUserReviewsCommandErrorCode;
   message: string;
-  raw: unknown;
+  cause: unknown;
 }>;
 
 export type ListUserReviewsCommandContract = Readonly<{
@@ -49,7 +49,7 @@ export const ListUserReviewsCommandError = {
         command: LIST_USER_REVIEWS_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error.raw,
+        cause: error.cause,
       };
     }
 
@@ -62,7 +62,7 @@ export const ListUserReviewsCommandError = {
         command: LIST_USER_REVIEWS_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error,
+        cause: error,
       };
     }
 
@@ -80,13 +80,13 @@ export const ListUserReviewsCommandError = {
     );
   },
 
-  /** @returns An unknown list_user_reviews command error preserving the raw payload. */
-  unknown(message: string, raw: unknown): ListUserReviewsCommandError {
+  /** @returns An unknown list_user_reviews command error preserving the cause payload. */
+  unknown(message: string, cause: unknown): ListUserReviewsCommandError {
     return {
       command: LIST_USER_REVIEWS_COMMAND,
       code: "unknown",
       message,
-      raw,
+      cause,
     };
   },
 

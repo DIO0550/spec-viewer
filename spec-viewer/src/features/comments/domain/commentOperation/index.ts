@@ -1,4 +1,3 @@
-import type { CommentFeatureError } from "@/features/comments/domain/commentError";
 import type { Comment, CommentId } from "@/features/comments/types/comment";
 
 export type CommentOperationKind =
@@ -23,17 +22,17 @@ export type CommentOperationSavingState = Readonly<{
   error: null;
 }>;
 
-export type CommentOperationFailedState = Readonly<{
+export type CommentOperationFailedState<TError = unknown> = Readonly<{
   status: "error";
   operation: CommentOperationKind;
   commentId: CommentId | null;
-  error: CommentFeatureError;
+  error: TError;
 }>;
 
-export type CommentOperationState =
+export type CommentOperationState<TError = unknown> =
   | CommentOperationIdleState
   | CommentOperationSavingState
-  | CommentOperationFailedState;
+  | CommentOperationFailedState<TError>;
 
 export const CommentOperationIdleState = {
   /**
@@ -50,8 +49,9 @@ export const CommentOperationIdleState = {
    * @param state - The comment operation state to test.
    * @returns True when the state is idle.
    */
-  is: (state: CommentOperationState): state is CommentOperationIdleState =>
-    state.status === "idle",
+  is: (
+    state: CommentOperationState<unknown>,
+  ): state is CommentOperationIdleState => state.status === "idle",
 } as const;
 
 export const CommentOperationSavingState = {
@@ -74,8 +74,9 @@ export const CommentOperationSavingState = {
    * @param state - The comment operation state to test.
    * @returns True when the state is saving.
    */
-  is: (state: CommentOperationState): state is CommentOperationSavingState =>
-    state.status === "saving",
+  is: (
+    state: CommentOperationState<unknown>,
+  ): state is CommentOperationSavingState => state.status === "saving",
 
   /**
    * @param state - The comment operation state to test.
@@ -83,7 +84,7 @@ export const CommentOperationSavingState = {
    * @returns True when the state is saving the given operation.
    */
   matchesOperation: (
-    state: CommentOperationState,
+    state: CommentOperationState<unknown>,
     operation: CommentOperationKind,
   ): boolean =>
     CommentOperationSavingState.is(state) && state.operation === operation,
@@ -94,7 +95,7 @@ export const CommentOperationSavingState = {
    * @returns True when the state is saving for the given comment.
    */
   isForComment: (
-    state: CommentOperationState,
+    state: CommentOperationState<unknown>,
     commentId: Comment["id"],
   ): boolean =>
     CommentOperationSavingState.is(state) && state.commentId === commentId,
@@ -107,11 +108,11 @@ export const CommentOperationFailedState = {
    * @param error - The feature error describing the failure.
    * @returns A failed comment operation state.
    */
-  create: (
+  create: <TError>(
     operation: CommentOperationKind,
     commentId: CommentId | null,
-    error: CommentFeatureError,
-  ): CommentOperationFailedState => ({
+    error: TError,
+  ): CommentOperationFailedState<TError> => ({
     status: "error",
     operation,
     commentId,
@@ -122,8 +123,9 @@ export const CommentOperationFailedState = {
    * @param state - The comment operation state to test.
    * @returns True when the state is a failure.
    */
-  is: (state: CommentOperationState): state is CommentOperationFailedState =>
-    state.status === "error",
+  is: <TError>(
+    state: CommentOperationState<TError>,
+  ): state is CommentOperationFailedState<TError> => state.status === "error",
 
   /**
    * @param state - The comment operation state to test.
@@ -131,7 +133,7 @@ export const CommentOperationFailedState = {
    * @returns True when the state failed for the given operation.
    */
   matchesOperation: (
-    state: CommentOperationState,
+    state: CommentOperationState<unknown>,
     operation: CommentOperationKind,
   ): boolean =>
     CommentOperationFailedState.is(state) && state.operation === operation,
@@ -140,7 +142,7 @@ export const CommentOperationFailedState = {
    * @param state - The comment operation state to inspect.
    * @returns The failure error, or null when the state is not a failure.
    */
-  errorOf: (state: CommentOperationState): CommentFeatureError | null =>
+  errorOf: <TError>(state: CommentOperationState<TError>): TError | null =>
     CommentOperationFailedState.is(state) ? state.error : null,
 
   /**
@@ -148,10 +150,10 @@ export const CommentOperationFailedState = {
    * @param operation - The operation kind to match against.
    * @returns The failure error for the given operation, or null otherwise.
    */
-  errorFor: (
-    state: CommentOperationState,
+  errorFor: <TError>(
+    state: CommentOperationState<TError>,
     operation: CommentOperationKind,
-  ): CommentFeatureError | null =>
+  ): TError | null =>
     CommentOperationFailedState.matchesOperation(state, operation)
       ? state.error
       : null,

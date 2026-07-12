@@ -1,4 +1,3 @@
-import type { CommentFeatureError } from "@/features/comments/domain/commentError";
 import type { Comment } from "@/features/comments/types/comment";
 
 export type CommentListIdleState = Readonly<{
@@ -25,25 +24,25 @@ export type CommentListEmptyState = Readonly<{
   error: null;
 }>;
 
-export type CommentListErrorState = Readonly<{
+export type CommentListErrorState<TError = unknown> = Readonly<{
   status: "error";
   comments: readonly [];
-  error: CommentFeatureError;
+  error: TError;
 }>;
 
-export type CommentListState =
+export type CommentListState<TError = unknown> =
   | CommentListIdleState
   | CommentListLoadingState
   | CommentListReadyState
   | CommentListEmptyState
-  | CommentListErrorState;
+  | CommentListErrorState<TError>;
 
 export type CommentListTransform = (
   comments: readonly Comment[],
 ) => readonly Comment[];
 
-export type CommentListTransformResult = Readonly<{
-  state: CommentListState;
+export type CommentListTransformResult<TError = unknown> = Readonly<{
+  state: CommentListState<TError>;
   invalidatesRequest: boolean;
 }>;
 
@@ -92,7 +91,7 @@ export const CommentListState = {
    * @param error - The feature error to wrap.
    * @returns An error comment list state.
    */
-  error: (error: CommentFeatureError): CommentListErrorState => ({
+  error: <TError>(error: TError): CommentListErrorState<TError> => ({
     status: "error",
     comments: [],
     error,
@@ -102,22 +101,23 @@ export const CommentListState = {
    * @param state - The comment list state to test.
    * @returns True when the state is idle.
    */
-  isIdle: (state: CommentListState): state is CommentListIdleState =>
+  isIdle: (state: CommentListState<unknown>): state is CommentListIdleState =>
     state.status === "idle",
 
   /**
    * @param state - The comment list state to test.
    * @returns True when the state is loading.
    */
-  isLoading: (state: CommentListState): state is CommentListLoadingState =>
-    state.status === "loading",
+  isLoading: (
+    state: CommentListState<unknown>,
+  ): state is CommentListLoadingState => state.status === "loading",
 
   /**
    * @param state - The comment list state to test.
    * @returns True when the state is ready or empty.
    */
   isLoaded: (
-    state: CommentListState,
+    state: CommentListState<unknown>,
   ): state is CommentListReadyState | CommentListEmptyState =>
     state.status === "ready" || state.status === "empty",
 
@@ -126,10 +126,10 @@ export const CommentListState = {
    * @param transform - The transform applied to the comment list.
    * @returns The next state and whether it invalidates the in-flight request.
    */
-  applyTransform: (
-    state: CommentListState,
+  applyTransform: <TError>(
+    state: CommentListState<TError>,
     transform: CommentListTransform,
-  ): CommentListTransformResult => {
+  ): CommentListTransformResult<TError> => {
     if (CommentListState.isIdle(state)) {
       return {
         state,

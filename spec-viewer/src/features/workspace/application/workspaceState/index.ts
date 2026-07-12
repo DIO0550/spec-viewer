@@ -1,6 +1,6 @@
 import type { GenerationToken } from "@/features/workspace/application/generation";
 import type { Workspace } from "@/features/workspace/domain/workspace";
-import type { WorkspaceError } from "@/features/workspace/domain/workspaceError";
+import type { WorkspaceFeatureError } from "@/features/workspace/application/workspaceError";
 
 export type WorkspaceState =
   | Readonly<{
@@ -15,12 +15,12 @@ export type WorkspaceState =
   | Readonly<{
       status: "opened";
       workspace: Workspace;
-      lastOpenError: WorkspaceError | null;
+      lastOpenError: WorkspaceFeatureError | null;
     }>
   | Readonly<{
       status: "failed";
       requestedPath: string;
-      error: WorkspaceError;
+      error: WorkspaceFeatureError;
     }>;
 
 export type WorkspaceStateMachine = Readonly<{
@@ -43,7 +43,7 @@ export type WorkspaceStateEvent =
   | Readonly<{
       type: "openFailed";
       requestId: GenerationToken;
-      error: WorkspaceError;
+      error: WorkspaceFeatureError;
     }>
   | Readonly<{ type: "reset" }>;
 
@@ -60,7 +60,7 @@ type OpenSucceededInput = Readonly<{
 
 type OpenFailedInput = Readonly<{
   requestId: GenerationToken;
-  error: WorkspaceError;
+  error: WorkspaceFeatureError;
 }>;
 
 export const WorkspaceState = {
@@ -174,7 +174,7 @@ function isCurrentCompletion(
 /** @returns Failed or preserved-opened state for the active request. */
 function reduceOpenFailed(
   current: WorkspaceStateMachine,
-  error: WorkspaceError,
+  error: WorkspaceFeatureError,
 ): WorkspaceStateMachine {
   if (current.state.status !== "opening") {
     return current;

@@ -5,14 +5,13 @@ import {
   type CommentExportOperation,
   type CommentExportScope,
   createSpecSkillMcpFeedbackDryRunPayload,
-  ExportCommentsCommandError,
   type ExportCommentsResponse,
   type ExportCommentsTarget,
   exportComments as defaultExportComments,
-  GenerateLlmPromptCommandError,
   type GenerateLlmPromptResponse,
   generateLlmPrompt as defaultGenerateLlmPrompt,
   renderSpecSkillMcpFeedbackDryRunPayload,
+  toCommentFeatureError,
   selectCommentExportDestination as defaultSelectCommentExportDestination,
   type SpecSkillMcpFeedbackPayload,
 } from "@/features/comments";
@@ -136,7 +135,7 @@ export function useCommentExport(
         setCommentExportState({
           status: "error",
           operation: target.scope,
-          message: ExportCommentsCommandError.fromUnknown(error).message,
+          message: toCommentFeatureError("export", error).message,
         });
       }
     },
@@ -196,7 +195,7 @@ export function useCommentExport(
         setCommentExportState({
           status: "error",
           operation: target.scope,
-          message: GenerateLlmPromptCommandError.fromUnknown(error).message,
+          message: toCommentFeatureError("generatePrompt", error).message,
         });
       }
     },

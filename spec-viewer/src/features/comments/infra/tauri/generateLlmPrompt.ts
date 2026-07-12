@@ -25,7 +25,7 @@ export type GenerateLlmPromptCommandError = Readonly<{
   command: GenerateLlmPromptCommandName;
   code: GenerateLlmPromptCommandErrorCode;
   message: string;
-  raw: unknown;
+  cause: unknown;
 }>;
 
 export type GenerateLlmPromptCommandContract = Readonly<{
@@ -48,7 +48,7 @@ export const GenerateLlmPromptCommandError = {
         command: GENERATE_LLM_PROMPT_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error.raw,
+        cause: error.cause,
       };
     }
 
@@ -61,7 +61,7 @@ export const GenerateLlmPromptCommandError = {
         command: GENERATE_LLM_PROMPT_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error,
+        cause: error,
       };
     }
 
@@ -79,13 +79,13 @@ export const GenerateLlmPromptCommandError = {
     );
   },
 
-  /** @returns An unknown generate_llm_prompt command error preserving the raw payload. */
-  unknown(message: string, raw: unknown): GenerateLlmPromptCommandError {
+  /** @returns An unknown generate_llm_prompt command error preserving the cause payload. */
+  unknown(message: string, cause: unknown): GenerateLlmPromptCommandError {
     return {
       command: GENERATE_LLM_PROMPT_COMMAND,
       code: "unknown",
       message,
-      raw,
+      cause,
     };
   },
 

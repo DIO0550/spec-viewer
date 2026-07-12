@@ -10,11 +10,11 @@ import {
 import type { ReactNode } from "react";
 import { useId, useState } from "react";
 import { CommentThread } from "@/features/comments/components/CommentThread";
-import type { CommentListState } from "@/features/comments/domain/commentListState";
-import {
-  CommentOperationFailedState,
-  type CommentOperationState,
-} from "@/features/comments/domain/commentOperation";
+import type {
+  CommentListFeatureState as CommentListState,
+  CommentOperationFeatureState as CommentOperationState,
+} from "@/features/comments/application/commentError";
+import { CommentOperationFailedState } from "@/features/comments/domain/commentOperation";
 import type {
   ApplyWithAiPlaceholderState,
   Comment,

@@ -24,7 +24,7 @@ export type AddCommentCommandError = Readonly<{
   command: AddCommentCommandName;
   code: AddCommentCommandErrorCode;
   message: string;
-  raw: unknown;
+  cause: unknown;
 }>;
 
 export type AddCommentCommandContract = Readonly<{
@@ -47,7 +47,7 @@ export const AddCommentCommandError = {
         command: ADD_COMMENT_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error.raw,
+        cause: error.cause,
       };
     }
 
@@ -60,7 +60,7 @@ export const AddCommentCommandError = {
         command: ADD_COMMENT_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error,
+        cause: error,
       };
     }
 
@@ -75,13 +75,13 @@ export const AddCommentCommandError = {
     return AddCommentCommandError.unknown("Unknown add_comment failure", error);
   },
 
-  /** @returns An unknown add_comment command error preserving the raw payload. */
-  unknown(message: string, raw: unknown): AddCommentCommandError {
+  /** @returns An unknown add_comment command error preserving the cause payload. */
+  unknown(message: string, cause: unknown): AddCommentCommandError {
     return {
       command: ADD_COMMENT_COMMAND,
       code: "unknown",
       message,
-      raw,
+      cause,
     };
   },
 

@@ -2,11 +2,11 @@ import { useMemo } from "react";
 
 import type { UserReviewCommands } from "@/features/review-runs/application/ports/userReviewCommands";
 import type { UserReview } from "@/features/review-runs/domain/userReview";
-import type { UserReviewListState as UserReviewListStateType } from "@/features/review-runs/domain/userReviewListState";
 import type {
-  UserReviewArchiveState,
-  UserReviewCreateState,
-} from "@/features/review-runs/domain/userReviewOperation";
+  UserReviewArchiveFeatureState,
+  UserReviewCreateFeatureState,
+  UserReviewListFeatureState,
+} from "@/features/review-runs/application/userReviewError";
 import { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import { buildUserReviewsResult } from "@/features/review-runs/hooks/buildUserReviewsResult";
 import {
@@ -25,11 +25,11 @@ import {
   type SpecViewSelection,
 } from "@/shared/domain/specViewSelection";
 
-export type { UserReviewListState } from "@/features/review-runs/domain/userReviewListState";
 export type {
-  UserReviewArchiveState,
-  UserReviewCreateState,
-} from "@/features/review-runs/domain/userReviewOperation";
+  UserReviewArchiveFeatureState as UserReviewArchiveState,
+  UserReviewCreateFeatureState as UserReviewCreateState,
+  UserReviewListFeatureState as UserReviewListState,
+} from "@/features/review-runs/application/userReviewError";
 export type { UserReviewTargetScope } from "@/features/review-runs/domain/userReviewTarget";
 export type { CreateUserReviewInput } from "@/features/review-runs/hooks/useCreateUserReview";
 
@@ -43,9 +43,9 @@ export type UseUserReviewsOptions = Readonly<{
 
 export type UseUserReviewsResult = Readonly<{
   target: UserReviewTarget | null;
-  listState: UserReviewListStateType;
-  createState: UserReviewCreateState;
-  archiveState: UserReviewArchiveState;
+  listState: UserReviewListFeatureState;
+  createState: UserReviewCreateFeatureState;
+  archiveState: UserReviewArchiveFeatureState;
   activeReviews: readonly UserReview[];
   archivedReviews: readonly UserReview[];
   /** Reloads the user review list. */

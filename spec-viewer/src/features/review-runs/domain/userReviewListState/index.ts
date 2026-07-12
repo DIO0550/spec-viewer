@@ -6,7 +6,6 @@ import {
 import type { UserReview } from "@/features/review-runs/domain/userReview";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import type { UserReviewListProblem } from "@/features/review-runs/types/userReviewIpc";
-import type { UserReviewFeatureError } from "@/features/review-runs/domain/userReviewError";
 
 export type UserReviewListIdleState = Readonly<{
   status: "idle";
@@ -44,24 +43,24 @@ export type UserReviewListEmptyState = Readonly<{
   error: null;
 }>;
 
-export type UserReviewListErrorState = Readonly<{
+export type UserReviewListErrorState<TError = unknown> = Readonly<{
   status: "error";
   target: UserReviewTarget;
   active: readonly [];
   archived: readonly [];
   problems: readonly [];
-  error: UserReviewFeatureError;
+  error: TError;
 }>;
 
-export type UserReviewListState =
+export type UserReviewListState<TError = unknown> =
   | UserReviewListIdleState
   | UserReviewListLoadingState
   | UserReviewListReadyState
   | UserReviewListEmptyState
-  | UserReviewListErrorState;
+  | UserReviewListErrorState<TError>;
 
-export type UserReviewListTransformResult = Readonly<{
-  state: UserReviewListState;
+export type UserReviewListTransformResult<TError = unknown> = Readonly<{
+  state: UserReviewListState<TError>;
   invalidatesRequest: boolean;
 }>;
 
@@ -75,8 +74,8 @@ export type UserReviewListEvent =
       review: UserReview;
     }>;
 
-export type UserReviewListEventResult = Readonly<{
-  state: UserReviewListState;
+export type UserReviewListEventResult<TError = unknown> = Readonly<{
+  state: UserReviewListState<TError>;
   invalidatesInFlightListRequest: boolean;
 }>;
 
@@ -132,10 +131,10 @@ export const UserReviewListState = {
   },
 
   /** @returns Error list state for a failed target load. */
-  error(
+  error<TError>(
     target: UserReviewTarget,
-    error: UserReviewFeatureError,
-  ): UserReviewListErrorState {
+    error: TError,
+  ): UserReviewListErrorState<TError> {
     return {
       status: "error",
       target,
@@ -148,16 +147,16 @@ export const UserReviewListState = {
 
   /** @returns True when the list has active or empty loaded data. */
   isLoaded(
-    state: UserReviewListState,
+    state: UserReviewListState<unknown>,
   ): state is UserReviewListReadyState | UserReviewListEmptyState {
     return state.status === "ready" || state.status === "empty";
   },
 
   /** @returns State transformed by a user review event plus request invalidation. */
-  reduceUserReviewEvent(
-    state: UserReviewListState,
+  reduceUserReviewEvent<TError>(
+    state: UserReviewListState<TError>,
     event: UserReviewListEvent,
-  ): UserReviewListEventResult {
+  ): UserReviewListEventResult<TError> {
     const result = applyCollectionTransformForState(state, (collection) => {
       if (event.type === "reviewCreated") {
         return UserReviewCollection.addCreated(collection, event.review);
@@ -173,19 +172,19 @@ export const UserReviewListState = {
   },
 
   /** @returns State transformed by a collection update plus request invalidation. */
-  applyCollectionTransform(
-    state: UserReviewListState,
+  applyCollectionTransform<TError>(
+    state: UserReviewListState<TError>,
     transform: UserReviewCollectionTransform,
-  ): UserReviewListTransformResult {
+  ): UserReviewListTransformResult<TError> {
     return applyCollectionTransformForState(state, transform);
   },
 } as const;
 
 /** @returns State transformed by a collection update plus request invalidation. */
-function applyCollectionTransformForState(
-  state: UserReviewListState,
+function applyCollectionTransformForState<TError>(
+  state: UserReviewListState<TError>,
   transform: UserReviewCollectionTransform,
-): UserReviewListTransformResult {
+): UserReviewListTransformResult<TError> {
   if (state.status === "idle") {
     return {
       state,
@@ -205,7 +204,7 @@ function applyCollectionTransformForState(
 
 /** @returns Domain collection represented by a list state. */
 function collectionFromState(
-  state: Exclude<UserReviewListState, UserReviewListIdleState>,
+  state: Exclude<UserReviewListState<unknown>, UserReviewListIdleState>,
 ): UserReviewCollectionType {
   if (UserReviewListState.isLoaded(state)) {
     return UserReviewCollection.fromListResponse(

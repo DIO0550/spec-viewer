@@ -25,7 +25,7 @@ export type ResolveCommentCommandError = Readonly<{
   command: ResolveCommentCommandName;
   code: ResolveCommentCommandErrorCode;
   message: string;
-  raw: unknown;
+  cause: unknown;
 }>;
 
 export type ResolveCommentCommandContract = Readonly<{
@@ -48,7 +48,7 @@ export const ResolveCommentCommandError = {
         command: RESOLVE_COMMENT_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error.raw,
+        cause: error.cause,
       };
     }
 
@@ -61,7 +61,7 @@ export const ResolveCommentCommandError = {
         command: RESOLVE_COMMENT_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error,
+        cause: error,
       };
     }
 
@@ -79,13 +79,13 @@ export const ResolveCommentCommandError = {
     );
   },
 
-  /** @returns An unknown resolve_comment command error preserving the raw payload. */
-  unknown(message: string, raw: unknown): ResolveCommentCommandError {
+  /** @returns An unknown resolve_comment command error preserving the cause payload. */
+  unknown(message: string, cause: unknown): ResolveCommentCommandError {
     return {
       command: RESOLVE_COMMENT_COMMAND,
       code: "unknown",
       message,
-      raw,
+      cause,
     };
   },
 

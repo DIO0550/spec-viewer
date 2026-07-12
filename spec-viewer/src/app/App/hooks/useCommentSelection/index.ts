@@ -9,7 +9,10 @@ import type {
   CommentAnchorDisplayState,
   CommentId,
 } from "@/features/comments";
-import { CommentListState } from "@/features/comments";
+import {
+  type CommentListFeatureState,
+  CommentListState,
+} from "@/features/comments";
 
 /** useComments の戻り値のうち本フックが使う操作のみの狭い構造的型（DI テスト容易性のため）。 */
 export type CommentSelectionCommentActions = Readonly<{
@@ -29,7 +32,7 @@ export type CommentSelectionCommentActions = Readonly<{
 
 export type UseCommentSelectionOptions = Readonly<{
   comments: readonly Comment[];
-  listState: CommentListState;
+  listState: CommentListFeatureState;
   commentActions: CommentSelectionCommentActions;
   /** Opens the comment sidebar. */
   openSidebar: () => void;

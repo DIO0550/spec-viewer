@@ -27,7 +27,7 @@ export type ToggleCommentResolvedCommandError = Readonly<{
   command: ToggleCommentResolvedCommandName;
   code: ToggleCommentResolvedCommandErrorCode;
   message: string;
-  raw: unknown;
+  cause: unknown;
 }>;
 
 export type ToggleCommentResolvedCommandContract = Readonly<{
@@ -50,7 +50,7 @@ export const ToggleCommentResolvedCommandError = {
         command: TOGGLE_COMMENT_RESOLVED_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error.raw,
+        cause: error.cause,
       };
     }
 
@@ -63,7 +63,7 @@ export const ToggleCommentResolvedCommandError = {
         command: TOGGLE_COMMENT_RESOLVED_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error,
+        cause: error,
       };
     }
 
@@ -81,13 +81,13 @@ export const ToggleCommentResolvedCommandError = {
     );
   },
 
-  /** @returns An unknown toggle_comment_resolved command error preserving the raw payload. */
-  unknown(message: string, raw: unknown): ToggleCommentResolvedCommandError {
+  /** @returns An unknown toggle_comment_resolved command error preserving the cause payload. */
+  unknown(message: string, cause: unknown): ToggleCommentResolvedCommandError {
     return {
       command: TOGGLE_COMMENT_RESOLVED_COMMAND,
       code: "unknown",
       message,
-      raw,
+      cause,
     };
   },
 

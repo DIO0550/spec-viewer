@@ -25,7 +25,7 @@ export type ReopenCommentCommandError = Readonly<{
   command: ReopenCommentCommandName;
   code: ReopenCommentCommandErrorCode;
   message: string;
-  raw: unknown;
+  cause: unknown;
 }>;
 
 export type ReopenCommentCommandContract = Readonly<{
@@ -48,7 +48,7 @@ export const ReopenCommentCommandError = {
         command: REOPEN_COMMENT_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error.raw,
+        cause: error.cause,
       };
     }
 
@@ -61,7 +61,7 @@ export const ReopenCommentCommandError = {
         command: REOPEN_COMMENT_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error,
+        cause: error,
       };
     }
 
@@ -79,13 +79,13 @@ export const ReopenCommentCommandError = {
     );
   },
 
-  /** @returns An unknown reopen_comment command error preserving the raw payload. */
-  unknown(message: string, raw: unknown): ReopenCommentCommandError {
+  /** @returns An unknown reopen_comment command error preserving the cause payload. */
+  unknown(message: string, cause: unknown): ReopenCommentCommandError {
     return {
       command: REOPEN_COMMENT_COMMAND,
       code: "unknown",
       message,
-      raw,
+      cause,
     };
   },
 

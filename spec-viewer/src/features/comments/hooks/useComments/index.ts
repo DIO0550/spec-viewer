@@ -5,13 +5,12 @@ import {
   useRef,
   useState,
 } from "react";
-import type { CommentFeatureError as CommentFeatureErrorType } from "@/features/comments/domain/commentError";
-import { CommentFeatureError } from "@/features/comments/domain/commentError";
-import {
-  CommentListState,
-  type CommentListState as CommentListStateType,
-} from "@/features/comments/domain/commentListState";
-import type { CommentOperationState } from "@/features/comments/domain/commentOperation";
+import type {
+  CommentFeatureError as CommentFeatureErrorType,
+  CommentListFeatureState,
+} from "@/features/comments/application/commentError";
+import { CommentListState } from "@/features/comments/domain/commentListState";
+import type { CommentOperationFeatureState } from "@/features/comments/application/commentError";
 import {
   CommentScope,
   type CommentScope as CommentScopeType,
@@ -28,7 +27,7 @@ import { listComments as listCommentsViaGateway } from "@/features/comments/infr
 import type { Comment, CommentId } from "@/features/comments/types/comment";
 import type { CommentCommands } from "@/features/comments/application/ports/commentCommands";
 import { commentCommands as defaultCommentCommands } from "@/features/comments/infra/tauri";
-import { ListCommentsCommandError } from "@/features/comments/infra/tauri/listComments";
+import { toCommentFeatureError } from "@/features/comments/infra/tauri/commentErrorMapper";
 import {
   SelectionIdentity,
   type SelectionIdentity as SelectionIdentityType,
@@ -38,11 +37,9 @@ import {
   startPerformanceSpan,
 } from "@/shared/lib/performance";
 
-export type { CommentListState } from "@/features/comments/domain/commentListState";
-export type {
-  CommentOperationKind,
-  CommentOperationState,
-} from "@/features/comments/domain/commentOperation";
+export type { CommentListFeatureState as CommentListState } from "@/features/comments/application/commentError";
+export type { CommentOperationFeatureState as CommentOperationState } from "@/features/comments/application/commentError";
+export type { CommentOperationKind } from "@/features/comments/domain/commentOperation";
 export type {
   AddCommentInput,
   UpdateCommentInput,
@@ -56,8 +53,8 @@ export type UseCommentsOptions = Readonly<{
 }>;
 
 export type UseCommentsResult = Readonly<{
-  listState: CommentListStateType;
-  operationState: CommentOperationState;
+  listState: CommentListFeatureState;
+  operationState: CommentOperationFeatureState;
   comments: readonly Comment[];
   isLoading: boolean;
   isSaving: boolean;
@@ -94,7 +91,7 @@ export function useComments({
   const listRequestIdRef = useRef(0);
   const activeListSelectionIdentityRef = useRef(selectionIdentity);
   const activeListStatusFilterRef = useRef(statusFilter);
-  const [listState, setListState] = useState<CommentListStateType>(
+  const [listState, setListState] = useState<CommentListFeatureState>(
     CommentListState.idle(),
   );
 
@@ -194,11 +191,7 @@ export function useComments({
       }
 
       setListState(
-        CommentListState.error(
-          CommentFeatureError.fromCommandError(
-            ListCommentsCommandError.fromUnknown(error),
-          ),
-        ),
+        CommentListState.error(toCommentFeatureError("list", error)),
       );
       return false;
     }

@@ -17,13 +17,14 @@ export type {
 } from "@/features/comments/types/comment";
 export { CommentThread } from "./components/CommentThread";
 export { CommentListState } from "./domain/commentListState";
+export type { CommentListFeatureState } from "./application/commentError";
 export {
   CommentOperationFailedState,
   CommentOperationIdleState,
   type CommentOperationKind,
   CommentOperationSavingState,
-  type CommentOperationState,
 } from "./domain/commentOperation";
+export type { CommentOperationFeatureState as CommentOperationState } from "./application/commentError";
 export { CommentScope } from "./domain/commentScope";
 export { CommentStatusFilter } from "./domain/commentStatusFilter";
 export { useComments } from "./hooks/useComments";
@@ -33,9 +34,8 @@ export {
   renderSpecSkillMcpFeedbackDryRunPayload,
 } from "./lib/mcpFeedback";
 export {
-  ExportCommentsCommandError,
   exportComments,
-  GenerateLlmPromptCommandError,
   generateLlmPrompt,
   selectCommentExportDestination,
 } from "./infra/tauri";
+export { toCommentFeatureError } from "./infra/tauri/commentErrorMapper";

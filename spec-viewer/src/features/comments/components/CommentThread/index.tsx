@@ -14,10 +14,8 @@ import {
   useState,
 } from "react";
 
-import {
-  CommentOperationSavingState,
-  type CommentOperationState,
-} from "@/features/comments/domain/commentOperation";
+import type { CommentOperationFeatureState as CommentOperationState } from "@/features/comments/application/commentError";
+import { CommentOperationSavingState } from "@/features/comments/domain/commentOperation";
 import type {
   Comment,
   CommentAnchorDisplayStatus,

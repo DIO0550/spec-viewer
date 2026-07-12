@@ -1,6 +1,8 @@
-import type { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
-import type { SpecFeatureError } from "@/features/specs/domain/specError";
-import type { SpecTreeState } from "@/features/specs/domain/specTreeState";
+import type {
+  SpecDocumentFeatureState,
+  SpecFeatureError,
+  SpecTreeFeatureState,
+} from "@/features/specs/application/specError";
 import type { SpecsSelectors } from "@/features/specs/hooks/useSpecs/selectors";
 import type { SpecFileKey } from "@/shared/domain/specFileKey";
 
@@ -10,8 +12,8 @@ export type SpecSelectionState = Readonly<{
 }>;
 
 export type SpecsState = Readonly<{
-  specTreeState: SpecTreeState;
-  documentState: SpecDocumentState;
+  specTreeState: SpecTreeFeatureState;
+  documentState: SpecDocumentFeatureState;
   selection: SpecSelectionState;
   isLoading: boolean;
   activeOperationId: string | null;

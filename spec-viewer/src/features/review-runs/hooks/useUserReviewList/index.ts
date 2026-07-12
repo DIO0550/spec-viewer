@@ -1,16 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { UserReviewCollection } from "@/features/review-runs/domain/userReviewCollection";
-import { UserReviewFeatureError } from "@/features/review-runs/domain/userReviewError";
+import type { UserReviewListFeatureState } from "@/features/review-runs/application/userReviewError";
 import {
   type UserReviewListEvent,
   UserReviewListState,
-  type UserReviewListState as UserReviewListStateType,
 } from "@/features/review-runs/domain/userReviewListState";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import { listUserReviews as listUserReviewsViaGateway } from "@/features/review-runs/infra/userReviewGateway";
 import type { UserReviewCommands } from "@/features/review-runs/application/ports/userReviewCommands";
-import { ListUserReviewsCommandError } from "@/features/review-runs/infra/tauri/listUserReviews";
+import { toUserReviewFeatureError } from "@/features/review-runs/infra/tauri/userReviewErrorMapper";
 import type { SelectionIdentity } from "@/shared/domain/specViewSelection";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 import {
@@ -32,7 +31,7 @@ export type UseUserReviewListOptions = Readonly<{
 }>;
 
 export type UseUserReviewListResult = Readonly<{
-  listState: UserReviewListStateType;
+  listState: UserReviewListFeatureState;
   /** Reloads the user review list. */
   reloadUserReviews: () => Promise<boolean>;
   /** Applies a list event. @param event - The user review list event to apply. */
@@ -44,7 +43,7 @@ export type UseUserReviewListResult = Readonly<{
 type SelectionIdentityListState = Readonly<{
   selectionIdentity: SelectionIdentity;
   requestVersion: number;
-  state: UserReviewListStateType;
+  state: UserReviewListFeatureState;
 }>;
 
 /** @returns User review list state and reload controls for the active target. */
@@ -182,9 +181,7 @@ export function useUserReviewList(
           requestVersion: startedRequestVersion,
           state: UserReviewListState.error(
             activeTarget,
-            UserReviewFeatureError.fromCommandError(
-              ListUserReviewsCommandError.fromUnknown(error),
-            ),
+            toUserReviewFeatureError("list", error),
           ),
         };
       });

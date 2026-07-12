@@ -1,8 +1,7 @@
 import type { SpecFileKey } from "@/features/specs/domain/specFile";
 import type { SpecDocument } from "@/features/specs/types/spec";
-import type { SpecFeatureError } from "@/features/specs/domain/specError";
 
-export type SpecDocumentState =
+export type SpecDocumentState<TError = unknown> =
   | Readonly<{
       status: "idle";
       workspacePath: string | null;
@@ -46,7 +45,7 @@ export type SpecDocumentState =
       fileKey: SpecFileKey;
       correlationId?: string;
       document: null;
-      error: SpecFeatureError;
+      error: TError;
     }>;
 
 type CorrelationFields = Readonly<{ correlationId?: string }>;
@@ -62,7 +61,7 @@ export const SpecDocumentState = {
     workspacePath: string | null,
     specId: string | null = null,
     fileKey: SpecFileKey | null = null,
-  ): SpecDocumentState => ({
+  ): SpecDocumentState<never> => ({
     status: "idle",
     workspacePath,
     specId,
@@ -83,7 +82,7 @@ export const SpecDocumentState = {
     specId: string,
     fileKey: SpecFileKey,
     correlationId?: string,
-  ): SpecDocumentState => ({
+  ): SpecDocumentState<never> => ({
     status: "loading",
     workspacePath,
     specId,
@@ -107,7 +106,7 @@ export const SpecDocumentState = {
     fileKey: SpecFileKey,
     document: SpecDocument,
     correlationId?: string,
-  ): SpecDocumentState => ({
+  ): SpecDocumentState<never> => ({
     status: document.missing ? "missing" : "ready",
     workspacePath,
     specId,
@@ -125,13 +124,13 @@ export const SpecDocumentState = {
    * @param correlationId - Optional performance correlation id
    * @returns Error document state.
    */
-  failed: (
+  failed: <TError>(
     workspacePath: string,
     specId: string,
     fileKey: SpecFileKey,
-    error: SpecFeatureError,
+    error: TError,
     correlationId?: string,
-  ): SpecDocumentState => ({
+  ): SpecDocumentState<TError> => ({
     status: "error",
     workspacePath,
     specId,

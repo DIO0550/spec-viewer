@@ -24,7 +24,7 @@ export type ReadSpecFileCommandError = Readonly<{
   command: ReadSpecFileCommandName;
   code: ReadSpecFileCommandErrorCode;
   message: string;
-  raw: unknown;
+  cause: unknown;
 }>;
 
 export type ReadSpecFileCommandContract = Readonly<{
@@ -47,7 +47,7 @@ export const ReadSpecFileCommandError = {
         command: READ_SPEC_FILE_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error.raw,
+        cause: error.cause,
       };
     }
 
@@ -60,7 +60,7 @@ export const ReadSpecFileCommandError = {
         command: READ_SPEC_FILE_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error,
+        cause: error,
       };
     }
 
@@ -78,13 +78,13 @@ export const ReadSpecFileCommandError = {
     );
   },
 
-  /** @returns An unknown read_spec_file command error preserving the raw payload. */
-  unknown(message: string, raw: unknown): ReadSpecFileCommandError {
+  /** @returns An unknown read_spec_file command error preserving the cause payload. */
+  unknown(message: string, cause: unknown): ReadSpecFileCommandError {
     return {
       command: READ_SPEC_FILE_COMMAND,
       code: "unknown",
       message,
-      raw,
+      cause,
     };
   },
 

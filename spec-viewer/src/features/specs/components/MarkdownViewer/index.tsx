@@ -39,8 +39,8 @@ import {
   CommentOperationIdleState,
   type CommentOperationKind,
   CommentOperationSavingState,
-  type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
+import type { CommentOperationState } from "@/features/comments";
 import { useMarkdownTextSelection } from "@/features/comments/hooks/useMarkdownTextSelection";
 import {
   createCommentAnchorDraftFromBlock,
@@ -70,6 +70,7 @@ import {
   createHtmlSearchIndex,
   findHtmlSearchMatches,
 } from "@/lib/htmlDocumentSearch";
+import { getUnknownErrorMessage } from "@/shared/lib/errorMessage";
 import { recordPerformancePoint } from "@/shared/lib/performance";
 import { uiText } from "@/shared/lib/uiText";
 import { HtmlDocument } from "./HtmlDocument";
@@ -2423,7 +2424,7 @@ function getCommentOperationErrorMessage(
     return null;
   }
 
-  return operationState.error.message;
+  return getUnknownErrorMessage(operationState.error);
 }
 
 /**

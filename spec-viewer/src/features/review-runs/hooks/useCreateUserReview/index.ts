@@ -7,17 +7,16 @@ import {
 } from "react";
 
 import type { UserReview } from "@/features/review-runs/domain/userReview";
-import { UserReviewFeatureError } from "@/features/review-runs/domain/userReviewError";
+import type { UserReviewCreateFeatureState } from "@/features/review-runs/application/userReviewError";
 import {
   type CreateUserReviewPayload,
   UserReviewCreateState,
-  type UserReviewCreateState as UserReviewCreateStateType,
 } from "@/features/review-runs/domain/userReviewOperation";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import type { UserReviewListEventWithSelectionIdentity } from "@/features/review-runs/hooks/useUserReviewList";
 import { createUserReview as createUserReviewViaGateway } from "@/features/review-runs/infra/userReviewGateway";
 import type { UserReviewCommands } from "@/features/review-runs/application/ports/userReviewCommands";
-import { CreateUserReviewCommandError } from "@/features/review-runs/infra/tauri/createUserReview";
+import { toUserReviewFeatureError } from "@/features/review-runs/infra/tauri/userReviewErrorMapper";
 import { SelectionIdentity } from "@/shared/domain/specViewSelection";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 
@@ -34,7 +33,7 @@ export type UseCreateUserReviewOptions = Readonly<{
 
 type SelectionIdentityCreateState = Readonly<{
   selectionIdentity: SelectionIdentity;
-  state: UserReviewCreateStateType;
+  state: UserReviewCreateFeatureState;
 }>;
 
 type CreateRequestToken = Readonly<{
@@ -43,7 +42,7 @@ type CreateRequestToken = Readonly<{
 }>;
 
 export type UseCreateUserReviewResult = Readonly<{
-  createState: UserReviewCreateStateType;
+  createState: UserReviewCreateFeatureState;
   /** Creates a user review. @param input - The create-review input. */
   createUserReview: (
     input: CreateUserReviewInput,
@@ -166,9 +165,7 @@ export function useCreateUserReview(
             selectionIdentity: request.selectionIdentity,
             state: UserReviewCreateState.error(
               payload,
-              UserReviewFeatureError.fromCommandError(
-                CreateUserReviewCommandError.fromUnknown(error),
-              ),
+              toUserReviewFeatureError("create", error),
             ),
           };
         });

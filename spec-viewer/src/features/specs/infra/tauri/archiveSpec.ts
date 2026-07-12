@@ -24,7 +24,7 @@ export type ArchiveSpecCommandError = Readonly<{
   command: ArchiveSpecCommandName;
   code: ArchiveSpecCommandErrorCode;
   message: string;
-  raw: unknown;
+  cause: unknown;
 }>;
 
 export type ArchiveSpecCommandContract = Readonly<{
@@ -47,7 +47,7 @@ export const ArchiveSpecCommandError = {
         command: ARCHIVE_SPEC_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error.raw,
+        cause: error.cause,
       };
     }
 
@@ -60,7 +60,7 @@ export const ArchiveSpecCommandError = {
         command: ARCHIVE_SPEC_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error,
+        cause: error,
       };
     }
 
@@ -78,13 +78,13 @@ export const ArchiveSpecCommandError = {
     );
   },
 
-  /** @returns An unknown archive_spec command error preserving the raw payload. */
-  unknown(message: string, raw: unknown): ArchiveSpecCommandError {
+  /** @returns An unknown archive_spec command error preserving the cause payload. */
+  unknown(message: string, cause: unknown): ArchiveSpecCommandError {
     return {
       command: ARCHIVE_SPEC_COMMAND,
       code: "unknown",
       message,
-      raw,
+      cause,
     };
   },
 

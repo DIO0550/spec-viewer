@@ -1,9 +1,8 @@
 import type { UserReview } from "@/features/review-runs/domain/userReview";
-import type { UserReviewFeatureError } from "@/features/review-runs/domain/userReviewError";
 import type { UserReviewWorkspaceMode } from "@/features/review-runs/types/userReviewIpc";
 import type { CommentId } from "@/shared/domain/commentId";
 
-export type AsyncOperationState<TPayload, TResult> =
+export type AsyncOperationState<TPayload, TResult, TError = unknown> =
   | Readonly<{
       status: "idle";
     }>
@@ -19,7 +18,7 @@ export type AsyncOperationState<TPayload, TResult> =
   | Readonly<{
       status: "error";
       payload: TPayload;
-      error: UserReviewFeatureError;
+      error: TError;
     }>;
 
 export type CreateUserReviewPayload = Readonly<{
@@ -31,19 +30,21 @@ export type ArchiveUserReviewPayload = Readonly<{
   userReviewId: string;
 }>;
 
-export type UserReviewCreateState = AsyncOperationState<
+export type UserReviewCreateState<TError = unknown> = AsyncOperationState<
   CreateUserReviewPayload,
-  UserReview
+  UserReview,
+  TError
 >;
 
-export type UserReviewArchiveState = AsyncOperationState<
+export type UserReviewArchiveState<TError = unknown> = AsyncOperationState<
   ArchiveUserReviewPayload,
-  UserReview
+  UserReview,
+  TError
 >;
 
 export const UserReviewCreateState = {
   /** @returns Idle create operation state. */
-  idle(): UserReviewCreateState {
+  idle(): UserReviewCreateState<never> {
     return { status: "idle" };
   },
 
@@ -51,7 +52,7 @@ export const UserReviewCreateState = {
    * @param payload - Input used for the in-flight create operation.
    * @returns Saving create operation state.
    */
-  saving(payload: CreateUserReviewPayload): UserReviewCreateState {
+  saving(payload: CreateUserReviewPayload): UserReviewCreateState<never> {
     return { status: "saving", payload };
   },
 
@@ -63,7 +64,7 @@ export const UserReviewCreateState = {
   success(
     payload: CreateUserReviewPayload,
     userReview: UserReview,
-  ): UserReviewCreateState {
+  ): UserReviewCreateState<never> {
     return { status: "success", payload, result: userReview };
   },
 
@@ -72,17 +73,17 @@ export const UserReviewCreateState = {
    * @param error - Feature-level user review error.
    * @returns Failed create operation state.
    */
-  error(
+  error<TError>(
     payload: CreateUserReviewPayload,
-    error: UserReviewFeatureError,
-  ): UserReviewCreateState {
+    error: TError,
+  ): UserReviewCreateState<TError> {
     return { status: "error", payload, error };
   },
 } as const;
 
 export const UserReviewArchiveState = {
   /** @returns Idle archive operation state. */
-  idle(): UserReviewArchiveState {
+  idle(): UserReviewArchiveState<never> {
     return { status: "idle" };
   },
 
@@ -90,7 +91,7 @@ export const UserReviewArchiveState = {
    * @param payload - Input used for the in-flight archive operation.
    * @returns Saving archive operation state.
    */
-  saving(payload: ArchiveUserReviewPayload): UserReviewArchiveState {
+  saving(payload: ArchiveUserReviewPayload): UserReviewArchiveState<never> {
     return { status: "saving", payload };
   },
 
@@ -102,7 +103,7 @@ export const UserReviewArchiveState = {
   success(
     payload: ArchiveUserReviewPayload,
     userReview: UserReview,
-  ): UserReviewArchiveState {
+  ): UserReviewArchiveState<never> {
     return { status: "success", payload, result: userReview };
   },
 
@@ -111,10 +112,10 @@ export const UserReviewArchiveState = {
    * @param error - Feature-level user review error.
    * @returns Failed archive operation state.
    */
-  error(
+  error<TError>(
     payload: ArchiveUserReviewPayload,
-    error: UserReviewFeatureError,
-  ): UserReviewArchiveState {
+    error: TError,
+  ): UserReviewArchiveState<TError> {
     return { status: "error", payload, error };
   },
 } as const;

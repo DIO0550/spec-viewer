@@ -25,7 +25,7 @@ export type DeleteCommentCommandError = Readonly<{
   command: DeleteCommentCommandName;
   code: DeleteCommentCommandErrorCode;
   message: string;
-  raw: unknown;
+  cause: unknown;
 }>;
 
 export type DeleteCommentCommandContract = Readonly<{
@@ -48,7 +48,7 @@ export const DeleteCommentCommandError = {
         command: DELETE_COMMENT_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error.raw,
+        cause: error.cause,
       };
     }
 
@@ -61,7 +61,7 @@ export const DeleteCommentCommandError = {
         command: DELETE_COMMENT_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error,
+        cause: error,
       };
     }
 
@@ -79,13 +79,13 @@ export const DeleteCommentCommandError = {
     );
   },
 
-  /** @returns An unknown delete_comment command error preserving the raw payload. */
-  unknown(message: string, raw: unknown): DeleteCommentCommandError {
+  /** @returns An unknown delete_comment command error preserving the cause payload. */
+  unknown(message: string, cause: unknown): DeleteCommentCommandError {
     return {
       command: DELETE_COMMENT_COMMAND,
       code: "unknown",
       message,
-      raw,
+      cause,
     };
   },
 

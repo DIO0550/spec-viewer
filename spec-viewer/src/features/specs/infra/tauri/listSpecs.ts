@@ -20,7 +20,7 @@ export type ListSpecsCommandError = Readonly<{
   command: ListSpecsCommandName;
   code: ListSpecsCommandErrorCode;
   message: string;
-  raw: unknown;
+  cause: unknown;
 }>;
 
 export type ListSpecsCommandContract = Readonly<{
@@ -43,7 +43,7 @@ export const ListSpecsCommandError = {
         command: LIST_SPECS_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error.raw,
+        cause: error.cause,
       };
     }
 
@@ -56,7 +56,7 @@ export const ListSpecsCommandError = {
         command: LIST_SPECS_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error,
+        cause: error,
       };
     }
 
@@ -71,13 +71,13 @@ export const ListSpecsCommandError = {
     return ListSpecsCommandError.unknown("Unknown list_specs failure", error);
   },
 
-  /** @returns An unknown list_specs command error preserving the raw payload. */
-  unknown(message: string, raw: unknown): ListSpecsCommandError {
+  /** @returns An unknown list_specs command error preserving the cause payload. */
+  unknown(message: string, cause: unknown): ListSpecsCommandError {
     return {
       command: LIST_SPECS_COMMAND,
       code: "unknown",
       message,
-      raw,
+      cause,
     };
   },
 

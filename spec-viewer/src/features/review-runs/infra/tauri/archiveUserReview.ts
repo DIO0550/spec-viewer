@@ -26,7 +26,7 @@ export type ArchiveUserReviewCommandError = Readonly<{
   command: ArchiveUserReviewCommandName;
   code: ArchiveUserReviewCommandErrorCode;
   message: string;
-  raw: unknown;
+  cause: unknown;
 }>;
 
 export type ArchiveUserReviewCommandContract = Readonly<{
@@ -49,7 +49,7 @@ export const ArchiveUserReviewCommandError = {
         command: ARCHIVE_USER_REVIEW_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error.raw,
+        cause: error.cause,
       };
     }
 
@@ -62,7 +62,7 @@ export const ArchiveUserReviewCommandError = {
         command: ARCHIVE_USER_REVIEW_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error,
+        cause: error,
       };
     }
 
@@ -80,13 +80,13 @@ export const ArchiveUserReviewCommandError = {
     );
   },
 
-  /** @returns An unknown archive_user_review command error preserving the raw payload. */
-  unknown(message: string, raw: unknown): ArchiveUserReviewCommandError {
+  /** @returns An unknown archive_user_review command error preserving the cause payload. */
+  unknown(message: string, cause: unknown): ArchiveUserReviewCommandError {
     return {
       command: ARCHIVE_USER_REVIEW_COMMAND,
       code: "unknown",
       message,
-      raw,
+      cause,
     };
   },
 

@@ -7,16 +7,13 @@ import {
 } from "react";
 
 import type { UserReview } from "@/features/review-runs/domain/userReview";
-import { UserReviewFeatureError } from "@/features/review-runs/domain/userReviewError";
-import {
-  UserReviewArchiveState,
-  type UserReviewArchiveState as UserReviewArchiveStateType,
-} from "@/features/review-runs/domain/userReviewOperation";
+import type { UserReviewArchiveFeatureState } from "@/features/review-runs/application/userReviewError";
+import { UserReviewArchiveState } from "@/features/review-runs/domain/userReviewOperation";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import type { UserReviewListEventWithSelectionIdentity } from "@/features/review-runs/hooks/useUserReviewList";
 import { archiveUserReview as archiveUserReviewViaGateway } from "@/features/review-runs/infra/userReviewGateway";
 import type { UserReviewCommands } from "@/features/review-runs/application/ports/userReviewCommands";
-import { ArchiveUserReviewCommandError } from "@/features/review-runs/infra/tauri/archiveUserReview";
+import { toUserReviewFeatureError } from "@/features/review-runs/infra/tauri/userReviewErrorMapper";
 import { SelectionIdentity } from "@/shared/domain/specViewSelection";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 
@@ -31,7 +28,7 @@ export type UseArchiveUserReviewOptions = Readonly<{
 
 type SelectionIdentityArchiveState = Readonly<{
   selectionIdentity: SelectionIdentity;
-  state: UserReviewArchiveStateType;
+  state: UserReviewArchiveFeatureState;
 }>;
 
 type ArchiveRequestToken = Readonly<{
@@ -40,7 +37,7 @@ type ArchiveRequestToken = Readonly<{
 }>;
 
 export type UseArchiveUserReviewResult = Readonly<{
-  archiveState: UserReviewArchiveStateType;
+  archiveState: UserReviewArchiveFeatureState;
   /** Archives a user review. @param userReviewId - ID of the review to archive. */
   archiveUserReview: (userReviewId: string) => Promise<UserReview | null>;
 }>;
@@ -157,9 +154,7 @@ export function useArchiveUserReview(
             selectionIdentity: request.selectionIdentity,
             state: UserReviewArchiveState.error(
               payload,
-              UserReviewFeatureError.fromCommandError(
-                ArchiveUserReviewCommandError.fromUnknown(error),
-              ),
+              toUserReviewFeatureError("archive", error),
             ),
           };
         });

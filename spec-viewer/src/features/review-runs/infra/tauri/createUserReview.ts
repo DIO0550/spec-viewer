@@ -26,7 +26,7 @@ export type CreateUserReviewCommandError = Readonly<{
   command: CreateUserReviewCommandName;
   code: CreateUserReviewCommandErrorCode;
   message: string;
-  raw: unknown;
+  cause: unknown;
 }>;
 
 export type CreateUserReviewCommandContract = Readonly<{
@@ -49,7 +49,7 @@ export const CreateUserReviewCommandError = {
         command: CREATE_USER_REVIEW_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error.raw,
+        cause: error.cause,
       };
     }
 
@@ -62,7 +62,7 @@ export const CreateUserReviewCommandError = {
         command: CREATE_USER_REVIEW_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error,
+        cause: error,
       };
     }
 
@@ -80,13 +80,13 @@ export const CreateUserReviewCommandError = {
     );
   },
 
-  /** @returns An unknown create_user_review command error preserving the raw payload. */
-  unknown(message: string, raw: unknown): CreateUserReviewCommandError {
+  /** @returns An unknown create_user_review command error preserving the cause payload. */
+  unknown(message: string, cause: unknown): CreateUserReviewCommandError {
     return {
       command: CREATE_USER_REVIEW_COMMAND,
       code: "unknown",
       message,
-      raw,
+      cause,
     };
   },
 

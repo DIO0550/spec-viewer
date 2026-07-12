@@ -1,23 +1,23 @@
 import type { UserReview } from "@/features/review-runs/domain/userReview";
-import type { UserReviewListState } from "@/features/review-runs/domain/userReviewListState";
 import type {
-  UserReviewArchiveState,
-  UserReviewCreateState,
-} from "@/features/review-runs/domain/userReviewOperation";
+  UserReviewArchiveFeatureState,
+  UserReviewCreateFeatureState,
+  UserReviewListFeatureState,
+} from "@/features/review-runs/application/userReviewError";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import type { CreateUserReviewInput } from "@/features/review-runs/hooks/useCreateUserReview";
 import type { UseUserReviewsResult } from "@/features/review-runs/hooks/useUserReviews";
 
 type UserReviewsListResultInput = Readonly<{
   target: UserReviewTarget | null;
-  listState: UserReviewListState;
+  listState: UserReviewListFeatureState;
   /** Reloads the user review list. */
   reloadUserReviews: () => Promise<boolean>;
 }>;
 
 type UserReviewsOperationResultInput = Readonly<{
-  createState: UserReviewCreateState;
-  archiveState: UserReviewArchiveState;
+  createState: UserReviewCreateFeatureState;
+  archiveState: UserReviewArchiveFeatureState;
   /** Creates a user review. @param input - The create-review input. */
   createUserReview: (
     input: CreateUserReviewInput,
