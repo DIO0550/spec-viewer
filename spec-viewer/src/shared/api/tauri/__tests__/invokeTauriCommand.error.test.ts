@@ -25,7 +25,12 @@ test("invokeTauriCommandはreject errorをcommand-local error factoryで変換�
       Readonly<{ ok: true }>,
       Readonly<{ id: string }>,
       ReturnType<typeof createError>
-    >("example_command", { id: "1" }, createError),
+    >({
+      name: "example_command",
+      request: { id: "1" },
+      decodeResponse: (response) => response as Readonly<{ ok: true }>,
+      createError,
+    }),
   ).rejects.toEqual({
     command: "example_command",
     code: "invalidRequest",
@@ -33,4 +38,21 @@ test("invokeTauriCommandはreject errorをcommand-local error factoryで変換�
     raw: rawError,
   });
   expect(createError).toHaveBeenCalledWith(rawError);
+});
+
+test("invokeTauriCommandはunknown successをdecoderへ渡す", async () => {
+  const rawResponse = { ok: true };
+  const decodeResponse = vi.fn(() => ({ value: "decoded" }));
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue(rawResponse);
+
+  await expect(
+    invokeTauriCommand({
+      name: "example_command",
+      request: { id: "1" },
+      decodeResponse,
+      createError: (error) => error,
+    }),
+  ).resolves.toEqual({ value: "decoded" });
+  expect(decodeResponse).toHaveBeenCalledWith(rawResponse);
 });
