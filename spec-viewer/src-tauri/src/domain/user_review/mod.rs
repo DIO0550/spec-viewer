@@ -15,6 +15,14 @@ use crate::domain::{
     workspace::WorkspaceRelativePath,
 };
 
+mod repository;
+
+pub use repository::{
+    UserReviewArchiveOutcome, UserReviewCreateOutcome, UserReviewListOutcome,
+    UserReviewRecordLocator, UserReviewRecordProblem, UserReviewRecordProblemKind,
+    UserReviewRepository, UserReviewRepositoryError,
+};
+
 const USER_REVIEW_ID_PREFIX: &str = "urv_";
 const USER_REVIEW_ID_HEX_LENGTH: usize = 32;
 const USER_REVIEW_ID_LENGTH: usize = USER_REVIEW_ID_PREFIX.len() + USER_REVIEW_ID_HEX_LENGTH;
@@ -519,6 +527,8 @@ pub enum UserReviewDomainError {
     InvalidUserReviewId { value: String },
     #[error("user review ID generation requires an RFC UUID v4: {uuid}")]
     InvalidUserReviewUuid { uuid: Uuid },
+    #[error("user review record locator must be an opaque display-safe name: {value}")]
+    InvalidRecordLocator { value: String },
     #[error("user review requires at least one comment snapshot")]
     MissingComments,
     #[error("duplicate comment ID in user review: {id}")]
