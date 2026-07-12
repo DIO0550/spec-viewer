@@ -1,8 +1,7 @@
 import { expect, test } from "vitest";
-
-import { SpecViewSelection } from "@/features/specs/domain/specViewSelection";
 import { isSpecFileWatchEventForSelection } from "@/features/specs/hooks/useSpecFileWatcher";
 import type { SpecFileWatchChangedEvent } from "@/features/specs/types/watch";
+import { SpecViewSelection } from "@/shared/domain/specViewSelection";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 
 const selection = SpecViewSelection.synchronize(SpecViewSelection.empty(), {

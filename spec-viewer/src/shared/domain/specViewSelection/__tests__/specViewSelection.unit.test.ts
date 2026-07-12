@@ -3,7 +3,7 @@ import { expect, test } from "vitest";
 import {
   SelectionIdentity,
   SpecViewSelection,
-} from "@/features/specs/domain/specViewSelection";
+} from "@/shared/domain/specViewSelection";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 
 const workspacePath = WorkspacePath.fromString("/workspace/spec-reviewer");

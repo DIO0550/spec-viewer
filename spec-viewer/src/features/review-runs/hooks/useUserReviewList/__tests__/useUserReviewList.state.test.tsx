@@ -3,16 +3,16 @@ import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
-import {
-  SelectionIdentity,
-  SpecViewSelection,
-} from "@/features/specs/domain/specViewSelection";
 import { useUserReviewList } from "@/features/review-runs/hooks/useUserReviewList";
 import type {
   ListUserReviewsResponse,
   UserReview,
 } from "@/features/review-runs/types/userReviewIpc";
 import type { UserReviewCommands } from "@/shared/api/tauri";
+import {
+  SelectionIdentity,
+  SpecViewSelection,
+} from "@/shared/domain/specViewSelection";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 
 /** @returns Branded identity generated through the selection aggregate. */
@@ -25,6 +25,7 @@ function createSelectionIdentity(seed: string): SelectionIdentity {
 
   return SelectionIdentity.fromSelection(selection);
 }
+
 import { configurePerformanceLoggerForTest } from "@/shared/lib/performance";
 
 type HookProps = Readonly<{

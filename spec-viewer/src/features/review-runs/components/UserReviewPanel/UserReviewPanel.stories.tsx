@@ -1,8 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
-
-import { CommentId } from "@/features/comments/types/comment";
 import { UserReviewPanel } from "@/features/review-runs/components/UserReviewPanel";
+import { CommentId } from "@/shared/domain/commentId";
 
 const meta = {
   component: UserReviewPanel,

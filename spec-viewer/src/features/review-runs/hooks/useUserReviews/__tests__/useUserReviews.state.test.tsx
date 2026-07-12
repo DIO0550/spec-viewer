@@ -1,7 +1,6 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-import { CommentId } from "@/features/comments/types/comment";
 import {
   type UserReviewTargetScope,
   useUserReviews,
@@ -13,12 +12,13 @@ import type {
   ListUserReviewsResponse,
   UserReview,
 } from "@/features/review-runs/types/userReviewIpc";
+import type { UserReviewCommands } from "@/shared/api/tauri";
+import { CommentId } from "@/shared/domain/commentId";
+import type { SpecFileKey } from "@/shared/domain/specFileKey";
 import {
   SpecViewSelection,
   type SpecViewSelection as SpecViewSelectionType,
-} from "@/features/specs/domain/specViewSelection";
-import type { SpecFileKey } from "@/features/specs/types/spec";
-import type { UserReviewCommands } from "@/shared/api/tauri";
+} from "@/shared/domain/specViewSelection";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 import { configurePerformanceLoggerForTest } from "@/shared/lib/performance";
 

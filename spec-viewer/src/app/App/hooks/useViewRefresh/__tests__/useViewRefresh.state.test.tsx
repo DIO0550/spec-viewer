@@ -6,17 +6,17 @@ import {
   type UseViewRefreshOptions,
   useViewRefresh,
 } from "@/app/App/hooks/useViewRefresh";
-import { SpecViewSelection } from "@/features/specs/domain/specViewSelection";
 import type {
   SpecFileWatchSubscriber,
   StartSpecFileWatchCommand,
   StopSpecFileWatchCommand,
-} from "@/features/specs/hooks/useSpecFileWatcher";
+} from "@/features/specs";
 import {
   SPEC_FILE_WATCH_CHANGED_EVENT,
   SPEC_FILE_WATCH_ERROR_EVENT,
   type SpecFileWatchChangeKind,
 } from "@/features/specs/types/watch";
+import { SpecViewSelection } from "@/shared/domain/specViewSelection";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 import { getUnknownErrorMessage } from "@/shared/lib/errorMessage";
 

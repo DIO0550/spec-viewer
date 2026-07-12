@@ -1,16 +1,15 @@
 import { act, useLayoutEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-
-import { CommentId } from "@/features/comments/types/comment";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import { useCreateUserReview } from "@/features/review-runs/hooks/useCreateUserReview";
 import type { UserReview } from "@/features/review-runs/types/userReviewIpc";
+import type { UserReviewCommands } from "@/shared/api/tauri";
+import { CommentId } from "@/shared/domain/commentId";
 import {
   SelectionIdentity,
   SpecViewSelection,
-} from "@/features/specs/domain/specViewSelection";
-import type { UserReviewCommands } from "@/shared/api/tauri";
+} from "@/shared/domain/specViewSelection";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 
 /** @returns Branded identity generated through the selection aggregate. */

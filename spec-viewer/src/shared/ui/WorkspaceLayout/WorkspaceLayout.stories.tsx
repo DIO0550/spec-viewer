@@ -6,7 +6,6 @@ import {
   CommentSidebar,
   createTextHash,
 } from "@/features/comments";
-import { CommentId } from "@/features/comments/types/comment";
 import { ThemeProvider } from "@/features/preferences";
 import type {
   SpecDocument,
@@ -21,6 +20,7 @@ import {
   WorkspaceSidebarSection,
   WorkspaceToolbar,
 } from "@/features/workspace";
+import { CommentId } from "@/shared/domain/commentId";
 import { WorkspaceLayout } from "@/shared/ui/WorkspaceLayout";
 
 const workspacePath = "/workspace/spec-reviewer";

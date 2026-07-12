@@ -6,9 +6,9 @@ import {
   createUserReview,
   listUserReviews,
 } from "@/features/review-runs/infra/userReviewGateway";
-import type { UserReviewCommands } from "@/shared/api/tauri";
 import type { UserReviewDto } from "@/features/review-runs/types/userReviewIpc";
-import { CommentId } from "@/features/comments/types/comment";
+import type { UserReviewCommands } from "@/shared/api/tauri";
+import { CommentId } from "@/shared/domain/commentId";
 
 const target = {
   scope: "file",

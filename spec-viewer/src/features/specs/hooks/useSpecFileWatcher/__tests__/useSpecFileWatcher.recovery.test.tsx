@@ -1,11 +1,6 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-
-import {
-  SpecViewSelection,
-  type SpecViewSelection as SpecViewSelectionType,
-} from "@/features/specs/domain/specViewSelection";
 import {
   type SpecFileWatchSubscriber,
   type StartSpecFileWatchCommand,
@@ -14,6 +9,10 @@ import {
   useSpecFileWatcher,
 } from "@/features/specs/hooks/useSpecFileWatcher";
 import type { StartSpecFileWatchResponse } from "@/features/specs/types/watch";
+import {
+  SpecViewSelection,
+  type SpecViewSelection as SpecViewSelectionType,
+} from "@/shared/domain/specViewSelection";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 
 type WatcherErrorHandler = NonNullable<

@@ -8,7 +8,7 @@ import {
   type UseCommentSelectionResult,
   useCommentSelection,
 } from "@/app/App/hooks/useCommentSelection";
-import { CommentListState } from "@/features/comments/domain/commentListState";
+import { CommentListState } from "@/features/comments";
 import type { Comment, CommentAnchor } from "@/features/comments/types/comment";
 import { CommentId as CommentIdValue } from "@/features/comments/types/comment";
 

@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 
 import { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
-import { SpecViewSelection } from "@/features/specs/domain/specViewSelection";
+import { SpecViewSelection } from "@/shared/domain/specViewSelection";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 
 const workspacePath = WorkspacePath.fromString("/workspace/spec-reviewer");

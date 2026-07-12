@@ -3,15 +3,15 @@ import { createRoot } from "react-dom/client";
 import { expect, test } from "vitest";
 
 import {
+  type SpecViewSelectionContextValue,
   SpecViewSelectionProvider,
   useSpecViewSelection,
-  type SpecViewSelectionContextValue,
 } from "@/app/context/specViewSelection";
+import type { SpecFileKey } from "@/shared/domain/specFileKey";
 import {
   SelectionIdentity,
   SpecViewSelection,
-} from "@/features/specs/domain/specViewSelection";
-import type { SpecFileKey } from "@/features/specs/types/spec";
+} from "@/shared/domain/specViewSelection";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 
 function createContainerRoot(): Readonly<{

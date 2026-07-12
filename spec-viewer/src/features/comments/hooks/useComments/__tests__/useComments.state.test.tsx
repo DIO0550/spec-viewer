@@ -1,25 +1,24 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-
+import {
+  CommentScope,
+  type CommentScope as CommentScopeType,
+} from "@/features/comments/domain/commentScope";
+import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
+import { useCommentOperations } from "@/features/comments/hooks/useCommentOperations";
+import { useComments } from "@/features/comments/hooks/useComments";
 import { createCommentCommandTestDouble } from "@/features/comments/testing/comment-command-test-double";
-import { configurePerformanceLoggerForTest } from "@/shared/lib/performance";
-import type { CommentCommands } from "@/shared/api/tauri";
 import type {
   Comment,
   CommentAnchor,
   ListCommentsResponse,
 } from "@/features/comments/types/comment";
 import { CommentId } from "@/features/comments/types/comment";
-import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
-import {
-  CommentScope,
-  type CommentScope as CommentScopeType,
-} from "@/features/comments/domain/commentScope";
-import { useCommentOperations } from "@/features/comments/hooks/useCommentOperations";
-import { useComments } from "@/features/comments/hooks/useComments";
-import { SpecViewSelection } from "@/features/specs/domain/specViewSelection";
+import type { CommentCommands } from "@/shared/api/tauri";
+import { SpecViewSelection } from "@/shared/domain/specViewSelection";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
+import { configurePerformanceLoggerForTest } from "@/shared/lib/performance";
 
 const commentId = CommentId.fromString;
 
