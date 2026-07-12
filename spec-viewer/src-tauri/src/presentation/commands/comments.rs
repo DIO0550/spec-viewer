@@ -982,8 +982,9 @@ fn build_comment_export(
             })
         }
         ExportCommentsTargetRequest::Spec { spec_id } => {
+            let parsed_spec_id = parse_spec_id(spec_id)?;
             let specs = use_cases.list_specs(workspace)?.into_specs();
-            let spec = find_spec_node(&specs, spec_id).ok_or_else(|| {
+            let spec = find_spec_node(&specs, &parsed_spec_id).ok_or_else(|| {
                 CommandError::invalid_request(format!("unknown spec id: {spec_id}"))
             })?;
             let files = export_comment_files_for_spec(use_cases, workspace, spec)?;
@@ -1054,8 +1055,9 @@ fn build_llm_prompt(
             )?]
         }
         ExportCommentsTargetRequest::Spec { spec_id } => {
+            let parsed_spec_id = parse_spec_id(spec_id)?;
             let specs = use_cases.list_specs(workspace)?.into_specs();
-            let spec = find_spec_node(&specs, spec_id).ok_or_else(|| {
+            let spec = find_spec_node(&specs, &parsed_spec_id).ok_or_else(|| {
                 CommandError::invalid_request(format!("unknown spec id: {spec_id}"))
             })?;
 
@@ -1200,9 +1202,9 @@ fn prompt_file(
     })
 }
 
-fn find_spec_node<'a>(specs: &'a [SpecNode], spec_id: &str) -> Option<&'a SpecNode> {
+fn find_spec_node<'a>(specs: &'a [SpecNode], spec_id: &SpecId) -> Option<&'a SpecNode> {
     specs.iter().find_map(|spec| {
-        if spec.id().as_str() == spec_id {
+        if spec.id() == spec_id {
             return Some(spec);
         }
 
