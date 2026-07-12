@@ -1,3 +1,4 @@
+export type { CommentCommands } from "./application/ports/commentCommands";
 export { AddCommentPopover } from "@/features/comments/components/AddCommentPopover";
 export { CommentSidebar } from "@/features/comments/components/CommentSidebar";
 export { Comment } from "@/features/comments/domain/comment";
@@ -31,3 +32,10 @@ export {
   createSpecSkillMcpFeedbackDryRunPayload,
   renderSpecSkillMcpFeedbackDryRunPayload,
 } from "./lib/mcpFeedback";
+export {
+  ExportCommentsCommandError,
+  exportComments,
+  GenerateLlmPromptCommandError,
+  generateLlmPrompt,
+  selectCommentExportDestination,
+} from "./infra/tauri";

@@ -1,11 +1,13 @@
-import { listen, type Event as TauriEvent } from "@tauri-apps/api/event";
 import { useEffect, useLayoutEffect, useRef } from "react";
+import type {
+  SpecFileWatchSubscriber,
+  StartSpecFileWatchCommand,
+  StopSpecFileWatchCommand,
+} from "@/features/specs/application/ports/specFileWatch";
 import type {
   SpecFileWatchChangedEvent,
   SpecFileWatchErrorEvent,
   StartSpecFileWatchRequest,
-  StartSpecFileWatchResponse,
-  StopSpecFileWatchResponse,
 } from "@/features/specs/types/watch";
 import {
   SPEC_FILE_WATCH_CHANGED_EVENT,
@@ -14,7 +16,8 @@ import {
 import {
   startSpecFileWatch as defaultStartSpecFileWatch,
   stopSpecFileWatch as defaultStopSpecFileWatch,
-} from "@/shared/api/tauri";
+  subscribeSpecFileWatchEvents,
+} from "@/features/specs/infra/tauri";
 import {
   SelectionIdentity,
   type SelectionIdentity as SelectionIdentityType,
@@ -24,17 +27,11 @@ import {
 } from "@/shared/domain/specViewSelection";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 
-export type StartSpecFileWatchCommand = (
-  request: StartSpecFileWatchRequest,
-) => Promise<StartSpecFileWatchResponse>;
-
-export type StopSpecFileWatchCommand = () => Promise<StopSpecFileWatchResponse>;
-
-export type SpecFileWatchSubscriber = <Payload>(
-  eventName: string,
-  /** Handles a received event. @param event - The received Tauri event. */
-  handler: (event: TauriEvent<Payload>) => void,
-) => Promise<() => void>;
+export type {
+  SpecFileWatchSubscriber,
+  StartSpecFileWatchCommand,
+  StopSpecFileWatchCommand,
+} from "@/features/specs/application/ports/specFileWatch";
 
 export type SpecFileWatchScope = StartSpecFileWatchRequest;
 
@@ -71,7 +68,7 @@ function enqueueSpecFileWatchLifecycleOperation(
 export function useSpecFileWatcher(options: UseSpecFileWatcherOptions): void {
   const startWatch = options.startWatch ?? defaultStartSpecFileWatch;
   const stopWatch = options.stopWatch ?? defaultStopSpecFileWatch;
-  const subscribe = options.subscribe ?? listen;
+  const subscribe = options.subscribe ?? subscribeSpecFileWatchEvents;
   const { fileKey, specId, targetScope, workspacePath } = options.selection;
   const activeWatchTarget = SpecViewSelection.watchTarget(options.selection);
   const activeSelectionIdentity = activeWatchTarget?.selectionIdentity ?? null;

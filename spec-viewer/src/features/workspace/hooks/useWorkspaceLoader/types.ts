@@ -1,19 +1,10 @@
+import type { WorkspaceLoaderCommands } from "@/features/workspace/application/ports/workspaceCommands";
+import type { SubscribeWorkspaceDragDropEvents } from "@/features/workspace/application/ports/workspaceDragDrop";
+import type { RecentWorkspaceStorage } from "@/features/workspace/application/ports/recentWorkspaceStore";
 import type { WorkspaceContextValue } from "@/features/workspace/context/types";
 import type { UseRecentWorkspacesResult } from "@/features/workspace/hooks/useRecentWorkspaces";
-import type { SubscribeWorkspaceDragDropEvents } from "@/features/workspace/hooks/useWorkspaceDrop";
-import type {
-  selectWorkspaceDirectory as defaultSelectWorkspaceDirectory,
-  validateWorkspaceDirectory as defaultValidateWorkspaceDirectory,
-} from "@/shared/api/tauri";
-import type { RecentWorkspaceStorage } from "@/shared/lib/recentWorkspaces";
 
-/** IPC コマンドの DI（useComments の `commands?` 規約に合わせた1オブジェクト）。 */
-export type WorkspaceLoaderCommands = Readonly<{
-  /** browse アダプタ（index.ts）が使う。flow には渡さない（ダイアログはフック専有の副作用）。 */
-  selectWorkspaceDirectory: typeof defaultSelectWorkspaceDirectory;
-  /** index.ts が io.validate ラッパーに包んで flow へ渡す。 */
-  validateWorkspaceDirectory: typeof defaultValidateWorkspaceDirectory;
-}>;
+export type { WorkspaceLoaderCommands } from "@/features/workspace/application/ports/workspaceCommands";
 
 /**
  * flow へ注入する IPC 2関数（flow に注入してよい副作用は IPC のみ。

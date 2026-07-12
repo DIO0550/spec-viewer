@@ -15,8 +15,8 @@ import {
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import type { UserReviewListEventWithSelectionIdentity } from "@/features/review-runs/hooks/useUserReviewList";
 import { archiveUserReview as archiveUserReviewViaGateway } from "@/features/review-runs/infra/userReviewGateway";
-import type { UserReviewCommands } from "@/shared/api/tauri";
-import { ArchiveUserReviewCommandError } from "@/shared/api/tauri/archiveUserReview";
+import type { UserReviewCommands } from "@/features/review-runs/application/ports/userReviewCommands";
+import { ArchiveUserReviewCommandError } from "@/features/review-runs/infra/tauri/archiveUserReview";
 import { SelectionIdentity } from "@/shared/domain/specViewSelection";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 

@@ -26,9 +26,9 @@ import {
 } from "@/features/comments/hooks/useCommentOperations";
 import { listComments as listCommentsViaGateway } from "@/features/comments/infra/commentGateway";
 import type { Comment, CommentId } from "@/features/comments/types/comment";
-import type { CommentCommands } from "@/shared/api/tauri";
-import { commentCommands as defaultCommentCommands } from "@/shared/api/tauri";
-import { ListCommentsCommandError } from "@/shared/api/tauri/listComments";
+import type { CommentCommands } from "@/features/comments/application/ports/commentCommands";
+import { commentCommands as defaultCommentCommands } from "@/features/comments/infra/tauri";
+import { ListCommentsCommandError } from "@/features/comments/infra/tauri/listComments";
 import {
   SelectionIdentity,
   type SelectionIdentity as SelectionIdentityType,

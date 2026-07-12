@@ -1,19 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
-import {
-  subscribeWorkspaceDragDropEvents,
-  type WorkspaceDragDropEvent,
-} from "@/shared/api/tauri";
+import type { SubscribeWorkspaceDragDropEvents } from "@/features/workspace/application/ports/workspaceDragDrop";
+import { subscribeWorkspaceDragDropEvents } from "@/features/workspace/infra/tauri";
 import {
   createWorkspaceDropCandidate,
   extractBrowserDropPaths,
 } from "@/shared/lib/workspaceDrop";
 
-export type WorkspaceDropStatus = "idle" | "dragging";
+export type { SubscribeWorkspaceDragDropEvents } from "@/features/workspace/application/ports/workspaceDragDrop";
 
-export type SubscribeWorkspaceDragDropEvents = (
-  /** @param handler - 各ドラッグ&ドロップイベントを受け取るコールバック。 */
-  handler: (event: WorkspaceDragDropEvent) => void,
-) => Promise<() => void>;
+export type WorkspaceDropStatus = "idle" | "dragging";
 
 export type UseWorkspaceDropOptions = Readonly<{
   isDisabled: boolean;

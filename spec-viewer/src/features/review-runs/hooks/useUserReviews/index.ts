@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 
+import type { UserReviewCommands } from "@/features/review-runs/application/ports/userReviewCommands";
 import type { UserReview } from "@/features/review-runs/domain/userReview";
 import type { UserReviewListState as UserReviewListStateType } from "@/features/review-runs/domain/userReviewListState";
 import type {
@@ -18,10 +19,7 @@ import {
   useCreateUserReview,
 } from "@/features/review-runs/hooks/useCreateUserReview";
 import { useUserReviewList } from "@/features/review-runs/hooks/useUserReviewList";
-import {
-  userReviewCommands as defaultUserReviewCommands,
-  type UserReviewCommands,
-} from "@/shared/api/tauri";
+import { userReviewCommands as defaultUserReviewCommands } from "@/features/review-runs/infra/tauri";
 import {
   SelectionIdentity,
   type SpecViewSelection,

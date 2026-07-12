@@ -1,12 +1,12 @@
-import type { AddCommentCommandError } from "@/shared/api/tauri/addComment";
-import type { DeleteCommentCommandError } from "@/shared/api/tauri/deleteComment";
-import type { ExportCommentsCommandError } from "@/shared/api/tauri/exportComments";
-import type { GenerateLlmPromptCommandError } from "@/shared/api/tauri/generateLlmPrompt";
-import type { ListCommentsCommandError } from "@/shared/api/tauri/listComments";
-import type { ReopenCommentCommandError } from "@/shared/api/tauri/reopenComment";
-import type { ResolveCommentCommandError } from "@/shared/api/tauri/resolveComment";
-import type { ToggleCommentResolvedCommandError } from "@/shared/api/tauri/toggleCommentResolved";
-import type { UpdateCommentCommandError } from "@/shared/api/tauri/updateComment";
+import type { AddCommentCommandError } from "@/features/comments/infra/tauri/addComment";
+import type { DeleteCommentCommandError } from "@/features/comments/infra/tauri/deleteComment";
+import type { ExportCommentsCommandError } from "@/features/comments/infra/tauri/exportComments";
+import type { GenerateLlmPromptCommandError } from "@/features/comments/infra/tauri/generateLlmPrompt";
+import type { ListCommentsCommandError } from "@/features/comments/infra/tauri/listComments";
+import type { ReopenCommentCommandError } from "@/features/comments/infra/tauri/reopenComment";
+import type { ResolveCommentCommandError } from "@/features/comments/infra/tauri/resolveComment";
+import type { ToggleCommentResolvedCommandError } from "@/features/comments/infra/tauri/toggleCommentResolved";
+import type { UpdateCommentCommandError } from "@/features/comments/infra/tauri/updateComment";
 
 export type CommentCommandError =
   | AddCommentCommandError

@@ -1,7 +1,7 @@
 import { ChevronDown, ChevronRight, Folder, FolderOpen, X } from "lucide-react";
 import { useId } from "react";
 
-import type { RecentWorkspace } from "@/shared/lib/recentWorkspaces";
+import type { RecentWorkspace } from "@/features/workspace/application/ports/recentWorkspaceStore";
 import { uiText } from "@/shared/lib/uiText";
 
 type Props = Readonly<{

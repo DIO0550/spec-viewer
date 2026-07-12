@@ -1,17 +1,19 @@
 import { useCallback, useState } from "react";
+import type {
+  RecentWorkspace,
+  RecentWorkspaceStorage,
+} from "@/features/workspace/application/ports/recentWorkspaceStore";
 import type { Workspace } from "@/features/workspace/types/workspace";
 import {
   clearLastActiveWorkspacePath,
   clearStoredRecentWorkspaces,
-  type RecentWorkspace,
-  type RecentWorkspaceStorage,
   readLastActiveWorkspacePath,
   readRecentWorkspaces,
   recordRecentWorkspace,
   removeRecentWorkspace,
   writeLastActiveWorkspacePath,
   writeRecentWorkspaces,
-} from "@/shared/lib/recentWorkspaces";
+} from "@/features/workspace/infra/recentWorkspaces";
 
 export type UseRecentWorkspacesOptions = Readonly<{
   storage?: RecentWorkspaceStorage | null;

@@ -10,7 +10,7 @@ import type {
   ListUserReviewsResponse,
   UserReviewWorkspaceMode,
 } from "@/features/review-runs/types/userReviewIpc";
-import type { UserReviewCommands } from "@/shared/api/tauri";
+import type { UserReviewCommands } from "@/features/review-runs/application/ports/userReviewCommands";
 import type { CommentId } from "@/shared/domain/commentId";
 
 export type CreateUserReviewParam = Readonly<{

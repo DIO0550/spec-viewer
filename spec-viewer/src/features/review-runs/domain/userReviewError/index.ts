@@ -1,6 +1,6 @@
-import type { ArchiveUserReviewCommandError } from "@/shared/api/tauri/archiveUserReview";
-import type { CreateUserReviewCommandError } from "@/shared/api/tauri/createUserReview";
-import type { ListUserReviewsCommandError } from "@/shared/api/tauri/listUserReviews";
+import type { ArchiveUserReviewCommandError } from "@/features/review-runs/infra/tauri/archiveUserReview";
+import type { CreateUserReviewCommandError } from "@/features/review-runs/infra/tauri/createUserReview";
+import type { ListUserReviewsCommandError } from "@/features/review-runs/infra/tauri/listUserReviews";
 
 export type UserReviewCommandError =
   | ArchiveUserReviewCommandError

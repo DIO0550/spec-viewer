@@ -6,7 +6,7 @@ import type {
   ReadSpecFileRequest,
   SpecDocument,
 } from "@/features/specs/types/spec";
-import type { SpecCommands } from "@/shared/api/tauri";
+import type { SpecCommands } from "@/features/specs/application/ports/specCommands";
 
 /**
  * @param commands - Spec command boundary

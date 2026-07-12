@@ -9,8 +9,8 @@ import {
 } from "@/features/review-runs/domain/userReviewListState";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import { listUserReviews as listUserReviewsViaGateway } from "@/features/review-runs/infra/userReviewGateway";
-import type { UserReviewCommands } from "@/shared/api/tauri";
-import { ListUserReviewsCommandError } from "@/shared/api/tauri/listUserReviews";
+import type { UserReviewCommands } from "@/features/review-runs/application/ports/userReviewCommands";
+import { ListUserReviewsCommandError } from "@/features/review-runs/infra/tauri/listUserReviews";
 import type { SelectionIdentity } from "@/shared/domain/specViewSelection";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 import {

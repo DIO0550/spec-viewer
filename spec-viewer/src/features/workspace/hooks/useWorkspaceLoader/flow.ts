@@ -6,7 +6,7 @@ import type {
   WorkspaceLoaderGuards,
   WorkspaceOpenOutcome,
 } from "@/features/workspace/hooks/useWorkspaceLoader/types";
-import { ValidateWorkspaceDirectoryCommandError } from "@/shared/api/tauri/validateWorkspaceDirectory";
+import { ValidateWorkspaceDirectoryCommandError } from "@/features/workspace/infra/tauri/validateWorkspaceDirectory";
 
 const invalidDroppedDirectoryMessage =
   "ワークスペースフォルダをドロップしてください。ファイルはワークスペースとして開けません。";

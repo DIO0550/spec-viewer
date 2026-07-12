@@ -5,19 +5,17 @@ import {
   type CommentExportOperation,
   type CommentExportScope,
   createSpecSkillMcpFeedbackDryRunPayload,
+  ExportCommentsCommandError,
   type ExportCommentsResponse,
   type ExportCommentsTarget,
+  exportComments as defaultExportComments,
+  GenerateLlmPromptCommandError,
   type GenerateLlmPromptResponse,
+  generateLlmPrompt as defaultGenerateLlmPrompt,
   renderSpecSkillMcpFeedbackDryRunPayload,
+  selectCommentExportDestination as defaultSelectCommentExportDestination,
   type SpecSkillMcpFeedbackPayload,
 } from "@/features/comments";
-import {
-  exportComments as defaultExportComments,
-  generateLlmPrompt as defaultGenerateLlmPrompt,
-  selectCommentExportDestination as defaultSelectCommentExportDestination,
-} from "@/shared/api/tauri";
-import { ExportCommentsCommandError } from "@/shared/api/tauri/exportComments";
-import { GenerateLlmPromptCommandError } from "@/shared/api/tauri/generateLlmPrompt";
 import { copyTextToClipboard } from "@/shared/lib/clipboard";
 import { getUnknownErrorMessage } from "@/shared/lib/errorMessage";
 

@@ -4,6 +4,7 @@ import {
   createGeneration,
   type Generation,
 } from "@/features/workspace/application/generation";
+import type { LoadWorkspace } from "@/features/workspace/application/ports/workspaceCommands";
 import { WorkspaceState } from "@/features/workspace/application/workspaceState";
 import type {
   LoadWorkspaceOptions,
@@ -11,8 +12,10 @@ import type {
   WorkspaceContextValue,
 } from "@/features/workspace/context/types";
 import { toWorkspaceError } from "@/features/workspace/domain/workspaceError";
-import { loadWorkspace as defaultLoadWorkspace } from "@/shared/api/tauri";
-import { LoadWorkspaceCommandError } from "@/shared/api/tauri/loadWorkspace";
+import { loadWorkspace as defaultLoadWorkspace } from "@/features/workspace/infra/tauri";
+import { LoadWorkspaceCommandError } from "@/features/workspace/infra/tauri/loadWorkspace";
+
+const loadWorkspace: LoadWorkspace = defaultLoadWorkspace;
 
 /** @returns Workspace loading state and actions for selecting/resetting a workspace. */
 export function useWorkspaceState(): WorkspaceContextValue {
@@ -39,7 +42,7 @@ export function useWorkspaceState(): WorkspaceContextValue {
       );
 
       try {
-        const workspace = await defaultLoadWorkspace(selectedDirectory);
+        const workspace = await loadWorkspace(selectedDirectory);
 
         if (!generation.isCurrent(requestId)) {
           return false;

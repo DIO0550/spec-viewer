@@ -1,4 +1,4 @@
-import type { LoadWorkspaceCommandError } from "@/shared/api/tauri/loadWorkspace";
+import type { LoadWorkspaceCommandError } from "@/features/workspace/infra/tauri/loadWorkspace";
 
 export type WorkspaceErrorReason =
   | "invalidSelection"
