@@ -313,7 +313,7 @@ pub struct UuidCommentIdGenerator;
 
 impl GenerateCommentId for UuidCommentIdGenerator {
     fn generate_comment_id(&self) -> Result<CommentId, AppUseCaseError> {
-        CommentId::new(format!("cmt_{}", Uuid::new_v4().simple())).map_err(AppUseCaseError::from)
+        Ok(CommentId::generate(Uuid::new_v4()))
     }
 }
 
