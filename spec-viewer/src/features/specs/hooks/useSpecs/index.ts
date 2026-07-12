@@ -16,11 +16,11 @@ import type {
   UseSpecsResult,
 } from "@/features/specs/hooks/useSpecs/types";
 import * as specGateway from "@/features/specs/infra/specGateway";
-import type { SpecFileKey } from "@/features/specs/types/spec";
 import { specCommands } from "@/shared/api/tauri";
 import { ArchiveSpecCommandError } from "@/shared/api/tauri/archiveSpec";
 import { ListSpecsCommandError } from "@/shared/api/tauri/listSpecs";
 import { ReadSpecFileCommandError } from "@/shared/api/tauri/readSpecFile";
+import type { SpecFileKey } from "@/shared/domain/specFileKey";
 import {
   createPerformanceCorrelationId,
   startPerformanceSpan,

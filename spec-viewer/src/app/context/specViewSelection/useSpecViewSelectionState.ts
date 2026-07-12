@@ -9,7 +9,7 @@ import {
   SpecViewSelection,
   type SpecViewSelection as SpecViewSelectionType,
   type SpecViewTargetScope,
-} from "@/features/specs/domain/specViewSelection";
+} from "@/shared/domain/specViewSelection";
 
 /** @returns React adapter for the spec view selection aggregate. */
 export function useSpecViewSelectionState(): SpecViewSelectionContextValue {

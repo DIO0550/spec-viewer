@@ -26,13 +26,13 @@ import {
 } from "@/features/comments/hooks/useCommentOperations";
 import { listComments as listCommentsViaGateway } from "@/features/comments/infra/commentGateway";
 import type { Comment, CommentId } from "@/features/comments/types/comment";
-import {
-  SelectionIdentity,
-  type SelectionIdentity as SelectionIdentityType,
-} from "@/features/specs/domain/specViewSelection";
 import type { CommentCommands } from "@/shared/api/tauri";
 import { commentCommands as defaultCommentCommands } from "@/shared/api/tauri";
 import { ListCommentsCommandError } from "@/shared/api/tauri/listComments";
+import {
+  SelectionIdentity,
+  type SelectionIdentity as SelectionIdentityType,
+} from "@/shared/domain/specViewSelection";
 import {
   resolvePerformanceCorrelationId,
   startPerformanceSpan,

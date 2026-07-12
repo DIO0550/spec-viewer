@@ -1,6 +1,6 @@
 import { RefreshCcw } from "lucide-react";
 
-import type { SpecFileKey } from "@/features/specs/types/spec";
+import type { SpecFileKey } from "@/shared/domain/specFileKey";
 import { uiText } from "@/shared/lib/uiText";
 import {
   DocumentSearchControl,

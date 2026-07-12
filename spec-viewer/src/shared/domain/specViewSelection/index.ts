@@ -1,25 +1,22 @@
-import type { SpecFileKey } from "@/features/specs/domain/specFile";
+import type { SpecFileKey } from "@/shared/domain/specFileKey";
+import type { SpecId as SpecIdType } from "@/shared/domain/specId";
+import { SpecId } from "@/shared/domain/specId";
 import {
   WorkspacePath,
   type WorkspacePath as WorkspacePathType,
 } from "@/shared/domain/workspacePath";
 
 declare const selectionIdentityBrand: unique symbol;
-declare const specIdBrand: unique symbol;
 
 export type SelectionIdentity = string & {
   readonly [selectionIdentityBrand]: true;
-};
-
-export type SpecId = string & {
-  readonly [specIdBrand]: true;
 };
 
 export type SpecViewTargetScope = "file" | "spec";
 
 export type SpecViewSelection = Readonly<{
   workspacePath: WorkspacePathType | null;
-  specId: SpecId | null;
+  specId: SpecIdType | null;
   fileKey: SpecFileKey | null;
   targetScope: SpecViewTargetScope;
 }>;
@@ -32,7 +29,7 @@ export type SpecViewSelectionInput = Readonly<{
 
 export type SpecViewFileTarget = Readonly<{
   workspacePath: WorkspacePathType;
-  specId: SpecId;
+  specId: SpecIdType;
   fileKey: SpecFileKey;
   selectionIdentity: SelectionIdentity;
 }>;
@@ -41,14 +38,14 @@ export type SpecViewReviewTarget =
   | Readonly<{
       scope: "file";
       workspacePath: WorkspacePathType;
-      specId: SpecId;
+      specId: SpecIdType;
       fileKey: SpecFileKey;
       selectionIdentity: SelectionIdentity;
     }>
   | Readonly<{
       scope: "spec";
       workspacePath: WorkspacePathType;
-      specId: SpecId;
+      specId: SpecIdType;
       selectionIdentity: SelectionIdentity;
     }>;
 
@@ -58,24 +55,6 @@ const emptySelection: SpecViewSelection = {
   fileKey: null,
   targetScope: "file",
 };
-
-export const SpecId = {
-  /**
-   * @param value - Raw spec identifier at the selection boundary.
-   * @returns Branded spec identifier for the aggregate.
-   */
-  fromString(value: string): SpecId {
-    return value as SpecId;
-  },
-
-  /**
-   * @param value - Branded spec identifier.
-   * @returns Raw spec identifier for feature and IPC boundaries.
-   */
-  toString(value: SpecId): string {
-    return value;
-  },
-} as const;
 
 export const SelectionIdentity = {
   /**

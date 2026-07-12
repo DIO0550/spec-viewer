@@ -1,4 +1,4 @@
-import type { SpecFileKey } from "@/features/specs/types/spec";
+import type { SpecFileKey } from "@/shared/domain/specFileKey";
 
 export type ReviewBundleFileKind =
   | "manifest"

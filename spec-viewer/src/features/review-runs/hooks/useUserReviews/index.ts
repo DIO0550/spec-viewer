@@ -7,10 +7,6 @@ import type {
   UserReviewCreateState,
 } from "@/features/review-runs/domain/userReviewOperation";
 import { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
-import {
-  SelectionIdentity,
-  type SpecViewSelection,
-} from "@/features/specs/domain/specViewSelection";
 import { buildUserReviewsResult } from "@/features/review-runs/hooks/buildUserReviewsResult";
 import {
   type UseArchiveUserReviewResult,
@@ -26,6 +22,10 @@ import {
   userReviewCommands as defaultUserReviewCommands,
   type UserReviewCommands,
 } from "@/shared/api/tauri";
+import {
+  SelectionIdentity,
+  type SpecViewSelection,
+} from "@/shared/domain/specViewSelection";
 
 export type { UserReviewListState } from "@/features/review-runs/domain/userReviewListState";
 export type {

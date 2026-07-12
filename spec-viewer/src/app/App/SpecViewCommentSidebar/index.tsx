@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import type { SpecViewResetKeys } from "@/app/App/hooks/types";
 import { useCommentExport } from "@/app/App/hooks/useCommentExport";
 import { SpecViewUserReviewPanel } from "@/app/App/SpecViewUserReviewPanel";
+import type { CommentListState } from "@/features/comments";
 import {
   type Comment,
   type CommentAnchorDisplayState,
@@ -9,7 +10,6 @@ import {
   type CommentOperationState,
   CommentSidebar,
 } from "@/features/comments";
-import type { CommentListState } from "@/features/comments/domain/commentListState";
 
 export type SpecViewCommentSidebarProps = Readonly<{
   comments: readonly Comment[];

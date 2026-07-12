@@ -1,4 +1,4 @@
-import type { SpecFileKey } from "@/features/specs/types/spec";
+import type { SpecFileKey } from "@/shared/domain/specFileKey";
 
 export const SPEC_FILE_WATCH_CHANGED_EVENT = "spec-file-watch://changed";
 export const SPEC_FILE_WATCH_ERROR_EVENT = "spec-file-watch://error";

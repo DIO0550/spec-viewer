@@ -1,14 +1,14 @@
 import { useCallback } from "react";
 import {
+  type SpecFileWatchSubscriber,
+  type StartSpecFileWatchCommand,
+  type StopSpecFileWatchCommand,
+  useSpecFileWatcher,
+} from "@/features/specs";
+import {
   SpecViewSelection,
   type SpecViewSelection as SpecViewSelectionType,
-} from "@/features/specs/domain/specViewSelection";
-import { useSpecFileWatcher } from "@/features/specs";
-import type {
-  SpecFileWatchSubscriber,
-  StartSpecFileWatchCommand,
-  StopSpecFileWatchCommand,
-} from "@/features/specs/hooks/useSpecFileWatcher";
+} from "@/shared/domain/specViewSelection";
 import { getUnknownErrorMessage } from "@/shared/lib/errorMessage";
 
 type RefreshCurrentViewOptions = Readonly<{

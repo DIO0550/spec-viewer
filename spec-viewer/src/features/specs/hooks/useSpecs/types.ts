@@ -2,7 +2,7 @@ import type { SpecDocumentState } from "@/features/specs/domain/specDocumentStat
 import type { SpecFeatureError } from "@/features/specs/domain/specError";
 import type { SpecTreeState } from "@/features/specs/domain/specTreeState";
 import type { SpecsSelectors } from "@/features/specs/hooks/useSpecs/selectors";
-import type { SpecFileKey } from "@/features/specs/types/spec";
+import type { SpecFileKey } from "@/shared/domain/specFileKey";
 
 export type SpecSelectionState = Readonly<{
   specId: string | null;

@@ -1,11 +1,14 @@
-const commentIdBrand: unique symbol = Symbol("CommentId");
+declare const commentIdBrand: unique symbol;
 
 export type CommentId = string & {
   readonly [commentIdBrand]: "CommentId";
 };
 
 export const CommentId = {
-  /** @returns A branded comment id while preserving the runtime string value. */
+  /**
+   * @param value - Raw comment identifier at an input boundary.
+   * @returns Branded comment identifier for domain use.
+   */
   fromString(value: string): CommentId {
     return value as CommentId;
   },

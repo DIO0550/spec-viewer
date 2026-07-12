@@ -1,12 +1,5 @@
 import { listen, type Event as TauriEvent } from "@tauri-apps/api/event";
 import { useEffect, useLayoutEffect, useRef } from "react";
-import {
-  SelectionIdentity,
-  type SelectionIdentity as SelectionIdentityType,
-  SpecViewSelection,
-  type SpecViewSelection as SpecViewSelectionType,
-  type SpecViewTargetScope,
-} from "@/features/specs/domain/specViewSelection";
 import type {
   SpecFileWatchChangedEvent,
   SpecFileWatchErrorEvent,
@@ -22,6 +15,13 @@ import {
   startSpecFileWatch as defaultStartSpecFileWatch,
   stopSpecFileWatch as defaultStopSpecFileWatch,
 } from "@/shared/api/tauri";
+import {
+  SelectionIdentity,
+  type SelectionIdentity as SelectionIdentityType,
+  SpecViewSelection,
+  type SpecViewSelection as SpecViewSelectionType,
+  type SpecViewTargetScope,
+} from "@/shared/domain/specViewSelection";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 
 export type StartSpecFileWatchCommand = (

@@ -30,10 +30,6 @@ import type {
   CommentAnchor,
   CommentId,
 } from "@/features/comments/types/comment";
-import {
-  SelectionIdentity,
-  type SelectionIdentity as SelectionIdentityType,
-} from "@/features/specs/domain/specViewSelection";
 import type { CommentCommands } from "@/shared/api/tauri";
 import { AddCommentCommandError } from "@/shared/api/tauri/addComment";
 import { DeleteCommentCommandError } from "@/shared/api/tauri/deleteComment";
@@ -41,6 +37,10 @@ import { ReopenCommentCommandError } from "@/shared/api/tauri/reopenComment";
 import { ResolveCommentCommandError } from "@/shared/api/tauri/resolveComment";
 import { ToggleCommentResolvedCommandError } from "@/shared/api/tauri/toggleCommentResolved";
 import { UpdateCommentCommandError } from "@/shared/api/tauri/updateComment";
+import {
+  SelectionIdentity,
+  type SelectionIdentity as SelectionIdentityType,
+} from "@/shared/domain/specViewSelection";
 
 export type AddCommentInput = Readonly<{
   anchor: CommentAnchor;

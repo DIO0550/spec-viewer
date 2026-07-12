@@ -1,7 +1,7 @@
-import type { CommentId } from "@/features/comments/types/comment";
 import type { UserReview } from "@/features/review-runs/domain/userReview";
-import type { UserReviewWorkspaceMode } from "@/features/review-runs/types/userReviewIpc";
 import type { UserReviewFeatureError } from "@/features/review-runs/domain/userReviewError";
+import type { UserReviewWorkspaceMode } from "@/features/review-runs/types/userReviewIpc";
+import type { CommentId } from "@/shared/domain/commentId";
 
 export type AsyncOperationState<TPayload, TResult> =
   | Readonly<{

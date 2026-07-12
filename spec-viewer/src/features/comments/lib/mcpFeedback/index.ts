@@ -4,7 +4,7 @@ import type {
   SpecSkillMcpFeedbackInterface,
   SpecSkillMcpFeedbackPayload,
 } from "@/features/comments/types/comment";
-import type { SpecFileKey } from "@/features/specs/types/spec";
+import type { SpecFileKey } from "@/shared/domain/specFileKey";
 
 type CreateSpecSkillMcpFeedbackDryRunPayloadInput = Readonly<{
   workspacePath: string;

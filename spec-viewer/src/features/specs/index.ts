@@ -1,13 +1,12 @@
 export { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
 export { SpecTabs } from "@/features/specs/components/SpecTabs";
 export { SpecTree } from "@/features/specs/components/SpecTree";
-export { useSpecFileWatcher } from "./hooks/useSpecFileWatcher";
 export {
-  useSpecs,
   type SpecDocumentState,
   type SpecSelectionChange,
   type SpecTreeState,
   type UseSpecsResult,
+  useSpecs,
 } from "@/features/specs/hooks/useSpecs";
 export type {
   SpecSelectionState,
@@ -23,3 +22,9 @@ export type {
   SpecNode,
   SpecTree as SpecTreeData,
 } from "@/features/specs/types/spec";
+export {
+  type SpecFileWatchSubscriber,
+  type StartSpecFileWatchCommand,
+  type StopSpecFileWatchCommand,
+  useSpecFileWatcher,
+} from "./hooks/useSpecFileWatcher";

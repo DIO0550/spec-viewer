@@ -21,10 +21,10 @@ import {
 import {
   CommentOperationFailedState,
   CommentOperationSavingState,
+  CommentScope,
+  CommentStatusFilter,
   useComments,
 } from "@/features/comments";
-import { CommentScope } from "@/features/comments/domain/commentScope";
-import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import {
   ThemeProvider,
   useLeftNavigationPreference,

@@ -1,9 +1,9 @@
-import type { SelectionIdentity } from "@/features/specs/domain/specViewSelection";
+import type { SpecFileKey } from "@/shared/domain/specFileKey";
+import type { SelectionIdentity } from "@/shared/domain/specViewSelection";
 import {
   SpecViewSelection,
   type SpecViewSelection as SpecViewSelectionType,
-} from "@/features/specs/domain/specViewSelection";
-import type { SpecFileKey } from "@/features/specs/types/spec";
+} from "@/shared/domain/specViewSelection";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 
 export type CommentScope = Readonly<{

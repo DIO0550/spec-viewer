@@ -5,7 +5,7 @@ import type {
   SpecViewSelection,
   SpecViewSelectionInput,
   SpecViewTargetScope,
-} from "@/features/specs/domain/specViewSelection";
+} from "@/shared/domain/specViewSelection";
 
 export type SpecViewSelectionContextValue = Readonly<{
   selection: SpecViewSelection;

@@ -1,16 +1,22 @@
-import type { ExportCommentsTarget } from "@/features/comments/types/comment";
+import type { SpecFileKey } from "@/shared/domain/specFileKey";
 import {
   SpecViewSelection,
   type SpecViewSelection as SpecViewSelectionType,
   type SpecViewTargetScope,
-} from "@/features/specs/domain/specViewSelection";
+} from "@/shared/domain/specViewSelection";
 
 export type UserReviewTargetScope = SpecViewTargetScope;
 
-export type UserReviewTarget = Extract<
-  ExportCommentsTarget,
-  { scope: "file" } | { scope: "spec" }
->;
+export type UserReviewTarget =
+  | Readonly<{
+      scope: "file";
+      specId: string;
+      fileKey: SpecFileKey;
+    }>
+  | Readonly<{
+      scope: "spec";
+      specId: string;
+    }>;
 
 export const UserReviewTarget = {
   /**
