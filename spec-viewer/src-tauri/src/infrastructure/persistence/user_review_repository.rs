@@ -56,6 +56,8 @@ pub trait ArchiveMutationObserver: Send + Sync {
     fn before_archive_publish(&self) {}
     fn after_archive_publish(&self) {}
     fn after_active_capture(&self) {}
+    fn after_temp_cleanup_validation(&self) {}
+    fn after_temp_cleanup_capture(&self) {}
 }
 
 #[derive(Debug)]
@@ -93,11 +95,26 @@ impl JsonUserReviewRepository {
         config: WorkspaceConfig,
         temp_cleanup_age: Duration,
     ) -> Self {
+        Self::with_temp_cleanup_age_and_observer(
+            layout,
+            config,
+            temp_cleanup_age,
+            Arc::new(NoopArchiveMutationObserver),
+        )
+    }
+
+    #[doc(hidden)]
+    pub fn with_temp_cleanup_age_and_observer(
+        layout: WorkspaceLayout,
+        config: WorkspaceConfig,
+        temp_cleanup_age: Duration,
+        archive_observer: Arc<dyn ArchiveMutationObserver>,
+    ) -> Self {
         Self {
             layout,
             config,
             temp_cleanup_age,
-            archive_observer: Arc::new(NoopArchiveMutationObserver),
+            archive_observer,
         }
     }
 
@@ -107,12 +124,12 @@ impl JsonUserReviewRepository {
         config: WorkspaceConfig,
         archive_observer: Arc<dyn ArchiveMutationObserver>,
     ) -> Self {
-        Self {
+        Self::with_temp_cleanup_age_and_observer(
             layout,
             config,
-            temp_cleanup_age: DEFAULT_TEMP_CLEANUP_AGE,
+            DEFAULT_TEMP_CLEANUP_AGE,
             archive_observer,
-        }
+        )
     }
 
     fn spec_relative_path(&self, spec_id: &SpecId) -> Result<PathBuf, UserReviewRepositoryError> {
@@ -215,11 +232,13 @@ impl JsonUserReviewRepository {
             if !self.temp_is_cleanup_eligible(spec_id, directory, &file_name, &id, collection) {
                 continue;
             }
+            self.archive_observer.after_temp_cleanup_validation();
             let Ok(Some(capture_name)) =
                 capture_cleanup_entry_no_replace(directory, &file_name, &id)
             else {
                 continue;
             };
+            self.archive_observer.after_temp_cleanup_capture();
 
             if self.temp_is_cleanup_eligible(spec_id, directory, &capture_name, &id, collection) {
                 if directory.remove_file(&capture_name).is_ok() {
@@ -485,6 +504,7 @@ impl UserReviewRepository for JsonUserReviewRepository {
         &self,
         review: UserReview,
     ) -> Result<UserReviewCreateOutcome, UserReviewRepositoryError> {
+        ensure_supported_platform()?;
         let _guard = lock_user_review_store()?;
         if review.status() != UserReviewStatus::Active || !self.source_paths_match(&review) {
             return Err(UserReviewRepositoryError::InvalidState {
@@ -528,6 +548,7 @@ impl UserReviewRepository for JsonUserReviewRepository {
         &self,
         target: &UserReviewTarget,
     ) -> Result<UserReviewListOutcome, UserReviewRepositoryError> {
+        ensure_supported_platform()?;
         let _guard = lock_user_review_store()?;
         let directories = self.existing_directories(target)?;
         self.cleanup_stale_temps(
@@ -603,6 +624,7 @@ impl UserReviewRepository for JsonUserReviewRepository {
         target: &UserReviewTarget,
         archived_at: DateTime<Utc>,
     ) -> Result<UserReviewArchiveOutcome, UserReviewRepositoryError> {
+        ensure_supported_platform()?;
         let _guard = lock_user_review_store()?;
         let directories = self.prepare_directories(target)?;
         self.cleanup_stale_temps(
@@ -1005,6 +1027,34 @@ fn create_new_file_options() -> OpenOptions {
     options
 }
 
+// Keep unsupported fallbacks type-checked on supported development platforms.
+#[allow(dead_code)]
+mod unsupported_platform {
+    use super::{io, Dir, OpenOptions, OsStr};
+
+    pub(super) fn configure_no_follow(_options: &mut OpenOptions) {
+        // Repository entry points reject platforms without no-follow filesystem APIs.
+    }
+
+    pub(super) fn rename_no_replace(
+        _directory: &Dir,
+        _from: &OsStr,
+        _to: &OsStr,
+    ) -> io::Result<()> {
+        Err(io::Error::new(
+            io::ErrorKind::Unsupported,
+            "atomic no-replace rename is unavailable on this platform",
+        ))
+    }
+
+    pub(super) fn sync_directory(_directory: &Dir) -> io::Result<()> {
+        Err(io::Error::from(io::ErrorKind::Unsupported))
+    }
+}
+
+#[cfg(not(any(unix, windows)))]
+use unsupported_platform::{configure_no_follow, rename_no_replace, sync_directory};
+
 #[cfg(unix)]
 fn configure_no_follow(options: &mut OpenOptions) {
     options.custom_flags(rustix::fs::OFlags::NOFOLLOW.bits() as i32);
@@ -1123,6 +1173,18 @@ fn rename_no_replace(directory: &Dir, from: &OsStr, to: &OsStr) -> io::Result<()
     Ok(())
 }
 
+fn platform_support_result(supported: bool) -> Result<(), UserReviewRepositoryError> {
+    if !supported {
+        return Err(UserReviewRepositoryError::Unavailable);
+    }
+
+    Ok(())
+}
+
+fn ensure_supported_platform() -> Result<(), UserReviewRepositoryError> {
+    platform_support_result(cfg!(any(unix, windows)))
+}
+
 fn lock_user_review_store() -> Result<MutexGuard<'static, ()>, UserReviewRepositoryError> {
     USER_REVIEW_STORE_LOCK
         .lock()
@@ -1139,9 +1201,4 @@ fn sync_directory(_directory: &Dir) -> io::Result<()> {
     // Windows has no directory fsync equivalent. Record contents are flushed
     // before the atomic rename, and NTFS journals the namespace transition.
     Ok(())
-}
-
-#[cfg(not(any(unix, windows)))]
-fn sync_directory(_directory: &Dir) -> io::Result<()> {
-    Err(io::Error::from(io::ErrorKind::Unsupported))
 }
