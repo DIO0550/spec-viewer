@@ -6,13 +6,19 @@ use thiserror::Error;
 
 mod config;
 mod ports;
+mod topology;
 
 pub use config::{
     default_scan_excluded_directory_names, SpecConfigOverride, WorkspaceConfig,
     WorkspaceConfigError, WorkspaceConfigSource, WorkspaceFileMapping,
 };
 pub use ports::{
-    DetectWorkspace, LoadWorkspaceConfig, WorkspaceConfigLoadPortError, WorkspaceDetectionPortError,
+    DetectWorkspace, LoadSpecConfigOverride, LoadWorkspaceConfig, WorkspaceConfigLoadPortError,
+    WorkspaceDetectionPortError,
+};
+pub use topology::{
+    SpecLocationDescriptor, SpecSourceGroupDescriptor, WorkspaceDetectionMode,
+    WorkspaceDetectionRule, WorkspaceRelativePath, WorkspaceTopology,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -111,6 +117,10 @@ pub enum WorkspaceDomainError {
     MissingRoot,
     #[error("unsupported workspace layout: {layout}")]
     UnsupportedLayout { layout: String },
+    #[error("unsafe relative workspace path: {value}")]
+    UnsafeRelativePath { value: String },
+    #[error("unsupported spec source: {name}")]
+    UnsupportedSpecSource { name: String },
 }
 
 #[cfg(test)]
