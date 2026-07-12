@@ -194,7 +194,7 @@ The following projections remain with their feature owner:
 | `CommentScope` | comments / `@/features/comments` | It projects a selected file into comment-list and mutation inputs. |
 | `ExportCommentsTarget` | comments / `@/features/comments` | It is a comments export transport shape and includes workspace export. |
 | `UserReviewTarget` | review-runs / `@/features/review-runs` | It is a review command projection. Its raw DTO-compatible `specId` remains until #110 separates DTO decoding from domain identities. |
-| Watch command and subscriber types | specs / `@/features/specs` | They are specs infrastructure ports, not domain vocabulary. |
+| Watch command and subscriber types | specs / `@/features/specs` | They are specs application ports implemented by the Tauri adapter, not domain vocabulary. |
 | `ThemeMode` | preferences / `@/features/preferences` | It is a preferences-owned policy exposed for UI composition. |
 
 ### Issue #106 acceptance boundary
@@ -205,10 +205,25 @@ waiver.
 
 The literal repository-wide cross-feature deep-import count is not yet zero.
 `features/specs/components/MarkdownViewer/index.tsx` retains five exact deep-import
-waivers and the `features/specs -> features/comments` cycle waiver owned by #108.
-Those six entries predate #106 and remain visible in `waivers.json`; moving comment
-composition out of MarkdownViewer belongs to #108. The #104 ledger must therefore
-not claim repository-wide zero until #108 removes them.
+waivers owned by #108. Moving comment composition out of MarkdownViewer belongs to
+#108. The package-cycle edge previously owned by #108 became stale when #107 removed
+the reverse `shared -> features/*` dependencies, so #107 removes that exact cycle
+waiver without hiding the five remaining deep imports. The #104 ledger must not
+claim repository-wide zero until #108 removes them.
+
+### Issue #107 acceptance boundary
+
+Issue #107 leaves `shared/api/tauri` with the generic
+`invokeTauriCommand` transport kernel and transport-level
+error compatibility only. Command names, request/response contracts, codecs,
+command-specific errors, concrete gateways, dialogs, drag-and-drop, file-watch
+subscriptions, and recent-workspace storage belong to comments, specs, workspace,
+or review-runs.
+
+Feature hooks and test doubles type their dependencies through feature-owned
+application ports. The sole production import of `@tauri-apps/api/core` is
+`shared/api/tauri/invokeTauriCommand.ts`; the architecture checker rejects any
+other production dependency on that raw transport module.
 
 ### PR #28 supersede map
 
@@ -221,8 +236,8 @@ architecture in small, issue-owned changes:
 | `a72ad162` shared timestamp and file-key types | #106 uses the approved `shared/domain/isoDateTime` and `shared/domain/specFileKey` leaves rather than a miscellaneous `shared/types` barrel. |
 | `e5633e5` specs/comments import changes | #106 assigns canonical owners and exposes comments/specs non-domain APIs from each feature root. |
 | `c238816` review-runs import changes | #106 uses exact Shared Kernel leaves and keeps `UserReviewTarget` as a review-owned projection instead of deriving it from a comments DTO. |
-| MarkdownViewer/comments integration follow-up | #108 owns the app-composition extraction and its six exact waivers. |
-| `shared/api/tauri` reverse-dependency follow-up | #107 owns feature-specific Tauri adapters and its existing exact waivers. |
+| MarkdownViewer/comments integration follow-up | #108 owns the app-composition extraction and its five remaining exact deep-import waivers. |
+| `shared/api/tauri` reverse-dependency follow-up | #107 moves feature-specific adapters to their owners and removes all 32 waivers it owned. |
 | Bulk test renames, lint formatting, accessibility changes, and JSDoc commits | Not reused by #106; they are unrelated to the ownership migration and would expand its behavioral surface. |
 
 ## Automated checks
@@ -243,6 +258,8 @@ production `.ts` and `.tsx` modules for:
   libraries remain eligible domain implementation dependencies;
 - `shared` dependencies on a feature;
 - cross-feature deep imports that bypass a feature root API;
+- raw `@tauri-apps/api/core` dependencies outside the canonical
+  `shared/api/tauri/invokeTauriCommand.ts` transport kernel;
 - package dependency edges that participate in a cycle.
 
 Files in `__tests__/` or `testing/`, plus `*.test.*`, `*.spec.*`, and `*.stories.*`,
