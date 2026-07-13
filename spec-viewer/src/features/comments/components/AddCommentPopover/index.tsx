@@ -11,8 +11,9 @@ import {
 import { CommentPopover } from "@/features/comments/components/CommentPopover";
 import {
   CommentBody,
-  type CommentBodyValidationError,
-} from "@/features/comments/lib/comment-body";
+  type CommentBodyDraft,
+  type CommentBodyParseError,
+} from "@/features/comments/domain/commentBody";
 import type {
   AddCommentSubmitInput,
   CommentAnchorDraft,
@@ -37,13 +38,12 @@ type Props = Readonly<{
 
 const missingScopeMessage =
   "保存する前にワークスペース、Spec、ファイルを選択してください。";
-const emptyBodyMessage = "保存するコメントを入力してください。";
 const failedSaveMessage =
   "コメントを保存できませんでした。再試行してください。";
 
 type CommentBodyFormState = Readonly<{
-  body: CommentBody;
-  error: CommentBodyValidationError | null;
+  draft: CommentBodyDraft;
+  error: CommentBodyParseError | null;
 }>;
 
 type CommentBodyFormAction =
@@ -57,7 +57,7 @@ type CommentBodyFormAction =
 
 /** @returns Initial add-comment body form state. */
 function createCommentBodyFormState(): CommentBodyFormState {
-  return { body: CommentBody.create(), error: null };
+  return { draft: "", error: null };
 }
 
 /** @returns Next add-comment body form state for the requested action. */
@@ -67,14 +67,15 @@ function reduceCommentBodyForm(
 ): CommentBodyFormState {
   if (action.type === "body_updated") {
     return {
-      body: CommentBody.update(state.body, action.value),
+      draft: action.value,
       error: null,
     };
   }
 
+  const parseResult = CommentBody.parse(state.draft);
   return {
     ...state,
-    error: CommentBody.validate(state.body),
+    error: parseResult.ok ? null : parseResult.error,
   };
 }
 
@@ -98,16 +99,16 @@ export function AddCommentPopover({
     undefined,
     createCommentBodyFormState,
   );
+  const commentBodyParseResult = CommentBody.parse(commentBodyFormState.draft);
   const [submitErrorMessage, setSubmitErrorMessage] = useState<string | null>(
     null,
   );
-  const isBodyEmpty = CommentBody.isEmpty(commentBodyFormState.body);
-  const canSubmit = isScopeReady && !isBodyEmpty;
+  const canSubmit = isScopeReady && commentBodyParseResult.ok;
   const isSubmitDisabled = isSaving || !canSubmit;
   const scopeMessage = isScopeReady ? null : missingScopeMessage;
   const visibleErrorMessage =
     scopeMessage ??
-    formatCommentBodyValidationError(commentBodyFormState.error) ??
+    commentBodyFormState.error?.message ??
     submitErrorMessage ??
     errorMessage;
   const describedBy =
@@ -122,17 +123,17 @@ export function AddCommentPopover({
       return;
     }
 
-    const validationError = CommentBody.validate(commentBodyFormState.body);
+    const parseResult = CommentBody.parse(commentBodyFormState.draft);
     dispatchCommentBodyForm({ type: "submit_attempted" });
 
-    if (validationError !== null) {
+    if (!parseResult.ok) {
       return;
     }
 
     setSubmitErrorMessage(null);
     const wasSaved = await onSubmit({
       anchor: draft.anchor,
-      body: CommentBody.getTrimmedValue(commentBodyFormState.body),
+      body: parseResult.commentBody,
     });
 
     if (!wasSaved) {
@@ -213,7 +214,7 @@ export function AddCommentPopover({
           <textarea
             id={textareaId}
             ref={textareaRef}
-            value={commentBodyFormState.body.value}
+            value={commentBodyFormState.draft}
             rows={4}
             aria-describedby={describedBy}
             aria-invalid={visibleErrorMessage !== null}
@@ -277,18 +278,4 @@ export function AddCommentPopover({
  */
 function formatDraftBlockType(blockType: string): string {
   return blockType.replace(/_/g, " ");
-}
-
-/**
- * @param error - The comment body validation error, or null when valid.
- * @returns Display message for a comment body validation error.
- */
-function formatCommentBodyValidationError(
-  error: CommentBodyValidationError | null,
-): string | null {
-  if (error === "empty_body") {
-    return emptyBodyMessage;
-  }
-
-  return null;
 }
