@@ -35,9 +35,11 @@ import ReactMarkdown, { type Components } from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
 import {
+  BlockType as CommentAnchorBlockType,
   CommentBody,
   type CommentBodyDraft,
   type CommentOperationState,
+  type RenderedBlockType,
   toCommentBodyValidationMessage,
 } from "@/features/comments";
 import { AddCommentPopover } from "@/features/comments/components/AddCommentPopover";
@@ -91,7 +93,7 @@ import { MarkdownViewerHeader } from "./MarkdownViewerHeader";
 import { MarkdownViewerPanel } from "./MarkdownViewerPanel";
 import { MarkdownViewerStatusPanel } from "./MarkdownViewerStatusPanel";
 
-type BlockType = "heading" | "paragraph" | "list-item" | "table" | "code";
+type BlockType = RenderedBlockType;
 
 type BlockMetadata = Readonly<{
   "data-block-type": BlockType;
@@ -1450,30 +1452,14 @@ function findCommentBlockForScroll({
 function mapCommentBlockTypeToBlockType(
   blockType: CommentBlockType,
 ): BlockType | null {
-  const blockTypeMap: Partial<Record<CommentBlockType, BlockType>> = {
-    heading: "heading",
-    paragraph: "paragraph",
-    list_item: "list-item",
-    table: "table",
-    code_block: "code",
-  };
-
-  return blockTypeMap[blockType] ?? null;
+  return CommentAnchorBlockType.toRendered(blockType);
 }
 
 /** @returns The rendered block type corresponding to backend Markdown metadata. */
 function mapMarkdownBlockTypeToBlockType(
   blockType: MarkdownBlockType,
 ): BlockType | null {
-  const blockTypeMap: Partial<Record<MarkdownBlockType, BlockType>> = {
-    heading: "heading",
-    paragraph: "paragraph",
-    list_item: "list-item",
-    table: "table",
-    code_block: "code",
-  };
-
-  return blockTypeMap[blockType] ?? null;
+  return CommentAnchorBlockType.toRendered(blockType);
 }
 
 /**

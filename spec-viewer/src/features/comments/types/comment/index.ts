@@ -1,6 +1,11 @@
 import type { Comment as DomainComment } from "@/features/comments/domain/comment";
 import type { CommentBody } from "@/features/comments/domain/commentBody";
 import type {
+  BlockType,
+  CharRange,
+  CommentAnchor as DomainCommentAnchor,
+} from "@/features/comments/domain/commentAnchor";
+import type {
   CommentStatus,
   CommentStatusFilter,
 } from "@/features/comments/domain/commentStatusFilter";
@@ -19,16 +24,7 @@ export type {
 
 export type { IsoDateTimeString } from "@/shared/domain/isoDateTime";
 
-export type CommentBlockType =
-  | "paragraph"
-  | "heading"
-  | "list_item"
-  | "code_block"
-  | "block_quote"
-  | "table"
-  | "thematic_break"
-  | "html"
-  | "other";
+export type CommentBlockType = BlockType;
 
 export type CommentDisplayFilter =
   | CommentStatusFilter
@@ -63,19 +59,9 @@ export type CommentAnchorResolutionReason =
   | "deleted_text"
   | "unsupported_block_type";
 
-export type CommentCharRange = Readonly<{
-  start: number;
-  end: number;
-}>;
+export type CommentCharRange = CharRange;
 
-export type CommentAnchor = Readonly<{
-  fileKey: SpecFileKey;
-  blockType: CommentBlockType;
-  blockIndex: number;
-  textHash: string;
-  textSnippet: string;
-  charRange: CommentCharRange;
-}>;
+export type CommentAnchor = DomainCommentAnchor;
 
 export type CommentSelectionBounds = Readonly<{
   top: number;

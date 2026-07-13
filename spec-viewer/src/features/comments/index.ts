@@ -2,6 +2,16 @@ export { AddCommentPopover } from "@/features/comments/components/AddCommentPopo
 export { CommentSidebar } from "@/features/comments/components/CommentSidebar";
 export { Comment } from "@/features/comments/domain/comment";
 export {
+  BlockIdentity,
+  BlockIndex,
+  BlockType,
+  CharRange,
+  CommentAnchor,
+  TextHash,
+  TextSnippet,
+  type RenderedBlockType,
+} from "@/features/comments/domain/commentAnchor";
+export {
   CommentBody,
   type CommentBodyDraft,
   type CommentBodyParseError,
@@ -9,7 +19,6 @@ export {
 export { Comments } from "@/features/comments/domain/comments";
 export type {
   AddCommentSubmitInput,
-  CommentAnchor,
   CommentAnchorDisplayState,
   CommentExportOperation,
   CommentExportScope,
