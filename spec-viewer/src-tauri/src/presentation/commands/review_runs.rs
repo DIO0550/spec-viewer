@@ -68,6 +68,7 @@ impl ReviewRunCommandError {
                 ReviewRunCommandErrorCode::CommentRepository
             }
             AppUseCaseError::ReviewRunExport { .. } => ReviewRunCommandErrorCode::UserReviewExport,
+            AppUseCaseError::UserReview { .. } => ReviewRunCommandErrorCode::UserReviewExport,
             AppUseCaseError::SpecTreeScan { .. }
             | AppUseCaseError::SpecArchive { .. }
             | AppUseCaseError::MarkdownRead { .. } => ReviewRunCommandErrorCode::Unexpected,

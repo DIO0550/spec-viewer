@@ -55,7 +55,8 @@ impl WatchCommandError {
             | AppUseCaseError::MarkdownRead { .. }
             | AppUseCaseError::InvalidComment { .. }
             | AppUseCaseError::CommentRepository { .. }
-            | AppUseCaseError::ReviewRunExport { .. } => WatchCommandErrorCode::Unexpected,
+            | AppUseCaseError::ReviewRunExport { .. }
+            | AppUseCaseError::UserReview { .. } => WatchCommandErrorCode::Unexpected,
         };
 
         Self::new(code, error.to_string())

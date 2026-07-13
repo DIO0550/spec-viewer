@@ -2,6 +2,7 @@
 
 pub mod comments;
 pub mod review_runs;
+pub mod user_reviews;
 
 use std::path::Path;
 
@@ -42,6 +43,11 @@ pub use review_runs::{
     ArchiveReviewRunInput, ArchiveReviewRunResult, CreateReviewRunInput, CreateReviewRunResult,
     ListReviewRunsInput, ListReviewRunsResult, ListedReviewRun, ReviewRunExecutionMode,
     ReviewRunListProblem, ReviewRunListProblemState,
+};
+pub use user_reviews::{
+    ArchiveUserReviewInput, CreateUserReviewInput, FilesystemUserReviewUseCases,
+    ListUserReviewsInput, LoadUserReviewSources, UserReviewSourceDocument, UserReviewUseCaseError,
+    UserReviewUseCases,
 };
 
 pub type FilesystemAppUseCases = AppUseCases<
@@ -546,6 +552,8 @@ pub enum AppUseCaseError {
     CommentRepository { message: String },
     #[error("failed to export review run: {message}")]
     ReviewRunExport { message: String },
+    #[error("user review operation failed: {source}")]
+    UserReview { source: UserReviewUseCaseError },
 }
 
 impl From<WorkspaceDetectionError> for AppUseCaseError {

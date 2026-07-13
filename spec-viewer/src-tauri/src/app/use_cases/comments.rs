@@ -334,7 +334,7 @@ fn scope(spec_id: &str, file_key: SpecFileKey) -> Result<CommentScope, AppUseCas
     Ok(CommentScope::new(SpecId::new(spec_id)?, file_key))
 }
 
-fn resolve_comment_anchor(
+pub(crate) fn resolve_comment_anchor(
     comment: Comment,
     current_blocks: &[MarkdownBlock],
 ) -> CommentAnchorResolution {
