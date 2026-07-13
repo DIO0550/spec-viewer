@@ -9,11 +9,12 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useId, useState } from "react";
-import { CommentThread } from "@/features/comments/components/CommentThread";
 import type {
   CommentListFeatureState as CommentListState,
   CommentOperationFeatureState as CommentOperationState,
 } from "@/features/comments/application/commentError";
+import { CommentThread } from "@/features/comments/components/CommentThread";
+import type { CommentBody } from "@/features/comments/domain/commentBody";
 import { CommentOperationFailedState } from "@/features/comments/domain/commentOperation";
 import type {
   ApplyWithAiPlaceholderState,
@@ -61,7 +62,7 @@ type Props = Readonly<{
    * @param commentId - The comment to update.
    * @param body - The new comment body text.
    */
-  onUpdateComment: (commentId: CommentId, body: string) => void;
+  onUpdateComment: (commentId: CommentId, body: CommentBody) => void;
   /** Reloads the comment list. */
   onReload: () => void;
   onExportComments?: (scope: CommentExportScope) => void;
@@ -789,7 +790,7 @@ type SectionProps = Readonly<{
    * @param commentId - The comment to update.
    * @param body - The new comment body text.
    */
-  onUpdateComment: (commentId: CommentId, body: string) => void;
+  onUpdateComment: (commentId: CommentId, body: CommentBody) => void;
 }>;
 
 /** @returns One grouped comment section with its count badge. */

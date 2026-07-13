@@ -6,6 +6,7 @@ import type { CommentListFeatureState } from "@/features/comments";
 import {
   type Comment,
   type CommentAnchorDisplayState,
+  type CommentBody,
   type CommentId,
   type CommentOperationState,
   CommentSidebar,
@@ -28,7 +29,10 @@ export type SpecViewCommentSidebarProps = Readonly<{
   /** Deletes a comment. @param commentId - Id of the comment to delete. */
   onDeleteComment: (commentId: CommentId) => void;
   /** Updates a comment body. @param commentId - Id of the target comment. @param body - New comment body. */
-  onUpdateComment: (commentId: CommentId, body: string) => Promise<boolean>;
+  onUpdateComment: (
+    commentId: CommentId,
+    body: CommentBody,
+  ) => Promise<boolean>;
   /** Reloads the comment list. */
   onReloadComments: () => void;
 }>;

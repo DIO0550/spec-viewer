@@ -7,6 +7,7 @@ import type {
   AddCommentSubmitInput,
   Comment,
   CommentAnchorDisplayState,
+  CommentBody,
   CommentId,
 } from "@/features/comments";
 import {
@@ -20,7 +21,7 @@ export type CommentSelectionCommentActions = Readonly<{
   addComment: (input: AddCommentSubmitInput) => Promise<Comment | null>;
   /** Updates a comment body. */
   updateComment: (
-    input: Readonly<{ commentId: CommentId; body: string }>,
+    input: Readonly<{ commentId: CommentId; body: CommentBody }>,
   ) => Promise<Comment | null>;
   /** Deletes a comment. @param commentId - Id of the comment to delete. */
   deleteComment: (commentId: CommentId) => Promise<boolean>;
@@ -49,7 +50,7 @@ export type UseCommentSelectionResult = Readonly<{
   /** Adds a comment and selects it. @param input - Anchor and body of the comment to add. */
   addComment: (input: AddCommentSubmitInput) => Promise<boolean>;
   /** Updates a comment body. @param commentId - Id of the target comment. @param body - New comment body. */
-  updateComment: (commentId: CommentId, body: string) => Promise<boolean>;
+  updateComment: (commentId: CommentId, body: CommentBody) => Promise<boolean>;
   /** Resolves a comment. @param commentId - Id of the comment to resolve. */
   resolveComment: (commentId: CommentId) => void;
   /** Reopens a resolved comment. @param commentId - Id of the comment to reopen. */
@@ -140,7 +141,7 @@ export function useCommentSelection(
   );
 
   const updateComment = useCallback(
-    async (commentId: CommentId, body: string): Promise<boolean> => {
+    async (commentId: CommentId, body: CommentBody): Promise<boolean> => {
       const updatedComment = await commentActions.updateComment({
         commentId,
         body,
