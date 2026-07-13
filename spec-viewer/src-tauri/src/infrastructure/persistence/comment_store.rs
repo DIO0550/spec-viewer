@@ -1,7 +1,7 @@
 //! JSON-backed comment repository implementation.
 
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     fs, io,
     path::Path,
     sync::{Mutex, MutexGuard},
@@ -13,10 +13,9 @@ use uuid::Uuid;
 use crate::{
     domain::{
         comment::{
-            Comment, CommentDomainError, CommentId, CommentListQuery, CommentRepository,
-            CommentRepositoryError, CommentScope,
+            CommentRepository, CommentRepositoryError, CommentScope, ScopedComments,
+            ScopedCommentsError,
         },
-        spec::SpecFileKey,
         workspace::WorkspaceLayout,
     },
     infrastructure::persistence::{
@@ -41,16 +40,15 @@ impl JsonCommentRepository {
         }
     }
 
-    fn load(&self, scope: &CommentScope) -> Result<CommentFileState, CommentRepositoryError> {
+    fn load_state(&self, scope: &CommentScope) -> Result<CommentFileState, CommentRepositoryError> {
         let path = self.resolve_path(scope)?;
-        let file_key = scope.file_key();
         let contents = match fs::read_to_string(path.file_path()) {
             Ok(contents) => contents,
             Err(source) if source.kind() == io::ErrorKind::NotFound => {
                 return Ok(CommentFileState {
                     path,
-                    file_key,
-                    comments: Vec::new(),
+                    comments: ScopedComments::restore(scope.clone(), Vec::new())
+                        .map_err(restored_data_error)?,
                     previous_json: None,
                 });
             }
@@ -62,8 +60,7 @@ impl JsonCommentRepository {
             }
         };
 
-        let comments = deserialize_comments(file_key, &contents).map_err(json_error)?;
-        ensure_unique_comment_ids(&comments)?;
+        let comments = deserialize_comments(scope.clone(), &contents).map_err(json_error)?;
         let previous_json = serde_json::from_str(&contents).map_err(|source| {
             CommentRepositoryError::invalid_data(format!(
                 "comment JSON is malformed at {}: {source}",
@@ -73,7 +70,6 @@ impl JsonCommentRepository {
 
         Ok(CommentFileState {
             path,
-            file_key,
             comments,
             previous_json: Some(previous_json),
         })
@@ -91,15 +87,14 @@ impl JsonCommentRepository {
     fn write(
         &self,
         state: &CommentFileState,
-        comments: &[Comment],
+        comments: &ScopedComments,
     ) -> Result<(), CommentRepositoryError> {
         state
             .path
             .ensure_comments_directory()
             .map_err(storage_path_error)?;
 
-        let document =
-            build_comment_document(state.file_key, comments, state.previous_json.as_ref())?;
+        let document = build_comment_document(comments, state.previous_json.as_ref())?;
         let contents = serde_json::to_string_pretty(&document).map_err(|source| {
             CommentRepositoryError::invalid_data(format!(
                 "failed to serialize comment JSON: {source}"
@@ -111,73 +106,28 @@ impl JsonCommentRepository {
 }
 
 impl CommentRepository for JsonCommentRepository {
-    fn list(&self, query: &CommentListQuery) -> Result<Vec<Comment>, CommentRepositoryError> {
+    fn load(&self, scope: &CommentScope) -> Result<ScopedComments, CommentRepositoryError> {
         let _store_guard = lock_comment_store()?;
-        let state = self.load(query.scope())?;
+        let state = self.load_state(scope)?;
 
-        Ok(state
-            .comments
-            .into_iter()
-            .filter(|comment| query.includes(comment))
-            .collect())
+        Ok(state.comments)
     }
 
-    fn add(
+    fn save(&self, comments: &ScopedComments) -> Result<(), CommentRepositoryError> {
+        let _store_guard = lock_comment_store()?;
+        let state = self.load_state(comments.scope())?;
+
+        self.write(&state, comments)
+    }
+
+    fn transaction(
         &self,
         scope: &CommentScope,
-        comment: Comment,
-    ) -> Result<Comment, CommentRepositoryError> {
+        operation: &mut dyn FnMut(&mut ScopedComments) -> Result<(), ScopedCommentsError>,
+    ) -> Result<(), CommentRepositoryError> {
         let _store_guard = lock_comment_store()?;
-        ensure_scope_contains(scope, &comment)?;
-
-        let mut state = self.load(scope)?;
-        if state
-            .comments
-            .iter()
-            .any(|existing| existing.id() == comment.id())
-        {
-            return Err(CommentRepositoryError::duplicate(comment.id().clone()));
-        }
-
-        state.comments.push(comment.clone());
-        self.write(&state, &state.comments)?;
-
-        Ok(comment)
-    }
-
-    fn update(
-        &self,
-        scope: &CommentScope,
-        comment: Comment,
-    ) -> Result<Comment, CommentRepositoryError> {
-        let _store_guard = lock_comment_store()?;
-        ensure_scope_contains(scope, &comment)?;
-
-        let mut state = self.load(scope)?;
-        let existing = state
-            .comments
-            .iter_mut()
-            .find(|existing| existing.id() == comment.id())
-            .ok_or_else(|| CommentRepositoryError::not_found(comment.id().clone()))?;
-        existing
-            .ensure_update_time(comment.updated_at())
-            .map_err(|source| stale_update_error(existing, &comment, source))?;
-
-        *existing = comment.clone();
-        self.write(&state, &state.comments)?;
-
-        Ok(comment)
-    }
-
-    fn delete(&self, scope: &CommentScope, id: &CommentId) -> Result<(), CommentRepositoryError> {
-        let _store_guard = lock_comment_store()?;
-        let mut state = self.load(scope)?;
-        let initial_len = state.comments.len();
-        state.comments.retain(|comment| comment.id() != id);
-
-        if state.comments.len() == initial_len {
-            return Err(CommentRepositoryError::not_found(id.clone()));
-        }
+        let mut state = self.load_state(scope)?;
+        operation(&mut state.comments).map_err(CommentRepositoryError::from)?;
 
         self.write(&state, &state.comments)
     }
@@ -186,8 +136,7 @@ impl CommentRepository for JsonCommentRepository {
 #[derive(Debug)]
 struct CommentFileState {
     path: CommentStoragePath,
-    file_key: SpecFileKey,
-    comments: Vec<Comment>,
+    comments: ScopedComments,
     previous_json: Option<Value>,
 }
 
@@ -197,70 +146,39 @@ fn lock_comment_store() -> Result<MutexGuard<'static, ()>, CommentRepositoryErro
         .map_err(|_| CommentRepositoryError::unavailable("comment store lock is poisoned"))
 }
 
-fn stale_update_error(
-    existing: &Comment,
-    attempted: &Comment,
-    source: CommentDomainError,
-) -> CommentRepositoryError {
-    match source {
-        CommentDomainError::UpdatedAtRollback { current, attempted } => {
-            CommentRepositoryError::stale_update(existing.id().clone(), current, attempted)
-        }
-        CommentDomainError::UpdatedBeforeCreated => CommentRepositoryError::stale_update(
-            existing.id().clone(),
-            existing.updated_at(),
-            attempted.updated_at(),
-        ),
-        source => CommentRepositoryError::invalid_data(format!(
-            "comment replacement timestamp validation failed: {source}"
-        )),
-    }
-}
-
-fn ensure_scope_contains(
-    scope: &CommentScope,
-    comment: &Comment,
-) -> Result<(), CommentRepositoryError> {
-    if !scope.contains_comment(comment) {
-        return Err(CommentRepositoryError::scope_mismatch(
-            scope.file_key(),
-            comment.anchor().file_key(),
-        ));
-    }
-
-    Ok(())
-}
-
-fn ensure_unique_comment_ids(comments: &[Comment]) -> Result<(), CommentRepositoryError> {
-    let mut seen = HashSet::new();
-
-    for comment in comments {
-        if !seen.insert(comment.id().clone()) {
-            return Err(CommentRepositoryError::invalid_data(format!(
-                "duplicate comment id in persisted data: {}",
-                comment.id()
-            )));
-        }
-    }
-
-    Ok(())
+fn restored_data_error(error: ScopedCommentsError) -> CommentRepositoryError {
+    CommentRepositoryError::invalid_data(error.to_string())
 }
 
 fn build_comment_document(
-    file_key: SpecFileKey,
-    comments: &[Comment],
+    comments: &ScopedComments,
     previous_json: Option<&Value>,
 ) -> Result<Value, CommentRepositoryError> {
     let previous_records = previous_comment_records_by_id(previous_json);
-    let comments = comments
+    let serialized = serialize_comments(comments).map_err(json_error)?;
+    let canonical_document: Value = serde_json::from_str(&serialized).map_err(|source| {
+        CommentRepositoryError::invalid_data(format!(
+            "serialized comment JSON did not parse: {source}"
+        ))
+    })?;
+    let canonical_records = canonical_document
+        .get("comments")
+        .and_then(Value::as_array)
+        .ok_or_else(|| {
+            CommentRepositoryError::invalid_data("serialized comment JSON had no comments array")
+        })?;
+    let comments = canonical_records
         .iter()
-        .map(|comment| {
-            let record = serialize_comment_record(file_key, comment)?;
-            let id = comment.id().as_str();
+        .map(|record| {
+            let id = record.get("id").and_then(Value::as_str).ok_or_else(|| {
+                CommentRepositoryError::invalid_data("serialized comment record had no id")
+            })?;
 
             Ok(match previous_records.get(id) {
-                Some(previous_record) => merge_known_fields(previous_record.clone(), record),
-                None => record,
+                Some(previous_record) => {
+                    merge_known_fields(previous_record.clone(), record.clone())
+                }
+                None => record.clone(),
             })
         })
         .collect::<Result<Vec<_>, CommentRepositoryError>>()?;
@@ -330,26 +248,6 @@ fn merge_anchor_field(previous_object: &mut Map<String, Value>, current_anchor: 
             previous_object.insert("anchor".to_string(), current_anchor);
         }
     }
-}
-
-fn serialize_comment_record(
-    file_key: SpecFileKey,
-    comment: &Comment,
-) -> Result<Value, CommentRepositoryError> {
-    let document =
-        serialize_comments(file_key, std::slice::from_ref(comment)).map_err(json_error)?;
-    let value: Value = serde_json::from_str(&document).map_err(|source| {
-        CommentRepositoryError::invalid_data(format!(
-            "serialized comment JSON did not parse: {source}"
-        ))
-    })?;
-
-    value
-        .get("comments")
-        .and_then(Value::as_array)
-        .and_then(|comments| comments.first())
-        .cloned()
-        .ok_or_else(|| CommentRepositoryError::invalid_data("serialized comment JSON was empty"))
 }
 
 fn write_via_temp_file(path: &Path, contents: &str) -> Result<(), CommentRepositoryError> {
@@ -443,12 +341,61 @@ mod tests {
     use super::*;
     use crate::domain::{
         comment::{
-            BlockIndex, BlockType, CharRange, CommentAnchor, CommentBody, CommentStatus, TextHash,
-            TextSnippet,
+            BlockIndex, BlockType, CharRange, Comment, CommentAnchor, CommentBody, CommentId,
+            CommentListQuery, CommentStatus, TextHash, TextSnippet,
         },
-        spec::SpecId,
+        spec::{SpecFileKey, SpecId},
         workspace::{WorkspaceKind, WorkspaceRoot},
     };
+
+    trait CommentRepositoryTestExt: CommentRepository {
+        fn list(&self, query: &CommentListQuery) -> Result<Vec<Comment>, CommentRepositoryError> {
+            let comments = self.load(query.scope())?;
+
+            Ok(comments
+                .comments()
+                .iter()
+                .filter(|comment| query.includes(comment))
+                .cloned()
+                .collect())
+        }
+
+        fn add(
+            &self,
+            scope: &CommentScope,
+            comment: Comment,
+        ) -> Result<Comment, CommentRepositoryError> {
+            let added = comment.clone();
+            self.transaction(scope, &mut |comments| {
+                comments.add(comment.clone()).map(drop)
+            })?;
+
+            Ok(added)
+        }
+
+        fn update(
+            &self,
+            scope: &CommentScope,
+            comment: Comment,
+        ) -> Result<Comment, CommentRepositoryError> {
+            let updated = comment.clone();
+            self.transaction(scope, &mut |comments| {
+                comments.update(comment.clone()).map(drop)
+            })?;
+
+            Ok(updated)
+        }
+
+        fn delete(
+            &self,
+            scope: &CommentScope,
+            id: &CommentId,
+        ) -> Result<(), CommentRepositoryError> {
+            self.transaction(scope, &mut |comments| comments.delete(id).map(drop))
+        }
+    }
+
+    impl<Repository> CommentRepositoryTestExt for Repository where Repository: CommentRepository {}
 
     struct TestWorkspace {
         root: PathBuf,
@@ -900,9 +847,10 @@ mod tests {
     }
 
     #[test]
-    fn duplicate_ids_in_existing_json_return_invalid_data() {
+    fn duplicate_ids_in_existing_json_return_invalid_data_without_overwriting_file() {
         let workspace = TestWorkspace::new("duplicate-existing");
         let repository = workspace.repository();
+        let scope = scope("auth-flow", SpecFileKey::Impl);
         workspace.write_comment_file(
             "auth-flow",
             SpecFileKey::Impl,
@@ -942,17 +890,31 @@ mod tests {
 }
 "#,
         );
+        let original =
+            fs::read_to_string(workspace.comment_file_path("auth-flow", SpecFileKey::Impl))
+                .expect("corrupt comment file should be readable");
 
-        let result = repository.list(&CommentListQuery::new(scope(
-            "auth-flow",
-            SpecFileKey::Impl,
-        )));
+        let result = repository.add(
+            &scope,
+            comment(
+                "cmt_new",
+                SpecFileKey::Impl,
+                "New body",
+                CommentStatus::Open,
+                3,
+            ),
+        );
 
         assert!(matches!(
             result,
             Err(CommentRepositoryError::InvalidData { message })
                 if message.contains("duplicate comment id")
         ));
+        assert_eq!(
+            original,
+            fs::read_to_string(workspace.comment_file_path("auth-flow", SpecFileKey::Impl))
+                .expect("corrupt comment file should remain readable")
+        );
     }
 
     #[test]

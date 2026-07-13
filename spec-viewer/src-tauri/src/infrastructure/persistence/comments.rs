@@ -23,29 +23,27 @@ use thiserror::Error;
 use crate::domain::{
     comment::{
         BlockIndex, BlockType, CharRange, Comment, CommentAnchor, CommentBody, CommentDomainError,
-        CommentId, CommentStatus, TextHash, TextSnippet,
+        CommentId, CommentScope, CommentStatus, ScopedComments, ScopedCommentsError, TextHash,
+        TextSnippet,
     },
     spec::SpecFileKey,
 };
 
 const COMMENT_JSON_VERSION: u32 = 1;
 
-pub fn serialize_comments(
-    file_key: SpecFileKey,
-    comments: &[Comment],
-) -> Result<String, CommentJsonError> {
-    let document = CommentJsonDocument::from_domain(file_key, comments)?;
+pub fn serialize_comments(comments: &ScopedComments) -> Result<String, CommentJsonError> {
+    let document = CommentJsonDocument::from_domain(comments.comments());
 
     serde_json::to_string_pretty(&document).map_err(CommentJsonError::Serialize)
 }
 
 pub fn deserialize_comments(
-    file_key: SpecFileKey,
+    scope: CommentScope,
     contents: &str,
-) -> Result<Vec<Comment>, CommentJsonError> {
+) -> Result<ScopedComments, CommentJsonError> {
     let document = CommentJsonDocument::parse(contents)?;
 
-    document.into_domain(file_key)
+    document.into_domain(scope)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -57,16 +55,16 @@ struct CommentJsonDocument {
 }
 
 impl CommentJsonDocument {
-    fn from_domain(file_key: SpecFileKey, comments: &[Comment]) -> Result<Self, CommentJsonError> {
+    fn from_domain(comments: &[Comment]) -> Self {
         let comments = comments
             .iter()
-            .map(|comment| CommentRecordDto::from_domain(file_key, comment))
-            .collect::<Result<Vec<_>, _>>()?;
+            .map(CommentRecordDto::from_domain)
+            .collect::<Vec<_>>();
 
-        Ok(Self {
+        Self {
             version: COMMENT_JSON_VERSION,
             comments,
-        })
+        }
     }
 
     fn parse(contents: &str) -> Result<Self, CommentJsonError> {
@@ -90,11 +88,15 @@ impl CommentJsonDocument {
         Ok(document)
     }
 
-    fn into_domain(self, file_key: SpecFileKey) -> Result<Vec<Comment>, CommentJsonError> {
-        self.comments
+    fn into_domain(self, scope: CommentScope) -> Result<ScopedComments, CommentJsonError> {
+        let file_key = scope.file_key();
+        let comments = self
+            .comments
             .into_iter()
             .map(|comment| comment.into_domain(file_key))
-            .collect()
+            .collect::<Result<Vec<_>, _>>()?;
+
+        ScopedComments::restore(scope, comments).map_err(CommentJsonError::Aggregate)
     }
 }
 
@@ -118,17 +120,17 @@ struct CommentRecordDto {
 }
 
 impl CommentRecordDto {
-    fn from_domain(file_key: SpecFileKey, comment: &Comment) -> Result<Self, CommentJsonError> {
-        let anchor = CommentAnchorDto::from_domain(file_key, comment.anchor())?;
+    fn from_domain(comment: &Comment) -> Self {
+        let anchor = CommentAnchorDto::from_domain(comment.anchor());
 
-        Ok(Self {
+        Self {
             id: comment.id().as_str().to_string(),
             anchor,
             body: comment.body().as_str().to_string(),
             resolved: comment.is_resolved(),
             created_at: comment.created_at(),
             updated_at: comment.updated_at(),
-        })
+        }
     }
 
     fn into_domain(self, file_key: SpecFileKey) -> Result<Comment, CommentJsonError> {
@@ -161,26 +163,16 @@ struct CommentAnchorDto {
 }
 
 impl CommentAnchorDto {
-    fn from_domain(
-        file_key: SpecFileKey,
-        anchor: &CommentAnchor,
-    ) -> Result<Self, CommentJsonError> {
-        if anchor.file_key() != file_key {
-            return Err(CommentJsonError::FileKeyMismatch {
-                expected: file_key,
-                actual: anchor.file_key(),
-            });
-        }
-
+    fn from_domain(anchor: &CommentAnchor) -> Self {
         let char_range = anchor.char_range();
 
-        Ok(Self {
+        Self {
             block_type: block_type_to_json(anchor.block_type()).to_string(),
             block_index: anchor.block_index().value(),
             text_hash: anchor.text_hash().as_str().to_string(),
             text_snippet: anchor.text_snippet().as_str().to_string(),
             char_offset: [char_range.start(), char_range.end()],
-        })
+        }
     }
 
     fn into_domain(self, file_key: SpecFileKey) -> Result<CommentAnchor, CommentJsonError> {
@@ -206,13 +198,10 @@ pub enum CommentJsonError {
     UnsupportedVersion { version: u32 },
     #[error("unsupported comment anchor block type: {block_type}")]
     UnsupportedBlockType { block_type: String },
-    #[error("comment belongs to file {actual} but JSON file is for {expected}")]
-    FileKeyMismatch {
-        expected: SpecFileKey,
-        actual: SpecFileKey,
-    },
     #[error("comment JSON contains invalid domain data")]
     Domain(CommentDomainError),
+    #[error("comment JSON violates scoped comment invariants: {0}")]
+    Aggregate(ScopedCommentsError),
 }
 
 fn default_comment_json_version() -> u32 {
@@ -261,6 +250,7 @@ impl FromStr for CommentJsonDocument {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::spec::SpecId;
 
     fn timestamp(second: u32) -> DateTime<Utc> {
         DateTime::parse_from_rfc3339(&format!("2026-05-05T10:00:{second:02}Z"))
@@ -293,18 +283,33 @@ mod tests {
         .expect("comment should be valid")
     }
 
+    fn scope(file_key: SpecFileKey) -> CommentScope {
+        CommentScope::new(
+            SpecId::new("auth-flow").expect("spec id should be valid"),
+            file_key,
+        )
+    }
+
+    fn deserialize_for_file(
+        file_key: SpecFileKey,
+        contents: &str,
+    ) -> Result<ScopedComments, CommentJsonError> {
+        deserialize_comments(scope(file_key), contents)
+    }
+
     #[test]
     fn serialize_comments_uses_versioned_wrapper_and_stable_field_names() {
-        let json = serialize_comments(
-            SpecFileKey::Impl,
-            &[comment(
+        let comments = ScopedComments::restore(
+            scope(SpecFileKey::Impl),
+            vec![comment(
                 "cmt_1a2b3c",
                 SpecFileKey::Impl,
                 BlockType::Paragraph,
                 false,
             )],
         )
-        .expect("comments should serialize");
+        .expect("aggregate should restore");
+        let json = serialize_comments(&comments).expect("comments should serialize");
         let value: serde_json::Value =
             serde_json::from_str(&json).expect("serialized JSON should parse");
 
@@ -328,42 +333,24 @@ mod tests {
     }
 
     #[test]
-    fn serialize_comments_rejects_comments_for_another_file_key() {
-        let result = serialize_comments(
-            SpecFileKey::Tasks,
-            &[comment(
-                "cmt_mismatch",
-                SpecFileKey::Impl,
-                BlockType::Heading,
-                false,
-            )],
-        );
-
-        assert!(matches!(
-            result,
-            Err(CommentJsonError::FileKeyMismatch {
-                expected: SpecFileKey::Tasks,
-                actual: SpecFileKey::Impl,
-            })
-        ));
-    }
-
-    #[test]
     fn deserialize_comments_round_trips_domain_comments() {
-        let expected = vec![
-            comment("cmt_open", SpecFileKey::Impl, BlockType::Paragraph, false),
-            comment(
-                "cmt_resolved",
-                SpecFileKey::Impl,
-                BlockType::CodeBlock,
-                true,
-            ),
-        ];
-        let json =
-            serialize_comments(SpecFileKey::Impl, &expected).expect("comments should serialize");
+        let scope = scope(SpecFileKey::Impl);
+        let expected = ScopedComments::restore(
+            scope.clone(),
+            vec![
+                comment("cmt_open", SpecFileKey::Impl, BlockType::Paragraph, false),
+                comment(
+                    "cmt_resolved",
+                    SpecFileKey::Impl,
+                    BlockType::CodeBlock,
+                    true,
+                ),
+            ],
+        )
+        .expect("aggregate should restore");
+        let json = serialize_comments(&expected).expect("comments should serialize");
 
-        let actual =
-            deserialize_comments(SpecFileKey::Impl, &json).expect("comments should deserialize");
+        let actual = deserialize_comments(scope, &json).expect("comments should deserialize");
 
         assert_eq!(expected, actual);
     }
@@ -390,7 +377,7 @@ mod tests {
 "#;
 
         let comments =
-            deserialize_comments(SpecFileKey::Impl, json).expect("legacy array should deserialize");
+            deserialize_for_file(SpecFileKey::Impl, json).expect("legacy array should deserialize");
 
         assert_eq!(
             vec![comment(
@@ -399,16 +386,16 @@ mod tests {
                 BlockType::Heading,
                 true,
             )],
-            comments
+            comments.comments()
         );
     }
 
     #[test]
     fn deserialize_comments_defaults_missing_version_and_comments() {
-        let comments = deserialize_comments(SpecFileKey::Impl, "{}")
+        let comments = deserialize_for_file(SpecFileKey::Impl, "{}")
             .expect("missing wrapper fields should use defaults");
 
-        assert!(comments.is_empty());
+        assert!(comments.comments().is_empty());
     }
 
     #[test]
@@ -434,22 +421,22 @@ mod tests {
 }
 "#;
 
-        let comments = deserialize_comments(SpecFileKey::Impl, json)
+        let comments = deserialize_for_file(SpecFileKey::Impl, json)
             .expect("missing resolved should default to open");
 
-        assert_eq!(CommentStatus::Open, comments[0].status());
+        assert_eq!(CommentStatus::Open, comments.comments()[0].status());
     }
 
     #[test]
     fn deserialize_comments_rejects_malformed_json() {
-        let result = deserialize_comments(SpecFileKey::Impl, "{");
+        let result = deserialize_for_file(SpecFileKey::Impl, "{");
 
         assert!(matches!(result, Err(CommentJsonError::MalformedJson(_))));
     }
 
     #[test]
     fn deserialize_comments_rejects_unsupported_version() {
-        let result = deserialize_comments(SpecFileKey::Impl, r#"{"version":2,"comments":[]}"#);
+        let result = deserialize_for_file(SpecFileKey::Impl, r#"{"version":2,"comments":[]}"#);
 
         assert!(matches!(
             result,
@@ -481,7 +468,7 @@ mod tests {
 }
 "#;
 
-        let result = deserialize_comments(SpecFileKey::Impl, json);
+        let result = deserialize_for_file(SpecFileKey::Impl, json);
 
         assert!(matches!(
             result,
@@ -514,7 +501,7 @@ mod tests {
 }
 "#;
 
-        let result = deserialize_comments(SpecFileKey::Impl, json);
+        let result = deserialize_for_file(SpecFileKey::Impl, json);
 
         assert!(matches!(
             result,
