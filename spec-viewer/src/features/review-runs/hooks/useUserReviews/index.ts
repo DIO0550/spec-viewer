@@ -1,5 +1,20 @@
-import { useMemo } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useReducer,
+  useRef,
+} from "react";
 
+import type { UserReviewRepository } from "@/features/review-runs/application/ports/userReviewRepository";
+import {
+  SelectionIdentity,
+  UserReviewApplicationState,
+} from "@/features/review-runs/application/userReviewApplication";
+import { createUserReviewApplicationService } from "@/features/review-runs/application/userReviewApplicationService";
+import { createUserReviewUseCases } from "@/features/review-runs/application/userReviewUseCases";
+import type { CreateUserReviewCommandInput } from "@/features/review-runs/domain/createUserReviewCommand";
 import type {
   ActiveUserReview,
   ArchivedUserReview,
@@ -13,22 +28,7 @@ import {
   UserReviewTarget,
   type UserReviewTargetScope,
 } from "@/features/review-runs/domain/userReviewTarget";
-import { buildUserReviewsResult } from "@/features/review-runs/hooks/buildUserReviewsResult";
-import {
-  type UseArchiveUserReviewResult,
-  useArchiveUserReview,
-} from "@/features/review-runs/hooks/useArchiveUserReview";
-import {
-  type CreateUserReviewInput,
-  type UseCreateUserReviewResult,
-  useCreateUserReview,
-} from "@/features/review-runs/hooks/useCreateUserReview";
-import { useUserReviewList } from "@/features/review-runs/hooks/useUserReviewList";
 import type { SpecFileKey } from "@/features/specs/types/spec";
-import {
-  userReviewCommands as defaultUserReviewCommands,
-  type UserReviewCommands,
-} from "@/shared/api/tauri";
 import type { WorkspacePath } from "@/shared/domain/workspacePath";
 
 export type { UserReviewListState } from "@/features/review-runs/domain/userReviewListState";
@@ -37,7 +37,11 @@ export type {
   UserReviewCreateState,
 } from "@/features/review-runs/domain/userReviewOperation";
 export type { UserReviewTargetScope } from "@/features/review-runs/domain/userReviewTarget";
-export type { CreateUserReviewInput } from "@/features/review-runs/hooks/useCreateUserReview";
+
+export type CreateUserReviewInput = Pick<
+  CreateUserReviewCommandInput,
+  "commentIds"
+>;
 
 export type UserReviewsSelectionInput = Readonly<{
   workspacePath: WorkspacePath | null;
@@ -53,8 +57,8 @@ export type UserReviewsSelectionSnapshot = Readonly<{
 
 export type UseUserReviewsOptions = Readonly<{
   selectionSnapshot: UserReviewsSelectionSnapshot;
+  repository: UserReviewRepository;
   correlationId?: string | null;
-  commands?: UserReviewCommands;
 }>;
 
 export type UseUserReviewsResult = Readonly<{
@@ -78,11 +82,11 @@ export type UseUserReviewsResult = Readonly<{
   ) => Promise<ArchivedUserReview | null>;
 }>;
 
-/** @returns User review loading and creation state for the selected target. */
+/** @returns User review application state adapted to the selected React view. */
 export function useUserReviews(
   options: UseUserReviewsOptions,
 ): UseUserReviewsResult {
-  const commands = options.commands ?? defaultUserReviewCommands;
+  const { correlationId, repository } = options;
   const { selection, selectionId } = options.selectionSnapshot;
   const target = useMemo(
     () =>
@@ -93,41 +97,114 @@ export function useUserReviews(
       }),
     [selection.fileKey, selection.specId, selection.targetScope],
   );
-  const list = useUserReviewList({
-    commands,
-    target,
-    workspacePath: selection.workspacePath,
-    selectionId,
-    correlationId: options.correlationId,
-  });
+  const selectionIdentity = useMemo(
+    () =>
+      SelectionIdentity.create({
+        key: selectionId,
+        workspacePath: selection.workspacePath,
+        target,
+      }),
+    [selection.workspacePath, selectionId, target],
+  );
+  const initialSelectionIdentity = useRef(selectionIdentity);
+  const useCases = useMemo(
+    () => createUserReviewUseCases(repository),
+    [repository],
+  );
+  const service = useMemo(
+    () =>
+      createUserReviewApplicationService(
+        useCases,
+        initialSelectionIdentity.current,
+      ),
+    [useCases],
+  );
+  const [applicationState, dispatch] = useReducer(
+    UserReviewApplicationState.reduce,
+    selectionIdentity,
+    UserReviewApplicationState.initial,
+  );
 
-  const create: UseCreateUserReviewResult = useCreateUserReview({
-    workspacePath: selection.workspacePath,
-    target,
-    selectionId,
-    commands,
-    onUserReviewEvent: list.applyUserReviewEvent,
-  });
-  const archive: UseArchiveUserReviewResult = useArchiveUserReview({
-    workspacePath: selection.workspacePath,
-    target,
-    selectionId,
-    commands,
-    onUserReviewEvent: list.applyUserReviewEvent,
-  });
+  useLayoutEffect(() => {
+    service.select(selectionIdentity, dispatch);
+  }, [selectionIdentity, service]);
 
-  return buildUserReviewsResult({
-    list: {
+  const reloadUserReviews = useCallback(
+    (): Promise<boolean> =>
+      service.list(
+        {
+          selectionIdentity,
+          workspacePath: selection.workspacePath,
+          target,
+          correlationId,
+        },
+        dispatch,
+      ),
+    [
+      correlationId,
+      selection.workspacePath,
+      selectionIdentity,
+      service,
       target,
-      listState: list.listState,
-      reloadUserReviews: list.reloadUserReviews,
-    },
-    operations: {
-      createState: create.createState,
-      archiveState: archive.archiveState,
-      createUserReview: create.createUserReview,
-      canCreateUserReview: create.canCreateUserReview,
-      archiveUserReview: archive.archiveUserReview,
-    },
-  });
+    ],
+  );
+
+  useEffect(() => {
+    void reloadUserReviews();
+  }, [reloadUserReviews]);
+
+  const canCreateUserReview = useCallback(
+    (input: CreateUserReviewInput): boolean =>
+      service.canCreate({
+        workspacePath: selection.workspacePath,
+        target,
+        commentIds: input.commentIds,
+      }),
+    [selection.workspacePath, service, target],
+  );
+  const createUserReview = useCallback(
+    (input: CreateUserReviewInput): Promise<ActiveUserReview | null> =>
+      service.create(
+        {
+          selectionIdentity,
+          workspacePath: selection.workspacePath,
+          target,
+          commentIds: input.commentIds,
+        },
+        dispatch,
+      ),
+    [selection.workspacePath, selectionIdentity, service, target],
+  );
+  const archiveUserReview = useCallback(
+    (userReview: ActiveUserReview): Promise<ArchivedUserReview | null> =>
+      service.archive(
+        {
+          selectionIdentity,
+          workspacePath: selection.workspacePath,
+          target,
+          userReview,
+        },
+        dispatch,
+      ),
+    [selection.workspacePath, selectionIdentity, service, target],
+  );
+  const state = SelectionIdentity.equals(
+    applicationState.selectionIdentity,
+    selectionIdentity,
+  )
+    ? applicationState
+    : UserReviewApplicationState.initial(selectionIdentity);
+
+  return {
+    target,
+    listState: state.listState,
+    createState: state.createState,
+    archiveState: state.archiveState,
+    activeReviews: state.listState.active,
+    archivedReviews: state.listState.archived,
+    reloadUserReviews,
+    canCreateUserReview,
+    createUserReview,
+    archiveUserReview,
+  };
 }

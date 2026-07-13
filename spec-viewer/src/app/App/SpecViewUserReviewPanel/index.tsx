@@ -1,7 +1,15 @@
 import type { ReactElement } from "react";
 import { useSpecViewSelection } from "@/app/context/specViewSelection";
 import type { Comment, CommentId } from "@/features/comments";
-import { UserReviewPanel, useUserReviews } from "@/features/review-runs";
+import {
+  createTauriUserReviewRepository,
+  UserReviewPanel,
+  useUserReviews,
+} from "@/features/review-runs";
+import { userReviewCommands } from "@/shared/api/tauri";
+
+const userReviewRepository =
+  createTauriUserReviewRepository(userReviewCommands);
 
 type UserReviewCommentSummary = Readonly<{
   id: CommentId;
@@ -27,6 +35,7 @@ export function SpecViewUserReviewPanel(
       selection,
       selectionId,
     },
+    repository: userReviewRepository,
     correlationId,
   });
   const openCommentIds = getOpenCommentIds(comments);

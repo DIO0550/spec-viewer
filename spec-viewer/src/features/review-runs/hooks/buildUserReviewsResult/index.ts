@@ -8,8 +8,10 @@ import type {
   UserReviewCreateState,
 } from "@/features/review-runs/domain/userReviewOperation";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
-import type { CreateUserReviewInput } from "@/features/review-runs/hooks/useCreateUserReview";
-import type { UseUserReviewsResult } from "@/features/review-runs/hooks/useUserReviews";
+import type {
+  CreateUserReviewInput,
+  UseUserReviewsResult,
+} from "@/features/review-runs/hooks/useUserReviews";
 
 type UserReviewsListResultInput = Readonly<{
   target: UserReviewTarget | null;
