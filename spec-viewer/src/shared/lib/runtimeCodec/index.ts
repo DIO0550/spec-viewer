@@ -67,7 +67,9 @@ const number: RuntimeCodec<number> = {
 
 const nonNegativeInteger: RuntimeCodec<number> = {
   decode(value, path = "$") {
-    return typeof value === "number" && Number.isInteger(value) && value >= 0
+    return typeof value === "number" &&
+      Number.isSafeInteger(value) &&
+      value >= 0
       ? success(value)
       : failure(path, "non-negative integer", value);
   },
@@ -75,7 +77,11 @@ const nonNegativeInteger: RuntimeCodec<number> = {
 
 const isoDateTime: RuntimeCodec<string> = {
   decode(value, path = "$") {
-    return typeof value === "string" && !Number.isNaN(Date.parse(value))
+    return typeof value === "string" &&
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(
+        value,
+      ) &&
+      !Number.isNaN(Date.parse(value))
       ? success(value)
       : failure(path, "ISO date-time string", value);
   },
