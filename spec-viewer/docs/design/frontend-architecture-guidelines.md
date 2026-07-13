@@ -276,13 +276,13 @@ newly issued, while `fromDto` restores persisted or wire values. Both return a
 typed result; neither constructor exposes an unchecked brand cast. `toString` is
 reserved for DOM and display leaves, and `toDto` is reserved for serialization.
 
-The restore policy is deliberately narrower than accepting an arbitrary string:
+The restore policy mirrors backend persistence behavior while issuance remains strict:
 
 | Value object | Newly issued / parsed form | Restored legacy form |
 | --- | --- | --- |
-| `SpecId` | non-empty, normalized, safe relative path components | the same safe path form; there is no unsafe legacy escape hatch |
-| `CommentId` | `cmt_` plus 32 lowercase hexadecimal characters | an existing `cmt_` identifier with an alphanumeric, underscore, or hyphen suffix |
-| `UserReviewId` | `urv_` plus 32 lowercase hexadecimal characters | the timestamp-based `...-spec` or `...-file-<key>` review folder names emitted before v1 IDs |
+| `SpecId` | non-empty, normalized, safe relative path components without `:` | the same safe path form; there is no unsafe legacy escape hatch |
+| `CommentId` | `cmt_` plus 32 lowercase hexadecimal characters, without implicit trim | any existing non-empty identifier; outer whitespace is normalized only while restoring |
+| `UserReviewId` | `urv_` plus 32 lowercase hexadecimal characters, without implicit trim | the timestamp-based `...-spec` or `...-file-<key>` review folder names emitted before v1 IDs, also without implicit trim |
 | `IsoDateTime` | a calendar-valid RFC 3339 date-time | the same RFC 3339 form; invalid persisted timestamps are rejected |
 
 The cross-runtime golden cases live in
