@@ -2,7 +2,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
-import { WorkspacePath } from "@/shared/domain/workspacePath";
+import { workspacePathFixture } from "@/features/workspace/testing/workspacePath";
 import { configurePerformanceLoggerForTest } from "@/shared/lib/performance";
 import { createUserReviewCommandTestDouble } from "@/features/review-runs/testing/review-run-command-test-double";
 import { CommentId } from "@/features/comments/types/comment";
@@ -131,7 +131,7 @@ function renderUseUserReviews(props: HookProps) {
             workspacePath:
               workspacePath === null
                 ? null
-                : WorkspacePath.fromString(workspacePath),
+                : workspacePathFixture(workspacePath),
             specId,
             fileKey,
             targetScope,

@@ -7,7 +7,7 @@ import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewT
 import { useCreateUserReview } from "@/features/review-runs/hooks/useCreateUserReview";
 import type { UserReview } from "@/features/review-runs/types/userReviewIpc";
 import type { UserReviewCommands } from "@/shared/api/tauri";
-import { WorkspacePath } from "@/shared/domain/workspacePath";
+import { workspacePathFixture } from "@/features/workspace/testing/workspacePath";
 
 type HookResult<Props, Result> = Readonly<{
   current: Result;
@@ -64,7 +64,7 @@ function renderUseCreateUserReview(props: HookProps) {
     ({ commands, onUserReviewEvent, selectionId, workspacePath }) =>
       useCreateUserReview({
         commands,
-        workspacePath: WorkspacePath.fromString(workspacePath),
+        workspacePath: workspacePathFixture(workspacePath),
         target,
         selectionId,
         onUserReviewEvent,

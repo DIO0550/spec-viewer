@@ -10,7 +10,8 @@ import {
   writeRecentWorkspaces,
   type RecentWorkspace,
   type RecentWorkspaceStorage,
-} from "@/shared/lib/recentWorkspaces";
+} from "@/features/workspace/infrastructure/recentWorkspaces";
+import { workspacePathFixture } from "@/features/workspace/testing/workspacePath";
 
 class MemoryStorage implements RecentWorkspaceStorage {
   private readonly values = new Map<string, string>();
@@ -31,13 +32,13 @@ class MemoryStorage implements RecentWorkspaceStorage {
 test("recordRecentWorkspaceは既存pathの位置を保ったまま内容を更新する", () => {
   const currentWorkspaces: readonly RecentWorkspace[] = [
     {
-      path: "/workspace/alpha",
+      path: workspacePathFixture("/workspace/alpha"),
       displayName: "alpha",
       kind: "plugin-workspace",
       lastOpenedAt: "2026-05-01T00:00:00.000Z",
     },
     {
-      path: "/workspace/beta",
+      path: workspacePathFixture("/workspace/beta"),
       displayName: "beta",
       kind: "spec-skill",
       lastOpenedAt: "2026-05-02T00:00:00.000Z",
@@ -47,7 +48,7 @@ test("recordRecentWorkspaceは既存pathの位置を保ったまま内容を更�
   const nextWorkspaces = recordRecentWorkspace(
     currentWorkspaces,
     {
-      root: " /workspace/beta ",
+      root: workspacePathFixture(" /workspace/beta "),
       kind: "plugin-workspace",
       files: [],
     },
@@ -74,7 +75,7 @@ test("recordRecentWorkspaceは最大件数に切り詰める", () => {
   const currentWorkspaces = Array.from(
     { length: recentWorkspaceLimit },
     (_, index): RecentWorkspace => ({
-      path: `/workspace/${index}`,
+      path: workspacePathFixture(`/workspace/${index}`),
       displayName: String(index),
       kind: "plugin-workspace",
       lastOpenedAt: `2026-05-0${index}`,
@@ -84,7 +85,7 @@ test("recordRecentWorkspaceは最大件数に切り詰める", () => {
   const nextWorkspaces = recordRecentWorkspace(
     currentWorkspaces,
     {
-      root: "/workspace/new",
+      root: workspacePathFixture("/workspace/new"),
       kind: "plugin-workspace",
       files: [],
     },
@@ -101,20 +102,25 @@ test("recordRecentWorkspaceは最大件数に切り詰める", () => {
 test("removeRecentWorkspaceは指定pathだけを削除する", () => {
   const currentWorkspaces: readonly RecentWorkspace[] = [
     {
-      path: "/workspace/alpha",
+      path: workspacePathFixture("/workspace/alpha"),
       displayName: "alpha",
       kind: "plugin-workspace",
       lastOpenedAt: "2026-05-01T00:00:00.000Z",
     },
     {
-      path: "/workspace/beta",
+      path: workspacePathFixture("/workspace/beta"),
       displayName: "beta",
       kind: "plugin-workspace",
       lastOpenedAt: "2026-05-02T00:00:00.000Z",
     },
   ];
 
-  expect(removeRecentWorkspace(currentWorkspaces, "/workspace/alpha")).toEqual([
+  expect(
+    removeRecentWorkspace(
+      currentWorkspaces,
+      workspacePathFixture("/workspace/alpha"),
+    ),
+  ).toEqual([
     {
       path: "/workspace/beta",
       displayName: "beta",
@@ -152,7 +158,7 @@ test("readRecentWorkspacesは保存済み値を正規化して読み込む", () 
 
   expect(readRecentWorkspaces(storage)).toEqual([
     {
-      path: "/workspace/alpha",
+      path: workspacePathFixture("/workspace/alpha"),
       displayName: "Alpha Workspace",
       kind: "spec-skill",
       lastOpenedAt: "2026-05-01T00:00:00.000Z",
@@ -166,11 +172,39 @@ test("readRecentWorkspacesは保存済み値を正規化して読み込む", () 
   ]);
 });
 
+test("readRecentWorkspacesはlegacy pathとfile URLをcanonical pathで重複排除する", () => {
+  const storage = new MemoryStorage();
+
+  storage.setItem(
+    "spec-reviewer.recent-workspaces",
+    JSON.stringify([
+      "file:///workspace/spec-viewer/",
+      { path: "/workspace/spec-viewer", displayName: "duplicate" },
+      "C:\\workspace\\other\\",
+    ]),
+  );
+
+  expect(readRecentWorkspaces(storage)).toEqual([
+    {
+      path: "/workspace/spec-viewer",
+      displayName: "spec-viewer",
+      kind: "plugin-workspace",
+      lastOpenedAt: "",
+    },
+    {
+      path: "C:/workspace/other",
+      displayName: "other",
+      kind: "plugin-workspace",
+      lastOpenedAt: "",
+    },
+  ]);
+});
+
 test("writeRecentWorkspacesはJSONとして保存する", () => {
   const storage = new MemoryStorage();
   const workspaces: readonly RecentWorkspace[] = [
     {
-      path: "/workspace/alpha",
+      path: workspacePathFixture("/workspace/alpha"),
       displayName: "alpha",
       kind: "plugin-workspace",
       lastOpenedAt: "2026-05-01T00:00:00.000Z",
@@ -185,7 +219,21 @@ test("writeRecentWorkspacesはJSONとして保存する", () => {
 test("last active workspace pathは保存と読み込みでtrimされる", () => {
   const storage = new MemoryStorage();
 
-  writeLastActiveWorkspacePath(" /workspace/alpha ", storage);
+  writeLastActiveWorkspacePath(
+    workspacePathFixture(" /workspace/alpha "),
+    storage,
+  );
 
   expect(readLastActiveWorkspacePath(storage)).toBe("/workspace/alpha");
+});
+
+test("last active workspace pathはlegacy file URLをcanonical pathとして読み込む", () => {
+  const storage = new MemoryStorage();
+
+  storage.setItem(
+    "spec-reviewer.last-active-workspace",
+    "file:///workspace/spec%20viewer/",
+  );
+
+  expect(readLastActiveWorkspacePath(storage)).toBe("/workspace/spec viewer");
 });

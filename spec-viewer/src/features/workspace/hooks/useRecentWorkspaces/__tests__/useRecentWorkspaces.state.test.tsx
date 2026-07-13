@@ -2,8 +2,9 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test } from "vitest";
 
-import type { RecentWorkspaceStorage } from "@/shared/lib/recentWorkspaces";
+import type { RecentWorkspaceStorage } from "@/features/workspace/infrastructure/recentWorkspaces";
 import { useRecentWorkspaces } from "@/features/workspace/hooks/useRecentWorkspaces";
+import { workspacePathFixture } from "@/features/workspace/testing/workspacePath";
 
 class MemoryStorage implements RecentWorkspaceStorage {
   private readonly values = new Map<string, string>();
@@ -58,16 +59,16 @@ test("useRecentWorkspacesは保存済みworkspaceの追加と削除をstorageへ
 
   act(() => {
     result.current.recordWorkspace({
-      root: "/workspace/alpha",
+      root: workspacePathFixture("/workspace/alpha"),
       kind: "plugin-workspace",
       files: [],
     });
     result.current.recordWorkspace({
-      root: "/workspace/beta",
+      root: workspacePathFixture("/workspace/beta"),
       kind: "spec-skill",
       files: [],
     });
-    result.current.removeWorkspace("/workspace/alpha");
+    result.current.removeWorkspace(workspacePathFixture("/workspace/alpha"));
   });
 
   expect(
@@ -89,7 +90,7 @@ test("useRecentWorkspacesはclearでstorageから保存済み一覧とlast activ
 
   act(() => {
     result.current.recordWorkspace({
-      root: "/workspace/alpha",
+      root: workspacePathFixture("/workspace/alpha"),
       kind: "plugin-workspace",
       files: [],
     });
@@ -110,5 +111,22 @@ test("useRecentWorkspacesは保存済みlast activeを起動時復元候補と�
   const result = renderHook(() => useRecentWorkspaces({ storage }));
 
   expect(result.current.lastActiveWorkspacePath).toBe("/workspace/alpha");
+  result.unmount();
+});
+
+test("useRecentWorkspacesはcanonicalに等しいpath削除時にlegacy last activeも消去する", () => {
+  const storage = new MemoryStorage();
+  storage.setItem(
+    "spec-reviewer.last-active-workspace",
+    "file:///workspace/alpha/",
+  );
+  const result = renderHook(() => useRecentWorkspaces({ storage }));
+
+  act(() => {
+    result.current.removeWorkspace(workspacePathFixture("/workspace/alpha"));
+  });
+
+  expect(result.current.lastActiveWorkspacePath).toBeNull();
+  expect(storage.getItem("spec-reviewer.last-active-workspace")).toBeNull();
   result.unmount();
 });

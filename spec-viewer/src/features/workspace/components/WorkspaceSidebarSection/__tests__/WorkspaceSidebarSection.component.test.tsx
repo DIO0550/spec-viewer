@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
 import { WorkspaceSidebarSection } from "@/features/workspace/components/WorkspaceSidebarSection";
+import { workspacePathFixture } from "@/features/workspace/testing/workspacePath";
 
 type RenderResult = Readonly<{
   container: HTMLDivElement;
@@ -38,13 +39,13 @@ test("WorkspaceSidebarSectionは現在のworkspaceと保存済みworkspaceを左
       isBusy={false}
       recentWorkspaces={[
         {
-          path: "/workspace",
+          path: workspacePathFixture("/workspace"),
           displayName: "workspace",
           kind: "plugin-workspace",
           lastOpenedAt: "2026-05-06T00:00:00.000Z",
         },
         {
-          path: "/workspace/spec-reviewer",
+          path: workspacePathFixture("/workspace/spec-reviewer"),
           displayName: "spec-reviewer",
           kind: "plugin-workspace",
           lastOpenedAt: "2026-05-05T00:00:00.000Z",
@@ -78,7 +79,7 @@ test("WorkspaceSidebarSectionは保存済みworkspace操作を発火する", () 
       isBusy={false}
       recentWorkspaces={[
         {
-          path: "/workspace/spec-reviewer",
+          path: workspacePathFixture("/workspace/spec-reviewer"),
           displayName: "spec-reviewer",
           kind: "plugin-workspace",
           lastOpenedAt: "2026-05-05T00:00:00.000Z",
@@ -125,7 +126,7 @@ test("WorkspaceSidebarSectionは折りたたみ時に現在のworkspaceを残し
       isBusy={false}
       recentWorkspaces={[
         {
-          path: "/workspace/spec-reviewer",
+          path: workspacePathFixture("/workspace/spec-reviewer"),
           displayName: "spec-reviewer",
           kind: "plugin-workspace",
           lastOpenedAt: "2026-05-05T00:00:00.000Z",

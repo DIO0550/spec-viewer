@@ -51,6 +51,32 @@ test("Workspace.fromDtoは入力DTOから独立したaggregateを返す", () => 
   });
 });
 
+test("Workspace.fromDtoはIPCのrootをcanonical workspace pathへ変換する", () => {
+  const result = Workspace.fromDto({
+    root: "file:///workspace/spec%20reviewer///",
+    kind: "plugin-workspace",
+    files: [],
+  });
+
+  expect(result).toMatchObject({
+    ok: true,
+    workspace: { root: "/workspace/spec reviewer" },
+  });
+});
+
+test("Workspace.fromDtoは不正なfile URL rootを拒否する", () => {
+  const result = Workspace.fromDto({
+    root: "file://%",
+    kind: "plugin-workspace",
+    files: [],
+  });
+
+  expect(result).toMatchObject({
+    ok: false,
+    error: { field: "root" },
+  });
+});
+
 test.each([
   ["rootが空", { root: "", kind: "plugin-workspace", files: [] }, "root"],
   ["kindが未知", { root: "/workspace", kind: "unknown", files: [] }, "kind"],
