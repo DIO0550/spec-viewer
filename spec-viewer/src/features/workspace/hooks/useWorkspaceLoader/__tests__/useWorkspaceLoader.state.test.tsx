@@ -16,8 +16,10 @@ import {
   type UseWorkspaceLoaderResult,
   useWorkspaceLoader,
 } from "@/features/workspace/hooks/useWorkspaceLoader";
-import type { RecentWorkspaceStorage } from "@/features/workspace/infrastructure/recentWorkspaces";
-import { writeLastActiveWorkspacePath } from "@/features/workspace/infrastructure/recentWorkspaces";
+import {
+  createLocalStorageRecentWorkspacesRepository,
+  type RecentWorkspaceStorage,
+} from "@/features/workspace/infrastructure/recentWorkspacesRepository";
 import { workspacePathFixture } from "@/features/workspace/testing/workspacePath";
 import type { WorkspaceDragDropEvent } from "@/shared/api/tauri";
 import { getUnknownErrorMessage } from "@/shared/lib/errorMessage";
@@ -106,13 +108,45 @@ async function flush(): Promise<void> {
   });
 }
 
+type LoaderTestOptions = Omit<
+  UseWorkspaceLoaderOptions,
+  "recentWorkspacesRepository" | "recentWorkspacesClock"
+> &
+  Partial<
+    Pick<
+      UseWorkspaceLoaderOptions,
+      "recentWorkspacesRepository" | "recentWorkspacesClock"
+    >
+  > &
+  Readonly<{ recentWorkspacesStorage?: RecentWorkspaceStorage | null }>;
+
 type LoaderHandle = Readonly<{
   current: UseWorkspaceLoaderResult;
-  rerender: (options: UseWorkspaceLoaderOptions) => void;
+  rerender: (options: LoaderTestOptions) => void;
   unmount: () => void;
 }>;
 
-function renderLoader(options: UseWorkspaceLoaderOptions): LoaderHandle {
+function resolveLoaderOptions(
+  options: LoaderTestOptions,
+): UseWorkspaceLoaderOptions {
+  const { recentWorkspacesStorage, ...loaderOptions } = options;
+
+  return {
+    ...loaderOptions,
+    recentWorkspacesRepository:
+      loaderOptions.recentWorkspacesRepository ??
+      createLocalStorageRecentWorkspacesRepository(
+        recentWorkspacesStorage === undefined
+          ? new MemoryStorage()
+          : recentWorkspacesStorage,
+      ),
+    recentWorkspacesClock: loaderOptions.recentWorkspacesClock ?? {
+      now: () => "2026-05-03T00:00:00.000Z",
+    },
+  };
+}
+
+function renderLoader(options: LoaderTestOptions): LoaderHandle {
   const container = document.createElement("div");
   const root = createRoot(container);
   const result = {
@@ -133,7 +167,7 @@ function renderLoader(options: UseWorkspaceLoaderOptions): LoaderHandle {
   act(() => {
     root.render(
       <Wrapper>
-        <TestComponent options={options} />
+        <TestComponent options={resolveLoaderOptions(options)} />
       </Wrapper>,
     );
   });
@@ -146,7 +180,7 @@ function renderLoader(options: UseWorkspaceLoaderOptions): LoaderHandle {
       act(() => {
         root.render(
           <Wrapper>
-            <TestComponent options={next} />
+            <TestComponent options={resolveLoaderOptions(next)} />
           </Wrapper>,
         );
       });
@@ -420,7 +454,7 @@ test("recent失敗outcomeは一覧削除→onError→input rollbackの順で適�
 test("recent loadがcanceledなら保存済みpathを削除しない", async () => {
   const storage = new MemoryStorage();
   const recentPath = workspacePathFixture("/recent");
-  writeLastActiveWorkspacePath(recentPath, storage);
+  seedRecentWorkspace(storage, recentPath);
   const hook = renderLoader({
     onError: vi.fn(),
     workspace: fakeWorkspace(openedState("/active"), {
@@ -610,7 +644,7 @@ test("opening中はdropが無効化される", async () => {
 
 test("startup restoreはvalidate→loadを1回だけ実行しrerenderで再実行しない", async () => {
   const storage = new MemoryStorage();
-  writeLastActiveWorkspacePath(workspacePathFixture("/last"), storage);
+  seedRecentWorkspace(storage, workspacePathFixture("/last"));
   const commands = {
     selectWorkspaceDirectory: vi.fn(async () => "/selected"),
     validateWorkspaceDirectory: vi.fn(async () => ({ isDirectory: true })),
@@ -618,7 +652,7 @@ test("startup restoreはvalidate→loadを1回だけ実行しrerenderで再実�
   const load = vi.fn(async (path: WorkspacePath) =>
     loadedWorkspaceOutcome(path),
   );
-  const options: UseWorkspaceLoaderOptions = {
+  const options: LoaderTestOptions = {
     onError: vi.fn(),
     workspace: fakeWorkspace(idleState(), { load }),
     commands,
@@ -637,9 +671,27 @@ test("startup restoreはvalidate→loadを1回だけ実行しrerenderで再実�
   hook.unmount();
 });
 
+function seedRecentWorkspace(
+  storage: RecentWorkspaceStorage,
+  path: WorkspacePath,
+): void {
+  storage.setItem(
+    "spec-reviewer.recent-workspaces",
+    JSON.stringify([
+      {
+        path,
+        displayName: "last",
+        kind: "plugin-workspace",
+        lastOpenedAt: "2026-05-01T00:00:00.000Z",
+      },
+    ]),
+  );
+  storage.setItem("spec-reviewer.last-active-workspace", path);
+}
+
 function seededStorage(): MemoryStorage {
   const storage = new MemoryStorage();
-  writeLastActiveWorkspacePath(workspacePathFixture("/last"), storage);
+  seedRecentWorkspace(storage, workspacePathFixture("/last"));
   return storage;
 }
 

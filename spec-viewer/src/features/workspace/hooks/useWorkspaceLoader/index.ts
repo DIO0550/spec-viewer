@@ -43,7 +43,7 @@ export type {
 } from "@/features/workspace/hooks/useWorkspaceLoader/types";
 
 /**
- * @param options - Shared error sink plus test-only DI (commands / storage / workspace override).
+ * @param options - Shared error sink, recent-workspaces ports, and optional test adapters.
  * @returns Workspace open/restore/drop state and command adapters.
  */
 export function useWorkspaceLoader(
@@ -51,11 +51,10 @@ export function useWorkspaceLoader(
 ): UseWorkspaceLoaderResult {
   const workspaceFromContext = useWorkspace();
   const workspace = options.workspace ?? workspaceFromContext;
-  const recentWorkspaces = useRecentWorkspaces(
-    options.recentWorkspacesStorage === undefined
-      ? {}
-      : { storage: options.recentWorkspacesStorage },
-  );
+  const recentWorkspaces = useRecentWorkspaces({
+    repository: options.recentWorkspacesRepository,
+    clock: options.recentWorkspacesClock,
+  });
 
   const currentWorkspace = selectWorkspace(workspace.state);
   const activeWorkspaceRoot = selectActiveWorkspaceRoot(workspace.state);

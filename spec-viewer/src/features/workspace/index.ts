@@ -6,6 +6,7 @@ export type {
   Workspace,
   WorkspaceKind,
 } from "@/features/workspace/domain/workspace";
+export type { RecentWorkspace } from "@/features/workspace/domain/recentWorkspaces";
 export type {
   WorkspacePathParseError,
   WorkspacePathParseResult,
@@ -30,3 +31,7 @@ export { useRecentWorkspaces } from "./hooks/useRecentWorkspaces";
 export { useWorkspaceDrop } from "./hooks/useWorkspaceDrop";
 export { useWorkspaceLoader } from "./hooks/useWorkspaceLoader";
 export { useWorkspaceSidebarSectionPreference } from "./hooks/useWorkspaceSidebarSectionPreference";
+export {
+  createBrowserRecentWorkspacesRepository,
+  createRecentWorkspacesSystemClock,
+} from "./infrastructure/recentWorkspacesRepository";

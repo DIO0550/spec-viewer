@@ -1,95 +1,89 @@
-import { useCallback, useState } from "react";
-import type { Workspace } from "@/features/workspace/domain/workspace";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
+
+import type { RecentWorkspacesClock } from "@/features/workspace/application/ports/recentWorkspacesClock";
+import type { RecentWorkspacesRepository } from "@/features/workspace/application/ports/recentWorkspacesRepository";
 import {
-  WorkspacePath,
-  type WorkspacePath as WorkspacePathValue,
-} from "@/features/workspace/domain/workspacePath";
-import {
-  clearLastActiveWorkspacePath,
-  clearStoredRecentWorkspaces,
+  RecentWorkspaces,
   type RecentWorkspace,
-  type RecentWorkspaceStorage,
-  readLastActiveWorkspacePath,
-  readRecentWorkspaces,
-  recordRecentWorkspace,
-  removeRecentWorkspace,
-  writeLastActiveWorkspacePath,
-  writeRecentWorkspaces,
-} from "@/features/workspace/infrastructure/recentWorkspaces";
+  type RecentWorkspaces as RecentWorkspacesValue,
+} from "@/features/workspace/domain/recentWorkspaces";
+import type { Workspace } from "@/features/workspace/domain/workspace";
+import type { WorkspacePath } from "@/features/workspace/domain/workspacePath";
 
 export type UseRecentWorkspacesOptions = Readonly<{
-  storage?: RecentWorkspaceStorage | null;
+  repository: RecentWorkspacesRepository;
+  clock: RecentWorkspacesClock;
 }>;
 
 export type UseRecentWorkspacesResult = Readonly<{
   recentWorkspaces: readonly RecentWorkspace[];
-  lastActiveWorkspacePath: WorkspacePathValue | null;
+  lastActiveWorkspacePath: WorkspacePath | null;
   /** @param workspace - 最近使用した一覧へ記録するワークスペース。 */
   recordWorkspace: (workspace: Workspace) => void;
   /** @param path - 一覧から削除するワークスペースのパス。 */
-  removeWorkspace: (path: WorkspacePathValue) => void;
+  removeWorkspace: (path: WorkspacePath) => void;
   /** 最近使用したワークスペースをすべて消去する。 */
   clearWorkspaces: () => void;
 }>;
 
-/** @returns Recent workspace state synchronized with local browser storage. */
+/**
+ * @param options - Recent-workspaces repository and clock ports.
+ * @returns Recent workspace state synchronized through the repository port.
+ */
 export function useRecentWorkspaces(
-  options: UseRecentWorkspacesOptions = {},
+  options: UseRecentWorkspacesOptions,
 ): UseRecentWorkspacesResult {
-  const storage = "storage" in options ? options.storage : undefined;
-  const [recentWorkspaces, setRecentWorkspaces] = useState<
-    readonly RecentWorkspace[]
-  >(() => readRecentWorkspaces(storage));
-  const [lastActiveWorkspacePath, setLastActiveWorkspacePath] =
-    useState<WorkspacePathValue | null>(() =>
-      readLastActiveWorkspacePath(storage),
-    );
+  const { clock, repository } = options;
+  const [recentWorkspaces, setRecentWorkspaces] =
+    useState<RecentWorkspacesValue>(() => repository.load());
+  const recentWorkspacesRef = useRef(recentWorkspaces);
+  const repositoryRef = useRef(repository);
+
+  useLayoutEffect(() => {
+    if (repositoryRef.current === repository) {
+      return;
+    }
+
+    const restored = repository.load();
+    repositoryRef.current = repository;
+    recentWorkspacesRef.current = restored;
+    setRecentWorkspaces(restored);
+  }, [repository]);
 
   const recordWorkspace = useCallback(
     (workspace: Workspace): void => {
-      setRecentWorkspaces((currentWorkspaces) => {
-        const nextWorkspaces = recordRecentWorkspace(
-          currentWorkspaces,
-          workspace,
-        );
-        writeRecentWorkspaces(nextWorkspaces, storage);
-        return nextWorkspaces;
-      });
-      writeLastActiveWorkspacePath(workspace.root, storage);
-      setLastActiveWorkspacePath(readLastActiveWorkspacePath(storage));
+      const next = RecentWorkspaces.record(
+        recentWorkspacesRef.current,
+        workspace,
+        clock.now(),
+      );
+      recentWorkspacesRef.current = next;
+      repository.save(next);
+      setRecentWorkspaces(next);
     },
-    [storage],
+    [clock, repository],
   );
 
   const removeWorkspace = useCallback(
-    (path: WorkspacePathValue): void => {
-      setRecentWorkspaces((currentWorkspaces) => {
-        const nextWorkspaces = removeRecentWorkspace(currentWorkspaces, path);
-        writeRecentWorkspaces(nextWorkspaces, storage);
-        return nextWorkspaces;
-      });
-      setLastActiveWorkspacePath((currentPath) => {
-        if (currentPath === null || !WorkspacePath.equals(currentPath, path)) {
-          return currentPath;
-        }
-
-        clearLastActiveWorkspacePath(storage);
-        return null;
-      });
+    (path: WorkspacePath): void => {
+      const next = RecentWorkspaces.remove(recentWorkspacesRef.current, path);
+      recentWorkspacesRef.current = next;
+      repository.save(next);
+      setRecentWorkspaces(next);
     },
-    [storage],
+    [repository],
   );
 
   const clearWorkspaces = useCallback((): void => {
-    setRecentWorkspaces([]);
-    setLastActiveWorkspacePath(null);
-    clearStoredRecentWorkspaces(storage);
-    clearLastActiveWorkspacePath(storage);
-  }, [storage]);
+    const next = RecentWorkspaces.clear();
+    recentWorkspacesRef.current = next;
+    repository.clear();
+    setRecentWorkspaces(next);
+  }, [repository]);
 
   return {
-    recentWorkspaces,
-    lastActiveWorkspacePath,
+    recentWorkspaces: recentWorkspaces.entries,
+    lastActiveWorkspacePath: recentWorkspaces.lastActiveWorkspacePath,
     recordWorkspace,
     removeWorkspace,
     clearWorkspaces,
