@@ -1,7 +1,6 @@
 //! Use cases that coordinate domain logic and infrastructure.
 
 pub mod comments;
-pub mod review_runs;
 pub mod user_reviews;
 
 use std::path::Path;
@@ -38,11 +37,6 @@ pub use comments::{
     CommentAnchorResolution, CommentAnchorResolutionTarget, CommentUseCases,
     FilesystemCommentUseCases, GenerateCommentId, GetCurrentTime, ResolveCommentAnchorsResult,
     UtcCommentClock, UuidCommentIdGenerator,
-};
-pub use review_runs::{
-    ArchiveReviewRunInput, ArchiveReviewRunResult, CreateReviewRunInput, CreateReviewRunResult,
-    ListReviewRunsInput, ListReviewRunsResult, ListedReviewRun, ReviewRunExecutionMode,
-    ReviewRunListProblem, ReviewRunListProblemState,
 };
 pub use user_reviews::{
     ArchiveUserReviewInput, CreateUserReviewInput, FilesystemUserReviewUseCases,
@@ -550,8 +544,6 @@ pub enum AppUseCaseError {
     InvalidComment { message: String },
     #[error("failed to persist comments: {message}")]
     CommentRepository { message: String },
-    #[error("failed to export review run: {message}")]
-    ReviewRunExport { message: String },
     #[error("user review operation failed: {source}")]
     UserReview { source: UserReviewUseCaseError },
 }

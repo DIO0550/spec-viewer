@@ -81,8 +81,7 @@ impl UserReviewCommandError {
             AppUseCaseError::UserReview { .. } => UserReviewCommandErrorCode::InvalidUserReview,
             AppUseCaseError::SpecTreeScan { .. }
             | AppUseCaseError::SpecArchive { .. }
-            | AppUseCaseError::MarkdownRead { .. }
-            | AppUseCaseError::ReviewRunExport { .. } => UserReviewCommandErrorCode::Unexpected,
+            | AppUseCaseError::MarkdownRead { .. } => UserReviewCommandErrorCode::Unexpected,
         };
 
         Self::new(code, error.to_string())

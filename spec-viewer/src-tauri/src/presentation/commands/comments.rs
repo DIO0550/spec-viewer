@@ -65,7 +65,6 @@ impl AddCommentCommandError {
             AppUseCaseError::SpecTreeScan { .. }
             | AppUseCaseError::SpecArchive { .. }
             | AppUseCaseError::MarkdownRead { .. }
-            | AppUseCaseError::ReviewRunExport { .. }
             | AppUseCaseError::UserReview { .. } => AddCommentCommandErrorCode::Unexpected,
         };
 
@@ -144,7 +143,6 @@ impl CommentCommandError {
             AppUseCaseError::CommentRepository { .. } => CommentCommandErrorCode::CommentRepository,
             AppUseCaseError::SpecTreeScan { .. }
             | AppUseCaseError::SpecArchive { .. }
-            | AppUseCaseError::ReviewRunExport { .. }
             | AppUseCaseError::UserReview { .. } => CommentCommandErrorCode::Unexpected,
         };
 

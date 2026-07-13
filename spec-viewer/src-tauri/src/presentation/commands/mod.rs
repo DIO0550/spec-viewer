@@ -82,7 +82,6 @@ impl From<AppUseCaseError> for CommandError {
             AppUseCaseError::InvalidSpec { .. } => "invalidSpec",
             AppUseCaseError::InvalidComment { .. } => "invalidComment",
             AppUseCaseError::CommentRepository { .. } => "commentRepository",
-            AppUseCaseError::ReviewRunExport { .. } => "userReviewExport",
             AppUseCaseError::UserReview { ref source } => match source {
                 crate::app::use_cases::UserReviewUseCaseError::CreateIdCollision { .. } => {
                     "userReviewCollision"

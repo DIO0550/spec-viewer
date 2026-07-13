@@ -61,7 +61,6 @@ impl SpecCommandError {
             AppUseCaseError::InvalidSpec { .. } => SpecCommandErrorCode::InvalidSpec,
             AppUseCaseError::InvalidComment { .. }
             | AppUseCaseError::CommentRepository { .. }
-            | AppUseCaseError::ReviewRunExport { .. }
             | AppUseCaseError::UserReview { .. } => SpecCommandErrorCode::Unexpected,
         };
 

@@ -51,7 +51,6 @@ impl WorkspaceCommandError {
             | AppUseCaseError::InvalidSpec { .. }
             | AppUseCaseError::InvalidComment { .. }
             | AppUseCaseError::CommentRepository { .. }
-            | AppUseCaseError::ReviewRunExport { .. }
             | AppUseCaseError::UserReview { .. } => WorkspaceCommandErrorCode::Unexpected,
         };
 
