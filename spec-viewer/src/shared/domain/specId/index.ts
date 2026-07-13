@@ -40,6 +40,23 @@ export const SpecId = {
   },
 
   /**
+   * @param candidate - Candidate ancestor identity.
+   * @param descendant - Candidate descendant identity.
+   * @returns True when candidate is a strict segment ancestor of descendant.
+   */
+  isStrictAncestorOf(candidate: SpecId, descendant: SpecId): boolean {
+    const candidateSegments = candidate.split("/");
+    const descendantSegments = descendant.split("/");
+    if (candidateSegments.length >= descendantSegments.length) {
+      return false;
+    }
+
+    return candidateSegments.every(
+      (segment, index) => segment === descendantSegments[index],
+    );
+  },
+
+  /**
    * @param value - Validated spec identity.
    * @returns The raw identity for display and DOM boundaries.
    */

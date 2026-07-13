@@ -11,7 +11,12 @@ export type {
   SpecFileKey,
   SpecFileStatus,
 } from "@/features/specs/domain/specFile";
-export type { SpecNode } from "@/features/specs/domain/specNode";
+export type {
+  SpecNode,
+  SpecNodeCapabilities,
+  SpecNodeKind,
+} from "@/features/specs/domain/specNode";
+export type { SpecFileCollection } from "@/features/specs/domain/specFileCollection";
 export type { SpecTree } from "@/features/specs/domain/specTree";
 
 export type MarkdownBlockType =

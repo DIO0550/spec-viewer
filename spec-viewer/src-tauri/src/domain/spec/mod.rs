@@ -476,12 +476,50 @@ impl MarkdownBlock {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SpecNodeKind {
+    SourceGroup,
+    Spec,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SpecNodeCapabilities {
+    reviewable: bool,
+    archiveable: bool,
+}
+
+impl SpecNodeCapabilities {
+    pub const fn source_group() -> Self {
+        Self {
+            reviewable: false,
+            archiveable: false,
+        }
+    }
+
+    pub const fn spec(reviewable: bool) -> Self {
+        Self {
+            reviewable,
+            archiveable: true,
+        }
+    }
+
+    pub const fn is_reviewable(self) -> bool {
+        self.reviewable
+    }
+
+    pub const fn is_archiveable(self) -> bool {
+        self.archiveable
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpecNode {
     id: String,
     label: String,
     files: Vec<SpecFile>,
     children: Vec<SpecNode>,
+    kind: SpecNodeKind,
+    capabilities: SpecNodeCapabilities,
 }
 
 impl SpecNode {
@@ -503,13 +541,27 @@ impl SpecNode {
         if trimmed_label.is_empty() {
             return Err(SpecDomainError::MissingNodeLabel);
         }
+        let reviewable = !files.is_empty();
 
         Ok(Self {
             id: trimmed_id.to_string(),
             label: trimmed_label.to_string(),
             files,
             children,
+            kind: SpecNodeKind::Spec,
+            capabilities: SpecNodeCapabilities::spec(reviewable),
         })
+    }
+
+    pub fn source_group(
+        id: impl Into<String>,
+        label: impl Into<String>,
+        children: Vec<SpecNode>,
+    ) -> Result<Self, SpecDomainError> {
+        let mut node = Self::new(id, label, Vec::new(), children)?;
+        node.kind = SpecNodeKind::SourceGroup;
+        node.capabilities = SpecNodeCapabilities::source_group();
+        Ok(node)
     }
 
     pub fn leaf(
@@ -542,6 +594,22 @@ impl SpecNode {
 
     pub fn is_leaf(&self) -> bool {
         self.children.is_empty()
+    }
+
+    pub fn kind(&self) -> SpecNodeKind {
+        self.kind
+    }
+
+    pub fn capabilities(&self) -> SpecNodeCapabilities {
+        self.capabilities
+    }
+
+    pub fn is_reviewable(&self) -> bool {
+        self.capabilities.is_reviewable()
+    }
+
+    pub fn is_archiveable(&self) -> bool {
+        self.capabilities.is_archiveable()
     }
 }
 

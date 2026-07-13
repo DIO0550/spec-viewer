@@ -19,7 +19,7 @@ export function buildSpecsSelectors(state: SpecsState): SpecsSelectors {
   const selectedSpec =
     tree === null || state.selection.specId === null
       ? null
-      : SpecTreeDomain.findNode(tree, state.selection.specId);
+      : SpecTreeDomain.find(tree, state.selection.specId);
   const selectedFile = SpecNodeDomain.selectedFile(
     selectedSpec,
     state.selection.fileKey,

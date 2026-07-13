@@ -1,11 +1,15 @@
 import { useCallback } from "react";
 import type { NavigationDirection } from "@/app/App/hooks/types";
 import { useKeyboardShortcuts } from "@/features/preferences";
-import type { SpecFileKey } from "@/features/specs";
+import {
+  SpecFileCollection,
+  type SpecFileCollection as SpecFileCollectionType,
+  type SpecFileKey,
+} from "@/features/specs";
 
 /** selectedSpec のうち本フックが使う形だけの狭い構造的型。 */
 export type NavigableSpec = Readonly<{
-  files: readonly Readonly<{ key: SpecFileKey }>[];
+  files: SpecFileCollectionType;
 }>;
 
 export type UseSpecViewKeyboardNavigationOptions = Readonly<{
@@ -36,26 +40,17 @@ export function useSpecViewKeyboardNavigation(
 
   const selectAdjacentFile = useCallback(
     (direction: NavigationDirection): boolean => {
-      if (
-        isCurrentViewLoading ||
-        selectedSpec === null ||
-        selectedSpec.files.length === 0
-      ) {
+      if (isCurrentViewLoading || selectedSpec === null) {
         return false;
       }
 
-      const currentIndex = selectedSpec.files.findIndex(
-        (file) => file.key === selectedFileKey,
+      const nextFileKey = SpecFileCollection.adjacentKey(
+        selectedSpec.files,
+        selectedFileKey,
+        direction,
       );
-      const selectedIndex = currentIndex < 0 ? 0 : currentIndex;
-      const offset = direction === "next" ? 1 : -1;
-      const nextIndex =
-        (selectedIndex + offset + selectedSpec.files.length) %
-        selectedSpec.files.length;
-      const nextFileKey: SpecFileKey | undefined =
-        selectedSpec.files[nextIndex]?.key;
 
-      if (nextFileKey === undefined) {
+      if (nextFileKey === null) {
         return false;
       }
 

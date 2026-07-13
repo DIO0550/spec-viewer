@@ -13,7 +13,7 @@ use crate::{
     },
     domain::spec::{
         MarkdownBlock, MarkdownBlockSourceRange, SpecDocumentFormat, SpecFile, SpecFileKey,
-        SpecFileStatus, SpecNode,
+        SpecFileStatus, SpecNode, SpecNodeKind,
     },
 };
 
@@ -134,8 +134,24 @@ impl SpecTreeResponse {
 pub struct SpecNodeResponse {
     id: String,
     label: String,
+    kind: SpecNodeKindResponse,
+    capabilities: SpecNodeCapabilitiesResponse,
     files: Vec<SpecFileResponse>,
     children: Vec<SpecNodeResponse>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+enum SpecNodeKindResponse {
+    SourceGroup,
+    Spec,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SpecNodeCapabilitiesResponse {
+    reviewable: bool,
+    archiveable: bool,
 }
 
 impl SpecNodeResponse {
@@ -375,8 +391,22 @@ impl From<&SpecNode> for SpecNodeResponse {
         Self {
             id: node.id().to_string(),
             label: node.label().to_string(),
+            kind: SpecNodeKindResponse::from(node.kind()),
+            capabilities: SpecNodeCapabilitiesResponse {
+                reviewable: node.is_reviewable(),
+                archiveable: node.is_archiveable(),
+            },
             files: node.files().iter().map(SpecFileResponse::from).collect(),
             children: node.children().iter().map(SpecNodeResponse::from).collect(),
+        }
+    }
+}
+
+impl From<SpecNodeKind> for SpecNodeKindResponse {
+    fn from(kind: SpecNodeKind) -> Self {
+        match kind {
+            SpecNodeKind::SourceGroup => Self::SourceGroup,
+            SpecNodeKind::Spec => Self::Spec,
         }
     }
 }
@@ -534,6 +564,43 @@ mod tests {
         assert_eq!(
             "missing",
             response.specs()[0].children()[0].files()[0].status()
+        );
+    }
+
+    #[test]
+    fn spec_tree_response_serializes_explicit_node_kind_and_capabilities() {
+        let reviewable = SpecNode::leaf(
+            ".plugin-workspace/.specs/auth",
+            "auth",
+            vec![
+                SpecFile::new(SpecFileKey::Tasks, "tasks.md", SpecFileStatus::Present)
+                    .expect("file should be valid"),
+            ],
+        )
+        .expect("reviewable spec should be valid");
+        let empty = SpecNode::leaf(".plugin-workspace/.specs/empty", "empty", Vec::new())
+            .expect("empty spec should be valid");
+        let root =
+            SpecNode::source_group(".plugin-workspace/.specs", "Root", vec![reviewable, empty])
+                .expect("source group should be valid");
+
+        let serialized = serde_json::to_value(SpecTreeResponse::from(vec![root]))
+            .expect("spec tree response should serialize");
+
+        assert_eq!("sourceGroup", serialized["specs"][0]["kind"]);
+        assert_eq!(
+            serde_json::json!({ "reviewable": false, "archiveable": false }),
+            serialized["specs"][0]["capabilities"]
+        );
+        assert_eq!("spec", serialized["specs"][0]["children"][0]["kind"]);
+        assert_eq!(
+            serde_json::json!({ "reviewable": true, "archiveable": true }),
+            serialized["specs"][0]["children"][0]["capabilities"]
+        );
+        assert_eq!("spec", serialized["specs"][0]["children"][1]["kind"]);
+        assert_eq!(
+            serde_json::json!({ "reviewable": false, "archiveable": true }),
+            serialized["specs"][0]["children"][1]["capabilities"]
         );
     }
 

@@ -2,6 +2,7 @@ export { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
 export { toSpecFeatureError } from "@/features/specs/infra/tauri/specErrorMapper";
 export { SpecTabs } from "@/features/specs/components/SpecTabs";
 export { SpecTree } from "@/features/specs/components/SpecTree";
+export { SpecFileCollection } from "@/features/specs/domain/specFileCollection";
 export {
   type SpecDocumentState,
   type SpecSelectionChange,
@@ -19,6 +20,8 @@ export type {
   MarkdownBlockType,
   SpecDocument,
   SpecFile,
+  SpecNodeCapabilities,
+  SpecNodeKind,
   SpecFileKey,
   SpecNode,
   SpecTree as SpecTreeData,

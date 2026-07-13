@@ -3,12 +3,24 @@ import {
   type SpecFile as SpecFileType,
   type SpecFileKey,
 } from "@/features/specs/domain/specFile";
+import {
+  SpecFileCollection,
+  type SpecFileCollection as SpecFileCollectionType,
+} from "@/features/specs/domain/specFileCollection";
 import type { SpecId } from "@/shared/domain/specId";
+
+export type SpecNodeKind = "sourceGroup" | "spec";
+export type SpecNodeCapabilities = Readonly<{
+  reviewable: boolean;
+  archiveable: boolean;
+}>;
 
 export type SpecNode = Readonly<{
   id: SpecId;
   label: string;
-  files: readonly SpecFileType[];
+  kind: SpecNodeKind;
+  capabilities: SpecNodeCapabilities;
+  files: SpecFileCollectionType;
   children: readonly SpecNode[];
 }>;
 
@@ -17,7 +29,7 @@ export const SpecNode = {
   create(input: SpecNode): SpecNode {
     return {
       ...input,
-      files: [...input.files],
+      files: SpecFileCollection.create(input.files),
       children: [...input.children],
     };
   },
@@ -57,13 +69,13 @@ export const SpecNode = {
     const firstNode = SpecNode.first(nodes);
 
     for (const node of nodes) {
-      if (node.files.length > 0) {
+      if (node.capabilities.reviewable) {
         return node;
       }
 
       const child = SpecNode.firstOpenable(node.children);
 
-      if (child !== null && child.files.length > 0) {
+      if (child !== null && child.capabilities.reviewable) {
         return child;
       }
     }
