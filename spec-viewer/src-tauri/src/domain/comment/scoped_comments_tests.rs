@@ -91,9 +91,8 @@ fn scoped_comments_owns_add_update_and_delete_rules() {
 fn scoped_comments_rejects_duplicate_add_without_mutation() {
     let first = comment("cmt_duplicate", SpecFileKey::Impl, "First", 1);
     let duplicate = comment("cmt_duplicate", SpecFileKey::Impl, "Duplicate", 2);
-    let mut comments =
-        ScopedComments::restore(scope(SpecFileKey::Impl), vec![first.clone()])
-            .expect("aggregate should restore");
+    let mut comments = ScopedComments::restore(scope(SpecFileKey::Impl), vec![first.clone()])
+        .expect("aggregate should restore");
 
     assert_eq!(
         Err(ScopedCommentsError::DuplicateComment {
@@ -108,9 +107,8 @@ fn scoped_comments_rejects_duplicate_add_without_mutation() {
 fn scoped_comments_rejects_stale_update_without_mutation() {
     let current = comment("cmt_stale", SpecFileKey::Impl, "Current", 3);
     let stale = comment("cmt_stale", SpecFileKey::Impl, "Stale", 2);
-    let mut comments =
-        ScopedComments::restore(scope(SpecFileKey::Impl), vec![current.clone()])
-            .expect("aggregate should restore");
+    let mut comments = ScopedComments::restore(scope(SpecFileKey::Impl), vec![current.clone()])
+        .expect("aggregate should restore");
 
     assert_eq!(
         Err(ScopedCommentsError::StaleUpdate {
