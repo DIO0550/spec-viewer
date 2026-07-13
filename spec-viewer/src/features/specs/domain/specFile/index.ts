@@ -16,10 +16,15 @@ export type SpecFile = Readonly<{
 }>;
 
 export const SpecFile = {
+  /**  Spec file restored from a validated boundary value. */
+  create(input: SpecFile): SpecFile {
+    return { ...input };
+  },
+
   /**
-   * @param files - Candidate spec files
-   * @param key - File key to find
-   * @returns Matching spec file, or null when absent.
+   *  files - Candidate spec files
+   *  key - File key to find
+   *  Matching spec file, or null when absent.
    */
   findByKey: (
     files: readonly SpecFile[],

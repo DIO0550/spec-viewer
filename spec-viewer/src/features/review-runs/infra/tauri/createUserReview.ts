@@ -2,6 +2,10 @@ import type {
   CreateUserReviewRequest,
   CreateUserReviewResponse,
 } from "@/features/review-runs/types/userReviewIpc";
+import {
+  decodeCreateUserReviewResponse,
+  encodeCreateUserReviewRequest,
+} from "@/features/review-runs/infra/tauri/userReviewIpcCodec";
 
 import { invokeTauriCommand } from "@/shared/api/tauri/invokeTauriCommand";
 import { isRecord } from "@/shared/lib/isRecord";
@@ -20,6 +24,7 @@ export type CreateUserReviewCommandErrorCode =
   | "commentRepository"
   | "userReviewExport"
   | "unexpected"
+  | "invalidResponse"
   | "unknown";
 
 export type CreateUserReviewCommandError = Readonly<{
@@ -49,7 +54,7 @@ export const CreateUserReviewCommandError = {
         command: CREATE_USER_REVIEW_COMMAND,
         code: error.code,
         message: error.message,
-        cause: error.cause,
+        cause: "cause" in error ? error.cause : error,
       };
     }
 
@@ -94,13 +99,20 @@ export const CreateUserReviewCommandError = {
   isCommandErrorCode(
     value: unknown,
   ): value is CreateUserReviewCommandErrorCode {
-    return CreateUserReviewCommandError.isCode(value) || value === "unknown";
+    return (
+      CreateUserReviewCommandError.isCode(value) ||
+      value === "invalidResponse" ||
+      value === "unknown"
+    );
   },
 
   /** @returns True when the value is a known create_user_review backend error code. */
   isCode(
     value: unknown,
-  ): value is Exclude<CreateUserReviewCommandErrorCode, "unknown"> {
+  ): value is Exclude<
+    CreateUserReviewCommandErrorCode,
+    "unknown" | "invalidResponse"
+  > {
     return (
       value === "invalidRequest" ||
       value === "workspaceDetection" ||
@@ -118,15 +130,16 @@ export const CreateUserReviewCommandError = {
 export async function createUserReview(
   request: CreateUserReviewRequest,
 ): Promise<CreateUserReviewCommandResponse> {
-  const commandRequest: CreateUserReviewCommandRequest = request;
+  const commandRequest = encodeCreateUserReviewRequest(request);
 
   return invokeTauriCommand<
     CreateUserReviewCommandResponse,
-    CreateUserReviewCommandRequest,
+    ReturnType<typeof encodeCreateUserReviewRequest>,
     CreateUserReviewCommandError
   >(
     CREATE_USER_REVIEW_COMMAND,
     commandRequest,
     CreateUserReviewCommandError.fromUnknown,
+    decodeCreateUserReviewResponse,
   );
 }

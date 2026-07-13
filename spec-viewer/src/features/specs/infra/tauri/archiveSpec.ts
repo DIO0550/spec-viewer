@@ -2,6 +2,10 @@ import type {
   ArchiveSpecRequest,
   ArchiveSpecResponse,
 } from "@/features/specs/types/spec";
+import {
+  decodeArchiveSpecResponse,
+  encodeArchiveSpecRequest,
+} from "@/features/specs/infra/tauri/specIpcCodec";
 
 import { invokeTauriCommand } from "@/shared/api/tauri/invokeTauriCommand";
 import { isRecord } from "@/shared/lib/isRecord";
@@ -18,6 +22,7 @@ export type ArchiveSpecCommandErrorCode =
   | "specArchive"
   | "invalidSpec"
   | "unexpected"
+  | "invalidResponse"
   | "unknown";
 
 export type ArchiveSpecCommandError = Readonly<{
@@ -47,7 +52,7 @@ export const ArchiveSpecCommandError = {
         command: ARCHIVE_SPEC_COMMAND,
         code: error.code,
         message: error.message,
-        cause: error.cause,
+        cause: "cause" in error ? error.cause : error,
       };
     }
 
@@ -90,13 +95,20 @@ export const ArchiveSpecCommandError = {
 
   /** @returns True when the value is a archive_spec command error code. */
   isCommandErrorCode(value: unknown): value is ArchiveSpecCommandErrorCode {
-    return ArchiveSpecCommandError.isCode(value) || value === "unknown";
+    return (
+      ArchiveSpecCommandError.isCode(value) ||
+      value === "invalidResponse" ||
+      value === "unknown"
+    );
   },
 
   /** @returns True when the value is a known archive_spec backend error code. */
   isCode(
     value: unknown,
-  ): value is Exclude<ArchiveSpecCommandErrorCode, "unknown"> {
+  ): value is Exclude<
+    ArchiveSpecCommandErrorCode,
+    "unknown" | "invalidResponse"
+  > {
     return (
       value === "invalidRequest" ||
       value === "workspaceDetection" ||
@@ -118,5 +130,10 @@ export async function archiveSpec(
     ArchiveSpecCommandResponse,
     ArchiveSpecCommandRequest,
     ArchiveSpecCommandError
-  >(ARCHIVE_SPEC_COMMAND, commandRequest, ArchiveSpecCommandError.fromUnknown);
+  >(
+    ARCHIVE_SPEC_COMMAND,
+    encodeArchiveSpecRequest(commandRequest),
+    ArchiveSpecCommandError.fromUnknown,
+    decodeArchiveSpecResponse,
+  );
 }

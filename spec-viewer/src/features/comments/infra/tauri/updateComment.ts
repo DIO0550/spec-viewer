@@ -2,6 +2,10 @@ import type {
   Comment,
   UpdateCommentRequest,
 } from "@/features/comments/types/comment";
+import {
+  decodeUpdateCommentResponse,
+  encodeUpdateCommentRequest,
+} from "@/features/comments/infra/tauri/commentIpcCodec";
 
 import { invokeTauriCommand } from "@/shared/api/tauri/invokeTauriCommand";
 import { isRecord } from "@/shared/lib/isRecord";
@@ -19,6 +23,7 @@ export type UpdateCommentCommandErrorCode =
   | "invalidComment"
   | "commentRepository"
   | "unexpected"
+  | "invalidResponse"
   | "unknown";
 
 export type UpdateCommentCommandError = Readonly<{
@@ -48,7 +53,7 @@ export const UpdateCommentCommandError = {
         command: UPDATE_COMMENT_COMMAND,
         code: error.code,
         message: error.message,
-        cause: error.cause,
+        cause: "cause" in error ? error.cause : error,
       };
     }
 
@@ -91,13 +96,20 @@ export const UpdateCommentCommandError = {
 
   /** @returns True when the value is a update_comment command error code. */
   isCommandErrorCode(value: unknown): value is UpdateCommentCommandErrorCode {
-    return UpdateCommentCommandError.isCode(value) || value === "unknown";
+    return (
+      UpdateCommentCommandError.isCode(value) ||
+      value === "invalidResponse" ||
+      value === "unknown"
+    );
   },
 
   /** @returns True when the value is a known update_comment backend error code. */
   isCode(
     value: unknown,
-  ): value is Exclude<UpdateCommentCommandErrorCode, "unknown"> {
+  ): value is Exclude<
+    UpdateCommentCommandErrorCode,
+    "unknown" | "invalidResponse"
+  > {
     return (
       value === "invalidRequest" ||
       value === "workspaceDetection" ||
@@ -118,11 +130,12 @@ export async function updateComment(
 
   return invokeTauriCommand<
     UpdateCommentCommandResponse,
-    UpdateCommentCommandRequest,
+    ReturnType<typeof encodeUpdateCommentRequest>,
     UpdateCommentCommandError
   >(
     UPDATE_COMMENT_COMMAND,
-    commandRequest,
+    encodeUpdateCommentRequest(commandRequest),
     UpdateCommentCommandError.fromUnknown,
+    decodeUpdateCommentResponse,
   );
 }

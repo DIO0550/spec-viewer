@@ -2,6 +2,10 @@ import type {
   GenerateLlmPromptRequest,
   GenerateLlmPromptResponse,
 } from "@/features/comments/types/comment";
+import {
+  decodeGenerateLlmPromptResponse,
+  encodeGenerateLlmPromptRequest,
+} from "@/features/comments/infra/tauri/commentIpcCodec";
 
 import { invokeTauriCommand } from "@/shared/api/tauri/invokeTauriCommand";
 import { isRecord } from "@/shared/lib/isRecord";
@@ -19,6 +23,7 @@ export type GenerateLlmPromptCommandErrorCode =
   | "invalidComment"
   | "commentRepository"
   | "unexpected"
+  | "invalidResponse"
   | "unknown";
 
 export type GenerateLlmPromptCommandError = Readonly<{
@@ -48,7 +53,7 @@ export const GenerateLlmPromptCommandError = {
         command: GENERATE_LLM_PROMPT_COMMAND,
         code: error.code,
         message: error.message,
-        cause: error.cause,
+        cause: "cause" in error ? error.cause : error,
       };
     }
 
@@ -93,13 +98,20 @@ export const GenerateLlmPromptCommandError = {
   isCommandErrorCode(
     value: unknown,
   ): value is GenerateLlmPromptCommandErrorCode {
-    return GenerateLlmPromptCommandError.isCode(value) || value === "unknown";
+    return (
+      GenerateLlmPromptCommandError.isCode(value) ||
+      value === "invalidResponse" ||
+      value === "unknown"
+    );
   },
 
   /** @returns True when the value is a known generate_llm_prompt backend error code. */
   isCode(
     value: unknown,
-  ): value is Exclude<GenerateLlmPromptCommandErrorCode, "unknown"> {
+  ): value is Exclude<
+    GenerateLlmPromptCommandErrorCode,
+    "unknown" | "invalidResponse"
+  > {
     return (
       value === "invalidRequest" ||
       value === "workspaceDetection" ||
@@ -124,7 +136,8 @@ export async function generateLlmPrompt(
     GenerateLlmPromptCommandError
   >(
     GENERATE_LLM_PROMPT_COMMAND,
-    commandRequest,
+    encodeGenerateLlmPromptRequest(commandRequest),
     GenerateLlmPromptCommandError.fromUnknown,
+    decodeGenerateLlmPromptResponse,
   );
 }

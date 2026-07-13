@@ -1,8 +1,4 @@
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
-import {
-  mapListUserReviewsResponseToUserReviews,
-  mapUserReviewDtoToUserReview,
-} from "@/features/review-runs/infra/userReviewIpcAdapter";
 import type {
   ArchiveUserReviewResponse,
   CreateUserReviewResponse,
@@ -31,11 +27,9 @@ export async function listUserReviews(
   target: UserReviewTarget,
   correlationId: string | null,
 ): Promise<ListUserReviewsResponse> {
-  const response = await commands.listUserReviews(
+  return commands.listUserReviews(
     createListUserReviewsRequest(workspacePath, target, correlationId),
   );
-
-  return mapListUserReviewsResponseToUserReviews(response);
 }
 
 /**
@@ -51,16 +45,12 @@ export async function createUserReview(
   target: UserReviewTarget,
   param: CreateUserReviewParam,
 ): Promise<CreateUserReviewResponse> {
-  const response = await commands.createUserReview({
+  return commands.createUserReview({
     workspacePath,
     target,
     commentIds: param.commentIds,
     workspaceMode: param.workspaceMode,
   });
-
-  return {
-    userReview: mapUserReviewDtoToUserReview(response.userReview),
-  };
 }
 
 /**
@@ -76,15 +66,11 @@ export async function archiveUserReview(
   target: UserReviewTarget,
   userReviewId: string,
 ): Promise<ArchiveUserReviewResponse> {
-  const response = await commands.archiveUserReview({
+  return commands.archiveUserReview({
     workspacePath,
     target,
     userReviewId,
   });
-
-  return {
-    userReview: mapUserReviewDtoToUserReview(response.userReview),
-  };
 }
 
 /**

@@ -2,6 +2,10 @@ import type {
   DeleteCommentRequest,
   DeleteCommentResponse,
 } from "@/features/comments/types/comment";
+import {
+  decodeDeleteCommentResponse,
+  encodeDeleteCommentRequest,
+} from "@/features/comments/infra/tauri/commentIpcCodec";
 
 import { invokeTauriCommand } from "@/shared/api/tauri/invokeTauriCommand";
 import { isRecord } from "@/shared/lib/isRecord";
@@ -19,6 +23,7 @@ export type DeleteCommentCommandErrorCode =
   | "invalidComment"
   | "commentRepository"
   | "unexpected"
+  | "invalidResponse"
   | "unknown";
 
 export type DeleteCommentCommandError = Readonly<{
@@ -48,7 +53,7 @@ export const DeleteCommentCommandError = {
         command: DELETE_COMMENT_COMMAND,
         code: error.code,
         message: error.message,
-        cause: error.cause,
+        cause: "cause" in error ? error.cause : error,
       };
     }
 
@@ -91,13 +96,20 @@ export const DeleteCommentCommandError = {
 
   /** @returns True when the value is a delete_comment command error code. */
   isCommandErrorCode(value: unknown): value is DeleteCommentCommandErrorCode {
-    return DeleteCommentCommandError.isCode(value) || value === "unknown";
+    return (
+      DeleteCommentCommandError.isCode(value) ||
+      value === "invalidResponse" ||
+      value === "unknown"
+    );
   },
 
   /** @returns True when the value is a known delete_comment backend error code. */
   isCode(
     value: unknown,
-  ): value is Exclude<DeleteCommentCommandErrorCode, "unknown"> {
+  ): value is Exclude<
+    DeleteCommentCommandErrorCode,
+    "unknown" | "invalidResponse"
+  > {
     return (
       value === "invalidRequest" ||
       value === "workspaceDetection" ||
@@ -118,11 +130,12 @@ export async function deleteComment(
 
   return invokeTauriCommand<
     DeleteCommentCommandResponse,
-    DeleteCommentCommandRequest,
+    ReturnType<typeof encodeDeleteCommentRequest>,
     DeleteCommentCommandError
   >(
     DELETE_COMMENT_COMMAND,
-    commandRequest,
+    encodeDeleteCommentRequest(commandRequest),
     DeleteCommentCommandError.fromUnknown,
+    decodeDeleteCommentResponse,
   );
 }

@@ -12,9 +12,7 @@ export const ValidatedStoredUserReview = {
    * @param storedUserReview - Stored user review data read from a boundary.
    * @returns Validation result for converting stored data into validated stored data.
    */
-  from(
-    storedUserReview: StoredUserReview,
-  ):
+  from(storedUserReview: StoredUserReview):
     | Readonly<{
         ok: true;
         validatedStoredUserReview: ValidatedStoredUserReview;
@@ -34,8 +32,7 @@ export const ValidatedStoredUserReview = {
 
     return {
       ok: true,
-      validatedStoredUserReview:
-        storedUserReview as ValidatedStoredUserReview,
+      validatedStoredUserReview: restoreValidatedUserReview(storedUserReview),
     };
   },
 
@@ -75,4 +72,30 @@ function validateArchiveState(
   }
 
   return null;
+}
+
+/** @returns A discriminated review after archive-state validation. */
+function restoreValidatedUserReview(
+  storedUserReview: StoredUserReview,
+): ValidatedStoredUserReview {
+  if (
+    storedUserReview.status === "archived" &&
+    storedUserReview.archivedAt !== null
+  ) {
+    return {
+      ...storedUserReview,
+      status: "archived",
+      archivedAt: storedUserReview.archivedAt,
+    };
+  }
+
+  if (storedUserReview.status === "inProgress") {
+    return { ...storedUserReview, status: "inProgress", archivedAt: null };
+  }
+
+  if (storedUserReview.status === "completed") {
+    return { ...storedUserReview, status: "completed", archivedAt: null };
+  }
+
+  return { ...storedUserReview, status: "active", archivedAt: null };
 }

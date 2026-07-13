@@ -1,5 +1,5 @@
 import type { UserReview } from "@/features/review-runs/domain/userReview";
-import type { UserReviewWorkspaceMode } from "@/features/review-runs/types/userReviewIpc";
+import type { UserReviewWorkspaceMode } from "@/features/review-runs/domain/userReviewWorkspaceMode";
 import type { CommentId } from "@/shared/domain/commentId";
 
 export type AsyncOperationState<TPayload, TResult, TError = unknown> =

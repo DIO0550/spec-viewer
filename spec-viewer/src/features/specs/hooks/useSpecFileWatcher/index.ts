@@ -99,9 +99,9 @@ export function useSpecFileWatcher(options: UseSpecFileWatcherOptions): void {
       let unlistenChanged: (() => void) | null = null;
       let unlistenError: (() => void) | null = null;
       try {
-        unlistenChanged = await subscribe<SpecFileWatchChangedEvent>(
-          SPEC_FILE_WATCH_CHANGED_EVENT,
-          (event) => {
+        unlistenChanged = await subscribe({
+          eventName: SPEC_FILE_WATCH_CHANGED_EVENT,
+          handler: (event) => {
             if (
               !isActive ||
               !isSpecFileWatchEventForSelectionIdentity(
@@ -120,10 +120,10 @@ export function useSpecFileWatcher(options: UseSpecFileWatcherOptions): void {
 
             void options.onConfigChange?.(event.payload);
           },
-        );
-        unlistenError = await subscribe<SpecFileWatchErrorEvent>(
-          SPEC_FILE_WATCH_ERROR_EVENT,
-          (event) => {
+        });
+        unlistenError = await subscribe({
+          eventName: SPEC_FILE_WATCH_ERROR_EVENT,
+          handler: (event) => {
             if (
               !isActive ||
               !isSpecFileWatchEventForSelectionIdentity(
@@ -137,7 +137,7 @@ export function useSpecFileWatcher(options: UseSpecFileWatcherOptions): void {
 
             options.onWatcherError?.(event.payload);
           },
-        );
+        });
         cleanupListeners = () => {
           unlistenChanged?.();
           unlistenError?.();

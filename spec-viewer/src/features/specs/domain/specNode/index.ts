@@ -1,4 +1,8 @@
-import { SpecFile, type SpecFile as SpecFileType, type SpecFileKey } from "@/features/specs/domain/specFile";
+import {
+  SpecFile,
+  type SpecFile as SpecFileType,
+  type SpecFileKey,
+} from "@/features/specs/domain/specFile";
 
 export type SpecNode = Readonly<{
   id: string;
@@ -8,6 +12,15 @@ export type SpecNode = Readonly<{
 }>;
 
 export const SpecNode = {
+  /** @returns Spec node restored from validated boundary values. */
+  create(input: SpecNode): SpecNode {
+    return {
+      ...input,
+      files: [...input.files],
+      children: [...input.children],
+    };
+  },
+
   /**
    * @param nodes - Candidate spec nodes
    * @param id - Spec node id to find

@@ -1,4 +1,8 @@
 import type { ListSpecsRequest, SpecTree } from "@/features/specs/types/spec";
+import {
+  decodeListSpecsResponse,
+  encodeListSpecsRequest,
+} from "@/features/specs/infra/tauri/specIpcCodec";
 
 import { invokeTauriCommand } from "@/shared/api/tauri/invokeTauriCommand";
 import { isRecord } from "@/shared/lib/isRecord";
@@ -14,6 +18,7 @@ export type ListSpecsCommandErrorCode =
   | "configLoad"
   | "specTreeScan"
   | "unexpected"
+  | "invalidResponse"
   | "unknown";
 
 export type ListSpecsCommandError = Readonly<{
@@ -43,7 +48,7 @@ export const ListSpecsCommandError = {
         command: LIST_SPECS_COMMAND,
         code: error.code,
         message: error.message,
-        cause: error.cause,
+        cause: "cause" in error ? error.cause : error,
       };
     }
 
@@ -83,13 +88,20 @@ export const ListSpecsCommandError = {
 
   /** @returns True when the value is a list_specs command error code. */
   isCommandErrorCode(value: unknown): value is ListSpecsCommandErrorCode {
-    return ListSpecsCommandError.isCode(value) || value === "unknown";
+    return (
+      ListSpecsCommandError.isCode(value) ||
+      value === "invalidResponse" ||
+      value === "unknown"
+    );
   },
 
   /** @returns True when the value is a known list_specs backend error code. */
   isCode(
     value: unknown,
-  ): value is Exclude<ListSpecsCommandErrorCode, "unknown"> {
+  ): value is Exclude<
+    ListSpecsCommandErrorCode,
+    "unknown" | "invalidResponse"
+  > {
     return (
       value === "invalidRequest" ||
       value === "workspaceDetection" ||
@@ -110,5 +122,10 @@ export async function listSpecs(
     ListSpecsCommandResponse,
     ListSpecsCommandRequest,
     ListSpecsCommandError
-  >(LIST_SPECS_COMMAND, commandRequest, ListSpecsCommandError.fromUnknown);
+  >(
+    LIST_SPECS_COMMAND,
+    encodeListSpecsRequest(commandRequest),
+    ListSpecsCommandError.fromUnknown,
+    decodeListSpecsResponse,
+  );
 }

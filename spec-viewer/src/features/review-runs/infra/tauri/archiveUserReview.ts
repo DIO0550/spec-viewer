@@ -2,6 +2,10 @@ import type {
   ArchiveUserReviewRequest,
   ArchiveUserReviewResponse,
 } from "@/features/review-runs/types/userReviewIpc";
+import {
+  decodeArchiveUserReviewResponse,
+  encodeArchiveUserReviewRequest,
+} from "@/features/review-runs/infra/tauri/userReviewIpcCodec";
 
 import { invokeTauriCommand } from "@/shared/api/tauri/invokeTauriCommand";
 import { isRecord } from "@/shared/lib/isRecord";
@@ -20,6 +24,7 @@ export type ArchiveUserReviewCommandErrorCode =
   | "commentRepository"
   | "userReviewExport"
   | "unexpected"
+  | "invalidResponse"
   | "unknown";
 
 export type ArchiveUserReviewCommandError = Readonly<{
@@ -49,7 +54,7 @@ export const ArchiveUserReviewCommandError = {
         command: ARCHIVE_USER_REVIEW_COMMAND,
         code: error.code,
         message: error.message,
-        cause: error.cause,
+        cause: "cause" in error ? error.cause : error,
       };
     }
 
@@ -94,13 +99,20 @@ export const ArchiveUserReviewCommandError = {
   isCommandErrorCode(
     value: unknown,
   ): value is ArchiveUserReviewCommandErrorCode {
-    return ArchiveUserReviewCommandError.isCode(value) || value === "unknown";
+    return (
+      ArchiveUserReviewCommandError.isCode(value) ||
+      value === "invalidResponse" ||
+      value === "unknown"
+    );
   },
 
   /** @returns True when the value is a known archive_user_review backend error code. */
   isCode(
     value: unknown,
-  ): value is Exclude<ArchiveUserReviewCommandErrorCode, "unknown"> {
+  ): value is Exclude<
+    ArchiveUserReviewCommandErrorCode,
+    "unknown" | "invalidResponse"
+  > {
     return (
       value === "invalidRequest" ||
       value === "workspaceDetection" ||
@@ -118,15 +130,16 @@ export const ArchiveUserReviewCommandError = {
 export async function archiveUserReview(
   request: ArchiveUserReviewRequest,
 ): Promise<ArchiveUserReviewCommandResponse> {
-  const commandRequest: ArchiveUserReviewCommandRequest = request;
+  const commandRequest = encodeArchiveUserReviewRequest(request);
 
   return invokeTauriCommand<
     ArchiveUserReviewCommandResponse,
-    ArchiveUserReviewCommandRequest,
+    ReturnType<typeof encodeArchiveUserReviewRequest>,
     ArchiveUserReviewCommandError
   >(
     ARCHIVE_USER_REVIEW_COMMAND,
     commandRequest,
     ArchiveUserReviewCommandError.fromUnknown,
+    decodeArchiveUserReviewResponse,
   );
 }

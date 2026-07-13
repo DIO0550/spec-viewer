@@ -2,6 +2,10 @@ import type {
   ListCommentsRequest,
   ListCommentsResponse,
 } from "@/features/comments/types/comment";
+import {
+  decodeListCommentsResponse,
+  encodeListCommentsRequest,
+} from "@/features/comments/infra/tauri/commentIpcCodec";
 
 import { invokeTauriCommand } from "@/shared/api/tauri/invokeTauriCommand";
 import { isRecord } from "@/shared/lib/isRecord";
@@ -19,6 +23,7 @@ export type ListCommentsCommandErrorCode =
   | "invalidComment"
   | "commentRepository"
   | "unexpected"
+  | "invalidResponse"
   | "unknown";
 
 export type ListCommentsCommandError = Readonly<{
@@ -48,7 +53,7 @@ export const ListCommentsCommandError = {
         command: LIST_COMMENTS_COMMAND,
         code: error.code,
         message: error.message,
-        cause: error.cause,
+        cause: "cause" in error ? error.cause : error,
       };
     }
 
@@ -91,13 +96,20 @@ export const ListCommentsCommandError = {
 
   /** @returns True when the value is a list_comments command error code. */
   isCommandErrorCode(value: unknown): value is ListCommentsCommandErrorCode {
-    return ListCommentsCommandError.isCode(value) || value === "unknown";
+    return (
+      ListCommentsCommandError.isCode(value) ||
+      value === "invalidResponse" ||
+      value === "unknown"
+    );
   },
 
   /** @returns True when the value is a known list_comments backend error code. */
   isCode(
     value: unknown,
-  ): value is Exclude<ListCommentsCommandErrorCode, "unknown"> {
+  ): value is Exclude<
+    ListCommentsCommandErrorCode,
+    "unknown" | "invalidResponse"
+  > {
     return (
       value === "invalidRequest" ||
       value === "workspaceDetection" ||
@@ -122,7 +134,8 @@ export async function listComments(
     ListCommentsCommandError
   >(
     LIST_COMMENTS_COMMAND,
-    commandRequest,
+    encodeListCommentsRequest(commandRequest),
     ListCommentsCommandError.fromUnknown,
+    decodeListCommentsResponse,
   );
 }

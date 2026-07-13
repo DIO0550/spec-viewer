@@ -2,6 +2,10 @@ import type {
   ValidateWorkspaceDirectoryRequest,
   ValidateWorkspaceDirectoryResponse,
 } from "@/features/workspace/types/workspace";
+import {
+  decodeValidateWorkspaceDirectoryResponse,
+  encodeValidateWorkspaceDirectoryRequest,
+} from "@/features/workspace/infra/tauri/workspaceIpcCodec";
 
 import { invokeTauriCommand } from "@/shared/api/tauri/invokeTauriCommand";
 import { isRecord } from "@/shared/lib/isRecord";
@@ -11,8 +15,9 @@ export const VALIDATE_WORKSPACE_DIRECTORY_COMMAND =
 
 export type ValidateWorkspaceDirectoryCommandName =
   typeof VALIDATE_WORKSPACE_DIRECTORY_COMMAND;
-export type ValidateWorkspaceDirectoryCommandRequest =
-  ValidateWorkspaceDirectoryRequest;
+export type ValidateWorkspaceDirectoryCommandRequest = ReturnType<
+  typeof encodeValidateWorkspaceDirectoryRequest
+>;
 export type ValidateWorkspaceDirectoryCommandResponse =
   ValidateWorkspaceDirectoryResponse;
 export type ValidateWorkspaceDirectoryCommandErrorCode =
@@ -20,6 +25,7 @@ export type ValidateWorkspaceDirectoryCommandErrorCode =
   | "workspaceDetection"
   | "configLoad"
   | "unexpected"
+  | "invalidResponse"
   | "unknown";
 
 export type ValidateWorkspaceDirectoryCommandError = Readonly<{
@@ -49,7 +55,7 @@ export const ValidateWorkspaceDirectoryCommandError = {
         command: VALIDATE_WORKSPACE_DIRECTORY_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error.raw,
+        raw: "raw" in error ? error.raw : error,
       };
     }
 
@@ -102,6 +108,7 @@ export const ValidateWorkspaceDirectoryCommandError = {
   ): value is ValidateWorkspaceDirectoryCommandErrorCode {
     return (
       ValidateWorkspaceDirectoryCommandError.isCode(value) ||
+      value === "invalidResponse" ||
       value === "unknown"
     );
   },
@@ -109,7 +116,10 @@ export const ValidateWorkspaceDirectoryCommandError = {
   /** @returns True when the value is a known validate_workspace_directory backend error code. */
   isCode(
     value: unknown,
-  ): value is Exclude<ValidateWorkspaceDirectoryCommandErrorCode, "unknown"> {
+  ): value is Exclude<
+    ValidateWorkspaceDirectoryCommandErrorCode,
+    "unknown" | "invalidResponse"
+  > {
     return (
       value === "invalidRequest" ||
       value === "workspaceDetection" ||
@@ -123,7 +133,8 @@ export const ValidateWorkspaceDirectoryCommandError = {
 export async function validateWorkspaceDirectory(
   path: string,
 ): Promise<ValidateWorkspaceDirectoryCommandResponse> {
-  const commandRequest: ValidateWorkspaceDirectoryCommandRequest = { path };
+  const request: ValidateWorkspaceDirectoryRequest = { path };
+  const commandRequest = encodeValidateWorkspaceDirectoryRequest(request);
 
   return invokeTauriCommand<
     ValidateWorkspaceDirectoryCommandResponse,
@@ -133,5 +144,6 @@ export async function validateWorkspaceDirectory(
     VALIDATE_WORKSPACE_DIRECTORY_COMMAND,
     commandRequest,
     ValidateWorkspaceDirectoryCommandError.fromUnknown,
+    decodeValidateWorkspaceDirectoryResponse,
   );
 }

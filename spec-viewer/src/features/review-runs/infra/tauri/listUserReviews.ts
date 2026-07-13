@@ -2,6 +2,10 @@ import type {
   ListUserReviewsRequest,
   ListUserReviewsResponse,
 } from "@/features/review-runs/types/userReviewIpc";
+import {
+  decodeListUserReviewsResponse,
+  encodeListUserReviewsRequest,
+} from "@/features/review-runs/infra/tauri/userReviewIpcCodec";
 
 import { invokeTauriCommand } from "@/shared/api/tauri/invokeTauriCommand";
 import { isRecord } from "@/shared/lib/isRecord";
@@ -20,6 +24,7 @@ export type ListUserReviewsCommandErrorCode =
   | "commentRepository"
   | "userReviewExport"
   | "unexpected"
+  | "invalidResponse"
   | "unknown";
 
 export type ListUserReviewsCommandError = Readonly<{
@@ -49,7 +54,7 @@ export const ListUserReviewsCommandError = {
         command: LIST_USER_REVIEWS_COMMAND,
         code: error.code,
         message: error.message,
-        cause: error.cause,
+        cause: "cause" in error ? error.cause : error,
       };
     }
 
@@ -92,13 +97,20 @@ export const ListUserReviewsCommandError = {
 
   /** @returns True when the value is a list_user_reviews command error code. */
   isCommandErrorCode(value: unknown): value is ListUserReviewsCommandErrorCode {
-    return ListUserReviewsCommandError.isCode(value) || value === "unknown";
+    return (
+      ListUserReviewsCommandError.isCode(value) ||
+      value === "invalidResponse" ||
+      value === "unknown"
+    );
   },
 
   /** @returns True when the value is a known list_user_reviews backend error code. */
   isCode(
     value: unknown,
-  ): value is Exclude<ListUserReviewsCommandErrorCode, "unknown"> {
+  ): value is Exclude<
+    ListUserReviewsCommandErrorCode,
+    "unknown" | "invalidResponse"
+  > {
     return (
       value === "invalidRequest" ||
       value === "workspaceDetection" ||
@@ -116,15 +128,16 @@ export const ListUserReviewsCommandError = {
 export async function listUserReviews(
   request: ListUserReviewsRequest,
 ): Promise<ListUserReviewsCommandResponse> {
-  const commandRequest: ListUserReviewsCommandRequest = request;
+  const commandRequest = encodeListUserReviewsRequest(request);
 
   return invokeTauriCommand<
     ListUserReviewsCommandResponse,
-    ListUserReviewsCommandRequest,
+    ReturnType<typeof encodeListUserReviewsRequest>,
     ListUserReviewsCommandError
   >(
     LIST_USER_REVIEWS_COMMAND,
     commandRequest,
     ListUserReviewsCommandError.fromUnknown,
+    decodeListUserReviewsResponse,
   );
 }

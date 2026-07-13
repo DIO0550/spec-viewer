@@ -2,6 +2,10 @@ import type {
   Comment,
   CommentStatusRequest,
 } from "@/features/comments/types/comment";
+import {
+  decodeResolveCommentResponse,
+  encodeCommentStatusRequest,
+} from "@/features/comments/infra/tauri/commentIpcCodec";
 
 import { invokeTauriCommand } from "@/shared/api/tauri/invokeTauriCommand";
 import { isRecord } from "@/shared/lib/isRecord";
@@ -19,6 +23,7 @@ export type ResolveCommentCommandErrorCode =
   | "invalidComment"
   | "commentRepository"
   | "unexpected"
+  | "invalidResponse"
   | "unknown";
 
 export type ResolveCommentCommandError = Readonly<{
@@ -48,7 +53,7 @@ export const ResolveCommentCommandError = {
         command: RESOLVE_COMMENT_COMMAND,
         code: error.code,
         message: error.message,
-        cause: error.cause,
+        cause: "cause" in error ? error.cause : error,
       };
     }
 
@@ -91,13 +96,20 @@ export const ResolveCommentCommandError = {
 
   /** @returns True when the value is a resolve_comment command error code. */
   isCommandErrorCode(value: unknown): value is ResolveCommentCommandErrorCode {
-    return ResolveCommentCommandError.isCode(value) || value === "unknown";
+    return (
+      ResolveCommentCommandError.isCode(value) ||
+      value === "invalidResponse" ||
+      value === "unknown"
+    );
   },
 
   /** @returns True when the value is a known resolve_comment backend error code. */
   isCode(
     value: unknown,
-  ): value is Exclude<ResolveCommentCommandErrorCode, "unknown"> {
+  ): value is Exclude<
+    ResolveCommentCommandErrorCode,
+    "unknown" | "invalidResponse"
+  > {
     return (
       value === "invalidRequest" ||
       value === "workspaceDetection" ||
@@ -118,11 +130,12 @@ export async function resolveComment(
 
   return invokeTauriCommand<
     ResolveCommentCommandResponse,
-    ResolveCommentCommandRequest,
+    ReturnType<typeof encodeCommentStatusRequest>,
     ResolveCommentCommandError
   >(
     RESOLVE_COMMENT_COMMAND,
-    commandRequest,
+    encodeCommentStatusRequest(commandRequest),
     ResolveCommentCommandError.fromUnknown,
+    decodeResolveCommentResponse,
   );
 }

@@ -5,7 +5,7 @@ import {
 } from "@/features/review-runs/domain/userReviewCollection";
 import type { UserReview } from "@/features/review-runs/domain/userReview";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
-import type { UserReviewListProblem } from "@/features/review-runs/types/userReviewIpc";
+import type { UserReviewListProblem } from "@/features/review-runs/domain/userReviewListProblem";
 
 export type UserReviewListIdleState = Readonly<{
   status: "idle";

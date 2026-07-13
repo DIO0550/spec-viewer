@@ -1,5 +1,8 @@
 import type { SpecFileKey } from "@/features/specs/domain/specFile";
-import { SpecNode, type SpecNode as SpecNodeType } from "@/features/specs/domain/specNode";
+import {
+  SpecNode,
+  type SpecNode as SpecNodeType,
+} from "@/features/specs/domain/specNode";
 
 export type SpecTree = Readonly<{
   specs: readonly SpecNodeType[];
@@ -11,9 +14,14 @@ export type SpecSelection = Readonly<{
 }>;
 
 export const SpecTree = {
+  /**  Spec tree restored from validated boundary nodes. */
+  create(specs: readonly SpecNodeType[]): SpecTree {
+    return { specs: [...specs] };
+  },
+
   /**
-   * @param tree - Spec tree to inspect
-   * @returns True when the tree has no root specs.
+   *  tree - Spec tree to inspect
+   *  True when the tree has no root specs.
    */
   isEmpty: (tree: SpecTree): boolean => tree.specs.length === 0,
 

@@ -2,6 +2,10 @@ import type {
   ExportCommentsRequest,
   ExportCommentsResponse,
 } from "@/features/comments/types/comment";
+import {
+  decodeExportCommentsResponse,
+  encodeExportCommentsRequest,
+} from "@/features/comments/infra/tauri/commentIpcCodec";
 
 import { invokeTauriCommand } from "@/shared/api/tauri/invokeTauriCommand";
 import { isRecord } from "@/shared/lib/isRecord";
@@ -19,6 +23,7 @@ export type ExportCommentsCommandErrorCode =
   | "invalidComment"
   | "commentRepository"
   | "unexpected"
+  | "invalidResponse"
   | "unknown";
 
 export type ExportCommentsCommandError = Readonly<{
@@ -48,7 +53,7 @@ export const ExportCommentsCommandError = {
         command: EXPORT_COMMENTS_COMMAND,
         code: error.code,
         message: error.message,
-        cause: error.cause,
+        cause: "cause" in error ? error.cause : error,
       };
     }
 
@@ -91,13 +96,20 @@ export const ExportCommentsCommandError = {
 
   /** @returns True when the value is a export_comments command error code. */
   isCommandErrorCode(value: unknown): value is ExportCommentsCommandErrorCode {
-    return ExportCommentsCommandError.isCode(value) || value === "unknown";
+    return (
+      ExportCommentsCommandError.isCode(value) ||
+      value === "invalidResponse" ||
+      value === "unknown"
+    );
   },
 
   /** @returns True when the value is a known export_comments backend error code. */
   isCode(
     value: unknown,
-  ): value is Exclude<ExportCommentsCommandErrorCode, "unknown"> {
+  ): value is Exclude<
+    ExportCommentsCommandErrorCode,
+    "unknown" | "invalidResponse"
+  > {
     return (
       value === "invalidRequest" ||
       value === "workspaceDetection" ||
@@ -122,7 +134,8 @@ export async function exportComments(
     ExportCommentsCommandError
   >(
     EXPORT_COMMENTS_COMMAND,
-    commandRequest,
+    encodeExportCommentsRequest(commandRequest),
     ExportCommentsCommandError.fromUnknown,
+    decodeExportCommentsResponse,
   );
 }

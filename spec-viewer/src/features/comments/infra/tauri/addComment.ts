@@ -2,6 +2,10 @@ import type {
   AddCommentRequest,
   Comment,
 } from "@/features/comments/types/comment";
+import {
+  decodeAddCommentResponse,
+  encodeAddCommentRequest,
+} from "@/features/comments/infra/tauri/commentIpcCodec";
 
 import { invokeTauriCommand } from "@/shared/api/tauri/invokeTauriCommand";
 import { isRecord } from "@/shared/lib/isRecord";
@@ -18,6 +22,7 @@ export type AddCommentCommandErrorCode =
   | "invalidComment"
   | "commentRepository"
   | "unexpected"
+  | "invalidResponse"
   | "unknown";
 
 export type AddCommentCommandError = Readonly<{
@@ -47,7 +52,7 @@ export const AddCommentCommandError = {
         command: ADD_COMMENT_COMMAND,
         code: error.code,
         message: error.message,
-        cause: error.cause,
+        cause: "cause" in error ? error.cause : error,
       };
     }
 
@@ -87,13 +92,20 @@ export const AddCommentCommandError = {
 
   /** @returns True when the value is an add_comment command error code. */
   isCommandErrorCode(value: unknown): value is AddCommentCommandErrorCode {
-    return AddCommentCommandError.isCode(value) || value === "unknown";
+    return (
+      AddCommentCommandError.isCode(value) ||
+      value === "invalidResponse" ||
+      value === "unknown"
+    );
   },
 
   /** @returns True when the value is a known add_comment backend error code. */
   isCode(
     value: unknown,
-  ): value is Exclude<AddCommentCommandErrorCode, "unknown"> {
+  ): value is Exclude<
+    AddCommentCommandErrorCode,
+    "unknown" | "invalidResponse"
+  > {
     return (
       value === "invalidRequest" ||
       value === "workspaceDetection" ||
@@ -113,5 +125,10 @@ export async function addComment(
     AddCommentCommandResponse,
     AddCommentCommandRequest,
     AddCommentCommandError
-  >(ADD_COMMENT_COMMAND, request, AddCommentCommandError.fromUnknown);
+  >(
+    ADD_COMMENT_COMMAND,
+    encodeAddCommentRequest(request),
+    AddCommentCommandError.fromUnknown,
+    decodeAddCommentResponse,
+  );
 }

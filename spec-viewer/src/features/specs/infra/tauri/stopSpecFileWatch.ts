@@ -2,6 +2,10 @@ import type {
   StopSpecFileWatchRequest,
   StopSpecFileWatchResponse,
 } from "@/features/specs/types/watch";
+import {
+  decodeStopSpecFileWatchResponse,
+  encodeStopSpecFileWatchRequest,
+} from "@/features/specs/infra/tauri/specIpcCodec";
 
 import { invokeTauriCommand } from "@/shared/api/tauri/invokeTauriCommand";
 import { isRecord } from "@/shared/lib/isRecord";
@@ -18,6 +22,7 @@ export type StopSpecFileWatchCommandErrorCode =
   | "invalidSpec"
   | "fileWatch"
   | "unexpected"
+  | "invalidResponse"
   | "unknown";
 
 export type StopSpecFileWatchCommandError = Readonly<{
@@ -47,7 +52,7 @@ export const StopSpecFileWatchCommandError = {
         command: STOP_SPEC_FILE_WATCH_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error.raw,
+        raw: "raw" in error ? error.raw : error,
       };
     }
 
@@ -92,13 +97,20 @@ export const StopSpecFileWatchCommandError = {
   isCommandErrorCode(
     value: unknown,
   ): value is StopSpecFileWatchCommandErrorCode {
-    return StopSpecFileWatchCommandError.isCode(value) || value === "unknown";
+    return (
+      StopSpecFileWatchCommandError.isCode(value) ||
+      value === "invalidResponse" ||
+      value === "unknown"
+    );
   },
 
   /** @returns True when the value is a known stop_spec_file_watch backend error code. */
   isCode(
     value: unknown,
-  ): value is Exclude<StopSpecFileWatchCommandErrorCode, "unknown"> {
+  ): value is Exclude<
+    StopSpecFileWatchCommandErrorCode,
+    "unknown" | "invalidResponse"
+  > {
     return (
       value === "invalidRequest" ||
       value === "workspaceDetection" ||
@@ -120,7 +132,8 @@ export async function stopSpecFileWatch(): Promise<StopSpecFileWatchCommandRespo
     StopSpecFileWatchCommandError
   >(
     STOP_SPEC_FILE_WATCH_COMMAND,
-    commandRequest,
+    encodeStopSpecFileWatchRequest(commandRequest),
     StopSpecFileWatchCommandError.fromUnknown,
+    decodeStopSpecFileWatchResponse,
   );
 }

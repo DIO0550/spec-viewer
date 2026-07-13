@@ -1,35 +1,26 @@
+import type { Workspace as WorkspaceAggregate } from "@/features/workspace/domain/workspace";
 import {
-  Workspace,
-  type Workspace as WorkspaceAggregate,
-} from "@/features/workspace/domain/workspace";
+  decodeLoadWorkspaceResponse,
+  encodeLoadWorkspaceRequest,
+} from "@/features/workspace/infra/tauri/workspaceIpcCodec";
 import type { LoadWorkspaceRequest } from "@/features/workspace/types/workspace";
 
 import { invokeTauriCommand } from "@/shared/api/tauri/invokeTauriCommand";
 import { isRecord } from "@/shared/lib/isRecord";
 
 export const LOAD_WORKSPACE_COMMAND = "load_workspace" as const;
-
-export type WorkspaceFileMappingDto = Readonly<{
-  key: string;
-  label: string;
-  fileName: string;
-  configSource?: string;
-}>;
-
-export type WorkspaceDto = Readonly<{
-  root: string;
-  kind: string;
-  files: readonly WorkspaceFileMappingDto[];
-}>;
-
 export type LoadWorkspaceCommandName = typeof LOAD_WORKSPACE_COMMAND;
-export type LoadWorkspaceCommandRequest = LoadWorkspaceRequest;
-export type LoadWorkspaceCommandResponse = WorkspaceDto;
+export type LoadWorkspaceCommandRequest = ReturnType<
+  typeof encodeLoadWorkspaceRequest
+>;
+
+export type LoadWorkspaceCommandResponse = WorkspaceAggregate;
 export type LoadWorkspaceCommandErrorCode =
   | "invalidRequest"
   | "workspaceDetection"
   | "configLoad"
   | "unexpected"
+  | "invalidResponse"
   | "unknown";
 
 export type LoadWorkspaceCommandError = Readonly<{
@@ -59,7 +50,7 @@ export const LoadWorkspaceCommandError = {
         command: LOAD_WORKSPACE_COMMAND,
         code: error.code,
         message: error.message,
-        cause: error.cause,
+        cause: "cause" in error ? error.cause : error,
       };
     }
 
@@ -102,13 +93,20 @@ export const LoadWorkspaceCommandError = {
 
   /** @returns True when the value is a load_workspace command error code. */
   isCommandErrorCode(value: unknown): value is LoadWorkspaceCommandErrorCode {
-    return LoadWorkspaceCommandError.isCode(value) || value === "unknown";
+    return (
+      LoadWorkspaceCommandError.isCode(value) ||
+      value === "invalidResponse" ||
+      value === "unknown"
+    );
   },
 
   /** @returns True when the value is a known load_workspace backend error code. */
   isCode(
     value: unknown,
-  ): value is Exclude<LoadWorkspaceCommandErrorCode, "unknown"> {
+  ): value is Exclude<
+    LoadWorkspaceCommandErrorCode,
+    "unknown" | "invalidResponse"
+  > {
     return (
       value === "invalidRequest" ||
       value === "workspaceDetection" ||
@@ -122,21 +120,16 @@ export const LoadWorkspaceCommandError = {
 export async function loadWorkspace(
   selectedDirectory: string,
 ): Promise<WorkspaceAggregate> {
-  const commandRequest: LoadWorkspaceCommandRequest = { selectedDirectory };
-  const dto = await invokeTauriCommand<
-    unknown,
+  const request: LoadWorkspaceRequest = { selectedDirectory };
+  const commandRequest = encodeLoadWorkspaceRequest(request);
+  return invokeTauriCommand<
+    LoadWorkspaceCommandResponse,
     LoadWorkspaceCommandRequest,
     LoadWorkspaceCommandError
   >(
     LOAD_WORKSPACE_COMMAND,
     commandRequest,
     LoadWorkspaceCommandError.fromUnknown,
+    decodeLoadWorkspaceResponse,
   );
-
-  const result = Workspace.fromDto(dto);
-  if (!result.ok) {
-    throw LoadWorkspaceCommandError.unknown(result.error.message, dto);
-  }
-
-  return result.workspace;
 }

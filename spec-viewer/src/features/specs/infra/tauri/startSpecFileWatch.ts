@@ -2,6 +2,10 @@ import type {
   StartSpecFileWatchRequest,
   StartSpecFileWatchResponse,
 } from "@/features/specs/types/watch";
+import {
+  decodeStartSpecFileWatchResponse,
+  encodeStartSpecFileWatchRequest,
+} from "@/features/specs/infra/tauri/specIpcCodec";
 
 import { invokeTauriCommand } from "@/shared/api/tauri/invokeTauriCommand";
 import { isRecord } from "@/shared/lib/isRecord";
@@ -19,6 +23,7 @@ export type StartSpecFileWatchCommandErrorCode =
   | "invalidSpec"
   | "fileWatch"
   | "unexpected"
+  | "invalidResponse"
   | "unknown";
 
 export type StartSpecFileWatchCommandError = Readonly<{
@@ -48,7 +53,7 @@ export const StartSpecFileWatchCommandError = {
         command: START_SPEC_FILE_WATCH_COMMAND,
         code: error.code,
         message: error.message,
-        raw: error.raw,
+        raw: "raw" in error ? error.raw : error,
       };
     }
 
@@ -93,13 +98,20 @@ export const StartSpecFileWatchCommandError = {
   isCommandErrorCode(
     value: unknown,
   ): value is StartSpecFileWatchCommandErrorCode {
-    return StartSpecFileWatchCommandError.isCode(value) || value === "unknown";
+    return (
+      StartSpecFileWatchCommandError.isCode(value) ||
+      value === "invalidResponse" ||
+      value === "unknown"
+    );
   },
 
   /** @returns True when the value is a known start_spec_file_watch backend error code. */
   isCode(
     value: unknown,
-  ): value is Exclude<StartSpecFileWatchCommandErrorCode, "unknown"> {
+  ): value is Exclude<
+    StartSpecFileWatchCommandErrorCode,
+    "unknown" | "invalidResponse"
+  > {
     return (
       value === "invalidRequest" ||
       value === "workspaceDetection" ||
@@ -123,7 +135,8 @@ export async function startSpecFileWatch(
     StartSpecFileWatchCommandError
   >(
     START_SPEC_FILE_WATCH_COMMAND,
-    commandRequest,
+    encodeStartSpecFileWatchRequest(commandRequest),
     StartSpecFileWatchCommandError.fromUnknown,
+    decodeStartSpecFileWatchResponse,
   );
 }

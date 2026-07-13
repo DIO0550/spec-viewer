@@ -2,6 +2,10 @@ import type {
   Comment,
   CommentStatusRequest,
 } from "@/features/comments/types/comment";
+import {
+  decodeReopenCommentResponse,
+  encodeCommentStatusRequest,
+} from "@/features/comments/infra/tauri/commentIpcCodec";
 
 import { invokeTauriCommand } from "@/shared/api/tauri/invokeTauriCommand";
 import { isRecord } from "@/shared/lib/isRecord";
@@ -19,6 +23,7 @@ export type ReopenCommentCommandErrorCode =
   | "invalidComment"
   | "commentRepository"
   | "unexpected"
+  | "invalidResponse"
   | "unknown";
 
 export type ReopenCommentCommandError = Readonly<{
@@ -48,7 +53,7 @@ export const ReopenCommentCommandError = {
         command: REOPEN_COMMENT_COMMAND,
         code: error.code,
         message: error.message,
-        cause: error.cause,
+        cause: "cause" in error ? error.cause : error,
       };
     }
 
@@ -91,13 +96,20 @@ export const ReopenCommentCommandError = {
 
   /** @returns True when the value is a reopen_comment command error code. */
   isCommandErrorCode(value: unknown): value is ReopenCommentCommandErrorCode {
-    return ReopenCommentCommandError.isCode(value) || value === "unknown";
+    return (
+      ReopenCommentCommandError.isCode(value) ||
+      value === "invalidResponse" ||
+      value === "unknown"
+    );
   },
 
   /** @returns True when the value is a known reopen_comment backend error code. */
   isCode(
     value: unknown,
-  ): value is Exclude<ReopenCommentCommandErrorCode, "unknown"> {
+  ): value is Exclude<
+    ReopenCommentCommandErrorCode,
+    "unknown" | "invalidResponse"
+  > {
     return (
       value === "invalidRequest" ||
       value === "workspaceDetection" ||
@@ -118,11 +130,12 @@ export async function reopenComment(
 
   return invokeTauriCommand<
     ReopenCommentCommandResponse,
-    ReopenCommentCommandRequest,
+    ReturnType<typeof encodeCommentStatusRequest>,
     ReopenCommentCommandError
   >(
     REOPEN_COMMENT_COMMAND,
-    commandRequest,
+    encodeCommentStatusRequest(commandRequest),
     ReopenCommentCommandError.fromUnknown,
+    decodeReopenCommentResponse,
   );
 }

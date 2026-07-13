@@ -1,6 +1,7 @@
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 
 import type { WorkspaceDragDropEvent } from "@/features/workspace/application/ports/workspaceDragDrop";
+import { decodeWorkspaceDragDropEvent } from "@/features/workspace/infra/tauri/workspaceIpcCodec";
 
 /** @returns An unlisten function for native Tauri workspace drag-and-drop events. */
 export async function subscribeWorkspaceDragDropEvents(
@@ -11,6 +12,6 @@ export async function subscribeWorkspaceDragDropEvents(
   handler: (event: WorkspaceDragDropEvent) => void,
 ): Promise<() => void> {
   return getCurrentWebview().onDragDropEvent((event) => {
-    handler(event.payload as WorkspaceDragDropEvent);
+    handler(decodeWorkspaceDragDropEvent(event.payload));
   });
 }

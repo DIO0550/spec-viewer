@@ -2,6 +2,10 @@ import type {
   Comment,
   CommentStatusRequest,
 } from "@/features/comments/types/comment";
+import {
+  decodeToggleCommentResolvedResponse,
+  encodeCommentStatusRequest,
+} from "@/features/comments/infra/tauri/commentIpcCodec";
 
 import { invokeTauriCommand } from "@/shared/api/tauri/invokeTauriCommand";
 import { isRecord } from "@/shared/lib/isRecord";
@@ -21,6 +25,7 @@ export type ToggleCommentResolvedCommandErrorCode =
   | "invalidComment"
   | "commentRepository"
   | "unexpected"
+  | "invalidResponse"
   | "unknown";
 
 export type ToggleCommentResolvedCommandError = Readonly<{
@@ -50,7 +55,7 @@ export const ToggleCommentResolvedCommandError = {
         command: TOGGLE_COMMENT_RESOLVED_COMMAND,
         code: error.code,
         message: error.message,
-        cause: error.cause,
+        cause: "cause" in error ? error.cause : error,
       };
     }
 
@@ -96,14 +101,19 @@ export const ToggleCommentResolvedCommandError = {
     value: unknown,
   ): value is ToggleCommentResolvedCommandErrorCode {
     return (
-      ToggleCommentResolvedCommandError.isCode(value) || value === "unknown"
+      ToggleCommentResolvedCommandError.isCode(value) ||
+      value === "invalidResponse" ||
+      value === "unknown"
     );
   },
 
   /** @returns True when the value is a known toggle_comment_resolved backend error code. */
   isCode(
     value: unknown,
-  ): value is Exclude<ToggleCommentResolvedCommandErrorCode, "unknown"> {
+  ): value is Exclude<
+    ToggleCommentResolvedCommandErrorCode,
+    "unknown" | "invalidResponse"
+  > {
     return (
       value === "invalidRequest" ||
       value === "workspaceDetection" ||
@@ -124,11 +134,12 @@ export async function toggleCommentResolved(
 
   return invokeTauriCommand<
     ToggleCommentResolvedCommandResponse,
-    ToggleCommentResolvedCommandRequest,
+    ReturnType<typeof encodeCommentStatusRequest>,
     ToggleCommentResolvedCommandError
   >(
     TOGGLE_COMMENT_RESOLVED_COMMAND,
-    commandRequest,
+    encodeCommentStatusRequest(commandRequest),
     ToggleCommentResolvedCommandError.fromUnknown,
+    decodeToggleCommentResolvedResponse,
   );
 }

@@ -4,7 +4,7 @@ import {
   UserReview,
   type UserReview as UserReviewType,
 } from "@/features/review-runs/domain/userReview";
-import type { UserReviewListProblem } from "@/features/review-runs/types/userReviewIpc";
+import type { UserReviewListProblem } from "@/features/review-runs/domain/userReviewListProblem";
 
 export type UserReviewCollection = Readonly<{
   active: readonly NonArchivedUserReview[];

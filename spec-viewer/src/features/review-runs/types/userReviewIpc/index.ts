@@ -4,15 +4,20 @@ import type {
   UserReviewStatus,
   UserReviewWorkspace,
 } from "@/features/review-runs/domain/userReview";
+import type { UserReviewListProblem } from "@/features/review-runs/domain/userReviewListProblem";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
+import type { UserReviewWorkspaceMode } from "@/features/review-runs/domain/userReviewWorkspaceMode";
 import type { CommentId } from "@/shared/domain/commentId";
 import type { IsoDateTimeString } from "@/shared/domain/isoDateTime";
+export type {
+  UserReviewListProblem,
+  UserReviewListProblemState,
+} from "@/features/review-runs/domain/userReviewListProblem";
+export type { UserReviewWorkspaceMode } from "@/features/review-runs/domain/userReviewWorkspaceMode";
 
 export type { UserReview };
 
 export type ReviewBundleSchemaVersion = "spec-reviewer.review-run.v1";
-
-export type UserReviewWorkspaceMode = "currentWorkspace" | "worktree";
 
 export type ReviewBundleManifest = Readonly<{
   schemaVersion: ReviewBundleSchemaVersion;
@@ -35,15 +40,6 @@ export type ReviewBundleStatusDocument = Readonly<{
   warnings: readonly string[];
 }>;
 
-export type UserReviewListProblemState = "malformed" | "missingFolder";
-
-export type UserReviewListProblem = Readonly<{
-  folderPath: string;
-  state: UserReviewListProblemState;
-  message: string;
-}>;
-
-export type UserReviewDto = UserReview;
 export type UserReviewExecutionMode = UserReviewWorkspaceMode;
 export type UserReviewExecutionTarget = UserReviewWorkspace;
 export type UserReviewSourceFile = ReviewSourceFile;
@@ -58,7 +54,7 @@ export type CreateUserReviewRequest = Readonly<{
 }>;
 
 export type CreateUserReviewResponse = Readonly<{
-  userReview: UserReviewDto;
+  userReview: UserReview;
 }>;
 
 export type ListUserReviewsRequest = Readonly<{
@@ -68,8 +64,8 @@ export type ListUserReviewsRequest = Readonly<{
 }>;
 
 export type ListUserReviewsResponse = Readonly<{
-  active: readonly UserReviewDto[];
-  archived: readonly UserReviewDto[];
+  active: readonly UserReview[];
+  archived: readonly UserReview[];
   problems: readonly UserReviewListProblem[];
 }>;
 
@@ -80,7 +76,7 @@ export type ArchiveUserReviewRequest = Readonly<{
 }>;
 
 export type ArchiveUserReviewResponse = Readonly<{
-  userReview: UserReviewDto;
+  userReview: UserReview;
 }>;
 
 export type UserReviewCommandPayloads = Readonly<{

@@ -2,6 +2,10 @@ import type {
   ReadSpecFileRequest,
   SpecDocument,
 } from "@/features/specs/types/spec";
+import {
+  decodeReadSpecFileResponse,
+  encodeReadSpecFileRequest,
+} from "@/features/specs/infra/tauri/specIpcCodec";
 
 import { invokeTauriCommand } from "@/shared/api/tauri/invokeTauriCommand";
 import { isRecord } from "@/shared/lib/isRecord";
@@ -18,6 +22,7 @@ export type ReadSpecFileCommandErrorCode =
   | "markdownRead"
   | "invalidSpec"
   | "unexpected"
+  | "invalidResponse"
   | "unknown";
 
 export type ReadSpecFileCommandError = Readonly<{
@@ -47,7 +52,7 @@ export const ReadSpecFileCommandError = {
         command: READ_SPEC_FILE_COMMAND,
         code: error.code,
         message: error.message,
-        cause: error.cause,
+        cause: "cause" in error ? error.cause : error,
       };
     }
 
@@ -90,13 +95,20 @@ export const ReadSpecFileCommandError = {
 
   /** @returns True when the value is a read_spec_file command error code. */
   isCommandErrorCode(value: unknown): value is ReadSpecFileCommandErrorCode {
-    return ReadSpecFileCommandError.isCode(value) || value === "unknown";
+    return (
+      ReadSpecFileCommandError.isCode(value) ||
+      value === "invalidResponse" ||
+      value === "unknown"
+    );
   },
 
   /** @returns True when the value is a known read_spec_file backend error code. */
   isCode(
     value: unknown,
-  ): value is Exclude<ReadSpecFileCommandErrorCode, "unknown"> {
+  ): value is Exclude<
+    ReadSpecFileCommandErrorCode,
+    "unknown" | "invalidResponse"
+  > {
     return (
       value === "invalidRequest" ||
       value === "workspaceDetection" ||
@@ -120,7 +132,8 @@ export async function readSpecFile(
     ReadSpecFileCommandError
   >(
     READ_SPEC_FILE_COMMAND,
-    commandRequest,
+    encodeReadSpecFileRequest(commandRequest),
     ReadSpecFileCommandError.fromUnknown,
+    decodeReadSpecFileResponse,
   );
 }
