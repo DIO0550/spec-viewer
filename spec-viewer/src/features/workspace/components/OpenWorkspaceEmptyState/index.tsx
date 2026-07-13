@@ -1,7 +1,7 @@
 import { FolderClock, FolderOpen, X } from "lucide-react";
 
 import type { WorkspacePath } from "@/features/workspace/domain/workspacePath";
-import type { RecentWorkspace } from "@/features/workspace/infrastructure/recentWorkspaces";
+import type { RecentWorkspace } from "@/features/workspace/domain/recentWorkspaces";
 import { uiText } from "@/shared/lib/uiText";
 import { EmptyState } from "@/shared/ui/EmptyState";
 

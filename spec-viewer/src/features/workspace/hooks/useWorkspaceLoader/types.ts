@@ -1,8 +1,9 @@
+import type { RecentWorkspacesClock } from "@/features/workspace/application/ports/recentWorkspacesClock";
+import type { RecentWorkspacesRepository } from "@/features/workspace/application/ports/recentWorkspacesRepository";
 import type { WorkspaceContextValue } from "@/features/workspace/context/types";
 import type { WorkspacePath } from "@/features/workspace/domain/workspacePath";
 import type { UseRecentWorkspacesResult } from "@/features/workspace/hooks/useRecentWorkspaces";
 import type { SubscribeWorkspaceDragDropEvents } from "@/features/workspace/hooks/useWorkspaceDrop";
-import type { RecentWorkspaceStorage } from "@/features/workspace/infrastructure/recentWorkspaces";
 import type {
   selectWorkspaceDirectory as defaultSelectWorkspaceDirectory,
   validateWorkspaceDirectory as defaultValidateWorkspaceDirectory,
@@ -31,8 +32,10 @@ export type UseWorkspaceLoaderOptions = Readonly<{
    * 省略時（プロダクション）はフック内部で useWorkspace() を読む。
    */
   workspace?: WorkspaceContextValue;
-  /** テスト専用: 内部 useRecentWorkspaces({ storage }) へのパススルー DI。 */
-  recentWorkspacesStorage?: RecentWorkspaceStorage | null;
+  /** Recent-workspaces persistence port supplied by app composition. */
+  recentWorkspacesRepository: RecentWorkspacesRepository;
+  /** Clock used when recording a successfully opened workspace. */
+  recentWorkspacesClock: RecentWorkspacesClock;
 }>;
 
 export type UseWorkspaceLoaderResult = Readonly<{

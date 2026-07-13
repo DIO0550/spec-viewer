@@ -43,6 +43,8 @@ import {
   useSpecs,
 } from "@/features/specs";
 import {
+  createBrowserRecentWorkspacesRepository,
+  createRecentWorkspacesSystemClock,
   OpenWorkspaceEmptyState,
   useWorkspaceLoader,
   useWorkspaceSidebarSectionPreference,
@@ -84,9 +86,15 @@ function SpecViewAppContent(): ReactElement {
   const [dialogErrorMessage, setDialogErrorMessage] = useState<string | null>(
     null,
   );
-  // workspace を開く知識は feature に集約済み — App は onError を渡して呼ぶだけ。
+  const recentWorkspacesRepository = useMemo(
+    createBrowserRecentWorkspacesRepository,
+    [],
+  );
+  const recentWorkspacesClock = useMemo(createRecentWorkspacesSystemClock, []);
   const workspaceLoader = useWorkspaceLoader({
     onError: setDialogErrorMessage,
+    recentWorkspacesRepository,
+    recentWorkspacesClock,
   });
   const { activeWorkspaceRoot, isWorkspaceOpening } = workspaceLoader.state;
 
