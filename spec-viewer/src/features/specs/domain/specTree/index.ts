@@ -14,14 +14,17 @@ export type SpecSelection = Readonly<{
 }>;
 
 export const SpecTree = {
-  /**  Spec tree restored from validated boundary nodes. */
+  /**
+   * @param specs - Validated root spec nodes
+   * @returns Spec tree restored from the boundary nodes.
+   */
   create(specs: readonly SpecNodeType[]): SpecTree {
     return { specs: [...specs] };
   },
 
   /**
-   *  tree - Spec tree to inspect
-   *  True when the tree has no root specs.
+   * @param tree - Spec tree to inspect
+   * @returns True when the tree has no root specs.
    */
   isEmpty: (tree: SpecTree): boolean => tree.specs.length === 0,
 
