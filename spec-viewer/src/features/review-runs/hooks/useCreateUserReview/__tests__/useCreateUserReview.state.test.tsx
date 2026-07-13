@@ -1,4 +1,4 @@
-import * as TestValues from "@/shared/testing/validatedValueObjects";
+import * as TestValues from "@/features/review-runs/testing/validatedValueObjects";
 import { act, useLayoutEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";

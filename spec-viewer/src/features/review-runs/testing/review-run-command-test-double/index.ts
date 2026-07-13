@@ -12,7 +12,7 @@ import {
   isoDateTime,
   specId,
   userReviewId,
-} from "@/shared/testing/validatedValueObjects";
+} from "@/features/review-runs/testing/validatedValueObjects";
 
 const authSpecId = specId("auth");
 

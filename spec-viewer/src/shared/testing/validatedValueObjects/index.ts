@@ -1,8 +1,4 @@
 import {
-  UserReviewId,
-  type UserReviewId as UserReviewIdType,
-} from "@/features/review-runs/domain/userReviewId";
-import {
   CommentId,
   type CommentId as CommentIdType,
 } from "@/shared/domain/commentId";
@@ -19,6 +15,7 @@ type ParseResult<Value> =
 /**
  * @param result - Production parser result for the fixture.
  * @returns A validated test fixture value or throws for an invalid fixture.
+ * @throws Error when the fixture violates production restoration rules.
  */
 function unwrapFixture<Value>(result: ParseResult<Value>): Value {
   if (!result.ok) {
@@ -31,6 +28,7 @@ function unwrapFixture<Value>(result: ParseResult<Value>): Value {
 /**
  * @param value - Raw SpecId fixture.
  * @returns A validated SpecId fixture restored with production rules.
+ * @throws Error when the fixture violates production restoration rules.
  */
 export const specId = (value: string): SpecIdType =>
   unwrapFixture(SpecId.fromDto(value));
@@ -38,20 +36,15 @@ export const specId = (value: string): SpecIdType =>
 /**
  * @param value - Raw CommentId fixture.
  * @returns A validated CommentId fixture restored with production rules.
+ * @throws Error when the fixture violates production restoration rules.
  */
 export const commentId = (value: string): CommentIdType =>
   unwrapFixture(CommentId.fromDto(value));
 
 /**
- * @param value - Raw UserReviewId fixture.
- * @returns A validated UserReviewId fixture restored with production rules.
- */
-export const userReviewId = (value: string): UserReviewIdType =>
-  unwrapFixture(UserReviewId.fromDto(value));
-
-/**
  * @param value - Raw IsoDateTime fixture.
  * @returns A validated IsoDateTime fixture restored with production rules.
+ * @throws Error when the fixture violates production restoration rules.
  */
 export const isoDateTime = (value: string): IsoDateTimeType =>
   unwrapFixture(IsoDateTime.fromDto(value));

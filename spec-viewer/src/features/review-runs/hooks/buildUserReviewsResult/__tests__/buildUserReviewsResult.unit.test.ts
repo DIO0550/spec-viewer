@@ -1,4 +1,4 @@
-import * as TestValues from "@/shared/testing/validatedValueObjects";
+import * as TestValues from "@/features/review-runs/testing/validatedValueObjects";
 import { expect, test, vi } from "vitest";
 
 import { UserReviewListState } from "@/features/review-runs/domain/userReviewListState";

@@ -1,4 +1,4 @@
-import * as TestValues from "@/shared/testing/validatedValueObjects";
+import * as TestValues from "@/features/review-runs/testing/validatedValueObjects";
 import { invoke } from "@tauri-apps/api/core";
 import { expect, test, vi } from "vitest";
 

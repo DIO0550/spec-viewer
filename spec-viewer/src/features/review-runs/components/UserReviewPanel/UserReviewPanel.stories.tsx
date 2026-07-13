@@ -1,4 +1,4 @@
-import * as TestValues from "@/shared/testing/validatedValueObjects";
+import * as TestValues from "@/features/review-runs/testing/validatedValueObjects";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
 import { UserReviewPanel } from "@/features/review-runs/components/UserReviewPanel";
