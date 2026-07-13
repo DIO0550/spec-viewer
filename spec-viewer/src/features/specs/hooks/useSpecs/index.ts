@@ -466,7 +466,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
       await runSpecLoad(async (operationId) => {
         const activeWorkspacePath = workspacePath;
         const nextSpec =
-          tree === null ? null : SpecTreeDomain.findNode(tree, specId);
+          tree === null ? null : SpecTreeDomain.find(tree, specId);
 
         if (nextSpec === null) {
           return false;

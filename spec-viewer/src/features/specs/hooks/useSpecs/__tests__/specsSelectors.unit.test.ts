@@ -12,6 +12,8 @@ const tree: SpecTreeData = {
     {
       id: TestValues.specId("phase-1"),
       label: "Phase 1",
+      kind: "spec",
+      capabilities: { reviewable: true, archiveable: true },
       files: [
         {
           key: "impl",

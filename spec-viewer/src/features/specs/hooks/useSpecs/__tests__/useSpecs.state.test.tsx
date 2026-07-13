@@ -37,6 +37,8 @@ const populatedTree: SpecTree = {
     {
       id: TestValues.specId("phase-1-viewer"),
       label: "Phase 1 Viewer",
+      kind: "spec",
+      capabilities: { reviewable: true, archiveable: true },
       files: [
         {
           key: "tasks",
@@ -55,11 +57,15 @@ const nestedTree: SpecTree = {
     {
       id: TestValues.specId("phase-root"),
       label: "Phase Root",
+      kind: "spec",
+      capabilities: { reviewable: false, archiveable: true },
       files: [],
       children: [
         {
           id: TestValues.specId("phase-child"),
           label: "Phase Child",
+          kind: "spec",
+          capabilities: { reviewable: true, archiveable: true },
           files: [
             {
               key: "design",
@@ -80,11 +86,15 @@ const refreshedNestedTree: SpecTree = {
     {
       id: TestValues.specId("phase-root"),
       label: "Phase Root",
+      kind: "spec",
+      capabilities: { reviewable: false, archiveable: true },
       files: [],
       children: [
         {
           id: TestValues.specId("phase-child"),
           label: "Phase Child",
+          kind: "spec",
+          capabilities: { reviewable: true, archiveable: true },
           files: [
             {
               key: "design",
@@ -106,6 +116,8 @@ const refreshedNestedTree: SpecTree = {
     {
       id: TestValues.specId("phase-new"),
       label: "Phase New",
+      kind: "spec",
+      capabilities: { reviewable: true, archiveable: true },
       files: [
         {
           key: "tasks",
@@ -124,6 +136,8 @@ const tasksAndDesignTree: SpecTree = {
     {
       id: TestValues.specId("phase-refresh"),
       label: "Phase Refresh",
+      kind: "spec",
+      capabilities: { reviewable: true, archiveable: true },
       files: [
         {
           key: "design",
@@ -148,6 +162,8 @@ const sixTabTree: SpecTree = {
     {
       id: TestValues.specId("tech-reference-tab"),
       label: "Tech Reference Tab",
+      kind: "spec",
+      capabilities: { reviewable: true, archiveable: true },
       files: [
         {
           key: "impl",
@@ -198,6 +214,8 @@ const renamedTasksTree: SpecTree = {
     {
       id: TestValues.specId("phase-refresh"),
       label: "Phase Refresh",
+      kind: "spec",
+      capabilities: { reviewable: true, archiveable: true },
       files: [
         {
           key: "design",
@@ -216,6 +234,8 @@ const missingTasksTree: SpecTree = {
     {
       id: TestValues.specId("phase-1-viewer"),
       label: "Phase 1 Viewer",
+      kind: "spec",
+      capabilities: { reviewable: true, archiveable: true },
       files: [
         {
           key: "tasks",

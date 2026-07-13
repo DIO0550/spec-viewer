@@ -78,11 +78,15 @@ const hearingFile: SpecFile = {
 const selectedSpec: SpecNode = {
   id: TestValues.specId("phase-1-viewer"),
   label: "Phase 1 Viewer",
+  kind: "spec",
+  capabilities: { reviewable: true, archiveable: true },
   files: [taskFile, implFile],
   children: [
     {
       id: TestValues.specId("phase-1-comments"),
       label: "Phase 1 Comments",
+      kind: "spec",
+      capabilities: { reviewable: true, archiveable: true },
       files: [taskFile],
       children: [],
     },
@@ -101,11 +105,15 @@ const issueTreeState: SpecTreeState = {
       {
         id: TestValues.specId("021-issue-262"),
         label: "021-issue-262",
+        kind: "spec",
+        capabilities: { reviewable: true, archiveable: true },
         files: [taskFile, implFile],
         children: [
           {
             id: TestValues.specId("021-issue-262/code-review"),
             label: "code-review",
+            kind: "spec",
+            capabilities: { reviewable: true, archiveable: true },
             files: [implFile],
             children: [],
           },
@@ -314,6 +322,8 @@ test("SpecTabsはbackendの6タブ順をそのまま表示する", () => {
       spec={{
         id: TestValues.specId("tech-reference-tab"),
         label: "Tech Reference Tab",
+        kind: "spec",
+        capabilities: { reviewable: true, archiveable: true },
         files: [
           implFile,
           taskFile,
@@ -822,17 +832,19 @@ test.each([
   result.unmount();
 });
 
-test("SpecTreeはsource group rootにはアーカイブ操作を表示しない", () => {
-  const sourceGroupTreeState: SpecTreeState = {
+test("SpecTreeはsuffixなしspecでもarchiveable=falseならアーカイブ操作を表示しない", () => {
+  const nonArchiveableTreeState: SpecTreeState = {
     status: "ready",
     workspacePath,
     tree: {
       specs: [
         {
-          id: TestValues.specId(".plugin-workspace/.specs"),
-          label: "ルート",
-          files: [],
-          children: [selectedSpec],
+          id: TestValues.specId("locked-spec"),
+          label: "Locked Spec",
+          kind: "spec",
+          capabilities: { reviewable: true, archiveable: false },
+          files: selectedSpec.files,
+          children: [],
         },
       ],
     },
@@ -840,7 +852,7 @@ test("SpecTreeはsource group rootにはアーカイブ操作を表示しない"
   };
   const result = renderComponent(
     <SpecTree
-      state={sourceGroupTreeState}
+      state={nonArchiveableTreeState}
       selectedSpecId={null}
       onSelectSpec={vi.fn()}
       onArchiveSpec={vi.fn()}
@@ -849,7 +861,9 @@ test("SpecTreeはsource group rootにはアーカイブ操作を表示しない"
   );
 
   expect(
-    result.container.querySelector('[aria-label="ルートをアーカイブへ移動"]'),
+    result.container.querySelector(
+      '[aria-label="Locked Specをアーカイブへ移動"]',
+    ),
   ).toBeNull();
   result.unmount();
 });

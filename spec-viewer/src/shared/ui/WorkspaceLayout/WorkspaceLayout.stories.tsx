@@ -34,6 +34,8 @@ const commentId = TestValues.commentId;
 const sampleSpec: SpecNode = {
   id: TestValues.specId("phase-1-viewer"),
   label: "Phase 1 Viewer",
+  kind: "spec",
+  capabilities: { reviewable: true, archiveable: true },
   files: [
     {
       key: "impl",
@@ -72,6 +74,8 @@ const sampleSpec: SpecNode = {
     {
       id: TestValues.specId("phase-1-comments"),
       label: "Phase 1 Comments",
+      kind: "spec",
+      capabilities: { reviewable: true, archiveable: true },
       files: [
         {
           key: "requirements",

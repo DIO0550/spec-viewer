@@ -5,6 +5,8 @@ import {
 import {
   SpecNode,
   type SpecNode as SpecNodeDomain,
+  type SpecNodeCapabilities,
+  type SpecNodeKind,
 } from "@/features/specs/domain/specNode";
 import {
   SpecTree,
@@ -70,6 +72,8 @@ export type SpecFileDto = Readonly<{
 export type SpecNodeDto = Readonly<{
   id: string;
   label: string;
+  kind: SpecNodeKind;
+  capabilities: SpecNodeCapabilities;
   files: readonly SpecFileDto[];
   children: readonly SpecNodeDto[];
 }>;
@@ -143,11 +147,21 @@ const specFileCodec: RuntimeCodecType<SpecFileDto> = RuntimeCodec.object({
   ] as const),
 });
 
+const specNodeKindCodec = RuntimeCodec.literalUnion([
+  "sourceGroup",
+  "spec",
+] as const);
+const specNodeCapabilitiesCodec = RuntimeCodec.object({
+  reviewable: RuntimeCodec.boolean,
+  archiveable: RuntimeCodec.boolean,
+});
 const specNodeCodec: RuntimeCodecType<SpecNodeDto> = {
   decode(value, path) {
     return RuntimeCodec.object({
       id: RuntimeCodec.nonEmptyString,
       label: RuntimeCodec.nonEmptyString,
+      kind: specNodeKindCodec,
+      capabilities: specNodeCapabilitiesCodec,
       files: RuntimeCodec.array(specFileCodec),
       children: RuntimeCodec.array(specNodeCodec),
     }).decode(value, path);
@@ -328,6 +342,8 @@ function mapSpecNodeDtoToDomain(
   return SpecNode.create({
     id: decodeSpecId(command, `${path}.id`, dto.id),
     label: dto.label,
+    kind: dto.kind,
+    capabilities: dto.capabilities,
     files: dto.files.map(mapSpecFileDtoToDomain),
     children: dto.children.map((child, index) =>
       mapSpecNodeDtoToDomain(command, child, `${path}.children[${index}]`),

@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { type KeyboardEvent, useEffect, useState } from "react";
 
+import { SpecTree as SpecTreeDomain } from "@/features/specs/domain/specTree";
 import type { SpecTreeState } from "@/features/specs/hooks/useSpecs";
 import type { SpecNode } from "@/features/specs/types/spec";
 import type { SpecId } from "@/shared/domain/specId";
@@ -49,7 +50,7 @@ export function SpecTree({
       return;
     }
 
-    const ancestorIds = findAncestorSpecIds(state.tree.specs, selectedSpecId);
+    const ancestorIds = SpecTreeDomain.ancestorIds(state.tree, selectedSpecId);
 
     if (ancestorIds.length === 0) {
       return;
@@ -220,7 +221,9 @@ function SpecTreeItem({
   const isSelected = selectedSpecId === node.id;
   const hasChildren = node.children.length > 0;
   const isExpanded = expandedSpecIds.has(node.id);
-  const canArchive = onArchiveSpec !== undefined && isArchivableSpecNode(node);
+  const canArchive =
+    onArchiveSpec !== undefined &&
+    SpecTreeDomain.nodeArchiveability(node).canArchive;
   const isArchiving = archivingSpecId === node.id;
   const indentation = BASE_TREE_ITEM_INDENT + depth * TREE_ITEM_INDENT_STEP;
 
@@ -332,14 +335,6 @@ function SpecTreeItem({
       ) : null}
     </div>
   );
-}
-
-/**
- * @param node - The spec tree node to test.
- * @returns Whether this tree node represents an archiveable spec directory.
- */
-function isArchivableSpecNode(node: SpecNode): boolean {
-  return !node.id.endsWith("/.specs");
 }
 
 type TreeItemKeyDownOptions = Readonly<{
@@ -481,28 +476,4 @@ function readTreeItemLevel(item: HTMLButtonElement | undefined): number {
   const level = Number(item.getAttribute("aria-level"));
 
   return Number.isFinite(level) ? level : 1;
-}
-
-/** @returns Ancestor spec IDs for the selected node, excluding the selected ID. */
-function findAncestorSpecIds(
-  nodes: readonly SpecNode[],
-  selectedSpecId: SpecId,
-  ancestors: readonly SpecId[] = [],
-): readonly SpecId[] {
-  for (const node of nodes) {
-    if (node.id === selectedSpecId) {
-      return ancestors;
-    }
-
-    const childAncestors = findAncestorSpecIds(node.children, selectedSpecId, [
-      ...ancestors,
-      node.id,
-    ]);
-
-    if (childAncestors.length > 0) {
-      return childAncestors;
-    }
-  }
-
-  return [];
 }

@@ -24,6 +24,8 @@ test("listSpecsはlist_specsへworkspacePathを渡す", async () => {
       {
         id: "auth",
         label: "auth",
+        kind: "spec",
+        capabilities: { reviewable: false, archiveable: true },
         files: [],
         children: [],
       },
@@ -35,6 +37,127 @@ test("listSpecsはlist_specsへworkspacePathを渡す", async () => {
   expect(result.specs).toHaveLength(1);
   expect(invokeMock).toHaveBeenCalledWith("list_specs", {
     request: { workspacePath: "/workspace/spec-reviewer" },
+  });
+});
+
+test("listSpecsはbackendのnode kindとcapabilitiesをdomainへ復元する", async () => {
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue({
+    specs: [
+      {
+        id: "worktrees/main/.specs",
+        label: "main",
+        kind: "sourceGroup",
+        capabilities: { reviewable: false, archiveable: false },
+        files: [],
+        children: [
+          {
+            id: "worktrees/main/.specs/auth",
+            label: "auth",
+            kind: "spec",
+            capabilities: { reviewable: false, archiveable: true },
+            files: [],
+            children: [],
+          },
+        ],
+      },
+    ],
+  });
+
+  const result = await listSpecs("/workspace/spec-reviewer");
+
+  expect(result.specs[0]).toMatchObject({
+    kind: "sourceGroup",
+    capabilities: { reviewable: false, archiveable: false },
+  });
+  expect(result.specs[0]?.children[0]).toMatchObject({
+    kind: "spec",
+    capabilities: { reviewable: false, archiveable: true },
+  });
+});
+
+test("listSpecsはkindが欠落したDTOをfield path付きで拒否する", async () => {
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue({
+    specs: [
+      {
+        id: "worktrees/main/.specs",
+        label: "main",
+        files: [],
+        children: [],
+      },
+    ],
+  });
+
+  await expect(listSpecs("/workspace/spec-reviewer")).rejects.toMatchObject({
+    command: "list_specs",
+    code: "invalidResponse",
+    path: "$.specs[0].kind",
+  });
+});
+
+test("listSpecsはcapabilitiesが欠落したDTOをfield path付きで拒否する", async () => {
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue({
+    specs: [
+      {
+        id: "auth",
+        label: "auth",
+        kind: "spec",
+        files: [],
+        children: [],
+      },
+    ],
+  });
+
+  await expect(listSpecs("/workspace/spec-reviewer")).rejects.toMatchObject({
+    command: "list_specs",
+    code: "invalidResponse",
+    path: "$.specs[0].capabilities",
+  });
+});
+
+test("listSpecsはunsupported node kindをfield path付きで拒否する", async () => {
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue({
+    specs: [
+      {
+        id: "auth",
+        label: "auth",
+        kind: "container",
+        capabilities: { reviewable: false, archiveable: false },
+        files: [],
+        children: [],
+      },
+    ],
+  });
+
+  await expect(listSpecs("/workspace/spec-reviewer")).rejects.toMatchObject({
+    command: "list_specs",
+    code: "invalidResponse",
+    path: "$.specs[0].kind",
+  });
+});
+
+test("listSpecsはmalformed capabilityをfield path付きで拒否する", async () => {
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue({
+    specs: [
+      {
+        id: "auth",
+        label: "auth",
+        kind: "spec",
+        capabilities: { reviewable: false, archiveable: "yes" },
+        files: [],
+        children: [],
+      },
+    ],
+  });
+
+  await expect(listSpecs("/workspace/spec-reviewer")).rejects.toMatchObject({
+    command: "list_specs",
+    code: "invalidResponse",
+    path: "$.specs[0].capabilities.archiveable",
   });
 });
 
@@ -137,7 +260,15 @@ test("ArchiveSpecCommandError.fromUnknownは正規化済みunknownエラーのme
 test("listSpecsはmissing children fieldをstructured decode errorとして拒否する", async () => {
   invokeMock.mockReset();
   invokeMock.mockResolvedValue({
-    specs: [{ id: "auth", label: "auth", files: [] }],
+    specs: [
+      {
+        id: "auth",
+        label: "auth",
+        kind: "spec",
+        capabilities: { reviewable: false, archiveable: true },
+        files: [],
+      },
+    ],
   });
 
   await expect(listSpecs("/workspace/spec-reviewer")).rejects.toMatchObject({
@@ -154,11 +285,15 @@ test("listSpecsはnested specのunsafe IDを最深path付きdecode errorとし�
       {
         id: "auth",
         label: "auth",
+        kind: "spec",
+        capabilities: { reviewable: false, archiveable: true },
         files: [],
         children: [
           {
             id: "../escape",
             label: "escape",
+            kind: "spec",
+            capabilities: { reviewable: false, archiveable: true },
             files: [],
             children: [],
           },

@@ -119,7 +119,7 @@ impl FilesystemSpecTreeScanner {
 
             if let Some(label) = root.label {
                 let node =
-                    SpecNode::new(id.clone(), label, Vec::new(), children).map_err(|source| {
+                    SpecNode::source_group(id.clone(), label, children).map_err(|source| {
                         SpecTreeScanError::InvalidNode {
                             id,
                             path: display_path(&root.path),
@@ -1418,8 +1418,14 @@ mod tests {
         let root = &tree[0];
         assert_eq!(PLUGIN_WORKSPACE_SPECS_DIR, root.id());
         assert_eq!("ルート", root.label());
+        assert_eq!(crate::domain::spec::SpecNodeKind::SourceGroup, root.kind());
+        assert!(!root.is_reviewable());
+        assert!(!root.is_archiveable());
         let issue = &root.children()[0];
         assert_eq!(".plugin-workspace/.specs/021-issue-262", issue.id());
+        assert_eq!(crate::domain::spec::SpecNodeKind::Spec, issue.kind());
+        assert!(issue.is_reviewable());
+        assert!(issue.is_archiveable());
         assert_eq!(
             vec![".plugin-workspace/.specs/021-issue-262/code-review"],
             node_ids(issue.children())
