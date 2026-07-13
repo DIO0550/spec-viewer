@@ -32,7 +32,6 @@ sha2 = "0.11.0"
 uuid = { version = "1.23.1", features = ["v4", "serde"] }
 chrono = { version = "0.4.44", features = ["serde"] }
 thiserror = "2.0.18"
-anyhow = "1.0.102"
 notify = "8"
 # Keep user-review persistence rooted in opened directory capabilities.
 cap-std = "4.0.2"

@@ -65,7 +65,7 @@ impl AddCommentCommandError {
             AppUseCaseError::SpecTreeScan { .. }
             | AppUseCaseError::SpecArchive { .. }
             | AppUseCaseError::MarkdownRead { .. }
-            | AppUseCaseError::ReviewRunExport { .. } => AddCommentCommandErrorCode::Unexpected,
+            | AppUseCaseError::UserReview { .. } => AddCommentCommandErrorCode::Unexpected,
         };
 
         Self::new(code, error.to_string())
@@ -143,7 +143,7 @@ impl CommentCommandError {
             AppUseCaseError::CommentRepository { .. } => CommentCommandErrorCode::CommentRepository,
             AppUseCaseError::SpecTreeScan { .. }
             | AppUseCaseError::SpecArchive { .. }
-            | AppUseCaseError::ReviewRunExport { .. } => CommentCommandErrorCode::Unexpected,
+            | AppUseCaseError::UserReview { .. } => CommentCommandErrorCode::Unexpected,
         };
 
         Self::new(code, error.to_string())

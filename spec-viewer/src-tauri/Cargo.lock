@@ -3489,7 +3489,6 @@ dependencies = [
 name = "spec-viewer"
 version = "0.1.9"
 dependencies = [
- "anyhow",
  "cap-std",
  "chrono",
  "notify",

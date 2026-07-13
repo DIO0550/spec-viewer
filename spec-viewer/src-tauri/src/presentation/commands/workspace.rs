@@ -51,7 +51,7 @@ impl WorkspaceCommandError {
             | AppUseCaseError::InvalidSpec { .. }
             | AppUseCaseError::InvalidComment { .. }
             | AppUseCaseError::CommentRepository { .. }
-            | AppUseCaseError::ReviewRunExport { .. } => WorkspaceCommandErrorCode::Unexpected,
+            | AppUseCaseError::UserReview { .. } => WorkspaceCommandErrorCode::Unexpected,
         };
 
         Self::new(code, error.to_string())

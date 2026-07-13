@@ -61,7 +61,7 @@ impl SpecCommandError {
             AppUseCaseError::InvalidSpec { .. } => SpecCommandErrorCode::InvalidSpec,
             AppUseCaseError::InvalidComment { .. }
             | AppUseCaseError::CommentRepository { .. }
-            | AppUseCaseError::ReviewRunExport { .. } => SpecCommandErrorCode::Unexpected,
+            | AppUseCaseError::UserReview { .. } => SpecCommandErrorCode::Unexpected,
         };
 
         Self::new(code, error.to_string())
