@@ -236,7 +236,7 @@ test("UserReviewPanelはrecord problemのlocatorと日本語説明を表示す�
   });
 
   expect(result.container.querySelector('[role="alert"]')?.textContent).toBe(
-    "旧形式のレビュー: legacy-review-folderフォルダ形式のレビューは一覧に表示できません。",
+    "旧形式のレビュー: legacy-review-folder フォルダ形式のレビューは一覧に表示できません。",
   );
   expect(result.container.textContent).not.toContain("legacy folder bundle");
   result.unmount();
