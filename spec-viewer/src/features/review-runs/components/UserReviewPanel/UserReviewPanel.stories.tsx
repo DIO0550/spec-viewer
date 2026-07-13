@@ -3,51 +3,34 @@ import { fn } from "storybook/test";
 
 import { CommentId } from "@/features/comments/types/comment";
 import { UserReviewPanel } from "@/features/review-runs/components/UserReviewPanel";
+import type { ActiveUserReview } from "@/features/review-runs/domain/userReview";
+
+const activeReview: ActiveUserReview = {
+  schemaVersion: "spec-reviewer.user-review.v1",
+  id: "urv_0123456789abcdef0123456789abcdef",
+  status: "active",
+  target: {
+    scope: "file",
+    specId: "auth",
+    fileKey: "tasks",
+  },
+  recordLocator: "urv_0123456789abcdef0123456789abcdef.json",
+  commentCount: 2,
+  createdAt: "2026-07-12T10:00:00Z",
+  updatedAt: "2026-07-12T10:00:00Z",
+  archivedAt: null,
+};
 
 const meta = {
   component: UserReviewPanel,
   args: {
     targetScope: "file",
-    workspaceMode: "currentWorkspace",
     openCommentCount: 2,
+    canCreateUserReview: true,
     listState: {
       status: "ready",
-      target: {
-        scope: "file",
-        specId: "auth",
-        fileKey: "tasks",
-      },
-      active: [
-        {
-          id: "2026-05-06T120000Z-file-tasks-abcdef12",
-          status: "active",
-          target: {
-            scope: "file",
-            specId: "auth",
-            fileKey: "tasks",
-          },
-          workspace: {
-            mode: "currentWorkspace",
-            workspacePath: "/workspace/spec-reviewer",
-          },
-          specFolderPath:
-            "/workspace/spec-reviewer/.plugin-workspace/.specs/auth",
-          folderPath:
-            "/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/active/2026-05-06T120000Z-file-tasks-abcdef12",
-          sourceFiles: [
-            {
-              specId: "auth",
-              fileKey: "tasks",
-              relativePath: ".plugin-workspace/.specs/auth/tasks.md",
-            },
-          ],
-          commentCount: 2,
-          createdAt: "2026-05-06T12:00:00Z",
-          archivedAt: null,
-          summary: null,
-          warnings: [],
-        },
-      ],
+      target: activeReview.target,
+      active: [activeReview],
       archived: [],
       problems: [],
       error: null,
@@ -59,19 +42,15 @@ const meta = {
       status: "idle",
     },
     onTargetScopeChange: fn(),
-    onWorkspaceModeChange: fn(),
     onCreateUserReview: fn(),
     onArchiveUserReview: fn(),
     onRefreshUserReviews: fn(),
-    onCopyPath: fn(async () => undefined),
   },
   argTypes: {
     onTargetScopeChange: { control: false },
-    onWorkspaceModeChange: { control: false },
     onCreateUserReview: { control: false },
     onArchiveUserReview: { control: false },
     onRefreshUserReviews: { control: false },
-    onCopyPath: { control: false },
   },
 } satisfies Meta<typeof UserReviewPanel>;
 
@@ -81,16 +60,19 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
+export const AllProps: Story = {
+  args: {
+    targetScope: "spec",
+    openCommentCount: 12,
+  },
+};
+
 export const Empty: Story = {
   args: {
     openCommentCount: 0,
     listState: {
       status: "empty",
-      target: {
-        scope: "file",
-        specId: "auth",
-        fileKey: "tasks",
-      },
+      target: activeReview.target,
       active: [],
       archived: [],
       problems: [],
@@ -99,14 +81,14 @@ export const Empty: Story = {
   },
 };
 
-export const Error: Story = {
+export const CreateError: Story = {
   args: {
     createState: {
       status: "error",
-      payload: { commentIds: [], workspaceMode: "currentWorkspace" },
+      payload: { commentIds: [CommentId.fromString("cmt_1")] },
       error: {
         code: "userReviewExport",
-        message: "source files have uncommitted changes",
+        message: "failed to write user review record",
         raw: {},
       },
     },
@@ -117,11 +99,7 @@ export const Loading: Story = {
   args: {
     listState: {
       status: "loading",
-      target: {
-        scope: "file",
-        specId: "auth",
-        fileKey: "tasks",
-      },
+      target: activeReview.target,
       active: [],
       archived: [],
       problems: [],
@@ -136,7 +114,6 @@ export const Creating: Story = {
       status: "saving",
       payload: {
         commentIds: [CommentId.fromString("cmt_1")],
-        workspaceMode: "currentWorkspace",
       },
     },
   },
@@ -144,53 +121,35 @@ export const Creating: Story = {
 
 export const Archiving: Story = {
   args: {
-    listState: {
-      status: "ready",
-      target: {
-        scope: "file",
-        specId: "auth",
-        fileKey: "tasks",
-      },
-      active: [
-        {
-          id: "2026-05-06T120000Z-file-tasks-abcdef12",
-          status: "completed",
-          target: {
-            scope: "file",
-            specId: "auth",
-            fileKey: "tasks",
-          },
-          workspace: {
-            mode: "currentWorkspace",
-            workspacePath: "/workspace/spec-reviewer",
-          },
-          specFolderPath:
-            "/workspace/spec-reviewer/.plugin-workspace/.specs/auth",
-          folderPath:
-            "/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/active/2026-05-06T120000Z-file-tasks-abcdef12",
-          sourceFiles: [
-            {
-              specId: "auth",
-              fileKey: "tasks",
-              relativePath: ".plugin-workspace/.specs/auth/tasks.md",
-            },
-          ],
-          commentCount: 2,
-          createdAt: "2026-05-06T12:00:00Z",
-          archivedAt: null,
-          summary: "対応完了",
-          warnings: [],
-        },
-      ],
-      archived: [],
-      problems: [],
-      error: null,
-    },
     archiveState: {
       status: "saving",
       payload: {
-        userReviewId: "2026-05-06T120000Z-file-tasks-abcdef12",
+        userReviewId: activeReview.id,
       },
+    },
+  },
+};
+
+export const Problems: Story = {
+  args: {
+    listState: {
+      status: "empty",
+      target: activeReview.target,
+      active: [],
+      archived: [],
+      problems: [
+        {
+          locator: "legacy-review-folder",
+          kind: "legacyRecord",
+          message: "legacy folder bundle",
+        },
+        {
+          locator: "future-review.json",
+          kind: "unsupportedRecordVersion",
+          message: "schema version 2 is not supported",
+        },
+      ],
+      error: null,
     },
   },
 };

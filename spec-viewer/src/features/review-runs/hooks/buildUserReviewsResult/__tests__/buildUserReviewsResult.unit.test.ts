@@ -17,6 +17,7 @@ test("buildUserReviewsResultは公開resultへ組み立てる", async () => {
   const reloadUserReviews = vi.fn().mockResolvedValue(true);
   const createUserReview = vi.fn().mockResolvedValue(null);
   const archiveUserReview = vi.fn().mockResolvedValue(null);
+  const canCreateUserReview = vi.fn().mockReturnValue(true);
   const result = buildUserReviewsResult({
     list: {
       target,
@@ -26,6 +27,7 @@ test("buildUserReviewsResultは公開resultへ組み立てる", async () => {
     operations: {
       createState: UserReviewCreateState.idle(),
       archiveState: UserReviewArchiveState.idle(),
+      canCreateUserReview,
       createUserReview,
       archiveUserReview,
     },
@@ -38,5 +40,6 @@ test("buildUserReviewsResultは公開resultへ組み立てる", async () => {
   expect(result.activeReviews).toEqual([]);
   expect(result.archivedReviews).toEqual([]);
   expect(result.createUserReview).toBe(createUserReview);
+  expect(result.canCreateUserReview).toBe(canCreateUserReview);
   expect(result.archiveUserReview).toBe(archiveUserReview);
 });

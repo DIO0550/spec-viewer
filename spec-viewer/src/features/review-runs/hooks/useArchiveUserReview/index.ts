@@ -1,12 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { UserReview } from "@/features/review-runs/domain/userReview";
+import type {
+  ActiveUserReview,
+  ArchivedUserReview,
+} from "@/features/review-runs/domain/userReview";
 import { UserReviewFeatureError } from "@/features/review-runs/domain/userReviewError";
 import {
   UserReviewArchiveState,
   type UserReviewArchiveState as UserReviewArchiveStateType,
 } from "@/features/review-runs/domain/userReviewOperation";
-import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
+import {
+  UserReviewTarget,
+  type UserReviewTarget as UserReviewTargetType,
+} from "@/features/review-runs/domain/userReviewTarget";
 import type { UserReviewListEventWithSelectionId } from "@/features/review-runs/hooks/useUserReviewList";
 import { archiveUserReview as archiveUserReviewViaGateway } from "@/features/review-runs/infra/userReviewGateway";
 import type { UserReviewCommands } from "@/shared/api/tauri";
@@ -17,7 +23,7 @@ type SelectionId = string;
 
 export type UseArchiveUserReviewOptions = Readonly<{
   workspacePath: WorkspacePath | null;
-  target: UserReviewTarget | null;
+  target: UserReviewTargetType | null;
   selectionId: SelectionId;
   commands: UserReviewCommands;
   /** Handles a list event. @param event - The user review list event. */
@@ -31,8 +37,10 @@ type SelectionIdArchiveState = Readonly<{
 
 export type UseArchiveUserReviewResult = Readonly<{
   archiveState: UserReviewArchiveStateType;
-  /** Archives a user review. @param userReviewId - ID of the review to archive. */
-  archiveUserReview: (userReviewId: string) => Promise<UserReview | null>;
+  /** Archives a user review. @param userReview - Aggregate to archive. */
+  archiveUserReview: (
+    userReview: ActiveUserReview,
+  ) => Promise<ArchivedUserReview | null>;
 }>;
 
 /** @returns User review archive state and callback for the active target. */
@@ -42,6 +50,7 @@ export function useArchiveUserReview(
   const { commands, onUserReviewEvent, target, selectionId, workspacePath } =
     options;
   const requestIdRef = useRef(0);
+  const isArchivingRef = useRef(false);
   const [archiveViewState, setArchiveViewState] =
     useState<SelectionIdArchiveState>({
       selectionId,
@@ -50,6 +59,7 @@ export function useArchiveUserReview(
 
   useEffect(() => {
     requestIdRef.current += 1;
+    isArchivingRef.current = false;
     setArchiveViewState({
       selectionId,
       state: UserReviewArchiveState.idle(),
@@ -57,12 +67,20 @@ export function useArchiveUserReview(
   }, [selectionId]);
 
   const archiveUserReview = useCallback(
-    async (userReviewId: string): Promise<UserReview | null> => {
-      if (workspacePath === null || target === null) {
+    async (
+      userReview: ActiveUserReview,
+    ): Promise<ArchivedUserReview | null> => {
+      if (
+        workspacePath === null ||
+        target === null ||
+        isArchivingRef.current ||
+        !UserReviewTarget.equals(target, userReview.target)
+      ) {
         return null;
       }
 
-      const payload = { userReviewId };
+      isArchivingRef.current = true;
+      const payload = { userReviewId: userReview.id };
       const startedSelectionId = selectionId;
       const startedRequestId = requestIdRef.current + 1;
       requestIdRef.current = startedRequestId;
@@ -75,9 +93,12 @@ export function useArchiveUserReview(
         const response = await archiveUserReviewViaGateway(
           commands,
           WorkspacePath.toString(workspacePath),
-          target,
-          payload.userReviewId,
+          userReview,
         );
+
+        if (requestIdRef.current === startedRequestId) {
+          isArchivingRef.current = false;
+        }
 
         setArchiveViewState((current) => {
           if (
@@ -103,6 +124,10 @@ export function useArchiveUserReview(
         }
         return response.userReview;
       } catch (error) {
+        if (requestIdRef.current === startedRequestId) {
+          isArchivingRef.current = false;
+        }
+
         setArchiveViewState((current) => {
           if (
             current.selectionId !== startedSelectionId ||

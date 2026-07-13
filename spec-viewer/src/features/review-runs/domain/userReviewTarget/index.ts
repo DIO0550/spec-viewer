@@ -16,6 +16,17 @@ export type UserReviewTargetInput = Readonly<{
 
 export type UserReviewTargetIdentity = string;
 
+const specFileKeys: ReadonlySet<SpecFileKey> = new Set([
+  "exploration",
+  "hearing",
+  "impl",
+  "tasks",
+  "tech-reference",
+  "test-cases",
+  "requirements",
+  "design",
+]);
+
 export const UserReviewTarget = {
   /** @returns A user review target for file/spec scope, or null when incomplete. */
   create(input: UserReviewTargetInput): UserReviewTarget | null {
@@ -39,6 +50,51 @@ export const UserReviewTarget = {
       specId: input.specId,
       fileKey: input.fileKey,
     };
+  },
+
+  /**
+   * @param target - Runtime target value restored from a boundary.
+   * @returns True when target scope and identity fields are valid.
+   */
+  isValid(target: unknown): target is UserReviewTarget {
+    if (typeof target !== "object" || target === null) {
+      return false;
+    }
+
+    const candidate = target as Record<string, unknown>;
+
+    if (
+      typeof candidate.specId !== "string" ||
+      candidate.specId.trim().length === 0
+    ) {
+      return false;
+    }
+
+    if (candidate.scope === "spec") {
+      return true;
+    }
+
+    return (
+      candidate.scope === "file" &&
+      specFileKeys.has(candidate.fileKey as SpecFileKey)
+    );
+  },
+
+  /**
+   * @param target - First target.
+   * @param other - Second target.
+   * @returns True when both targets select the same spec/file scope.
+   */
+  equals(target: UserReviewTarget, other: UserReviewTarget): boolean {
+    if (target.scope !== other.scope || target.specId !== other.specId) {
+      return false;
+    }
+
+    if (target.scope === "spec" || other.scope === "spec") {
+      return true;
+    }
+
+    return target.fileKey === other.fileKey;
   },
 } as const;
 

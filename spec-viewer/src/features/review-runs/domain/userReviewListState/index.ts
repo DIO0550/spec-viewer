@@ -1,12 +1,15 @@
+import type {
+  ActiveUserReview,
+  ArchivedUserReview,
+} from "@/features/review-runs/domain/userReview";
 import {
   UserReviewCollection,
-  type UserReviewCollection as UserReviewCollectionType,
   type UserReviewCollectionTransform,
+  type UserReviewCollection as UserReviewCollectionType,
 } from "@/features/review-runs/domain/userReviewCollection";
-import type { UserReview } from "@/features/review-runs/domain/userReview";
-import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
-import type { UserReviewListProblem } from "@/features/review-runs/types/userReviewIpc";
 import type { UserReviewFeatureError } from "@/features/review-runs/domain/userReviewError";
+import type { UserReviewRecordProblem } from "@/features/review-runs/domain/userReviewRecordProblem";
+import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 
 export type UserReviewListIdleState = Readonly<{
   status: "idle";
@@ -29,9 +32,9 @@ export type UserReviewListLoadingState = Readonly<{
 export type UserReviewListReadyState = Readonly<{
   status: "ready";
   target: UserReviewTarget;
-  active: readonly UserReview[];
-  archived: readonly UserReview[];
-  problems: readonly UserReviewListProblem[];
+  active: readonly ActiveUserReview[];
+  archived: readonly ArchivedUserReview[];
+  problems: readonly UserReviewRecordProblem[];
   error: null;
 }>;
 
@@ -40,7 +43,7 @@ export type UserReviewListEmptyState = Readonly<{
   target: UserReviewTarget;
   active: readonly [];
   archived: readonly [];
-  problems: readonly UserReviewListProblem[];
+  problems: readonly UserReviewRecordProblem[];
   error: null;
 }>;
 
@@ -68,11 +71,11 @@ export type UserReviewListTransformResult = Readonly<{
 export type UserReviewListEvent =
   | Readonly<{
       type: "reviewCreated";
-      review: UserReview;
+      review: ActiveUserReview;
     }>
   | Readonly<{
       type: "reviewArchived";
-      review: UserReview;
+      review: ArchivedUserReview;
     }>;
 
 export type UserReviewListEventResult = Readonly<{

@@ -1,81 +1,186 @@
 import { expect, test } from "vitest";
 
 import {
-  UserReview,
-  UserReviewStatus,
   type StoredUserReview,
-  type UserReview as UserReviewType,
+  UserReview,
 } from "@/features/review-runs/domain/userReview";
 
-const activeRun = createUserReview({
-  id: "run-active",
+const activeStoredReview: StoredUserReview = {
+  schemaVersion: "spec-reviewer.user-review.v1",
+  id: "urv_0123456789abcdef0123456789abcdef",
   status: "active",
-  archivedAt: null,
-});
-
-test("UserReviewStatus.isArchivedはarchived statusをtrueとして返す", () => {
-  expect(UserReviewStatus.isArchived("archived")).toBe(true);
-});
-
-test("UserReviewStatus.isArchivedはcompleted statusをfalseとして返す", () => {
-  expect(UserReviewStatus.isArchived("completed")).toBe(false);
-});
-
-test.each(["active", "inProgress", "completed"] as const)(
-  "UserReviewStatus.isNonArchivedは%s statusをtrueとして返す",
-  (status) => {
-    expect(UserReviewStatus.isNonArchived(status)).toBe(true);
+  target: {
+    scope: "file",
+    specId: "auth-flow",
+    fileKey: "tasks",
   },
-);
+  recordLocator: "urv_0123456789abcdef0123456789abcdef.json",
+  commentCount: 2,
+  createdAt: "2026-07-12T10:00:00Z",
+  updatedAt: "2026-07-12T10:00:00Z",
+  archivedAt: null,
+};
 
-test("UserReviewStatus.isNonArchivedはarchived statusをfalseとして返す", () => {
-  expect(UserReviewStatus.isNonArchived("archived")).toBe(false);
-});
+test("active reviewをarchive可能なaggregateへrestoreする", () => {
+  const result = UserReview.restore(activeStoredReview);
 
-test("UserReview.isArchivedはarchived runをarchived variantへnarrowする", () => {
-  const entity = createUserReview({
-    id: "run-archived",
-    status: "archived",
-    archivedAt: "2026-05-06T12:30:00Z",
+  expect(result).toEqual({
+    ok: true,
+    userReview: activeStoredReview,
   });
-
-  expect(UserReview.isArchived(entity)).toBe(true);
-  expect(UserReview.isNonArchived(entity)).toBe(false);
+  if (result.ok) {
+    expect(UserReview.canArchive(result.userReview)).toBe(true);
+  }
 });
 
-test("UserReview.isNonArchivedは非archived runをactive collection向けにnarrowする", () => {
-  expect(UserReview.isNonArchived(activeRun)).toBe(true);
-  expect(UserReview.isArchived(activeRun)).toBe(false);
+test("active reviewをarchivedへ遷移する", () => {
+  const restored = UserReview.restore(activeStoredReview);
+
+  expect(restored.ok).toBe(true);
+  if (!restored.ok) {
+    return;
+  }
+
+  const result = UserReview.archive(
+    restored.userReview,
+    "2026-07-12T11:00:00Z",
+  );
+
+  expect(result).toEqual({
+    ok: true,
+    userReview: {
+      ...activeStoredReview,
+      status: "archived",
+      updatedAt: "2026-07-12T11:00:00Z",
+      archivedAt: "2026-07-12T11:00:00Z",
+    },
+  });
 });
 
-function createUserReview(
-  input: Pick<StoredUserReview, "archivedAt" | "id" | "status">,
-): UserReviewType {
-  return {
-    id: input.id,
-    status: input.status,
-    target: {
-      scope: "file",
-      specId: "auth",
-      fileKey: "tasks",
+test("archived reviewは再度archiveできない", () => {
+  const archivedReview: StoredUserReview = {
+    ...activeStoredReview,
+    status: "archived",
+    updatedAt: "2026-07-12T11:00:00Z",
+    archivedAt: "2026-07-12T11:00:00Z",
+  };
+  const restored = UserReview.restore(archivedReview);
+
+  expect(restored.ok).toBe(true);
+  if (!restored.ok) {
+    return;
+  }
+
+  expect(UserReview.canArchive(restored.userReview)).toBe(false);
+  expect(
+    UserReview.archive(restored.userReview, "2026-07-12T12:00:00Z"),
+  ).toEqual({
+    ok: false,
+    error: {
+      reason: "alreadyArchived",
+      id: archivedReview.id,
     },
-    workspace: {
-      mode: "currentWorkspace",
-      workspacePath: "/workspace/spec-reviewer",
+  });
+});
+
+test.each([
+  {
+    name: "unsupported schema version",
+    review: { ...activeStoredReview, schemaVersion: "legacy.v0" },
+    reason: "unsupportedSchemaVersion",
+  },
+  {
+    name: "zero comment count",
+    review: { ...activeStoredReview, commentCount: 0 },
+    reason: "invalidCommentCount",
+  },
+  {
+    name: "fractional comment count",
+    review: { ...activeStoredReview, commentCount: 1.5 },
+    reason: "invalidCommentCount",
+  },
+  {
+    name: "blank target spec id",
+    review: {
+      ...activeStoredReview,
+      target: { ...activeStoredReview.target, specId: " " },
     },
-    specFolderPath: "/workspace/spec-reviewer/.plugin-workspace/.specs/auth",
-    folderPath: `/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/active/${input.id}`,
-    sourceFiles: [
-      {
-        specId: "auth",
-        fileKey: "tasks",
-        relativePath: ".plugin-workspace/.specs/auth/tasks.md",
-      },
-    ],
-    commentCount: 1,
-    createdAt: "2026-05-06T12:00:00Z",
-    archivedAt: input.archivedAt,
-    summary: null,
-    warnings: [],
-  } as UserReviewType;
-}
+    reason: "invalidTarget",
+  },
+  {
+    name: "malformed target",
+    review: {
+      ...activeStoredReview,
+      target: null,
+    },
+    reason: "invalidTarget",
+  },
+  {
+    name: "non-canonical timestamp",
+    review: {
+      ...activeStoredReview,
+      createdAt: "2026-07-12 10:00:00Z",
+    },
+    reason: "invalidTimestamp",
+  },
+  {
+    name: "active timestamp mismatch",
+    review: {
+      ...activeStoredReview,
+      updatedAt: "2026-07-12T10:00:01Z",
+    },
+    reason: "activeTimestampsDiffer",
+  },
+  {
+    name: "active archivedAt",
+    review: {
+      ...activeStoredReview,
+      archivedAt: "2026-07-12T10:00:00Z",
+    },
+    reason: "activeHasArchivedAt",
+  },
+  {
+    name: "archived missing archivedAt",
+    review: {
+      ...activeStoredReview,
+      status: "archived",
+    },
+    reason: "archivedMissingArchivedAt",
+  },
+  {
+    name: "archived timestamp mismatch",
+    review: {
+      ...activeStoredReview,
+      status: "archived",
+      updatedAt: "2026-07-12T11:00:00Z",
+      archivedAt: "2026-07-12T11:00:01Z",
+    },
+    reason: "archivedTimestampsDiffer",
+  },
+] as const)("$nameをtyped restore errorとして返す", ({ review, reason }) => {
+  const result = UserReview.restore(review as StoredUserReview);
+
+  expect(result).toMatchObject({
+    ok: false,
+    error: { reason },
+  });
+});
+
+test("updatedAtより前のtimestampではarchiveできない", () => {
+  const restored = UserReview.restore(activeStoredReview);
+
+  expect(restored.ok).toBe(true);
+  if (!restored.ok) {
+    return;
+  }
+
+  expect(
+    UserReview.archive(restored.userReview, "2026-07-12T09:59:59Z"),
+  ).toEqual({
+    ok: false,
+    error: {
+      reason: "archiveTimestampRollback",
+      id: activeStoredReview.id,
+    },
+  });
+});

@@ -1,10 +1,5 @@
 import { expectTypeOf, test } from "vitest";
-
-import type {
-  AddCommentCommandRequest,
-  AddCommentCommandResponse,
-} from "@/shared/api/tauri/addComment";
-import type { CommandRequest, CommandResponse } from "@/shared/types/ipc";
+import type { Comment as DomainComment } from "@/features/comments/domain/comment";
 import type {
   AddCommentRequest,
   ApplyWithAiCommentSelectionInput,
@@ -12,9 +7,9 @@ import type {
   ApplyWithAiPlaceholderState,
   Comment,
   CommentAnchorDisplayStatus,
-  CommentExportOperation,
   CommentDisplayFilter,
   CommentDisplayState,
+  CommentExportOperation,
   CommentStatusFilter as CommentStatusFilterType,
   ListCommentsResponse,
   SpecSkillMcpFeedbackPayload,
@@ -22,10 +17,12 @@ import type {
 import type {
   CreateUserReviewRequest,
   UserReview,
-  UserReviewManifest,
-  UserReviewStatusDocument,
 } from "@/features/review-runs/types/userReviewIpc";
-import type { Comment as DomainComment } from "@/features/comments/domain/comment";
+import type {
+  AddCommentCommandRequest,
+  AddCommentCommandResponse,
+} from "@/shared/api/tauri/addComment";
+import type { CommandRequest, CommandResponse } from "@/shared/types/ipc";
 
 test("types/commentのCommentはdomain Commentの互換exportとして扱える", () => {
   expectTypeOf<Comment>().toEqualTypeOf<DomainComment>();
@@ -118,38 +115,21 @@ test("MCP feedback pathはdry-run payloadとmanual copy operationを表現する
   }>();
 });
 
-test("review run payloadはfile/spec targetと実行先を表現する", () => {
+test("review run payloadはsingle JSON lifecycleとfile/spec targetを表現する", () => {
   expectTypeOf<
     CommandRequest<"create_user_review">
   >().toEqualTypeOf<CreateUserReviewRequest>();
   expectTypeOf<UserReview>().toMatchTypeOf<{
-    status: "active" | "inProgress" | "completed" | "archived";
-    workspace:
-      | { mode: "currentWorkspace"; workspacePath: string }
-      | {
-          mode: "worktree";
-          repositoryPath: string;
-          worktreePath: string;
-          branchName: string;
-        };
+    schemaVersion: "spec-reviewer.user-review.v1";
+    status: "active" | "archived";
+    recordLocator: string;
+    updatedAt: string;
   }>();
   expectTypeOf<CreateUserReviewRequest>().toMatchTypeOf<{
+    workspacePath: string;
     target:
-      | { scope: "file"; specId: string }
+      | { scope: "file"; specId: string; fileKey: string }
       | { scope: "spec"; specId: string };
-    workspaceMode: "currentWorkspace" | "worktree";
-  }>();
-});
-
-test("review run manifestとstatus documentはbundle schemaを表現する", () => {
-  expectTypeOf<UserReviewManifest>().toMatchTypeOf<{
-    schemaVersion: "spec-reviewer.review-run.v1";
     commentIds: readonly string[];
-    archivedAt: string | null;
-  }>();
-  expectTypeOf<UserReviewStatusDocument>().toMatchTypeOf<{
-    status: "active" | "inProgress" | "completed" | "archived";
-    summary: string | null;
-    warnings: readonly string[];
   }>();
 });

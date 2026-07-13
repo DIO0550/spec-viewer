@@ -27,32 +27,19 @@ export type UserReviewCommandTestDouble = Readonly<{
 }>;
 
 const defaultUserReview: UserReview = {
-  id: "2026-05-06T120000Z-file-tasks-abcdef12",
+  schemaVersion: "spec-reviewer.user-review.v1",
+  id: "urv_0123456789abcdef0123456789abcdef",
   status: "active",
   target: {
     scope: "file",
-    specId: "auth",
+    specId: "auth-flow",
     fileKey: "tasks",
   },
-  workspace: {
-    mode: "currentWorkspace",
-    workspacePath: "/workspace/spec-reviewer",
-  },
-  specFolderPath: "/workspace/spec-reviewer/.plugin-workspace/.specs/auth",
-  folderPath:
-    "/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/active/2026-05-06T120000Z-file-tasks-abcdef12",
-  sourceFiles: [
-    {
-      specId: "auth",
-      fileKey: "tasks",
-      relativePath: ".plugin-workspace/.specs/auth/tasks.md",
-    },
-  ],
+  recordLocator: "urv_0123456789abcdef0123456789abcdef.json",
   commentCount: 1,
   createdAt: "2026-05-06T12:00:00Z",
+  updatedAt: "2026-05-06T12:00:00Z",
   archivedAt: null,
-  summary: null,
-  warnings: [],
 };
 
 /** @returns A typed review run command double for hook and component tests. */
@@ -94,10 +81,7 @@ export function createUserReviewCommandTestDouble(
             userReview: {
               ...defaultUserReview,
               status: "archived",
-              folderPath: defaultUserReview.folderPath.replace(
-                "/active/",
-                "/archive/",
-              ),
+              updatedAt: "2026-05-06T12:30:00Z",
               archivedAt: "2026-05-06T12:30:00Z",
             },
           }

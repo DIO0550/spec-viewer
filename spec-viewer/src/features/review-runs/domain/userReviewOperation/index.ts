@@ -1,6 +1,8 @@
 import type { CommentId } from "@/features/comments/types/comment";
-import type { UserReview } from "@/features/review-runs/domain/userReview";
-import type { UserReviewWorkspaceMode } from "@/features/review-runs/types/userReviewIpc";
+import type {
+  ActiveUserReview,
+  ArchivedUserReview,
+} from "@/features/review-runs/domain/userReview";
 import type { UserReviewFeatureError } from "@/features/review-runs/domain/userReviewError";
 
 export type AsyncOperationState<TPayload, TResult> =
@@ -22,9 +24,10 @@ export type AsyncOperationState<TPayload, TResult> =
       error: UserReviewFeatureError;
     }>;
 
+export type NonEmptyCommentIds = readonly [CommentId, ...CommentId[]];
+
 export type CreateUserReviewPayload = Readonly<{
-  commentIds: readonly CommentId[];
-  workspaceMode: UserReviewWorkspaceMode;
+  commentIds: NonEmptyCommentIds;
 }>;
 
 export type ArchiveUserReviewPayload = Readonly<{
@@ -33,12 +36,12 @@ export type ArchiveUserReviewPayload = Readonly<{
 
 export type UserReviewCreateState = AsyncOperationState<
   CreateUserReviewPayload,
-  UserReview
+  ActiveUserReview
 >;
 
 export type UserReviewArchiveState = AsyncOperationState<
   ArchiveUserReviewPayload,
-  UserReview
+  ArchivedUserReview
 >;
 
 export const UserReviewCreateState = {
@@ -62,7 +65,7 @@ export const UserReviewCreateState = {
    */
   success(
     payload: CreateUserReviewPayload,
-    userReview: UserReview,
+    userReview: ActiveUserReview,
   ): UserReviewCreateState {
     return { status: "success", payload, result: userReview };
   },
@@ -101,7 +104,7 @@ export const UserReviewArchiveState = {
    */
   success(
     payload: ArchiveUserReviewPayload,
-    userReview: UserReview,
+    userReview: ArchivedUserReview,
   ): UserReviewArchiveState {
     return { status: "success", payload, result: userReview };
   },

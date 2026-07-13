@@ -1,10 +1,7 @@
 import type { ReactElement } from "react";
-import type { SpecViewResetKeys } from "@/app/App/hooks/types";
-import { useUserReviewWorkspaceMode } from "@/app/App/hooks/useUserReviewWorkspaceMode";
 import { useSpecViewSelection } from "@/app/context/specViewSelection";
 import type { Comment, CommentId } from "@/features/comments";
 import { UserReviewPanel, useUserReviews } from "@/features/review-runs";
-import { copyTextToClipboard } from "@/shared/lib/clipboard";
 
 type UserReviewCommentSummary = Readonly<{
   id: CommentId;
@@ -14,7 +11,6 @@ type UserReviewCommentSummary = Readonly<{
 export type SpecViewUserReviewPanelProps = Readonly<{
   comments: readonly UserReviewCommentSummary[];
   correlationId: string | null;
-  resetKeys: SpecViewResetKeys;
 }>;
 
 /**
@@ -25,9 +21,6 @@ export function SpecViewUserReviewPanel(
   props: SpecViewUserReviewPanelProps,
 ): ReactElement {
   const { comments, correlationId } = props;
-  const { workspaceMode, setWorkspaceMode } = useUserReviewWorkspaceMode({
-    resetKeys: props.resetKeys,
-  });
   const { selection, setTargetScope, selectionId } = useSpecViewSelection();
   const userReviews = useUserReviews({
     selectionSnapshot: {
@@ -36,41 +29,42 @@ export function SpecViewUserReviewPanel(
     },
     correlationId,
   });
+  const openCommentIds = getOpenCommentIds(comments);
 
   return (
     <UserReviewPanel
       targetScope={selection.targetScope}
-      workspaceMode={workspaceMode}
-      openCommentCount={countOpenComments(comments)}
+      openCommentCount={openCommentIds.length}
+      canCreateUserReview={userReviews.canCreateUserReview({
+        commentIds: openCommentIds,
+      })}
       listState={userReviews.listState}
       createState={userReviews.createState}
       archiveState={userReviews.archiveState}
       onTargetScopeChange={setTargetScope}
-      onWorkspaceModeChange={setWorkspaceMode}
       onCreateUserReview={() => {
-        const openCommentIds = comments
-          .filter((comment) => comment.status === "open")
-          .map((comment) => comment.id);
-
         void userReviews.createUserReview({
           commentIds: openCommentIds,
-          workspaceMode,
         });
       }}
-      onArchiveUserReview={(userReviewId) => {
-        void userReviews.archiveUserReview(userReviewId);
+      onArchiveUserReview={(userReview) => {
+        void userReviews.archiveUserReview(userReview);
       }}
       onRefreshUserReviews={() => {
         void userReviews.reloadUserReviews();
       }}
-      onCopyPath={copyTextToClipboard}
     />
   );
 }
 
-/** @returns The number of unresolved comments in the active sidebar list. */
-function countOpenComments(
+/**
+ * @param comments - Comment summaries visible in the active sidebar.
+ * @returns IDs of unresolved comments in the active sidebar list.
+ */
+function getOpenCommentIds(
   comments: readonly UserReviewCommentSummary[],
-): number {
-  return comments.filter((comment) => comment.status === "open").length;
+): readonly CommentId[] {
+  return comments
+    .filter((comment) => comment.status === "open")
+    .map((comment) => comment.id);
 }

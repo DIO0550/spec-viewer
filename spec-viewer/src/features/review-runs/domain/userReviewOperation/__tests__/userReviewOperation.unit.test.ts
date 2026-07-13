@@ -1,17 +1,26 @@
 import { expect, test } from "vitest";
-
+import { CommentId } from "@/features/comments/types/comment";
+import type {
+  ActiveUserReview,
+  ArchivedUserReview,
+} from "@/features/review-runs/domain/userReview";
+import type { CreateUserReviewPayload } from "@/features/review-runs/domain/userReviewOperation";
 import {
   UserReviewArchiveState,
   UserReviewCreateState,
 } from "@/features/review-runs/domain/userReviewOperation";
-import type { CreateUserReviewPayload } from "@/features/review-runs/domain/userReviewOperation";
-import type { UserReview } from "@/features/review-runs/types/userReviewIpc";
 import type { IpcCommandError } from "@/shared/types/ipc";
 
 const userReview = createUserReview();
+const archivedUserReview: ArchivedUserReview = {
+  ...userReview,
+  status: "archived",
+  updatedAt: "2026-05-06T12:30:00Z",
+  archivedAt: "2026-05-06T12:30:00Z",
+};
+
 const createPayload: CreateUserReviewPayload = {
-  commentIds: [],
-  workspaceMode: "currentWorkspace",
+  commentIds: [CommentId.fromString("cmt_1")],
 };
 const archivePayload = { userReviewId: "run-1" };
 const error: IpcCommandError = {
@@ -44,10 +53,12 @@ test("UserReviewArchiveStateはpayload付きarchive操作の状態を生成す�
     status: "saving",
     payload: archivePayload,
   });
-  expect(UserReviewArchiveState.success(archivePayload, userReview)).toEqual({
+  expect(
+    UserReviewArchiveState.success(archivePayload, archivedUserReview),
+  ).toEqual({
     status: "success",
     payload: archivePayload,
-    result: userReview,
+    result: archivedUserReview,
   });
   expect(UserReviewArchiveState.error(archivePayload, error)).toEqual({
     status: "error",
@@ -56,8 +67,9 @@ test("UserReviewArchiveStateはpayload付きarchive操作の状態を生成す�
   });
 });
 
-function createUserReview(): UserReview {
+function createUserReview(): ActiveUserReview {
   return {
+    schemaVersion: "spec-reviewer.user-review.v1",
     id: "run-1",
     status: "active",
     target: {
@@ -65,18 +77,10 @@ function createUserReview(): UserReview {
       specId: "auth",
       fileKey: "tasks",
     },
-    workspace: {
-      mode: "currentWorkspace",
-      workspacePath: "/workspace/spec-reviewer",
-    },
-    specFolderPath: "/workspace/spec-reviewer/.plugin-workspace/.specs/auth",
-    folderPath:
-      "/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/active/run-1",
-    sourceFiles: [],
+    recordLocator: "run-1.json",
     commentCount: 1,
     createdAt: "2026-05-06T12:00:00Z",
+    updatedAt: "2026-05-06T12:00:00Z",
     archivedAt: null,
-    summary: null,
-    warnings: [],
   };
 }

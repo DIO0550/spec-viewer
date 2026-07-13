@@ -1,8 +1,10 @@
 import { expect, test } from "vitest";
-
+import type {
+  ActiveUserReview,
+  ArchivedUserReview,
+} from "@/features/review-runs/domain/userReview";
 import { UserReviewCollection } from "@/features/review-runs/domain/userReviewCollection";
 import { UserReviewListState } from "@/features/review-runs/domain/userReviewListState";
-import type { UserReview } from "@/features/review-runs/types/userReviewIpc";
 
 const target = {
   scope: "file",
@@ -11,12 +13,12 @@ const target = {
 } as const;
 const activeRun = createUserReview("run-active");
 const secondActiveRun = createUserReview("run-second-active");
-const archivedRun: UserReview = {
+const archivedRun: ArchivedUserReview = {
   ...activeRun,
   id: "run-archived",
   status: "archived",
-  folderPath:
-    "/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/archive/run-archived",
+  recordLocator: "run-archived.json",
+  updatedAt: "2026-05-06T12:30:00Z",
   archivedAt: "2026-05-06T12:30:00Z",
 };
 
@@ -99,28 +101,16 @@ test("UserReviewListState.applyCollectionTransformはidleなら状態を変え�
   expect(result.state).toBe(state);
 });
 
-function createUserReview(id: string): UserReview {
+function createUserReview(id: string): ActiveUserReview {
   return {
+    schemaVersion: "spec-reviewer.user-review.v1",
     id,
     status: "active",
     target,
-    workspace: {
-      mode: "currentWorkspace",
-      workspacePath: "/workspace/spec-reviewer",
-    },
-    specFolderPath: "/workspace/spec-reviewer/.plugin-workspace/.specs/auth",
-    folderPath: `/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/active/${id}`,
-    sourceFiles: [
-      {
-        specId: "auth",
-        fileKey: "tasks",
-        relativePath: ".plugin-workspace/.specs/auth/tasks.md",
-      },
-    ],
+    recordLocator: `${id}.json`,
     commentCount: 1,
     createdAt: "2026-05-06T12:00:00Z",
+    updatedAt: "2026-05-06T12:00:00Z",
     archivedAt: null,
-    summary: null,
-    warnings: [],
   };
 }

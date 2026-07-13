@@ -3,9 +3,9 @@ import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
 import { CommentId } from "@/features/comments/types/comment";
+import type { ActiveUserReview } from "@/features/review-runs/domain/userReview";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import { useCreateUserReview } from "@/features/review-runs/hooks/useCreateUserReview";
-import type { UserReview } from "@/features/review-runs/types/userReviewIpc";
 import type { UserReviewCommands } from "@/shared/api/tauri";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 
@@ -53,19 +53,29 @@ function renderHook<Props, Result>(
 }
 
 type HookProps = Readonly<{
-  workspacePath: string;
+  workspacePath: string | null;
   selectionId: string;
   commands: UserReviewCommands;
+  target?: UserReviewTarget | null;
   onUserReviewEvent: (event: unknown) => void;
 }>;
 
 function renderUseCreateUserReview(props: HookProps) {
   return renderHook(
-    ({ commands, onUserReviewEvent, selectionId, workspacePath }) =>
+    ({
+      commands,
+      onUserReviewEvent,
+      selectionId,
+      target: reviewTarget,
+      workspacePath,
+    }) =>
       useCreateUserReview({
         commands,
-        workspacePath: WorkspacePath.fromString(workspacePath),
-        target,
+        workspacePath:
+          workspacePath === null
+            ? null
+            : WorkspacePath.fromString(workspacePath),
+        target: reviewTarget === undefined ? target : reviewTarget,
         selectionId,
         onUserReviewEvent,
       }),
@@ -79,34 +89,22 @@ const target: UserReviewTarget = {
   fileKey: "tasks",
 };
 
-const activeRun: UserReview = {
+const activeRun: ActiveUserReview = {
+  schemaVersion: "spec-reviewer.user-review.v1",
   id: "review-active",
   status: "active",
   target,
-  workspace: {
-    mode: "currentWorkspace",
-    workspacePath: "/workspace/spec-reviewer",
-  },
-  specFolderPath: "/workspace/spec-reviewer/.plugin-workspace/.specs/auth",
-  folderPath:
-    "/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/active/review-active",
-  sourceFiles: [
-    {
-      specId: "auth",
-      fileKey: "tasks",
-      relativePath: ".plugin-workspace/.specs/auth/tasks.md",
-    },
-  ],
+  recordLocator: "review-active.json",
   commentCount: 1,
   createdAt: "2026-05-06T12:00:00Z",
+  updatedAt: "2026-05-06T12:00:00Z",
   archivedAt: null,
-  summary: null,
-  warnings: [],
 };
 
-const secondActiveRun: UserReview = {
+const secondActiveRun: ActiveUserReview = {
   ...activeRun,
   id: "review-second-active",
+  recordLocator: "review-second-active.json",
 };
 
 function createCommands(): UserReviewCommands {
@@ -138,6 +136,43 @@ function createDeferred<T>(): Deferred<T> {
   };
 }
 
+test.each([
+  [
+    "有効な入力",
+    "/workspace/spec-reviewer",
+    target,
+    [CommentId.fromString("cmt_1")],
+    true,
+  ],
+  ["workspaceなし", null, target, [CommentId.fromString("cmt_1")], false],
+  [
+    "targetなし",
+    "/workspace/spec-reviewer",
+    null,
+    [CommentId.fromString("cmt_1")],
+    false,
+  ],
+  ["commentなし", "/workspace/spec-reviewer", target, [], false],
+  [
+    "comment ID重複",
+    "/workspace/spec-reviewer",
+    target,
+    [CommentId.fromString("cmt_1"), CommentId.fromString("cmt_1")],
+    false,
+  ],
+] as const)("useCreateUserReviewは%sの作成可否をdomain commandで判定する", (_, workspacePath, reviewTarget, commentIds, expected) => {
+  const result = renderUseCreateUserReview({
+    commands: createCommands(),
+    workspacePath,
+    target: reviewTarget,
+    selectionId: "/workspace/spec-reviewer:file:auth:tasks",
+    onUserReviewEvent: vi.fn(),
+  });
+
+  expect(result.current.canCreateUserReview({ commentIds })).toBe(expected);
+  result.unmount();
+});
+
 test("useCreateUserReviewはcreate成功後にreviewCreated eventを発行する", async () => {
   const commands = createCommands();
   const onUserReviewEvent = vi.fn();
@@ -151,7 +186,6 @@ test("useCreateUserReviewはcreate成功後にreviewCreated eventを発行する
   await act(async () => {
     await result.current.createUserReview({
       commentIds: [CommentId.fromString("cmt_1")],
-      workspaceMode: "currentWorkspace",
     });
   });
 
@@ -179,7 +213,6 @@ test("useCreateUserReviewはselectionIdを戻しても古いsuccessを再表示�
   await act(async () => {
     await result.current.createUserReview({
       commentIds: [CommentId.fromString("cmt_1")],
-      workspaceMode: "currentWorkspace",
     });
   });
   result.rerender({
@@ -200,7 +233,7 @@ test("useCreateUserReviewはselectionIdを戻しても古いsuccessを再表示�
 });
 
 test("useCreateUserReviewは同一identityの古いcreate完了を反映しない", async () => {
-  const firstCreate = createDeferred<{ userReview: UserReview }>();
+  const firstCreate = createDeferred<{ userReview: ActiveUserReview }>();
   const commands: UserReviewCommands = {
     listUserReviews: vi.fn(),
     createUserReview: vi
@@ -219,12 +252,10 @@ test("useCreateUserReviewは同一identityの古いcreate完了を反映しな�
 
   const firstPromise = result.current.createUserReview({
     commentIds: [CommentId.fromString("cmt_1")],
-    workspaceMode: "currentWorkspace",
   });
   await act(async () => {
     await result.current.createUserReview({
       commentIds: [CommentId.fromString("cmt_2")],
-      workspaceMode: "currentWorkspace",
     });
   });
   await act(async () => {

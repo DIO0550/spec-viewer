@@ -1,4 +1,7 @@
-import type { UserReview } from "@/features/review-runs/domain/userReview";
+import type {
+  ActiveUserReview,
+  ArchivedUserReview,
+} from "@/features/review-runs/domain/userReview";
 import type { UserReviewListState } from "@/features/review-runs/domain/userReviewListState";
 import type {
   UserReviewArchiveState,
@@ -18,12 +21,16 @@ type UserReviewsListResultInput = Readonly<{
 type UserReviewsOperationResultInput = Readonly<{
   createState: UserReviewCreateState;
   archiveState: UserReviewArchiveState;
+  /** @returns True when the current selection can create a review. */
+  canCreateUserReview: (input: CreateUserReviewInput) => boolean;
   /** Creates a user review. @param input - The create-review input. */
   createUserReview: (
     input: CreateUserReviewInput,
-  ) => Promise<UserReview | null>;
-  /** Archives a user review. @param userReviewId - ID of the review to archive. */
-  archiveUserReview: (userReviewId: string) => Promise<UserReview | null>;
+  ) => Promise<ActiveUserReview | null>;
+  /** Archives a user review. @param userReview - Aggregate to archive. */
+  archiveUserReview: (
+    userReview: ActiveUserReview,
+  ) => Promise<ArchivedUserReview | null>;
 }>;
 
 type UserReviewsResultInput = Readonly<{
@@ -44,6 +51,7 @@ export const buildUserReviewsResult: UserReviewsResultBuilder = (input) => {
   const { createState, archiveState, createUserReview, archiveUserReview } =
     input.operations;
 
+  const { canCreateUserReview } = input.operations;
   return {
     target,
     listState,
@@ -53,6 +61,7 @@ export const buildUserReviewsResult: UserReviewsResultBuilder = (input) => {
     archivedReviews: listState.archived,
     reloadUserReviews,
     createUserReview,
+    canCreateUserReview,
     archiveUserReview,
   };
 };

@@ -28,28 +28,15 @@ const target = {
 const selectionId = "/workspace/spec-reviewer:file:auth:tasks";
 
 const activeRun: UserReview = {
+  schemaVersion: "spec-reviewer.user-review.v1",
   id: "review-active",
   status: "active",
   target,
-  workspace: {
-    mode: "currentWorkspace",
-    workspacePath: "/workspace/spec-reviewer",
-  },
-  specFolderPath: "/workspace/spec-reviewer/.plugin-workspace/.specs/auth",
-  folderPath:
-    "/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/active/review-active",
-  sourceFiles: [
-    {
-      specId: "auth",
-      fileKey: "tasks",
-      relativePath: ".plugin-workspace/.specs/auth/tasks.md",
-    },
-  ],
+  recordLocator: "review-active.json",
   commentCount: 1,
   createdAt: "2026-05-06T12:00:00Z",
+  updatedAt: "2026-05-06T12:00:00Z",
   archivedAt: null,
-  summary: null,
-  warnings: [],
 };
 
 type HookResult<Props, Result> = Readonly<{
