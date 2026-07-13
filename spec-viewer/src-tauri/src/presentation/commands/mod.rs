@@ -2,7 +2,7 @@
 
 pub mod comments;
 pub mod specs;
-pub mod review_runs;
+pub mod user_reviews;
 pub mod watch;
 pub mod workspace;
 
