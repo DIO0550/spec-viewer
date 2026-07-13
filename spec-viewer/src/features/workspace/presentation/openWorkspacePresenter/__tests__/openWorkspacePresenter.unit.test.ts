@@ -81,6 +81,7 @@ test("startup restore失敗はactive workspaceなしを空inputへrollbackする
 test.each([
   { type: "loaded", source: "input", path: workspacePathFixture("/path") },
   { type: "loadFailedSilently", source: "input" },
+  { type: "loadCanceled", source: "recent" },
   { type: "skipped", source: "drop" },
   {
     type: "rejected",

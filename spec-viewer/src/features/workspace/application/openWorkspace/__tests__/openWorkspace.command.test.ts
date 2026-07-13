@@ -24,7 +24,10 @@ function workspace(root: string): Workspace {
 function createPorts(): OpenWorkspacePorts {
   return {
     validate: vi.fn(async () => ({ isDirectory: true })),
-    load: vi.fn(async (path) => workspace(path)),
+    load: vi.fn(async (path) => ({
+      type: "loaded" as const,
+      workspace: workspace(path),
+    })),
     recentWorkspaces: {
       record: vi.fn(async () => undefined),
       remove: vi.fn(async () => undefined),

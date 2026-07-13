@@ -30,7 +30,10 @@ test("recentのvalidate pending中にdrop commandも独立して実行できる"
     .mockResolvedValueOnce({ isDirectory: true });
   const ports: OpenWorkspacePorts = {
     validate,
-    load: vi.fn(async (path) => workspace(path)),
+    load: vi.fn(async (path) => ({
+      type: "loaded" as const,
+      workspace: workspace(path),
+    })),
     recentWorkspaces: {
       record: vi.fn(async () => undefined),
       remove: vi.fn(async () => undefined),

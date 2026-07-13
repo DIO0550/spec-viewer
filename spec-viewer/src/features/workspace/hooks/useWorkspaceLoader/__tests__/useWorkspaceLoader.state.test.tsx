@@ -2,12 +2,12 @@ import type { ReactNode } from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-
-import { WorkspaceProvider } from "@/features/workspace";
 import type { WorkspacePath } from "@/features/workspace";
+import { WorkspaceProvider } from "@/features/workspace";
 import type {
   LoadWorkspaceOptions,
   WorkspaceContextValue,
+  WorkspaceLoadOutcome,
   WorkspaceState,
 } from "@/features/workspace/context/types";
 import type { SubscribeWorkspaceDragDropEvents } from "@/features/workspace/hooks/useWorkspaceDrop";
@@ -16,11 +16,11 @@ import {
   type UseWorkspaceLoaderResult,
   useWorkspaceLoader,
 } from "@/features/workspace/hooks/useWorkspaceLoader";
+import type { RecentWorkspaceStorage } from "@/features/workspace/infrastructure/recentWorkspaces";
+import { writeLastActiveWorkspacePath } from "@/features/workspace/infrastructure/recentWorkspaces";
 import { workspacePathFixture } from "@/features/workspace/testing/workspacePath";
 import type { WorkspaceDragDropEvent } from "@/shared/api/tauri";
 import { getUnknownErrorMessage } from "@/shared/lib/errorMessage";
-import type { RecentWorkspaceStorage } from "@/features/workspace/infrastructure/recentWorkspaces";
-import { writeLastActiveWorkspacePath } from "@/features/workspace/infrastructure/recentWorkspaces";
 
 class MemoryStorage implements RecentWorkspaceStorage {
   private readonly values = new Map<string, string>();
@@ -62,6 +62,12 @@ function openingState(): WorkspaceState {
 function idleState(): WorkspaceState {
   return { status: "idle" };
 }
+function loadedWorkspaceOutcome(root: WorkspacePath): WorkspaceLoadOutcome {
+  return {
+    type: "loaded",
+    workspace: { root, kind: "plugin-workspace", files: [] },
+  };
+}
 
 function fakeWorkspace(
   state: WorkspaceState,
@@ -70,7 +76,7 @@ function fakeWorkspace(
   return {
     state,
     actions: {
-      load: vi.fn(async () => true),
+      load: vi.fn(async (path) => loadedWorkspaceOutcome(path)),
       reset: vi.fn(),
       ...overrides,
     },
@@ -169,11 +175,10 @@ test("初期状態のstate3個とselector導出", () => {
   hook.unmount();
 });
 
-test("io.loadラッパーはload開始前にクリア+input更新しonWorkspaceLoadedをpre-bindする", async () => {
-  const loadDeferred = deferred<boolean>();
-  const loadOptions: { onWorkspaceLoaded?: unknown; preserve?: unknown } = {};
+test("io.loadラッパーはload開始前にクリア+input更新しpreserve policyを渡す", async () => {
+  const loadDeferred = deferred<WorkspaceLoadOutcome>();
+  const loadOptions: { preserve?: unknown } = {};
   const load = vi.fn((_path: WorkspacePath, options?: LoadWorkspaceOptions) => {
-    loadOptions.onWorkspaceLoaded = options?.onWorkspaceLoaded;
     loadOptions.preserve = options?.preserveCurrentWorkspace;
     return loadDeferred.promise;
   });
@@ -194,10 +199,9 @@ test("io.loadラッパーはload開始前にクリア+input更新しonWorkspaceL
   expect(onError).toHaveBeenCalledWith(null);
   expect(hook.current.state.dropErrorMessage).toBeNull();
   expect(hook.current.state.workspaceInput).toBe("/typed");
-  expect(typeof loadOptions.onWorkspaceLoaded).toBe("function");
   expect(loadOptions.preserve).toBe(false);
 
-  loadDeferred.resolve(true);
+  loadDeferred.resolve(loadedWorkspaceOutcome(workspacePathFixture("/typed")));
   await flush();
   hook.unmount();
 });
@@ -248,7 +252,9 @@ test("browseアダプタはダイアログ表示中にbrowsingフラグをtrue�
     selectWorkspaceDirectory: vi.fn(() => dialog.promise),
     validateWorkspaceDirectory: vi.fn(async () => ({ isDirectory: true })),
   };
-  const load = vi.fn(async () => true);
+  const load = vi.fn(async (path: WorkspacePath) =>
+    loadedWorkspaceOutcome(path),
+  );
   const hook = renderLoader({
     onError: vi.fn(),
     workspace: fakeWorkspace(idleState(), { load }),
@@ -270,7 +276,9 @@ test("browseアダプタはダイアログ表示中にbrowsingフラグをtrue�
 });
 
 test("browseアダプタはダイアログのfile URLをcanonical pathへ変換する", async () => {
-  const load = vi.fn(async () => true);
+  const load = vi.fn(async (path: WorkspacePath) =>
+    loadedWorkspaceOutcome(path),
+  );
   const hook = renderLoader({
     onError: vi.fn(),
     workspace: fakeWorkspace(idleState(), { load }),
@@ -299,12 +307,15 @@ test("browseアダプタはキャンセル（null）でloadせずbrowsingをfals
     selectWorkspaceDirectory: vi.fn(async () => null),
     validateWorkspaceDirectory: vi.fn(async () => ({ isDirectory: true })),
   };
-  const load = vi.fn(async () => true);
+  const load = vi.fn(async (path: WorkspacePath) =>
+    loadedWorkspaceOutcome(path),
+  );
   const onError = vi.fn();
   const hook = renderLoader({
     onError,
     workspace: fakeWorkspace(idleState(), { load }),
     commands,
+    recentWorkspacesStorage: new MemoryStorage(),
   });
 
   await act(async () => {
@@ -358,7 +369,9 @@ test("browseアダプタはopening中ならダイアログコマンドを呼ば�
 });
 
 test("手入力アダプタは現在のworkspaceInput stateの値をloadへ渡す", async () => {
-  const load = vi.fn(async () => true);
+  const load = vi.fn(async (path: WorkspacePath) =>
+    loadedWorkspaceOutcome(path),
+  );
   const hook = renderLoader({
     onError: vi.fn(),
     workspace: fakeWorkspace(idleState(), { load }),
@@ -401,6 +414,29 @@ test("recent失敗outcomeは一覧削除→onError→input rollbackの順で適�
     "ワークスペースが見つかりません。保存済み一覧から削除しました。",
   );
   expect(hook.current.state.workspaceInput).toBe("/active");
+  hook.unmount();
+});
+
+test("recent loadがcanceledなら保存済みpathを削除しない", async () => {
+  const storage = new MemoryStorage();
+  const recentPath = workspacePathFixture("/recent");
+  writeLastActiveWorkspacePath(recentPath, storage);
+  const hook = renderLoader({
+    onError: vi.fn(),
+    workspace: fakeWorkspace(openedState("/active"), {
+      load: vi.fn(async () => ({ type: "canceled" as const })),
+    }),
+    commands: defaultCommands(),
+    recentWorkspacesStorage: storage,
+  });
+
+  await act(async () => {
+    await hook.current.actions.openRecentWorkspacePath(recentPath);
+  });
+
+  expect(storage.getItem("spec-reviewer.last-active-workspace")).toBe(
+    "/recent",
+  );
   hook.unmount();
 });
 
@@ -467,7 +503,7 @@ test("recentWorkspacesは所有する単一インスタンスを再露出しreco
         kind: "plugin-workspace",
         files: [],
       });
-      return true;
+      return loadedWorkspaceOutcome(path);
     },
   );
   const hook = renderLoader({
@@ -579,7 +615,9 @@ test("startup restoreはvalidate→loadを1回だけ実行しrerenderで再実�
     selectWorkspaceDirectory: vi.fn(async () => "/selected"),
     validateWorkspaceDirectory: vi.fn(async () => ({ isDirectory: true })),
   };
-  const load = vi.fn(async () => true);
+  const load = vi.fn(async (path: WorkspacePath) =>
+    loadedWorkspaceOutcome(path),
+  );
   const options: UseWorkspaceLoaderOptions = {
     onError: vi.fn(),
     workspace: fakeWorkspace(idleState(), { load }),

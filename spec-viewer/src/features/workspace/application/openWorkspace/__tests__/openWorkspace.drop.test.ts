@@ -25,7 +25,10 @@ function createPorts(
 ): OpenWorkspacePorts {
   return {
     validate: vi.fn(async () => ({ isDirectory: true })),
-    load: vi.fn(async (path) => workspace(path)),
+    load: vi.fn(async (path) => ({
+      type: "loaded" as const,
+      workspace: workspace(path),
+    })),
     recentWorkspaces: {
       record: vi.fn(async () => undefined),
       remove: vi.fn(async () => undefined),
@@ -40,7 +43,7 @@ test("load成功はrecent repositoryへworkspaceを記録してからloadedを�
   const ports = createPorts({
     load: vi.fn(async () => {
       order.push("load");
-      return loadedWorkspace;
+      return { type: "loaded" as const, workspace: loadedWorkspace };
     }),
     recentWorkspaces: {
       record: vi.fn(async () => {
@@ -71,7 +74,7 @@ test("drop commandはvalidateからloadの順に実行する", async () => {
     }),
     load: vi.fn(async () => {
       order.push("load");
-      return workspace("/drop");
+      return { type: "loaded" as const, workspace: workspace("/drop") };
     }),
   });
   const openWorkspace = createOpenWorkspaceUseCase(ports);

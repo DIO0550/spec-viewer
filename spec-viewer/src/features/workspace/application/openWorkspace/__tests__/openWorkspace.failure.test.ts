@@ -15,7 +15,7 @@ const available = {
 function failedLoadPorts(): OpenWorkspacePorts {
   return {
     validate: vi.fn(async () => ({ isDirectory: true })),
-    load: vi.fn(async () => null),
+    load: vi.fn(async () => ({ type: "unsupported" as const })),
     recentWorkspaces: {
       record: vi.fn(async () => undefined),
       remove: vi.fn(async () => undefined),

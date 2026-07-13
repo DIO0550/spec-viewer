@@ -25,7 +25,10 @@ function createPorts(
 ): OpenWorkspacePorts {
   return {
     validate: vi.fn(async () => ({ isDirectory: true })),
-    load: vi.fn(async (path) => workspace(path)),
+    load: vi.fn(async (path) => ({
+      type: "loaded" as const,
+      workspace: workspace(path),
+    })),
     recentWorkspaces: {
       record: vi.fn(async () => undefined),
       remove: vi.fn(async () => undefined),
@@ -75,7 +78,9 @@ test.each([
 });
 
 test("recent load失敗はunsupportedとしてremoveしnull rollbackを保持する", async () => {
-  const ports = createPorts({ load: vi.fn(async () => null) });
+  const ports = createPorts({
+    load: vi.fn(async () => ({ type: "unsupported" as const })),
+  });
   const openWorkspace = createOpenWorkspaceUseCase(ports);
 
   const outcome = await openWorkspace({
@@ -95,6 +100,24 @@ test("recent load失敗はunsupportedとしてremoveしnull rollbackを保持す
     removedPath: workspacePathFixture("/recent"),
     rollbackPath: null,
   });
+});
+
+test("recent loadがcanceledなら保存済みpathをremoveしない", async () => {
+  const ports = createPorts({
+    load: vi.fn(async () => ({ type: "canceled" as const })),
+  });
+  const openWorkspace = createOpenWorkspaceUseCase(ports);
+
+  const outcome = await openWorkspace({
+    type: "recent",
+    path: workspacePathFixture("/recent"),
+    activeWorkspaceRoot: workspacePathFixture("/active"),
+    availability: available,
+  });
+
+  expect(ports.recentWorkspaces.record).not.toHaveBeenCalled();
+  expect(ports.recentWorkspaces.remove).not.toHaveBeenCalled();
+  expect(outcome).toEqual({ type: "loadCanceled", source: "recent" });
 });
 
 test("recent validate例外はremove後にcauseとrollback pathを返す", async () => {
