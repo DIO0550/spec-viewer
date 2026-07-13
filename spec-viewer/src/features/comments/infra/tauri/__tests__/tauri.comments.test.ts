@@ -1,14 +1,14 @@
 import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { invoke } from "@tauri-apps/api/core";
 import { expect, test, vi } from "vitest";
-
-import type {
-  AddCommentRequest,
-  Comment,
-  DeleteCommentRequest,
-  ListCommentsRequest,
-  UpdateCommentRequest,
-} from "@/features/comments/types/comment";
+import {
+  AddCommentCommandError,
+  addComment,
+  commentCommands,
+  deleteComment,
+  listComments,
+  updateComment,
+} from "@/features/comments/infra/tauri";
 import { DeleteCommentCommandError } from "@/features/comments/infra/tauri/deleteComment";
 import { ExportCommentsCommandError } from "@/features/comments/infra/tauri/exportComments";
 import { GenerateLlmPromptCommandError } from "@/features/comments/infra/tauri/generateLlmPrompt";
@@ -17,14 +17,14 @@ import { ReopenCommentCommandError } from "@/features/comments/infra/tauri/reope
 import { ResolveCommentCommandError } from "@/features/comments/infra/tauri/resolveComment";
 import { ToggleCommentResolvedCommandError } from "@/features/comments/infra/tauri/toggleCommentResolved";
 import { UpdateCommentCommandError } from "@/features/comments/infra/tauri/updateComment";
-import {
-  addComment,
-  AddCommentCommandError,
-  commentCommands,
-  deleteComment,
-  listComments,
-  updateComment,
-} from "@/features/comments/infra/tauri";
+import { commentBody } from "@/features/comments/testing/comment-body-test-fixture";
+import type {
+  AddCommentRequest,
+  Comment,
+  DeleteCommentRequest,
+  ListCommentsRequest,
+  UpdateCommentRequest,
+} from "@/features/comments/types/comment";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
@@ -65,7 +65,7 @@ const addRequest: AddCommentRequest = {
   workspacePath: "/workspace/spec-reviewer",
   specId: TestValues.specId("auth"),
   anchor: comment.anchor,
-  body: "Clarify this task",
+  body: commentBody("Clarify this task"),
 };
 
 const updateRequest: UpdateCommentRequest = {
@@ -73,7 +73,7 @@ const updateRequest: UpdateCommentRequest = {
   specId: TestValues.specId("auth"),
   fileKey: "tasks",
   commentId: commentId("cmt_1"),
-  body: "Clarify token expiry",
+  body: commentBody("Clarify token expiry"),
 };
 
 const deleteRequest: DeleteCommentRequest = {

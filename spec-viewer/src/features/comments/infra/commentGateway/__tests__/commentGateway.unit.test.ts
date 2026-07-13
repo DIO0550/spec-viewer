@@ -14,6 +14,7 @@ import {
   toggleCommentResolved,
   updateComment,
 } from "@/features/comments/infra/commentGateway";
+import { commentBody } from "@/features/comments/testing/comment-body-test-fixture";
 import { createCommentCommandTestDouble } from "@/features/comments/testing/comment-command-test-double";
 import type { Comment, CommentAnchor } from "@/features/comments/types/comment";
 import { SpecViewSelection } from "@/shared/domain/specViewSelection";
@@ -99,7 +100,7 @@ test("addCommentはCommentCommandsへ追加request DTOを渡す", async () => {
   await expect(
     addComment(double.commands, scope, {
       anchor,
-      body: "Clarify this task",
+      body: commentBody("Clarify this task"),
     }),
   ).resolves.toEqual(comment);
 
@@ -126,7 +127,7 @@ test("updateCommentはCommentCommandsへ更新request DTOを渡す", async () =>
   await expect(
     updateComment(double.commands, scope, {
       commentId: comment.id,
-      body: "Updated body",
+      body: commentBody("Updated body"),
     }),
   ).resolves.toEqual(updatedComment);
 

@@ -2,6 +2,7 @@ import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
+import type { CommentCommands } from "@/features/comments/application/ports/commentCommands";
 import {
   CommentScope,
   type CommentScope as CommentScopeType,
@@ -9,14 +10,14 @@ import {
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import { useCommentOperations } from "@/features/comments/hooks/useCommentOperations";
 import { useComments } from "@/features/comments/hooks/useComments";
+import { toCommentFeatureError } from "@/features/comments/infra/tauri/commentErrorMapper";
+import { commentBody } from "@/features/comments/testing/comment-body-test-fixture";
 import { createCommentCommandTestDouble } from "@/features/comments/testing/comment-command-test-double";
 import type {
   Comment,
   CommentAnchor,
   ListCommentsResponse,
 } from "@/features/comments/types/comment";
-import { toCommentFeatureError } from "@/features/comments/infra/tauri/commentErrorMapper";
-import type { CommentCommands } from "@/features/comments/application/ports/commentCommands";
 import { SpecViewSelection } from "@/shared/domain/specViewSelection";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 import { configurePerformanceLoggerForTest } from "@/shared/lib/performance";
@@ -367,7 +368,7 @@ test("useCommentsはコメント追加中のsaving状態と追加後の一覧を
   act(() => {
     addPromise = result.current.addComment({
       anchor: secondComment.anchor,
-      body: secondComment.body,
+      body: commentBody(secondComment.body),
     });
   });
 
@@ -407,7 +408,7 @@ test("useCommentsはloading中のコメント追加成功を古い一覧response
   act(() => {
     addPromise = result.current.addComment({
       anchor: secondComment.anchor,
-      body: secondComment.body,
+      body: commentBody(secondComment.body),
     });
   });
 
@@ -442,7 +443,7 @@ test("useCommentsはscope変更後に完了したコメント追加を現在の�
   act(() => {
     addPromise = result.current.addComment({
       anchor: secondComment.anchor,
-      body: secondComment.body,
+      body: commentBody(secondComment.body),
     });
   });
 
@@ -473,7 +474,7 @@ test("useCommentsはコメント本文を更新して一覧へ反映する", asy
   await act(async () => {
     await result.current.updateComment({
       commentId: commentId("cmt_1"),
-      body: "Updated body",
+      body: commentBody("Updated body"),
     });
   });
 
@@ -499,7 +500,7 @@ test("useCommentsは同一scopeで古いoperation完了を現在の一覧へ反�
   act(() => {
     updatePromise = result.current.updateComment({
       commentId: commentId("cmt_1"),
-      body: "Updated body",
+      body: commentBody("Updated body"),
     });
   });
   expect(result.current.operationState.operation).toBe("update");
@@ -687,7 +688,7 @@ test("useCommentOperationsはreloadComments変更時に進行中operationを無�
   act(() => {
     addPromise = result.current.addComment({
       anchor: secondComment.anchor,
-      body: secondComment.body,
+      body: commentBody(secondComment.body),
     });
   });
   expect(result.current.operationState.status).toBe("saving");

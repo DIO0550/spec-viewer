@@ -3,7 +3,12 @@ import type { ReactNode } from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-
+import {
+  type CommentExportState,
+  CommentSidebar,
+} from "@/features/comments/components/CommentSidebar";
+import type { CommentBody } from "@/features/comments/domain/commentBody";
+import { toCommentFeatureError } from "@/features/comments/infra/tauri/commentErrorMapper";
 import type {
   Comment,
   CommentAnchor,
@@ -11,11 +16,6 @@ import type {
   CommentExportScope,
   CommentId,
 } from "@/features/comments/types/comment";
-import {
-  type CommentExportState,
-  CommentSidebar,
-} from "@/features/comments/components/CommentSidebar";
-import { toCommentFeatureError } from "@/features/comments/infra/tauri/commentErrorMapper";
 
 const commentId = TestValues.commentId;
 
@@ -122,7 +122,7 @@ function renderReadySidebar(
     onResolveComment?: (commentId: CommentId) => void;
     onReopenComment?: (commentId: CommentId) => void;
     onDeleteComment?: (commentId: CommentId) => void;
-    onUpdateComment?: (commentId: CommentId, body: string) => void;
+    onUpdateComment?: (commentId: CommentId, body: CommentBody) => void;
     exportState?: CommentExportState;
     onExportComments?: (scope: CommentExportScope) => void;
     onCopyLlmPrompt?: (scope: CommentExportScope) => void;

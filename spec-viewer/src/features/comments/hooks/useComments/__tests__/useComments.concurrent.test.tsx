@@ -22,6 +22,7 @@ import {
   flushAsyncEffects,
   tasksScope,
 } from "@/features/comments/hooks/useComments/__tests__/useComments.concurrent.fixture";
+import { commentBody } from "@/features/comments/testing/comment-body-test-fixture";
 import type { Comment } from "@/features/comments/types/comment";
 
 test.each([
@@ -86,7 +87,7 @@ test.each([
   act(() => {
     addPromise = committedResult.current.addComment({
       anchor: addedComment.anchor,
-      body: addedComment.body,
+      body: commentBody(addedComment.body),
     });
   });
 

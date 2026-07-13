@@ -1,15 +1,13 @@
 import * as TestValues from "@/shared/testing/validatedValueObjects";
-import { act } from "react";
 import type { ReactNode } from "react";
+import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-
-import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
 import {
   CommentOperationFailedState,
   CommentOperationIdleState,
-  CommentOperationSavingState,
   type CommentOperationKind,
+  CommentOperationSavingState,
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
 import { createTextHash } from "@/features/comments/lib/comment-anchor-draft";
@@ -19,11 +17,12 @@ import type {
   CommentBlockType,
   CommentId,
 } from "@/features/comments/types/comment";
+import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
+import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
 import type {
   MarkdownBlockMetadata,
   SpecDocument,
 } from "@/features/specs/types/spec";
-import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
 
 const commentId = TestValues.commentId;
 
@@ -1741,7 +1740,7 @@ test("MarkdownViewerは別ブロックのコメントdraftへ切り替えると�
   });
 
   expect(result.container.textContent).toContain(
-    "保存するコメントを入力してください。",
+    "コメント本文を入力してください。",
   );
 
   const refreshedAddButtons = result.container.querySelectorAll(
@@ -1757,7 +1756,7 @@ test("MarkdownViewerは別ブロックのコメントdraftへ切り替えると�
   expect(nextTextarea.value).toBe("");
   expect(result.container.textContent).toContain("paragraphブロック 2");
   expect(result.container.textContent).not.toContain(
-    "保存するコメントを入力してください。",
+    "コメント本文を入力してください。",
   );
   result.unmount();
 });
