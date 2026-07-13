@@ -26,7 +26,7 @@ import {
   userReviewCommands as defaultUserReviewCommands,
   type UserReviewCommands,
 } from "@/shared/api/tauri";
-import type { WorkspacePath } from "@/shared/domain/workspacePath";
+import type { WorkspacePath } from "@/features/workspace";
 
 export type { UserReviewListState } from "@/features/review-runs/domain/userReviewListState";
 export type {

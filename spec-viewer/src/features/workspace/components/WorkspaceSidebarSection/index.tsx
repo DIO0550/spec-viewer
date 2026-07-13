@@ -1,7 +1,8 @@
 import { ChevronDown, ChevronRight, Folder, FolderOpen, X } from "lucide-react";
 import { useId } from "react";
 
-import type { RecentWorkspace } from "@/shared/lib/recentWorkspaces";
+import { WorkspacePath } from "@/features/workspace/domain/workspacePath";
+import type { RecentWorkspace } from "@/features/workspace/infrastructure/recentWorkspaces";
 import { uiText } from "@/shared/lib/uiText";
 
 type Props = Readonly<{
@@ -14,9 +15,9 @@ type Props = Readonly<{
   /** ワークスペース切替セクションの開閉を切り替える。 */
   onToggleOpen: () => void;
   /** @param path - 開く最近使用したワークスペースのパス。 */
-  onOpenWorkspace: (path: string) => void;
+  onOpenWorkspace: (path: WorkspacePath) => void;
   /** @param path - 一覧から削除する最近使用したワークスペースのパス。 */
-  onRemoveWorkspace: (path: string) => void;
+  onRemoveWorkspace: (path: WorkspacePath) => void;
 }>;
 
 /** @returns Workspace switching controls for the left navigation sidebar. */
@@ -99,7 +100,10 @@ export function WorkspaceSidebarSection({
                     disabled={isBusy}
                     title={recentWorkspace.path}
                     aria-current={
-                      recentWorkspace.path === currentWorkspacePath
+                      isCurrentWorkspace(
+                        recentWorkspace.path,
+                        currentWorkspacePath,
+                      )
                         ? "location"
                         : undefined
                     }
@@ -139,5 +143,22 @@ export function WorkspaceSidebarSection({
         </div>
       ) : null}
     </section>
+  );
+}
+
+/** @returns Whether a recent workspace matches the current UI path. */
+function isCurrentWorkspace(
+  recentWorkspacePath: WorkspacePath,
+  currentWorkspacePath: string | null,
+): boolean {
+  if (currentWorkspacePath === null) {
+    return false;
+  }
+
+  const parsedCurrentPath = WorkspacePath.parse(currentWorkspacePath);
+
+  return (
+    parsedCurrentPath.ok &&
+    WorkspacePath.equals(recentWorkspacePath, parsedCurrentPath.path)
   );
 }

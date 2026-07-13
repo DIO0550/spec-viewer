@@ -6,7 +6,8 @@ import {
 import {
   createWorkspaceDropCandidate,
   extractBrowserDropPaths,
-} from "@/shared/lib/workspaceDrop";
+} from "@/features/workspace/infrastructure/workspaceDrop";
+import type { WorkspacePath } from "@/features/workspace/domain/workspacePath";
 
 export type WorkspaceDropStatus = "idle" | "dragging";
 
@@ -18,7 +19,7 @@ export type SubscribeWorkspaceDragDropEvents = (
 export type UseWorkspaceDropOptions = Readonly<{
   isDisabled: boolean;
   /** @param path - ドロップされたワークスペースディレクトリパス。 */
-  onDropWorkspacePath: (path: string) => void;
+  onDropWorkspacePath: (path: WorkspacePath) => void;
   /** @param message - 無効なドロップ時に表示するエラーメッセージ。 */
   onInvalidDrop: (message: string) => void;
   subscribeDragDropEvents?: SubscribeWorkspaceDragDropEvents;

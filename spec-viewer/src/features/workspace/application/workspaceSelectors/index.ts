@@ -1,6 +1,7 @@
 import type { WorkspaceState } from "@/features/workspace/application/workspaceState";
 import type { Workspace } from "@/features/workspace/domain/workspace";
 import type { WorkspaceError } from "@/features/workspace/domain/workspaceError";
+import type { WorkspacePath } from "@/features/workspace/domain/workspacePath";
 
 /**
  * @param state - Current workspace application state.
@@ -21,7 +22,7 @@ export function selectWorkspace(state: WorkspaceState): Workspace | null {
 /** @returns The canonical active workspace root derived only from workspace.root. */
 export function selectActiveWorkspaceRoot(
   state: WorkspaceState,
-): string | null {
+): WorkspacePath | null {
   const workspace = selectWorkspace(state);
 
   return workspace?.root ?? null;
@@ -30,7 +31,7 @@ export function selectActiveWorkspaceRoot(
 /** @returns The path currently being opened or the path that failed to open. */
 export function selectRequestedWorkspacePath(
   state: WorkspaceState,
-): string | null {
+): WorkspacePath | null {
   if (state.status === "opening" || state.status === "failed") {
     return state.requestedPath;
   }

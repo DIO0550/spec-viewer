@@ -12,7 +12,7 @@ import type { UserReviewListEventWithSelectionId } from "@/features/review-runs/
 import { createUserReview as createUserReviewViaGateway } from "@/features/review-runs/infra/userReviewGateway";
 import type { UserReviewCommands } from "@/shared/api/tauri";
 import { CreateUserReviewCommandError } from "@/shared/api/tauri/createUserReview";
-import { WorkspacePath } from "@/shared/domain/workspacePath";
+import { WorkspacePath } from "@/features/workspace";
 
 type SelectionId = string;
 

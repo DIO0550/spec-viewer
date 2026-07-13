@@ -11,7 +11,7 @@ import type { UserReviewListEventWithSelectionId } from "@/features/review-runs/
 import { archiveUserReview as archiveUserReviewViaGateway } from "@/features/review-runs/infra/userReviewGateway";
 import type { UserReviewCommands } from "@/shared/api/tauri";
 import { ArchiveUserReviewCommandError } from "@/shared/api/tauri/archiveUserReview";
-import { WorkspacePath } from "@/shared/domain/workspacePath";
+import { WorkspacePath } from "@/features/workspace";
 
 type SelectionId = string;
 

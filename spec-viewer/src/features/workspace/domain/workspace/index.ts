@@ -1,3 +1,5 @@
+import { WorkspacePath } from "@/features/workspace/domain/workspacePath";
+
 export type WorkspaceKind =
   | "plugin-workspace"
   | "plugin-worktree"
@@ -15,7 +17,7 @@ export type WorkspaceFileMapping = Readonly<{
 }>;
 
 export type Workspace = Readonly<{
-  root: string;
+  root: WorkspacePath;
   kind: WorkspaceKind;
   files: readonly WorkspaceFileMapping[];
 }>;
@@ -44,8 +46,14 @@ export const Workspace = {
       return invalidWorkspaceDto("workspace", "Workspace must be an object");
     }
 
-    if (!isNonEmptyString(dto.root)) {
-      return invalidWorkspaceDto("root", "Workspace root must not be empty");
+    if (typeof dto.root !== "string") {
+      return invalidWorkspaceDto("root", "Workspace root must be a string");
+    }
+
+    const parsedRoot = WorkspacePath.parse(dto.root);
+
+    if (!parsedRoot.ok) {
+      return invalidWorkspaceDto("root", "Workspace root must be a valid path");
     }
 
     if (!isWorkspaceKind(dto.kind)) {
@@ -70,7 +78,7 @@ export const Workspace = {
     return {
       ok: true,
       workspace: {
-        root: dto.root,
+        root: parsedRoot.path,
         kind: dto.kind,
         files,
       },

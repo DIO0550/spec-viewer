@@ -6,6 +6,10 @@ import type {
   WorkspaceLoaderGuards,
   WorkspaceOpenOutcome,
 } from "@/features/workspace/hooks/useWorkspaceLoader/types";
+import {
+  WorkspacePath,
+  type WorkspacePath as WorkspacePathValue,
+} from "@/features/workspace/domain/workspacePath";
 import { ValidateWorkspaceDirectoryCommandError } from "@/shared/api/tauri/validateWorkspaceDirectory";
 
 const invalidDroppedDirectoryMessage =
@@ -34,7 +38,7 @@ export function isEntryGuarded(guards: WorkspaceLoaderGuards): boolean {
  * @returns Loaded or silently-failed outcome.
  */
 export async function openWorkspacePath(
-  path: string,
+  path: WorkspacePathValue,
   io: WorkspaceLoaderFlowIo,
 ): Promise<WorkspaceOpenOutcome> {
   const isLoaded = await io.load(path, false);
@@ -53,13 +57,13 @@ export async function openWorkspaceFromInput(
   rawInput: string,
   io: WorkspaceLoaderFlowIo,
 ): Promise<OpenWorkspaceFromInputOutcome> {
-  const path = rawInput.trim();
+  const parsedPath = WorkspacePath.parse(rawInput);
 
-  if (path.length === 0) {
+  if (!parsedPath.ok) {
     return { type: "emptyInput" };
   }
 
-  return openWorkspacePath(path, io);
+  return openWorkspacePath(parsedPath.path, io);
 }
 
 /**
@@ -71,7 +75,7 @@ export async function openWorkspaceFromInput(
  * @returns Skipped, loaded, silently-failed, not-directory or exception outcome.
  */
 export async function openDroppedWorkspacePath(
-  path: string,
+  path: WorkspacePathValue,
   guards: WorkspaceLoaderGuards,
   io: WorkspaceLoaderFlowIo,
 ): Promise<OpenDroppedWorkspaceOutcome> {
@@ -112,16 +116,19 @@ export async function openDroppedWorkspacePath(
  * @returns Skipped, loaded or one of the three recent-failure outcomes.
  */
 export async function openRecentWorkspacePath(
-  path: string,
+  path: WorkspacePathValue,
   guards: WorkspaceLoaderGuards,
-  activeWorkspaceRoot: string | null,
+  activeWorkspaceRoot: WorkspacePathValue | null,
   io: WorkspaceLoaderFlowIo,
 ): Promise<OpenRecentWorkspaceOutcome> {
   if (isEntryGuarded(guards)) {
     return { type: "skipped" };
   }
 
-  const rollbackInput = activeWorkspaceRoot ?? "";
+  const rollbackInput =
+    activeWorkspaceRoot === null
+      ? ""
+      : WorkspacePath.toString(activeWorkspaceRoot);
 
   try {
     const validation = await io.validate(path);

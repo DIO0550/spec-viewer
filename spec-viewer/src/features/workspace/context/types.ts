@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import type { WorkspaceState } from "@/features/workspace/application/workspaceState";
 import type { Workspace } from "@/features/workspace/domain/workspace";
+import type { WorkspacePath } from "@/features/workspace/domain/workspacePath";
 
 export type { WorkspaceState } from "@/features/workspace/application/workspaceState";
 
@@ -18,7 +19,7 @@ export type WorkspaceActions = Readonly<{
    * @returns 読み込みに成功したかどうか。
    */
   load: (
-    selectedDirectory: string,
+    selectedDirectory: WorkspacePath,
     options?: LoadWorkspaceOptions,
   ) => Promise<boolean>;
   /** 現在のワークスペースを初期状態へ戻す。 */

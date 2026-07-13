@@ -6,6 +6,11 @@ export type {
   Workspace,
   WorkspaceKind,
 } from "@/features/workspace/domain/workspace";
+export { WorkspacePath } from "@/features/workspace/domain/workspacePath";
+export type {
+  WorkspacePathParseError,
+  WorkspacePathParseResult,
+} from "@/features/workspace/domain/workspacePath";
 export type {
   WorkspaceActions,
   WorkspaceContextValue,
