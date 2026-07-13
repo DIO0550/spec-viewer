@@ -1,3 +1,4 @@
+import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
 import type { ReactNode } from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
@@ -6,7 +7,7 @@ import { AddCommentPopover } from "@/features/comments/components/AddCommentPopo
 import type { CommentAnchorDraft } from "@/features/comments/types/comment";
 
 const draft: CommentAnchorDraft = {
-  anchor: {
+  anchor: createCommentAnchorTestFixture({
     fileKey: "tasks",
     blockType: "paragraph",
     blockIndex: 2,
@@ -16,7 +17,7 @@ const draft: CommentAnchorDraft = {
       start: 4,
       end: 29,
     },
-  },
+  }),
   selectionBounds: {
     top: 24,
     left: 32,
@@ -225,10 +226,10 @@ test("AddCommentPopoverは本文スクロール領域とfooter actionsを分け�
   const result = renderPopover({
     draft: {
       ...draft,
-      anchor: {
+      anchor: createCommentAnchorTestFixture({
         ...draft.anchor,
         textSnippet: "long selected text ".repeat(30),
-      },
+      }),
     },
   });
   const body = result.container.querySelector(".add-comment-popover__body");
@@ -565,12 +566,12 @@ test("AddCommentPopoverはkey変更remountで本文とvalidation errorを初期�
         key="draft-2"
         draft={{
           ...draft,
-          anchor: {
+          anchor: createCommentAnchorTestFixture({
             ...draft.anchor,
             blockIndex: 3,
             textHash: "fnv1a:87654321",
             textSnippet: "next selected requirement text",
-          },
+          }),
         }}
         style={{ top: 10, left: 20 }}
         isSaving={false}

@@ -1,4 +1,5 @@
 import * as TestValues from "@/shared/testing/validatedValueObjects";
+import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
 import type { ReactNode } from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
@@ -135,14 +136,14 @@ function createComment({
 }>): Comment {
   return {
     id: commentId(id),
-    anchor: {
+    anchor: createCommentAnchorTestFixture({
       fileKey: "tasks",
       blockType,
       blockIndex,
       textHash: createTextHash(text),
       textSnippet: text,
       charRange,
-    },
+    }),
     body: `${id} body`,
     status: resolved ? "resolved" : "open",
     resolved,

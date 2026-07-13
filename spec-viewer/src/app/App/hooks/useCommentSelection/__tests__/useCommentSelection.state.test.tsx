@@ -1,3 +1,4 @@
+import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
@@ -15,14 +16,14 @@ import * as TestValues from "@/shared/testing/validatedValueObjects";
 
 const commentId = TestValues.commentId;
 
-const anchor: CommentAnchor = {
+const anchor: CommentAnchor = createCommentAnchorTestFixture({
   fileKey: "tasks",
   blockType: "paragraph",
   blockIndex: 0,
   textHash: "sha256:anchor",
   textSnippet: "snippet",
   charRange: { start: 0, end: 7 },
-};
+});
 
 function makeComment(id: string): Comment {
   return {

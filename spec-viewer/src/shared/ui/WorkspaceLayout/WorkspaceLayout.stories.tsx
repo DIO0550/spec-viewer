@@ -1,4 +1,5 @@
 import * as TestValues from "@/shared/testing/validatedValueObjects";
+import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type ComponentProps, type ReactNode, useState } from "react";
 import { fn } from "storybook/test";
@@ -135,7 +136,7 @@ const readyDocumentState: SpecDocumentState = {
 const sampleComments: readonly Comment[] = [
   {
     id: commentId("cmt_story_open"),
-    anchor: {
+    anchor: createCommentAnchorTestFixture({
       fileKey: "tasks",
       blockType: "list_item",
       blockIndex: 5,
@@ -145,7 +146,7 @@ const sampleComments: readonly Comment[] = [
         start: 0,
         end: 34,
       },
-    },
+    }),
     body: "Check whether this note should move to Phase 2.",
     status: "open",
     resolved: false,
@@ -154,7 +155,7 @@ const sampleComments: readonly Comment[] = [
   },
   {
     id: commentId("cmt_story_resolved"),
-    anchor: {
+    anchor: createCommentAnchorTestFixture({
       fileKey: "tasks",
       blockType: "heading",
       blockIndex: 0,
@@ -164,7 +165,7 @@ const sampleComments: readonly Comment[] = [
         start: 0,
         end: 25,
       },
-    },
+    }),
     body: "Rendering checklist is already reflected in the plan.",
     status: "resolved",
     resolved: true,

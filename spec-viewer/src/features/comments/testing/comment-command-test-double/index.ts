@@ -1,3 +1,4 @@
+import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
 import type {
   AddCommentRequest,
   Comment,
@@ -38,7 +39,7 @@ export type CommentCommandTestDouble = Readonly<{
 
 const defaultComment: Comment = {
   id: commentId("cmt_test"),
-  anchor: {
+  anchor: createCommentAnchorTestFixture({
     fileKey: "tasks",
     blockType: "paragraph",
     blockIndex: 0,
@@ -48,7 +49,7 @@ const defaultComment: Comment = {
       start: 0,
       end: 18,
     },
-  },
+  }),
   body: "Clarify this task",
   status: "open",
   resolved: false,

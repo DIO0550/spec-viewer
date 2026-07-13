@@ -17,6 +17,7 @@ import { ReopenCommentCommandError } from "@/features/comments/infra/tauri/reope
 import { ResolveCommentCommandError } from "@/features/comments/infra/tauri/resolveComment";
 import { ToggleCommentResolvedCommandError } from "@/features/comments/infra/tauri/toggleCommentResolved";
 import { UpdateCommentCommandError } from "@/features/comments/infra/tauri/updateComment";
+import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
 import { commentBody } from "@/features/comments/testing/comment-body-test-fixture";
 import type {
   AddCommentRequest,
@@ -35,7 +36,7 @@ const commentId = TestValues.commentId;
 
 const comment: Comment = {
   id: commentId("cmt_1"),
-  anchor: {
+  anchor: createCommentAnchorTestFixture({
     fileKey: "tasks",
     blockType: "paragraph",
     blockIndex: 1,
@@ -45,7 +46,7 @@ const comment: Comment = {
       start: 0,
       end: 18,
     },
-  },
+  }),
   body: "Clarify this task",
   status: "open",
   resolved: false,
@@ -308,5 +309,46 @@ test("listCommentsは配列内の不正日時を最深path付きdecode errorと�
     path: "$.comments[0].createdAt",
     expected: "valid RFC3339 date-time",
     actual: "2026-02-30T10:00:00Z",
+  });
+});
+
+test("addCommentは不正なanchor hashを正確なfield pathで拒否する", async () => {
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue({
+    ...comment,
+    anchor: { ...comment.anchor, textHash: "   " },
+  });
+
+  await expect(addComment(addRequest)).rejects.toMatchObject({
+    command: "add_comment",
+    code: "invalidResponse",
+    path: "$.anchor.textHash",
+    expected: "non-blank text hash",
+    actual: "invalid_text_hash",
+  });
+});
+
+test("listCommentsは不正なanchor rangeに配列index付きfield pathを付ける", async () => {
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue({
+    comments: [
+      comment,
+      {
+        ...comment,
+        id: "cmt_2",
+        anchor: {
+          ...comment.anchor,
+          charRange: { start: 3, end: 3 },
+        },
+      },
+    ],
+  });
+
+  await expect(listComments(listRequest)).rejects.toMatchObject({
+    command: "list_comments",
+    code: "invalidResponse",
+    path: "$.comments[1].anchor.charRange",
+    expected: "non-empty ordered character range",
+    actual: "invalid_char_range",
   });
 });

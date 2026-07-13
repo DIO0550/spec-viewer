@@ -1,4 +1,5 @@
 import * as TestValues from "@/shared/testing/validatedValueObjects";
+import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
 import { createTextHash } from "@/features/comments/lib/comment-anchor-draft";
@@ -111,7 +112,7 @@ const highlightedParagraph =
 const comments: readonly Comment[] = [
   {
     id: commentId("cmt_active_selection"),
-    anchor: {
+    anchor: createCommentAnchorTestFixture({
       fileKey: "tasks",
       blockType: "paragraph",
       blockIndex: 1,
@@ -121,7 +122,7 @@ const comments: readonly Comment[] = [
         start: 27,
         end: 45,
       },
-    },
+    }),
     body: "Verify partial selection stays copyable inside this highlight.",
     status: "open",
     resolved: false,
@@ -135,7 +136,7 @@ const commentCardComments: readonly Comment[] = [
   ...comments,
   {
     id: commentId("cmt_resolved_card"),
-    anchor: {
+    anchor: createCommentAnchorTestFixture({
       fileKey: "tasks",
       blockType: "paragraph",
       blockIndex: 1,
@@ -145,7 +146,7 @@ const commentCardComments: readonly Comment[] = [
         start: 0,
         end: highlightedParagraph.length,
       },
-    },
+    }),
     body: "Resolved note stays visible without making the paragraph feel busy.",
     status: "resolved",
     resolved: true,
@@ -155,7 +156,7 @@ const commentCardComments: readonly Comment[] = [
   },
   {
     id: commentId("cmt_code_card"),
-    anchor: {
+    anchor: createCommentAnchorTestFixture({
       fileKey: "tasks",
       blockType: "code_block",
       blockIndex: 4,
@@ -165,7 +166,7 @@ const commentCardComments: readonly Comment[] = [
         start: 6,
         end: 18,
       },
-    },
+    }),
     body: "Code block comments keep the gutter add button available.",
     status: "open",
     resolved: false,

@@ -1,4 +1,5 @@
 import * as TestValues from "@/shared/testing/validatedValueObjects";
+import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
 import { expect, test, vi } from "vitest";
 
 import {
@@ -18,7 +19,7 @@ import { toCommentFeatureError } from "@/features/comments/infra/tauri/commentEr
 
 const commentId = TestValues.commentId;
 
-const anchor: CommentAnchor = {
+const anchor: CommentAnchor = createCommentAnchorTestFixture({
   fileKey: "tasks",
   blockType: "paragraph",
   blockIndex: 0,
@@ -28,7 +29,7 @@ const anchor: CommentAnchor = {
     start: 0,
     end: 18,
   },
-};
+});
 
 const comment: Comment = {
   id: commentId("cmt_1"),

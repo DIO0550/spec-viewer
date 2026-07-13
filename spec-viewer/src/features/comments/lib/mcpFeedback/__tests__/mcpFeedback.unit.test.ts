@@ -1,4 +1,5 @@
 import * as TestValues from "@/shared/testing/validatedValueObjects";
+import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
 import { expect, test } from "vitest";
 
 import { createSpecSkillMcpFeedbackDryRunPayload } from "@/features/comments/lib/mcpFeedback";
@@ -9,7 +10,7 @@ const commentId = TestValues.commentId;
 
 const anchoredComment: Comment = {
   id: commentId("cmt_open"),
-  anchor: {
+  anchor: createCommentAnchorTestFixture({
     fileKey: "tasks",
     blockType: "paragraph",
     blockIndex: 4,
@@ -19,7 +20,7 @@ const anchoredComment: Comment = {
       start: 0,
       end: 18,
     },
-  },
+  }),
   body: "Clarify the feedback handoff boundary.",
   status: "open",
   resolved: false,

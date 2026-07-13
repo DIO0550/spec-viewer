@@ -1,3 +1,4 @@
+import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
 
@@ -5,7 +6,7 @@ import type { CommentAnchorDraft } from "@/features/comments/types/comment";
 import { AddCommentPopover } from "@/features/comments/components/AddCommentPopover";
 
 const defaultDraft: CommentAnchorDraft = {
-  anchor: {
+  anchor: createCommentAnchorTestFixture({
     fileKey: "tasks",
     blockType: "paragraph",
     blockIndex: 2,
@@ -15,7 +16,7 @@ const defaultDraft: CommentAnchorDraft = {
       start: 4,
       end: 29,
     },
-  },
+  }),
   selectionBounds: {
     top: 24,
     left: 32,
@@ -26,7 +27,7 @@ const defaultDraft: CommentAnchorDraft = {
 
 const longExcerptDraft: CommentAnchorDraft = {
   ...defaultDraft,
-  anchor: {
+  anchor: createCommentAnchorTestFixture({
     ...defaultDraft.anchor,
     textSnippet:
       "This selected Markdown excerpt is intentionally long so the dialog body needs to scroll while the footer actions remain available. ".repeat(
@@ -36,7 +37,7 @@ const longExcerptDraft: CommentAnchorDraft = {
       start: 0,
       end: 620,
     },
-  },
+  }),
 };
 
 const meta: Meta<typeof AddCommentPopover> = {
