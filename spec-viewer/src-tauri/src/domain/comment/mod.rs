@@ -11,6 +11,8 @@ use crate::domain::spec::{MarkdownBlock, MarkdownBlockType, SpecFileKey};
 #[cfg(test)]
 mod id_tests;
 mod repository;
+#[cfg(test)]
+mod scoped_comments_tests;
 
 pub use repository::{
     CommentListQuery, CommentRepository, CommentRepositoryError, CommentScope, CommentStatusFilter,
