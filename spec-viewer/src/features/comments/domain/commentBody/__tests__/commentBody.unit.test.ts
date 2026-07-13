@@ -11,7 +11,6 @@ test.each([
     ok: false,
     error: {
       reason: "empty_body",
-      message: "コメント本文を入力してください。",
     },
   });
 });
