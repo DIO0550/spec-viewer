@@ -35,18 +35,17 @@ export const UserReviewId = {
    * @returns A v1 or legacy user-review identity restored from a wire DTO.
    */
   fromDto(value: string): UserReviewIdParseResult {
-    const normalized = value.trim();
-    if (normalized.length === 0) {
+    if (value.trim().length === 0) {
       return failure("empty", value, "User review ID must not be empty");
     }
-    if (!issuedPattern.test(normalized) && !legacyPattern.test(normalized)) {
+    if (!issuedPattern.test(value) && !legacyPattern.test(value)) {
       return failure(
         "invalidFormat",
         value,
         "User review ID must use v1 or recognized legacy format",
       );
     }
-    return { ok: true, value: normalized as UserReviewId };
+    return { ok: true, value: value as UserReviewId };
   },
 
   /**
@@ -77,14 +76,13 @@ function parseWithPattern(
   pattern: RegExp,
   message: string,
 ): UserReviewIdParseResult {
-  const normalized = value.trim();
-  if (normalized.length === 0) {
+  if (value.trim().length === 0) {
     return failure("empty", value, "User review ID must not be empty");
   }
-  if (!pattern.test(normalized)) {
+  if (!pattern.test(value)) {
     return failure("invalidFormat", value, message);
   }
-  return { ok: true, value: normalized as UserReviewId };
+  return { ok: true, value: value as UserReviewId };
 }
 
 /**

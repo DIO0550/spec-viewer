@@ -61,7 +61,12 @@ export const SpecId = {
  * @returns True when every path component is normal and relative.
  */
 function isSafeRelativeSpecId(value: string): boolean {
-  if (value.startsWith("/") || value.includes("\\") || value.includes("\0")) {
+  if (
+    value.startsWith("/") ||
+    value.includes("\\") ||
+    value.includes(":") ||
+    value.includes("\0")
+  ) {
     return false;
   }
   const components = value.split("/");

@@ -12,7 +12,6 @@ export type CommentIdParseResult =
   | Readonly<{ ok: false; error: CommentIdParseError }>;
 
 const issuedPattern = /^cmt_[0-9a-f]{32}$/;
-const restorablePattern = /^cmt_[A-Za-z0-9_-]+$/;
 
 export const CommentId = {
   /**
@@ -20,18 +19,17 @@ export const CommentId = {
    * @returns A newly-issued-format comment identity or a validation error.
    */
   parse(value: string): CommentIdParseResult {
-    const normalized = value.trim();
-    if (normalized.length === 0) {
+    if (value.trim().length === 0) {
       return failure("empty", value, "Comment ID must not be empty");
     }
-    if (!issuedPattern.test(normalized)) {
+    if (!issuedPattern.test(value)) {
       return failure(
         "invalidFormat",
         value,
         "Comment ID must match cmt_<32 lowercase hex>",
       );
     }
-    return { ok: true, value: normalized as CommentId };
+    return { ok: true, value: value as CommentId };
   },
 
   /**
@@ -42,13 +40,6 @@ export const CommentId = {
     const normalized = value.trim();
     if (normalized.length === 0) {
       return failure("empty", value, "Comment ID must not be empty");
-    }
-    if (!restorablePattern.test(normalized)) {
-      return failure(
-        "invalidFormat",
-        value,
-        "Comment ID must use the cmt_ prefix and a safe suffix",
-      );
     }
     return { ok: true, value: normalized as CommentId };
   },
