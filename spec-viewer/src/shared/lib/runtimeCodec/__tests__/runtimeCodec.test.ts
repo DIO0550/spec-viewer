@@ -1,9 +1,6 @@
 import { expect, test } from "vitest";
 
-import {
-  RuntimeCodec,
-  decodeRuntimeValue,
-} from "@/shared/lib/runtimeCodec";
+import { RuntimeCodec, decodeRuntimeValue } from "@/shared/lib/runtimeCodec";
 
 test("object codecはmissing fieldをpath付きerrorとして返す", () => {
   const codec = RuntimeCodec.object({

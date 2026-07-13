@@ -132,3 +132,16 @@ test("ArchiveSpecCommandError.fromUnknownは正規化済みunknownエラーのme
     normalizedError,
   );
 });
+
+test("listSpecsはmissing children fieldをstructured decode errorとして拒否する", async () => {
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue({
+    specs: [{ id: "auth", label: "auth", files: [] }],
+  });
+
+  await expect(listSpecs("/workspace/spec-reviewer")).rejects.toMatchObject({
+    command: "list_specs",
+    code: "invalidResponse",
+    path: "$.specs[0].children",
+  });
+});

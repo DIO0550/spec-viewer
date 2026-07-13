@@ -35,6 +35,7 @@ const comment: Comment = {
   body: "Clarify this task",
   status: "open",
   resolved: false,
+  anchorResolution: null,
   createdAt: "2026-05-05T10:00:00Z",
   updatedAt: "2026-05-05T10:00:00Z",
 };

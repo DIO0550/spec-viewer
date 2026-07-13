@@ -19,7 +19,14 @@ test("loadWorkspaceはload_workspaceへ選択ディレクトリを渡す", async
   invokeMock.mockResolvedValue({
     root: "/workspace/spec-reviewer",
     kind: "plugin-workspace",
-    files: [{ key: "tasks", label: "Tasks", fileName: "tasks.md" }],
+    files: [
+      {
+        key: "tasks",
+        label: "Tasks",
+        fileName: "tasks.md",
+        configSource: "default",
+      },
+    ],
   });
 
   const result = await loadWorkspace("/workspace/spec-reviewer");
@@ -30,7 +37,7 @@ test("loadWorkspaceはload_workspaceへ選択ディレクトリを渡す", async
   });
 });
 
-test("loadWorkspaceは不正なworkspace DTOをunknown command errorとして拒否する", async () => {
+test("loadWorkspaceは不正なworkspace enumをstructured decode errorとして拒否する", async () => {
   const rawDto = {
     root: "/workspace/spec-reviewer",
     kind: "unsupported",
@@ -39,12 +46,13 @@ test("loadWorkspaceは不正なworkspace DTOをunknown command errorとして拒
   invokeMock.mockReset();
   invokeMock.mockResolvedValue(rawDto);
 
-  await expect(loadWorkspace("/workspace/spec-reviewer")).rejects.toEqual({
-    command: "load_workspace",
-    code: "unknown",
-    message: "Workspace kind is not supported",
-    cause: rawDto,
-  });
+  await expect(loadWorkspace("/workspace/spec-reviewer")).rejects.toMatchObject(
+    {
+      command: "load_workspace",
+      code: "invalidResponse",
+      path: "$.kind",
+    },
+  );
 });
 
 test("validateWorkspaceDirectoryはvalidate_workspace_directoryへpathを渡す", async () => {

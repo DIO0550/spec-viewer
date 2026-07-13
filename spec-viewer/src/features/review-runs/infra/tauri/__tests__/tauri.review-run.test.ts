@@ -208,3 +208,20 @@ test("ArchiveUserReviewCommandError.fromUnknownは正規化済みunknownエラ�
     normalizedError,
   );
 });
+
+test("createUserReviewは矛盾するarchived statusをstructured decode errorとして拒否する", async () => {
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue({
+    userReview: {
+      ...response.userReview,
+      status: "archived",
+      archivedAt: null,
+    },
+  });
+
+  await expect(createUserReview(request)).rejects.toMatchObject({
+    command: "create_user_review",
+    code: "invalidResponse",
+    path: "$.userReview.archivedAt",
+  });
+});

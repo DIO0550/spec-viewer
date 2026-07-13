@@ -49,6 +49,7 @@ const comment: Comment = {
   body: "Clarify this task",
   status: "open",
   resolved: false,
+  anchorResolution: null,
   createdAt: "2026-05-05T10:00:00Z",
   updatedAt: "2026-05-05T10:00:00Z",
 };
@@ -280,4 +281,15 @@ test("GenerateLlmPromptCommandError.fromUnknownは正規化済みunknownエラ�
   expect(GenerateLlmPromptCommandError.fromUnknown(normalizedError)).toEqual(
     normalizedError,
   );
+});
+
+test("addCommentは空のcomment IDをstructured decode errorとして拒否する", async () => {
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue({ ...comment, id: "" });
+
+  await expect(addComment(addRequest)).rejects.toMatchObject({
+    command: "add_comment",
+    code: "invalidResponse",
+    path: "$.id",
+  });
 });

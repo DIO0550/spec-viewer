@@ -15,6 +15,8 @@ import {
   SPEC_FILE_WATCH_CHANGED_EVENT,
   SPEC_FILE_WATCH_ERROR_EVENT,
   type SpecFileWatchChangeKind,
+  type SpecFileWatchChangedEvent,
+  type SpecFileWatchErrorEvent,
 } from "@/features/specs/types/watch";
 import { SpecViewSelection } from "@/shared/domain/specViewSelection";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
@@ -37,17 +39,32 @@ const startResponse = {
   debounceMs: 100,
 };
 
-type WatchHandlers = Map<string, (event: TauriEvent<unknown>) => void>;
+type WatchEvent = Readonly<{
+  payload: SpecFileWatchChangedEvent | SpecFileWatchErrorEvent;
+}>;
+type WatchHandlers = Map<string, (event: WatchEvent) => void>;
 
 function createWatcher(handlers: WatchHandlers): {
   startWatch: StartSpecFileWatchCommand;
   stopWatch: StopSpecFileWatchCommand;
   subscribe: SpecFileWatchSubscriber;
 } {
-  const subscribe = vi.fn(async (eventName, handler) => {
-    handlers.set(eventName, handler as (event: TauriEvent<unknown>) => void);
+  const subscribe = vi.fn<SpecFileWatchSubscriber>(async (subscription) => {
+    if (subscription.eventName === SPEC_FILE_WATCH_CHANGED_EVENT) {
+      handlers.set(subscription.eventName, (event) => {
+        if ("changeKind" in event.payload) {
+          subscription.handler({ payload: event.payload });
+        }
+      });
+    } else {
+      handlers.set(subscription.eventName, (event) => {
+        if ("message" in event.payload) {
+          subscription.handler({ payload: event.payload });
+        }
+      });
+    }
     return vi.fn();
-  }) as unknown as SpecFileWatchSubscriber;
+  });
 
   return {
     startWatch: vi.fn(async () => startResponse),
@@ -141,7 +158,7 @@ function fireChanged(
         changeKind,
         path: "/workspace/spec-1/impl.md",
       },
-    } as TauriEvent<unknown>);
+    });
   });
 }
 
