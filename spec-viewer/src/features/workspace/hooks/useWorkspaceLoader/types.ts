@@ -1,12 +1,15 @@
 import type { WorkspaceContextValue } from "@/features/workspace/context/types";
+import type {
+  WorkspacePath,
+  WorkspacePathParseError,
+} from "@/features/workspace/domain/workspacePath";
 import type { UseRecentWorkspacesResult } from "@/features/workspace/hooks/useRecentWorkspaces";
 import type { SubscribeWorkspaceDragDropEvents } from "@/features/workspace/hooks/useWorkspaceDrop";
-import type { WorkspacePath } from "@/features/workspace/domain/workspacePath";
+import type { RecentWorkspaceStorage } from "@/features/workspace/infrastructure/recentWorkspaces";
 import type {
   selectWorkspaceDirectory as defaultSelectWorkspaceDirectory,
   validateWorkspaceDirectory as defaultValidateWorkspaceDirectory,
 } from "@/shared/api/tauri";
-import type { RecentWorkspaceStorage } from "@/features/workspace/infrastructure/recentWorkspaces";
 
 /** IPC コマンドの DI（useComments の `commands?` 規約に合わせた1オブジェクト）。 */
 export type WorkspaceLoaderCommands = Readonly<{
@@ -55,6 +58,7 @@ export type WorkspaceOpenOutcome =
 
 export type OpenWorkspaceFromInputOutcome =
   | Readonly<{ type: "emptyInput" }>
+  | Readonly<{ type: "invalidInput"; error: WorkspacePathParseError }>
   | WorkspaceOpenOutcome;
 
 export type OpenDroppedWorkspaceOutcome =

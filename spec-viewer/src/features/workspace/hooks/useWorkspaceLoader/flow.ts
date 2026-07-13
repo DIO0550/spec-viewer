@@ -1,3 +1,7 @@
+import {
+  WorkspacePath,
+  type WorkspacePath as WorkspacePathValue,
+} from "@/features/workspace/domain/workspacePath";
 import type {
   OpenDroppedWorkspaceOutcome,
   OpenRecentWorkspaceOutcome,
@@ -6,10 +10,6 @@ import type {
   WorkspaceLoaderGuards,
   WorkspaceOpenOutcome,
 } from "@/features/workspace/hooks/useWorkspaceLoader/types";
-import {
-  WorkspacePath,
-  type WorkspacePath as WorkspacePathValue,
-} from "@/features/workspace/domain/workspacePath";
 import { ValidateWorkspaceDirectoryCommandError } from "@/shared/api/tauri/validateWorkspaceDirectory";
 
 const invalidDroppedDirectoryMessage =
@@ -60,7 +60,11 @@ export async function openWorkspaceFromInput(
   const parsedPath = WorkspacePath.parse(rawInput);
 
   if (!parsedPath.ok) {
-    return { type: "emptyInput" };
+    if (parsedPath.error.reason === "missingWorkspacePath") {
+      return { type: "emptyInput" };
+    }
+
+    return { type: "invalidInput", error: parsedPath.error };
   }
 
   return openWorkspacePath(parsedPath.path, io);
