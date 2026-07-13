@@ -60,10 +60,10 @@ test("watch eventの区切り文字を含む値を構造として比較する", 
   );
   const event: SpecFileWatchChangedEvent = {
     workspacePath: "/workspace/project",
-    specId: TestValues.specId("a:b"),
+    specId: TestValues.specId("a|b"),
     fileKey: "tasks",
     changeKind: "markdown",
-    path: "/workspace/project/.plugin-workspace/.specs/a:b/tasks.md",
+    path: "/workspace/project/.plugin-workspace/.specs/a|b/tasks.md",
   };
 
   expect(isSpecFileWatchEventForSelection(event, delimiterSelection)).toBe(

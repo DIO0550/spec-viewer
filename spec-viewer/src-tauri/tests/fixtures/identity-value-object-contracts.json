@@ -9,19 +9,21 @@
       "spec\\path",
       "group/./spec",
       "group//spec",
+      "group:spec",
       "spec\u0000id"
     ]
   },
   "commentId": {
     "issued": ["cmt_0123456789abcdef0123456789abcdef"],
-    "legacy": ["cmt_1", "cmt_existing"],
-    "invalid": [
+    "legacy": ["cmt_1", "cmt_existing", "comment_existing", "cmt_bad/path"],
+    "invalidIssued": [
       "",
       "   ",
+      " cmt_0123456789abcdef0123456789abcdef ",
       "comment_0123456789abcdef0123456789abcdef",
-      "cmt_",
-      "cmt_bad/path"
-    ]
+      "cmt_"
+    ],
+    "invalidRestore": ["", "   "]
   },
   "userReviewId": {
     "issued": ["urv_0123456789abcdef0123456789abcdef"],
@@ -33,6 +35,7 @@
       "",
       "   ",
       "review-active",
+      " urv_0123456789abcdef0123456789abcdef ",
       "urv_01234567-89ab-cdef-0123-456789abcdef",
       "urv_0123456789ABCDEF0123456789ABCDEF",
       "urv_0123456789abcdef"

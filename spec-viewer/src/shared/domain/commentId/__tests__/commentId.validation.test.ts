@@ -17,7 +17,13 @@ test.each(
 });
 
 test.each(
-  contracts.commentId.invalid,
-)("CommentId.fromDtoは不正な%jを拒否する", (raw) => {
+  contracts.commentId.invalidIssued,
+)("CommentId.parseは不正な新規発行値%jを拒否する", (raw) => {
+  expect(CommentId.parse(raw)).toMatchObject({ ok: false });
+});
+
+test.each(
+  contracts.commentId.invalidRestore,
+)("CommentId.fromDtoは復元不能な%jを拒否する", (raw) => {
   expect(CommentId.fromDto(raw)).toMatchObject({ ok: false });
 });

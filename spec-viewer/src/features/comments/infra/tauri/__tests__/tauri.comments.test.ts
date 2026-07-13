@@ -291,19 +291,8 @@ test("addCommentは空のcomment IDをstructured decode errorとして拒否す�
     command: "add_comment",
     code: "invalidResponse",
     path: "$.id",
-  });
-});
-
-test("addCommentは不正prefixのcomment IDをVO path付きdecode errorとして拒否する", async () => {
-  invokeMock.mockReset();
-  invokeMock.mockResolvedValue({ ...comment, id: "comment_invalid" });
-
-  await expect(addComment(addRequest)).rejects.toMatchObject({
-    command: "add_comment",
-    code: "invalidResponse",
-    path: "$.id",
-    expected: "valid CommentId",
-    actual: "comment_invalid",
+    expected: "non-empty string",
+    actual: "string",
   });
 });
 

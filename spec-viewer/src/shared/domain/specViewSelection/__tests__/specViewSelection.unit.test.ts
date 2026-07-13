@@ -129,7 +129,7 @@ test("SelectionIdentityは区切り文字を含む値でも衝突しない", () 
   });
   const second = SpecViewSelection.synchronize(SpecViewSelection.empty(), {
     workspacePath: WorkspacePath.fromString("/workspace/a"),
-    specId: TestValues.specId("file:b"),
+    specId: TestValues.specId("file|b"),
     fileKey: "tasks",
   });
 
