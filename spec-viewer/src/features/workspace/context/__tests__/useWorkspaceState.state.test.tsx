@@ -1,9 +1,9 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { beforeEach, expect, test, vi } from "vitest";
-
-import type { Workspace } from "@/features/workspace/types/workspace";
+import type { WorkspaceLoadOutcome } from "@/features/workspace/context/types";
 import { workspacePathFixture } from "@/features/workspace/testing/workspacePath";
+import type { Workspace } from "@/features/workspace/types/workspace";
 
 const loadWorkspaceMock = vi.hoisted(() =>
   vi.fn<(selectedDirectory: string) => Promise<Workspace>>(),
@@ -110,12 +110,12 @@ test("useWorkspaceStateは選択したworkspaceを読み込み成功状態にす
   const result = renderHook(() => useWorkspaceState());
 
   await act(async () => {
-    const isLoaded = await result.current.actions.load(
+    const outcome = await result.current.actions.load(
       workspacePathFixture("/workspace/spec-reviewer"),
       { onWorkspaceLoaded },
     );
 
-    expect(isLoaded).toBe(true);
+    expect(outcome).toEqual({ type: "loaded", workspace });
   });
 
   expect(result.current.state).toEqual({
@@ -136,9 +136,9 @@ test("useWorkspaceStateは読み込み後callbackの例外をopen失敗状態に
   });
   const result = renderHook(() => useWorkspaceState());
 
-  let isLoaded!: boolean;
+  let outcome!: WorkspaceLoadOutcome;
   await act(async () => {
-    isLoaded = await result.current.actions.load(
+    outcome = await result.current.actions.load(
       workspacePathFixture("/workspace/spec-reviewer"),
       {
         onWorkspaceLoaded,
@@ -146,7 +146,7 @@ test("useWorkspaceStateは読み込み後callbackの例外をopen失敗状態に
     );
   });
 
-  expect(isLoaded).toBe(false);
+  expect(outcome).toEqual({ type: "failed" });
   expect(result.current.state).toMatchObject({
     status: "failed",
     requestedPath: workspacePathFixture("/workspace/spec-reviewer"),
@@ -202,12 +202,12 @@ test("useWorkspaceStateは指定時に読み込み失敗後も現在のworkspace
   });
 
   await act(async () => {
-    const isLoaded = await result.current.actions.load(
+    const outcome = await result.current.actions.load(
       workspacePathFixture("/workspace/file.md"),
       { preserveCurrentWorkspace: true },
     );
 
-    expect(isLoaded).toBe(false);
+    expect(outcome).toEqual({ type: "failed" });
   });
 
   expect(result.current.state).toEqual({
@@ -237,7 +237,7 @@ test("useWorkspaceStateは古いload成功で最新workspace stateを上書き�
     .mockResolvedValueOnce(otherWorkspace);
   const result = renderHook(() => useWorkspaceState());
 
-  let firstResult!: Promise<boolean>;
+  let firstResult!: Promise<WorkspaceLoadOutcome>;
   act(() => {
     firstResult = result.current.actions.load(
       workspacePathFixture("/workspace/spec-reviewer"),
@@ -246,19 +246,19 @@ test("useWorkspaceStateは古いload成功で最新workspace stateを上書き�
   });
 
   await act(async () => {
-    const isLoaded = await result.current.actions.load(
+    const outcome = await result.current.actions.load(
       workspacePathFixture("/workspace/other"),
       { onWorkspaceLoaded: secondOnWorkspaceLoaded },
     );
 
-    expect(isLoaded).toBe(true);
+    expect(outcome).toEqual({ type: "loaded", workspace: otherWorkspace });
   });
 
   await act(async () => {
     firstLoad.resolve(workspace);
-    const isLoaded = await firstResult;
+    const outcome = await firstResult;
 
-    expect(isLoaded).toBe(false);
+    expect(outcome).toEqual({ type: "canceled" });
   });
 
   expect(result.current.state).toEqual({
@@ -277,7 +277,7 @@ test("useWorkspaceStateはreset後のload成功でidle stateを上書きしな�
   loadWorkspaceMock.mockReturnValue(load.promise);
   const result = renderHook(() => useWorkspaceState());
 
-  let loadResult!: Promise<boolean>;
+  let loadResult!: Promise<WorkspaceLoadOutcome>;
   act(() => {
     loadResult = result.current.actions.load(
       workspacePathFixture("/workspace/spec-reviewer"),
@@ -291,9 +291,9 @@ test("useWorkspaceStateはreset後のload成功でidle stateを上書きしな�
 
   await act(async () => {
     load.resolve(workspace);
-    const isLoaded = await loadResult;
+    const outcome = await loadResult;
 
-    expect(isLoaded).toBe(false);
+    expect(outcome).toEqual({ type: "canceled" });
   });
 
   expect(result.current.state).toEqual({ status: "idle" });
@@ -308,7 +308,7 @@ test("useWorkspaceStateは古いload失敗で最新workspace stateを上書き�
     .mockResolvedValueOnce(otherWorkspace);
   const result = renderHook(() => useWorkspaceState());
 
-  let firstResult!: Promise<boolean>;
+  let firstResult!: Promise<WorkspaceLoadOutcome>;
   act(() => {
     firstResult = result.current.actions.load(
       workspacePathFixture("/workspace/missing"),
@@ -321,9 +321,9 @@ test("useWorkspaceStateは古いload失敗で最新workspace stateを上書き�
 
   await act(async () => {
     firstLoad.reject("missing workspace");
-    const isLoaded = await firstResult;
+    const outcome = await firstResult;
 
-    expect(isLoaded).toBe(false);
+    expect(outcome).toEqual({ type: "canceled" });
   });
 
   expect(result.current.state).toEqual({
