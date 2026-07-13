@@ -9,6 +9,7 @@ import type {
   LoadWorkspaceOptions,
   WorkspaceActions,
   WorkspaceContextValue,
+  WorkspaceLoadOutcome,
 } from "@/features/workspace/context/types";
 import { toWorkspaceError } from "@/features/workspace/domain/workspaceError";
 import {
@@ -31,7 +32,7 @@ export function useWorkspaceState(): WorkspaceContextValue {
     async (
       selectedDirectory: WorkspacePathValue,
       loadOptions: LoadWorkspaceOptions = {},
-    ): Promise<boolean> => {
+    ): Promise<WorkspaceLoadOutcome> => {
       const requestId = generation.next();
       dispatch(
         WorkspaceState.openRequested({
@@ -48,20 +49,24 @@ export function useWorkspaceState(): WorkspaceContextValue {
         );
 
         if (!generation.isCurrent(requestId)) {
-          return false;
+          return { type: "canceled" };
         }
 
         loadOptions.onWorkspaceLoaded?.(workspace);
         dispatch(WorkspaceState.openSucceeded({ requestId, workspace }));
-        return true;
+        return { type: "loaded", workspace };
       } catch (error) {
+        if (!generation.isCurrent(requestId)) {
+          return { type: "canceled" };
+        }
+
         const workspaceError = toWorkspaceError(
           LoadWorkspaceCommandError.fromUnknown(error),
         );
         dispatch(
           WorkspaceState.openFailed({ requestId, error: workspaceError }),
         );
-        return false;
+        return { type: "failed" };
       }
     },
     [generation],

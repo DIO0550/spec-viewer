@@ -11,17 +11,22 @@ export type LoadWorkspaceOptions = Readonly<{
   onWorkspaceLoaded?: (workspace: Workspace) => void;
 }>;
 
+export type WorkspaceLoadOutcome =
+  | Readonly<{ type: "loaded"; workspace: Workspace }>
+  | Readonly<{ type: "failed" }>
+  | Readonly<{ type: "canceled" }>;
+
 export type WorkspaceActions = Readonly<{
   /**
    * 選択したディレクトリからワークスペースを読み込む。
    * @param selectedDirectory - 開くワークスペースの絶対パス。
    * @param options - 読み込み挙動のオプション（現在保持・読み込み後コールバック）。
-   * @returns 読み込みに成功したかどうか。
+   * @returns 成功・失敗・新しい操作によるキャンセルを区別する結果。
    */
   load: (
     selectedDirectory: WorkspacePath,
     options?: LoadWorkspaceOptions,
-  ) => Promise<boolean>;
+  ) => Promise<WorkspaceLoadOutcome>;
   /** 現在のワークスペースを初期状態へ戻す。 */
   reset: () => void;
 }>;

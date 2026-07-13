@@ -13,7 +13,6 @@ import {
   selectWorkspace,
   selectWorkspaceError,
 } from "@/features/workspace/context/selectors";
-import type { Workspace } from "@/features/workspace/domain/workspace";
 import {
   WorkspacePath,
   type WorkspacePath as WorkspacePathValue,
@@ -94,16 +93,20 @@ export function useWorkspaceLoader(
         return validateWorkspaceDirectory(WorkspacePath.toString(path));
       },
       load: async (path, loadOptions) => {
-        let loadedWorkspace: Workspace | null = null;
         applyOpenProgress(path);
-        const isLoaded = await workspaceLoad(path, {
+        const loadOutcome = await workspaceLoad(path, {
           preserveCurrentWorkspace: loadOptions.preserveCurrentWorkspace,
-          onWorkspaceLoaded: (nextWorkspace) => {
-            loadedWorkspace = nextWorkspace;
-          },
         });
 
-        return isLoaded ? loadedWorkspace : null;
+        if (loadOutcome.type === "canceled") {
+          return { type: "canceled" };
+        }
+
+        if (loadOutcome.type === "failed") {
+          return { type: "unsupported" };
+        }
+
+        return { type: "loaded", workspace: loadOutcome.workspace };
       },
       recentWorkspaces: {
         record: async (loadedWorkspace) => {

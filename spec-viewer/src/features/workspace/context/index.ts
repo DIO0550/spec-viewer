@@ -1,4 +1,3 @@
-export { WorkspaceProvider } from "@/features/workspace/context/WorkspaceProvider";
 export {
   useWorkspace,
   useWorkspaceContext,
@@ -10,11 +9,13 @@ export {
   selectWorkspace,
   selectWorkspaceError,
 } from "@/features/workspace/context/selectors";
-export { useWorkspaceState } from "@/features/workspace/context/useWorkspaceState";
 export type {
   LoadWorkspaceOptions,
   WorkspaceActions,
   WorkspaceContextValue,
+  WorkspaceLoadOutcome,
   WorkspaceProviderProps,
   WorkspaceState,
 } from "@/features/workspace/context/types";
+export { useWorkspaceState } from "@/features/workspace/context/useWorkspaceState";
+export { WorkspaceProvider } from "@/features/workspace/context/WorkspaceProvider";

@@ -1,8 +1,8 @@
 import type { Workspace } from "@/features/workspace/domain/workspace";
 import {
   WorkspacePath,
-  type WorkspacePath as WorkspacePathValue,
   type WorkspacePathParseError,
+  type WorkspacePath as WorkspacePathValue,
 } from "@/features/workspace/domain/workspacePath";
 
 export type WorkspaceOpenSource =
@@ -43,6 +43,10 @@ export type OpenWorkspaceOutcome =
       source: Exclude<WorkspaceOpenSource, "recent" | "startupRestore">;
     }>
   | Readonly<{
+      type: "loadCanceled";
+      source: WorkspaceOpenSource;
+    }>
+  | Readonly<{
       type: "skipped";
       source: "drop" | "recent" | "startupRestore";
     }>
@@ -75,16 +79,21 @@ export type OpenWorkspaceLoadOptions = Readonly<{
   preserveCurrentWorkspace: boolean;
 }>;
 
+export type OpenWorkspaceLoadOutcome =
+  | Readonly<{ type: "loaded"; workspace: Workspace }>
+  | Readonly<{ type: "unsupported" }>
+  | Readonly<{ type: "canceled" }>;
+
 export type OpenWorkspacePorts = Readonly<{
   /** @returns Whether the path currently identifies a directory. */
   validate: (
     path: WorkspacePathValue,
   ) => Promise<Readonly<{ isDirectory: boolean }>>;
-  /** @returns The loaded workspace, or null when loading did not complete. */
+  /** @returns A loaded, unsupported, or canceled workspace outcome. */
   load: (
     path: WorkspacePathValue,
     options: OpenWorkspaceLoadOptions,
-  ) => Promise<Workspace | null>;
+  ) => Promise<OpenWorkspaceLoadOutcome>;
   recentWorkspaces: Readonly<{
     /** Records a successfully loaded workspace. */
     record: (workspace: Workspace) => Promise<void>;
@@ -202,15 +211,19 @@ async function openSavedPath(
     return removeSavedPath(command, "missing", ports);
   }
 
-  const loadedWorkspace = await ports.load(command.path, {
+  const loadOutcome = await ports.load(command.path, {
     preserveCurrentWorkspace: true,
   });
 
-  if (loadedWorkspace === null) {
+  if (loadOutcome.type === "canceled") {
+    return { type: "loadCanceled", source: command.type };
+  }
+
+  if (loadOutcome.type === "unsupported") {
     return removeSavedPath(command, "unsupported", ports);
   }
 
-  await ports.recentWorkspaces.record(loadedWorkspace);
+  await ports.recentWorkspaces.record(loadOutcome.workspace);
   return {
     type: "loaded",
     source: command.type,
@@ -231,13 +244,17 @@ async function loadWorkspace(
   preserveCurrentWorkspace: boolean,
   ports: OpenWorkspacePorts,
 ): Promise<OpenWorkspaceOutcome> {
-  const loadedWorkspace = await ports.load(path, { preserveCurrentWorkspace });
+  const loadOutcome = await ports.load(path, { preserveCurrentWorkspace });
 
-  if (loadedWorkspace === null) {
+  if (loadOutcome.type === "canceled") {
+    return { type: "loadCanceled", source };
+  }
+
+  if (loadOutcome.type === "unsupported") {
     return { type: "loadFailedSilently", source };
   }
 
-  await ports.recentWorkspaces.record(loadedWorkspace);
+  await ports.recentWorkspaces.record(loadOutcome.workspace);
   return { type: "loaded", source, path };
 }
 
