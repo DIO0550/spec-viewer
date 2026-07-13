@@ -297,7 +297,7 @@ function UserReviewProblem({ problem }: UserReviewProblemProps) {
     <p>
       <strong>
         {presentation.label}: {problem.locator}
-      </strong>
+      </strong>{" "}
       <span>{presentation.description}</span>
     </p>
   );
