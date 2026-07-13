@@ -132,7 +132,7 @@ export async function generateLlmPrompt(
 
   return invokeTauriCommand<
     GenerateLlmPromptCommandResponse,
-    GenerateLlmPromptCommandRequest,
+    ReturnType<typeof encodeGenerateLlmPromptRequest>,
     GenerateLlmPromptCommandError
   >(
     GENERATE_LLM_PROMPT_COMMAND,

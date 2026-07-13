@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
@@ -15,13 +16,12 @@ import type {
   ListCommentsResponse,
 } from "@/features/comments/types/comment";
 import { toCommentFeatureError } from "@/features/comments/infra/tauri/commentErrorMapper";
-import { CommentId } from "@/features/comments/types/comment";
 import type { CommentCommands } from "@/features/comments/application/ports/commentCommands";
 import { SpecViewSelection } from "@/shared/domain/specViewSelection";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 import { configurePerformanceLoggerForTest } from "@/shared/lib/performance";
 
-const commentId = CommentId.fromString;
+const commentId = TestValues.commentId;
 
 const anchor: CommentAnchor = {
   fileKey: "tasks",
@@ -41,23 +41,23 @@ const firstComment: Comment = {
   body: "Clarify this task",
   status: "open",
   resolved: false,
-  createdAt: "2026-05-05T10:00:00Z",
-  updatedAt: "2026-05-05T10:00:00Z",
+  createdAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
+  updatedAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
 };
 
 const secondComment: Comment = {
   ...firstComment,
   id: commentId("cmt_2"),
   body: "Add acceptance criteria",
-  createdAt: "2026-05-05T10:05:00Z",
-  updatedAt: "2026-05-05T10:05:00Z",
+  createdAt: TestValues.isoDateTime("2026-05-05T10:05:00Z"),
+  updatedAt: TestValues.isoDateTime("2026-05-05T10:05:00Z"),
 };
 
 const resolvedComment: Comment = {
   ...firstComment,
   status: "resolved",
   resolved: true,
-  updatedAt: "2026-05-05T10:10:00Z",
+  updatedAt: TestValues.isoDateTime("2026-05-05T10:10:00Z"),
 };
 
 const optimisticResolvedComment: Comment = {
@@ -71,7 +71,7 @@ function createCommentScope(
 ): CommentScopeType {
   const selection = SpecViewSelection.synchronize(SpecViewSelection.empty(), {
     workspacePath: WorkspacePath.fromString("/workspace/spec-reviewer"),
-    specId: "phase-2-comments",
+    specId: TestValues.specId("phase-2-comments"),
     fileKey,
   });
 
@@ -178,7 +178,7 @@ function createCommands(
     updateComment: {
       ...firstComment,
       body: "Updated body",
-      updatedAt: "2026-05-05T10:15:00Z",
+      updatedAt: TestValues.isoDateTime("2026-05-05T10:15:00Z"),
     },
     resolveComment: resolvedComment,
     reopenComment: firstComment,
@@ -222,7 +222,7 @@ test("useCommentsはscopeが揃うとコメント一覧を読み込む", async (
   expect(double.calls.listComments).toEqual([
     {
       workspacePath: "/workspace/spec-reviewer",
-      specId: "phase-2-comments",
+      specId: TestValues.specId("phase-2-comments"),
       fileKey: "tasks",
       statusFilter: "all",
     },
@@ -246,7 +246,7 @@ test.each([
   expect(double.calls.listComments).toEqual([
     {
       workspacePath: "/workspace/spec-reviewer",
-      specId: "phase-2-comments",
+      specId: TestValues.specId("phase-2-comments"),
       fileKey: "tasks",
       statusFilter: expectedStatusFilter,
     },
@@ -344,7 +344,7 @@ test("useCommentsはscope変更時にリセットして再読み込みする", a
   expect(result.current.comments).toEqual([secondComment]);
   expect(listComments).toHaveBeenLastCalledWith({
     workspacePath: "/workspace/spec-reviewer",
-    specId: "phase-2-comments",
+    specId: TestValues.specId("phase-2-comments"),
     fileKey: "design",
     statusFilter: "all",
   });
@@ -520,7 +520,7 @@ test("useCommentsは同一scopeで古いoperation完了を現在の一覧へ反�
   updateDeferred.resolve({
     ...firstComment,
     body: "Updated body",
-    updatedAt: "2026-05-05T10:15:00Z",
+    updatedAt: TestValues.isoDateTime("2026-05-05T10:15:00Z"),
   });
   await act(async () => {
     await expect(updatePromise).resolves.toBeNull();

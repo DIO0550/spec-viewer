@@ -1,4 +1,5 @@
 import type { SpecFileKey } from "@/shared/domain/specFileKey";
+import type { SpecId } from "@/shared/domain/specId";
 import {
   SpecViewSelection,
   type SpecViewSelection as SpecViewSelectionType,
@@ -10,12 +11,12 @@ export type UserReviewTargetScope = SpecViewTargetScope;
 export type UserReviewTarget =
   | Readonly<{
       scope: "file";
-      specId: string;
+      specId: SpecId;
       fileKey: SpecFileKey;
     }>
   | Readonly<{
       scope: "spec";
-      specId: string;
+      specId: SpecId;
     }>;
 
 export const UserReviewTarget = {

@@ -3,9 +3,10 @@ import {
   type SpecFile as SpecFileType,
   type SpecFileKey,
 } from "@/features/specs/domain/specFile";
+import type { SpecId } from "@/shared/domain/specId";
 
 export type SpecNode = Readonly<{
-  id: string;
+  id: SpecId;
   label: string;
   files: readonly SpecFileType[];
   children: readonly SpecNode[];
@@ -26,7 +27,7 @@ export const SpecNode = {
    * @param id - Spec node id to find
    * @returns Matching spec node from the nested tree, or null when absent.
    */
-  findById: (nodes: readonly SpecNode[], id: string): SpecNode | null => {
+  findById: (nodes: readonly SpecNode[], id: SpecId): SpecNode | null => {
     for (const node of nodes) {
       if (node.id === id) {
         return node;

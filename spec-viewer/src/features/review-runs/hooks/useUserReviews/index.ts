@@ -2,6 +2,7 @@ import { useMemo } from "react";
 
 import type { UserReviewCommands } from "@/features/review-runs/application/ports/userReviewCommands";
 import type { UserReview } from "@/features/review-runs/domain/userReview";
+import type { UserReviewId } from "@/features/review-runs/domain/userReviewId";
 import type {
   UserReviewArchiveFeatureState,
   UserReviewCreateFeatureState,
@@ -55,7 +56,7 @@ export type UseUserReviewsResult = Readonly<{
     input: CreateUserReviewInput,
   ) => Promise<UserReview | null>;
   /** Archives a user review. @param userReviewId - ID of the review to archive. */
-  archiveUserReview: (userReviewId: string) => Promise<UserReview | null>;
+  archiveUserReview: (userReviewId: UserReviewId) => Promise<UserReview | null>;
 }>;
 
 /** @returns User review loading and creation state for the selected target. */

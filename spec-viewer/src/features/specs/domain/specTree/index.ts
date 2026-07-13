@@ -1,4 +1,5 @@
 import type { SpecFileKey } from "@/features/specs/domain/specFile";
+import type { SpecId } from "@/shared/domain/specId";
 import {
   SpecNode,
   type SpecNode as SpecNodeType,
@@ -33,7 +34,7 @@ export const SpecTree = {
    * @param specId - Spec node id to find
    * @returns Matching node, or null when absent.
    */
-  findNode: (tree: SpecTree, specId: string): SpecNodeType | null =>
+  findNode: (tree: SpecTree, specId: SpecId): SpecNodeType | null =>
     SpecNode.findById(tree.specs, specId),
 
   /**
@@ -50,7 +51,7 @@ export const SpecTree = {
    */
   resolveSelection: (
     tree: SpecTree,
-    preferred: Readonly<{ specId: string | null; fileKey: SpecFileKey | null }>,
+    preferred: Readonly<{ specId: SpecId | null; fileKey: SpecFileKey | null }>,
   ): SpecSelection => {
     if (preferred.specId !== null) {
       const preferredSpec = SpecTree.findNode(tree, preferred.specId);

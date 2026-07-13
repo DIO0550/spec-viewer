@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { expect, test } from "vitest";
 
 import type { SpecFile } from "@/features/specs/domain/specFile";
@@ -19,7 +20,7 @@ const tasksFile: SpecFile = {
 };
 
 const nestedChild: SpecNodeType = {
-  id: "child-spec",
+  id: TestValues.specId("child-spec"),
   label: "Child Spec",
   files: [tasksFile],
   children: [],
@@ -27,13 +28,13 @@ const nestedChild: SpecNodeType = {
 
 const nodes: readonly SpecNodeType[] = [
   {
-    id: "root-empty",
+    id: TestValues.specId("root-empty"),
     label: "Root Empty",
     files: [],
     children: [nestedChild],
   },
   {
-    id: "root-openable",
+    id: TestValues.specId("root-openable"),
     label: "Root Openable",
     files: [implFile, tasksFile],
     children: [],
@@ -41,15 +42,21 @@ const nodes: readonly SpecNodeType[] = [
 ];
 
 test("SpecNode.findByIdはroot nodeを見つける", () => {
-  expect(SpecNode.findById(nodes, "root-openable")).toBe(nodes[1]);
+  expect(SpecNode.findById(nodes, TestValues.specId("root-openable"))).toBe(
+    nodes[1],
+  );
 });
 
 test("SpecNode.findByIdはnested child nodeを見つける", () => {
-  expect(SpecNode.findById(nodes, "child-spec")).toBe(nestedChild);
+  expect(SpecNode.findById(nodes, TestValues.specId("child-spec"))).toBe(
+    nestedChild,
+  );
 });
 
 test("SpecNode.findByIdは存在しないidならnullを返す", () => {
-  expect(SpecNode.findById(nodes, "missing-spec")).toBeNull();
+  expect(
+    SpecNode.findById(nodes, TestValues.specId("missing-spec")),
+  ).toBeNull();
 });
 
 test("SpecNode.firstは先頭nodeを返す", () => {
@@ -67,8 +74,13 @@ test("SpecNode.firstOpenableはfileを持つchild nodeを返す", () => {
 
 test("SpecNode.firstOpenableはfileを持つnodeがなければ先頭nodeへfallbackする", () => {
   const emptyNodes: readonly SpecNodeType[] = [
-    { id: "root", label: "Root", files: [], children: [] },
-    { id: "sibling", label: "Sibling", files: [], children: [] },
+    { id: TestValues.specId("root"), label: "Root", files: [], children: [] },
+    {
+      id: TestValues.specId("sibling"),
+      label: "Sibling",
+      files: [],
+      children: [],
+    },
   ];
 
   expect(SpecNode.firstOpenable(emptyNodes)).toBe(emptyNodes[0]);

@@ -7,6 +7,7 @@ import type { CommentId as BrandedCommentId } from "@/shared/domain/commentId";
 import { CommentId as CommentIdValue } from "@/shared/domain/commentId";
 import type { IsoDateTimeString } from "@/shared/domain/isoDateTime";
 import type { SpecFileKey } from "@/shared/domain/specFileKey";
+import type { SpecId } from "@/shared/domain/specId";
 
 export type CommentId = BrandedCommentId;
 export const CommentId = CommentIdValue;
@@ -129,7 +130,7 @@ export type CommentAnchorDisplayState = Readonly<{
 
 export type ListCommentsRequest = Readonly<{
   workspacePath: string;
-  specId: string;
+  specId: SpecId;
   fileKey: SpecFileKey;
   statusFilter?: CommentStatusFilter | null;
   correlationId?: string;
@@ -137,14 +138,14 @@ export type ListCommentsRequest = Readonly<{
 
 export type AddCommentRequest = Readonly<{
   workspacePath: string;
-  specId: string;
+  specId: SpecId;
   anchor: CommentAnchor;
   body: string;
 }>;
 
 export type UpdateCommentRequest = Readonly<{
   workspacePath: string;
-  specId: string;
+  specId: SpecId;
   fileKey: SpecFileKey;
   commentId: CommentId;
   body: string;
@@ -152,14 +153,14 @@ export type UpdateCommentRequest = Readonly<{
 
 export type DeleteCommentRequest = Readonly<{
   workspacePath: string;
-  specId: string;
+  specId: SpecId;
   fileKey: SpecFileKey;
   commentId: CommentId;
 }>;
 
 export type CommentStatusRequest = Readonly<{
   workspacePath: string;
-  specId: string;
+  specId: SpecId;
   fileKey: SpecFileKey;
   commentId: CommentId;
 }>;
@@ -167,12 +168,12 @@ export type CommentStatusRequest = Readonly<{
 export type ExportCommentsTarget =
   | Readonly<{
       scope: "file";
-      specId: string;
+      specId: SpecId;
       fileKey: SpecFileKey;
     }>
   | Readonly<{
       scope: "spec";
-      specId: string;
+      specId: SpecId;
     }>
   | Readonly<{
       scope: "workspace";
@@ -235,7 +236,7 @@ export type SpecSkillMcpFeedbackInterface = Readonly<{
 }>;
 
 export type SpecSkillMcpFeedbackComment = Readonly<{
-  id: CommentId;
+  id: string;
   fileKey: SpecFileKey;
   body: string;
   status: CommentStatus;
@@ -251,7 +252,11 @@ export type SpecSkillMcpFeedbackPayload = Readonly<{
   interface: SpecSkillMcpFeedbackInterface;
   mode: "dryRun";
   workspacePath: string;
-  target: Extract<ExportCommentsTarget, { scope: "file" }>;
+  target: Readonly<{
+    scope: "file";
+    specId: string;
+    fileKey: SpecFileKey;
+  }>;
   generatedAt: IsoDateTimeString;
   dryRun: Readonly<{
     callProvider: false;

@@ -1,3 +1,4 @@
+import * as TestValues from "@/features/review-runs/testing/validatedValueObjects";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
@@ -13,7 +14,6 @@ import type {
   UserReview,
 } from "@/features/review-runs/types/userReviewIpc";
 import type { UserReviewCommands } from "@/features/review-runs/application/ports/userReviewCommands";
-import { CommentId } from "@/shared/domain/commentId";
 import type { SpecFileKey } from "@/shared/domain/specFileKey";
 import {
   SpecViewSelection,
@@ -22,14 +22,14 @@ import {
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 import { configurePerformanceLoggerForTest } from "@/shared/lib/performance";
 
-const commentId = CommentId.fromString;
+const commentId = TestValues.commentId;
 
 const activeRun: UserReview = {
-  id: "2026-05-06T120000Z-file-tasks-abcdef12",
+  id: TestValues.userReviewId("2026-05-06T120000Z-file-tasks-abcdef12"),
   status: "active",
   target: {
     scope: "file",
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "tasks",
   },
   workspace: {
@@ -41,13 +41,13 @@ const activeRun: UserReview = {
     "/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/active/2026-05-06T120000Z-file-tasks-abcdef12",
   sourceFiles: [
     {
-      specId: "auth",
+      specId: TestValues.specId("auth"),
       fileKey: "tasks",
       relativePath: ".plugin-workspace/.specs/auth/tasks.md",
     },
   ],
   commentCount: 1,
-  createdAt: "2026-05-06T12:00:00Z",
+  createdAt: TestValues.isoDateTime("2026-05-06T12:00:00Z"),
   archivedAt: null,
   summary: null,
   warnings: [],
@@ -64,7 +64,7 @@ const archivedRun: UserReview = {
   status: "archived",
   folderPath:
     "/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/archive/2026-05-06T120000Z-file-tasks-abcdef12",
-  archivedAt: "2026-05-06T12:30:00Z",
+  archivedAt: TestValues.isoDateTime("2026-05-06T12:30:00Z"),
 };
 
 type HookProps = Readonly<{
@@ -132,7 +132,10 @@ function createSelection(props: HookProps): SpecViewSelectionType {
     return selection;
   }
 
-  selection = SpecViewSelection.selectSpec(selection, props.specId);
+  selection = SpecViewSelection.selectSpec(
+    selection,
+    TestValues.specId(props.specId),
+  );
   if (props.fileKey !== null) {
     selection = SpecViewSelection.selectFile(selection, props.fileKey);
   }
@@ -183,7 +186,7 @@ test("useUserReviewsはscope未選択ならidleで一覧を読み込まない", 
   const double = createUserReviewCommandTestDouble();
   const result = renderUseUserReviews({
     workspacePath: null,
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "tasks",
     targetScope: "file",
     commands: double.commands,
@@ -207,7 +210,7 @@ test("useUserReviewsは対象が揃うとactive run一覧を読み込む", async
   });
   const result = renderUseUserReviews({
     workspacePath: "/workspace/spec-reviewer",
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "tasks",
     targetScope: "file",
     commands: double.commands,
@@ -222,7 +225,7 @@ test("useUserReviewsは対象が揃うとactive run一覧を読み込む", async
       workspacePath: "/workspace/spec-reviewer",
       target: {
         scope: "file",
-        specId: "auth",
+        specId: TestValues.specId("auth"),
         fileKey: "tasks",
       },
     },
@@ -242,7 +245,7 @@ test("useUserReviewsは一覧読み込み失敗時もperformance spanを記録�
   };
   const result = renderUseUserReviews({
     workspacePath: "/workspace/spec-reviewer",
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "tasks",
     targetScope: "file",
     commands,
@@ -278,7 +281,7 @@ test("useUserReviewsは作成したactive runを一覧の先頭に追加する",
   });
   const result = renderUseUserReviews({
     workspacePath: "/workspace/spec-reviewer",
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "tasks",
     targetScope: "file",
     commands: double.commands,
@@ -299,7 +302,7 @@ test("useUserReviewsは作成したactive runを一覧の先頭に追加する",
       workspacePath: "/workspace/spec-reviewer",
       target: {
         scope: "file",
-        specId: "auth",
+        specId: TestValues.specId("auth"),
         fileKey: "tasks",
       },
       commentIds: ["cmt_1"],
@@ -322,7 +325,7 @@ test("useUserReviewsはcompleted runをアーカイブして一覧を移動す�
   });
   const result = renderUseUserReviews({
     workspacePath: "/workspace/spec-reviewer",
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "tasks",
     targetScope: "file",
     commands: double.commands,
@@ -341,7 +344,7 @@ test("useUserReviewsはcompleted runをアーカイブして一覧を移動す�
       workspacePath: "/workspace/spec-reviewer",
       target: {
         scope: "file",
-        specId: "auth",
+        specId: TestValues.specId("auth"),
         fileKey: "tasks",
       },
       userReviewId: completedRun.id,
@@ -359,7 +362,7 @@ test("useUserReviewsはloading中のcreate成功を古いlist responseで上書�
   };
   const result = renderUseUserReviews({
     workspacePath: "/workspace/spec-reviewer",
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "tasks",
     targetScope: "file",
     commands,
@@ -397,7 +400,7 @@ test("useUserReviewsはselection変更後に完了したcreateを現在listへ�
   };
   const result = renderUseUserReviews({
     workspacePath: "/workspace/spec-reviewer",
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "tasks",
     targetScope: "file",
     commands,
@@ -410,7 +413,7 @@ test("useUserReviewsはselection変更後に完了したcreateを現在listへ�
   });
   result.rerender({
     workspacePath: "/workspace/spec-reviewer",
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "impl",
     targetScope: "file",
     commands,
@@ -440,7 +443,7 @@ test("useUserReviewsはselection変更後に完了したarchiveを現在listへ�
   };
   const result = renderUseUserReviews({
     workspacePath: "/workspace/spec-reviewer",
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "tasks",
     targetScope: "file",
     commands,
@@ -450,7 +453,7 @@ test("useUserReviewsはselection変更後に完了したarchiveを現在listへ�
   const archivePromise = result.current.archiveUserReview(completedRun.id);
   result.rerender({
     workspacePath: "/workspace/spec-reviewer",
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "impl",
     targetScope: "file",
     commands,
@@ -480,7 +483,7 @@ test("useUserReviewsはtarget変更後に完了したcreateを現在listへ反�
   };
   const result = renderUseUserReviews({
     workspacePath: "/workspace/spec-reviewer",
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "tasks",
     targetScope: "file",
     commands,
@@ -493,7 +496,7 @@ test("useUserReviewsはtarget変更後に完了したcreateを現在listへ反�
   });
   result.rerender({
     workspacePath: "/workspace/spec-reviewer",
-    specId: "billing",
+    specId: TestValues.specId("billing"),
     fileKey: "tasks",
     targetScope: "file",
     commands,
@@ -523,7 +526,7 @@ test("useUserReviewsはworkspace変更後に完了したcreateを現在listへ�
   };
   const result = renderUseUserReviews({
     workspacePath: "/workspace/spec-reviewer",
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "tasks",
     targetScope: "file",
     commands,
@@ -536,7 +539,7 @@ test("useUserReviewsはworkspace変更後に完了したcreateを現在listへ�
   });
   result.rerender({
     workspacePath: "/workspace/other-spec-reviewer",
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "tasks",
     targetScope: "file",
     commands,
@@ -566,7 +569,7 @@ test("useUserReviewsはtarget変更後に完了したarchiveを現在listへ反�
   };
   const result = renderUseUserReviews({
     workspacePath: "/workspace/spec-reviewer",
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "tasks",
     targetScope: "file",
     commands,
@@ -576,7 +579,7 @@ test("useUserReviewsはtarget変更後に完了したarchiveを現在listへ反�
   const archivePromise = result.current.archiveUserReview(completedRun.id);
   result.rerender({
     workspacePath: "/workspace/spec-reviewer",
-    specId: "billing",
+    specId: TestValues.specId("billing"),
     fileKey: "tasks",
     targetScope: "file",
     commands,

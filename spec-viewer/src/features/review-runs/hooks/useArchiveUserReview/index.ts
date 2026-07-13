@@ -10,6 +10,7 @@ import type { UserReview } from "@/features/review-runs/domain/userReview";
 import type { UserReviewArchiveFeatureState } from "@/features/review-runs/application/userReviewError";
 import { UserReviewArchiveState } from "@/features/review-runs/domain/userReviewOperation";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
+import type { UserReviewId } from "@/features/review-runs/domain/userReviewId";
 import type { UserReviewListEventWithSelectionIdentity } from "@/features/review-runs/hooks/useUserReviewList";
 import { archiveUserReview as archiveUserReviewViaGateway } from "@/features/review-runs/infra/userReviewGateway";
 import type { UserReviewCommands } from "@/features/review-runs/application/ports/userReviewCommands";
@@ -39,7 +40,7 @@ type ArchiveRequestToken = Readonly<{
 export type UseArchiveUserReviewResult = Readonly<{
   archiveState: UserReviewArchiveFeatureState;
   /** Archives a user review. @param userReviewId - ID of the review to archive. */
-  archiveUserReview: (userReviewId: string) => Promise<UserReview | null>;
+  archiveUserReview: (userReviewId: UserReviewId) => Promise<UserReview | null>;
 }>;
 
 /** @returns User review archive state and callback for the active target. */
@@ -88,7 +89,7 @@ export function useArchiveUserReview(
   }, [selectionIdentity]);
 
   const archiveUserReview = useCallback(
-    async (userReviewId: string): Promise<UserReview | null> => {
+    async (userReviewId: UserReviewId): Promise<UserReview | null> => {
       if (workspacePath === null || target === null) {
         return null;
       }

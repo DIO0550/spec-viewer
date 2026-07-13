@@ -1,4 +1,5 @@
 import type { SpecFileKey } from "@/features/specs";
+import type { SpecId } from "@/shared/domain/specId";
 
 /**
  * 現在の選択の同一性を表す3値（既存のリセット effect と同一のキー）。
@@ -15,7 +16,7 @@ import type { SpecFileKey } from "@/features/specs";
  */
 export type SpecViewResetKeys = Readonly<{
   workspaceRoot: string | null;
-  specId: string | null;
+  specId: SpecId | null;
   fileKey: SpecFileKey | null;
 }>;
 

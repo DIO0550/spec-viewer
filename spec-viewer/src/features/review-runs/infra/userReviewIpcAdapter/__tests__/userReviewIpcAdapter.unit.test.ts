@@ -1,3 +1,4 @@
+import * as TestValues from "@/features/review-runs/testing/validatedValueObjects";
 import { expect, test } from "vitest";
 
 import {
@@ -7,19 +8,19 @@ import {
 import type { UserReviewDto } from "@/features/review-runs/infra/tauri/userReviewIpcCodec";
 
 const activeReview = createUserReview({
-  id: "review-active",
+  id: "urv_00000000000000000000000000000001",
   status: "active",
   archivedAt: null,
 });
 const archivedReview = createUserReview({
-  id: "review-archived",
+  id: "urv_00000000000000000000000000000002",
   status: "archived",
-  archivedAt: "2026-05-06T12:30:00Z",
+  archivedAt: TestValues.isoDateTime("2026-05-06T12:30:00Z"),
 });
 
 test("review DTO adapterはarchivedAtのないarchived reviewをstructured errorで拒否する", () => {
   const invalidReview = createUserReview({
-    id: "review-invalid-archived",
+    id: "urv_00000000000000000000000000000004",
     status: "archived",
     archivedAt: null,
   });
@@ -35,9 +36,9 @@ test("review DTO adapterはarchivedAtのないarchived reviewをstructured error
 
 test("review DTO adapterはarchivedAtのある非archived reviewをstructured errorで拒否する", () => {
   const invalidReview = createUserReview({
-    id: "review-invalid-active",
+    id: "urv_00000000000000000000000000000003",
     status: "completed",
-    archivedAt: "2026-05-06T12:30:00Z",
+    archivedAt: TestValues.isoDateTime("2026-05-06T12:30:00Z"),
   });
 
   expect(() => mapUserReviewDtoToUserReview(invalidReview)).toThrowError(
@@ -65,7 +66,11 @@ function createUserReview(
   return {
     id: input.id,
     status: input.status,
-    target: { scope: "file", specId: "auth", fileKey: "tasks" },
+    target: {
+      scope: "file",
+      specId: TestValues.specId("auth"),
+      fileKey: "tasks",
+    },
     workspace: {
       mode: "currentWorkspace",
       workspacePath: "/workspace/spec-reviewer",
@@ -74,13 +79,13 @@ function createUserReview(
     folderPath: `/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/active/${input.id}`,
     sourceFiles: [
       {
-        specId: "auth",
+        specId: TestValues.specId("auth"),
         fileKey: "tasks",
         relativePath: ".plugin-workspace/.specs/auth/tasks.md",
       },
     ],
     commentCount: 1,
-    createdAt: "2026-05-06T12:00:00Z",
+    createdAt: TestValues.isoDateTime("2026-05-06T12:00:00Z"),
     archivedAt: input.archivedAt,
     summary: null,
     warnings: [],

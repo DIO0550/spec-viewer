@@ -1,3 +1,4 @@
+import * as TestValues from "@/features/review-runs/testing/validatedValueObjects";
 import { expect, test } from "vitest";
 
 import {
@@ -13,7 +14,9 @@ const createPayload: CreateUserReviewPayload = {
   commentIds: [],
   workspaceMode: "currentWorkspace",
 };
-const archivePayload = { userReviewId: "run-1" };
+const archivePayload = {
+  userReviewId: TestValues.userReviewId("urv_00000000000000000000000000000011"),
+};
 const error: IpcCommandError = {
   message: "failed",
   code: "unknown",
@@ -58,11 +61,11 @@ test("UserReviewArchiveStateはpayload付きarchive操作の状態を生成す�
 
 function createUserReview(): UserReview {
   return {
-    id: "run-1",
+    id: TestValues.userReviewId("urv_00000000000000000000000000000011"),
     status: "active",
     target: {
       scope: "file",
-      specId: "auth",
+      specId: TestValues.specId("auth"),
       fileKey: "tasks",
     },
     workspace: {
@@ -74,7 +77,7 @@ function createUserReview(): UserReview {
       "/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/active/run-1",
     sourceFiles: [],
     commentCount: 1,
-    createdAt: "2026-05-06T12:00:00Z",
+    createdAt: TestValues.isoDateTime("2026-05-06T12:00:00Z"),
     archivedAt: null,
     summary: null,
     warnings: [],

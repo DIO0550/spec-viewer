@@ -4,11 +4,14 @@ import type {
   SpecSkillMcpFeedbackInterface,
   SpecSkillMcpFeedbackPayload,
 } from "@/features/comments/types/comment";
+import { CommentId } from "@/shared/domain/commentId";
+import { IsoDateTime } from "@/shared/domain/isoDateTime";
 import type { SpecFileKey } from "@/shared/domain/specFileKey";
+import { SpecId, type SpecId as SpecIdType } from "@/shared/domain/specId";
 
 type CreateSpecSkillMcpFeedbackDryRunPayloadInput = Readonly<{
   workspacePath: string;
-  specId: string;
+  specId: SpecIdType;
   fileKey: SpecFileKey;
   comments: readonly Comment[];
   generatedAt: string;
@@ -46,7 +49,7 @@ export function createSpecSkillMcpFeedbackDryRunPayload({
     workspacePath,
     target: {
       scope: "file",
-      specId,
+      specId: SpecId.toDto(specId),
       fileKey,
     },
     generatedAt,
@@ -94,15 +97,15 @@ function createSpecSkillMcpFeedbackComment(
   comment: Comment,
 ): SpecSkillMcpFeedbackComment {
   return {
-    id: comment.id,
+    id: CommentId.toDto(comment.id),
     fileKey: comment.anchor.fileKey,
     body: comment.body,
     status: comment.status,
     resolved: comment.resolved,
     anchor: comment.anchor,
     anchorResolution: comment.anchorResolution ?? null,
-    createdAt: comment.createdAt,
-    updatedAt: comment.updatedAt,
+    createdAt: IsoDateTime.toDto(comment.createdAt),
+    updatedAt: IsoDateTime.toDto(comment.updatedAt),
   };
 }
 

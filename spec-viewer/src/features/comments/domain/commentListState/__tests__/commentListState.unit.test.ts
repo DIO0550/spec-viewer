@@ -1,10 +1,10 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { expect, test } from "vitest";
 
 import { CommentListState } from "@/features/comments/domain/commentListState";
 import type { Comment, CommentAnchor } from "@/features/comments/types/comment";
-import { CommentId } from "@/features/comments/types/comment";
 
-const commentId = CommentId.fromString;
+const commentId = TestValues.commentId;
 
 const anchor: CommentAnchor = {
   fileKey: "tasks",
@@ -24,14 +24,14 @@ const comment: Comment = {
   body: "Clarify this task",
   status: "open",
   resolved: false,
-  createdAt: "2026-05-05T10:00:00Z",
-  updatedAt: "2026-05-05T10:00:00Z",
+  createdAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
+  updatedAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
 };
 
 const updatedComment: Comment = {
   ...comment,
   body: "Updated body",
-  updatedAt: "2026-05-05T10:15:00Z",
+  updatedAt: TestValues.isoDateTime("2026-05-05T10:15:00Z"),
 };
 
 const featureError = { kind: "commentFailure" } as const;

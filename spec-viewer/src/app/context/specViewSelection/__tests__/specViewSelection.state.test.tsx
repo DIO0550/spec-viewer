@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test } from "vitest";
@@ -46,7 +47,7 @@ test("SpecViewSelectionProviderはaggregate stateとderived identityだけを保
   act(() => {
     currentValue?.synchronizeSelection({
       workspacePath,
-      specId: "auth",
+      specId: TestValues.specId("auth"),
       fileKey: "tasks" as SpecFileKey,
     });
   });
@@ -63,7 +64,7 @@ test("SpecViewSelectionProviderはaggregate stateとderived identityだけを保
   );
   expect(values[values.length - 1]?.selection).toMatchObject({
     workspacePath,
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "tasks",
     targetScope: "file",
   });
@@ -71,7 +72,7 @@ test("SpecViewSelectionProviderはaggregate stateとderived identityだけを保
     SelectionIdentity.fromSelection(
       SpecViewSelection.synchronize(SpecViewSelection.empty(), {
         workspacePath,
-        specId: "auth",
+        specId: TestValues.specId("auth"),
         fileKey: "tasks",
       }),
     ),
@@ -86,7 +87,7 @@ test.each([
     name: "workspace変更",
     workspaceSelection: {
       workspacePath: WorkspacePath.fromString("/workspace/other"),
-      specId: "auth",
+      specId: TestValues.specId("auth"),
       fileKey: "tasks" as SpecFileKey,
     },
     targetScope: "file" as const,
@@ -95,7 +96,7 @@ test.each([
     name: "spec変更",
     workspaceSelection: {
       workspacePath: WorkspacePath.fromString("/workspace/spec-reviewer"),
-      specId: "billing",
+      specId: TestValues.specId("billing"),
       fileKey: "tasks" as SpecFileKey,
     },
     targetScope: "file" as const,
@@ -104,7 +105,7 @@ test.each([
     name: "file変更",
     workspaceSelection: {
       workspacePath: WorkspacePath.fromString("/workspace/spec-reviewer"),
-      specId: "auth",
+      specId: TestValues.specId("auth"),
       fileKey: "implementation" as SpecFileKey,
     },
     targetScope: "file" as const,
@@ -113,7 +114,7 @@ test.each([
     name: "spec scope変更",
     workspaceSelection: {
       workspacePath: WorkspacePath.fromString("/workspace/spec-reviewer"),
-      specId: "auth",
+      specId: TestValues.specId("auth"),
       fileKey: "tasks" as SpecFileKey,
     },
     targetScope: "spec" as const,
@@ -122,7 +123,7 @@ test.each([
     name: "fileKey未確定",
     workspaceSelection: {
       workspacePath: WorkspacePath.fromString("/workspace/spec-reviewer"),
-      specId: "auth",
+      specId: TestValues.specId("auth"),
       fileKey: null,
     },
     targetScope: "file" as const,

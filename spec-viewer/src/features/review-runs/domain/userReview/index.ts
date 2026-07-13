@@ -1,5 +1,7 @@
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
-import type { IsoDateTimeString } from "@/shared/domain/isoDateTime";
+import type { IsoDateTime } from "@/shared/domain/isoDateTime";
+import type { SpecId } from "@/shared/domain/specId";
+import type { UserReviewId } from "@/features/review-runs/domain/userReviewId";
 import type { SpecFileKey } from "@/shared/domain/specFileKey";
 
 export type UserReviewStatus =
@@ -35,20 +37,20 @@ export type UserReviewWorkspace =
     }>;
 
 export type ReviewSourceFile = Readonly<{
-  specId: string;
+  specId: SpecId;
   fileKey: SpecFileKey;
   relativePath: string;
 }>;
 
 export type UserReviewBase = Readonly<{
-  id: string;
+  id: UserReviewId;
   target: UserReviewTarget;
   workspace: UserReviewWorkspace;
   specFolderPath: string;
   folderPath: string;
   sourceFiles: readonly ReviewSourceFile[];
   commentCount: number;
-  createdAt: IsoDateTimeString;
+  createdAt: IsoDateTime;
   summary: string | null;
   warnings: readonly string[];
 }>;
@@ -74,7 +76,7 @@ export type CompletedUserReview = UserReviewBase &
 export type ArchivedUserReview = UserReviewBase &
   Readonly<{
     status: "archived";
-    archivedAt: IsoDateTimeString;
+    archivedAt: IsoDateTime;
   }>;
 
 export type NonArchivedUserReview =
@@ -86,7 +88,7 @@ export type UserReview = NonArchivedUserReview | ArchivedUserReview;
 export type StoredUserReview = UserReviewBase &
   Readonly<{
     status: UserReviewStatus;
-    archivedAt: IsoDateTimeString | null;
+    archivedAt: IsoDateTime | null;
   }>;
 
 export type UserReviewArchiveStateErrorReason =
@@ -94,7 +96,7 @@ export type UserReviewArchiveStateErrorReason =
   | "nonArchivedHasArchivedAt";
 export type UserReviewArchiveStateError = Readonly<{
   reason: UserReviewArchiveStateErrorReason;
-  id: string;
+  id: UserReviewId;
   message: string;
 }>;
 

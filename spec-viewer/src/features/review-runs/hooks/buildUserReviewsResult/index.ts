@@ -1,4 +1,5 @@
 import type { UserReview } from "@/features/review-runs/domain/userReview";
+import type { UserReviewId } from "@/features/review-runs/domain/userReviewId";
 import type {
   UserReviewArchiveFeatureState,
   UserReviewCreateFeatureState,
@@ -23,7 +24,7 @@ type UserReviewsOperationResultInput = Readonly<{
     input: CreateUserReviewInput,
   ) => Promise<UserReview | null>;
   /** Archives a user review. @param userReviewId - ID of the review to archive. */
-  archiveUserReview: (userReviewId: string) => Promise<UserReview | null>;
+  archiveUserReview: (userReviewId: UserReviewId) => Promise<UserReview | null>;
 }>;
 
 type UserReviewsResultInput = Readonly<{

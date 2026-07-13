@@ -268,6 +268,36 @@ The three `domain-forbidden-dependency` waivers owned by #110 are removed. Revie
 list problems and workspace mode now live in review-run domain vocabulary. Waivers
 owned by #108, #118, and #120 remain exact and unchanged.
 
+### Issue #111 validated identity boundary
+
+`SpecId`, `CommentId`, `UserReviewId`, and `IsoDateTime` are validated value
+objects inside domain and application APIs. `parse` accepts values that may be
+newly issued, while `fromDto` restores persisted or wire values. Both return a
+typed result; neither constructor exposes an unchecked brand cast. `toString` is
+reserved for DOM and display leaves, and `toDto` is reserved for serialization.
+
+The restore policy mirrors backend persistence behavior while issuance remains strict:
+
+| Value object | Newly issued / parsed form | Restored legacy form |
+| --- | --- | --- |
+| `SpecId` | non-empty, normalized, safe relative path components without `:` | the same safe path form; there is no unsafe legacy escape hatch |
+| `CommentId` | `cmt_` plus 32 lowercase hexadecimal characters, without implicit trim | any existing non-empty identifier; outer whitespace is normalized only while restoring |
+| `UserReviewId` | `urv_` plus 32 lowercase hexadecimal characters, without implicit trim | the timestamp-based `...-spec` or `...-file-<key>` review folder names emitted before v1 IDs, also without implicit trim |
+| `IsoDateTime` | a calendar-valid RFC 3339 date-time | the same RFC 3339 form; invalid persisted timestamps are rejected |
+
+The cross-runtime golden cases live in
+`src-tauri/tests/fixtures/identity-value-object-contracts.json`. Frontend value
+object tests import that file directly, and its accepted and rejected examples
+mirror the backend identity, UUID-generation, review-folder, and timestamp
+contracts introduced by #54, #55, #56, and #59. A format change must update this
+single fixture together with both runtime contracts; it must not silently widen
+`fromDto`.
+
+Raw identity strings remain only in feature-owned IPC DTOs and explicit output,
+DOM, or display projections. Codec restoration failures retain the command name,
+the deepest JSON path, the `invalidResponse` reason, and the expected value-object
+shape before application state can observe a value.
+
 ### PR #28 supersede map
 
 [PR #28](https://github.com/DIO0550/spec-viewer/pull/28) is conflicting and is not

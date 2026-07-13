@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { createRef, type ReactNode } from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
@@ -45,7 +46,7 @@ function createReadyState(contents: string | null): SpecDocumentState {
   return {
     status: "ready",
     workspacePath,
-    specId: "phase-1-viewer",
+    specId: TestValues.specId("phase-1-viewer"),
     fileKey: "tasks",
     document: createDocument(contents),
     error: null,
@@ -94,7 +95,7 @@ test.each([
     {
       status: "idle",
       workspacePath,
-      specId: "phase-1-viewer",
+      specId: TestValues.specId("phase-1-viewer"),
       fileKey: null,
       document: null,
       error: null,
@@ -107,7 +108,7 @@ test.each([
     {
       status: "missing",
       workspacePath,
-      specId: "phase-1-viewer",
+      specId: TestValues.specId("phase-1-viewer"),
       fileKey: "tasks",
       document: {
         ...createDocument(null),
@@ -142,7 +143,7 @@ test("MarkdownViewerStatusPanelはloading状態でaria-liveとskeleton classを�
       state={{
         status: "loading",
         workspacePath,
-        specId: "phase-1-viewer",
+        specId: TestValues.specId("phase-1-viewer"),
         fileKey: "tasks",
         document: null,
         error: null,
@@ -171,7 +172,7 @@ test("MarkdownViewerStatusPanelはerror状態でretryをonReloadへ委譲する"
       state={{
         status: "error",
         workspacePath,
-        specId: "phase-1-viewer",
+        specId: TestValues.specId("phase-1-viewer"),
         fileKey: "tasks",
         document: null,
         error: toSpecFeatureError("read", {

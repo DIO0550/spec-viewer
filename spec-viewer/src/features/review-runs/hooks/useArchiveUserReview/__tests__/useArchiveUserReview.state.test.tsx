@@ -1,3 +1,4 @@
+import * as TestValues from "@/features/review-runs/testing/validatedValueObjects";
 import { act, useLayoutEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
@@ -16,7 +17,7 @@ import { WorkspacePath } from "@/shared/domain/workspacePath";
 function createSelectionIdentity(seed: string): SelectionIdentity {
   const selection = SpecViewSelection.synchronize(SpecViewSelection.empty(), {
     workspacePath: WorkspacePath.fromString(seed),
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "tasks",
   });
 
@@ -110,12 +111,12 @@ function renderUseArchiveUserReview(props: HookProps) {
 
 const target: UserReviewTarget = {
   scope: "file",
-  specId: "auth",
+  specId: TestValues.specId("auth"),
   fileKey: "tasks",
 };
 
 const archivedRun: UserReview = {
-  id: "review-archived",
+  id: TestValues.userReviewId("urv_00000000000000000000000000000002"),
   status: "archived",
   target,
   workspace: {
@@ -127,21 +128,21 @@ const archivedRun: UserReview = {
     "/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/archive/review-archived",
   sourceFiles: [
     {
-      specId: "auth",
+      specId: TestValues.specId("auth"),
       fileKey: "tasks",
       relativePath: ".plugin-workspace/.specs/auth/tasks.md",
     },
   ],
   commentCount: 1,
-  createdAt: "2026-05-06T12:00:00Z",
-  archivedAt: "2026-05-06T12:30:00Z",
+  createdAt: TestValues.isoDateTime("2026-05-06T12:00:00Z"),
+  archivedAt: TestValues.isoDateTime("2026-05-06T12:30:00Z"),
   summary: null,
   warnings: [],
 };
 
 const secondArchivedRun: UserReview = {
   ...archivedRun,
-  id: "review-second-archived",
+  id: TestValues.userReviewId("urv_00000000000000000000000000000006"),
 };
 
 function createCommands(): UserReviewCommands {
@@ -184,7 +185,9 @@ test("useArchiveUserReviewはarchive成功後にreviewArchived eventを発行す
   });
 
   await act(async () => {
-    await result.current.archiveUserReview("review-active");
+    await result.current.archiveUserReview(
+      TestValues.userReviewId("urv_00000000000000000000000000000001"),
+    );
   });
 
   expect(result.current.archiveState.status).toBe("success");
@@ -211,7 +214,9 @@ test("useArchiveUserReviewはselectionIdを戻しても古いsuccessを再表示
   });
 
   await act(async () => {
-    await result.current.archiveUserReview("review-active");
+    await result.current.archiveUserReview(
+      TestValues.userReviewId("urv_00000000000000000000000000000001"),
+    );
   });
   result.rerender({
     commands,
@@ -248,9 +253,13 @@ test("useArchiveUserReviewは同一identityの古いarchive完了を反映しな
     onUserReviewEvent,
   });
 
-  const firstPromise = result.current.archiveUserReview("review-active");
+  const firstPromise = result.current.archiveUserReview(
+    TestValues.userReviewId("urv_00000000000000000000000000000001"),
+  );
   await act(async () => {
-    await result.current.archiveUserReview("review-second-active");
+    await result.current.archiveUserReview(
+      TestValues.userReviewId("urv_00000000000000000000000000000005"),
+    );
   });
   await act(async () => {
     firstArchive.resolve({ userReview: archivedRun });
@@ -288,7 +297,9 @@ test("selection変更renderのpassive effect前にarchiveが完了してもevent
     selectionId: "/workspace/spec-reviewer:file:auth:tasks",
     onUserReviewEvent,
   });
-  const archivePromise = result.current.archiveUserReview("review-active");
+  const archivePromise = result.current.archiveUserReview(
+    TestValues.userReviewId("urv_00000000000000000000000000000001"),
+  );
 
   await result.rerenderBeforePassiveEffects(
     {

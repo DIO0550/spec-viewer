@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { expect, test } from "vitest";
 
 import {
@@ -15,13 +16,13 @@ const workspacePath = WorkspacePath.fromString("/workspace/spec-reviewer");
 test("CommentScope.fromSelectionはcomplete file selectionからscopeを作成する", () => {
   const selection = SpecViewSelection.synchronize(SpecViewSelection.empty(), {
     workspacePath,
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "tasks",
   });
 
   expect(CommentScope.fromSelection(selection)).toEqual({
     workspacePath: "/workspace/spec-reviewer",
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "tasks",
     selectionIdentity: SelectionIdentity.fromSelection(selection),
   });
@@ -32,7 +33,7 @@ test.each([
   SpecViewSelection.selectWorkspace(SpecViewSelection.empty(), workspacePath),
   SpecViewSelection.selectSpec(
     SpecViewSelection.selectWorkspace(SpecViewSelection.empty(), workspacePath),
-    "auth",
+    TestValues.specId("auth"),
   ),
 ])("CommentScope.fromSelectionはincomplete selectionならnullを返す", (selection) => {
   expect(CommentScope.fromSelection(selection)).toBeNull();
@@ -41,7 +42,7 @@ test.each([
 test("CommentScope.selectionIdentityはaggregateと同じbranded identityを返す", () => {
   const selection = SpecViewSelection.synchronize(SpecViewSelection.empty(), {
     workspacePath,
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "tasks",
   });
   const scope = CommentScope.fromSelection(selection) as CommentScopeType;
@@ -61,7 +62,7 @@ test("CommentScopeはtargetScopeを含むaggregate identityを保持する", () 
     SpecViewSelection.empty(),
     {
       workspacePath,
-      specId: "auth",
+      specId: TestValues.specId("auth"),
       fileKey: "tasks",
     },
   );

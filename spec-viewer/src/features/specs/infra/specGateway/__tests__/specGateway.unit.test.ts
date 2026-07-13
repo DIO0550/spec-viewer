@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { expect, test, vi } from "vitest";
 
 import {
@@ -23,7 +24,7 @@ const document: SpecDocument = {
 };
 
 const archiveResponse = {
-  archivedSpecId: "spec-1",
+  archivedSpecId: TestValues.specId("spec-1"),
   archivePath: "/workspace/spec-viewer/.plugin-workspace/.specs/archive/spec-1",
 };
 
@@ -44,7 +45,7 @@ test("listSpecsはcommands.listSpecsへworkspacePathを委譲する", async () =
 test("readSpecFileはrequest DTOを維持してcommands.readSpecFileへ委譲する", async () => {
   const request = {
     workspacePath: "/workspace/spec-viewer",
-    specId: "spec-1",
+    specId: TestValues.specId("spec-1"),
     fileKey: "impl",
     correlationId: "document-read-1",
   } as const;
@@ -62,7 +63,7 @@ test("readSpecFileはrequest DTOを維持してcommands.readSpecFileへ委譲す
 test("archiveSpecはworkspacePathとspecIdを維持してcommands.archiveSpecへ委譲する", async () => {
   const request = {
     workspacePath: "/workspace/spec-viewer",
-    specId: "spec-1",
+    specId: TestValues.specId("spec-1"),
   } as const;
   const commands: SpecCommands = {
     listSpecs: vi.fn().mockResolvedValue(tree),
@@ -79,13 +80,13 @@ test("createReadSpecFileRequestはcorrelationIdを含むread request DTOを生�
   expect(
     createReadSpecFileRequest({
       workspacePath: "/workspace/spec-viewer",
-      specId: "spec-1",
+      specId: TestValues.specId("spec-1"),
       fileKey: "tasks",
       correlationId: "document-read-1",
     }),
   ).toEqual({
     workspacePath: "/workspace/spec-viewer",
-    specId: "spec-1",
+    specId: TestValues.specId("spec-1"),
     fileKey: "tasks",
     correlationId: "document-read-1",
   });
@@ -95,12 +96,12 @@ test("createReadSpecFileRequestはcorrelationIdが未指定ならrequest DTOか�
   expect(
     createReadSpecFileRequest({
       workspacePath: "/workspace/spec-viewer",
-      specId: "spec-1",
+      specId: TestValues.specId("spec-1"),
       fileKey: "tasks",
     }),
   ).toEqual({
     workspacePath: "/workspace/spec-viewer",
-    specId: "spec-1",
+    specId: TestValues.specId("spec-1"),
     fileKey: "tasks",
   });
 });

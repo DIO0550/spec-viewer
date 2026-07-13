@@ -1,8 +1,8 @@
+import * as TestValues from "@/features/review-runs/testing/validatedValueObjects";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
 import { UserReviewPanel } from "@/features/review-runs/components/UserReviewPanel";
 import { toUserReviewFeatureError } from "@/features/review-runs/infra/tauri/userReviewErrorMapper";
-import { CommentId } from "@/shared/domain/commentId";
 
 const meta = {
   component: UserReviewPanel,
@@ -14,16 +14,16 @@ const meta = {
       status: "ready",
       target: {
         scope: "file",
-        specId: "auth",
+        specId: TestValues.specId("auth"),
         fileKey: "tasks",
       },
       active: [
         {
-          id: "2026-05-06T120000Z-file-tasks-abcdef12",
+          id: TestValues.userReviewId("2026-05-06T120000Z-file-tasks-abcdef12"),
           status: "active",
           target: {
             scope: "file",
-            specId: "auth",
+            specId: TestValues.specId("auth"),
             fileKey: "tasks",
           },
           workspace: {
@@ -36,13 +36,13 @@ const meta = {
             "/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/active/2026-05-06T120000Z-file-tasks-abcdef12",
           sourceFiles: [
             {
-              specId: "auth",
+              specId: TestValues.specId("auth"),
               fileKey: "tasks",
               relativePath: ".plugin-workspace/.specs/auth/tasks.md",
             },
           ],
           commentCount: 2,
-          createdAt: "2026-05-06T12:00:00Z",
+          createdAt: TestValues.isoDateTime("2026-05-06T12:00:00Z"),
           archivedAt: null,
           summary: null,
           warnings: [],
@@ -88,7 +88,7 @@ export const Empty: Story = {
       status: "empty",
       target: {
         scope: "file",
-        specId: "auth",
+        specId: TestValues.specId("auth"),
         fileKey: "tasks",
       },
       active: [],
@@ -118,7 +118,7 @@ export const Loading: Story = {
       status: "loading",
       target: {
         scope: "file",
-        specId: "auth",
+        specId: TestValues.specId("auth"),
         fileKey: "tasks",
       },
       active: [],
@@ -134,7 +134,7 @@ export const Creating: Story = {
     createState: {
       status: "saving",
       payload: {
-        commentIds: [CommentId.fromString("cmt_1")],
+        commentIds: [TestValues.commentId("cmt_1")],
         workspaceMode: "currentWorkspace",
       },
     },
@@ -147,16 +147,16 @@ export const Archiving: Story = {
       status: "ready",
       target: {
         scope: "file",
-        specId: "auth",
+        specId: TestValues.specId("auth"),
         fileKey: "tasks",
       },
       active: [
         {
-          id: "2026-05-06T120000Z-file-tasks-abcdef12",
+          id: TestValues.userReviewId("2026-05-06T120000Z-file-tasks-abcdef12"),
           status: "completed",
           target: {
             scope: "file",
-            specId: "auth",
+            specId: TestValues.specId("auth"),
             fileKey: "tasks",
           },
           workspace: {
@@ -169,13 +169,13 @@ export const Archiving: Story = {
             "/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/active/2026-05-06T120000Z-file-tasks-abcdef12",
           sourceFiles: [
             {
-              specId: "auth",
+              specId: TestValues.specId("auth"),
               fileKey: "tasks",
               relativePath: ".plugin-workspace/.specs/auth/tasks.md",
             },
           ],
           commentCount: 2,
-          createdAt: "2026-05-06T12:00:00Z",
+          createdAt: TestValues.isoDateTime("2026-05-06T12:00:00Z"),
           archivedAt: null,
           summary: "対応完了",
           warnings: [],
@@ -188,7 +188,9 @@ export const Archiving: Story = {
     archiveState: {
       status: "saving",
       payload: {
-        userReviewId: "2026-05-06T120000Z-file-tasks-abcdef12",
+        userReviewId: TestValues.userReviewId(
+          "2026-05-06T120000Z-file-tasks-abcdef12",
+        ),
       },
     },
   },

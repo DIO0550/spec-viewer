@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
@@ -34,7 +35,7 @@ function createDeferred<T>(): Deferred<T> {
 function createSelection(specId: string): SpecViewSelectionType {
   return SpecViewSelection.synchronize(SpecViewSelection.empty(), {
     workspacePath: WorkspacePath.fromString("/workspace"),
-    specId,
+    specId: TestValues.specId(specId),
     fileKey: "impl",
   });
 }
@@ -42,7 +43,7 @@ function createSelection(specId: string): SpecViewSelectionType {
 function createStartResponse(specId: string): StartSpecFileWatchResponse {
   return {
     workspacePath: "/workspace",
-    specId,
+    specId: TestValues.specId(specId),
     fileKey: "impl",
     strategy: "native",
     watchedPaths: [],

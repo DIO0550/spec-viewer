@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { invoke } from "@tauri-apps/api/core";
 import { expect, test, vi } from "vitest";
 
@@ -8,7 +9,6 @@ import type {
   ListCommentsRequest,
   UpdateCommentRequest,
 } from "@/features/comments/types/comment";
-import { CommentId } from "@/features/comments/types/comment";
 import { DeleteCommentCommandError } from "@/features/comments/infra/tauri/deleteComment";
 import { ExportCommentsCommandError } from "@/features/comments/infra/tauri/exportComments";
 import { GenerateLlmPromptCommandError } from "@/features/comments/infra/tauri/generateLlmPrompt";
@@ -31,7 +31,7 @@ vi.mock("@tauri-apps/api/core", () => ({
 }));
 
 const invokeMock = vi.mocked(invoke);
-const commentId = CommentId.fromString;
+const commentId = TestValues.commentId;
 
 const comment: Comment = {
   id: commentId("cmt_1"),
@@ -50,27 +50,27 @@ const comment: Comment = {
   status: "open",
   resolved: false,
   anchorResolution: null,
-  createdAt: "2026-05-05T10:00:00Z",
-  updatedAt: "2026-05-05T10:00:00Z",
+  createdAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
+  updatedAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
 };
 
 const listRequest: ListCommentsRequest = {
   workspacePath: "/workspace/spec-reviewer",
-  specId: "auth",
+  specId: TestValues.specId("auth"),
   fileKey: "tasks",
   statusFilter: "open",
 };
 
 const addRequest: AddCommentRequest = {
   workspacePath: "/workspace/spec-reviewer",
-  specId: "auth",
+  specId: TestValues.specId("auth"),
   anchor: comment.anchor,
   body: "Clarify this task",
 };
 
 const updateRequest: UpdateCommentRequest = {
   workspacePath: "/workspace/spec-reviewer",
-  specId: "auth",
+  specId: TestValues.specId("auth"),
   fileKey: "tasks",
   commentId: commentId("cmt_1"),
   body: "Clarify token expiry",
@@ -78,7 +78,7 @@ const updateRequest: UpdateCommentRequest = {
 
 const deleteRequest: DeleteCommentRequest = {
   workspacePath: "/workspace/spec-reviewer",
-  specId: "auth",
+  specId: TestValues.specId("auth"),
   fileKey: "tasks",
   commentId: commentId("cmt_1"),
 };
@@ -291,5 +291,22 @@ test("addCommentは空のcomment IDをstructured decode errorとして拒否す�
     command: "add_comment",
     code: "invalidResponse",
     path: "$.id",
+    expected: "non-empty string",
+    actual: "string",
+  });
+});
+
+test("listCommentsは配列内の不正日時を最深path付きdecode errorとして拒否する", async () => {
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue({
+    comments: [{ ...comment, createdAt: "2026-02-30T10:00:00Z" }],
+  });
+
+  await expect(listComments(listRequest)).rejects.toMatchObject({
+    command: "list_comments",
+    code: "invalidResponse",
+    path: "$.comments[0].createdAt",
+    expected: "valid RFC3339 date-time",
+    actual: "2026-02-30T10:00:00Z",
   });
 });

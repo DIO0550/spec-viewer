@@ -1,24 +1,24 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { expect, test } from "vitest";
 
 import type {
   DeleteCommentRequest,
   ListCommentsRequest,
 } from "@/features/comments/types/comment";
-import { CommentId } from "@/features/comments/types/comment";
 import { createCommentCommandTestDouble } from "@/features/comments/testing/comment-command-test-double";
 
-const commentId = CommentId.fromString;
+const commentId = TestValues.commentId;
 
 const listRequest: ListCommentsRequest = {
   workspacePath: "/workspace/spec-reviewer",
-  specId: "auth",
+  specId: TestValues.specId("auth"),
   fileKey: "tasks",
   statusFilter: "open",
 };
 
 const deleteRequest: DeleteCommentRequest = {
   workspacePath: "/workspace/spec-reviewer",
-  specId: "auth",
+  specId: TestValues.specId("auth"),
   fileKey: "tasks",
   commentId: commentId("cmt_1"),
 };

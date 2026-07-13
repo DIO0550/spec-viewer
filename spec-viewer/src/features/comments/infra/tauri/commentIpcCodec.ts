@@ -18,7 +18,15 @@ import type {
   ListCommentsResponse,
   UpdateCommentRequest,
 } from "@/features/comments/types/comment";
-import { CommentId } from "@/shared/domain/commentId";
+import {
+  CommentId,
+  type CommentId as CommentIdType,
+} from "@/shared/domain/commentId";
+import {
+  IsoDateTime,
+  type IsoDateTime as IsoDateTimeType,
+} from "@/shared/domain/isoDateTime";
+import { SpecId } from "@/shared/domain/specId";
 import {
   IpcResponseDecodeError,
   RuntimeCodec,
@@ -175,7 +183,7 @@ const generatePromptCodec = RuntimeCodec.object({
 
 export const encodeListCommentsRequest = (request: ListCommentsRequest) => ({
   workspacePath: request.workspacePath,
-  specId: request.specId,
+  specId: SpecId.toDto(request.specId),
   fileKey: request.fileKey,
   ...(request.statusFilter === undefined
     ? {}
@@ -186,41 +194,41 @@ export const encodeListCommentsRequest = (request: ListCommentsRequest) => ({
 });
 export const encodeAddCommentRequest = (request: AddCommentRequest) => ({
   workspacePath: request.workspacePath,
-  specId: request.specId,
+  specId: SpecId.toDto(request.specId),
   anchor: encodeAnchor(request.anchor),
   body: request.body,
 });
 export const encodeUpdateCommentRequest = (request: UpdateCommentRequest) => ({
   workspacePath: request.workspacePath,
-  specId: request.specId,
+  specId: SpecId.toDto(request.specId),
   fileKey: request.fileKey,
-  commentId: String(request.commentId),
+  commentId: CommentId.toDto(request.commentId),
   body: request.body,
 });
 export const encodeDeleteCommentRequest = (request: DeleteCommentRequest) => ({
   workspacePath: request.workspacePath,
-  specId: request.specId,
+  specId: SpecId.toDto(request.specId),
   fileKey: request.fileKey,
-  commentId: String(request.commentId),
+  commentId: CommentId.toDto(request.commentId),
 });
 export const encodeCommentStatusRequest = (request: CommentStatusRequest) => ({
   workspacePath: request.workspacePath,
-  specId: request.specId,
+  specId: SpecId.toDto(request.specId),
   fileKey: request.fileKey,
-  commentId: String(request.commentId),
+  commentId: CommentId.toDto(request.commentId),
 });
 export const encodeExportCommentsRequest = (
   request: ExportCommentsRequest,
 ) => ({
   workspacePath: request.workspacePath,
-  target: { ...request.target },
+  target: encodeTarget(request.target),
   destinationPath: request.destinationPath,
 });
 export const encodeGenerateLlmPromptRequest = (
   request: GenerateLlmPromptRequest,
 ) => ({
   workspacePath: request.workspacePath,
-  target: { ...request.target },
+  target: encodeTarget(request.target),
 });
 
 export function decodeListCommentsResponse(
@@ -228,8 +236,8 @@ export function decodeListCommentsResponse(
 ): ListCommentsResponse {
   const dto = decodeRuntimeValue("list_comments", listCommentsCodec, value);
   return {
-    comments: dto.comments.map((comment) =>
-      mapComment("list_comments", comment),
+    comments: dto.comments.map((comment, index) =>
+      mapComment("list_comments", comment, `$.comments[${index}]`),
     ),
   };
 }
@@ -268,25 +276,110 @@ export function decodeGenerateLlmPromptResponse(
 }
 
 function decodeCommentResponse(command: string, value: unknown): CommentDomain {
-  return mapComment(command, decodeRuntimeValue(command, commentCodec, value));
+  return mapComment(
+    command,
+    decodeRuntimeValue(command, commentCodec, value),
+    "$",
+  );
 }
 
-function mapComment(command: string, dto: CommentDto): CommentDomain {
+/**
+ * @param command - Tauri command that produced the DTO.
+ * @param dto - Structurally decoded comment DTO.
+ * @param path - JSON path of the comment DTO.
+ * @returns A comment restored with validated identities and timestamps.
+ * @throws {IpcResponseDecodeError} When a domain invariant is invalid.
+ */
+function mapComment(
+  command: string,
+  dto: CommentDto,
+  path: string,
+): CommentDomain {
   if (dto.resolved !== (dto.status === "resolved")) {
     throw new IpcResponseDecodeError(
       command,
-      "$.resolved",
+      `${path}.resolved`,
       `boolean consistent with status ${dto.status}`,
       String(dto.resolved),
     );
   }
 
   return Comment.create({
-    ...dto,
-    id: CommentId.fromString(dto.id),
+    id: decodeCommentId(command, `${path}.id`, dto.id),
     anchor: { ...dto.anchor },
+    body: dto.body,
+    status: dto.status,
+    resolved: dto.resolved,
     anchorResolution: mapAnchorResolutionDtoToDomain(dto.anchorResolution),
+    createdAt: decodeIsoDateTime(command, `${path}.createdAt`, dto.createdAt),
+    updatedAt: decodeIsoDateTime(command, `${path}.updatedAt`, dto.updatedAt),
   });
+}
+
+/**
+ * @param target - Domain-facing export target.
+ * @returns A wire target with raw identities.
+ */
+function encodeTarget(target: ExportCommentsRequest["target"]) {
+  if (target.scope === "workspace") {
+    return { scope: "workspace" as const };
+  }
+  if (target.scope === "spec") {
+    return {
+      scope: "spec" as const,
+      specId: SpecId.toDto(target.specId),
+    };
+  }
+  return {
+    scope: "file" as const,
+    specId: SpecId.toDto(target.specId),
+    fileKey: target.fileKey,
+  };
+}
+
+/**
+ * @param command - Tauri command that produced the value.
+ * @param path - JSON path of the identity.
+ * @param value - Raw identity received over IPC.
+ * @returns A restored CommentId.
+ * @throws {IpcResponseDecodeError} When the identity is invalid.
+ */
+function decodeCommentId(
+  command: string,
+  path: string,
+  value: string,
+): CommentIdType {
+  const result = CommentId.fromDto(value);
+  if (result.ok) {
+    return result.value;
+  }
+
+  throw new IpcResponseDecodeError(command, path, "valid CommentId", value);
+}
+
+/**
+ * @param command - Tauri command that produced the value.
+ * @param path - JSON path of the date-time.
+ * @param value - Raw date-time received over IPC.
+ * @returns A restored IsoDateTime.
+ * @throws {IpcResponseDecodeError} When the date-time is invalid.
+ */
+function decodeIsoDateTime(
+  command: string,
+  path: string,
+  value: string,
+): IsoDateTimeType {
+  const result = IsoDateTime.fromDto(value);
+  if (result.ok) {
+    return result.value;
+  }
+
+  throw new IpcResponseDecodeError(
+    command,
+    path,
+    "valid RFC3339 date-time",
+    value,
+  );
 }
 
 function encodeAnchor(anchor: CommentAnchor) {

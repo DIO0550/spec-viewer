@@ -1,3 +1,4 @@
+import * as TestValues from "@/features/review-runs/testing/validatedValueObjects";
 import { expect, test } from "vitest";
 
 import {
@@ -27,7 +28,7 @@ test("ReviewBundleFile.parseはcontextSource metadataを保持する", () => {
     kind: "contextSource",
     relativePath: "context/auth/tasks.md",
     contents: "# Tasks",
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "tasks",
   });
 
@@ -35,7 +36,7 @@ test("ReviewBundleFile.parseはcontextSource metadataを保持する", () => {
     kind: "contextSource",
     relativePath: "context/auth/tasks.md",
     contents: "# Tasks",
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "tasks",
   });
 });
@@ -45,7 +46,7 @@ test("ReviewBundleContextSourceFile.parseはcontextSource metadataを保持す�
     kind: "contextSource",
     relativePath: "context/auth/tasks.md",
     contents: "# Tasks",
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "tasks",
   });
 

@@ -9,6 +9,7 @@ import { type KeyboardEvent, useEffect, useState } from "react";
 
 import type { SpecTreeState } from "@/features/specs/hooks/useSpecs";
 import type { SpecNode } from "@/features/specs/types/spec";
+import type { SpecId } from "@/shared/domain/specId";
 import { uiText } from "@/shared/lib/uiText";
 import { CommandErrorDisplay } from "@/shared/ui/CommandErrorDisplay";
 import { EmptyState } from "@/shared/ui/EmptyState";
@@ -19,12 +20,12 @@ const TREE_ITEM_INDENT_STEP = 16;
 
 type Props = Readonly<{
   state: SpecTreeState;
-  selectedSpecId: string | null;
-  archivingSpecId?: string | null;
+  selectedSpecId: SpecId | null;
+  archivingSpecId?: SpecId | null;
   isLoading?: boolean;
   /** Selects a spec. @param specId - ID of the spec to select. */
-  onSelectSpec: (specId: string) => void;
-  onArchiveSpec?: (specId: string) => void;
+  onSelectSpec: (specId: SpecId) => void;
+  onArchiveSpec?: (specId: SpecId) => void;
   /** Reloads the spec tree. */
   onReload: () => void;
 }>;
@@ -39,7 +40,7 @@ export function SpecTree({
   onArchiveSpec,
   onReload,
 }: Props) {
-  const [expandedSpecIds, setExpandedSpecIds] = useState<ReadonlySet<string>>(
+  const [expandedSpecIds, setExpandedSpecIds] = useState<ReadonlySet<SpecId>>(
     () => new Set(),
   );
 
@@ -68,7 +69,7 @@ export function SpecTree({
   const isActionDisabled =
     state.status === "loading" || isLoading || archivingSpecId !== null;
 
-  const toggleSpecExpanded = (specId: string): void => {
+  const toggleSpecExpanded = (specId: SpecId): void => {
     setExpandedSpecIds((currentIds) => {
       const nextIds = new Set(currentIds);
 
@@ -191,16 +192,16 @@ export function SpecTree({
 type SpecTreeItemProps = Readonly<{
   node: SpecNode;
   depth: number;
-  expandedSpecIds: ReadonlySet<string>;
-  selectedSpecId: string | null;
-  archivingSpecId: string | null;
+  expandedSpecIds: ReadonlySet<SpecId>;
+  selectedSpecId: SpecId | null;
+  archivingSpecId: SpecId | null;
   isSelectionDisabled: boolean;
   isArchiveDisabled: boolean;
   /** Selects a spec. @param specId - ID of the spec to select. */
-  onSelectSpec: (specId: string) => void;
-  onArchiveSpec?: (specId: string) => void;
+  onSelectSpec: (specId: SpecId) => void;
+  onArchiveSpec?: (specId: SpecId) => void;
   /** Toggles expansion of a spec. @param specId - ID of the spec to toggle. */
-  onToggleExpanded: (specId: string) => void;
+  onToggleExpanded: (specId: SpecId) => void;
 }>;
 
 /** @returns One spec tree row plus any child rows. */
@@ -485,9 +486,9 @@ function readTreeItemLevel(item: HTMLButtonElement | undefined): number {
 /** @returns Ancestor spec IDs for the selected node, excluding the selected ID. */
 function findAncestorSpecIds(
   nodes: readonly SpecNode[],
-  selectedSpecId: string,
-  ancestors: readonly string[] = [],
-): readonly string[] {
+  selectedSpecId: SpecId,
+  ancestors: readonly SpecId[] = [],
+): readonly SpecId[] {
   for (const node of nodes) {
     if (node.id === selectedSpecId) {
       return ancestors;

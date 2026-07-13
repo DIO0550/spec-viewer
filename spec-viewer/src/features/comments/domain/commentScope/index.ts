@@ -1,4 +1,5 @@
 import type { SpecFileKey } from "@/shared/domain/specFileKey";
+import type { SpecId } from "@/shared/domain/specId";
 import type { SelectionIdentity } from "@/shared/domain/specViewSelection";
 import {
   SpecViewSelection,
@@ -8,7 +9,7 @@ import { WorkspacePath } from "@/shared/domain/workspacePath";
 
 export type CommentScope = Readonly<{
   workspacePath: string;
-  specId: string;
+  specId: SpecId;
   fileKey: SpecFileKey;
   selectionIdentity: SelectionIdentity;
 }>;

@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type ComponentProps, type ReactNode, useState } from "react";
 import { fn } from "storybook/test";
@@ -25,14 +26,13 @@ import {
   WorkspaceSidebarSection,
   WorkspaceToolbar,
 } from "@/features/workspace";
-import { CommentId } from "@/shared/domain/commentId";
 import { WorkspaceLayout } from "@/shared/ui/WorkspaceLayout";
 
 const workspacePath = "/workspace/spec-reviewer";
-const commentId = CommentId.fromString;
+const commentId = TestValues.commentId;
 
 const sampleSpec: SpecNode = {
-  id: "phase-1-viewer",
+  id: TestValues.specId("phase-1-viewer"),
   label: "Phase 1 Viewer",
   files: [
     {
@@ -70,7 +70,7 @@ const sampleSpec: SpecNode = {
   ],
   children: [
     {
-      id: "phase-1-comments",
+      id: TestValues.specId("phase-1-comments"),
       label: "Phase 1 Comments",
       files: [
         {
@@ -149,8 +149,8 @@ const sampleComments: readonly Comment[] = [
     body: "Check whether this note should move to Phase 2.",
     status: "open",
     resolved: false,
-    createdAt: "2026-05-05T10:00:00Z",
-    updatedAt: "2026-05-05T10:15:00Z",
+    createdAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
+    updatedAt: TestValues.isoDateTime("2026-05-05T10:15:00Z"),
   },
   {
     id: commentId("cmt_story_resolved"),
@@ -168,8 +168,8 @@ const sampleComments: readonly Comment[] = [
     body: "Rendering checklist is already reflected in the plan.",
     status: "resolved",
     resolved: true,
-    createdAt: "2026-05-05T11:00:00Z",
-    updatedAt: "2026-05-05T11:30:00Z",
+    createdAt: TestValues.isoDateTime("2026-05-05T11:00:00Z"),
+    updatedAt: TestValues.isoDateTime("2026-05-05T11:30:00Z"),
   },
 ];
 
@@ -408,7 +408,7 @@ type ShellArgsOptions = Readonly<{
   workspaceStatusPath: string | null;
   workspaceErrorMessage?: string;
   isWorkspaceLoading?: boolean;
-  archivingSpecId?: string | null;
+  archivingSpecId?: SpecNode["id"] | null;
 }>;
 
 /** @returns WorkspaceLayout story args for a representative viewer state. */

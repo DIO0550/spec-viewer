@@ -1,3 +1,4 @@
+import * as TestValues from "@/features/review-runs/testing/validatedValueObjects";
 import { expect, test } from "vitest";
 
 import type { StoredUserReview } from "@/features/review-runs/domain/userReview";
@@ -5,7 +6,7 @@ import { ValidatedStoredUserReview } from "@/features/review-runs/domain/validat
 
 test("ValidatedStoredUserReview.fromはvalid active stored reviewを検証済みとして返す", () => {
   const activeReview = createStoredUserReview({
-    id: "review-active",
+    id: TestValues.userReviewId("urv_00000000000000000000000000000001"),
     status: "active",
     archivedAt: null,
   });
@@ -20,9 +21,9 @@ test("ValidatedStoredUserReview.fromはvalid active stored reviewを検証済み
 
 test("ValidatedStoredUserReview.fromはvalid archived stored reviewを検証済みとして返す", () => {
   const archivedReview = createStoredUserReview({
-    id: "review-archived",
+    id: TestValues.userReviewId("urv_00000000000000000000000000000002"),
     status: "archived",
-    archivedAt: "2026-05-06T12:30:00Z",
+    archivedAt: TestValues.isoDateTime("2026-05-06T12:30:00Z"),
   });
 
   const result = ValidatedStoredUserReview.from(archivedReview);
@@ -35,7 +36,7 @@ test("ValidatedStoredUserReview.fromはvalid archived stored reviewを検証済�
 
 test("ValidatedStoredUserReview.fromはarchivedAtのないarchived stored reviewを拒否する", () => {
   const invalidReview = createStoredUserReview({
-    id: "review-invalid-archived",
+    id: TestValues.userReviewId("urv_00000000000000000000000000000004"),
     status: "archived",
     archivedAt: null,
   });
@@ -46,18 +47,18 @@ test("ValidatedStoredUserReview.fromはarchivedAtのないarchived stored review
     ok: false,
     error: {
       reason: "archivedMissingArchivedAt",
-      id: "review-invalid-archived",
+      id: TestValues.userReviewId("urv_00000000000000000000000000000004"),
       message:
-        "Archived user review must have archivedAt: review-invalid-archived",
+        "Archived user review must have archivedAt: urv_00000000000000000000000000000004",
     },
   });
 });
 
 test("ValidatedStoredUserReview.fromはarchivedAtのある非archived stored reviewを拒否する", () => {
   const invalidReview = createStoredUserReview({
-    id: "review-invalid-active",
+    id: TestValues.userReviewId("urv_00000000000000000000000000000003"),
     status: "completed",
-    archivedAt: "2026-05-06T12:30:00Z",
+    archivedAt: TestValues.isoDateTime("2026-05-06T12:30:00Z"),
   });
 
   const result = ValidatedStoredUserReview.from(invalidReview);
@@ -66,9 +67,9 @@ test("ValidatedStoredUserReview.fromはarchivedAtのある非archived stored rev
     ok: false,
     error: {
       reason: "nonArchivedHasArchivedAt",
-      id: "review-invalid-active",
+      id: TestValues.userReviewId("urv_00000000000000000000000000000003"),
       message:
-        "Non-archived user review must not have archivedAt: review-invalid-active",
+        "Non-archived user review must not have archivedAt: urv_00000000000000000000000000000003",
     },
   });
 });
@@ -81,7 +82,7 @@ function createStoredUserReview(
     status: input.status,
     target: {
       scope: "file",
-      specId: "auth",
+      specId: TestValues.specId("auth"),
       fileKey: "tasks",
     },
     workspace: {
@@ -92,13 +93,13 @@ function createStoredUserReview(
     folderPath: `/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/active/${input.id}`,
     sourceFiles: [
       {
-        specId: "auth",
+        specId: TestValues.specId("auth"),
         fileKey: "tasks",
         relativePath: ".plugin-workspace/.specs/auth/tasks.md",
       },
     ],
     commentCount: 1,
-    createdAt: "2026-05-06T12:00:00Z",
+    createdAt: TestValues.isoDateTime("2026-05-06T12:00:00Z"),
     archivedAt: input.archivedAt,
     summary: null,
     warnings: [],

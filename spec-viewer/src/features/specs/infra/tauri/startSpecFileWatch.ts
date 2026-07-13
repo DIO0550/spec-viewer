@@ -131,7 +131,7 @@ export async function startSpecFileWatch(
 
   return invokeTauriCommand<
     StartSpecFileWatchCommandResponse,
-    StartSpecFileWatchCommandRequest,
+    ReturnType<typeof encodeStartSpecFileWatchRequest>,
     StartSpecFileWatchCommandError
   >(
     START_SPEC_FILE_WATCH_COMMAND,

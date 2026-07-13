@@ -1,12 +1,12 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { expect, expectTypeOf, test } from "vitest";
 
 import type { Comment } from "@/features/comments/domain/comment";
 import { Comments } from "@/features/comments/domain/comments";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import type { CommentAnchor } from "@/features/comments/types/comment";
-import { CommentId } from "@/features/comments/types/comment";
 
-const commentId = CommentId.fromString;
+const commentId = TestValues.commentId;
 
 const anchor: CommentAnchor = {
   fileKey: "tasks",
@@ -26,16 +26,16 @@ const openComment: Comment = {
   body: "Clarify this task",
   status: "open",
   resolved: false,
-  createdAt: "2026-05-05T10:00:00Z",
-  updatedAt: "2026-05-05T10:00:00Z",
+  createdAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
+  updatedAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
 };
 
 const secondOpenComment: Comment = {
   ...openComment,
   id: commentId("cmt_2"),
   body: "Add acceptance criteria",
-  createdAt: "2026-05-05T10:05:00Z",
-  updatedAt: "2026-05-05T10:05:00Z",
+  createdAt: TestValues.isoDateTime("2026-05-05T10:05:00Z"),
+  updatedAt: TestValues.isoDateTime("2026-05-05T10:05:00Z"),
 };
 
 const movedAnchorResolution = {
@@ -112,7 +112,7 @@ test("Comments.upsertDisplayableは既存コメントを同じ位置で置換す
   const updatedComment: Comment = {
     ...openComment,
     body: "Updated body",
-    updatedAt: "2026-05-05T10:15:00Z",
+    updatedAt: TestValues.isoDateTime("2026-05-05T10:15:00Z"),
   };
 
   expect(
@@ -172,7 +172,7 @@ test.each([
     {
       ...openComment,
       body: "Updated body",
-      updatedAt: "2026-05-05T10:15:00Z",
+      updatedAt: TestValues.isoDateTime("2026-05-05T10:15:00Z"),
     },
   ],
   [

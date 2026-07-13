@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { expect, expectTypeOf, test } from "vitest";
 
 import { Comment } from "@/features/comments/domain/comment";
@@ -7,9 +8,8 @@ import type {
   Comment as CompatComment,
   CommentAnchor,
 } from "@/features/comments/types/comment";
-import { CommentId } from "@/features/comments/types/comment";
 
-const commentId = CommentId.fromString;
+const commentId = TestValues.commentId;
 
 const anchor: CommentAnchor = {
   fileKey: "tasks",
@@ -29,16 +29,16 @@ const openComment: Comment = {
   body: "Clarify this task",
   status: "open",
   resolved: false,
-  createdAt: "2026-05-05T10:00:00Z",
-  updatedAt: "2026-05-05T10:00:00Z",
+  createdAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
+  updatedAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
 };
 
 const secondOpenComment: Comment = {
   ...openComment,
   id: commentId("cmt_2"),
   body: "Add acceptance criteria",
-  createdAt: "2026-05-05T10:05:00Z",
-  updatedAt: "2026-05-05T10:05:00Z",
+  createdAt: TestValues.isoDateTime("2026-05-05T10:05:00Z"),
+  updatedAt: TestValues.isoDateTime("2026-05-05T10:05:00Z"),
 };
 
 const movedAnchorResolution = {
@@ -231,7 +231,7 @@ test("Comment.upsertDisplayableは既存コメントを同じ位置で置換す�
   const updatedComment: Comment = {
     ...openComment,
     body: "Updated body",
-    updatedAt: "2026-05-05T10:15:00Z",
+    updatedAt: TestValues.isoDateTime("2026-05-05T10:15:00Z"),
   };
 
   expect(
@@ -247,7 +247,7 @@ test("Comment.upsertDisplayableはCommentsと同じ結果を返す", () => {
   const updatedComment: Comment = {
     ...openComment,
     body: "Updated body",
-    updatedAt: "2026-05-05T10:15:00Z",
+    updatedAt: TestValues.isoDateTime("2026-05-05T10:15:00Z"),
   };
 
   expect(
@@ -316,7 +316,7 @@ test("Comment.upsertDisplayableはcommand resultで省略されたanchor resolut
   const nextComment: Comment = {
     ...openComment,
     body: "Updated body",
-    updatedAt: "2026-05-05T10:15:00Z",
+    updatedAt: TestValues.isoDateTime("2026-05-05T10:15:00Z"),
   };
 
   expect(

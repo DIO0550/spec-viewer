@@ -1,7 +1,6 @@
 import type {
   AddCommentRequest,
   Comment,
-  CommentId,
   CommentStatusRequest,
   DeleteCommentRequest,
   DeleteCommentResponse,
@@ -9,10 +8,8 @@ import type {
   ListCommentsResponse,
   UpdateCommentRequest,
 } from "@/features/comments/types/comment";
-import { CommentId as CommentIdValue } from "@/features/comments/types/comment";
 import type { CommentCommands } from "@/features/comments/application/ports/commentCommands";
-
-const commentId: (value: string) => CommentId = CommentIdValue.fromString;
+import { commentId, isoDateTime } from "@/shared/testing/validatedValueObjects";
 
 export type CommentCommandTestDoubleResponses = Readonly<{
   listComments?: ListCommentsResponse;
@@ -55,8 +52,8 @@ const defaultComment: Comment = {
   body: "Clarify this task",
   status: "open",
   resolved: false,
-  createdAt: "2026-05-05T10:00:00Z",
-  updatedAt: "2026-05-05T10:00:00Z",
+  createdAt: isoDateTime("2026-05-05T10:00:00Z"),
+  updatedAt: isoDateTime("2026-05-05T10:00:00Z"),
 };
 
 /** @returns A typed comment command double for component and hook tests. */

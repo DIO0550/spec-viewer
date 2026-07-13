@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { afterEach, expect, test, vi } from "vitest";
 
 import {
@@ -19,19 +20,17 @@ test("performance loggerはprefix付きcorrelation idを生成する", () => {
   expect(correlationId).toMatch(/^document-read-[a-z0-9]+-[a-z0-9]+$/);
 });
 
-test.each([null, undefined] as const)(
-  "performance loggerはcorrelation idが%sならprefix付きIDを生成する",
-  (correlationId) => {
-    const resolvedCorrelationId = resolvePerformanceCorrelationId(
-      correlationId,
-      "comments list",
-    );
+test.each([
+  null,
+  undefined,
+] as const)("performance loggerはcorrelation idが%sならprefix付きIDを生成する", (correlationId) => {
+  const resolvedCorrelationId = resolvePerformanceCorrelationId(
+    correlationId,
+    "comments list",
+  );
 
-    expect(resolvedCorrelationId).toMatch(
-      /^comments-list-[a-z0-9]+-[a-z0-9]+$/,
-    );
-  },
-);
+  expect(resolvedCorrelationId).toMatch(/^comments-list-[a-z0-9]+-[a-z0-9]+$/);
+});
 
 test("performance loggerは既存correlation idをそのまま返す", () => {
   expect(resolvePerformanceCorrelationId("cid-1", "comments list")).toBe(
@@ -50,7 +49,7 @@ test("performance loggerはspanのdurationとmetadataを記録する", () => {
   });
 
   const endSpan = startPerformanceSpan("cid-1", "document.read", {
-    specId: "auth",
+    specId: TestValues.specId("auth"),
   });
   const span = endSpan({ bytes: 256 });
 
@@ -61,7 +60,7 @@ test("performance loggerはspanのdurationとmetadataを記録する", () => {
     endedAt: 142,
     durationMs: 42,
     metadata: {
-      specId: "auth",
+      specId: TestValues.specId("auth"),
       bytes: 256,
     },
   });

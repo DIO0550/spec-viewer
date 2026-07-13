@@ -1,12 +1,12 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
 import { createTextHash } from "@/features/comments/lib/comment-anchor-draft";
 import type { Comment } from "@/features/comments/types/comment";
-import { CommentId } from "@/features/comments/types/comment";
 import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
 import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
 
-const commentId = CommentId.fromString;
+const commentId = TestValues.commentId;
 
 const workspacePath = "/workspace/spec-reviewer";
 const markdownContents = [
@@ -25,7 +25,7 @@ const markdownContents = [
 const readyState: SpecDocumentState = {
   status: "ready",
   workspacePath,
-  specId: "selection-reliability",
+  specId: TestValues.specId("selection-reliability"),
   fileKey: "tasks",
   document: {
     key: "tasks",
@@ -60,7 +60,7 @@ const techReferenceHtmlContents = [
 const techReferenceHtmlState: SpecDocumentState = {
   status: "ready",
   workspacePath,
-  specId: "tech-reference-tab",
+  specId: TestValues.specId("tech-reference-tab"),
   fileKey: "tech-reference",
   document: {
     key: "tech-reference",
@@ -92,7 +92,7 @@ const testCasesHtmlContents = [
 const testCasesHtmlState: SpecDocumentState = {
   status: "ready",
   workspacePath,
-  specId: "test-cases-tab",
+  specId: TestValues.specId("test-cases-tab"),
   fileKey: "test-cases",
   document: {
     key: "test-cases",
@@ -126,8 +126,8 @@ const comments: readonly Comment[] = [
     status: "open",
     resolved: false,
     anchorResolution: null,
-    createdAt: "2026-05-07T00:00:00Z",
-    updatedAt: "2026-05-07T00:00:00Z",
+    createdAt: TestValues.isoDateTime("2026-05-07T00:00:00Z"),
+    updatedAt: TestValues.isoDateTime("2026-05-07T00:00:00Z"),
   },
 ];
 
@@ -150,8 +150,8 @@ const commentCardComments: readonly Comment[] = [
     status: "resolved",
     resolved: true,
     anchorResolution: null,
-    createdAt: "2026-05-07T00:10:00Z",
-    updatedAt: "2026-05-07T00:20:00Z",
+    createdAt: TestValues.isoDateTime("2026-05-07T00:10:00Z"),
+    updatedAt: TestValues.isoDateTime("2026-05-07T00:20:00Z"),
   },
   {
     id: commentId("cmt_code_card"),
@@ -170,8 +170,8 @@ const commentCardComments: readonly Comment[] = [
     status: "open",
     resolved: false,
     anchorResolution: null,
-    createdAt: "2026-05-07T00:30:00Z",
-    updatedAt: "2026-05-07T00:30:00Z",
+    createdAt: TestValues.isoDateTime("2026-05-07T00:30:00Z"),
+    updatedAt: TestValues.isoDateTime("2026-05-07T00:30:00Z"),
   },
 ];
 

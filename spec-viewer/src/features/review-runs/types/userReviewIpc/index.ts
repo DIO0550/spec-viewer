@@ -7,6 +7,7 @@ import type {
 import type { UserReviewListProblem } from "@/features/review-runs/domain/userReviewListProblem";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import type { UserReviewWorkspaceMode } from "@/features/review-runs/domain/userReviewWorkspaceMode";
+import type { UserReviewId } from "@/features/review-runs/domain/userReviewId";
 import type { CommentId } from "@/shared/domain/commentId";
 import type { IsoDateTimeString } from "@/shared/domain/isoDateTime";
 export type {
@@ -21,7 +22,7 @@ export type ReviewBundleSchemaVersion = "spec-reviewer.review-run.v1";
 
 export type ReviewBundleManifest = Readonly<{
   schemaVersion: ReviewBundleSchemaVersion;
-  id: string;
+  id: UserReviewId;
   status: UserReviewStatus;
   workspacePath: string;
   target: UserReviewTarget;
@@ -72,7 +73,7 @@ export type ListUserReviewsResponse = Readonly<{
 export type ArchiveUserReviewRequest = Readonly<{
   workspacePath: string;
   target: UserReviewTarget;
-  userReviewId: string;
+  userReviewId: UserReviewId;
 }>;
 
 export type ArchiveUserReviewResponse = Readonly<{

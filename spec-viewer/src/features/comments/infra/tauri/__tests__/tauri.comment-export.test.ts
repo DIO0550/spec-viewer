@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
 import { expect, test, vi } from "vitest";
@@ -30,7 +31,7 @@ test("selectCommentExportDestinationはfile export用のMarkdown保存先を選�
 
   const result = await selectCommentExportDestination({
     scope: "file",
-    specId: "auth/tasks",
+    specId: TestValues.specId("auth/tasks"),
     fileKey: "tasks",
   });
 
@@ -73,7 +74,7 @@ test("exportCommentsはbackend commandへrequestを渡す", async () => {
     workspacePath: "/workspace/project",
     target: {
       scope: "spec",
-      specId: "auth",
+      specId: TestValues.specId("auth"),
     },
     destinationPath: "/tmp/auth-comments.md",
   };
@@ -98,7 +99,7 @@ test("generateLlmPromptはbackend commandへrequestを渡す", async () => {
     workspacePath: "/workspace/project",
     target: {
       scope: "file",
-      specId: "auth",
+      specId: TestValues.specId("auth"),
       fileKey: "tasks",
     },
   };

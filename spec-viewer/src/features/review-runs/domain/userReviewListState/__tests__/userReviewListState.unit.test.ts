@@ -1,3 +1,4 @@
+import * as TestValues from "@/features/review-runs/testing/validatedValueObjects";
 import { expect, test } from "vitest";
 
 import { UserReviewCollection } from "@/features/review-runs/domain/userReviewCollection";
@@ -6,18 +7,20 @@ import type { UserReview } from "@/features/review-runs/types/userReviewIpc";
 
 const target = {
   scope: "file",
-  specId: "auth",
+  specId: TestValues.specId("auth"),
   fileKey: "tasks",
 } as const;
-const activeRun = createUserReview("run-active");
-const secondActiveRun = createUserReview("run-second-active");
+const activeRun = createUserReview("urv_00000000000000000000000000000012");
+const secondActiveRun = createUserReview(
+  "urv_00000000000000000000000000000016",
+);
 const archivedRun: UserReview = {
   ...activeRun,
-  id: "run-archived",
+  id: TestValues.userReviewId("urv_00000000000000000000000000000013"),
   status: "archived",
   folderPath:
     "/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/archive/run-archived",
-  archivedAt: "2026-05-06T12:30:00Z",
+  archivedAt: TestValues.isoDateTime("2026-05-06T12:30:00Z"),
 };
 
 test("UserReviewListState.loadedはrunがなければemptyを返す", () => {
@@ -101,7 +104,7 @@ test("UserReviewListState.applyCollectionTransformはidleなら状態を変え�
 
 function createUserReview(id: string): UserReview {
   return {
-    id,
+    id: TestValues.userReviewId(id),
     status: "active",
     target,
     workspace: {
@@ -112,13 +115,13 @@ function createUserReview(id: string): UserReview {
     folderPath: `/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/active/${id}`,
     sourceFiles: [
       {
-        specId: "auth",
+        specId: TestValues.specId("auth"),
         fileKey: "tasks",
         relativePath: ".plugin-workspace/.specs/auth/tasks.md",
       },
     ],
     commentCount: 1,
-    createdAt: "2026-05-06T12:00:00Z",
+    createdAt: TestValues.isoDateTime("2026-05-06T12:00:00Z"),
     archivedAt: null,
     summary: null,
     warnings: [],

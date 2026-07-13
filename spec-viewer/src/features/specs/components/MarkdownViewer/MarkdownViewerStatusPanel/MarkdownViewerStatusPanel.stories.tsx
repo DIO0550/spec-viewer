@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { createRef } from "react";
 import { fn } from "storybook/test";
@@ -34,7 +35,7 @@ const idleState: SpecDocumentState = {
 const loadingState: SpecDocumentState = {
   status: "loading",
   workspacePath,
-  specId: "phase-1-viewer",
+  specId: TestValues.specId("phase-1-viewer"),
   fileKey: "tasks",
   document: null,
   error: null,
@@ -43,7 +44,7 @@ const loadingState: SpecDocumentState = {
 const errorState: SpecDocumentState = {
   status: "error",
   workspacePath,
-  specId: "phase-1-viewer",
+  specId: TestValues.specId("phase-1-viewer"),
   fileKey: "tasks",
   document: null,
   error: toSpecFeatureError("read", {
@@ -55,7 +56,7 @@ const errorState: SpecDocumentState = {
 const missingState: SpecDocumentState = {
   status: "missing",
   workspacePath,
-  specId: "phase-1-viewer",
+  specId: TestValues.specId("phase-1-viewer"),
   fileKey: "tasks",
   document: createDocument(null, true),
   error: null,
@@ -64,7 +65,7 @@ const missingState: SpecDocumentState = {
 const emptyState: SpecDocumentState = {
   status: "ready",
   workspacePath,
-  specId: "phase-1-viewer",
+  specId: TestValues.specId("phase-1-viewer"),
   fileKey: "tasks",
   document: createDocument(" \n\t "),
   error: null,
@@ -130,7 +131,7 @@ export const EdgeCases: Story = {
     state: {
       ...idleState,
       workspacePath,
-      specId: "phase-1-viewer",
+      specId: TestValues.specId("phase-1-viewer"),
     },
     selectedSpecLabel: "Phase 1 Viewer",
   },

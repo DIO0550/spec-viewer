@@ -8,6 +8,13 @@ import type {
   UserReview,
 } from "@/features/review-runs/types/userReviewIpc";
 import type { UserReviewCommands } from "@/features/review-runs/application/ports/userReviewCommands";
+import {
+  isoDateTime,
+  specId,
+  userReviewId,
+} from "@/features/review-runs/testing/validatedValueObjects";
+
+const authSpecId = specId("auth");
 
 export type UserReviewCommandTestDoubleResponses = Readonly<{
   createUserReview?: CreateUserReviewResponse;
@@ -27,11 +34,11 @@ export type UserReviewCommandTestDouble = Readonly<{
 }>;
 
 const defaultUserReview: UserReview = {
-  id: "2026-05-06T120000Z-file-tasks-abcdef12",
+  id: userReviewId("2026-05-06T120000Z-file-tasks-abcdef12"),
   status: "active",
   target: {
     scope: "file",
-    specId: "auth",
+    specId: authSpecId,
     fileKey: "tasks",
   },
   workspace: {
@@ -43,13 +50,13 @@ const defaultUserReview: UserReview = {
     "/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/active/2026-05-06T120000Z-file-tasks-abcdef12",
   sourceFiles: [
     {
-      specId: "auth",
+      specId: authSpecId,
       fileKey: "tasks",
       relativePath: ".plugin-workspace/.specs/auth/tasks.md",
     },
   ],
   commentCount: 1,
-  createdAt: "2026-05-06T12:00:00Z",
+  createdAt: isoDateTime("2026-05-06T12:00:00Z"),
   archivedAt: null,
   summary: null,
   warnings: [],
@@ -98,7 +105,7 @@ export function createUserReviewCommandTestDouble(
                 "/active/",
                 "/archive/",
               ),
-              archivedAt: "2026-05-06T12:30:00Z",
+              archivedAt: isoDateTime("2026-05-06T12:30:00Z"),
             },
           }
         );

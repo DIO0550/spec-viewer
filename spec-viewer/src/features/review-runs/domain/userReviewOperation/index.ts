@@ -1,4 +1,5 @@
 import type { UserReview } from "@/features/review-runs/domain/userReview";
+import type { UserReviewId } from "@/features/review-runs/domain/userReviewId";
 import type { UserReviewWorkspaceMode } from "@/features/review-runs/domain/userReviewWorkspaceMode";
 import type { CommentId } from "@/shared/domain/commentId";
 
@@ -27,7 +28,7 @@ export type CreateUserReviewPayload = Readonly<{
 }>;
 
 export type ArchiveUserReviewPayload = Readonly<{
-  userReviewId: string;
+  userReviewId: UserReviewId;
 }>;
 
 export type UserReviewCreateState<TError = unknown> = AsyncOperationState<

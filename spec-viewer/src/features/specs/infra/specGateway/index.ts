@@ -1,4 +1,5 @@
 import type { SpecFileKey } from "@/features/specs/domain/specFile";
+import type { SpecId } from "@/shared/domain/specId";
 import type { SpecTree } from "@/features/specs/domain/specTree";
 import type {
   ArchiveSpecRequest,
@@ -51,7 +52,7 @@ export async function archiveSpec(
 export function createReadSpecFileRequest(
   request: Readonly<{
     workspacePath: string;
-    specId: string;
+    specId: SpecId;
     fileKey: SpecFileKey;
     correlationId?: string;
   }>,

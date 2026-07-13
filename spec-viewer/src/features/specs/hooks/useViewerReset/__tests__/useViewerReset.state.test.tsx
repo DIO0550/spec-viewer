@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { act, type ReactElement, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
@@ -133,7 +134,7 @@ test("createViewerResetKeyはdocumentの場所と本文長からstable keyを作
   const state: SpecDocumentState = {
     status: "ready",
     workspacePath: "/workspace/project",
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "tasks",
     document: {
       key: "tasks",

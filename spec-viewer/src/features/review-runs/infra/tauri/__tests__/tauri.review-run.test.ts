@@ -1,3 +1,4 @@
+import * as TestValues from "@/features/review-runs/testing/validatedValueObjects";
 import { invoke } from "@tauri-apps/api/core";
 import { expect, test, vi } from "vitest";
 
@@ -17,20 +18,19 @@ import {
 import { ArchiveUserReviewCommandError } from "@/features/review-runs/infra/tauri/archiveUserReview";
 import { CreateUserReviewCommandError } from "@/features/review-runs/infra/tauri/createUserReview";
 import { ListUserReviewsCommandError } from "@/features/review-runs/infra/tauri/listUserReviews";
-import { CommentId } from "@/features/comments/types/comment";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
 }));
 
 const invokeMock = vi.mocked(invoke);
-const commentId = CommentId.fromString;
+const commentId = TestValues.commentId;
 
 const request: CreateUserReviewRequest = {
   workspacePath: "/workspace/spec-reviewer",
   target: {
     scope: "file",
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "tasks",
   },
   commentIds: [commentId("cmt_1")],
@@ -39,7 +39,7 @@ const request: CreateUserReviewRequest = {
 
 const response: CreateUserReviewResponse = {
   userReview: {
-    id: "2026-05-06T120000Z-file-tasks-abcdef12",
+    id: TestValues.userReviewId("2026-05-06T120000Z-file-tasks-abcdef12"),
     status: "active",
     target: request.target,
     workspace: {
@@ -51,13 +51,13 @@ const response: CreateUserReviewResponse = {
       "/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/active/2026-05-06T120000Z-file-tasks-abcdef12",
     sourceFiles: [
       {
-        specId: "auth",
+        specId: TestValues.specId("auth"),
         fileKey: "tasks",
         relativePath: ".plugin-workspace/.specs/auth/tasks.md",
       },
     ],
     commentCount: 1,
-    createdAt: "2026-05-06T12:00:00Z",
+    createdAt: TestValues.isoDateTime("2026-05-06T12:00:00Z"),
     archivedAt: null,
     summary: null,
     warnings: [],
@@ -87,7 +87,7 @@ const archiveResponse: ArchiveUserReviewResponse = {
     status: "archived",
     folderPath:
       "/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/archive/2026-05-06T120000Z-file-tasks-abcdef12",
-    archivedAt: "2026-05-06T12:30:00Z",
+    archivedAt: TestValues.isoDateTime("2026-05-06T12:30:00Z"),
     summary: "対応完了",
   },
 };
@@ -223,5 +223,20 @@ test("createUserReviewは矛盾するarchived statusをstructured decode error�
     command: "create_user_review",
     code: "invalidResponse",
     path: "$.userReview.archivedAt",
+  });
+});
+
+test("createUserReviewは不正なreview IDをVO path付きdecode errorとして拒否する", async () => {
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue({
+    userReview: { ...response.userReview, id: "review-active" },
+  });
+
+  await expect(createUserReview(request)).rejects.toMatchObject({
+    command: "create_user_review",
+    code: "invalidResponse",
+    path: "$.userReview.id",
+    expected: "valid UserReviewId",
+    actual: "review-active",
   });
 });

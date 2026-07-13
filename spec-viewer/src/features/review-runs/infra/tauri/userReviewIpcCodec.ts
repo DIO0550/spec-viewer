@@ -5,6 +5,16 @@ import type {
 } from "@/features/review-runs/domain/userReview";
 import type { UserReviewListProblem } from "@/features/review-runs/domain/userReviewListProblem";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
+import {
+  UserReviewId,
+  type UserReviewId as UserReviewIdType,
+} from "@/features/review-runs/domain/userReviewId";
+import { CommentId } from "@/shared/domain/commentId";
+import {
+  IsoDateTime,
+  type IsoDateTime as IsoDateTimeType,
+} from "@/shared/domain/isoDateTime";
+import { SpecId, type SpecId as SpecIdType } from "@/shared/domain/specId";
 import { ValidatedStoredUserReview } from "@/features/review-runs/domain/validatedStoredUserReview";
 import type {
   ArchiveUserReviewRequest,
@@ -173,7 +183,7 @@ export function encodeCreateUserReviewRequest(
   return {
     workspacePath: request.workspacePath,
     target: encodeTarget(request.target),
-    commentIds: request.commentIds.map((id) => String(id)),
+    commentIds: request.commentIds.map(CommentId.toDto),
     workspaceMode: request.workspaceMode,
   };
 }
@@ -194,7 +204,7 @@ export function encodeArchiveUserReviewRequest(
   return {
     workspacePath: request.workspacePath,
     target: encodeTarget(request.target),
-    userReviewId: request.userReviewId,
+    userReviewId: UserReviewId.toDto(request.userReviewId),
   };
 }
 
@@ -283,10 +293,28 @@ export function mapUserReviewDtoToDomain(
   path = "$.userReview",
 ): UserReview {
   const stored: StoredUserReview = {
-    ...dto,
-    target: mapTargetDtoToDomain(dto.target),
+    id: decodeUserReviewId(command, `${path}.id`, dto.id),
+    status: dto.status,
+    target: mapTargetDtoToDomain(command, dto.target, `${path}.target`),
     workspace: mapWorkspaceDtoToDomain(dto.workspace),
-    sourceFiles: dto.sourceFiles.map((file) => ({ ...file })),
+    specFolderPath: dto.specFolderPath,
+    folderPath: dto.folderPath,
+    sourceFiles: dto.sourceFiles.map((file, index) => ({
+      ...file,
+      specId: decodeSpecId(
+        command,
+        `${path}.sourceFiles[${index}].specId`,
+        file.specId,
+      ),
+    })),
+    commentCount: dto.commentCount,
+    createdAt: decodeIsoDateTime(command, `${path}.createdAt`, dto.createdAt),
+    archivedAt:
+      dto.archivedAt === null
+        ? null
+        : decodeIsoDateTime(command, `${path}.archivedAt`, dto.archivedAt),
+    summary: dto.summary,
+    warnings: [...dto.warnings],
   };
   const result = ValidatedStoredUserReview.from(stored);
   if (!result.ok) {
@@ -302,8 +330,15 @@ export function mapUserReviewDtoToDomain(
 
 function encodeTarget(target: UserReviewTarget) {
   return target.scope === "file"
-    ? { scope: "file" as const, specId: target.specId, fileKey: target.fileKey }
-    : { scope: "spec" as const, specId: target.specId };
+    ? {
+        scope: "file" as const,
+        specId: SpecId.toDto(target.specId),
+        fileKey: target.fileKey,
+      }
+    : {
+        scope: "spec" as const,
+        specId: SpecId.toDto(target.specId),
+      };
 }
 
 function mapProblemDtoToDomain(
@@ -313,12 +348,15 @@ function mapProblemDtoToDomain(
 }
 
 function mapTargetDtoToDomain(
+  command: string,
   target: UserReviewDto["target"],
+  path: string,
 ): UserReviewTarget {
+  const specId = decodeSpecId(command, `${path}.specId`, target.specId);
   if (target.scope === "file") {
-    return { ...target };
+    return { ...target, specId };
   }
-  return { ...target };
+  return { ...target, specId };
 }
 
 function mapWorkspaceDtoToDomain(
@@ -328,4 +366,69 @@ function mapWorkspaceDtoToDomain(
     return { ...workspace };
   }
   return { ...workspace };
+}
+
+/**
+ * @param command - Tauri command that produced the value.
+ * @param path - JSON path of the identity.
+ * @param value - Raw identity received over IPC.
+ * @returns A restored UserReviewId.
+ * @throws {IpcResponseDecodeError} When the identity is invalid.
+ */
+function decodeUserReviewId(
+  command: string,
+  path: string,
+  value: string,
+): UserReviewIdType {
+  const result = UserReviewId.fromDto(value);
+  if (result.ok) {
+    return result.value;
+  }
+
+  throw new IpcResponseDecodeError(command, path, "valid UserReviewId", value);
+}
+
+/**
+ * @param command - Tauri command that produced the value.
+ * @param path - JSON path of the identity.
+ * @param value - Raw identity received over IPC.
+ * @returns A restored SpecId.
+ * @throws {IpcResponseDecodeError} When the identity is invalid.
+ */
+function decodeSpecId(
+  command: string,
+  path: string,
+  value: string,
+): SpecIdType {
+  const result = SpecId.fromDto(value);
+  if (result.ok) {
+    return result.value;
+  }
+
+  throw new IpcResponseDecodeError(command, path, "valid SpecId", value);
+}
+
+/**
+ * @param command - Tauri command that produced the value.
+ * @param path - JSON path of the date-time.
+ * @param value - Raw date-time received over IPC.
+ * @returns A restored IsoDateTime.
+ * @throws {IpcResponseDecodeError} When the date-time is invalid.
+ */
+function decodeIsoDateTime(
+  command: string,
+  path: string,
+  value: string,
+): IsoDateTimeType {
+  const result = IsoDateTime.fromDto(value);
+  if (result.ok) {
+    return result.value;
+  }
+
+  throw new IpcResponseDecodeError(
+    command,
+    path,
+    "valid RFC3339 date-time",
+    value,
+  );
 }

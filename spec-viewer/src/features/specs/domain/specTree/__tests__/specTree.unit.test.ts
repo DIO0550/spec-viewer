@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { expect, test } from "vitest";
 
 import type { SpecFile } from "@/features/specs/domain/specFile";
@@ -20,14 +21,14 @@ const tasksFile: SpecFile = {
 };
 
 const childNode: SpecNode = {
-  id: "child-spec",
+  id: TestValues.specId("child-spec"),
   label: "Child Spec",
   files: [tasksFile],
   children: [],
 };
 
 const rootNode: SpecNode = {
-  id: "root-spec",
+  id: TestValues.specId("root-spec"),
   label: "Root Spec",
   files: [implFile, tasksFile],
   children: [childNode],
@@ -45,13 +46,15 @@ test.each([
 });
 
 test("SpecTree.findNodeはSpecNode.findById相当の結果を返す", () => {
-  expect(SpecTree.findNode(tree, "child-spec")).toBe(childNode);
-  expect(SpecTree.findNode(tree, "missing-spec")).toBeNull();
+  expect(SpecTree.findNode(tree, TestValues.specId("child-spec"))).toBe(
+    childNode,
+  );
+  expect(SpecTree.findNode(tree, TestValues.specId("missing-spec"))).toBeNull();
 });
 
 test("SpecTree.defaultNodeはSpecNode.firstOpenable相当の結果を返す", () => {
   const emptyRoot: SpecNode = {
-    id: "empty-root",
+    id: TestValues.specId("empty-root"),
     label: "Empty Root",
     files: [],
     children: [childNode],
@@ -63,7 +66,7 @@ test("SpecTree.defaultNodeはSpecNode.firstOpenable相当の結果を返す", ()
 test("SpecTree.resolveSelectionはpreferred specとfileが有効なら保持する", () => {
   expect(
     SpecTree.resolveSelection(tree, {
-      specId: "root-spec",
+      specId: TestValues.specId("root-spec"),
       fileKey: "tasks",
     }),
   ).toEqual({
@@ -75,7 +78,7 @@ test("SpecTree.resolveSelectionはpreferred specとfileが有効なら保持す�
 test("SpecTree.resolveSelectionはfile削除時に同じspecの先頭fileKeyへfallbackする", () => {
   expect(
     SpecTree.resolveSelection(tree, {
-      specId: "root-spec",
+      specId: TestValues.specId("root-spec"),
       fileKey: "hearing",
     }),
   ).toEqual({
@@ -87,7 +90,7 @@ test("SpecTree.resolveSelectionはfile削除時に同じspecの先頭fileKeyへf
 test("SpecTree.resolveSelectionはspec削除時にdefault nodeへfallbackする", () => {
   expect(
     SpecTree.resolveSelection(tree, {
-      specId: "missing-spec",
+      specId: TestValues.specId("missing-spec"),
       fileKey: "tasks",
     }),
   ).toEqual({
@@ -98,7 +101,10 @@ test("SpecTree.resolveSelectionはspec削除時にdefault nodeへfallbackする"
 
 test("SpecTree.resolveSelectionはempty treeでnull selectionを返す", () => {
   expect(
-    SpecTree.resolveSelection({ specs: [] }, { specId: "root-spec", fileKey: "impl" }),
+    SpecTree.resolveSelection(
+      { specs: [] },
+      { specId: TestValues.specId("root-spec"), fileKey: "impl" },
+    ),
   ).toEqual({
     spec: null,
     fileKey: null,
