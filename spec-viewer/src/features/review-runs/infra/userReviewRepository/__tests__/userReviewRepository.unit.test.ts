@@ -69,6 +69,25 @@ test("repositoryはbackend error codeをapplication portへ保持する", async 
   });
 });
 
+test("repositoryはuserReviewExport error codeを変換せず保持する", async () => {
+  const commands = createCommands({
+    listUserReviews: vi.fn().mockRejectedValue({
+      code: "userReviewExport",
+      message: "Review export failed",
+    }),
+  });
+  const repository = createTauriUserReviewRepository(commands);
+
+  await expect(
+    repository.list({ workspacePath, target, correlationId: null }),
+  ).resolves.toMatchObject({
+    ok: false,
+    error: {
+      code: "userReviewExport",
+      message: "Review export failed",
+    },
+  });
+});
 test("repositoryはcommand wrapperのraw backend error codeを復元する", async () => {
   const commands = createCommands({
     listUserReviews: vi.fn().mockRejectedValue({

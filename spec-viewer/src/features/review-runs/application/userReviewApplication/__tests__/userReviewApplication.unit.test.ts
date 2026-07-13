@@ -1,21 +1,25 @@
 import { expect, test, vi } from "vitest";
 
 import { CommentId } from "@/features/comments/types/comment";
+import type { UserReviewRepository } from "@/features/review-runs/application/ports/userReviewRepository";
 import {
   OperationToken,
   SelectionIdentity,
   type UserReviewApplicationEvent,
   UserReviewApplicationState,
 } from "@/features/review-runs/application/userReviewApplication";
-import { createUserReviewApplicationService } from "@/features/review-runs/application/userReviewApplicationService";
-import type { UserReviewRepository } from "@/features/review-runs/application/ports/userReviewRepository";
+import {
+  createUserReviewApplicationService,
+  type UserReviewApplicationDispatch,
+  type UserReviewApplicationService,
+} from "@/features/review-runs/application/userReviewApplicationService";
 import { createUserReviewUseCases } from "@/features/review-runs/application/userReviewUseCases";
 import type {
   ActiveUserReview,
   ArchivedUserReview,
 } from "@/features/review-runs/domain/userReview";
-import { UserReviewListState } from "@/features/review-runs/domain/userReviewListState";
 import type { UserReviewListOutcome } from "@/features/review-runs/domain/userReviewListOutcome";
+import { UserReviewListState } from "@/features/review-runs/domain/userReviewListState";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 
 const target = {
@@ -159,6 +163,90 @@ test("OperationToken.equalsは同じ構造を持つ別operation tokenを区別�
 
   expect(OperationToken.equals(first, first)).toBe(true);
   expect(OperationToken.equals(first, second)).toBe(false);
+});
+
+test.each([
+  {
+    operation: "list",
+    expected: false,
+    invoke: (
+      service: UserReviewApplicationService,
+      dispatch: UserReviewApplicationDispatch,
+    ) =>
+      service.list(
+        { selectionIdentity, workspacePath, target, correlationId: null },
+        dispatch,
+      ),
+  },
+  {
+    operation: "create",
+    expected: null,
+    invoke: (
+      service: UserReviewApplicationService,
+      dispatch: UserReviewApplicationDispatch,
+    ) =>
+      service.create(
+        { selectionIdentity, workspacePath, target, commentIds: [commentId] },
+        dispatch,
+      ),
+  },
+  {
+    operation: "archive",
+    expected: null,
+    invoke: (
+      service: UserReviewApplicationService,
+      dispatch: UserReviewApplicationDispatch,
+    ) =>
+      service.archive(
+        { selectionIdentity, workspacePath, target, userReview: activeReview },
+        dispatch,
+      ),
+  },
+])("application serviceはdispose後の$operationをrepository前に破棄する", async ({
+  invoke,
+  expected,
+}) => {
+  const repository = createRepository();
+  const service = createUserReviewApplicationService(
+    createUserReviewUseCases(repository),
+    selectionIdentity,
+  );
+  const dispatch = vi.fn();
+  service.dispose();
+
+  await expect(invoke(service, dispatch)).resolves.toBe(expected);
+
+  expect(repository.list).not.toHaveBeenCalled();
+  expect(repository.create).not.toHaveBeenCalled();
+  expect(repository.archive).not.toHaveBeenCalled();
+  expect(dispatch).not.toHaveBeenCalled();
+});
+
+test("application serviceはdispose後にselectされると操作を再開できる", async () => {
+  const repository: UserReviewRepository = {
+    list: vi.fn().mockResolvedValue({
+      ok: true,
+      value: { active: [], archived: [], problems: [] },
+    }),
+    create: vi.fn(),
+    archive: vi.fn(),
+  };
+  const service = createUserReviewApplicationService(
+    createUserReviewUseCases(repository),
+    selectionIdentity,
+  );
+  const dispatch = vi.fn();
+  service.dispose();
+
+  service.select(selectionIdentity, dispatch);
+  await expect(
+    service.list(
+      { selectionIdentity, workspacePath, target, correlationId: null },
+      dispatch,
+    ),
+  ).resolves.toBe(true);
+
+  expect(repository.list).toHaveBeenCalledTimes(1);
 });
 
 test("application serviceはselection変更後の古いlist inputを開始前に破棄する", async () => {

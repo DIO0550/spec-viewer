@@ -269,6 +269,116 @@ test("useUserReviewsはrepository差し替え後に旧list responseを破棄す�
   expect(result.current.activeReviews).toEqual([currentRun]);
   result.unmount();
 });
+test("useUserReviewsはrepository差し替え後に旧create responseを破棄する", async () => {
+  const oldCreateDeferred = createDeferred<CreateUserReviewResponse>();
+  const oldCommands: UserReviewCommands = {
+    listUserReviews: vi.fn().mockResolvedValue({
+      active: [],
+      archived: [],
+      problems: [],
+    }),
+    createUserReview: vi.fn().mockReturnValue(oldCreateDeferred.promise),
+    archiveUserReview: vi.fn(),
+  };
+  const currentCommands: UserReviewCommands = {
+    listUserReviews: vi.fn().mockResolvedValue({
+      active: [],
+      archived: [],
+      problems: [],
+    }),
+    createUserReview: vi.fn(),
+    archiveUserReview: vi.fn(),
+  };
+  const result = renderUseUserReviews({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "auth",
+    fileKey: "tasks",
+    targetScope: "file",
+    selectionId,
+    commands: oldCommands,
+  });
+  await flushAsyncEffects();
+  let createResult = Promise.resolve<UserReview | null>(null);
+
+  act(() => {
+    createResult = result.current.createUserReview({
+      commentIds: [commentId("cmt_1")],
+    });
+  });
+  result.rerender({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "auth",
+    fileKey: "tasks",
+    targetScope: "file",
+    selectionId,
+    commands: currentCommands,
+  });
+  await flushAsyncEffects();
+  await act(async () => {
+    oldCreateDeferred.resolve({ userReview: activeRun });
+    await oldCreateDeferred.promise;
+  });
+
+  await expect(createResult).resolves.toBeNull();
+  expect(result.current.createState.status).toBe("idle");
+  expect(result.current.activeReviews).toEqual([]);
+  result.unmount();
+});
+
+test("useUserReviewsはrepository差し替え後に旧archive responseを破棄する", async () => {
+  const oldArchiveDeferred = createDeferred<ArchiveUserReviewResponse>();
+  const oldCommands: UserReviewCommands = {
+    listUserReviews: vi.fn().mockResolvedValue({
+      active: [activeRun],
+      archived: [],
+      problems: [],
+    }),
+    createUserReview: vi.fn(),
+    archiveUserReview: vi.fn().mockReturnValue(oldArchiveDeferred.promise),
+  };
+  const currentCommands: UserReviewCommands = {
+    listUserReviews: vi.fn().mockResolvedValue({
+      active: [activeRun],
+      archived: [],
+      problems: [],
+    }),
+    createUserReview: vi.fn(),
+    archiveUserReview: vi.fn(),
+  };
+  const result = renderUseUserReviews({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "auth",
+    fileKey: "tasks",
+    targetScope: "file",
+    selectionId,
+    commands: oldCommands,
+  });
+  await flushAsyncEffects();
+  let archiveResult = Promise.resolve<UserReview | null>(null);
+
+  act(() => {
+    archiveResult = result.current.archiveUserReview(activeRun);
+  });
+  result.rerender({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "auth",
+    fileKey: "tasks",
+    targetScope: "file",
+    selectionId,
+    commands: currentCommands,
+  });
+  await flushAsyncEffects();
+  await act(async () => {
+    oldArchiveDeferred.resolve({ userReview: archivedRun });
+    await oldArchiveDeferred.promise;
+  });
+
+  await expect(archiveResult).resolves.toBeNull();
+  expect(result.current.archiveState.status).toBe("idle");
+  expect(result.current.activeReviews).toEqual([activeRun]);
+  expect(result.current.archivedReviews).toEqual([]);
+  result.unmount();
+});
 
 test("useUserReviewsは一覧読み込み失敗時もperformance spanを記録する", async () => {
   configurePerformanceLoggerForTest(true);
