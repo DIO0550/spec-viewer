@@ -338,14 +338,55 @@ fn use_cases(
     SequenceIdGenerator,
     FixedClock,
 > {
+    use_cases_with_documents(repository, comments, vec![source_document()], ids, now)
+}
+
+fn use_cases_with_documents(
+    repository: FakeUserReviewRepository,
+    comments: Vec<Comment>,
+    documents: Vec<UserReviewSourceDocument>,
+    ids: impl IntoIterator<Item = UserReviewId>,
+    now: DateTime<Utc>,
+) -> UserReviewUseCases<
+    FakeUserReviewRepository,
+    FakeCommentRepository,
+    FakeSourceLoader,
+    SequenceIdGenerator,
+    FixedClock,
+> {
     UserReviewUseCases::new(
         repository,
         FakeCommentRepository { comments },
-        FakeSourceLoader {
-            documents: vec![source_document()],
-        },
+        FakeSourceLoader { documents },
         SequenceIdGenerator::new(ids),
         FixedClock(now),
+    )
+}
+
+fn source_document_with_empty_block_range() -> UserReviewSourceDocument {
+    let contents = "Prelude\nEmpty anchor.\n";
+    let offset = contents
+        .find("Empty anchor")
+        .expect("fixture should contain the target block");
+    let block = MarkdownBlock::new(
+        MarkdownBlockType::Paragraph,
+        MarkdownBlockIndex::new(2),
+        MarkdownBlockText::new("Empty anchor.", "Empty anchor.")
+            .expect("block text should be valid"),
+        MarkdownBlockHash::new("sha256:empty-range").expect("hash should be valid"),
+        Some(
+            MarkdownBlockSourceRange::new(offset, offset)
+                .expect("empty source range is valid at the spec boundary"),
+        ),
+    );
+
+    UserReviewSourceDocument::new(
+        target().spec_id().clone(),
+        SpecFileKey::Tasks,
+        WorkspaceRelativePath::new(".plugin-workspace/.specs/001-auth-flow/tasks.md")
+            .expect("source path should be valid"),
+        contents,
+        vec![block],
     )
 }
 
@@ -493,6 +534,36 @@ fn create_rejects_resolved_or_missing_selected_comments_as_typed_input_error() {
             source: UserReviewUseCaseError::SelectedCommentsNotFound { .. },
         })
     ));
+}
+
+#[test]
+fn create_rejects_empty_block_source_range_as_typed_source_error() {
+    let selected_id = CommentId::new("cmt_empty_range").expect("comment ID should be valid");
+    let service = use_cases_with_documents(
+        FakeUserReviewRepository::default(),
+        vec![comment_at(
+            selected_id.as_str(),
+            CommentStatus::Open,
+            2,
+            "sha256:empty-range",
+            "Empty anchor",
+        )],
+        vec![source_document_with_empty_block_range()],
+        [review_id(1)],
+        timestamp(40),
+    );
+
+    let result = service.create_user_review(CreateUserReviewInput::new(
+        target(),
+        vec![selected_id.clone()],
+    ));
+
+    assert_eq!(
+        Err(AppUseCaseError::UserReview {
+            source: UserReviewUseCaseError::InvalidBlockSourceRange { id: selected_id },
+        }),
+        result
+    );
 }
 
 #[test]
