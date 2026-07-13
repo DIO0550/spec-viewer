@@ -11,7 +11,7 @@ import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewT
 import { listUserReviews as listUserReviewsViaGateway } from "@/features/review-runs/infra/userReviewGateway";
 import type { UserReviewCommands } from "@/shared/api/tauri";
 import { ListUserReviewsCommandError } from "@/shared/api/tauri/listUserReviews";
-import { WorkspacePath } from "@/shared/domain/workspacePath";
+import { WorkspacePath } from "@/features/workspace";
 import {
   createPerformanceCorrelationId,
   startPerformanceSpan,

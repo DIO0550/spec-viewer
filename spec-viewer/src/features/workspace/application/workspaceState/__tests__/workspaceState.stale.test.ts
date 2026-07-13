@@ -4,15 +4,16 @@ import { createGeneration } from "@/features/workspace/application/generation";
 import { WorkspaceState } from "@/features/workspace/application/workspaceState";
 import type { Workspace } from "@/features/workspace/domain/workspace";
 import type { WorkspaceError } from "@/features/workspace/domain/workspaceError";
+import { workspacePathFixture } from "@/features/workspace/testing/workspacePath";
 
 const workspace: Workspace = {
-  root: "/workspace/spec-reviewer",
+  root: workspacePathFixture("/workspace/spec-reviewer"),
   kind: "plugin-workspace",
   files: [],
 };
 
 const otherWorkspace: Workspace = {
-  root: "/workspace/other",
+  root: workspacePathFixture("/workspace/other"),
   kind: "plugin-workspace",
   files: [],
 };

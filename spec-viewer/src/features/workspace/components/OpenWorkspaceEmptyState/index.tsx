@@ -1,6 +1,7 @@
 import { FolderClock, FolderOpen, X } from "lucide-react";
 
-import type { RecentWorkspace } from "@/shared/lib/recentWorkspaces";
+import type { WorkspacePath } from "@/features/workspace/domain/workspacePath";
+import type { RecentWorkspace } from "@/features/workspace/infrastructure/recentWorkspaces";
 import { uiText } from "@/shared/lib/uiText";
 import { EmptyState } from "@/shared/ui/EmptyState";
 
@@ -9,8 +10,8 @@ type Props = Readonly<{
   recentWorkspaces?: readonly RecentWorkspace[];
   /** ネイティブのワークスペース選択ダイアログを開く。 */
   onOpenWorkspace: () => void;
-  onOpenRecentWorkspace?: (path: string) => void;
-  onRemoveRecentWorkspace?: (path: string) => void;
+  onOpenRecentWorkspace?: (path: WorkspacePath) => void;
+  onRemoveRecentWorkspace?: (path: WorkspacePath) => void;
 }>;
 
 /** @returns An initial empty state that opens the native workspace picker. */

@@ -11,6 +11,10 @@ import type {
   WorkspaceContextValue,
 } from "@/features/workspace/context/types";
 import { toWorkspaceError } from "@/features/workspace/domain/workspaceError";
+import {
+  WorkspacePath,
+  type WorkspacePath as WorkspacePathValue,
+} from "@/features/workspace/domain/workspacePath";
 import { loadWorkspace as defaultLoadWorkspace } from "@/shared/api/tauri";
 import { LoadWorkspaceCommandError } from "@/shared/api/tauri/loadWorkspace";
 
@@ -25,7 +29,7 @@ export function useWorkspaceState(): WorkspaceContextValue {
 
   const load = useCallback(
     async (
-      selectedDirectory: string,
+      selectedDirectory: WorkspacePathValue,
       loadOptions: LoadWorkspaceOptions = {},
     ): Promise<boolean> => {
       const requestId = generation.next();
@@ -39,7 +43,9 @@ export function useWorkspaceState(): WorkspaceContextValue {
       );
 
       try {
-        const workspace = await defaultLoadWorkspace(selectedDirectory);
+        const workspace = await defaultLoadWorkspace(
+          WorkspacePath.toString(selectedDirectory),
+        );
 
         if (!generation.isCurrent(requestId)) {
           return false;

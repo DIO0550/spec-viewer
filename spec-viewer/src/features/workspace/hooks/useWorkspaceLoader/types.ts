@@ -1,11 +1,15 @@
 import type { WorkspaceContextValue } from "@/features/workspace/context/types";
+import type {
+  WorkspacePath,
+  WorkspacePathParseError,
+} from "@/features/workspace/domain/workspacePath";
 import type { UseRecentWorkspacesResult } from "@/features/workspace/hooks/useRecentWorkspaces";
 import type { SubscribeWorkspaceDragDropEvents } from "@/features/workspace/hooks/useWorkspaceDrop";
+import type { RecentWorkspaceStorage } from "@/features/workspace/infrastructure/recentWorkspaces";
 import type {
   selectWorkspaceDirectory as defaultSelectWorkspaceDirectory,
   validateWorkspaceDirectory as defaultValidateWorkspaceDirectory,
 } from "@/shared/api/tauri";
-import type { RecentWorkspaceStorage } from "@/shared/lib/recentWorkspaces";
 
 /** IPC コマンドの DI（useComments の `commands?` 規約に合わせた1オブジェクト）。 */
 export type WorkspaceLoaderCommands = Readonly<{
@@ -26,14 +30,19 @@ export type WorkspaceLoaderFlowIo = Readonly<{
    * validateWorkspaceDirectory の薄いラッパー。flow は isDirectory のみ読む（構造的最小型）。
    * @param path - 検証対象のワークスペースディレクトリパス。
    */
-  validate: (path: string) => Promise<Readonly<{ isDirectory: boolean }>>;
+  validate: (
+    path: WorkspacePath,
+  ) => Promise<Readonly<{ isDirectory: boolean }>>;
   /**
    * workspace.actions.load の薄いラッパー（`onWorkspaceLoaded: recordWorkspace` を pre-bind 済み）。
    * Provider 内 catch 済みのため reject しない。
    * @param path - 読み込むワークスペースディレクトリパス。
    * @param preserveCurrentWorkspace - 失敗時に現在のワークスペースを保持するか。
    */
-  load: (path: string, preserveCurrentWorkspace: boolean) => Promise<boolean>;
+  load: (
+    path: WorkspacePath,
+    preserveCurrentWorkspace: boolean,
+  ) => Promise<boolean>;
 }>;
 
 /** 入口ガードの評価値（呼び出し時点の値を index.ts が束ねる）。 */
@@ -49,6 +58,7 @@ export type WorkspaceOpenOutcome =
 
 export type OpenWorkspaceFromInputOutcome =
   | Readonly<{ type: "emptyInput" }>
+  | Readonly<{ type: "invalidInput"; error: WorkspacePathParseError }>
   | WorkspaceOpenOutcome;
 
 export type OpenDroppedWorkspaceOutcome =
@@ -59,7 +69,7 @@ export type OpenDroppedWorkspaceOutcome =
 
 /** recent 失敗3種が共有する適用データ（フックは 一覧削除 → dialog エラー → rollback の順で適用）。 */
 export type RecentWorkspaceFailure = Readonly<{
-  removePath: string;
+  removePath: WorkspacePath;
   dialogMessage: string;
   /** `activeWorkspaceRoot ?? ""`（null 合体は flow 内の純粋ロジック）。 */
   rollbackInput: string;
@@ -93,7 +103,7 @@ export type UseWorkspaceLoaderOptions = Readonly<{
 
 export type UseWorkspaceLoaderResult = Readonly<{
   state: Readonly<{
-    activeWorkspaceRoot: string | null;
+    activeWorkspaceRoot: WorkspacePath | null;
     isWorkspaceOpening: boolean;
     isBrowsingWorkspace: boolean;
     workspaceInput: string;
@@ -109,7 +119,7 @@ export type UseWorkspaceLoaderResult = Readonly<{
     /** 入力欄のパスからワークスペースを読み込む。 */
     loadWorkspace: () => void;
     /** @param path - 開く最近使用したワークスペースのパス。 */
-    openRecentWorkspacePath: (path: string) => Promise<void>;
+    openRecentWorkspacePath: (path: WorkspacePath) => Promise<void>;
     /** 現在のワークスペースと入力・エラー状態をリセットする。 */
     resetWorkspace: () => void;
   }>;

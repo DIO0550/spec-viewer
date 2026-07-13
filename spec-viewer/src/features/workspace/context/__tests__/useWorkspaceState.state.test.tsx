@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { beforeEach, expect, test, vi } from "vitest";
 
 import type { Workspace } from "@/features/workspace/types/workspace";
+import { workspacePathFixture } from "@/features/workspace/testing/workspacePath";
 
 const loadWorkspaceMock = vi.hoisted(() =>
   vi.fn<(selectedDirectory: string) => Promise<Workspace>>(),
@@ -26,13 +27,13 @@ import {
 } from "@/features/workspace/context";
 
 const workspace: Workspace = {
-  root: "/workspace/spec-reviewer",
+  root: workspacePathFixture("/workspace/spec-reviewer"),
   kind: "plugin-workspace",
   files: [{ key: "tasks", label: "Tasks", fileName: "tasks.md" }],
 };
 
 const otherWorkspace: Workspace = {
-  root: "/workspace/other",
+  root: workspacePathFixture("/workspace/other"),
   kind: "plugin-workspace",
   files: [{ key: "tasks", label: "Tasks", fileName: "tasks.md" }],
 };
@@ -110,7 +111,7 @@ test("useWorkspaceStateは選択したworkspaceを読み込み成功状態にす
 
   await act(async () => {
     const isLoaded = await result.current.actions.load(
-      "/workspace/spec-reviewer",
+      workspacePathFixture("/workspace/spec-reviewer"),
       { onWorkspaceLoaded },
     );
 
@@ -137,15 +138,18 @@ test("useWorkspaceStateは読み込み後callbackの例外をopen失敗状態に
 
   let isLoaded!: boolean;
   await act(async () => {
-    isLoaded = await result.current.actions.load("/workspace/spec-reviewer", {
-      onWorkspaceLoaded,
-    });
+    isLoaded = await result.current.actions.load(
+      workspacePathFixture("/workspace/spec-reviewer"),
+      {
+        onWorkspaceLoaded,
+      },
+    );
   });
 
   expect(isLoaded).toBe(false);
   expect(result.current.state).toMatchObject({
     status: "failed",
-    requestedPath: "/workspace/spec-reviewer",
+    requestedPath: workspacePathFixture("/workspace/spec-reviewer"),
     error: {
       reason: "unknown",
       message: "recent workspace storage failed",
@@ -159,12 +163,14 @@ test("useWorkspaceStateは読み込み失敗をWorkspaceError状態にする", a
   const result = renderHook(() => useWorkspaceState());
 
   await act(async () => {
-    await result.current.actions.load("/workspace/missing");
+    await result.current.actions.load(
+      workspacePathFixture("/workspace/missing"),
+    );
   });
 
   expect(result.current.state).toEqual({
     status: "failed",
-    requestedPath: "/workspace/missing",
+    requestedPath: workspacePathFixture("/workspace/missing"),
     error: {
       reason: "unknown",
       message: "missing workspace",
@@ -190,13 +196,16 @@ test("useWorkspaceStateは指定時に読み込み失敗後も現在のworkspace
   const result = renderHook(() => useWorkspaceState());
 
   await act(async () => {
-    await result.current.actions.load("/workspace/spec-reviewer");
+    await result.current.actions.load(
+      workspacePathFixture("/workspace/spec-reviewer"),
+    );
   });
 
   await act(async () => {
-    const isLoaded = await result.current.actions.load("/workspace/file.md", {
-      preserveCurrentWorkspace: true,
-    });
+    const isLoaded = await result.current.actions.load(
+      workspacePathFixture("/workspace/file.md"),
+      { preserveCurrentWorkspace: true },
+    );
 
     expect(isLoaded).toBe(false);
   });
@@ -230,15 +239,17 @@ test("useWorkspaceStateは古いload成功で最新workspace stateを上書き�
 
   let firstResult!: Promise<boolean>;
   act(() => {
-    firstResult = result.current.actions.load("/workspace/spec-reviewer", {
-      onWorkspaceLoaded: firstOnWorkspaceLoaded,
-    });
+    firstResult = result.current.actions.load(
+      workspacePathFixture("/workspace/spec-reviewer"),
+      { onWorkspaceLoaded: firstOnWorkspaceLoaded },
+    );
   });
 
   await act(async () => {
-    const isLoaded = await result.current.actions.load("/workspace/other", {
-      onWorkspaceLoaded: secondOnWorkspaceLoaded,
-    });
+    const isLoaded = await result.current.actions.load(
+      workspacePathFixture("/workspace/other"),
+      { onWorkspaceLoaded: secondOnWorkspaceLoaded },
+    );
 
     expect(isLoaded).toBe(true);
   });
@@ -268,9 +279,10 @@ test("useWorkspaceStateはreset後のload成功でidle stateを上書きしな�
 
   let loadResult!: Promise<boolean>;
   act(() => {
-    loadResult = result.current.actions.load("/workspace/spec-reviewer", {
-      onWorkspaceLoaded,
-    });
+    loadResult = result.current.actions.load(
+      workspacePathFixture("/workspace/spec-reviewer"),
+      { onWorkspaceLoaded },
+    );
   });
 
   act(() => {
@@ -298,11 +310,13 @@ test("useWorkspaceStateは古いload失敗で最新workspace stateを上書き�
 
   let firstResult!: Promise<boolean>;
   act(() => {
-    firstResult = result.current.actions.load("/workspace/missing");
+    firstResult = result.current.actions.load(
+      workspacePathFixture("/workspace/missing"),
+    );
   });
 
   await act(async () => {
-    await result.current.actions.load("/workspace/other");
+    await result.current.actions.load(workspacePathFixture("/workspace/other"));
   });
 
   await act(async () => {

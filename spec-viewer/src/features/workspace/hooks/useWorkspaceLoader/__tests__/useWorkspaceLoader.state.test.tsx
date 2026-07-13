@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
 import { WorkspaceProvider } from "@/features/workspace";
+import type { WorkspacePath } from "@/features/workspace";
 import type {
   LoadWorkspaceOptions,
   WorkspaceContextValue,
@@ -15,10 +16,11 @@ import {
   type UseWorkspaceLoaderResult,
   useWorkspaceLoader,
 } from "@/features/workspace/hooks/useWorkspaceLoader";
+import { workspacePathFixture } from "@/features/workspace/testing/workspacePath";
 import type { WorkspaceDragDropEvent } from "@/shared/api/tauri";
 import { getUnknownErrorMessage } from "@/shared/lib/errorMessage";
-import type { RecentWorkspaceStorage } from "@/shared/lib/recentWorkspaces";
-import { writeLastActiveWorkspacePath } from "@/shared/lib/recentWorkspaces";
+import type { RecentWorkspaceStorage } from "@/features/workspace/infrastructure/recentWorkspaces";
+import { writeLastActiveWorkspacePath } from "@/features/workspace/infrastructure/recentWorkspaces";
 
 class MemoryStorage implements RecentWorkspaceStorage {
   private readonly values = new Map<string, string>();
@@ -39,7 +41,11 @@ class MemoryStorage implements RecentWorkspaceStorage {
 function openedState(root: string): WorkspaceState {
   return {
     status: "opened",
-    workspace: { root, kind: "plugin-workspace", files: [] },
+    workspace: {
+      root: workspacePathFixture(root),
+      kind: "plugin-workspace",
+      files: [],
+    },
     lastOpenError: null,
   };
 }
@@ -47,7 +53,7 @@ function openedState(root: string): WorkspaceState {
 function openingState(): WorkspaceState {
   return {
     status: "opening",
-    requestedPath: "/pending",
+    requestedPath: workspacePathFixture("/pending"),
     currentWorkspace: null,
     error: null,
   };
@@ -166,7 +172,7 @@ test("初期状態のstate3個とselector導出", () => {
 test("io.loadラッパーはload開始前にクリア+input更新しonWorkspaceLoadedをpre-bindする", async () => {
   const loadDeferred = deferred<boolean>();
   const loadOptions: { onWorkspaceLoaded?: unknown; preserve?: unknown } = {};
-  const load = vi.fn((_path: string, options?: LoadWorkspaceOptions) => {
+  const load = vi.fn((_path: WorkspacePath, options?: LoadWorkspaceOptions) => {
     loadOptions.onWorkspaceLoaded = options?.onWorkspaceLoaded;
     loadOptions.preserve = options?.preserveCurrentWorkspace;
     return loadDeferred.promise;
@@ -218,7 +224,9 @@ test("io.validateラッパーの2段クリア（validate pending中に書いたd
   await flush();
 
   act(() => {
-    void hook.current.actions.openRecentWorkspacePath("/recent");
+    void hook.current.actions.openRecentWorkspacePath(
+      workspacePathFixture("/recent"),
+    );
   });
   expect(hook.current.state.workspaceInput).toBe("/recent");
 
@@ -258,6 +266,31 @@ test("browseアダプタはダイアログ表示中にbrowsingフラグをtrue�
   expect(hook.current.state.isBrowsingWorkspace).toBe(false);
   expect(load).toHaveBeenCalledWith("/browsed", expect.anything());
   expect(hook.current.state.workspaceInput).toBe("/browsed");
+  hook.unmount();
+});
+
+test("browseアダプタはダイアログのfile URLをcanonical pathへ変換する", async () => {
+  const load = vi.fn(async () => true);
+  const hook = renderLoader({
+    onError: vi.fn(),
+    workspace: fakeWorkspace(idleState(), { load }),
+    commands: {
+      selectWorkspaceDirectory: vi.fn(
+        async () => "file:///workspace/spec%20viewer/",
+      ),
+      validateWorkspaceDirectory: vi.fn(async () => ({ isDirectory: true })),
+    },
+  });
+
+  await act(async () => {
+    await hook.current.actions.browseWorkspace();
+  });
+
+  expect(load).toHaveBeenCalledWith(
+    workspacePathFixture("/workspace/spec viewer"),
+    expect.anything(),
+  );
+  expect(hook.current.state.workspaceInput).toBe("/workspace/spec viewer");
   hook.unmount();
 });
 
@@ -359,7 +392,9 @@ test("recent失敗outcomeは一覧削除→onError→input rollbackの順で適�
   });
 
   await act(async () => {
-    await hook.current.actions.openRecentWorkspacePath("/recent");
+    await hook.current.actions.openRecentWorkspacePath(
+      workspacePathFixture("/recent"),
+    );
   });
 
   expect(onError).toHaveBeenCalledWith(
@@ -425,14 +460,16 @@ test("resetアダプタはinput・dropError・onErrorをクリアしresetを1回
 
 test("recentWorkspacesは所有する単一インスタンスを再露出しrecord/removeが反映される", async () => {
   const storage = new MemoryStorage();
-  const load = vi.fn(async (path: string, options?: LoadWorkspaceOptions) => {
-    options?.onWorkspaceLoaded?.({
-      root: path,
-      kind: "plugin-workspace",
-      files: [],
-    });
-    return true;
-  });
+  const load = vi.fn(
+    async (path: WorkspacePath, options?: LoadWorkspaceOptions) => {
+      options?.onWorkspaceLoaded?.({
+        root: path,
+        kind: "plugin-workspace",
+        files: [],
+      });
+      return true;
+    },
+  );
   const hook = renderLoader({
     onError: vi.fn(),
     workspace: fakeWorkspace(idleState(), { load }),
@@ -458,7 +495,9 @@ test("recentWorkspacesは所有する単一インスタンスを再露出しreco
   ).toBe(true);
 
   act(() => {
-    hook.current.recentWorkspaces.removeWorkspace("/added");
+    hook.current.recentWorkspaces.removeWorkspace(
+      workspacePathFixture("/added"),
+    );
   });
 
   expect(
@@ -535,7 +574,7 @@ test("opening中はdropが無効化される", async () => {
 
 test("startup restoreはvalidate→loadを1回だけ実行しrerenderで再実行しない", async () => {
   const storage = new MemoryStorage();
-  writeLastActiveWorkspacePath("/last", storage);
+  writeLastActiveWorkspacePath(workspacePathFixture("/last"), storage);
   const commands = {
     selectWorkspaceDirectory: vi.fn(async () => "/selected"),
     validateWorkspaceDirectory: vi.fn(async () => ({ isDirectory: true })),
@@ -562,7 +601,7 @@ test("startup restoreはvalidate→loadを1回だけ実行しrerenderで再実�
 
 function seededStorage(): MemoryStorage {
   const storage = new MemoryStorage();
-  writeLastActiveWorkspacePath("/last", storage);
+  writeLastActiveWorkspacePath(workspacePathFixture("/last"), storage);
   return storage;
 }
 

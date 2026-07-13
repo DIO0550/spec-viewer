@@ -1,6 +1,7 @@
 import type { GenerationToken } from "@/features/workspace/application/generation";
 import type { Workspace } from "@/features/workspace/domain/workspace";
 import type { WorkspaceError } from "@/features/workspace/domain/workspaceError";
+import type { WorkspacePath } from "@/features/workspace/domain/workspacePath";
 
 export type WorkspaceState =
   | Readonly<{
@@ -8,7 +9,7 @@ export type WorkspaceState =
     }>
   | Readonly<{
       status: "opening";
-      requestedPath: string;
+      requestedPath: WorkspacePath;
       currentWorkspace: Workspace | null;
       error: null;
     }>
@@ -19,7 +20,7 @@ export type WorkspaceState =
     }>
   | Readonly<{
       status: "failed";
-      requestedPath: string;
+      requestedPath: WorkspacePath;
       error: WorkspaceError;
     }>;
 
@@ -32,7 +33,7 @@ export type WorkspaceStateEvent =
   | Readonly<{
       type: "openRequested";
       requestId: GenerationToken;
-      requestedPath: string;
+      requestedPath: WorkspacePath;
       preserveCurrentWorkspace: boolean;
     }>
   | Readonly<{
@@ -49,7 +50,7 @@ export type WorkspaceStateEvent =
 
 type OpenRequestedInput = Readonly<{
   requestId: GenerationToken;
-  requestedPath: string;
+  requestedPath: WorkspacePath;
   preserveCurrentWorkspace: boolean;
 }>;
 

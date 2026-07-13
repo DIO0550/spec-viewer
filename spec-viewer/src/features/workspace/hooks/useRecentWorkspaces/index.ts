@@ -1,5 +1,9 @@
 import { useCallback, useState } from "react";
-import type { Workspace } from "@/features/workspace/types/workspace";
+import type { Workspace } from "@/features/workspace/domain/workspace";
+import {
+  WorkspacePath,
+  type WorkspacePath as WorkspacePathValue,
+} from "@/features/workspace/domain/workspacePath";
 import {
   clearLastActiveWorkspacePath,
   clearStoredRecentWorkspaces,
@@ -11,7 +15,7 @@ import {
   removeRecentWorkspace,
   writeLastActiveWorkspacePath,
   writeRecentWorkspaces,
-} from "@/shared/lib/recentWorkspaces";
+} from "@/features/workspace/infrastructure/recentWorkspaces";
 
 export type UseRecentWorkspacesOptions = Readonly<{
   storage?: RecentWorkspaceStorage | null;
@@ -19,11 +23,11 @@ export type UseRecentWorkspacesOptions = Readonly<{
 
 export type UseRecentWorkspacesResult = Readonly<{
   recentWorkspaces: readonly RecentWorkspace[];
-  lastActiveWorkspacePath: string | null;
+  lastActiveWorkspacePath: WorkspacePathValue | null;
   /** @param workspace - 最近使用した一覧へ記録するワークスペース。 */
   recordWorkspace: (workspace: Workspace) => void;
   /** @param path - 一覧から削除するワークスペースのパス。 */
-  removeWorkspace: (path: string) => void;
+  removeWorkspace: (path: WorkspacePathValue) => void;
   /** 最近使用したワークスペースをすべて消去する。 */
   clearWorkspaces: () => void;
 }>;
@@ -36,9 +40,10 @@ export function useRecentWorkspaces(
   const [recentWorkspaces, setRecentWorkspaces] = useState<
     readonly RecentWorkspace[]
   >(() => readRecentWorkspaces(storage));
-  const [lastActiveWorkspacePath, setLastActiveWorkspacePath] = useState<
-    string | null
-  >(() => readLastActiveWorkspacePath(storage));
+  const [lastActiveWorkspacePath, setLastActiveWorkspacePath] =
+    useState<WorkspacePathValue | null>(() =>
+      readLastActiveWorkspacePath(storage),
+    );
 
   const recordWorkspace = useCallback(
     (workspace: Workspace): void => {
@@ -57,14 +62,14 @@ export function useRecentWorkspaces(
   );
 
   const removeWorkspace = useCallback(
-    (path: string): void => {
+    (path: WorkspacePathValue): void => {
       setRecentWorkspaces((currentWorkspaces) => {
         const nextWorkspaces = removeRecentWorkspace(currentWorkspaces, path);
         writeRecentWorkspaces(nextWorkspaces, storage);
         return nextWorkspaces;
       });
       setLastActiveWorkspacePath((currentPath) => {
-        if (currentPath !== path) {
+        if (currentPath === null || !WorkspacePath.equals(currentPath, path)) {
           return currentPath;
         }
 

@@ -1,10 +1,14 @@
 import type {
   Workspace,
   WorkspaceKind,
-} from "@/features/workspace/types/workspace";
+} from "@/features/workspace/domain/workspace";
+import {
+  WorkspacePath,
+  type WorkspacePath as WorkspacePathValue,
+} from "@/features/workspace/domain/workspacePath";
 
 export type RecentWorkspace = Readonly<{
-  path: string;
+  path: WorkspacePathValue;
   displayName: string;
   kind: WorkspaceKind;
   lastOpenedAt: string;
@@ -37,16 +41,16 @@ export function readRecentWorkspaces(
 /** @returns The last active workspace path stored in browser storage. */
 export function readLastActiveWorkspacePath(
   storage: RecentWorkspaceStorage | null = getBrowserStorage(),
-): string | null {
+): WorkspacePathValue | null {
   if (storage === null) {
     return null;
   }
 
   try {
-    const normalizedPath = normalizeWorkspacePath(
+    const parsedPath = WorkspacePath.parse(
       storage.getItem(lastActiveWorkspaceStorageKey) ?? "",
     );
-    return normalizedPath;
+    return parsedPath.ok ? parsedPath.path : null;
   } catch {
     return null;
   }
@@ -54,22 +58,18 @@ export function readLastActiveWorkspacePath(
 
 /** Persists the last active workspace path when browser storage is available. */
 export function writeLastActiveWorkspacePath(
-  path: string,
+  path: WorkspacePathValue,
   storage: RecentWorkspaceStorage | null = getBrowserStorage(),
 ): void {
   if (storage === null) {
     return;
   }
 
-  const normalizedPath = normalizeWorkspacePath(path);
-
-  if (normalizedPath === null) {
-    clearLastActiveWorkspacePath(storage);
-    return;
-  }
-
   try {
-    storage.setItem(lastActiveWorkspaceStorageKey, normalizedPath);
+    storage.setItem(
+      lastActiveWorkspaceStorageKey,
+      WorkspacePath.toString(path),
+    );
   } catch {
     return;
   }
@@ -127,20 +127,14 @@ export function recordRecentWorkspace(
   workspace: Workspace,
   lastOpenedAt = new Date().toISOString(),
 ): readonly RecentWorkspace[] {
-  const normalizedPath = normalizeWorkspacePath(workspace.root);
-
-  if (normalizedPath === null) {
-    return workspaces;
-  }
-
   const recentWorkspace = {
-    path: normalizedPath,
-    displayName: createWorkspaceDisplayName(normalizedPath),
+    path: workspace.root,
+    displayName: WorkspacePath.displayName(workspace.root),
     kind: workspace.kind,
     lastOpenedAt,
   };
-  const existingIndex = workspaces.findIndex(
-    (currentWorkspace) => currentWorkspace.path === normalizedPath,
+  const existingIndex = workspaces.findIndex((currentWorkspace) =>
+    WorkspacePath.equals(currentWorkspace.path, workspace.root),
   );
 
   if (existingIndex >= 0) {
@@ -158,15 +152,11 @@ export function recordRecentWorkspace(
 /** @returns A recent list without the given path. */
 export function removeRecentWorkspace(
   workspaces: readonly RecentWorkspace[],
-  path: string,
+  path: WorkspacePathValue,
 ): readonly RecentWorkspace[] {
-  const normalizedPath = normalizeWorkspacePath(path);
-
-  if (normalizedPath === null) {
-    return workspaces;
-  }
-
-  return workspaces.filter((workspace) => workspace.path !== normalizedPath);
+  return workspaces.filter(
+    (workspace) => !WorkspacePath.equals(workspace.path, path),
+  );
 }
 
 /** @returns The localStorage object when running in a browser. */
@@ -206,15 +196,15 @@ function parseRecentWorkspaces(
  */
 function normalizeRecentWorkspace(value: unknown): RecentWorkspace | null {
   if (typeof value === "string") {
-    const path = normalizeWorkspacePath(value);
+    const parsedPath = WorkspacePath.parse(value);
 
-    if (path === null) {
+    if (!parsedPath.ok) {
       return null;
     }
 
     return {
-      path,
-      displayName: createWorkspaceDisplayName(path),
+      path: parsedPath.path,
+      displayName: WorkspacePath.displayName(parsedPath.path),
       kind: "plugin-workspace",
       lastOpenedAt: "",
     };
@@ -228,9 +218,9 @@ function normalizeRecentWorkspace(value: unknown): RecentWorkspace | null {
     return null;
   }
 
-  const path = normalizeWorkspacePath(value.path);
+  const parsedPath = WorkspacePath.parse(value.path);
 
-  if (path === null) {
+  if (!parsedPath.ok) {
     return null;
   }
 
@@ -239,7 +229,7 @@ function normalizeRecentWorkspace(value: unknown): RecentWorkspace | null {
     typeof value.displayName === "string" &&
     value.displayName.trim().length > 0
       ? value.displayName.trim()
-      : createWorkspaceDisplayName(path);
+      : WorkspacePath.displayName(parsedPath.path);
   const kind =
     "kind" in value && isWorkspaceKind(value.kind)
       ? value.kind
@@ -253,62 +243,33 @@ function normalizeRecentWorkspace(value: unknown): RecentWorkspace | null {
       ? value.lastOpenedAt
       : legacyOpenedAt;
 
-  return { path, displayName, kind, lastOpenedAt };
+  return {
+    path: parsedPath.path,
+    displayName,
+    kind,
+    lastOpenedAt,
+  };
 }
 
 /** @returns A deduplicated recent workspace list preserving first occurrence. */
 function dedupeRecentWorkspaces(
   workspaces: readonly RecentWorkspace[],
 ): readonly RecentWorkspace[] {
-  const seenPaths = new Set<string>();
   const dedupedWorkspaces: RecentWorkspace[] = [];
 
   for (const workspace of workspaces) {
-    if (seenPaths.has(workspace.path)) {
+    const isDuplicate = dedupedWorkspaces.some((currentWorkspace) =>
+      WorkspacePath.equals(currentWorkspace.path, workspace.path),
+    );
+
+    if (isDuplicate) {
       continue;
     }
 
-    seenPaths.add(workspace.path);
     dedupedWorkspaces.push(workspace);
   }
 
   return dedupedWorkspaces;
-}
-
-/**
- * @param path - 正規化するワークスペースパス。
- * @returns A non-empty trimmed workspace path, or null for blank input.
- */
-function normalizeWorkspacePath(path: string): string | null {
-  const trimmedPath = path.trim();
-
-  if (trimmedPath.length === 0) {
-    return null;
-  }
-
-  const normalizedPath = trimmedPath.replace(/[\\/]+$/, "");
-
-  if (normalizedPath.length === 0) {
-    return trimmedPath;
-  }
-
-  return normalizedPath;
-}
-
-/**
- * @param path - 表示名を生成するワークスペースパス。
- * @returns A readable display name for the workspace path.
- */
-function createWorkspaceDisplayName(path: string): string {
-  const normalizedPath = path.replace(/[\\/]+$/, "");
-  const pathParts = normalizedPath.split(/[\\/]/);
-  const lastPart = pathParts[pathParts.length - 1];
-
-  if (lastPart !== undefined && lastPart.length > 0) {
-    return lastPart;
-  }
-
-  return path;
 }
 
 /**

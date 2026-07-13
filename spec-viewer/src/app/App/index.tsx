@@ -50,8 +50,8 @@ import {
   WorkspaceProvider,
   WorkspaceSidebarSection,
   WorkspaceToolbar,
+  WorkspacePath,
 } from "@/features/workspace";
-import { WorkspacePath } from "@/shared/domain/workspacePath";
 import { uiText } from "@/shared/lib/uiText";
 import { WorkspaceLayout } from "@/shared/ui";
 
@@ -98,11 +98,18 @@ function SpecViewAppContent(): ReactElement {
   const { selectSpecView } = useSpecViewSelection();
   const selectCurrentSpecView = useCallback(
     (selection: SpecSelectionChange): void => {
+      const parsedWorkspacePath =
+        selection.workspacePath === null
+          ? null
+          : WorkspacePath.parse(selection.workspacePath);
+
+      if (parsedWorkspacePath !== null && !parsedWorkspacePath.ok) {
+        return;
+      }
+
       selectSpecView({
         workspacePath:
-          selection.workspacePath === null
-            ? null
-            : WorkspacePath.fromString(selection.workspacePath),
+          parsedWorkspacePath === null ? null : parsedWorkspacePath.path,
         specId: selection.specId,
         fileKey: selection.fileKey,
       });

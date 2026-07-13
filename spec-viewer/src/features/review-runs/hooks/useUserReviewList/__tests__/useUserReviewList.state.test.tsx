@@ -9,7 +9,7 @@ import type {
   UserReview,
 } from "@/features/review-runs/types/userReviewIpc";
 import type { UserReviewCommands } from "@/shared/api/tauri";
-import { WorkspacePath } from "@/shared/domain/workspacePath";
+import { workspacePathFixture } from "@/features/workspace/testing/workspacePath";
 import { configurePerformanceLoggerForTest } from "@/shared/lib/performance";
 
 type HookProps = Readonly<{
@@ -103,9 +103,7 @@ function renderUseUserReviewList(props: HookProps) {
         target,
         selectionId,
         workspacePath:
-          workspacePath === null
-            ? null
-            : WorkspacePath.fromString(workspacePath),
+          workspacePath === null ? null : workspacePathFixture(workspacePath),
       }),
     props,
   );

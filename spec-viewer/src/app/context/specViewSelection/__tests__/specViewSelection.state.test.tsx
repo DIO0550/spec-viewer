@@ -8,7 +8,7 @@ import {
   type SpecViewSelectionContextValue,
 } from "@/app/context/specViewSelection";
 import type { SpecFileKey } from "@/features/specs/types/spec";
-import { WorkspacePath } from "@/shared/domain/workspacePath";
+import { workspacePathFixture } from "@/features/workspace/testing/workspacePath";
 
 function createContainerRoot(): Readonly<{
   container: HTMLDivElement;
@@ -22,7 +22,7 @@ function createContainerRoot(): Readonly<{
 
 test("SpecViewSelectionProviderはselection propなしで選択状態とselectionIdを保持する", () => {
   const values: SpecViewSelectionContextValue[] = [];
-  const workspacePath = WorkspacePath.fromString("/workspace/spec-reviewer");
+  const workspacePath = workspacePathFixture("/workspace/spec-reviewer");
   const { container, root } = createContainerRoot();
   let currentValue: SpecViewSelectionContextValue | null = null;
 
@@ -73,7 +73,7 @@ test.each([
   {
     name: "workspace変更",
     workspaceSelection: {
-      workspacePath: WorkspacePath.fromString("/workspace/other"),
+      workspacePath: workspacePathFixture("/workspace/other"),
       specId: "auth",
       fileKey: "tasks" as SpecFileKey,
     },
@@ -83,7 +83,7 @@ test.each([
   {
     name: "spec変更",
     workspaceSelection: {
-      workspacePath: WorkspacePath.fromString("/workspace/spec-reviewer"),
+      workspacePath: workspacePathFixture("/workspace/spec-reviewer"),
       specId: "billing",
       fileKey: "tasks" as SpecFileKey,
     },
@@ -93,7 +93,7 @@ test.each([
   {
     name: "file変更",
     workspaceSelection: {
-      workspacePath: WorkspacePath.fromString("/workspace/spec-reviewer"),
+      workspacePath: workspacePathFixture("/workspace/spec-reviewer"),
       specId: "auth",
       fileKey: "implementation" as SpecFileKey,
     },
@@ -103,7 +103,7 @@ test.each([
   {
     name: "spec scope変更",
     workspaceSelection: {
-      workspacePath: WorkspacePath.fromString("/workspace/spec-reviewer"),
+      workspacePath: workspacePathFixture("/workspace/spec-reviewer"),
       specId: "auth",
       fileKey: "tasks" as SpecFileKey,
     },
@@ -113,7 +113,7 @@ test.each([
   {
     name: "fileKey未確定",
     workspaceSelection: {
-      workspacePath: WorkspacePath.fromString("/workspace/spec-reviewer"),
+      workspacePath: workspacePathFixture("/workspace/spec-reviewer"),
       specId: "auth",
       fileKey: null,
     },

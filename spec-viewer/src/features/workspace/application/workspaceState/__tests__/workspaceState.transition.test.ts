@@ -4,9 +4,10 @@ import { createGeneration } from "@/features/workspace/application/generation";
 import { WorkspaceState } from "@/features/workspace/application/workspaceState";
 import type { Workspace } from "@/features/workspace/domain/workspace";
 import type { WorkspaceError } from "@/features/workspace/domain/workspaceError";
+import { workspacePathFixture } from "@/features/workspace/testing/workspacePath";
 
 const workspace: Workspace = {
-  root: "/workspace/spec-reviewer",
+  root: workspacePathFixture("/workspace/spec-reviewer"),
   kind: "plugin-workspace",
   files: [],
 };
@@ -49,7 +50,7 @@ test("WorkspaceStateは保持対象がないopen失敗eventでfailedへ遷移す
     WorkspaceState.initial(),
     WorkspaceState.openRequested({
       requestId,
-      requestedPath: "/workspace/missing",
+      requestedPath: workspacePathFixture("/workspace/missing"),
       preserveCurrentWorkspace: false,
     }),
   );
@@ -62,7 +63,7 @@ test("WorkspaceStateは保持対象がないopen失敗eventでfailedへ遷移す
   expect(result).toEqual({
     state: {
       status: "failed",
-      requestedPath: "/workspace/missing",
+      requestedPath: workspacePathFixture("/workspace/missing"),
       error: workspaceError,
     },
     activeRequestId: null,
@@ -89,7 +90,7 @@ test("WorkspaceStateは指定時にopen失敗後も現在のworkspaceを保持�
     opened,
     WorkspaceState.openRequested({
       requestId: secondRequestId,
-      requestedPath: "/workspace/missing",
+      requestedPath: workspacePathFixture("/workspace/missing"),
       preserveCurrentWorkspace: true,
     }),
   );

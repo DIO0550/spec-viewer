@@ -21,9 +21,10 @@ import {
   WorkspaceSidebarSection,
   WorkspaceToolbar,
 } from "@/features/workspace";
+import { workspacePathFixture } from "@/features/workspace/testing/workspacePath";
 import { WorkspaceLayout } from "@/shared/ui/WorkspaceLayout";
 
-const workspacePath = "/workspace/spec-reviewer";
+const workspacePath = workspacePathFixture("/workspace/spec-reviewer");
 const commentId = CommentId.fromString;
 
 const sampleSpec: SpecNode = {
@@ -469,7 +470,7 @@ function createShellArgs({
               lastOpenedAt: "2026-05-06T00:00:00.000Z",
             },
             {
-              path: "/workspace/legacy-spec-skill",
+              path: workspacePathFixture("/workspace/legacy-spec-skill"),
               displayName: "legacy-spec-skill",
               kind: "spec-skill",
               lastOpenedAt: "2026-05-05T00:00:00.000Z",

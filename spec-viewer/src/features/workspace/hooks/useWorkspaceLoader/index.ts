@@ -9,6 +9,10 @@ import {
 } from "@/features/workspace/context/selectors";
 import { useRecentWorkspaces } from "@/features/workspace/hooks/useRecentWorkspaces";
 import { useWorkspaceDrop } from "@/features/workspace/hooks/useWorkspaceDrop";
+import {
+  WorkspacePath,
+  type WorkspacePath as WorkspacePathValue,
+} from "@/features/workspace/domain/workspacePath";
 import * as workspaceLoaderFlow from "@/features/workspace/hooks/useWorkspaceLoader/flow";
 import type {
   OpenDroppedWorkspaceOutcome,
@@ -76,17 +80,18 @@ export function useWorkspaceLoader(
      * 各 IPC 呼び出しの直前にエラー表示をクリアし、入力欄へパスを反映する。
      * @param path - 開こうとしているワークスペースディレクトリパス。
      */
-    const applyOpenProgress = (path: string): void => {
+    const applyOpenProgress = (path: WorkspacePathValue): void => {
+      const rawPath = WorkspacePath.toString(path);
       onError(null);
       setDropErrorMessage(null);
-      setWorkspaceInput(path);
+      setWorkspaceInput(rawPath);
     };
 
     return {
       /** @param path - 検証対象のワークスペースディレクトリパス。 */
       validate: (path) => {
         applyOpenProgress(path);
-        return validateWorkspaceDirectory(path);
+        return validateWorkspaceDirectory(WorkspacePath.toString(path));
       },
       /**
        * @param path - 読み込むワークスペースディレクトリパス。
@@ -151,7 +156,13 @@ export function useWorkspaceLoader(
         return;
       }
 
-      await workspaceLoaderFlow.openWorkspacePath(selectedDirectory, flowIo);
+      const parsedPath = WorkspacePath.parse(selectedDirectory);
+
+      if (!parsedPath.ok) {
+        return;
+      }
+
+      await workspaceLoaderFlow.openWorkspacePath(parsedPath.path, flowIo);
     } catch (error) {
       onError(getUnknownErrorMessage(error));
     } finally {
@@ -165,7 +176,7 @@ export function useWorkspaceLoader(
   };
 
   const openRecentWorkspacePath = useCallback(
-    async (path: string): Promise<void> => {
+    async (path: WorkspacePathValue): Promise<void> => {
       const outcome = await workspaceLoaderFlow.openRecentWorkspacePath(
         path,
         { isWorkspaceOpening, isBrowsingWorkspace },
@@ -218,7 +229,7 @@ export function useWorkspaceLoader(
 
   // 参照安定化して useWorkspaceDrop の毎レンダー再購読を防ぐ（onWatcherError と同じ方針）。
   const handleDropWorkspacePath = useCallback(
-    (path: string): void => {
+    (path: WorkspacePathValue): void => {
       void workspaceLoaderFlow
         .openDroppedWorkspacePath(
           path,

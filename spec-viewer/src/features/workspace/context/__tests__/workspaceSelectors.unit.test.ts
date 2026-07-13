@@ -9,16 +9,17 @@ import {
   type WorkspaceState,
 } from "@/features/workspace/context";
 import type { Workspace } from "@/features/workspace/types/workspace";
+import { workspacePathFixture } from "@/features/workspace/testing/workspacePath";
 
 const workspace: Workspace = {
-  root: "/workspace/spec-reviewer",
+  root: workspacePathFixture("/workspace/spec-reviewer"),
   kind: "plugin-workspace",
   files: [],
 };
 
 const failedState: WorkspaceState = {
   status: "failed",
-  requestedPath: "/workspace/missing",
+  requestedPath: workspacePathFixture("/workspace/missing"),
   error: {
     reason: "detectionFailed",
     message: "not a workspace",
@@ -47,7 +48,7 @@ test("workspace selectorsはopenedのactive rootをworkspace.rootから導出す
 test("workspace selectorsはopeningのrequestedPathをactive rootと混ぜない", () => {
   const state: WorkspaceState = {
     status: "opening",
-    requestedPath: "/workspace/next",
+    requestedPath: workspacePathFixture("/workspace/next"),
     currentWorkspace: workspace,
     error: null,
   };

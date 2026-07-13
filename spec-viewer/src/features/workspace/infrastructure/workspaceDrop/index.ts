@@ -1,7 +1,12 @@
+import {
+  WorkspacePath,
+  type WorkspacePath as WorkspacePathValue,
+} from "@/features/workspace/domain/workspacePath";
+
 export type WorkspaceDropCandidate =
   | Readonly<{
       status: "accepted";
-      path: string;
+      path: WorkspacePathValue;
     }>
   | Readonly<{
       status: "rejected";
@@ -20,18 +25,24 @@ export function createWorkspaceDropCandidate(
     .map((path) => path.trim())
     .filter((path) => path.length > 0);
 
-  if (trimmedPaths.length === 1) {
-    return {
-      status: "accepted",
-      path: trimmedPaths[0] ?? "",
-    };
-  }
-
   if (trimmedPaths.length > 1) {
     return {
       status: "rejected",
       message: multipleDropMessage,
     };
+  }
+
+  const rawPath = trimmedPaths[0];
+
+  if (rawPath !== undefined) {
+    const parsedPath = WorkspacePath.parse(rawPath);
+
+    if (parsedPath.ok) {
+      return {
+        status: "accepted",
+        path: parsedPath.path,
+      };
+    }
   }
 
   return {
@@ -64,21 +75,13 @@ export function extractBrowserDropPaths(
  * @returns A filesystem path from a plain-text drop, when present.
  */
 function normalizeDroppedTextPath(rawPath: string): string | null {
-  const trimmedPath = rawPath.trim();
+  const parsedPath = WorkspacePath.parse(rawPath);
 
-  if (trimmedPath.length === 0) {
+  if (!parsedPath.ok) {
     return null;
   }
 
-  if (!trimmedPath.startsWith("file://")) {
-    return trimmedPath;
-  }
-
-  try {
-    return decodeURIComponent(new URL(trimmedPath).pathname);
-  } catch {
-    return trimmedPath;
-  }
+  return WorkspacePath.toString(parsedPath.path);
 }
 
 /**
