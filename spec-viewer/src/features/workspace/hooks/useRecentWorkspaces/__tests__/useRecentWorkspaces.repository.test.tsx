@@ -231,6 +231,23 @@ test("useRecentWorkspacesはrepository差し替え時にaggregateを再同期す
   expect(hookResult.current?.lastActiveWorkspacePath).toBe("/workspace/beta");
   expect(firstRepository.saveCallCount).toBe(0);
   expect(currentRepository.saveCallCount).toBe(0);
+  act(() => {
+    hookResult.current?.recordWorkspace({
+      root: workspacePathFixture("/workspace/gamma"),
+      kind: "plugin-workspace",
+      files: [],
+    });
+  });
+
+  expect(firstRepository.load().entries.map(({ path }) => path)).toEqual([
+    "/workspace/alpha",
+  ]);
+  expect(currentRepository.load().entries.map(({ path }) => path)).toEqual([
+    "/workspace/gamma",
+    "/workspace/beta",
+  ]);
+  expect(firstRepository.saveCallCount).toBe(0);
+  expect(currentRepository.saveCallCount).toBe(1);
 
   act(() => {
     root.unmount();
