@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 
 import type { RecentWorkspacesClock } from "@/features/workspace/application/ports/recentWorkspacesClock";
 import type { RecentWorkspacesRepository } from "@/features/workspace/application/ports/recentWorkspacesRepository";
@@ -37,6 +37,18 @@ export function useRecentWorkspaces(
   const [recentWorkspaces, setRecentWorkspaces] =
     useState<RecentWorkspacesValue>(() => repository.load());
   const recentWorkspacesRef = useRef(recentWorkspaces);
+  const repositoryRef = useRef(repository);
+
+  useLayoutEffect(() => {
+    if (repositoryRef.current === repository) {
+      return;
+    }
+
+    const restored = repository.load();
+    repositoryRef.current = repository;
+    recentWorkspacesRef.current = restored;
+    setRecentWorkspaces(restored);
+  }, [repository]);
 
   const recordWorkspace = useCallback(
     (workspace: Workspace): void => {
