@@ -1,4 +1,4 @@
-import { act } from "react";
+import { act, useMemo } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 import { CommentId } from "@/features/comments/types/comment";
@@ -6,6 +6,7 @@ import {
   type UserReviewTargetScope,
   useUserReviews,
 } from "@/features/review-runs/hooks/useUserReviews";
+import { createTauriUserReviewRepository } from "@/features/review-runs/infra/userReviewRepository";
 import { createUserReviewCommandTestDouble } from "@/features/review-runs/testing/review-run-command-test-double";
 import type {
   ArchiveUserReviewResponse,
@@ -103,8 +104,20 @@ function renderHook<Props, Result>(
 
 function renderUseUserReviews(props: HookProps) {
   return renderHook(
-    ({ workspacePath, specId, fileKey, targetScope, selectionId, commands }) =>
-      useUserReviews({
+    ({
+      workspacePath,
+      specId,
+      fileKey,
+      targetScope,
+      selectionId,
+      commands,
+    }) => {
+      const repository = useMemo(
+        () => createTauriUserReviewRepository(commands),
+        [commands],
+      );
+
+      return useUserReviews({
         selectionSnapshot: {
           selection: {
             workspacePath:
@@ -117,8 +130,9 @@ function renderUseUserReviews(props: HookProps) {
           },
           selectionId,
         },
-        commands,
-      }),
+        repository,
+      });
+    },
     props,
   );
 }
@@ -201,6 +215,168 @@ test("useUserReviewsは対象が揃うとactive run一覧を読み込む", async
       },
     },
   ]);
+  result.unmount();
+});
+
+test("useUserReviewsはrepository差し替え後に旧list responseを破棄する", async () => {
+  const oldListDeferred = createDeferred<ListUserReviewsResponse>();
+  const currentListDeferred = createDeferred<ListUserReviewsResponse>();
+  const oldCommands: UserReviewCommands = {
+    listUserReviews: vi.fn().mockReturnValue(oldListDeferred.promise),
+    createUserReview: vi.fn(),
+    archiveUserReview: vi.fn(),
+  };
+  const currentCommands: UserReviewCommands = {
+    listUserReviews: vi.fn().mockReturnValue(currentListDeferred.promise),
+    createUserReview: vi.fn(),
+    archiveUserReview: vi.fn(),
+  };
+  const currentRun: UserReview = {
+    ...activeRun,
+    id: "2026-05-06T120000Z-file-tasks-current12",
+    recordLocator: "2026-05-06T120000Z-file-tasks-current12.json",
+  };
+  const result = renderUseUserReviews({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "auth",
+    fileKey: "tasks",
+    targetScope: "file",
+    selectionId,
+    commands: oldCommands,
+  });
+
+  result.rerender({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "auth",
+    fileKey: "tasks",
+    targetScope: "file",
+    selectionId,
+    commands: currentCommands,
+  });
+  await act(async () => {
+    oldListDeferred.resolve({ active: [], archived: [], problems: [] });
+    await oldListDeferred.promise;
+  });
+  await act(async () => {
+    currentListDeferred.resolve({
+      active: [currentRun],
+      archived: [],
+      problems: [],
+    });
+    await currentListDeferred.promise;
+  });
+
+  expect(result.current.activeReviews).toEqual([currentRun]);
+  result.unmount();
+});
+test("useUserReviewsはrepository差し替え後に旧create responseを破棄する", async () => {
+  const oldCreateDeferred = createDeferred<CreateUserReviewResponse>();
+  const oldCommands: UserReviewCommands = {
+    listUserReviews: vi.fn().mockResolvedValue({
+      active: [],
+      archived: [],
+      problems: [],
+    }),
+    createUserReview: vi.fn().mockReturnValue(oldCreateDeferred.promise),
+    archiveUserReview: vi.fn(),
+  };
+  const currentCommands: UserReviewCommands = {
+    listUserReviews: vi.fn().mockResolvedValue({
+      active: [],
+      archived: [],
+      problems: [],
+    }),
+    createUserReview: vi.fn(),
+    archiveUserReview: vi.fn(),
+  };
+  const result = renderUseUserReviews({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "auth",
+    fileKey: "tasks",
+    targetScope: "file",
+    selectionId,
+    commands: oldCommands,
+  });
+  await flushAsyncEffects();
+  let createResult = Promise.resolve<UserReview | null>(null);
+
+  act(() => {
+    createResult = result.current.createUserReview({
+      commentIds: [commentId("cmt_1")],
+    });
+  });
+  result.rerender({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "auth",
+    fileKey: "tasks",
+    targetScope: "file",
+    selectionId,
+    commands: currentCommands,
+  });
+  await flushAsyncEffects();
+  await act(async () => {
+    oldCreateDeferred.resolve({ userReview: activeRun });
+    await oldCreateDeferred.promise;
+  });
+
+  await expect(createResult).resolves.toBeNull();
+  expect(result.current.createState.status).toBe("idle");
+  expect(result.current.activeReviews).toEqual([]);
+  result.unmount();
+});
+
+test("useUserReviewsはrepository差し替え後に旧archive responseを破棄する", async () => {
+  const oldArchiveDeferred = createDeferred<ArchiveUserReviewResponse>();
+  const oldCommands: UserReviewCommands = {
+    listUserReviews: vi.fn().mockResolvedValue({
+      active: [activeRun],
+      archived: [],
+      problems: [],
+    }),
+    createUserReview: vi.fn(),
+    archiveUserReview: vi.fn().mockReturnValue(oldArchiveDeferred.promise),
+  };
+  const currentCommands: UserReviewCommands = {
+    listUserReviews: vi.fn().mockResolvedValue({
+      active: [activeRun],
+      archived: [],
+      problems: [],
+    }),
+    createUserReview: vi.fn(),
+    archiveUserReview: vi.fn(),
+  };
+  const result = renderUseUserReviews({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "auth",
+    fileKey: "tasks",
+    targetScope: "file",
+    selectionId,
+    commands: oldCommands,
+  });
+  await flushAsyncEffects();
+  let archiveResult = Promise.resolve<UserReview | null>(null);
+
+  act(() => {
+    archiveResult = result.current.archiveUserReview(activeRun);
+  });
+  result.rerender({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "auth",
+    fileKey: "tasks",
+    targetScope: "file",
+    selectionId,
+    commands: currentCommands,
+  });
+  await flushAsyncEffects();
+  await act(async () => {
+    oldArchiveDeferred.resolve({ userReview: archivedRun });
+    await oldArchiveDeferred.promise;
+  });
+
+  await expect(archiveResult).resolves.toBeNull();
+  expect(result.current.archiveState.status).toBe("idle");
+  expect(result.current.activeReviews).toEqual([activeRun]);
+  expect(result.current.archivedReviews).toEqual([]);
   result.unmount();
 });
 
