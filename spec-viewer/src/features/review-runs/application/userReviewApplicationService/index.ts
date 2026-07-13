@@ -1,14 +1,3 @@
-import type {
-  ActiveUserReview,
-  ArchivedUserReview,
-} from "@/features/review-runs/domain/userReview";
-import type { CreateUserReviewCommandInput } from "@/features/review-runs/domain/createUserReviewCommand";
-import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
-import type { WorkspacePath } from "@/shared/domain/workspacePath";
-import {
-  createPerformanceCorrelationId,
-  startPerformanceSpan,
-} from "@/shared/lib/performance";
 import {
   OperationToken,
   type OperationToken as OperationTokenType,
@@ -20,6 +9,17 @@ import type {
   ArchiveUserReviewPreparationInput,
   UserReviewUseCases,
 } from "@/features/review-runs/application/userReviewUseCases";
+import type { CreateUserReviewCommandInput } from "@/features/review-runs/domain/createUserReviewCommand";
+import type {
+  ActiveUserReview,
+  ArchivedUserReview,
+} from "@/features/review-runs/domain/userReview";
+import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
+import type { WorkspacePath } from "@/shared/domain/workspacePath";
+import {
+  createPerformanceCorrelationId,
+  startPerformanceSpan,
+} from "@/shared/lib/performance";
 
 export type UserReviewApplicationDispatch = (
   event: UserReviewApplicationEvent,
@@ -40,6 +40,8 @@ export type ArchiveUserReviewApplicationInput =
     Readonly<{ selectionIdentity: SelectionIdentityType }>;
 
 export type UserReviewApplicationService = Readonly<{
+  /** Invalidates operation slots owned by this service instance. */
+  dispose: () => void;
   /** Synchronizes the committed selection and invalidates older operations. */
   select: (
     selectionIdentity: SelectionIdentityType,
@@ -78,6 +80,7 @@ export function createUserReviewApplicationService(
   let listToken: OperationTokenType<"list"> | null = null;
   let createToken: OperationTokenType<"create"> | null = null;
   let archiveToken: OperationTokenType<"archive"> | null = null;
+  let isDisposed = false;
 
   /** @returns Next token for an operation and selection. */
   function nextToken<TOperation extends "list" | "create" | "archive">(
@@ -117,6 +120,7 @@ export function createUserReviewApplicationService(
 
     const inputIdentity = SelectionIdentity.create({
       key: selectionIdentity.key,
+      generation: selectionIdentity.generation,
       workspacePath,
       target,
     });
@@ -124,7 +128,14 @@ export function createUserReviewApplicationService(
   }
 
   return {
+    dispose: (): void => {
+      isDisposed = true;
+      listToken = null;
+      createToken = null;
+      archiveToken = null;
+    },
     select: (selectionIdentity, dispatch): void => {
+      isDisposed = false;
       if (
         !SelectionIdentity.equals(currentSelectionIdentity, selectionIdentity)
       ) {
@@ -136,8 +147,12 @@ export function createUserReviewApplicationService(
       currentSelectionIdentity = selectionIdentity;
       dispatch({ type: "selectionChanged", selectionIdentity });
     },
-    canCreate: useCases.canCreate,
+    canCreate: (input): boolean => !isDisposed && useCases.canCreate(input),
     list: async (input, dispatch): Promise<boolean> => {
+      if (isDisposed) {
+        return false;
+      }
+
       if (
         !isInputForCurrentSelection(
           input.selectionIdentity,
@@ -217,6 +232,10 @@ export function createUserReviewApplicationService(
       return true;
     },
     create: async (input, dispatch): Promise<ActiveUserReview | null> => {
+      if (isDisposed) {
+        return null;
+      }
+
       if (
         !isInputForCurrentSelection(
           input.selectionIdentity,
@@ -264,6 +283,10 @@ export function createUserReviewApplicationService(
       return outcome.userReview;
     },
     archive: async (input, dispatch): Promise<ArchivedUserReview | null> => {
+      if (isDisposed) {
+        return null;
+      }
+
       if (
         !isInputForCurrentSelection(
           input.selectionIdentity,

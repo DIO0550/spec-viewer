@@ -178,10 +178,6 @@ function normalizeErrorCode(code: unknown): UserReviewRepositoryErrorCode {
     return code as UserReviewRepositoryErrorCode;
   }
 
-  if (code === "userReviewExport") {
-    return "userReviewRepository";
-  }
-
   return "unknown";
 }
 
@@ -196,6 +192,7 @@ const repositoryErrorCodes: ReadonlySet<UserReviewRepositoryErrorCode> =
     "invalidUserReview",
     "userReviewCollision",
     "userReviewRepository",
+    "userReviewExport",
     "unexpected",
     "unknown",
   ]);

@@ -17,6 +17,7 @@ export type UserReviewRepositoryErrorCode =
   | "invalidUserReview"
   | "userReviewCollision"
   | "userReviewRepository"
+  | "userReviewExport"
   | "unexpected"
   | "unknown";
 

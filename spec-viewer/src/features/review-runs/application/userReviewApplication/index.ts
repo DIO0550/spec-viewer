@@ -26,9 +26,11 @@ import {
 } from "@/shared/domain/workspacePath";
 
 declare const selectionIdentityBrand: unique symbol;
+const defaultSelectionGeneration = Object.freeze({});
 
 export type SelectionIdentity = Readonly<{
   key: string;
+  generation: object;
   workspacePath: WorkspacePathType | null;
   target: UserReviewTargetType | null;
   readonly [selectionIdentityBrand]: true;
@@ -36,6 +38,7 @@ export type SelectionIdentity = Readonly<{
 
 export type SelectionIdentityInput = Readonly<{
   key: string;
+  generation?: object;
   workspacePath: WorkspacePathType | null;
   target: UserReviewTargetType | null;
 }>;
@@ -46,7 +49,10 @@ export const SelectionIdentity = {
    * @returns Structured identity used by application stale guards.
    */
   create(input: SelectionIdentityInput): SelectionIdentity {
-    return input as SelectionIdentity;
+    return {
+      ...input,
+      generation: input.generation ?? defaultSelectionGeneration,
+    } as SelectionIdentity;
   },
 
   /**
@@ -55,6 +61,10 @@ export const SelectionIdentity = {
    * @returns True when both identities describe the same committed selection.
    */
   equals(current: SelectionIdentity, other: SelectionIdentity): boolean {
+    if (current.generation !== other.generation) {
+      return false;
+    }
+
     if (current.key !== other.key) {
       return false;
     }

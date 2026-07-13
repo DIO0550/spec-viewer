@@ -101,10 +101,11 @@ export function useUserReviews(
     () =>
       SelectionIdentity.create({
         key: selectionId,
+        generation: repository,
         workspacePath: selection.workspacePath,
         target,
       }),
-    [selection.workspacePath, selectionId, target],
+    [repository, selection.workspacePath, selectionId, target],
   );
   const initialSelectionIdentity = useRef(selectionIdentity);
   const useCases = useMemo(
@@ -127,6 +128,7 @@ export function useUserReviews(
 
   useLayoutEffect(() => {
     service.select(selectionIdentity, dispatch);
+    return () => service.dispose();
   }, [selectionIdentity, service]);
 
   const reloadUserReviews = useCallback(
