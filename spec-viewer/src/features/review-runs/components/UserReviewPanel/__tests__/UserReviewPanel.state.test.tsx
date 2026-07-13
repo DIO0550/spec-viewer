@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { act } from "react";
 import type { ReactNode } from "react";
 import { createRoot } from "react-dom/client";
@@ -17,11 +18,11 @@ const activeRunBranchName =
 const activeRunSourcePath = ".plugin-workspace/.specs/auth/tasks.md";
 
 const activeRun: UserReview = {
-  id: "2026-05-06T120000Z-file-tasks-abcdef12",
+  id: TestValues.userReviewId("2026-05-06T120000Z-file-tasks-abcdef12"),
   status: "active",
   target: {
     scope: "file",
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "tasks",
   },
   workspace: {
@@ -35,13 +36,13 @@ const activeRun: UserReview = {
     "/workspace/spec-reviewer.spec-reviewer-worktrees/auth/.plugin-workspace/.specs/auth/user-review/active/2026-05-06T120000Z-file-tasks-abcdef12",
   sourceFiles: [
     {
-      specId: "auth",
+      specId: TestValues.specId("auth"),
       fileKey: "tasks",
       relativePath: activeRunSourcePath,
     },
   ],
   commentCount: 2,
-  createdAt: "2026-05-06T12:00:00Z",
+  createdAt: TestValues.isoDateTime("2026-05-06T12:00:00Z"),
   archivedAt: null,
   summary: null,
   warnings: [],

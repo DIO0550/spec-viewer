@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { invoke } from "@tauri-apps/api/core";
 import { expect, test, vi } from "vitest";
 
@@ -15,7 +16,7 @@ test("startSpecFileWatchはwatch registration successをdecodeする", async () 
   invokeMock.mockReset();
   invokeMock.mockResolvedValue({
     workspacePath: "/workspace/spec-reviewer",
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "tasks",
     strategy: "direct",
     watchedPaths: ["/workspace/spec-reviewer/tasks.md"],
@@ -26,7 +27,7 @@ test("startSpecFileWatchはwatch registration successをdecodeする", async () 
   await expect(
     startSpecFileWatch({
       workspacePath: "/workspace/spec-reviewer",
-      specId: "auth",
+      specId: TestValues.specId("auth"),
       fileKey: "tasks",
     }),
   ).resolves.toMatchObject({ fileKey: "tasks", debounceMs: 100 });

@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { expect, test, vi } from "vitest";
 
 import { UserReviewListState } from "@/features/review-runs/domain/userReviewListState";
@@ -9,7 +10,7 @@ import { buildUserReviewsResult } from "@/features/review-runs/hooks/buildUserRe
 
 const target = {
   scope: "file",
-  specId: "auth",
+  specId: TestValues.specId("auth"),
   fileKey: "tasks",
 } as const;
 

@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
@@ -53,14 +54,14 @@ const cases = [
     label: "selectSpecFromTree",
     actionKey: "selectSpec",
     invoke: (result: UseGuardedSpecActionsResult) =>
-      result.selectSpecFromTree("spec-1"),
+      result.selectSpecFromTree(TestValues.specId("spec-1")),
     expectedArgs: ["spec-1"] as const,
   },
   {
     label: "archiveSpecFromTree",
     actionKey: "archiveSpec",
     invoke: (result: UseGuardedSpecActionsResult) =>
-      result.archiveSpecFromTree("spec-1"),
+      result.archiveSpecFromTree(TestValues.specId("spec-1")),
     expectedArgs: ["spec-1"] as const,
   },
   {

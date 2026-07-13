@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
@@ -15,11 +16,10 @@ import type {
   ExportCommentsResponse,
   GenerateLlmPromptResponse,
 } from "@/features/comments/types/comment";
-import { CommentId as CommentIdValue } from "@/features/comments/types/comment";
 import { toCommentFeatureError } from "@/features/comments";
 import { getUnknownErrorMessage } from "@/shared/lib/errorMessage";
 
-const commentId = CommentIdValue.fromString;
+const commentId = TestValues.commentId;
 
 const anchor: CommentAnchor = {
   fileKey: "impl",
@@ -36,13 +36,13 @@ const openComment: Comment = {
   body: "body",
   status: "open",
   resolved: false,
-  createdAt: "2026-05-05T10:00:00Z",
-  updatedAt: "2026-05-05T10:00:00Z",
+  createdAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
+  updatedAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
 };
 
 const baseKeys: SpecViewResetKeys = {
   workspaceRoot: "/workspace",
-  specId: "spec-1",
+  specId: TestValues.specId("spec-1"),
   fileKey: "impl",
 };
 
@@ -226,8 +226,11 @@ test("export失敗でerror状態とExportCommentsCommandErrorのメッセージ�
 
 test.each([
   ["workspace", { scope: "workspace" }],
-  ["spec", { scope: "spec", specId: "spec-1" }],
-  ["file", { scope: "file", specId: "spec-1", fileKey: "impl" }],
+  ["spec", { scope: "spec", specId: TestValues.specId("spec-1") }],
+  [
+    "file",
+    { scope: "file", specId: TestValues.specId("spec-1"), fileKey: "impl" },
+  ],
 ] as const)("scope別（%s）にtargetが組み立てられる", async (scope, expectedTarget) => {
   const commands = createCommands();
   const hook = renderHook(baseOptions({ commands }));
@@ -395,7 +398,11 @@ test("選択変更でsuccess表示中の状態がidleへリセットされる", 
   await flush();
   expect(hook.current.commentExportState.status).toBe("success");
 
-  hook.rerender(baseOptions({ resetKeys: { ...baseKeys, specId: "spec-2" } }));
+  hook.rerender(
+    baseOptions({
+      resetKeys: { ...baseKeys, specId: TestValues.specId("spec-2") },
+    }),
+  );
 
   expect(hook.current.commentExportState.status).toBe("idle");
   hook.unmount();
@@ -441,7 +448,10 @@ test("選択変更リセット後にin-flightが遅延完了するとidleを上�
   expect(hook.current.commentExportState.status).toBe("saving");
 
   hook.rerender(
-    baseOptions({ resetKeys: { ...baseKeys, specId: "spec-2" }, commands }),
+    baseOptions({
+      resetKeys: { ...baseKeys, specId: TestValues.specId("spec-2") },
+      commands,
+    }),
   );
   expect(hook.current.commentExportState.status).toBe("idle");
 

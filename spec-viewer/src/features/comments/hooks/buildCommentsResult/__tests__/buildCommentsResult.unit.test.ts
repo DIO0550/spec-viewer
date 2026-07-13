@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { expect, test, vi } from "vitest";
 
 import {
@@ -12,11 +13,10 @@ import type {
   UseCommentsResult,
 } from "@/features/comments/hooks/useComments";
 import type { Comment, CommentAnchor } from "@/features/comments/types/comment";
-import { CommentId } from "@/features/comments/types/comment";
 import type { CommentFeatureError } from "@/features/comments/application/commentError";
 import { toCommentFeatureError } from "@/features/comments/infra/tauri/commentErrorMapper";
 
-const commentId = CommentId.fromString;
+const commentId = TestValues.commentId;
 
 const anchor: CommentAnchor = {
   fileKey: "tasks",
@@ -36,8 +36,8 @@ const comment: Comment = {
   body: "Clarify this task",
   status: "open",
   resolved: false,
-  createdAt: "2026-05-05T10:00:00Z",
-  updatedAt: "2026-05-05T10:00:00Z",
+  createdAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
+  updatedAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
 };
 
 const featureError: CommentFeatureError = toCommentFeatureError("add", {

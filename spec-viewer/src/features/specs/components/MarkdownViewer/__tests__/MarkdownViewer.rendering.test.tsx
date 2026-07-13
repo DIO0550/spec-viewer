@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { act } from "react";
 import type { ReactNode } from "react";
 import { createRoot } from "react-dom/client";
@@ -18,14 +19,13 @@ import type {
   CommentBlockType,
   CommentId,
 } from "@/features/comments/types/comment";
-import { CommentId as CommentIdValue } from "@/features/comments/types/comment";
 import type {
   MarkdownBlockMetadata,
   SpecDocument,
 } from "@/features/specs/types/spec";
 import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
 
-const commentId = CommentIdValue.fromString;
+const commentId = TestValues.commentId;
 
 const workspacePath = "/workspace/spec-reviewer";
 const selectedSpecLabel = "Phase 1 Viewer";
@@ -88,10 +88,9 @@ function createReadyState(
   contents: string | null,
   blocks: readonly MarkdownBlockMetadata[] = [],
   format: SpecDocument["format"] = "markdown",
-  documentPath: string =
-    format === "html"
-      ? "/workspace/spec-reviewer/docs/plans/tasks.html"
-      : "/workspace/spec-reviewer/docs/plans/tasks.md",
+  documentPath: string = format === "html"
+    ? "/workspace/spec-reviewer/docs/plans/tasks.html"
+    : "/workspace/spec-reviewer/docs/plans/tasks.md",
 ): SpecDocumentState {
   const document: SpecDocument = {
     key: "tasks",
@@ -105,7 +104,7 @@ function createReadyState(
   return {
     status: "ready",
     workspacePath,
-    specId: "phase-1-viewer",
+    specId: TestValues.specId("phase-1-viewer"),
     fileKey: "tasks",
     document,
     error: null,
@@ -149,8 +148,8 @@ function createComment({
     status: resolved ? "resolved" : "open",
     resolved,
     anchorResolution,
-    createdAt: "2026-05-05T10:00:00Z",
-    updatedAt: "2026-05-05T10:00:00Z",
+    createdAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
+    updatedAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
   };
 }
 
@@ -1795,7 +1794,7 @@ test("MarkdownViewerはmissing状態を表示する", () => {
   const result = renderViewer({
     status: "missing",
     workspacePath,
-    specId: "phase-1-viewer",
+    specId: TestValues.specId("phase-1-viewer"),
     fileKey: "tasks",
     document: missingDocument,
     error: null,
@@ -1809,7 +1808,7 @@ test("MarkdownViewerは読み込み中に文書skeletonを表示する", () => {
   const result = renderViewer({
     status: "loading",
     workspacePath,
-    specId: "phase-1-viewer",
+    specId: TestValues.specId("phase-1-viewer"),
     fileKey: "tasks",
     document: null,
     error: null,
@@ -1830,7 +1829,7 @@ test("MarkdownViewerはerror状態で再読み込みイベントを発火する"
     {
       status: "error",
       workspacePath,
-      specId: "phase-1-viewer",
+      specId: TestValues.specId("phase-1-viewer"),
       fileKey: "tasks",
       document: null,
       error: {

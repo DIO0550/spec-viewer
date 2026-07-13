@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test } from "vitest";
@@ -77,7 +78,7 @@ function renderDocumentReadiness(
 test("createDocumentReadableKeyはready documentのidentityを作る", () => {
   const state = SpecDocumentState.loaded(
     "/workspace/spec-reviewer",
-    "phase-1",
+    TestValues.specId("phase-1"),
     "tasks",
     markdownDocument,
     "corr-1",
@@ -91,7 +92,7 @@ test("createDocumentReadableKeyはready documentのidentityを作る", () => {
 test("useDocumentReadinessはMarkdown初回readableまでcomment scopeを待つ", () => {
   const state = SpecDocumentState.loaded(
     "/workspace/spec-reviewer",
-    "phase-1",
+    TestValues.specId("phase-1"),
     "tasks",
     markdownDocument,
     "corr-1",
@@ -113,7 +114,7 @@ test.each([
   [
     SpecDocumentState.loaded(
       "/workspace/spec-reviewer",
-      "phase-1",
+      TestValues.specId("phase-1"),
       "tasks",
       htmlDocument,
     ),
@@ -123,7 +124,7 @@ test.each([
   [
     SpecDocumentState.loaded(
       "/workspace/spec-reviewer",
-      "phase-1",
+      TestValues.specId("phase-1"),
       "tasks",
       missingDocument,
     ),
@@ -133,7 +134,7 @@ test.each([
   [
     SpecDocumentState.failed(
       "/workspace/spec-reviewer",
-      "phase-1",
+      TestValues.specId("phase-1"),
       "tasks",
       toSpecFeatureError("read", new Error("failed")),
     ),

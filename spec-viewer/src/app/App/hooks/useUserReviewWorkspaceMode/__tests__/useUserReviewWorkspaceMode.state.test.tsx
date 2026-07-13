@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test } from "vitest";
@@ -50,7 +51,7 @@ function renderHook<Props, Result>(
 
 const baseKeys: SpecViewResetKeys = {
   workspaceRoot: "/workspace",
-  specId: "spec-1",
+  specId: TestValues.specId("spec-1"),
   fileKey: "impl",
 };
 
@@ -81,7 +82,7 @@ test("setWorkspaceModeでモードが変更される", () => {
 
 test.each([
   ["fileKey", { ...baseKeys, fileKey: "tasks" as const }],
-  ["specId", { ...baseKeys, specId: "spec-2" }],
+  ["specId", { ...baseKeys, specId: TestValues.specId("spec-2") }],
   ["workspaceRoot", { ...baseKeys, workspaceRoot: "/other" }],
 ])("%s変更でcurrentWorkspaceへリセットされる", (_label, nextKeys) => {
   const hook = render(baseKeys);

@@ -1,11 +1,11 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { expect, test } from "vitest";
 
 import { createSpecSkillMcpFeedbackDryRunPayload } from "@/features/comments/lib/mcpFeedback";
 import { renderSpecSkillMcpFeedbackDryRunPayload } from "@/features/comments/lib/mcpFeedback";
 import type { Comment } from "@/features/comments/types/comment";
-import { CommentId } from "@/features/comments/types/comment";
 
-const commentId = CommentId.fromString;
+const commentId = TestValues.commentId;
 
 const anchoredComment: Comment = {
   id: commentId("cmt_open"),
@@ -29,8 +29,8 @@ const anchoredComment: Comment = {
     details: null,
     target: null,
   },
-  createdAt: "2026-05-06T10:00:00Z",
-  updatedAt: "2026-05-06T10:15:00Z",
+  createdAt: TestValues.isoDateTime("2026-05-06T10:00:00Z"),
+  updatedAt: TestValues.isoDateTime("2026-05-06T10:15:00Z"),
 };
 
 const orphanedComment: Comment = {
@@ -45,14 +45,14 @@ const orphanedComment: Comment = {
     details: "Original paragraph was removed.",
     target: null,
   },
-  createdAt: "2026-05-06T11:00:00Z",
-  updatedAt: "2026-05-06T11:15:00Z",
+  createdAt: TestValues.isoDateTime("2026-05-06T11:00:00Z"),
+  updatedAt: TestValues.isoDateTime("2026-05-06T11:15:00Z"),
 };
 
 test("Spec Skill MCP feedback dry-run payloadは対象interfaceとcomment summaryを含む", () => {
   const payload = createSpecSkillMcpFeedbackDryRunPayload({
     workspacePath: "/workspace/spec-reviewer",
-    specId: "later-phases",
+    specId: TestValues.specId("later-phases"),
     fileKey: "tasks",
     comments: [anchoredComment, orphanedComment],
     generatedAt: "2026-05-06T12:00:00Z",
@@ -62,7 +62,7 @@ test("Spec Skill MCP feedback dry-run payloadは対象interfaceとcomment summar
   expect(payload.interface.toolName).toBe("spec_skill.feedback.submit");
   expect(payload.target).toEqual({
     scope: "file",
-    specId: "later-phases",
+    specId: TestValues.specId("later-phases"),
     fileKey: "tasks",
   });
   expect(payload.summary).toEqual({
@@ -80,7 +80,7 @@ test("Spec Skill MCP feedback dry-run payloadは対象interfaceとcomment summar
 test("Spec Skill MCP feedback dry-run payloadはcopy用JSONとして復元できる", () => {
   const payload = createSpecSkillMcpFeedbackDryRunPayload({
     workspacePath: "/workspace/spec-reviewer",
-    specId: "later-phases",
+    specId: TestValues.specId("later-phases"),
     fileKey: "tasks",
     comments: [anchoredComment],
     generatedAt: "2026-05-06T12:00:00Z",

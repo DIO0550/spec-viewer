@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { expect, test } from "vitest";
 import { isSpecFileWatchEventForSelection } from "@/features/specs/hooks/useSpecFileWatcher";
 import type { SpecFileWatchChangedEvent } from "@/features/specs/types/watch";
@@ -6,14 +7,14 @@ import { WorkspacePath } from "@/shared/domain/workspacePath";
 
 const selection = SpecViewSelection.synchronize(SpecViewSelection.empty(), {
   workspacePath: WorkspacePath.fromString("/workspace/project"),
-  specId: "auth",
+  specId: TestValues.specId("auth"),
   fileKey: "tasks",
 });
 
 test("watch eventがselection identityと一致する場合trueを返す", () => {
   const event: SpecFileWatchChangedEvent = {
     workspacePath: "/workspace/project",
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "tasks",
     changeKind: "markdown",
     path: "/workspace/project/.plugin-workspace/.specs/auth/tasks.md",
@@ -25,17 +26,17 @@ test("watch eventがselection identityと一致する場合trueを返す", () =>
 test.each([
   {
     workspacePath: "/workspace/other",
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "tasks",
   },
   {
     workspacePath: "/workspace/project",
-    specId: "billing",
+    specId: TestValues.specId("billing"),
     fileKey: "tasks",
   },
   {
     workspacePath: "/workspace/project",
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "impl",
   },
 ] as const)("watch eventが異なるselection identityの場合falseを返す", (partialEvent) => {
@@ -53,13 +54,13 @@ test("watch eventの区切り文字を含む値を構造として比較する", 
     SpecViewSelection.empty(),
     {
       workspacePath: WorkspacePath.fromString("/workspace/project:a"),
-      specId: "b",
+      specId: TestValues.specId("b"),
       fileKey: "tasks",
     },
   );
   const event: SpecFileWatchChangedEvent = {
     workspacePath: "/workspace/project",
-    specId: "a:b",
+    specId: TestValues.specId("a:b"),
     fileKey: "tasks",
     changeKind: "markdown",
     path: "/workspace/project/.plugin-workspace/.specs/a:b/tasks.md",

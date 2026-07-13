@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { act, type ReactNode } from "react";
 import { vi } from "vitest";
 
@@ -11,7 +12,6 @@ import type {
   Comment,
   ListCommentsResponse,
 } from "@/features/comments/types/comment";
-import { CommentId } from "@/features/comments/types/comment";
 import type { CommentCommands } from "@/features/comments/application/ports/commentCommands";
 import { SpecViewSelection } from "@/shared/domain/specViewSelection";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
@@ -29,7 +29,7 @@ export type Deferred<T> = Readonly<{
 }>;
 
 export const addedComment: Comment = {
-  id: CommentId.fromString("cmt_concurrent"),
+  id: TestValues.commentId("cmt_concurrent"),
   anchor: {
     fileKey: "tasks",
     blockType: "paragraph",
@@ -41,8 +41,8 @@ export const addedComment: Comment = {
   body: "Keep the committed selection",
   status: "open",
   resolved: false,
-  createdAt: "2026-07-11T12:00:00Z",
-  updatedAt: "2026-07-11T12:00:00Z",
+  createdAt: TestValues.isoDateTime("2026-07-11T12:00:00Z"),
+  updatedAt: TestValues.isoDateTime("2026-07-11T12:00:00Z"),
 };
 
 /** @returns Deferred promise controlled by a concurrent hook test. */
@@ -93,7 +93,7 @@ export async function flushAsyncEffects(): Promise<void> {
 function createCommentScope(fileKey: "tasks" | "design"): CommentScopeType {
   const selection = SpecViewSelection.synchronize(SpecViewSelection.empty(), {
     workspacePath: WorkspacePath.fromString("/workspace/spec-reviewer"),
-    specId: "phase-2-comments",
+    specId: TestValues.specId("phase-2-comments"),
     fileKey,
   });
   return CommentScope.fromSelection(selection) as CommentScopeType;

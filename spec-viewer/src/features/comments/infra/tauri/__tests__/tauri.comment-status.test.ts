@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { invoke } from "@tauri-apps/api/core";
 import { expect, test, vi } from "vitest";
 
@@ -5,7 +6,6 @@ import type {
   Comment,
   CommentStatusRequest,
 } from "@/features/comments/types/comment";
-import { CommentId } from "@/features/comments/types/comment";
 import {
   resolveComment,
   reopenComment,
@@ -17,7 +17,7 @@ vi.mock("@tauri-apps/api/core", () => ({
 }));
 
 const invokeMock = vi.mocked(invoke);
-const commentId = CommentId.fromString;
+const commentId = TestValues.commentId;
 
 const comment: Comment = {
   id: commentId("cmt_1"),
@@ -36,13 +36,13 @@ const comment: Comment = {
   status: "open",
   resolved: false,
   anchorResolution: null,
-  createdAt: "2026-05-05T10:00:00Z",
-  updatedAt: "2026-05-05T10:00:00Z",
+  createdAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
+  updatedAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
 };
 
 const statusRequest: CommentStatusRequest = {
   workspacePath: "/workspace/spec-reviewer",
-  specId: "auth",
+  specId: TestValues.specId("auth"),
   fileKey: "tasks",
   commentId: commentId("cmt_1"),
 };

@@ -10,9 +10,9 @@ import {
 } from "@/app/App/hooks/useCommentSelection";
 import { CommentListState } from "@/features/comments";
 import type { Comment, CommentAnchor } from "@/features/comments/types/comment";
-import { CommentId as CommentIdValue } from "@/features/comments/types/comment";
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 
-const commentId = CommentIdValue.fromString;
+const commentId = TestValues.commentId;
 
 const anchor: CommentAnchor = {
   fileKey: "tasks",
@@ -30,8 +30,8 @@ function makeComment(id: string): Comment {
     body: `body-${id}`,
     status: "open",
     resolved: false,
-    createdAt: "2026-05-05T10:00:00Z",
-    updatedAt: "2026-05-05T10:00:00Z",
+    createdAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
+    updatedAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
   };
 }
 
@@ -42,7 +42,7 @@ const comments = [c1, c2, c3];
 
 const baseKeys: SpecViewResetKeys = {
   workspaceRoot: "/workspace",
-  specId: "spec-1",
+  specId: TestValues.specId("spec-1"),
   fileKey: "impl",
 };
 
@@ -286,7 +286,7 @@ test.each([
 
 test.each([
   ["fileKey", { ...baseKeys, fileKey: "tasks" as const }],
-  ["specId", { ...baseKeys, specId: "spec-2" }],
+  ["specId", { ...baseKeys, specId: TestValues.specId("spec-2") }],
   ["workspaceRoot", { ...baseKeys, workspaceRoot: "/other" }],
 ])("%s変更で選択がリセットされる", (_label, nextKeys) => {
   const hook = renderHook(baseOptions());

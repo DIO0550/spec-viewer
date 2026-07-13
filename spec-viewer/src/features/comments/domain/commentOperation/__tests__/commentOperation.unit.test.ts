@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { expect, test } from "vitest";
 
 import * as commentOperationModule from "@/features/comments/domain/commentOperation";
@@ -7,9 +8,8 @@ import {
   CommentOperationSavingState,
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
-import { CommentId } from "@/features/comments/types/comment";
 
-const commentId = CommentId.fromString;
+const commentId = TestValues.commentId;
 
 const featureError = { kind: "commentFailure" } as const;
 

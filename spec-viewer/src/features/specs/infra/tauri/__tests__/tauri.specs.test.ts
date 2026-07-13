@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { invoke } from "@tauri-apps/api/core";
 import { expect, test, vi } from "vitest";
 
@@ -61,7 +62,7 @@ test("readSpecFileはread_spec_fileへspecIdとfileKeyを渡す", async () => {
 
   const result = await readSpecFile({
     workspacePath: "/workspace/spec-reviewer",
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "tasks",
   });
 
@@ -71,7 +72,7 @@ test("readSpecFileはread_spec_fileへspecIdとfileKeyを渡す", async () => {
   expect(invokeMock).toHaveBeenCalledWith("read_spec_file", {
     request: {
       workspacePath: "/workspace/spec-reviewer",
-      specId: "auth",
+      specId: TestValues.specId("auth"),
       fileKey: "tasks",
     },
   });
@@ -80,13 +81,13 @@ test("readSpecFileはread_spec_fileへspecIdとfileKeyを渡す", async () => {
 test("archiveSpecはarchive_specへworkspacePathとspecIdを渡す", async () => {
   invokeMock.mockReset();
   invokeMock.mockResolvedValue({
-    archivedSpecId: ".plugin-workspace/.specs/auth",
+    archivedSpecId: TestValues.specId(".plugin-workspace/.specs/auth"),
     archivePath: "/workspace/.plugin-workspace/.specs/.archive/auth",
   });
 
   const result = await archiveSpec({
     workspacePath: "/workspace/spec-reviewer",
-    specId: ".plugin-workspace/.specs/auth",
+    specId: TestValues.specId(".plugin-workspace/.specs/auth"),
   });
 
   expect(result.archivePath).toBe(
@@ -95,7 +96,7 @@ test("archiveSpecはarchive_specへworkspacePathとspecIdを渡す", async () =>
   expect(invokeMock).toHaveBeenCalledWith("archive_spec", {
     request: {
       workspacePath: "/workspace/spec-reviewer",
-      specId: ".plugin-workspace/.specs/auth",
+      specId: TestValues.specId(".plugin-workspace/.specs/auth"),
     },
   });
 });
@@ -143,5 +144,34 @@ test("listSpecsはmissing children fieldをstructured decode errorとして拒�
     command: "list_specs",
     code: "invalidResponse",
     path: "$.specs[0].children",
+  });
+});
+
+test("listSpecsはnested specのunsafe IDを最深path付きdecode errorとして拒否する", async () => {
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue({
+    specs: [
+      {
+        id: "auth",
+        label: "auth",
+        files: [],
+        children: [
+          {
+            id: "../escape",
+            label: "escape",
+            files: [],
+            children: [],
+          },
+        ],
+      },
+    ],
+  });
+
+  await expect(listSpecs("/workspace/spec-reviewer")).rejects.toMatchObject({
+    command: "list_specs",
+    code: "invalidResponse",
+    path: "$.specs[0].children[0].id",
+    expected: "valid SpecId",
+    actual: "../escape",
   });
 });

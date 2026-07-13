@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { expect, test } from "vitest";
 
 import {
@@ -7,20 +8,24 @@ import {
   formatProblemState,
   formatUserReviewSummary,
 } from "@/features/review-runs/components/userReviewPanelPresenter";
-import type { UserReview } from "@/features/review-runs/domain/userReview";
+import type {
+  StoredUserReview,
+  UserReview,
+} from "@/features/review-runs/domain/userReview";
+import { ValidatedStoredUserReview } from "@/features/review-runs/domain/validatedStoredUserReview";
 
 const completedReview = createUserReview("completed");
 
 test("canCreateUserReviewは未解決コメントがあり保存中でなければtrueを返す", () => {
-  expect(
-    canCreateUserReview({ openCommentCount: 1, isCreating: false }),
-  ).toBe(true);
+  expect(canCreateUserReview({ openCommentCount: 1, isCreating: false })).toBe(
+    true,
+  );
 });
 
 test("canCreateUserReviewは未解決コメントがないとfalseを返す", () => {
-  expect(
-    canCreateUserReview({ openCommentCount: 0, isCreating: false }),
-  ).toBe(false);
+  expect(canCreateUserReview({ openCommentCount: 0, isCreating: false })).toBe(
+    false,
+  );
 });
 
 test("canArchiveUserReviewはcompletedだけarchive可能にする", () => {
@@ -42,12 +47,12 @@ test("formatProblemStateはproblem stateを日本語labelへ変換する", () =>
 });
 
 function createUserReview(status: UserReview["status"]): UserReview {
-  return {
-    id: `review-${status}`,
+  const stored: StoredUserReview = {
+    id: TestValues.userReviewId("urv_00000000000000000000000000000001"),
     status,
     target: {
       scope: "file",
-      specId: "auth",
+      specId: TestValues.specId("auth"),
       fileKey: "tasks",
     },
     workspace: {
@@ -59,9 +64,18 @@ function createUserReview(status: UserReview["status"]): UserReview {
       "/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/active/review",
     sourceFiles: [],
     commentCount: 1,
-    createdAt: "2026-05-06T12:00:00Z",
-    archivedAt: status === "archived" ? "2026-05-06T12:30:00Z" : null,
+    createdAt: TestValues.isoDateTime("2026-05-06T12:00:00Z"),
+    archivedAt:
+      status === "archived"
+        ? TestValues.isoDateTime("2026-05-06T12:30:00Z")
+        : null,
     summary: null,
     warnings: [],
-  } as UserReview;
+  };
+  const result = ValidatedStoredUserReview.from(stored);
+  if (!result.ok) {
+    throw new Error(result.error.message);
+  }
+
+  return ValidatedStoredUserReview.to(result.validatedStoredUserReview);
 }

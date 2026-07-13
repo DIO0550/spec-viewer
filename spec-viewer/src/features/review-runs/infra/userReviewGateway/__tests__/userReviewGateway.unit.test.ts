@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { expect, test, vi } from "vitest";
 
 import {
@@ -10,12 +11,12 @@ import type { UserReviewCommands } from "@/features/review-runs/application/port
 
 const target = {
   scope: "file",
-  specId: "auth",
+  specId: TestValues.specId("auth"),
   fileKey: "tasks",
 } as const;
 
 const activeReview = createUserReviewDto({
-  id: "review-active",
+  id: TestValues.userReviewId("urv_00000000000000000000000000000001"),
   status: "active",
   archivedAt: null,
 });
@@ -55,9 +56,9 @@ test("listUserReviewsはresponseをnormalizeして返す", async () => {
 
 test("archiveUserReviewはresponseをnormalizeして返す", async () => {
   const archivedReview = createUserReviewDto({
-    id: "review-archived",
+    id: TestValues.userReviewId("urv_00000000000000000000000000000002"),
     status: "archived",
-    archivedAt: "2026-05-06T12:30:00Z",
+    archivedAt: TestValues.isoDateTime("2026-05-06T12:30:00Z"),
   });
   const commands = createCommands({
     archiveUserReview: vi.fn().mockResolvedValue({
@@ -69,7 +70,7 @@ test("archiveUserReviewはresponseをnormalizeして返す", async () => {
     commands,
     "/workspace/spec-reviewer",
     target,
-    "review-archived",
+    TestValues.userReviewId("urv_00000000000000000000000000000002"),
   );
 
   expect(response.userReview).toEqual(archivedReview);
@@ -105,7 +106,7 @@ function createUserReviewDto(
     folderPath: `/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/active/${input.id}`,
     sourceFiles: [],
     commentCount: 1,
-    createdAt: "2026-05-06T12:00:00Z",
+    createdAt: TestValues.isoDateTime("2026-05-06T12:00:00Z"),
     archivedAt: input.archivedAt,
     summary: null,
     warnings: [],

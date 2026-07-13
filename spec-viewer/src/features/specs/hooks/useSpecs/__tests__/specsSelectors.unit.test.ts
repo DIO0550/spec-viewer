@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { expect, test } from "vitest";
 
 import { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
@@ -9,7 +10,7 @@ import type { SpecTreeData } from "@/features/specs";
 const tree: SpecTreeData = {
   specs: [
     {
-      id: "phase-1",
+      id: TestValues.specId("phase-1"),
       label: "Phase 1",
       files: [
         {
@@ -34,7 +35,7 @@ const baseState: SpecsState = {
   specTreeState: SpecTreeState.loaded("/workspace/spec-reviewer", tree),
   documentState: SpecDocumentState.idle("/workspace/spec-reviewer"),
   selection: {
-    specId: "phase-1",
+    specId: TestValues.specId("phase-1"),
     fileKey: "tasks",
   },
   isLoading: false,

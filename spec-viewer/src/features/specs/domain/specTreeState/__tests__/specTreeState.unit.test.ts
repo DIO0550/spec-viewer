@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { expect, test } from "vitest";
 
 import type { SpecFile } from "@/features/specs/domain/specFile";
@@ -13,7 +14,7 @@ const implFile: SpecFile = {
 };
 
 const specNode: SpecNode = {
-  id: "spec-1",
+  id: TestValues.specId("spec-1"),
   label: "Spec 1",
   files: [implFile],
   children: [],

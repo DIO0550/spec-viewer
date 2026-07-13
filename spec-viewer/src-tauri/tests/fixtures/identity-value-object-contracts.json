@@ -1,0 +1,52 @@
+{
+  "specId": {
+    "valid": ["auth", "001-checkout-flow", "group/auth-flow"],
+    "invalid": [
+      "",
+      "   ",
+      "../escape",
+      "/tmp/spec",
+      "spec\\path",
+      "group/./spec",
+      "group//spec",
+      "spec\u0000id"
+    ]
+  },
+  "commentId": {
+    "issued": ["cmt_0123456789abcdef0123456789abcdef"],
+    "legacy": ["cmt_1", "cmt_existing"],
+    "invalid": [
+      "",
+      "   ",
+      "comment_0123456789abcdef0123456789abcdef",
+      "cmt_",
+      "cmt_bad/path"
+    ]
+  },
+  "userReviewId": {
+    "issued": ["urv_0123456789abcdef0123456789abcdef"],
+    "legacy": [
+      "2026-05-06T120000Z-file-tasks-abcdef12",
+      "2026-05-06T120000Z-spec"
+    ],
+    "invalid": [
+      "",
+      "   ",
+      "review-active",
+      "urv_01234567-89ab-cdef-0123-456789abcdef",
+      "urv_0123456789ABCDEF0123456789ABCDEF",
+      "urv_0123456789abcdef"
+    ]
+  },
+  "isoDateTime": {
+    "valid": ["2026-05-06T12:00:00Z", "2026-05-06T21:00:00.123+09:00"],
+    "invalid": [
+      "",
+      "   ",
+      "2026-05-06",
+      "2026-02-30T12:00:00Z",
+      "2026-05-06T12:00:00",
+      "not-a-date"
+    ]
+  }
+}

@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { act } from "react";
 import type { ReactNode } from "react";
 import { createRoot } from "react-dom/client";
@@ -44,7 +45,7 @@ function createLoadingState(): SpecDocumentState {
   return {
     status: "loading",
     workspacePath,
-    specId: "phase-1-viewer",
+    specId: TestValues.specId("phase-1-viewer"),
     fileKey: "tasks",
     correlationId: "cid-loading",
     document: null,
@@ -65,7 +66,7 @@ function createReadyState(contents: string): SpecDocumentState {
   return {
     status: "ready",
     workspacePath,
-    specId: "phase-1-viewer",
+    specId: TestValues.specId("phase-1-viewer"),
     fileKey: "tasks",
     correlationId: "cid-1",
     document,
@@ -145,9 +146,11 @@ test("MarkdownViewerは巨大Markdownでsyntax highlightを無効にする", () 
 });
 
 test("MarkdownViewerは非ASCIIの実バイト数が大きいMarkdownでsyntax highlightを無効にする", () => {
-  const oversizedCode = ["```ts", `const value = "${"あ".repeat(70_000)}";`, "```"].join(
-    "\n",
-  );
+  const oversizedCode = [
+    "```ts",
+    `const value = "${"あ".repeat(70_000)}";`,
+    "```",
+  ].join("\n");
   const result = renderComponent(
     <MarkdownViewer
       state={createReadyState(oversizedCode)}

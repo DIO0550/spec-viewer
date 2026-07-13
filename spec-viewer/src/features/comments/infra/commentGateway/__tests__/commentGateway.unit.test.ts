@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { expect, test, vi } from "vitest";
 import {
   CommentScope,
@@ -15,17 +16,16 @@ import {
 } from "@/features/comments/infra/commentGateway";
 import { createCommentCommandTestDouble } from "@/features/comments/testing/comment-command-test-double";
 import type { Comment, CommentAnchor } from "@/features/comments/types/comment";
-import { CommentId } from "@/features/comments/types/comment";
 import { SpecViewSelection } from "@/shared/domain/specViewSelection";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 
-const commentId = CommentId.fromString;
+const commentId = TestValues.commentId;
 
 const scopeSelection = SpecViewSelection.synchronize(
   SpecViewSelection.empty(),
   {
     workspacePath: WorkspacePath.fromString("/workspace/spec-reviewer"),
-    specId: "phase-2-comments",
+    specId: TestValues.specId("phase-2-comments"),
     fileKey: "tasks",
   },
 );
@@ -49,8 +49,8 @@ const comment: Comment = {
   body: "Clarify this task",
   status: "open",
   resolved: false,
-  createdAt: "2026-05-05T10:00:00Z",
-  updatedAt: "2026-05-05T10:00:00Z",
+  createdAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
+  updatedAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
 };
 
 test("listCommentsはscopeとfilterとcorrelationIdをrequest DTOへ変換する", async () => {
@@ -117,7 +117,7 @@ test("updateCommentはCommentCommandsへ更新request DTOを渡す", async () =>
   const updatedComment: Comment = {
     ...comment,
     body: "Updated body",
-    updatedAt: "2026-05-05T10:15:00Z",
+    updatedAt: TestValues.isoDateTime("2026-05-05T10:15:00Z"),
   };
   const double = createCommentCommandTestDouble({
     updateComment: updatedComment,

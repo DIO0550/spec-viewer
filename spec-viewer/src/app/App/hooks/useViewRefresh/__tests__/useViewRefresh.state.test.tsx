@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { act, useLayoutEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
@@ -24,13 +25,13 @@ import { getUnknownErrorMessage } from "@/shared/lib/errorMessage";
 const workspacePath = WorkspacePath.fromString("/workspace");
 const selection = SpecViewSelection.synchronize(SpecViewSelection.empty(), {
   workspacePath,
-  specId: "spec-1",
+  specId: TestValues.specId("spec-1"),
   fileKey: "impl",
 });
 
 const startResponse = {
   workspacePath: "/workspace",
-  specId: "spec-1",
+  specId: TestValues.specId("spec-1"),
   fileKey: "impl" as const,
   strategy: "native",
   watchedPaths: [],
@@ -152,7 +153,7 @@ function fireChanged(
     handlers.get(SPEC_FILE_WATCH_CHANGED_EVENT)?.({
       payload: {
         workspacePath: "/workspace",
-        specId: "spec-1",
+        specId: TestValues.specId("spec-1"),
         fileKey: "impl",
         changeKind,
         path: "/workspace/spec-1/impl.md",
@@ -244,7 +245,7 @@ test.each([
         SpecViewSelection.empty(),
         workspacePath,
       ),
-      "spec-1",
+      TestValues.specId("spec-1"),
     ),
     false,
   ],
@@ -366,7 +367,7 @@ test("watcherエラーイベントで監視失敗メッセージとevent.message
     handlers.get(SPEC_FILE_WATCH_ERROR_EVENT)?.({
       payload: {
         workspacePath: "/workspace",
-        specId: "spec-1",
+        specId: TestValues.specId("spec-1"),
         fileKey: "impl",
         message: "watch died",
       },
@@ -396,7 +397,7 @@ test("selection変更commit後のpassive effect前に旧watch eventを受けて�
     SpecViewSelection.empty(),
     {
       workspacePath,
-      specId: "spec-2",
+      specId: TestValues.specId("spec-2"),
       fileKey: "impl",
     },
   );
@@ -413,7 +414,7 @@ test("selection変更commit後のpassive effect前に旧watch eventを受けて�
       previousChangedHandler?.({
         payload: {
           workspacePath: "/workspace",
-          specId: "spec-1",
+          specId: TestValues.specId("spec-1"),
           fileKey: "impl",
           changeKind: "markdown",
           path: "/workspace/spec-1/impl.md",

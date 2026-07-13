@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { expect, test } from "vitest";
 
 import { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
@@ -38,11 +39,15 @@ test("SpecDocumentState.idleは選択なし状態を生成する", () => {
 
 test("SpecDocumentState.idleは任意の選択contextを保持する", () => {
   expect(
-    SpecDocumentState.idle("/workspace/spec-viewer", "spec-1", "tasks"),
+    SpecDocumentState.idle(
+      "/workspace/spec-viewer",
+      TestValues.specId("spec-1"),
+      "tasks",
+    ),
   ).toEqual({
     status: "idle",
     workspacePath: "/workspace/spec-viewer",
-    specId: "spec-1",
+    specId: TestValues.specId("spec-1"),
     fileKey: "tasks",
     document: null,
     error: null,
@@ -53,14 +58,14 @@ test("SpecDocumentState.loadingはcorrelation id付きの読み込み中状態�
   expect(
     SpecDocumentState.loading(
       "/workspace/spec-viewer",
-      "spec-1",
+      TestValues.specId("spec-1"),
       "impl",
       "document-read-1",
     ),
   ).toEqual({
     status: "loading",
     workspacePath: "/workspace/spec-viewer",
-    specId: "spec-1",
+    specId: TestValues.specId("spec-1"),
     fileKey: "impl",
     correlationId: "document-read-1",
     document: null,
@@ -72,7 +77,7 @@ test("SpecDocumentState.loadedはmissing=falseならready状態を生成する",
   expect(
     SpecDocumentState.loaded(
       "/workspace/spec-viewer",
-      "spec-1",
+      TestValues.specId("spec-1"),
       "impl",
       document,
       "document-read-1",
@@ -80,7 +85,7 @@ test("SpecDocumentState.loadedはmissing=falseならready状態を生成する",
   ).toEqual({
     status: "ready",
     workspacePath: "/workspace/spec-viewer",
-    specId: "spec-1",
+    specId: TestValues.specId("spec-1"),
     fileKey: "impl",
     correlationId: "document-read-1",
     document,
@@ -92,14 +97,14 @@ test("SpecDocumentState.loadedはmissing=trueならmissing状態を生成する"
   expect(
     SpecDocumentState.loaded(
       "/workspace/spec-viewer",
-      "spec-1",
+      TestValues.specId("spec-1"),
       "impl",
       missingDocument,
     ),
   ).toEqual({
     status: "missing",
     workspacePath: "/workspace/spec-viewer",
-    specId: "spec-1",
+    specId: TestValues.specId("spec-1"),
     fileKey: "impl",
     document: missingDocument,
     error: null,
@@ -110,7 +115,7 @@ test("SpecDocumentState.failedは正規化済みエラーとcorrelation idを保
   expect(
     SpecDocumentState.failed(
       "/workspace/spec-viewer",
-      "spec-1",
+      TestValues.specId("spec-1"),
       "impl",
       error,
       "document-read-1",
@@ -118,7 +123,7 @@ test("SpecDocumentState.failedは正規化済みエラーとcorrelation idを保
   ).toEqual({
     status: "error",
     workspacePath: "/workspace/spec-viewer",
-    specId: "spec-1",
+    specId: TestValues.specId("spec-1"),
     fileKey: "impl",
     correlationId: "document-read-1",
     document: null,

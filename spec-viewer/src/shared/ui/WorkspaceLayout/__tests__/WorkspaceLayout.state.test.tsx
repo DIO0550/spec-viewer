@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { act } from "react";
 import type { ReactElement, ReactNode } from "react";
 import { createRoot } from "react-dom/client";
@@ -75,12 +76,12 @@ const hearingFile: SpecFile = {
 };
 
 const selectedSpec: SpecNode = {
-  id: "phase-1-viewer",
+  id: TestValues.specId("phase-1-viewer"),
   label: "Phase 1 Viewer",
   files: [taskFile, implFile],
   children: [
     {
-      id: "phase-1-comments",
+      id: TestValues.specId("phase-1-comments"),
       label: "Phase 1 Comments",
       files: [taskFile],
       children: [],
@@ -98,12 +99,12 @@ const issueTreeState: SpecTreeState = {
   tree: {
     specs: [
       {
-        id: "021-issue-262",
+        id: TestValues.specId("021-issue-262"),
         label: "021-issue-262",
         files: [taskFile, implFile],
         children: [
           {
-            id: "021-issue-262/code-review",
+            id: TestValues.specId("021-issue-262/code-review"),
             label: "code-review",
             files: [implFile],
             children: [],
@@ -311,7 +312,7 @@ test("SpecTabsはbackendの6タブ順をそのまま表示する", () => {
   const result = renderComponent(
     <SpecTabs
       spec={{
-        id: "tech-reference-tab",
+        id: TestValues.specId("tech-reference-tab"),
         label: "Tech Reference Tab",
         files: [
           implFile,
@@ -623,7 +624,7 @@ test("SpecTreeはloading中に描画済みspec選択を発火しない", () => {
     <SpecTree
       state={readyTreeState}
       selectedSpecId={null}
-      archivingSpecId="phase-1-viewer"
+      archivingSpecId={TestValues.specId("phase-1-viewer")}
       isLoading
       onSelectSpec={onSelectSpec}
       onReload={vi.fn()}
@@ -672,7 +673,7 @@ test("SpecTreeはloading中にreloadとarchiveを発火しない", () => {
     <SpecTree
       state={readyTreeState}
       selectedSpecId={null}
-      archivingSpecId="phase-1-viewer"
+      archivingSpecId={TestValues.specId("phase-1-viewer")}
       isLoading
       onSelectSpec={vi.fn()}
       onArchiveSpec={onArchiveSpec}
@@ -706,7 +707,7 @@ test("SpecTreeはarchive中にreloadとspec選択とarchiveを発火しない", 
     <SpecTree
       state={readyTreeState}
       selectedSpecId={null}
-      archivingSpecId="phase-1-viewer"
+      archivingSpecId={TestValues.specId("phase-1-viewer")}
       onSelectSpec={onSelectSpec}
       onArchiveSpec={onArchiveSpec}
       onReload={onReload}
@@ -804,7 +805,7 @@ test.each([
     <SpecTree
       state={state}
       selectedSpecId={null}
-      archivingSpecId="phase-1-viewer"
+      archivingSpecId={TestValues.specId("phase-1-viewer")}
       isLoading
       onSelectSpec={vi.fn()}
       onReload={onReload}
@@ -828,7 +829,7 @@ test("SpecTreeはsource group rootにはアーカイブ操作を表示しない"
     tree: {
       specs: [
         {
-          id: ".plugin-workspace/.specs",
+          id: TestValues.specId(".plugin-workspace/.specs"),
           label: "ルート",
           files: [],
           children: [selectedSpec],
@@ -935,7 +936,7 @@ test("SpecTreeは矢印キーでtree itemのfocusを移動する", () => {
   const result = renderComponent(
     <SpecTree
       state={readyTreeState}
-      selectedSpecId="phase-1-comments"
+      selectedSpecId={TestValues.specId("phase-1-comments")}
       onSelectSpec={vi.fn()}
       onReload={vi.fn()}
     />,
@@ -957,7 +958,7 @@ test("SpecTreeは左右矢印キーで親子tree itemへfocusを移動する", (
   const result = renderComponent(
     <SpecTree
       state={readyTreeState}
-      selectedSpecId="phase-1-comments"
+      selectedSpecId={TestValues.specId("phase-1-comments")}
       onSelectSpec={vi.fn()}
       onReload={vi.fn()}
     />,

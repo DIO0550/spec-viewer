@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { act, useLayoutEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
@@ -5,7 +6,6 @@ import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewT
 import { useCreateUserReview } from "@/features/review-runs/hooks/useCreateUserReview";
 import type { UserReview } from "@/features/review-runs/types/userReviewIpc";
 import type { UserReviewCommands } from "@/features/review-runs/application/ports/userReviewCommands";
-import { CommentId } from "@/shared/domain/commentId";
 import {
   SelectionIdentity,
   SpecViewSelection,
@@ -16,7 +16,7 @@ import { WorkspacePath } from "@/shared/domain/workspacePath";
 function createSelectionIdentity(seed: string): SelectionIdentity {
   const selection = SpecViewSelection.synchronize(SpecViewSelection.empty(), {
     workspacePath: WorkspacePath.fromString(seed),
-    specId: "auth",
+    specId: TestValues.specId("auth"),
     fileKey: "tasks",
   });
 
@@ -110,12 +110,12 @@ function renderUseCreateUserReview(props: HookProps) {
 
 const target: UserReviewTarget = {
   scope: "file",
-  specId: "auth",
+  specId: TestValues.specId("auth"),
   fileKey: "tasks",
 };
 
 const activeRun: UserReview = {
-  id: "review-active",
+  id: TestValues.userReviewId("urv_00000000000000000000000000000001"),
   status: "active",
   target,
   workspace: {
@@ -127,13 +127,13 @@ const activeRun: UserReview = {
     "/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/active/review-active",
   sourceFiles: [
     {
-      specId: "auth",
+      specId: TestValues.specId("auth"),
       fileKey: "tasks",
       relativePath: ".plugin-workspace/.specs/auth/tasks.md",
     },
   ],
   commentCount: 1,
-  createdAt: "2026-05-06T12:00:00Z",
+  createdAt: TestValues.isoDateTime("2026-05-06T12:00:00Z"),
   archivedAt: null,
   summary: null,
   warnings: [],
@@ -141,7 +141,7 @@ const activeRun: UserReview = {
 
 const secondActiveRun: UserReview = {
   ...activeRun,
-  id: "review-second-active",
+  id: TestValues.userReviewId("urv_00000000000000000000000000000005"),
 };
 
 function createCommands(): UserReviewCommands {
@@ -185,7 +185,7 @@ test("useCreateUserReviewはcreate成功後にreviewCreated eventを発行する
 
   await act(async () => {
     await result.current.createUserReview({
-      commentIds: [CommentId.fromString("cmt_1")],
+      commentIds: [TestValues.commentId("cmt_1")],
       workspaceMode: "currentWorkspace",
     });
   });
@@ -215,7 +215,7 @@ test("useCreateUserReviewはselectionIdを戻しても古いsuccessを再表示�
 
   await act(async () => {
     await result.current.createUserReview({
-      commentIds: [CommentId.fromString("cmt_1")],
+      commentIds: [TestValues.commentId("cmt_1")],
       workspaceMode: "currentWorkspace",
     });
   });
@@ -255,12 +255,12 @@ test("useCreateUserReviewは同一identityの古いcreate完了を反映しな�
   });
 
   const firstPromise = result.current.createUserReview({
-    commentIds: [CommentId.fromString("cmt_1")],
+    commentIds: [TestValues.commentId("cmt_1")],
     workspaceMode: "currentWorkspace",
   });
   await act(async () => {
     await result.current.createUserReview({
-      commentIds: [CommentId.fromString("cmt_2")],
+      commentIds: [TestValues.commentId("cmt_2")],
       workspaceMode: "currentWorkspace",
     });
   });
@@ -301,7 +301,7 @@ test("selection変更renderのpassive effect前にcreateが完了してもevent�
     onUserReviewEvent,
   });
   const createPromise = result.current.createUserReview({
-    commentIds: [CommentId.fromString("cmt_1")],
+    commentIds: [TestValues.commentId("cmt_1")],
     workspaceMode: "currentWorkspace",
   });
 

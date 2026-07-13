@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import type { ReactNode } from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
@@ -10,14 +11,13 @@ import type {
   CommentExportScope,
   CommentId,
 } from "@/features/comments/types/comment";
-import { CommentId as CommentIdValue } from "@/features/comments/types/comment";
 import {
   type CommentExportState,
   CommentSidebar,
 } from "@/features/comments/components/CommentSidebar";
 import { toCommentFeatureError } from "@/features/comments/infra/tauri/commentErrorMapper";
 
-const commentId = CommentIdValue.fromString;
+const commentId = TestValues.commentId;
 
 const anchor: CommentAnchor = {
   fileKey: "tasks",
@@ -37,8 +37,8 @@ const openComment: Comment = {
   body: "Clarify what counts as an active comment highlight.",
   status: "open",
   resolved: false,
-  createdAt: "2026-05-05T10:00:00Z",
-  updatedAt: "2026-05-05T10:15:00Z",
+  createdAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
+  updatedAt: TestValues.isoDateTime("2026-05-05T10:15:00Z"),
 };
 
 const resolvedComment: Comment = {
@@ -47,32 +47,32 @@ const resolvedComment: Comment = {
   body: "This acceptance item is covered.",
   status: "resolved",
   resolved: true,
-  createdAt: "2026-05-05T11:00:00Z",
-  updatedAt: "2026-05-05T11:30:00Z",
+  createdAt: TestValues.isoDateTime("2026-05-05T11:00:00Z"),
+  updatedAt: TestValues.isoDateTime("2026-05-05T11:30:00Z"),
 };
 
 const fuzzyComment: Comment = {
   ...openComment,
   id: commentId("cmt_fuzzy"),
   body: "Re-check this moved paragraph before final review.",
-  createdAt: "2026-05-05T12:00:00Z",
-  updatedAt: "2026-05-05T12:15:00Z",
+  createdAt: TestValues.isoDateTime("2026-05-05T12:00:00Z"),
+  updatedAt: TestValues.isoDateTime("2026-05-05T12:15:00Z"),
 };
 
 const staleComment: Comment = {
   ...openComment,
   id: commentId("cmt_stale"),
   body: "Original snippet changed after this comment was created.",
-  createdAt: "2026-05-05T13:00:00Z",
-  updatedAt: "2026-05-05T13:15:00Z",
+  createdAt: TestValues.isoDateTime("2026-05-05T13:00:00Z"),
+  updatedAt: TestValues.isoDateTime("2026-05-05T13:15:00Z"),
 };
 
 const orphanedComment: Comment = {
   ...openComment,
   id: commentId("cmt_orphaned"),
   body: "This anchor can no longer be found in the document.",
-  createdAt: "2026-05-05T14:00:00Z",
-  updatedAt: "2026-05-05T14:15:00Z",
+  createdAt: TestValues.isoDateTime("2026-05-05T14:00:00Z"),
+  updatedAt: TestValues.isoDateTime("2026-05-05T14:15:00Z"),
 };
 
 const overviewComment: Comment = {
@@ -84,8 +84,8 @@ const overviewComment: Comment = {
     textSnippet: "Searchable orphaned snippet for release notes",
   },
   body: "Summarize release risk for reviewers.",
-  createdAt: "2026-05-05T15:00:00Z",
-  updatedAt: "2026-05-05T15:15:00Z",
+  createdAt: TestValues.isoDateTime("2026-05-05T15:00:00Z"),
+  updatedAt: TestValues.isoDateTime("2026-05-05T15:15:00Z"),
 };
 
 type RenderResult = Readonly<{
