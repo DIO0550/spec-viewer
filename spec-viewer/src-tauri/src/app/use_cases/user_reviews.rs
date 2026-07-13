@@ -1,7 +1,7 @@
 //! User-review use cases that build and persist single-document aggregates.
 
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     path::{Component, Path},
 };
 
@@ -284,6 +284,7 @@ where
         source_documents: &[UserReviewSourceDocument],
     ) -> Result<Vec<UserReviewComment>, AppUseCaseError> {
         let mut snapshots = HashMap::new();
+        let selected_ids = input.comment_ids().iter().cloned().collect::<HashSet<_>>();
 
         for source in source_documents {
             let query = CommentListQuery::with_status_filter(
@@ -294,7 +295,7 @@ where
 
             for comment in comments
                 .into_iter()
-                .filter(|comment| input.comment_ids().contains(comment.id()))
+                .filter(|comment| selected_ids.contains(comment.id()))
             {
                 let id = comment.id().clone();
                 let snapshot = snapshot_comment(comment, source)?;
@@ -348,6 +349,12 @@ fn snapshot_comment(
             .ok_or_else(|| UserReviewUseCaseError::MissingBlockSourceRange {
                 id: comment.id().clone(),
             })?;
+    if range.is_empty() {
+        return Err(UserReviewUseCaseError::InvalidBlockSourceRange {
+            id: comment.id().clone(),
+        }
+        .into());
+    }
     let line_start = line_number_at_offset(source.contents(), range.start_byte_offset())
         .ok_or_else(|| UserReviewUseCaseError::InvalidBlockSourceRange {
             id: comment.id().clone(),
