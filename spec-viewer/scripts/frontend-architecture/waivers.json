@@ -56,24 +56,6 @@
     },
     {
       "rule": "domain-forbidden-dependency",
-      "source": "features/review-runs/domain/userReviewCollection/index.ts",
-      "specifier": "@/features/review-runs/types/userReviewIpc",
-      "issue": 110
-    },
-    {
-      "rule": "domain-forbidden-dependency",
-      "source": "features/review-runs/domain/userReviewListState/index.ts",
-      "specifier": "@/features/review-runs/types/userReviewIpc",
-      "issue": 110
-    },
-    {
-      "rule": "domain-forbidden-dependency",
-      "source": "features/review-runs/domain/userReviewOperation/index.ts",
-      "specifier": "@/features/review-runs/types/userReviewIpc",
-      "issue": 110
-    },
-    {
-      "rule": "domain-forbidden-dependency",
       "source": "features/specs/domain/specDocumentState/index.ts",
       "specifier": "@/features/specs/types/spec",
       "issue": 118
