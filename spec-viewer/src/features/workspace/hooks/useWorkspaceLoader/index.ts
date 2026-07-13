@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import {
+  createOpenWorkspaceUseCase,
+  isWorkspaceOpenGuarded,
+  type OpenWorkspaceOutcome,
+  type OpenWorkspacePorts,
+} from "@/features/workspace/application/openWorkspace";
 import { useWorkspace } from "@/features/workspace/context/hooks";
 import {
   selectActiveWorkspaceRoot,
@@ -7,21 +13,19 @@ import {
   selectWorkspace,
   selectWorkspaceError,
 } from "@/features/workspace/context/selectors";
-import { useRecentWorkspaces } from "@/features/workspace/hooks/useRecentWorkspaces";
-import { useWorkspaceDrop } from "@/features/workspace/hooks/useWorkspaceDrop";
+import type { Workspace } from "@/features/workspace/domain/workspace";
 import {
   WorkspacePath,
   type WorkspacePath as WorkspacePathValue,
 } from "@/features/workspace/domain/workspacePath";
-import * as workspaceLoaderFlow from "@/features/workspace/hooks/useWorkspaceLoader/flow";
+import { useRecentWorkspaces } from "@/features/workspace/hooks/useRecentWorkspaces";
+import { useWorkspaceDrop } from "@/features/workspace/hooks/useWorkspaceDrop";
 import type {
-  OpenDroppedWorkspaceOutcome,
-  OpenRecentWorkspaceOutcome,
   UseWorkspaceLoaderOptions,
   UseWorkspaceLoaderResult,
   WorkspaceLoaderCommands,
-  WorkspaceLoaderFlowIo,
 } from "@/features/workspace/hooks/useWorkspaceLoader/types";
+import { presentOpenWorkspaceOutcome } from "@/features/workspace/presentation/openWorkspacePresenter";
 import {
   selectWorkspaceDirectory as defaultSelectWorkspaceDirectory,
   validateWorkspaceDirectory as defaultValidateWorkspaceDirectory,
@@ -41,7 +45,7 @@ export type {
 
 /**
  * @param options - Shared error sink plus test-only DI (commands / storage / workspace override).
- * @returns Workspace open/restore/drop state and guarded loader actions.
+ * @returns Workspace open/restore/drop state and command adapters.
  */
 export function useWorkspaceLoader(
   options: UseWorkspaceLoaderOptions,
@@ -74,75 +78,82 @@ export function useWorkspaceLoader(
   const validateWorkspaceDirectory = commands.validateWorkspaceDirectory;
   const selectWorkspaceDirectory = commands.selectWorkspaceDirectory;
 
-  // io ラッパー: 各 IPC 呼び出しの直前に「クリア + input 更新」を合成する（途中経過の等価維持）。
-  const flowIo: WorkspaceLoaderFlowIo = useMemo(() => {
-    /**
-     * 各 IPC 呼び出しの直前にエラー表示をクリアし、入力欄へパスを反映する。
-     * @param path - 開こうとしているワークスペースディレクトリパス。
-     */
-    const applyOpenProgress = (path: WorkspacePathValue): void => {
-      const rawPath = WorkspacePath.toString(path);
+  const applyOpenProgress = useCallback(
+    (path: WorkspacePathValue): void => {
       onError(null);
       setDropErrorMessage(null);
-      setWorkspaceInput(rawPath);
-    };
+      setWorkspaceInput(WorkspacePath.toString(path));
+    },
+    [onError],
+  );
 
-    return {
-      /** @param path - 検証対象のワークスペースディレクトリパス。 */
+  const openWorkspacePorts: OpenWorkspacePorts = useMemo(
+    () => ({
       validate: (path) => {
         applyOpenProgress(path);
         return validateWorkspaceDirectory(WorkspacePath.toString(path));
       },
-      /**
-       * @param path - 読み込むワークスペースディレクトリパス。
-       * @param preserveCurrentWorkspace - 失敗時に現在のワークスペースを保持するか。
-       */
-      load: (path, preserveCurrentWorkspace) => {
+      load: async (path, loadOptions) => {
+        let loadedWorkspace: Workspace | null = null;
         applyOpenProgress(path);
-        return workspaceLoad(path, {
-          preserveCurrentWorkspace,
-          onWorkspaceLoaded: recordWorkspace,
+        const isLoaded = await workspaceLoad(path, {
+          preserveCurrentWorkspace: loadOptions.preserveCurrentWorkspace,
+          onWorkspaceLoaded: (nextWorkspace) => {
+            loadedWorkspace = nextWorkspace;
+          },
         });
+
+        return isLoaded ? loadedWorkspace : null;
       },
-    };
-  }, [onError, recordWorkspace, validateWorkspaceDirectory, workspaceLoad]);
-
-  /**
-   * ドロップ結果を状態へ適用する（ディレクトリでない/例外時はエラー表示）。
-   * @param outcome - openDroppedWorkspacePath の判定結果。
-   */
-  const applyDropOutcome = useCallback(
-    (outcome: OpenDroppedWorkspaceOutcome): void => {
-      if (outcome.type === "notDirectory" || outcome.type === "dropException") {
-        setDropErrorMessage(outcome.dropMessage);
-      }
-    },
-    [],
+      recentWorkspaces: {
+        record: async (loadedWorkspace) => {
+          recordWorkspace(loadedWorkspace);
+        },
+        remove: async (path) => {
+          removeWorkspace(path);
+        },
+      },
+    }),
+    [
+      applyOpenProgress,
+      recordWorkspace,
+      removeWorkspace,
+      validateWorkspaceDirectory,
+      workspaceLoad,
+    ],
+  );
+  const openWorkspace = useMemo(
+    () => createOpenWorkspaceUseCase(openWorkspacePorts),
+    [openWorkspacePorts],
   );
 
-  const applyRecentOutcome = useCallback(
-    (outcome: OpenRecentWorkspaceOutcome): void => {
-      if (
-        outcome.type === "recentMissing" ||
-        outcome.type === "recentUnsupported" ||
-        outcome.type === "recentException"
-      ) {
-        removeWorkspace(outcome.removePath);
-        onError(outcome.dialogMessage);
-        setWorkspaceInput(outcome.rollbackInput);
+  const dispatchOpenWorkspaceOutcome = useCallback(
+    (outcome: OpenWorkspaceOutcome): void => {
+      const presentation = presentOpenWorkspaceOutcome(outcome);
+
+      if (presentation.type === "none") {
+        return;
       }
+
+      if (presentation.type === "dropError") {
+        setDropErrorMessage(presentation.message);
+        return;
+      }
+
+      onError(presentation.message);
+      setWorkspaceInput(presentation.rollbackInput);
     },
-    [onError, removeWorkspace],
+    [onError],
   );
 
-  /** ネイティブのディレクトリ選択ダイアログを開き、選択したワークスペースを読み込む。 */
+  const availability = useMemo(
+    () => ({ isWorkspaceOpening, isBrowsingWorkspace }),
+    [isBrowsingWorkspace, isWorkspaceOpening],
+  );
+
+  /** Opens a native directory picker and dispatches the selected browse command. */
   const browseWorkspace = async (): Promise<void> => {
-    if (
-      workspaceLoaderFlow.isEntryGuarded({
-        isWorkspaceOpening,
-        isBrowsingWorkspace,
-      })
-    ) {
+    if (isWorkspaceOpenGuarded(availability)) {
       return;
     }
 
@@ -156,13 +167,11 @@ export function useWorkspaceLoader(
         return;
       }
 
-      const parsedPath = WorkspacePath.parse(selectedDirectory);
-
-      if (!parsedPath.ok) {
-        return;
-      }
-
-      await workspaceLoaderFlow.openWorkspacePath(parsedPath.path, flowIo);
+      const outcome = await openWorkspace({
+        type: "browse",
+        rawPath: selectedDirectory,
+      });
+      dispatchOpenWorkspaceOutcome(outcome);
     } catch (error) {
       onError(getUnknownErrorMessage(error));
     } finally {
@@ -170,31 +179,32 @@ export function useWorkspaceLoader(
     }
   };
 
-  /** 入力欄のパスからワークスペースを読み込む。 */
+  /** Dispatches the current input as an open command. */
   const loadWorkspace = (): void => {
-    void workspaceLoaderFlow.openWorkspaceFromInput(workspaceInput, flowIo);
+    void openWorkspace({ type: "input", rawPath: workspaceInput }).then(
+      dispatchOpenWorkspaceOutcome,
+    );
   };
 
   const openRecentWorkspacePath = useCallback(
     async (path: WorkspacePathValue): Promise<void> => {
-      const outcome = await workspaceLoaderFlow.openRecentWorkspacePath(
+      const outcome = await openWorkspace({
+        type: "recent",
         path,
-        { isWorkspaceOpening, isBrowsingWorkspace },
         activeWorkspaceRoot,
-        flowIo,
-      );
-      applyRecentOutcome(outcome);
+        availability,
+      });
+      dispatchOpenWorkspaceOutcome(outcome);
     },
     [
       activeWorkspaceRoot,
-      applyRecentOutcome,
-      flowIo,
-      isBrowsingWorkspace,
-      isWorkspaceOpening,
+      availability,
+      dispatchOpenWorkspaceOutcome,
+      openWorkspace,
     ],
   );
 
-  /** 現在のワークスペースと入力・エラー状態をリセットする。 */
+  /** Resets the current workspace and view feedback state. */
   const resetWorkspace = (): void => {
     setWorkspaceInput("");
     onError(null);
@@ -216,29 +226,33 @@ export function useWorkspaceLoader(
     if (recentWorkspaces.lastActiveWorkspacePath === null) {
       return;
     }
+
     setHasAttemptedStartupRestore(true);
-    void openRecentWorkspacePath(recentWorkspaces.lastActiveWorkspacePath);
+    void openWorkspace({
+      type: "startupRestore",
+      path: recentWorkspaces.lastActiveWorkspacePath,
+      activeWorkspaceRoot,
+      availability,
+    }).then(dispatchOpenWorkspaceOutcome);
   }, [
+    activeWorkspaceRoot,
+    availability,
     currentWorkspace,
+    dispatchOpenWorkspaceOutcome,
     hasAttemptedStartupRestore,
     isBrowsingWorkspace,
     isWorkspaceOpening,
-    openRecentWorkspacePath,
+    openWorkspace,
     recentWorkspaces.lastActiveWorkspacePath,
   ]);
 
-  // 参照安定化して useWorkspaceDrop の毎レンダー再購読を防ぐ（onWatcherError と同じ方針）。
   const handleDropWorkspacePath = useCallback(
     (path: WorkspacePathValue): void => {
-      void workspaceLoaderFlow
-        .openDroppedWorkspacePath(
-          path,
-          { isWorkspaceOpening, isBrowsingWorkspace },
-          flowIo,
-        )
-        .then(applyDropOutcome);
+      void openWorkspace({ type: "drop", path, availability }).then(
+        dispatchOpenWorkspaceOutcome,
+      );
     },
-    [applyDropOutcome, flowIo, isBrowsingWorkspace, isWorkspaceOpening],
+    [availability, dispatchOpenWorkspaceOutcome, openWorkspace],
   );
 
   const workspaceDrop = useWorkspaceDrop({
