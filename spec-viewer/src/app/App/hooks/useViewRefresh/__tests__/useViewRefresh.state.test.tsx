@@ -1,4 +1,3 @@
-import type { Event as TauriEvent } from "@tauri-apps/api/event";
 import { act, useLayoutEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
@@ -63,7 +62,7 @@ function createWatcher(handlers: WatchHandlers): {
         }
       });
     }
-    return vi.fn();
+    return () => undefined;
   });
 
   return {
@@ -371,7 +370,7 @@ test("watcherエラーイベントで監視失敗メッセージとevent.message
         fileKey: "impl",
         message: "watch died",
       },
-    } as TauriEvent<unknown>);
+    });
   });
 
   expect(onError).toHaveBeenCalledWith(
@@ -419,7 +418,7 @@ test("selection変更commit後のpassive effect前に旧watch eventを受けて�
           changeKind: "markdown",
           path: "/workspace/spec-1/impl.md",
         },
-      } as TauriEvent<unknown>);
+      });
     },
   );
   await flush();
