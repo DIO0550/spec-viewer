@@ -781,6 +781,50 @@ test("MarkdownViewerは既存コメントを本文右側のカードから編集
   result.unmount();
 });
 
+test("MarkdownViewerのinline editは空白本文を共通理由で拒否する", async () => {
+  const onUpdateComment = vi.fn().mockResolvedValue(true);
+  const contents = "Existing comments should be visible beside the paragraph.";
+  const comments: readonly Comment[] = [
+    createComment({
+      id: "cmt_open",
+      blockIndex: 0,
+      text: contents,
+      resolved: false,
+    }),
+  ];
+  const result = renderViewer(
+    createReadyState(contents),
+    vi.fn(),
+    vi.fn().mockResolvedValue(true),
+    comments,
+    commentId("cmt_open"),
+    vi.fn(),
+    onUpdateComment,
+  );
+  const popover = openFirstCommentEditPopover(result.container);
+  const editor = popover.querySelector("textarea") as HTMLTextAreaElement;
+
+  act(() => {
+    editor.value = "   ";
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await act(async () => {
+    editor.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Enter",
+        ctrlKey: true,
+        bubbles: true,
+      }),
+    );
+  });
+
+  expect(onUpdateComment).not.toHaveBeenCalled();
+  expect(popover.querySelector('[role="alert"]')?.textContent).toBe(
+    "コメント本文を入力してください。",
+  );
+  result.unmount();
+});
+
 test("MarkdownViewerは編集ポップオーバーから未解決コメントを解決できる", async () => {
   const onResolveComment = vi.fn().mockResolvedValue(true);
   const contents = "Existing comments should be visible beside the paragraph.";

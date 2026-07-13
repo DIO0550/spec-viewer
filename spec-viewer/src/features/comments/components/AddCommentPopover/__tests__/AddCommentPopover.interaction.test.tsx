@@ -134,7 +134,7 @@ test("AddCommentPopoverは空白のみ本文を保存せず理由を表示する
 
   expect(onSubmit).not.toHaveBeenCalled();
   expect(result.container.textContent).toContain(
-    "保存するコメントを入力してください。",
+    "コメント本文を入力してください。",
   );
   expect(result.container.querySelector('[role="alert"]')).not.toBeNull();
   result.unmount();
