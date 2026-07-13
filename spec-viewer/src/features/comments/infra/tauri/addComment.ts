@@ -1,11 +1,11 @@
-import type {
-  AddCommentRequest,
-  Comment,
-} from "@/features/comments/types/comment";
 import {
   decodeAddCommentResponse,
   encodeAddCommentRequest,
 } from "@/features/comments/infra/tauri/commentIpcCodec";
+import type {
+  AddCommentRequest,
+  Comment,
+} from "@/features/comments/types/comment";
 
 import { invokeTauriCommand } from "@/shared/api/tauri/invokeTauriCommand";
 import { isRecord } from "@/shared/lib/isRecord";

@@ -2,6 +2,7 @@ import {
   Comment,
   type Comment as CommentDomain,
 } from "@/features/comments/domain/comment";
+import { CommentBody } from "@/features/comments/domain/commentBody";
 import type {
   AddCommentRequest,
   CommentAnchor,
@@ -28,9 +29,9 @@ import {
 } from "@/shared/domain/isoDateTime";
 import { SpecId } from "@/shared/domain/specId";
 import {
+  decodeRuntimeValue,
   IpcResponseDecodeError,
   RuntimeCodec,
-  decodeRuntimeValue,
   type RuntimeCodec as RuntimeCodecType,
 } from "@/shared/lib/runtimeCodec";
 
@@ -196,14 +197,14 @@ export const encodeAddCommentRequest = (request: AddCommentRequest) => ({
   workspacePath: request.workspacePath,
   specId: SpecId.toDto(request.specId),
   anchor: encodeAnchor(request.anchor),
-  body: request.body,
+  body: CommentBody.toString(request.body),
 });
 export const encodeUpdateCommentRequest = (request: UpdateCommentRequest) => ({
   workspacePath: request.workspacePath,
   specId: SpecId.toDto(request.specId),
   fileKey: request.fileKey,
   commentId: CommentId.toDto(request.commentId),
-  body: request.body,
+  body: CommentBody.toString(request.body),
 });
 export const encodeDeleteCommentRequest = (request: DeleteCommentRequest) => ({
   workspacePath: request.workspacePath,
