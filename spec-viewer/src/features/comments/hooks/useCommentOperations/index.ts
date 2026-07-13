@@ -9,6 +9,8 @@ import type {
   CommentFeatureError as CommentFeatureErrorType,
   CommentOperationFeatureState,
 } from "@/features/comments/application/commentError";
+import type { CommentCommands } from "@/features/comments/application/ports/commentCommands";
+import type { CommentBody } from "@/features/comments/domain/commentBody";
 import {
   CommentOperationFailedState,
   CommentOperationIdleState,
@@ -26,13 +28,12 @@ import {
   toggleCommentResolved as toggleCommentResolvedViaGateway,
   updateComment as updateCommentViaGateway,
 } from "@/features/comments/infra/commentGateway";
+import { toCommentFeatureError } from "@/features/comments/infra/tauri/commentErrorMapper";
 import type {
   Comment,
   CommentAnchor,
   CommentId,
 } from "@/features/comments/types/comment";
-import type { CommentCommands } from "@/features/comments/application/ports/commentCommands";
-import { toCommentFeatureError } from "@/features/comments/infra/tauri/commentErrorMapper";
 import {
   SelectionIdentity,
   type SelectionIdentity as SelectionIdentityType,
@@ -40,12 +41,12 @@ import {
 
 export type AddCommentInput = Readonly<{
   anchor: CommentAnchor;
-  body: string;
+  body: CommentBody;
 }>;
 
 export type UpdateCommentInput = Readonly<{
   commentId: CommentId;
-  body: string;
+  body: CommentBody;
 }>;
 
 export type CommentListTransform = (
