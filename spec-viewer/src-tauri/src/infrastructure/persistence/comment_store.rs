@@ -161,6 +161,9 @@ fn build_comment_document(
             "serialized comment JSON did not parse: {source}"
         ))
     })?;
+    let canonical_version = canonical_document.get("version").cloned().ok_or_else(|| {
+        CommentRepositoryError::invalid_data("serialized comment JSON had no version")
+    })?;
     let canonical_records = canonical_document
         .get("comments")
         .and_then(Value::as_array)
@@ -189,7 +192,7 @@ fn build_comment_document(
     };
 
     if let Value::Object(object) = &mut document {
-        object.insert("version".to_string(), Value::from(1));
+        object.insert("version".to_string(), canonical_version);
         object.insert("comments".to_string(), Value::Array(comments));
     }
 
