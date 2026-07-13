@@ -34,13 +34,18 @@ import {
 import ReactMarkdown, { type Components } from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
+import {
+  CommentBody,
+  type CommentBodyDraft,
+  type CommentBody as CommentBodyValue,
+  type CommentOperationState,
+} from "@/features/comments";
 import { AddCommentPopover } from "@/features/comments/components/AddCommentPopover";
 import {
   CommentOperationIdleState,
   type CommentOperationKind,
   CommentOperationSavingState,
 } from "@/features/comments/domain/commentOperation";
-import type { CommentOperationState } from "@/features/comments";
 import { useMarkdownTextSelection } from "@/features/comments/hooks/useMarkdownTextSelection";
 import {
   createCommentAnchorDraftFromBlock,
@@ -194,7 +199,10 @@ type Props = Readonly<{
   /** Reloads the current spec document. */
   onReload: () => void;
   onAddComment?: (input: AddCommentSubmitInput) => Promise<boolean>;
-  onUpdateComment?: (commentId: CommentId, body: string) => Promise<boolean>;
+  onUpdateComment?: (
+    commentId: CommentId,
+    body: CommentBodyValue,
+  ) => Promise<boolean>;
   onResolveComment?: (commentId: CommentId) => Promise<boolean>;
   onReopenComment?: (commentId: CommentId) => Promise<boolean>;
   onDeleteComment?: (commentId: CommentId) => Promise<boolean>;
@@ -458,7 +466,7 @@ export function MarkdownViewer({
    */
   const updateComment = async (
     commentId: CommentId,
-    body: string,
+    body: CommentBodyValue,
   ): Promise<boolean> => {
     if (onUpdateComment === undefined) {
       return false;
@@ -2378,7 +2386,7 @@ type CommentEditPopoverProps = Readonly<{
    * @param commentId - The identifier of the comment being edited.
    * @param body - The updated comment body text.
    */
-  onSubmit: (commentId: CommentId, body: string) => Promise<boolean>;
+  onSubmit: (commentId: CommentId, body: CommentBodyValue) => Promise<boolean>;
   /**
    * Resolves the edited comment.
    * @param commentId - The identifier of the comment to resolve.
@@ -2398,7 +2406,6 @@ type CommentEditPopoverProps = Readonly<{
   onCancel: () => void;
 }>;
 
-const emptyEditBodyMessage = uiText.commentThread.emptyBody;
 const failedUpdateMessage =
   "コメントを更新できませんでした。再試行してください。";
 const failedStatusActionMessage =
@@ -2453,12 +2460,12 @@ function CommentEditPopover({
   const popoverRef = useRef<HTMLElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const previousDraftCommentIdRef = useRef<CommentId | null>(null);
-  const [body, setBody] = useState(draft?.comment.body ?? "");
+  const [body, setBody] = useState<CommentBodyDraft>(draft?.comment.body ?? "");
   const [validationMessage, setValidationMessage] = useState<string | null>(
     null,
   );
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
-  const trimmedBody = body.trim();
+  const commentBodyParseResult = CommentBody.parse(body);
   const commentId = draft?.comment.id ?? null;
   const isOperatingComment =
     commentId === null
@@ -2475,7 +2482,7 @@ function CommentEditPopover({
           "delete",
         ]);
   const visibleErrorMessage = validationMessage ?? scopedOperationErrorMessage;
-  const isSubmitDisabled = isBusy || trimmedBody.length === 0;
+  const isSubmitDisabled = isBusy || !commentBodyParseResult.ok;
   const describedBy =
     visibleErrorMessage === null ? hintId : `${hintId} ${errorId}`;
 
@@ -2528,13 +2535,15 @@ function CommentEditPopover({
   }
 
   const submitComment = async (): Promise<void> => {
-    if (trimmedBody.length === 0) {
-      setValidationMessage(emptyEditBodyMessage);
+    const parseResult = CommentBody.parse(body);
+
+    if (!parseResult.ok) {
+      setValidationMessage(parseResult.error.message);
       return;
     }
 
     setValidationMessage(null);
-    const wasSaved = await onSubmit(draft.comment.id, trimmedBody);
+    const wasSaved = await onSubmit(draft.comment.id, parseResult.commentBody);
 
     if (!wasSaved) {
       setValidationMessage(failedUpdateMessage);
