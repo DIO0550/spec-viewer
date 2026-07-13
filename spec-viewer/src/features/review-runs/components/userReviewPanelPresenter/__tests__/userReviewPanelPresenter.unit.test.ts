@@ -1,67 +1,73 @@
 import { expect, test } from "vitest";
 
 import {
-  canArchiveUserReview,
-  canCreateUserReview,
   formatCreateSuccessMessage,
-  formatProblemState,
+  formatUserReviewRecordProblem,
   formatUserReviewSummary,
 } from "@/features/review-runs/components/userReviewPanelPresenter";
 import type { UserReview } from "@/features/review-runs/domain/userReview";
+import type { UserReviewRecordProblemKind } from "@/features/review-runs/domain/userReviewRecordProblem";
 
-const completedReview = createUserReview("completed");
+const activeReview: UserReview = {
+  schemaVersion: "spec-reviewer.user-review.v1",
+  id: "urv_0123456789abcdef0123456789abcdef",
+  status: "active",
+  target: {
+    scope: "file",
+    specId: "auth",
+    fileKey: "tasks",
+  },
+  recordLocator: "urv_0123456789abcdef0123456789abcdef.json",
+  commentCount: 2,
+  createdAt: "2026-07-12T10:00:00Z",
+  updatedAt: "2026-07-12T10:00:00Z",
+  archivedAt: null,
+};
 
-test("canCreateUserReviewは未解決コメントがあり保存中でなければtrueを返す", () => {
-  expect(
-    canCreateUserReview({ openCommentCount: 1, isCreating: false }),
-  ).toBe(true);
-});
-
-test("canCreateUserReviewは未解決コメントがないとfalseを返す", () => {
-  expect(
-    canCreateUserReview({ openCommentCount: 0, isCreating: false }),
-  ).toBe(false);
-});
-
-test("canArchiveUserReviewはcompletedだけarchive可能にする", () => {
-  expect(canArchiveUserReview(completedReview, false)).toBe(true);
-  expect(canArchiveUserReview(createUserReview("active"), false)).toBe(false);
-  expect(canArchiveUserReview(completedReview, true)).toBe(false);
-});
-
-test("presenterはstatus labelとfeedback messageを生成する", () => {
-  expect(formatUserReviewSummary(completedReview)).toBe("完了 / コメント 1件");
-  expect(formatCreateSuccessMessage(completedReview)).toContain(
-    "レビューを作成しました。",
+test("presenterはstatus labelとsingle-JSON locatorを含むfeedbackを生成する", () => {
+  expect(formatUserReviewSummary(activeReview)).toBe("受付中 / コメント 2件");
+  expect(formatCreateSuccessMessage(activeReview)).toBe(
+    "レビューを作成しました。2件 / urv_0123456789abcdef0123456789abcdef.json",
   );
 });
 
-test("formatProblemStateはproblem stateを日本語labelへ変換する", () => {
-  expect(formatProblemState("missingFolder")).toBe("フォルダなし");
-  expect(formatProblemState("malformed")).toBe("壊れたレビュー");
+test.each<{
+  kind: UserReviewRecordProblemKind;
+  label: string;
+  description: string;
+}>([
+  {
+    kind: "legacyRecord",
+    label: "旧形式のレビュー",
+    description: "フォルダ形式のレビューは一覧に表示できません。",
+  },
+  {
+    kind: "unsupportedRecordVersion",
+    label: "未対応のバージョン",
+    description: "このレビューは新しいバージョンで作成されています。",
+  },
+  {
+    kind: "malformedRecord",
+    label: "壊れたレビュー",
+    description: "レビューJSONの内容を読み取れませんでした。",
+  },
+  {
+    kind: "recoverableDuplicate",
+    label: "重複レコードを復旧",
+    description: "同じレビューの重複から有効なレコードを使用しました。",
+  },
+  {
+    kind: "conflictingCopies",
+    label: "競合するレコード",
+    description: "同じレビューIDを持つ異なるレコードがあります。",
+  },
+])("$kindを日本語labelとdescriptionへ変換する", ({
+  kind,
+  label,
+  description,
+}) => {
+  expect(formatUserReviewRecordProblem(kind)).toEqual({
+    label,
+    description,
+  });
 });
-
-function createUserReview(status: UserReview["status"]): UserReview {
-  return {
-    id: `review-${status}`,
-    status,
-    target: {
-      scope: "file",
-      specId: "auth",
-      fileKey: "tasks",
-    },
-    workspace: {
-      mode: "currentWorkspace",
-      workspacePath: "/workspace/spec-reviewer",
-    },
-    specFolderPath: "/workspace/spec-reviewer/.plugin-workspace/.specs/auth",
-    folderPath:
-      "/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/active/review",
-    sourceFiles: [],
-    commentCount: 1,
-    createdAt: "2026-05-06T12:00:00Z",
-    archivedAt: status === "archived" ? "2026-05-06T12:30:00Z" : null,
-    summary: null,
-    warnings: [],
-  } as UserReview;
-}

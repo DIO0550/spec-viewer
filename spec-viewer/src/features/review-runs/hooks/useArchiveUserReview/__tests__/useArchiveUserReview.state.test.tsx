@@ -1,10 +1,12 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-
+import type {
+  ActiveUserReview,
+  ArchivedUserReview,
+} from "@/features/review-runs/domain/userReview";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import { useArchiveUserReview } from "@/features/review-runs/hooks/useArchiveUserReview";
-import type { UserReview } from "@/features/review-runs/types/userReviewIpc";
 import type { UserReviewCommands } from "@/shared/api/tauri";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 
@@ -78,34 +80,29 @@ const target: UserReviewTarget = {
   fileKey: "tasks",
 };
 
-const archivedRun: UserReview = {
-  id: "review-archived",
-  status: "archived",
+const activeRun: ActiveUserReview = {
+  schemaVersion: "spec-reviewer.user-review.v1",
+  id: "review-active",
+  status: "active",
   target,
-  workspace: {
-    mode: "currentWorkspace",
-    workspacePath: "/workspace/spec-reviewer",
-  },
-  specFolderPath: "/workspace/spec-reviewer/.plugin-workspace/.specs/auth",
-  folderPath:
-    "/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/archive/review-archived",
-  sourceFiles: [
-    {
-      specId: "auth",
-      fileKey: "tasks",
-      relativePath: ".plugin-workspace/.specs/auth/tasks.md",
-    },
-  ],
+  recordLocator: "review-active.json",
   commentCount: 1,
   createdAt: "2026-05-06T12:00:00Z",
-  archivedAt: "2026-05-06T12:30:00Z",
-  summary: null,
-  warnings: [],
+  updatedAt: "2026-05-06T12:00:00Z",
+  archivedAt: null,
 };
 
-const secondArchivedRun: UserReview = {
-  ...archivedRun,
-  id: "review-second-archived",
+const secondActiveRun: ActiveUserReview = {
+  ...activeRun,
+  id: "review-second-active",
+  recordLocator: "review-second-active.json",
+};
+
+const archivedRun: ArchivedUserReview = {
+  ...activeRun,
+  status: "archived",
+  updatedAt: "2026-05-06T12:30:00Z",
+  archivedAt: "2026-05-06T12:30:00Z",
 };
 
 function createCommands(): UserReviewCommands {
@@ -148,7 +145,7 @@ test("useArchiveUserReviewはarchive成功後にreviewArchived eventを発行す
   });
 
   await act(async () => {
-    await result.current.archiveUserReview("review-active");
+    await result.current.archiveUserReview(activeRun);
   });
 
   expect(result.current.archiveState.status).toBe("success");
@@ -173,7 +170,7 @@ test("useArchiveUserReviewはselectionIdを戻しても古いsuccessを再表示
   });
 
   await act(async () => {
-    await result.current.archiveUserReview("review-active");
+    await result.current.archiveUserReview(activeRun);
   });
   result.rerender({
     commands,
@@ -192,15 +189,13 @@ test("useArchiveUserReviewはselectionIdを戻しても古いsuccessを再表示
   result.unmount();
 });
 
-test("useArchiveUserReviewは同一identityの古いarchive完了を反映しない", async () => {
-  const firstArchive = createDeferred<{ userReview: UserReview }>();
+test("useArchiveUserReviewは進行中の同時呼び出しを抑止する", async () => {
+  const firstArchive = createDeferred<{ userReview: ArchivedUserReview }>();
+  const archiveUserReview = vi.fn().mockReturnValue(firstArchive.promise);
   const commands: UserReviewCommands = {
     listUserReviews: vi.fn(),
     createUserReview: vi.fn(),
-    archiveUserReview: vi
-      .fn()
-      .mockReturnValueOnce(firstArchive.promise)
-      .mockResolvedValueOnce({ userReview: secondArchivedRun }),
+    archiveUserReview,
   };
   const onUserReviewEvent = vi.fn();
   const result = renderUseArchiveUserReview({
@@ -210,10 +205,17 @@ test("useArchiveUserReviewは同一identityの古いarchive完了を反映しな
     onUserReviewEvent,
   });
 
-  const firstPromise = result.current.archiveUserReview("review-active");
-  await act(async () => {
-    await result.current.archiveUserReview("review-second-active");
+  let firstPromise: Promise<ArchivedUserReview | null> = Promise.resolve(null);
+  act(() => {
+    firstPromise = result.current.archiveUserReview(activeRun);
   });
+  await expect(
+    result.current.archiveUserReview(secondActiveRun),
+  ).resolves.toBeNull();
+
+  expect(archiveUserReview).toHaveBeenCalledTimes(1);
+  expect(result.current.archiveState.status).toBe("saving");
+
   await act(async () => {
     firstArchive.resolve({ userReview: archivedRun });
     await firstPromise;
@@ -221,14 +223,14 @@ test("useArchiveUserReviewは同一identityの古いarchive完了を反映しな
 
   expect(result.current.archiveState).toMatchObject({
     status: "success",
-    result: secondArchivedRun,
+    result: archivedRun,
   });
   expect(onUserReviewEvent).toHaveBeenCalledTimes(1);
   expect(onUserReviewEvent).toHaveBeenCalledWith({
     selectionId: "/workspace/spec-reviewer:file:auth:tasks",
     event: {
       type: "reviewArchived",
-      review: secondArchivedRun,
+      review: archivedRun,
     },
   });
   result.unmount();

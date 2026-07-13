@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { expect, test, vi } from "vitest";
-
+import { CommentId } from "@/features/comments/types/comment";
 import type {
   ArchiveUserReviewRequest,
   ArchiveUserReviewResponse,
@@ -18,7 +18,6 @@ import {
 import { ArchiveUserReviewCommandError } from "@/shared/api/tauri/archiveUserReview";
 import { CreateUserReviewCommandError } from "@/shared/api/tauri/createUserReview";
 import { ListUserReviewsCommandError } from "@/shared/api/tauri/listUserReviews";
-import { CommentId } from "@/features/comments/types/comment";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
@@ -35,33 +34,19 @@ const request: CreateUserReviewRequest = {
     fileKey: "tasks",
   },
   commentIds: [commentId("cmt_1")],
-  workspaceMode: "currentWorkspace",
 };
 
 const response: CreateUserReviewResponse = {
   userReview: {
+    schemaVersion: "spec-reviewer.user-review.v1",
     id: "2026-05-06T120000Z-file-tasks-abcdef12",
     status: "active",
     target: request.target,
-    workspace: {
-      mode: "currentWorkspace",
-      workspacePath: "/workspace/spec-reviewer",
-    },
-    specFolderPath: "/workspace/spec-reviewer/.plugin-workspace/.specs/auth",
-    folderPath:
-      "/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/active/2026-05-06T120000Z-file-tasks-abcdef12",
-    sourceFiles: [
-      {
-        specId: "auth",
-        fileKey: "tasks",
-        relativePath: ".plugin-workspace/.specs/auth/tasks.md",
-      },
-    ],
+    recordLocator: "2026-05-06T120000Z-file-tasks-abcdef12.json",
     commentCount: 1,
     createdAt: "2026-05-06T12:00:00Z",
+    updatedAt: "2026-05-06T12:00:00Z",
     archivedAt: null,
-    summary: null,
-    warnings: [],
   },
 };
 
@@ -86,10 +71,8 @@ const archiveResponse: ArchiveUserReviewResponse = {
   userReview: {
     ...response.userReview,
     status: "archived",
-    folderPath:
-      "/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/archive/2026-05-06T120000Z-file-tasks-abcdef12",
+    updatedAt: "2026-05-06T12:30:00Z",
     archivedAt: "2026-05-06T12:30:00Z",
-    summary: "対応完了",
   },
 };
 

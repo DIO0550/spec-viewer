@@ -3,172 +3,207 @@ import { expect, test } from "vitest";
 import {
   mapListUserReviewsResponseToUserReviews,
   mapUserReviewDtoToUserReview,
+  UserReviewDtoRestoreError,
+  UserReviewIpcCodecError,
+  UserReviewListRestoreError,
 } from "@/features/review-runs/infra/userReviewIpcAdapter";
-import type { UserReviewDto } from "@/features/review-runs/types/userReviewIpc";
+import type {
+  ListUserReviewsResponse,
+  UserReviewDto,
+} from "@/features/review-runs/types/userReviewIpc";
 
 const activeReview = createUserReview({
-  id: "review-active",
+  id: "urv_0123456789abcdef0123456789abcdef",
   status: "active",
+  updatedAt: "2026-07-12T10:00:00Z",
   archivedAt: null,
 });
 
 const archivedReview = createUserReview({
-  id: "review-archived",
+  id: "urv_fedcba9876543210fedcba9876543210",
   status: "archived",
-  archivedAt: "2026-05-06T12:30:00Z",
+  updatedAt: "2026-07-12T11:00:00Z",
+  archivedAt: "2026-07-12T11:00:00Z",
 });
 
-test("mapUserReviewDtoToUserReviewはarchivedAtのないarchived reviewを拒否する", () => {
-  const invalidReview = createUserReview({
-    id: "review-invalid-archived",
-    status: "archived",
-    archivedAt: null,
-  });
+test("mapUserReviewDtoToUserReviewはsingle-JSON summaryをaggregateへrestoreする", () => {
+  expect(mapUserReviewDtoToUserReview(activeReview)).toEqual(activeReview);
+});
 
+test("mapUserReviewDtoToUserReviewはinvariant違反をtyped errorで拒否する", () => {
+  const invalidReview = { ...activeReview, commentCount: 0 };
+
+  expect(() => mapUserReviewDtoToUserReview(invalidReview)).toThrowError(
+    UserReviewDtoRestoreError,
+  );
   expect(() => mapUserReviewDtoToUserReview(invalidReview)).toThrow(
-    "Archived user review must have archivedAt",
+    expect.objectContaining({
+      reason: "invalidCommentCount",
+      userReviewId: invalidReview.id,
+    }),
   );
 });
 
-test("mapUserReviewDtoToUserReviewはarchivedAtのある非archived reviewを拒否する", () => {
-  const invalidReview = createUserReview({
-    id: "review-invalid-active",
-    status: "completed",
-    archivedAt: "2026-05-06T12:30:00Z",
-  });
-
-  expect(() => mapUserReviewDtoToUserReview(invalidReview)).toThrow(
-    "Non-archived user review must not have archivedAt",
+test.each([
+  undefined,
+  null,
+  [],
+  {},
+  { ...activeReview, id: undefined },
+])("mapUserReviewDtoToUserReviewは不正DTO %p をtyped codec errorで拒否する", (review) => {
+  expect(() => mapUserReviewDtoToUserReview(review)).toThrowError(
+    UserReviewIpcCodecError,
+  );
+  expect(() => mapUserReviewDtoToUserReview(review)).not.toThrowError(
+    TypeError,
   );
 });
 
-test("mapListUserReviewsResponseToUserReviewsはvalid responseを保持する", () => {
-  const response = {
+test.each([
+  { response: undefined, path: "response" },
+  { response: null, path: "response" },
+  { response: [], path: "response" },
+  {
+    response: { active: null, archived: [], problems: [] },
+    path: "response.active",
+  },
+  {
+    response: { active: [], archived: {}, problems: [] },
+    path: "response.archived",
+  },
+  {
+    response: { active: [], archived: [], problems: "invalid" },
+    path: "response.problems",
+  },
+] as const)("list responseの不正envelopeをtyped codec errorで拒否する", ({
+  response,
+  path,
+}) => {
+  expect(() => mapListUserReviewsResponseToUserReviews(response)).toThrow(
+    expect.objectContaining({
+      name: "UserReviewIpcCodecError",
+      reason: "invalidShape",
+      path,
+    }),
+  );
+  expect(() =>
+    mapListUserReviewsResponseToUserReviews(response),
+  ).not.toThrowError(TypeError);
+});
+
+test.each([
+  { problem: null, path: "response.problems[0]" },
+  {
+    problem: { recordLocator: 1, kind: "malformedDocument", message: "bad" },
+    path: "response.problems[0].recordLocator",
+  },
+  {
+    problem: { recordLocator: "bad.json", kind: "unknown", message: "bad" },
+    path: "response.problems[0].kind",
+  },
+  {
+    problem: {
+      recordLocator: "bad.json",
+      kind: "malformedDocument",
+      message: null,
+    },
+    path: "response.problems[0].message",
+  },
+] as const)("list responseの不正problem fieldをtyped codec errorで拒否する", ({
+  problem,
+  path,
+}) => {
+  const response = { active: [], archived: [], problems: [problem] };
+
+  expect(() => mapListUserReviewsResponseToUserReviews(response)).toThrow(
+    expect.objectContaining({
+      name: "UserReviewIpcCodecError",
+      reason: "invalidShape",
+      path,
+    }),
+  );
+});
+
+test("list responseのrecord problemをdomain conceptへ変換する", () => {
+  const response: ListUserReviewsResponse = {
     active: [activeReview],
     archived: [archivedReview],
-    problems: [],
-  };
-
-  const mapped = mapListUserReviewsResponseToUserReviews(response);
-
-  expect(mapped).toEqual(response);
-  expect(mapped.active[0]).toBe(activeReview);
-  expect(mapped.archived[0]).toBe(archivedReview);
-});
-
-test("mapListUserReviewsResponseToUserReviewsはactive内のarchive state不整合entryを拒否する", () => {
-  const response = {
-    active: [
-      activeReview,
-      createUserReview({
-        id: "review-invalid-active-list-entry",
-        status: "completed",
-        archivedAt: "2026-05-06T12:30:00Z",
-      }),
+    problems: [
+      {
+        recordLocator: "legacy-run",
+        kind: "legacyFolderBundle",
+        message: "Legacy folder bundle is read-only",
+      },
+      {
+        recordLocator: "broken.json",
+        kind: "malformedDocument",
+        message: "Malformed user review document",
+      },
     ],
-    archived: [archivedReview],
-    problems: [],
   };
 
-  expect(() => mapListUserReviewsResponseToUserReviews(response)).toThrow(
-    "Non-archived user review must not have archivedAt: review-invalid-active-list-entry",
-  );
-});
-
-test("mapListUserReviewsResponseToUserReviewsはarchived内のarchive state不整合entryを拒否する", () => {
-  const response = {
+  expect(mapListUserReviewsResponseToUserReviews(response)).toEqual({
     active: [activeReview],
-    archived: [
-      archivedReview,
-      createUserReview({
-        id: "review-invalid-archived-list-entry",
-        status: "archived",
-        archivedAt: null,
-      }),
+    archived: [archivedReview],
+    problems: [
+      {
+        locator: "legacy-run",
+        kind: "legacyRecord",
+        message: "Legacy folder bundle is read-only",
+      },
+      {
+        locator: "broken.json",
+        kind: "malformedRecord",
+        message: "Malformed user review document",
+      },
     ],
-    problems: [],
-  };
-
-  expect(() => mapListUserReviewsResponseToUserReviews(response)).toThrow(
-    "Archived user review must have archivedAt: review-invalid-archived-list-entry",
-  );
+  });
 });
 
-test("mapListUserReviewsResponseToUserReviewsは最初のinvalid entryで拒否する", () => {
-  const response = {
-    active: [
-      createUserReview({
-        id: "review-invalid-first",
-        status: "completed",
-        archivedAt: "2026-05-06T12:30:00Z",
-      }),
-      createUserReview({
-        id: "review-invalid-second",
-        status: "archived",
-        archivedAt: null,
-      }),
-    ],
-    archived: [],
-    problems: [],
-  };
-
-  expect(() => mapListUserReviewsResponseToUserReviews(response)).toThrow(
-    "Non-archived user review must not have archivedAt: review-invalid-first",
+test.each([
+  {
+    collection: "active",
+    response: { active: [archivedReview], archived: [], problems: [] },
+    review: archivedReview,
+  },
+  {
+    collection: "archived",
+    response: { active: [], archived: [activeReview], problems: [] },
+    review: activeReview,
+  },
+] as const)("$collection collectionとstatusの不整合をtyped errorで拒否する", ({
+  collection,
+  response,
+  review,
+}) => {
+  expect(() => mapListUserReviewsResponseToUserReviews(response)).toThrowError(
+    UserReviewListRestoreError,
   );
-});
-
-test("mapListUserReviewsResponseToUserReviewsはactive側のinvalid entryを先に拒否する", () => {
-  const response = {
-    active: [
-      createUserReview({
-        id: "review-invalid-active-first",
-        status: "completed",
-        archivedAt: "2026-05-06T12:30:00Z",
-      }),
-    ],
-    archived: [
-      createUserReview({
-        id: "review-invalid-archived-second",
-        status: "archived",
-        archivedAt: null,
-      }),
-    ],
-    problems: [],
-  };
-
   expect(() => mapListUserReviewsResponseToUserReviews(response)).toThrow(
-    "Non-archived user review must not have archivedAt: review-invalid-active-first",
+    expect.objectContaining({
+      reason: "collectionStatusMismatch",
+      collection,
+      userReviewId: review.id,
+    }),
   );
 });
 
 function createUserReview(
-  input: Pick<UserReviewDto, "archivedAt" | "id" | "status">,
+  input: Pick<UserReviewDto, "archivedAt" | "id" | "status" | "updatedAt">,
 ): UserReviewDto {
   return {
+    schemaVersion: "spec-reviewer.user-review.v1",
     id: input.id,
     status: input.status,
     target: {
       scope: "file",
-      specId: "auth",
+      specId: "auth-flow",
       fileKey: "tasks",
     },
-    workspace: {
-      mode: "currentWorkspace",
-      workspacePath: "/workspace/spec-reviewer",
-    },
-    specFolderPath: "/workspace/spec-reviewer/.plugin-workspace/.specs/auth",
-    folderPath: `/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/active/${input.id}`,
-    sourceFiles: [
-      {
-        specId: "auth",
-        fileKey: "tasks",
-        relativePath: ".plugin-workspace/.specs/auth/tasks.md",
-      },
-    ],
-    commentCount: 1,
-    createdAt: "2026-05-06T12:00:00Z",
+    recordLocator: `${input.id}.json`,
+    commentCount: 2,
+    createdAt: "2026-07-12T10:00:00Z",
+    updatedAt: input.updatedAt,
     archivedAt: input.archivedAt,
-    summary: null,
-    warnings: [],
-  } as UserReviewDto;
+  };
 }

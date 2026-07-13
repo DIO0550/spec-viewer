@@ -1,12 +1,12 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-
-import { WorkspacePath } from "@/shared/domain/workspacePath";
-import { configurePerformanceLoggerForTest } from "@/shared/lib/performance";
-import { createUserReviewCommandTestDouble } from "@/features/review-runs/testing/review-run-command-test-double";
 import { CommentId } from "@/features/comments/types/comment";
-import type { UserReviewCommands } from "@/shared/api/tauri";
+import {
+  type UserReviewTargetScope,
+  useUserReviews,
+} from "@/features/review-runs/hooks/useUserReviews";
+import { createUserReviewCommandTestDouble } from "@/features/review-runs/testing/review-run-command-test-double";
 import type {
   ArchiveUserReviewResponse,
   CreateUserReviewResponse,
@@ -14,14 +14,14 @@ import type {
   UserReview,
 } from "@/features/review-runs/types/userReviewIpc";
 import type { SpecFileKey } from "@/features/specs/types/spec";
-import {
-  useUserReviews,
-  type UserReviewTargetScope,
-} from "@/features/review-runs/hooks/useUserReviews";
+import type { UserReviewCommands } from "@/shared/api/tauri";
+import { WorkspacePath } from "@/shared/domain/workspacePath";
+import { configurePerformanceLoggerForTest } from "@/shared/lib/performance";
 
 const commentId = CommentId.fromString;
 
 const activeRun: UserReview = {
+  schemaVersion: "spec-reviewer.user-review.v1",
   id: "2026-05-06T120000Z-file-tasks-abcdef12",
   status: "active",
   target: {
@@ -29,38 +29,17 @@ const activeRun: UserReview = {
     specId: "auth",
     fileKey: "tasks",
   },
-  workspace: {
-    mode: "currentWorkspace",
-    workspacePath: "/workspace/spec-reviewer",
-  },
-  specFolderPath: "/workspace/spec-reviewer/.plugin-workspace/.specs/auth",
-  folderPath:
-    "/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/active/2026-05-06T120000Z-file-tasks-abcdef12",
-  sourceFiles: [
-    {
-      specId: "auth",
-      fileKey: "tasks",
-      relativePath: ".plugin-workspace/.specs/auth/tasks.md",
-    },
-  ],
+  recordLocator: "2026-05-06T120000Z-file-tasks-abcdef12.json",
   commentCount: 1,
   createdAt: "2026-05-06T12:00:00Z",
+  updatedAt: "2026-05-06T12:00:00Z",
   archivedAt: null,
-  summary: null,
-  warnings: [],
-};
-
-const completedRun: UserReview = {
-  ...activeRun,
-  status: "completed",
-  summary: "対応完了",
 };
 
 const archivedRun: UserReview = {
-  ...completedRun,
+  ...activeRun,
   status: "archived",
-  folderPath:
-    "/workspace/spec-reviewer/.plugin-workspace/.specs/auth/user-review/archive/2026-05-06T120000Z-file-tasks-abcdef12",
+  updatedAt: "2026-05-06T12:30:00Z",
   archivedAt: "2026-05-06T12:30:00Z",
 };
 
@@ -285,7 +264,6 @@ test("useUserReviewsは作成したactive runを一覧の先頭に追加する",
   await act(async () => {
     await result.current.createUserReview({
       commentIds: [commentId("cmt_1")],
-      workspaceMode: "currentWorkspace",
     });
   });
 
@@ -300,16 +278,15 @@ test("useUserReviewsは作成したactive runを一覧の先頭に追加する",
         fileKey: "tasks",
       },
       commentIds: ["cmt_1"],
-      workspaceMode: "currentWorkspace",
     },
   ]);
   result.unmount();
 });
 
-test("useUserReviewsはcompleted runをアーカイブして一覧を移動する", async () => {
+test("useUserReviewsはactive runをアーカイブして一覧を移動する", async () => {
   const double = createUserReviewCommandTestDouble({
     listUserReviews: {
-      active: [completedRun],
+      active: [activeRun],
       archived: [],
       problems: [],
     },
@@ -328,7 +305,7 @@ test("useUserReviewsはcompleted runをアーカイブして一覧を移動す�
 
   await flushAsyncEffects();
   await act(async () => {
-    await result.current.archiveUserReview(completedRun.id);
+    await result.current.archiveUserReview(activeRun);
   });
 
   expect(result.current.archiveState.status).toBe("success");
@@ -342,7 +319,7 @@ test("useUserReviewsはcompleted runをアーカイブして一覧を移動す�
         specId: "auth",
         fileKey: "tasks",
       },
-      userReviewId: completedRun.id,
+      userReviewId: activeRun.id,
     },
   ]);
   result.unmount();
@@ -367,7 +344,6 @@ test("useUserReviewsはloading中のcreate成功を古いlist responseで上書�
   await act(async () => {
     await result.current.createUserReview({
       commentIds: [commentId("cmt_1")],
-      workspaceMode: "currentWorkspace",
     });
   });
   await act(async () => {
@@ -406,7 +382,6 @@ test("useUserReviewsはselectionId変更後に完了したcreateを現在listへ
   await flushAsyncEffects();
   const createPromise = result.current.createUserReview({
     commentIds: [commentId("cmt_1")],
-    workspaceMode: "currentWorkspace",
   });
   result.rerender({
     workspacePath: "/workspace/spec-reviewer",
@@ -432,7 +407,7 @@ test("useUserReviewsはselectionId変更後に完了したarchiveを現在list�
   const archiveDeferred = createDeferred<ArchiveUserReviewResponse>();
   const commands: UserReviewCommands = {
     listUserReviews: vi.fn().mockResolvedValue({
-      active: [completedRun],
+      active: [activeRun],
       archived: [],
       problems: [],
     }),
@@ -449,7 +424,7 @@ test("useUserReviewsはselectionId変更後に完了したarchiveを現在list�
   });
 
   await flushAsyncEffects();
-  const archivePromise = result.current.archiveUserReview(completedRun.id);
+  const archivePromise = result.current.archiveUserReview(activeRun);
   result.rerender({
     workspacePath: "/workspace/spec-reviewer",
     specId: "auth",
@@ -493,7 +468,6 @@ test("useUserReviewsはtarget変更後に完了したcreateを現在listへ反�
   await flushAsyncEffects();
   const createPromise = result.current.createUserReview({
     commentIds: [commentId("cmt_1")],
-    workspaceMode: "currentWorkspace",
   });
   result.rerender({
     workspacePath: "/workspace/spec-reviewer",
@@ -538,7 +512,6 @@ test("useUserReviewsはworkspace変更後に完了したcreateを現在listへ�
   await flushAsyncEffects();
   const createPromise = result.current.createUserReview({
     commentIds: [commentId("cmt_1")],
-    workspaceMode: "currentWorkspace",
   });
   result.rerender({
     workspacePath: "/workspace/other-spec-reviewer",
@@ -564,7 +537,7 @@ test("useUserReviewsはtarget変更後に完了したarchiveを現在listへ反�
   const archiveDeferred = createDeferred<ArchiveUserReviewResponse>();
   const commands: UserReviewCommands = {
     listUserReviews: vi.fn().mockResolvedValue({
-      active: [completedRun],
+      active: [activeRun],
       archived: [],
       problems: [],
     }),
@@ -581,7 +554,7 @@ test("useUserReviewsはtarget変更後に完了したarchiveを現在listへ反�
   });
 
   await flushAsyncEffects();
-  const archivePromise = result.current.archiveUserReview(completedRun.id);
+  const archivePromise = result.current.archiveUserReview(activeRun);
   result.rerender({
     workspacePath: "/workspace/spec-reviewer",
     specId: "billing",

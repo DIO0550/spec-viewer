@@ -1,49 +1,36 @@
-import { act } from "react";
 import type { ReactNode } from "react";
+import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
+import { CommentId } from "@/features/comments/types/comment";
+import { UserReviewPanel } from "@/features/review-runs/components/UserReviewPanel";
+import type { ActiveUserReview } from "@/features/review-runs/domain/userReview";
 import type {
   UserReviewArchiveState,
   UserReviewCreateState,
   UserReviewListState,
 } from "@/features/review-runs/hooks/useUserReviews";
-import type { UserReview } from "@/features/review-runs/types/userReviewIpc";
-import { UserReviewPanel } from "@/features/review-runs/components/UserReviewPanel";
 
-const activeRunBranchName =
-  "spec-reviewer/2026-05-06T120000Z-file-tasks-abcdef12";
-const activeRunSourcePath = ".plugin-workspace/.specs/auth/tasks.md";
-
-const activeRun: UserReview = {
-  id: "2026-05-06T120000Z-file-tasks-abcdef12",
+const activeReview: ActiveUserReview = {
+  schemaVersion: "spec-reviewer.user-review.v1",
+  id: "urv_0123456789abcdef0123456789abcdef",
   status: "active",
   target: {
     scope: "file",
     specId: "auth",
     fileKey: "tasks",
   },
-  workspace: {
-    mode: "worktree",
-    repositoryPath: "/workspace/spec-reviewer",
-    worktreePath: "/workspace/spec-reviewer.spec-reviewer-worktrees/auth",
-    branchName: activeRunBranchName,
-  },
-  specFolderPath: "/workspace/spec-reviewer/.plugin-workspace/.specs/auth",
-  folderPath:
-    "/workspace/spec-reviewer.spec-reviewer-worktrees/auth/.plugin-workspace/.specs/auth/user-review/active/2026-05-06T120000Z-file-tasks-abcdef12",
-  sourceFiles: [
-    {
-      specId: "auth",
-      fileKey: "tasks",
-      relativePath: activeRunSourcePath,
-    },
-  ],
+  recordLocator: "urv_0123456789abcdef0123456789abcdef.json",
   commentCount: 2,
-  createdAt: "2026-05-06T12:00:00Z",
+  createdAt: "2026-07-12T10:00:00Z",
+  updatedAt: "2026-07-12T10:00:00Z",
   archivedAt: null,
-  summary: null,
-  warnings: [],
+};
+const secondActiveReview: ActiveUserReview = {
+  ...activeReview,
+  id: "urv_abcdef0123456789abcdef0123456789",
+  recordLocator: "urv_abcdef0123456789abcdef0123456789.json",
 };
 
 type RenderResult = Readonly<{
@@ -51,6 +38,10 @@ type RenderResult = Readonly<{
   unmount: () => void;
 }>;
 
+/**
+ * @param component - React component to render into a disposable DOM container.
+ * @returns Rendered container and cleanup callback.
+ */
 function renderComponent(component: ReactNode): RenderResult {
   const container = document.createElement("div");
   document.body.append(container);
@@ -71,27 +62,31 @@ function renderComponent(component: ReactNode): RenderResult {
   };
 }
 
+/**
+ * @param options - State and callbacks that override the default active-review panel.
+ * @returns Rendered user review panel.
+ */
 function renderPanel(
   options: Readonly<{
     openCommentCount?: number;
+    canCreateUserReview?: boolean;
     listState?: UserReviewListState;
     createState?: UserReviewCreateState;
     archiveState?: UserReviewArchiveState;
     onCreateUserReview?: () => void;
-    onArchiveUserReview?: (userReviewId: string) => void;
-    onCopyPath?: (path: string) => Promise<void>;
+    onArchiveUserReview?: (userReview: ActiveUserReview) => void;
   }> = {},
 ): RenderResult {
   return renderComponent(
     <UserReviewPanel
       targetScope="file"
-      workspaceMode="currentWorkspace"
       openCommentCount={options.openCommentCount ?? 2}
+      canCreateUserReview={options.canCreateUserReview ?? true}
       listState={
         options.listState ?? {
           status: "ready",
-          target: activeRun.target,
-          active: [activeRun],
+          target: activeReview.target,
+          active: [activeReview],
           archived: [],
           problems: [],
           error: null,
@@ -100,17 +95,18 @@ function renderPanel(
       createState={options.createState ?? { status: "idle" }}
       archiveState={options.archiveState ?? { status: "idle" }}
       onTargetScopeChange={vi.fn()}
-      onWorkspaceModeChange={vi.fn()}
       onCreateUserReview={options.onCreateUserReview ?? vi.fn()}
       onArchiveUserReview={options.onArchiveUserReview ?? vi.fn()}
       onRefreshUserReviews={vi.fn()}
-      onCopyPath={options.onCopyPath ?? vi.fn().mockResolvedValue(undefined)}
     />,
   );
 }
 
-test("UserReviewPanelは未解決コメントがないと作成をdisabledにする", () => {
-  const result = renderPanel({ openCommentCount: 0 });
+test("UserReviewPanelはdomainが作成不可と判定すると作成をdisabledにする", () => {
+  const result = renderPanel({
+    canCreateUserReview: false,
+    openCommentCount: 0,
+  });
   const createButton = result.container.querySelector(
     ".review-run-panel__create",
   ) as HTMLButtonElement;
@@ -126,10 +122,7 @@ test("UserReviewPanelは作成中に作成ボタンをdisabledにする", () => 
   const result = renderPanel({
     createState: {
       status: "saving",
-      payload: {
-        commentIds: [],
-        workspaceMode: "currentWorkspace",
-      },
+      payload: { commentIds: [CommentId.fromString("cmt_1")] },
     },
   });
   const createButton = result.container.querySelector(
@@ -145,104 +138,106 @@ test("UserReviewPanelは作成エラーを日本語alertで表示する", () => 
   const result = renderPanel({
     createState: {
       status: "error",
-      payload: { commentIds: [], workspaceMode: "currentWorkspace" },
+      payload: { commentIds: [CommentId.fromString("cmt_1")] },
       error: {
         code: "userReviewExport",
-        message: "source files have uncommitted changes",
+        message: "failed to write user review record",
         raw: {},
       },
     },
   });
 
   expect(result.container.querySelector('[role="alert"]')?.textContent).toBe(
-    "レビューを作成できませんでした。source files have uncommitted changes",
+    "レビューを作成できませんでした。failed to write user review record",
   );
   result.unmount();
 });
 
-test("UserReviewPanelはactive runのpathとworktree情報を表示してコピーできる", async () => {
-  const onCopyPath = vi.fn().mockResolvedValue(undefined);
-  const result = renderPanel({ onCopyPath });
-  const copyButton = result.container.querySelector(
-    `[aria-label="${activeRun.id}のフォルダパスをコピー"]`,
-  ) as HTMLButtonElement;
+test("UserReviewPanelはrecord locatorとcomment countだけでactive reviewを表示する", () => {
+  const result = renderPanel();
 
-  await act(async () => {
-    copyButton.click();
-  });
-
-  expect(result.container.textContent).toContain(activeRun.folderPath);
-  expect(result.container.textContent).toContain(activeRunSourcePath);
-  expect(result.container.textContent).toContain(activeRunBranchName);
-  expect(onCopyPath).toHaveBeenCalledWith(activeRun.folderPath);
-  expect(result.container.querySelector('[role="status"]')?.textContent).toBe(
-    "フォルダパスをコピーしました。",
-  );
+  expect(result.container.textContent).toContain(activeReview.recordLocator);
+  expect(result.container.textContent).toContain("コメント 2件");
+  expect(result.container.textContent).not.toContain("作成先");
+  expect(result.container.textContent).not.toContain("Worktree");
+  expect(
+    result.container.querySelector('[aria-label="対象ファイル"]'),
+  ).toBeNull();
   result.unmount();
 });
 
-test("UserReviewPanelはcompleted runを確認後にアーカイブできる", async () => {
+test("UserReviewPanelはdomainでarchive可能なactive reviewを確認後にアーカイブする", async () => {
   const onArchiveUserReview = vi.fn();
   const confirmMock = vi.fn(() => true);
   vi.stubGlobal("confirm", confirmMock);
-  const completedRun: UserReview = {
-    ...activeRun,
-    status: "completed",
-    summary: "対応完了",
-  };
-  const result = renderPanel({
-    listState: {
-      status: "ready",
-      target: activeRun.target,
-      active: [completedRun],
-      archived: [],
-      problems: [],
-      error: null,
-    },
-    onArchiveUserReview,
-  });
+  const result = renderPanel({ onArchiveUserReview });
   const archiveButton = result.container.querySelector(
-    `[aria-label="${completedRun.id}をアーカイブ"]`,
-  ) as HTMLButtonElement | null;
+    `[aria-label="${activeReview.id}をアーカイブ"]`,
+  ) as HTMLButtonElement;
 
   await act(async () => {
-    archiveButton?.click();
+    archiveButton.click();
   });
 
+  expect(archiveButton.disabled).toBe(false);
   expect(confirmMock).toHaveBeenCalled();
-  expect(onArchiveUserReview).toHaveBeenCalledWith(completedRun.id);
-  expect(result.container.textContent).toContain("対応完了");
+  expect(onArchiveUserReview).toHaveBeenCalledWith(activeReview);
   result.unmount();
   vi.unstubAllGlobals();
 });
 
-test("UserReviewPanelはアーカイブ中のレビュー行だけarchiveをdisabledにする", () => {
-  const completedRun: UserReview = {
-    ...activeRun,
-    status: "completed",
-    summary: "対応完了",
-  };
+test("UserReviewPanelはアーカイブ保存中に全レビュー行のarchiveをdisabledにする", () => {
   const result = renderPanel({
     listState: {
       status: "ready",
-      target: activeRun.target,
-      active: [completedRun],
+      target: activeReview.target,
+      active: [activeReview, secondActiveReview],
       archived: [],
       problems: [],
       error: null,
     },
     archiveState: {
       status: "saving",
-      payload: {
-        userReviewId: completedRun.id,
-      },
+      payload: { userReviewId: activeReview.id },
     },
   });
-  const archiveButton = result.container.querySelector(
-    `[aria-label="${completedRun.id}をアーカイブ"]`,
-  ) as HTMLButtonElement;
+  const archiveButtons = result.container.querySelectorAll<HTMLButtonElement>(
+    '[aria-label$="をアーカイブ"]',
+  );
 
-  expect(archiveButton.disabled).toBe(true);
-  expect(archiveButton.textContent).toContain("アーカイブ中");
+  expect(archiveButtons).toHaveLength(2);
+  expect([...archiveButtons].map((button) => button.disabled)).toEqual([
+    true,
+    true,
+  ]);
+  expect([...archiveButtons].map((button) => button.textContent)).toEqual([
+    "アーカイブ中",
+    "アーカイブ中",
+  ]);
+  result.unmount();
+});
+
+test("UserReviewPanelはrecord problemのlocatorと日本語説明を表示する", () => {
+  const result = renderPanel({
+    listState: {
+      status: "empty",
+      target: activeReview.target,
+      active: [],
+      archived: [],
+      problems: [
+        {
+          locator: "legacy-review-folder",
+          kind: "legacyRecord",
+          message: "legacy folder bundle",
+        },
+      ],
+      error: null,
+    },
+  });
+
+  expect(result.container.querySelector('[role="alert"]')?.textContent).toBe(
+    "旧形式のレビュー: legacy-review-folderフォルダ形式のレビューは一覧に表示できません。",
+  );
+  expect(result.container.textContent).not.toContain("legacy folder bundle");
   result.unmount();
 });
