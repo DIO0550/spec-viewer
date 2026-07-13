@@ -21,6 +21,7 @@ import {
   type CommentBodyParseError,
 } from "@/features/comments/domain/commentBody";
 import { CommentOperationSavingState } from "@/features/comments/domain/commentOperation";
+import { toCommentBodyValidationMessage } from "@/features/comments/lib/comment-body-validation-message";
 import type {
   Comment,
   CommentAnchorDisplayStatus,
@@ -300,7 +301,7 @@ export function CommentThread({
               className="comment-thread__validation"
               role="alert"
             >
-              {validationError.message}
+              {toCommentBodyValidationMessage(validationError)}
             </p>
           )}
           <div className="comment-thread__editor-actions">

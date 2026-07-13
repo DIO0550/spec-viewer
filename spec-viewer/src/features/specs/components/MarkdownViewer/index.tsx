@@ -37,8 +37,8 @@ import remarkGfm from "remark-gfm";
 import {
   CommentBody,
   type CommentBodyDraft,
-  type CommentBody as CommentBodyValue,
   type CommentOperationState,
+  toCommentBodyValidationMessage,
 } from "@/features/comments";
 import { AddCommentPopover } from "@/features/comments/components/AddCommentPopover";
 import {
@@ -201,7 +201,7 @@ type Props = Readonly<{
   onAddComment?: (input: AddCommentSubmitInput) => Promise<boolean>;
   onUpdateComment?: (
     commentId: CommentId,
-    body: CommentBodyValue,
+    body: CommentBody,
   ) => Promise<boolean>;
   onResolveComment?: (commentId: CommentId) => Promise<boolean>;
   onReopenComment?: (commentId: CommentId) => Promise<boolean>;
@@ -466,7 +466,7 @@ export function MarkdownViewer({
    */
   const updateComment = async (
     commentId: CommentId,
-    body: CommentBodyValue,
+    body: CommentBody,
   ): Promise<boolean> => {
     if (onUpdateComment === undefined) {
       return false;
@@ -2386,7 +2386,7 @@ type CommentEditPopoverProps = Readonly<{
    * @param commentId - The identifier of the comment being edited.
    * @param body - The updated comment body text.
    */
-  onSubmit: (commentId: CommentId, body: CommentBodyValue) => Promise<boolean>;
+  onSubmit: (commentId: CommentId, body: CommentBody) => Promise<boolean>;
   /**
    * Resolves the edited comment.
    * @param commentId - The identifier of the comment to resolve.
@@ -2538,7 +2538,7 @@ function CommentEditPopover({
     const parseResult = CommentBody.parse(body);
 
     if (!parseResult.ok) {
-      setValidationMessage(parseResult.error.message);
+      setValidationMessage(toCommentBodyValidationMessage(parseResult.error));
       return;
     }
 

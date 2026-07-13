@@ -42,6 +42,7 @@ export {
 } from "./infra/tauri";
 export { toCommentFeatureError } from "./infra/tauri/commentErrorMapper";
 export { createTextHash } from "./lib/comment-anchor-draft";
+export { toCommentBodyValidationMessage } from "./lib/comment-body-validation-message";
 export {
   createSpecSkillMcpFeedbackDryRunPayload,
   renderSpecSkillMcpFeedbackDryRunPayload,

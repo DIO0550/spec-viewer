@@ -14,6 +14,7 @@ import {
   type CommentBodyDraft,
   type CommentBodyParseError,
 } from "@/features/comments/domain/commentBody";
+import { toCommentBodyValidationMessage } from "@/features/comments/lib/comment-body-validation-message";
 import type {
   AddCommentSubmitInput,
   CommentAnchorDraft,
@@ -106,11 +107,12 @@ export function AddCommentPopover({
   const canSubmit = isScopeReady && commentBodyParseResult.ok;
   const isSubmitDisabled = isSaving || !canSubmit;
   const scopeMessage = isScopeReady ? null : missingScopeMessage;
+  const bodyValidationMessage =
+    commentBodyFormState.error === null
+      ? null
+      : toCommentBodyValidationMessage(commentBodyFormState.error);
   const visibleErrorMessage =
-    scopeMessage ??
-    commentBodyFormState.error?.message ??
-    submitErrorMessage ??
-    errorMessage;
+    scopeMessage ?? bodyValidationMessage ?? submitErrorMessage ?? errorMessage;
   const describedBy =
     visibleErrorMessage === null ? hintId : `${hintId} ${errorId}`;
 

@@ -8,7 +8,6 @@ export type CommentBodyDraft = string;
 
 export type CommentBodyParseError = Readonly<{
   reason: "empty_body";
-  message: "コメント本文を入力してください。";
 }>;
 
 export type CommentBodyParseResult =
@@ -23,7 +22,6 @@ export type CommentBodyParseResult =
 
 const emptyCommentBodyError: CommentBodyParseError = {
   reason: "empty_body",
-  message: "コメント本文を入力してください。",
 };
 
 export const CommentBody = {
