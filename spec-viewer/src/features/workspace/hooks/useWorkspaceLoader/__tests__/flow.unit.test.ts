@@ -135,6 +135,19 @@ test("手入力: 空白のみでemptyInputを返しio未呼び出し", async () 
   expect(io.load).not.toHaveBeenCalled();
 });
 
+test("手入力: 不正なfile URLでtyped invalidInputを返しio未呼び出し", async () => {
+  const io = createIo();
+
+  const outcome = await openWorkspaceFromInput("file://%", io);
+
+  expect(outcome).toEqual({
+    type: "invalidInput",
+    error: { reason: "invalidWorkspaceFileUrl" },
+  });
+  expect(io.validate).not.toHaveBeenCalled();
+  expect(io.load).not.toHaveBeenCalled();
+});
+
 test("手入力: load失敗でloadFailedSilentlyを返す", async () => {
   const io = createIo({ load: vi.fn(async () => false) });
 
