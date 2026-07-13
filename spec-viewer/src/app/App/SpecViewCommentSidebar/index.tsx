@@ -65,7 +65,6 @@ export function SpecViewCommentSidebar(
         <SpecViewUserReviewPanel
           comments={props.comments}
           correlationId={props.correlationId}
-          resetKeys={props.resetKeys}
         />
       }
     />

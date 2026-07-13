@@ -4,12 +4,12 @@ import {
   UserReview,
   type UserReview as UserReviewType,
 } from "@/features/review-runs/domain/userReview";
-import type { UserReviewListProblem } from "@/features/review-runs/types/userReviewIpc";
+import type { UserReviewRecordProblem } from "@/features/review-runs/domain/userReviewRecordProblem";
 
 export type UserReviewCollection = Readonly<{
   active: readonly NonArchivedUserReview[];
   archived: readonly ArchivedUserReview[];
-  problems: readonly UserReviewListProblem[];
+  problems: readonly UserReviewRecordProblem[];
 }>;
 
 export type UserReviewCollectionTransform = (
@@ -28,9 +28,9 @@ export const UserReviewCollection = {
 
   /** @returns Collection from an already-normalized command response. */
   fromListResponse(
-    active: readonly UserReviewType[],
-    archived: readonly UserReviewType[],
-    problems: readonly UserReviewListProblem[],
+    active: readonly NonArchivedUserReview[],
+    archived: readonly ArchivedUserReview[],
+    problems: readonly UserReviewRecordProblem[],
   ): UserReviewCollection {
     return {
       active: active.map(toNonArchivedReview),
@@ -42,7 +42,7 @@ export const UserReviewCollection = {
   /** @returns Collection with the created review first in active results. */
   addCreated(
     collection: UserReviewCollection,
-    userReview: UserReviewType,
+    userReview: NonArchivedUserReview,
   ): UserReviewCollection {
     const created = toNonArchivedReview(userReview);
 
@@ -61,7 +61,7 @@ export const UserReviewCollection = {
   /** @returns Collection with the archived review moved from active to archived. */
   moveArchived(
     collection: UserReviewCollection,
-    userReview: UserReviewType,
+    userReview: ArchivedUserReview,
   ): UserReviewCollection {
     const archived = toArchivedReview(userReview);
 

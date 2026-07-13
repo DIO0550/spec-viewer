@@ -1,62 +1,31 @@
+import type { CommentId } from "@/features/comments/types/comment";
 import type {
-  CommentId,
-  IsoDateTimeString,
-} from "@/features/comments/types/comment";
-import type {
-  ReviewSourceFile,
+  StoredUserReview,
   UserReview,
-  UserReviewStatus,
-  UserReviewWorkspace,
 } from "@/features/review-runs/domain/userReview";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 
 export type { UserReview };
 
-export type ReviewBundleSchemaVersion = "spec-reviewer.review-run.v1";
+export type UserReviewDto = StoredUserReview;
 
-export type UserReviewWorkspaceMode = "currentWorkspace" | "worktree";
+export type UserReviewListProblemDtoKind =
+  | "legacyFolderBundle"
+  | "unsupportedSchemaVersion"
+  | "malformedDocument"
+  | "recoverableDuplicate"
+  | "conflictingCopies";
 
-export type ReviewBundleManifest = Readonly<{
-  schemaVersion: ReviewBundleSchemaVersion;
-  id: string;
-  status: UserReviewStatus;
-  workspacePath: string;
-  target: UserReviewTarget;
-  specFolderPath: string;
-  workspace: UserReviewWorkspace;
-  sourceFiles: readonly ReviewSourceFile[];
-  commentIds: readonly CommentId[];
-  createdAt: IsoDateTimeString;
-  archivedAt: IsoDateTimeString | null;
-}>;
-
-export type ReviewBundleStatusDocument = Readonly<{
-  status: UserReviewStatus;
-  updatedAt: IsoDateTimeString;
-  summary: string | null;
-  warnings: readonly string[];
-}>;
-
-export type UserReviewListProblemState = "malformed" | "missingFolder";
-
-export type UserReviewListProblem = Readonly<{
-  folderPath: string;
-  state: UserReviewListProblemState;
+export type UserReviewListProblemDto = Readonly<{
+  recordLocator: string;
+  kind: UserReviewListProblemDtoKind;
   message: string;
 }>;
-
-export type UserReviewDto = UserReview;
-export type UserReviewExecutionMode = UserReviewWorkspaceMode;
-export type UserReviewExecutionTarget = UserReviewWorkspace;
-export type UserReviewSourceFile = ReviewSourceFile;
-export type UserReviewManifest = ReviewBundleManifest;
-export type UserReviewStatusDocument = ReviewBundleStatusDocument;
 
 export type CreateUserReviewRequest = Readonly<{
   workspacePath: string;
   target: UserReviewTarget;
   commentIds: readonly CommentId[];
-  workspaceMode: UserReviewWorkspaceMode;
 }>;
 
 export type CreateUserReviewResponse = Readonly<{
@@ -72,7 +41,7 @@ export type ListUserReviewsRequest = Readonly<{
 export type ListUserReviewsResponse = Readonly<{
   active: readonly UserReviewDto[];
   archived: readonly UserReviewDto[];
-  problems: readonly UserReviewListProblem[];
+  problems: readonly UserReviewListProblemDto[];
 }>;
 
 export type ArchiveUserReviewRequest = Readonly<{

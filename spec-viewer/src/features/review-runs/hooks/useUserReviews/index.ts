@@ -1,6 +1,9 @@
 import { useMemo } from "react";
 
-import type { UserReview } from "@/features/review-runs/domain/userReview";
+import type {
+  ActiveUserReview,
+  ArchivedUserReview,
+} from "@/features/review-runs/domain/userReview";
 import type { UserReviewListState as UserReviewListStateType } from "@/features/review-runs/domain/userReviewListState";
 import type {
   UserReviewArchiveState,
@@ -59,16 +62,20 @@ export type UseUserReviewsResult = Readonly<{
   listState: UserReviewListStateType;
   createState: UserReviewCreateState;
   archiveState: UserReviewArchiveState;
-  activeReviews: readonly UserReview[];
-  archivedReviews: readonly UserReview[];
+  activeReviews: readonly ActiveUserReview[];
+  archivedReviews: readonly ArchivedUserReview[];
   /** Reloads the user review list. */
   reloadUserReviews: () => Promise<boolean>;
+  /** @returns True when the current selection can create a review. */
+  canCreateUserReview: (input: CreateUserReviewInput) => boolean;
   /** Creates a user review. @param input - The create-review input. */
   createUserReview: (
     input: CreateUserReviewInput,
-  ) => Promise<UserReview | null>;
-  /** Archives a user review. @param userReviewId - ID of the review to archive. */
-  archiveUserReview: (userReviewId: string) => Promise<UserReview | null>;
+  ) => Promise<ActiveUserReview | null>;
+  /** Archives a user review. @param userReview - Aggregate to archive. */
+  archiveUserReview: (
+    userReview: ActiveUserReview,
+  ) => Promise<ArchivedUserReview | null>;
 }>;
 
 /** @returns User review loading and creation state for the selected target. */
@@ -119,6 +126,7 @@ export function useUserReviews(
       createState: create.createState,
       archiveState: archive.archiveState,
       createUserReview: create.createUserReview,
+      canCreateUserReview: create.canCreateUserReview,
       archiveUserReview: archive.archiveUserReview,
     },
   });

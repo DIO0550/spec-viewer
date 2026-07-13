@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { UserReview } from "@/features/review-runs/domain/userReview";
+import {
+  CreateUserReviewCommand,
+  type CreateUserReviewCommandInput,
+} from "@/features/review-runs/domain/createUserReviewCommand";
+import type { ActiveUserReview } from "@/features/review-runs/domain/userReview";
 import { UserReviewFeatureError } from "@/features/review-runs/domain/userReviewError";
 import {
-  type CreateUserReviewPayload,
   UserReviewCreateState,
   type UserReviewCreateState as UserReviewCreateStateType,
 } from "@/features/review-runs/domain/userReviewOperation";
@@ -12,12 +15,14 @@ import type { UserReviewListEventWithSelectionId } from "@/features/review-runs/
 import { createUserReview as createUserReviewViaGateway } from "@/features/review-runs/infra/userReviewGateway";
 import type { UserReviewCommands } from "@/shared/api/tauri";
 import { CreateUserReviewCommandError } from "@/shared/api/tauri/createUserReview";
-import { WorkspacePath } from "@/shared/domain/workspacePath";
+import type { WorkspacePath } from "@/shared/domain/workspacePath";
 
 type SelectionId = string;
 
-export type CreateUserReviewInput = CreateUserReviewPayload;
-
+export type CreateUserReviewInput = Pick<
+  CreateUserReviewCommandInput,
+  "commentIds"
+>;
 export type UseCreateUserReviewOptions = Readonly<{
   workspacePath: WorkspacePath | null;
   target: UserReviewTarget | null;
@@ -34,10 +39,12 @@ type SelectionIdCreateState = Readonly<{
 
 export type UseCreateUserReviewResult = Readonly<{
   createState: UserReviewCreateStateType;
+  /** @returns True when the current selection can create a review. */
+  canCreateUserReview: (input: CreateUserReviewInput) => boolean;
   /** Creates a user review. @param input - The create-review input. */
   createUserReview: (
     input: CreateUserReviewInput,
-  ) => Promise<UserReview | null>;
+  ) => Promise<ActiveUserReview | null>;
 }>;
 
 /** @returns User review create state and callback for the active target. */
@@ -61,17 +68,31 @@ export function useCreateUserReview(
     });
   }, [selectionId]);
 
+  const createCommand = useCallback(
+    (input: CreateUserReviewInput) =>
+      CreateUserReviewCommand.create({
+        workspacePath,
+        target,
+        commentIds: input.commentIds,
+      }),
+    [target, workspacePath],
+  );
+  const canCreateUserReview = useCallback(
+    (input: CreateUserReviewInput): boolean => createCommand(input).ok,
+    [createCommand],
+  );
+
   const createUserReview = useCallback(
-    async (input: CreateUserReviewInput): Promise<UserReview | null> => {
-      if (
-        workspacePath === null ||
-        target === null ||
-        input.commentIds.length === 0
-      ) {
+    async (input: CreateUserReviewInput): Promise<ActiveUserReview | null> => {
+      const commandResult = createCommand(input);
+
+      if (!commandResult.ok) {
         return null;
       }
 
-      const payload = input;
+      const payload = {
+        commentIds: commandResult.command.commentIds,
+      };
       const startedSelectionId = selectionId;
       const startedRequestId = requestIdRef.current + 1;
       requestIdRef.current = startedRequestId;
@@ -83,9 +104,7 @@ export function useCreateUserReview(
       try {
         const response = await createUserReviewViaGateway(
           commands,
-          WorkspacePath.toString(workspacePath),
-          target,
-          payload,
+          commandResult.command,
         );
 
         setCreateViewState((current) => {
@@ -133,7 +152,7 @@ export function useCreateUserReview(
         return null;
       }
     },
-    [commands, onUserReviewEvent, target, selectionId, workspacePath],
+    [commands, createCommand, onUserReviewEvent, selectionId],
   );
 
   const createState =
@@ -143,6 +162,7 @@ export function useCreateUserReview(
 
   return {
     createState,
+    canCreateUserReview,
     createUserReview,
   };
 }

@@ -1,37 +1,42 @@
 import type { UserReview } from "@/features/review-runs/domain/userReview";
-import type { UserReviewListState } from "@/features/review-runs/domain/userReviewListState";
+import type { UserReviewRecordProblemKind } from "@/features/review-runs/domain/userReviewRecordProblem";
 
 export const userReviewStatusLabels: Readonly<
   Record<UserReview["status"], string>
 > = {
   active: "受付中",
-  inProgress: "対応中",
-  completed: "完了",
   archived: "アーカイブ済み",
 };
 
-/**
- * @param input - Open comment count and create operation state.
- * @returns True when a user review can be created.
- */
-export function canCreateUserReview(input: {
-  openCommentCount: number;
-  isCreating: boolean;
-}): boolean {
-  return input.openCommentCount > 0 && !input.isCreating;
-}
+export type UserReviewRecordProblemPresentation = Readonly<{
+  label: string;
+  description: string;
+}>;
 
-/**
- * @param review - User review shown in the active list.
- * @param isSaving - Whether this review is currently being archived.
- * @returns True when a user review can be archived.
- */
-export function canArchiveUserReview(
-  review: UserReview,
-  isSaving: boolean,
-): boolean {
-  return review.status === "completed" && !isSaving;
-}
+const userReviewRecordProblemPresentations: Readonly<
+  Record<UserReviewRecordProblemKind, UserReviewRecordProblemPresentation>
+> = {
+  legacyRecord: {
+    label: "旧形式のレビュー",
+    description: "フォルダ形式のレビューは一覧に表示できません。",
+  },
+  unsupportedRecordVersion: {
+    label: "未対応のバージョン",
+    description: "このレビューは新しいバージョンで作成されています。",
+  },
+  malformedRecord: {
+    label: "壊れたレビュー",
+    description: "レビューJSONの内容を読み取れませんでした。",
+  },
+  recoverableDuplicate: {
+    label: "重複レコードを復旧",
+    description: "同じレビューの重複から有効なレコードを使用しました。",
+  },
+  conflictingCopies: {
+    label: "競合するレコード",
+    description: "同じレビューIDを持つ異なるレコードがあります。",
+  },
+};
 
 /**
  * @param openCommentCount - Number of open comments to be included.
@@ -47,10 +52,10 @@ export function formatOpenCommentSummary(openCommentCount: number): string {
 
 /**
  * @param userReview - The newly created user review.
- * @returns A Japanese success message for a newly created review.
+ * @returns A Japanese success message for user review creation.
  */
 export function formatCreateSuccessMessage(userReview: UserReview): string {
-  return `レビューを作成しました。${userReview.commentCount}件 / ${userReview.folderPath}`;
+  return `レビューを作成しました。${userReview.commentCount}件 / ${userReview.recordLocator}`;
 }
 
 /**
@@ -66,7 +71,7 @@ export function formatCreateErrorMessage(message: string): string {
  * @returns A Japanese success message for an archived review.
  */
 export function formatArchiveSuccessMessage(userReview: UserReview): string {
-  return `レビューをアーカイブしました。${userReview.folderPath}`;
+  return `レビューをアーカイブしました。${userReview.recordLocator}`;
 }
 
 /**
@@ -78,20 +83,19 @@ export function formatArchiveErrorMessage(message: string): string {
 }
 
 /**
- * @param userReview - The active user review to summarize.
- * @returns A compact status and comment summary for an active review.
+ * @param userReview - The user review to summarize.
+ * @returns A compact status and comment summary.
  */
 export function formatUserReviewSummary(userReview: UserReview): string {
   return `${userReviewStatusLabels[userReview.status]} / コメント ${userReview.commentCount}件`;
 }
 
-/** @returns A short Japanese label for malformed/missing folder list states. */
-export function formatProblemState(
-  state: UserReviewListState["problems"][number]["state"],
-): string {
-  if (state === "missingFolder") {
-    return "フォルダなし";
-  }
-
-  return "壊れたレビュー";
+/**
+ * @param kind - Typed record problem produced by the domain boundary.
+ * @returns Japanese label and description for the problem kind.
+ */
+export function formatUserReviewRecordProblem(
+  kind: UserReviewRecordProblemKind,
+): UserReviewRecordProblemPresentation {
+  return userReviewRecordProblemPresentations[kind];
 }
