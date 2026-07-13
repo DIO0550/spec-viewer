@@ -62,8 +62,7 @@ test("drop成功でio.validate→io.loadがこの順に各1回呼ばれる", asy
 test.each([
   [
     "手入力",
-    (io: WorkspaceLoaderFlowIo) =>
-      openWorkspaceFromInput(workspacePathFixture("/path"), io),
+    (io: WorkspaceLoaderFlowIo) => openWorkspaceFromInput("/path", io),
     false,
   ],
   [
@@ -139,10 +138,7 @@ test("手入力: 空白のみでemptyInputを返しio未呼び出し", async () 
 test("手入力: load失敗でloadFailedSilentlyを返す", async () => {
   const io = createIo({ load: vi.fn(async () => false) });
 
-  const outcome = await openWorkspaceFromInput(
-    workspacePathFixture("/path"),
-    io,
-  );
+  const outcome = await openWorkspaceFromInput("/path", io);
 
   expect(outcome).toEqual({ type: "loadFailedSilently" });
 });
