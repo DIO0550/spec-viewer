@@ -182,7 +182,7 @@ Issue #106 admits the following narrow leaves. Consumers import the exact leaf;
 | `shared/domain/specFileKey` | `SpecFileKey` | Shared Kernel / #106 | Specs, comments, and review runs identify the same logical planning document. |
 | `shared/domain/specId` | `SpecId` | Shared Kernel / #106 | Selection, comment, watch, and review targets refer to the same spec identity. |
 | `shared/domain/commentId` | `CommentId` | Shared Kernel / #106 | Comments own the aggregate, while review bundles preserve those same comment identities. |
-| `shared/domain/isoDateTime` | `IsoDateTimeString` | Shared Kernel / #106 | Comment and review records exchange the same persisted timestamp vocabulary. Runtime decoding remains owned by #110 and aggregate validation by #120. |
+| `shared/domain/isoDateTime` | `IsoDateTimeString` | Shared Kernel / #106 | Comment and review records exchange the same persisted timestamp vocabulary. Runtime decoding is enforced by #110; aggregate validation remains owned by #120. |
 | `shared/domain/specViewSelection` | `SpecViewSelection`, `SelectionIdentity`, `SpecViewFileTarget`, `SpecViewReviewTarget` | Shared Kernel / #106, behavior from #128 | App composition, specs watching, comments, and review runs must share one selection transition and stale-result identity rule. |
 
 `WorkspacePath` remains the pre-existing Shared Kernel path identity used by the
@@ -193,7 +193,7 @@ The following projections remain with their feature owner:
 | --- | --- | --- |
 | `CommentScope` | comments / `@/features/comments` | It projects a selected file into comment-list and mutation inputs. |
 | `ExportCommentsTarget` | comments / `@/features/comments` | It is a comments export transport shape and includes workspace export. |
-| `UserReviewTarget` | review-runs / `@/features/review-runs` | It is a review command projection. Its raw DTO-compatible `specId` remains until #110 separates DTO decoding from domain identities. |
+| `UserReviewTarget` | review-runs / `@/features/review-runs` | It is a review command projection. Its transport DTO is separated by #110; validated domain identities remain owned by #111. |
 | Watch command and subscriber types | specs / `@/features/specs` | They are specs application ports implemented by the Tauri adapter, not domain vocabulary. |
 | `ThemeMode` | preferences / `@/features/preferences` | It is a preferences-owned policy exposed for UI composition. |
 
@@ -246,9 +246,27 @@ non-domain wire codes continue to use the established unknown display behavior.
 
 All 16 `domain-forbidden-dependency` waivers owned by #109 are removed. The five
 MarkdownViewer deep-import waivers owned by #108 remain exact and visible.
-Waivers owned by #110, #118, and #120 also remain unchanged; generic domain state
+Waivers owned by #118 and #120 remain unchanged; generic domain state
 containers accept application errors without absorbing their display or transport
 shape.
+
+### Issue #110 acceptance boundary
+
+All Tauri command successes enter the frontend as `unknown`. The shared runtime
+codec reports the first invalid field with its command, path, expected shape, and
+actual runtime kind. Each workspace, spec, watch, comment, and review-run adapter
+defines its own wire DTO and converts it through a feature-owned anti-corruption
+layer before returning domain or application values.
+
+Request encoders perform the reverse conversion from domain-facing requests to
+wire DTOs. Command names and serialized request/response fields remain unchanged.
+Watch and workspace drag/drop event payloads use the same runtime-decoding rule.
+Review lifecycle restoration rejects contradictory `status` / `archivedAt`
+combinations before a `UserReview` reaches application state.
+
+The three `domain-forbidden-dependency` waivers owned by #110 are removed. Review
+list problems and workspace mode now live in review-run domain vocabulary. Waivers
+owned by #108, #118, and #120 remain exact and unchanged.
 
 ### PR #28 supersede map
 
