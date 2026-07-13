@@ -164,3 +164,75 @@ test("useRecentWorkspacesはremoveとclearをrepositoryへ同期する", () => {
   expect(repository.clearCallCount).toBe(1);
   result.unmount();
 });
+
+test("useRecentWorkspacesはrepository差し替え時にaggregateを再同期する", () => {
+  const firstRepository = new MemoryRecentWorkspacesRepository(
+    RecentWorkspaces.restore({
+      entries: [
+        {
+          path: workspacePathFixture("/workspace/alpha"),
+          displayName: "alpha",
+          kind: "plugin-workspace",
+          lastOpenedAt: "2026-05-01T00:00:00.000Z",
+        },
+      ],
+      lastActiveWorkspacePath: workspacePathFixture("/workspace/alpha"),
+    }),
+  );
+  const currentRepository = new MemoryRecentWorkspacesRepository(
+    RecentWorkspaces.restore({
+      entries: [
+        {
+          path: workspacePathFixture("/workspace/beta"),
+          displayName: "beta",
+          kind: "plugin-workspace",
+          lastOpenedAt: "2026-05-02T00:00:00.000Z",
+        },
+      ],
+      lastActiveWorkspacePath: workspacePathFixture("/workspace/beta"),
+    }),
+  );
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  const hookResult: {
+    current: ReturnType<typeof useRecentWorkspaces> | undefined;
+  } = {
+    current: undefined,
+  };
+
+  function TestComponent({
+    repository,
+  }: Readonly<{ repository: RecentWorkspacesRepository }>): null {
+    hookResult.current = useRecentWorkspaces({
+      repository,
+      clock: { now: () => "2026-05-03T00:00:00.000Z" },
+    });
+    return null;
+  }
+
+  act(() => {
+    root.render(
+      <StrictMode>
+        <TestComponent repository={firstRepository} />
+      </StrictMode>,
+    );
+  });
+  act(() => {
+    root.render(
+      <StrictMode>
+        <TestComponent repository={currentRepository} />
+      </StrictMode>,
+    );
+  });
+
+  expect(hookResult.current?.recentWorkspaces.map(({ path }) => path)).toEqual([
+    "/workspace/beta",
+  ]);
+  expect(hookResult.current?.lastActiveWorkspacePath).toBe("/workspace/beta");
+  expect(firstRepository.saveCallCount).toBe(0);
+  expect(currentRepository.saveCallCount).toBe(0);
+
+  act(() => {
+    root.unmount();
+  });
+});
