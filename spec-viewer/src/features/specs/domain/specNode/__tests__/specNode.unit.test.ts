@@ -22,6 +22,8 @@ const tasksFile: SpecFile = {
 const nestedChild: SpecNodeType = {
   id: TestValues.specId("child-spec"),
   label: "Child Spec",
+  kind: "spec",
+  capabilities: { reviewable: true, archiveable: true },
   files: [tasksFile],
   children: [],
 };
@@ -30,12 +32,16 @@ const nodes: readonly SpecNodeType[] = [
   {
     id: TestValues.specId("root-empty"),
     label: "Root Empty",
+    kind: "spec",
+    capabilities: { reviewable: false, archiveable: true },
     files: [],
     children: [nestedChild],
   },
   {
     id: TestValues.specId("root-openable"),
     label: "Root Openable",
+    kind: "spec",
+    capabilities: { reviewable: true, archiveable: true },
     files: [implFile, tasksFile],
     children: [],
   },
@@ -64,20 +70,42 @@ test("SpecNode.firstは先頭nodeを返す", () => {
   expect(SpecNode.first([])).toBeNull();
 });
 
-test("SpecNode.firstOpenableはfileを持つ最初のnodeを返す", () => {
+test("SpecNode.firstOpenableはreviewableな最初のnodeを返す", () => {
   expect(SpecNode.firstOpenable(nodes.slice(1))).toBe(nodes[1]);
 });
 
-test("SpecNode.firstOpenableはfileを持つchild nodeを返す", () => {
+test("SpecNode.firstOpenableはreviewableなchild nodeを返す", () => {
   expect(SpecNode.firstOpenable(nodes.slice(0, 1))).toBe(nestedChild);
 });
 
-test("SpecNode.firstOpenableはfileを持つnodeがなければ先頭nodeへfallbackする", () => {
+test("SpecNode.firstOpenableはfilesがあってもreviewable=falseのnodeをskipする", () => {
+  const nonReviewableNode: SpecNodeType = {
+    id: TestValues.specId("non-reviewable"),
+    label: "Non-reviewable",
+    kind: "spec",
+    capabilities: { reviewable: false, archiveable: true },
+    files: [implFile],
+    children: [],
+  };
+
+  expect(SpecNode.firstOpenable([nonReviewableNode, nodes[1]])).toBe(nodes[1]);
+});
+
+test("SpecNode.firstOpenableはreviewableなnodeがなければ先頭nodeへfallbackする", () => {
   const emptyNodes: readonly SpecNodeType[] = [
-    { id: TestValues.specId("root"), label: "Root", files: [], children: [] },
+    {
+      id: TestValues.specId("root"),
+      label: "Root",
+      kind: "spec",
+      capabilities: { reviewable: false, archiveable: true },
+      files: [],
+      children: [],
+    },
     {
       id: TestValues.specId("sibling"),
       label: "Sibling",
+      kind: "spec",
+      capabilities: { reviewable: false, archiveable: true },
       files: [],
       children: [],
     },

@@ -16,6 +16,8 @@ const implFile: SpecFile = {
 const specNode: SpecNode = {
   id: TestValues.specId("spec-1"),
   label: "Spec 1",
+  kind: "spec",
+  capabilities: { reviewable: true, archiveable: true },
   files: [implFile],
   children: [],
 };

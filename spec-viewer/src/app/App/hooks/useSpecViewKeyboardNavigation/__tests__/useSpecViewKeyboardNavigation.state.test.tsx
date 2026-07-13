@@ -41,7 +41,21 @@ function dispatchShortcut(key: string): void {
 }
 
 const spec: NavigableSpec = {
-  files: [{ key: "hearing" }, { key: "impl" }, { key: "tasks" }],
+  files: [
+    {
+      key: "hearing",
+      label: "Hearing",
+      fileName: "hearing.md",
+      status: "present",
+    },
+    {
+      key: "impl",
+      label: "Implementation",
+      fileName: "impl.md",
+      status: "present",
+    },
+    { key: "tasks", label: "Tasks", fileName: "tasks.md", status: "present" },
+  ],
 };
 
 function baseOptions(): UseSpecViewKeyboardNavigationOptions {
