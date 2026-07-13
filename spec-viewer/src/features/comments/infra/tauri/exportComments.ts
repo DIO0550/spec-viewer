@@ -130,7 +130,7 @@ export async function exportComments(
 
   return invokeTauriCommand<
     ExportCommentsCommandResponse,
-    ExportCommentsCommandRequest,
+    ReturnType<typeof encodeExportCommentsRequest>,
     ExportCommentsCommandError
   >(
     EXPORT_COMMENTS_COMMAND,

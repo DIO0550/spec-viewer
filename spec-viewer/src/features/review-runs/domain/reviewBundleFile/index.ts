@@ -1,4 +1,5 @@
 import type { SpecFileKey } from "@/shared/domain/specFileKey";
+import type { SpecId } from "@/shared/domain/specId";
 
 export type ReviewBundleFileKind =
   | "manifest"
@@ -11,7 +12,7 @@ export type RawReviewBundleFile = Readonly<{
   kind: ReviewBundleFileKind;
   relativePath: string;
   contents: string;
-  specId?: string;
+  specId?: SpecId;
   fileKey?: SpecFileKey;
 }>;
 
@@ -43,7 +44,7 @@ export type ReviewBundleContextSourceFile = Readonly<{
   kind: "contextSource";
   relativePath: string;
   contents: string;
-  specId: string;
+  specId: SpecId;
   fileKey: SpecFileKey;
 }>;
 

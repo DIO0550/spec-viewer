@@ -18,6 +18,7 @@ import * as specGateway from "@/features/specs/infra/specGateway";
 import { specCommands } from "@/features/specs/infra/tauri";
 import { toSpecFeatureError } from "@/features/specs/infra/tauri/specErrorMapper";
 import type { SpecFileKey } from "@/shared/domain/specFileKey";
+import type { SpecId } from "@/shared/domain/specId";
 import {
   createPerformanceCorrelationId,
   startPerformanceSpan,
@@ -29,7 +30,7 @@ export type { UseSpecsResult } from "@/features/specs/hooks/useSpecs/types";
 
 export type SpecSelectionChange = Readonly<{
   workspacePath: string | null;
-  specId: string | null;
+  specId: SpecId | null;
   fileKey: SpecFileKey | null;
 }>;
 
@@ -44,7 +45,7 @@ const initialDocumentState: SpecDocumentFeatureState =
   SpecDocumentFeatureStateFactory.idle(null);
 
 type PreferredSelection = Readonly<{
-  specId: string | null;
+  specId: SpecId | null;
   fileKey: SpecFileKey | null;
 }>;
 
@@ -167,7 +168,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
   const loadDocument = useCallback(
     async (
       operationId: string,
-      specId: string,
+      specId: SpecId,
       fileKey: SpecFileKey,
       activeWorkspacePath: string | null = workspacePath,
       canCommit: ShouldCommitState = () => true,
@@ -461,7 +462,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
   const tree = specTreeState.tree;
 
   const selectSpec = useCallback(
-    async (specId: string): Promise<void> => {
+    async (specId: SpecId): Promise<void> => {
       await runSpecLoad(async (operationId) => {
         const activeWorkspacePath = workspacePath;
         const nextSpec =
@@ -571,7 +572,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
   ]);
 
   const archiveSpec = useCallback(
-    async (specId: string): Promise<boolean> => {
+    async (specId: SpecId): Promise<boolean> => {
       return await runSpecLoad(async (operationId) => {
         const activeWorkspacePath = workspacePath;
 

@@ -1,13 +1,14 @@
 import { useCallback } from "react";
 
 import type { SpecFileKey } from "@/features/specs";
+import type { SpecId } from "@/shared/domain/specId";
 
 export type UseGuardedSpecActionsOptions = Readonly<{
   isCurrentViewLoading: boolean;
   /** Selects a spec. @param specId - Id of the spec to select. */
-  selectSpec: (specId: string) => Promise<unknown>;
+  selectSpec: (specId: SpecId) => Promise<unknown>;
   /** Archives a spec. @param specId - Id of the spec to archive. */
-  archiveSpec: (specId: string) => Promise<unknown>;
+  archiveSpec: (specId: SpecId) => Promise<unknown>;
   /** Reloads the spec list. */
   reloadSpecs: () => Promise<unknown>;
   /** Selects a spec file. @param fileKey - Key of the file to select. */
@@ -18,9 +19,9 @@ export type UseGuardedSpecActionsOptions = Readonly<{
 
 export type UseGuardedSpecActionsResult = Readonly<{
   /** Selects a spec from the tree. @param specId - Id of the spec to select. */
-  selectSpecFromTree: (specId: string) => void;
+  selectSpecFromTree: (specId: SpecId) => void;
   /** Archives a spec from the tree. @param specId - Id of the spec to archive. */
-  archiveSpecFromTree: (specId: string) => void;
+  archiveSpecFromTree: (specId: SpecId) => void;
   /** Reloads the spec list from the tree. */
   reloadSpecsFromTree: () => void;
   /** Selects a file from the tabs. @param fileKey - Key of the file to select. */
@@ -46,7 +47,7 @@ export function useGuardedSpecActions(
   } = options;
 
   const selectSpecFromTree = useCallback(
-    (specId: string): void => {
+    (specId: SpecId): void => {
       if (isCurrentViewLoading) {
         return;
       }
@@ -57,7 +58,7 @@ export function useGuardedSpecActions(
   );
 
   const archiveSpecFromTree = useCallback(
-    (specId: string): void => {
+    (specId: SpecId): void => {
       if (isCurrentViewLoading) {
         return;
       }

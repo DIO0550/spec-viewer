@@ -130,7 +130,7 @@ export async function listComments(
 
   return invokeTauriCommand<
     ListCommentsCommandResponse,
-    ListCommentsCommandRequest,
+    ReturnType<typeof encodeListCommentsRequest>,
     ListCommentsCommandError
   >(
     LIST_COMMENTS_COMMAND,

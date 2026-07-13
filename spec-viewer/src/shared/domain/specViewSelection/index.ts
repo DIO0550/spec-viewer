@@ -23,7 +23,7 @@ export type SpecViewSelection = Readonly<{
 
 export type SpecViewSelectionInput = Readonly<{
   workspacePath: WorkspacePathType | null;
-  specId: string | null;
+  specId: SpecIdType | null;
   fileKey: SpecFileKey | null;
 }>;
 
@@ -114,14 +114,17 @@ export const SpecViewSelection = {
    * @param specId - Spec to select.
    * @returns Spec selection with file and scope reset, or the current selection without a workspace.
    */
-  selectSpec(selection: SpecViewSelection, specId: string): SpecViewSelection {
+  selectSpec(
+    selection: SpecViewSelection,
+    specId: SpecIdType,
+  ): SpecViewSelection {
     if (selection.workspacePath === null) {
       return selection;
     }
 
     return {
       ...selection,
-      specId: SpecId.fromString(specId),
+      specId,
       fileKey: null,
       targetScope: "file",
     };

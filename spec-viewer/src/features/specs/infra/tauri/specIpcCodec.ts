@@ -25,7 +25,9 @@ import type {
   StopSpecFileWatchRequest,
   StopSpecFileWatchResponse,
 } from "@/features/specs/types/watch";
+import { SpecId, type SpecId as SpecIdType } from "@/shared/domain/specId";
 import {
+  IpcResponseDecodeError,
   RuntimeCodec,
   decodeRuntimeValue,
   type RuntimeCodec as RuntimeCodecType,
@@ -221,7 +223,7 @@ export const encodeListSpecsRequest = (request: ListSpecsRequest) => ({
 });
 export const encodeReadSpecFileRequest = (request: ReadSpecFileRequest) => ({
   workspacePath: request.workspacePath,
-  specId: request.specId,
+  specId: SpecId.toDto(request.specId),
   fileKey: request.fileKey,
   ...(request.correlationId === undefined
     ? {}
@@ -229,13 +231,13 @@ export const encodeReadSpecFileRequest = (request: ReadSpecFileRequest) => ({
 });
 export const encodeArchiveSpecRequest = (request: ArchiveSpecRequest) => ({
   workspacePath: request.workspacePath,
-  specId: request.specId,
+  specId: SpecId.toDto(request.specId),
 });
 export const encodeStartSpecFileWatchRequest = (
   request: StartSpecFileWatchRequest,
 ) => ({
   workspacePath: request.workspacePath,
-  specId: request.specId,
+  specId: SpecId.toDto(request.specId),
   fileKey: request.fileKey,
 });
 export const encodeStopSpecFileWatchRequest = (
@@ -244,7 +246,11 @@ export const encodeStopSpecFileWatchRequest = (
 
 export function decodeListSpecsResponse(value: unknown): SpecTreeDomain {
   const dto = decodeRuntimeValue("list_specs", specTreeCodec, value);
-  return SpecTree.create(dto.specs.map(mapSpecNodeDtoToDomain));
+  return SpecTree.create(
+    dto.specs.map((node, index) =>
+      mapSpecNodeDtoToDomain("list_specs", node, `$.specs[${index}]`),
+    ),
+  );
 }
 
 export function decodeReadSpecFileResponse(value: unknown): SpecDocument {
@@ -252,14 +258,28 @@ export function decodeReadSpecFileResponse(value: unknown): SpecDocument {
 }
 
 export function decodeArchiveSpecResponse(value: unknown): ArchiveSpecResponse {
-  return { ...decodeRuntimeValue("archive_spec", archiveSpecCodec, value) };
+  const dto = decodeRuntimeValue("archive_spec", archiveSpecCodec, value);
+  return {
+    archivedSpecId: decodeSpecId(
+      "archive_spec",
+      "$.archivedSpecId",
+      dto.archivedSpecId,
+    ),
+    archivePath: dto.archivePath,
+  };
 }
 
 export function decodeStartSpecFileWatchResponse(
   value: unknown,
 ): StartSpecFileWatchResponse {
+  const dto = decodeRuntimeValue(
+    "start_spec_file_watch",
+    startWatchCodec,
+    value,
+  );
   return {
-    ...decodeRuntimeValue("start_spec_file_watch", startWatchCodec, value),
+    ...dto,
+    specId: decodeSpecId("start_spec_file_watch", "$.specId", dto.specId),
   };
 }
 
@@ -274,32 +294,67 @@ export function decodeStopSpecFileWatchResponse(
 export function decodeSpecFileWatchChangedEvent(
   value: unknown,
 ): SpecFileWatchChangedEvent {
+  const command = "spec-file-watch://changed";
+  const dto = decodeRuntimeValue(command, watchChangedCodec, value);
   return {
-    ...decodeRuntimeValue(
-      "spec-file-watch://changed",
-      watchChangedCodec,
-      value,
-    ),
+    ...dto,
+    specId: decodeSpecId(command, "$.specId", dto.specId),
   };
 }
 
 export function decodeSpecFileWatchErrorEvent(
   value: unknown,
 ): SpecFileWatchErrorEvent {
+  const command = "spec-file-watch://error";
+  const dto = decodeRuntimeValue(command, watchErrorCodec, value);
   return {
-    ...decodeRuntimeValue("spec-file-watch://error", watchErrorCodec, value),
+    ...dto,
+    specId: decodeSpecId(command, "$.specId", dto.specId),
   };
 }
 
-function mapSpecNodeDtoToDomain(dto: SpecNodeDto): SpecNodeDomain {
+/**
+ * @param command - Tauri command that produced the DTO.
+ * @param dto - Structurally decoded spec node DTO.
+ * @param path - JSON path of the spec node DTO.
+ * @returns A spec node restored with validated identities.
+ * @throws {IpcResponseDecodeError} When an identity is invalid.
+ */
+function mapSpecNodeDtoToDomain(
+  command: string,
+  dto: SpecNodeDto,
+  path: string,
+): SpecNodeDomain {
   return SpecNode.create({
-    id: dto.id,
+    id: decodeSpecId(command, `${path}.id`, dto.id),
     label: dto.label,
     files: dto.files.map(mapSpecFileDtoToDomain),
-    children: dto.children.map(mapSpecNodeDtoToDomain),
+    children: dto.children.map((child, index) =>
+      mapSpecNodeDtoToDomain(command, child, `${path}.children[${index}]`),
+    ),
   });
 }
 
 function mapSpecFileDtoToDomain(dto: SpecFileDto): SpecFileDomain {
   return SpecFile.create({ ...dto });
+}
+
+/**
+ * @param command - Tauri command that produced the value.
+ * @param path - JSON path of the identity.
+ * @param value - Raw identity received over IPC.
+ * @returns A restored SpecId.
+ * @throws {IpcResponseDecodeError} When the identity is invalid.
+ */
+function decodeSpecId(
+  command: string,
+  path: string,
+  value: string,
+): SpecIdType {
+  const result = SpecId.fromDto(value);
+  if (result.ok) {
+    return result.value;
+  }
+
+  throw new IpcResponseDecodeError(command, path, "valid SpecId", value);
 }

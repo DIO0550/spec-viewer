@@ -151,9 +151,14 @@ export function CommentThread({
       return;
     }
 
+    const parsedCommentId = CommentIdValue.fromDto(nextCommentId);
+    if (!parsedCommentId.ok) {
+      return;
+    }
+
     event.preventDefault();
     nextButton.focus();
-    onSelectComment(CommentIdValue.fromString(nextCommentId));
+    onSelectComment(parsedCommentId.value);
   };
 
   return (

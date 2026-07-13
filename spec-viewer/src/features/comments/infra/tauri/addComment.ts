@@ -123,7 +123,7 @@ export async function addComment(
 ): Promise<AddCommentCommandResponse> {
   return invokeTauriCommand<
     AddCommentCommandResponse,
-    AddCommentCommandRequest,
+    ReturnType<typeof encodeAddCommentRequest>,
     AddCommentCommandError
   >(
     ADD_COMMENT_COMMAND,

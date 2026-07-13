@@ -8,8 +8,8 @@ import type {
   CommentAnchor,
   CommentAnchorResolution,
   CommentId,
-  IsoDateTimeString,
 } from "@/features/comments/types/comment";
+import type { IsoDateTime } from "@/shared/domain/isoDateTime";
 
 export type Comment = Readonly<{
   id: CommentId;
@@ -18,8 +18,8 @@ export type Comment = Readonly<{
   status: CommentStatus;
   resolved: boolean;
   anchorResolution?: CommentAnchorResolution | null;
-  createdAt: IsoDateTimeString;
-  updatedAt: IsoDateTimeString;
+  createdAt: IsoDateTime;
+  updatedAt: IsoDateTime;
 }>;
 
 export type CreateCommentInput = Comment;

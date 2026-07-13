@@ -20,6 +20,7 @@ import {
   formatProblemState,
   formatUserReviewSummary,
 } from "@/features/review-runs/components/userReviewPanelPresenter";
+import type { UserReviewId } from "@/features/review-runs/domain/userReviewId";
 import type {
   ReviewSourceFile,
   UserReview,
@@ -47,7 +48,7 @@ type Props = Readonly<{
   /** Creates a new user review. */
   onCreateUserReview: () => void;
   /** Archives a user review. @param userReviewId - ID of the review to archive. */
-  onArchiveUserReview: (userReviewId: string) => void;
+  onArchiveUserReview: (userReviewId: UserReviewId) => void;
   /** Refreshes the user review list. */
   onRefreshUserReviews: () => void;
   /** Copies a folder path. @param path - The path to copy to the clipboard. */
@@ -285,7 +286,7 @@ type UserReviewListProps = Readonly<{
   /** Copies a folder path. @param path - The path to copy to the clipboard. */
   onCopyPath: (path: string) => void;
   /** Archives a user review. @param userReviewId - ID of the review to archive. */
-  onArchiveUserReview: (userReviewId: string) => void;
+  onArchiveUserReview: (userReviewId: UserReviewId) => void;
 }>;
 
 /** @returns Active review run cards or a loading/empty/error state. */
@@ -427,7 +428,7 @@ type UserReviewActionsProps = Readonly<{
   run: UserReview;
   archiveState: UserReviewArchiveState;
   /** Archives a user review. @param userReviewId - ID of the review to archive. */
-  onArchiveUserReview: (userReviewId: string) => void;
+  onArchiveUserReview: (userReviewId: UserReviewId) => void;
 }>;
 
 /** @returns User review lifecycle actions. */

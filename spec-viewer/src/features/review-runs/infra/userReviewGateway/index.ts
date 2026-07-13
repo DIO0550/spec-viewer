@@ -1,4 +1,5 @@
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
+import type { UserReviewId } from "@/features/review-runs/domain/userReviewId";
 import type {
   ArchiveUserReviewResponse,
   CreateUserReviewResponse,
@@ -64,7 +65,7 @@ export async function archiveUserReview(
   commands: UserReviewCommands,
   workspacePath: string,
   target: UserReviewTarget,
-  userReviewId: string,
+  userReviewId: UserReviewId,
 ): Promise<ArchiveUserReviewResponse> {
   return commands.archiveUserReview({
     workspacePath,

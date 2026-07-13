@@ -128,7 +128,7 @@ export async function archiveSpec(
 
   return invokeTauriCommand<
     ArchiveSpecCommandResponse,
-    ArchiveSpecCommandRequest,
+    ReturnType<typeof encodeArchiveSpecRequest>,
     ArchiveSpecCommandError
   >(
     ARCHIVE_SPEC_COMMAND,

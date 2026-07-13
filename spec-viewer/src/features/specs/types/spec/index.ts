@@ -1,4 +1,8 @@
-import type { SpecDocumentFormat, SpecFileKey } from "@/features/specs/domain/specFile";
+import type {
+  SpecDocumentFormat,
+  SpecFileKey,
+} from "@/features/specs/domain/specFile";
+import type { SpecId } from "@/shared/domain/specId";
 
 export type {
   ConfigSource,
@@ -40,18 +44,18 @@ export type ListSpecsRequest = Readonly<{
 
 export type ReadSpecFileRequest = Readonly<{
   workspacePath: string;
-  specId: string;
+  specId: SpecId;
   fileKey: SpecFileKey;
   correlationId?: string;
 }>;
 
 export type ArchiveSpecRequest = Readonly<{
   workspacePath: string;
-  specId: string;
+  specId: SpecId;
 }>;
 
 export type ArchiveSpecResponse = Readonly<{
-  archivedSpecId: string;
+  archivedSpecId: SpecId;
   archivePath: string;
 }>;
 

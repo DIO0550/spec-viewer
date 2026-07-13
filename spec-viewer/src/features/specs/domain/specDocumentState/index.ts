@@ -1,11 +1,12 @@
 import type { SpecFileKey } from "@/features/specs/domain/specFile";
 import type { SpecDocument } from "@/features/specs/types/spec";
+import type { SpecId } from "@/shared/domain/specId";
 
 export type SpecDocumentState<TError = unknown> =
   | Readonly<{
       status: "idle";
       workspacePath: string | null;
-      specId: string | null;
+      specId: SpecId | null;
       fileKey: SpecFileKey | null;
       correlationId?: string;
       document: null;
@@ -14,7 +15,7 @@ export type SpecDocumentState<TError = unknown> =
   | Readonly<{
       status: "loading";
       workspacePath: string;
-      specId: string;
+      specId: SpecId;
       fileKey: SpecFileKey;
       correlationId?: string;
       document: null;
@@ -23,7 +24,7 @@ export type SpecDocumentState<TError = unknown> =
   | Readonly<{
       status: "ready";
       workspacePath: string;
-      specId: string;
+      specId: SpecId;
       fileKey: SpecFileKey;
       correlationId?: string;
       document: SpecDocument;
@@ -32,7 +33,7 @@ export type SpecDocumentState<TError = unknown> =
   | Readonly<{
       status: "missing";
       workspacePath: string;
-      specId: string;
+      specId: SpecId;
       fileKey: SpecFileKey;
       correlationId?: string;
       document: SpecDocument;
@@ -41,7 +42,7 @@ export type SpecDocumentState<TError = unknown> =
   | Readonly<{
       status: "error";
       workspacePath: string;
-      specId: string;
+      specId: SpecId;
       fileKey: SpecFileKey;
       correlationId?: string;
       document: null;
@@ -59,7 +60,7 @@ export const SpecDocumentState = {
    */
   idle: (
     workspacePath: string | null,
-    specId: string | null = null,
+    specId: SpecId | null = null,
     fileKey: SpecFileKey | null = null,
   ): SpecDocumentState<never> => ({
     status: "idle",
@@ -79,7 +80,7 @@ export const SpecDocumentState = {
    */
   loading: (
     workspacePath: string,
-    specId: string,
+    specId: SpecId,
     fileKey: SpecFileKey,
     correlationId?: string,
   ): SpecDocumentState<never> => ({
@@ -102,7 +103,7 @@ export const SpecDocumentState = {
    */
   loaded: (
     workspacePath: string,
-    specId: string,
+    specId: SpecId,
     fileKey: SpecFileKey,
     document: SpecDocument,
     correlationId?: string,
@@ -126,7 +127,7 @@ export const SpecDocumentState = {
    */
   failed: <TError>(
     workspacePath: string,
-    specId: string,
+    specId: SpecId,
     fileKey: SpecFileKey,
     error: TError,
     correlationId?: string,

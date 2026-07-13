@@ -128,7 +128,7 @@ export async function readSpecFile(
 
   return invokeTauriCommand<
     ReadSpecFileCommandResponse,
-    ReadSpecFileCommandRequest,
+    ReturnType<typeof encodeReadSpecFileRequest>,
     ReadSpecFileCommandError
   >(
     READ_SPEC_FILE_COMMAND,
