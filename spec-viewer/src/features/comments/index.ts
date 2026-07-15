@@ -50,6 +50,7 @@ export {
   selectCommentExportDestination,
 } from "./infra/tauri";
 export { toCommentFeatureError } from "./infra/tauri/commentErrorMapper";
+export { readRenderedBlockAnchorText } from "./infra/dom/commentAnchorDraftAdapter";
 export { createTextHash } from "./lib/comment-anchor-draft";
 export { toCommentBodyValidationMessage } from "./lib/comment-body-validation-message";
 export {

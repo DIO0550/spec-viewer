@@ -41,6 +41,7 @@ import {
   type CommentBodyDraft,
   type CommentOperationState,
   type RenderedBlockType,
+  readRenderedBlockAnchorText,
   toCommentBodyValidationMessage,
 } from "@/features/comments";
 import { AddCommentPopover } from "@/features/comments/components/AddCommentPopover";
@@ -1038,7 +1039,7 @@ function readRenderedBlockTextHash(block: HTMLElement): string | null {
   const textHash = block.dataset.textHash;
 
   if (textHash === undefined) {
-    return createTextHash(block.textContent ?? "");
+    return createTextHash(readRenderedBlockAnchorText(block));
   }
 
   const parsedTextHash = CommentAnchorTextHash.parse(textHash);

@@ -137,7 +137,7 @@ export function decodeRenderedBlockSnapshot(
     ok: true,
     value: {
       identity: identity.value,
-      text: createBlockText(block),
+      text: readRenderedBlockAnchorText(block),
       textHash: textHash.value,
     },
   };
@@ -305,7 +305,7 @@ function getTextOffsetWithinBlock(
  * @param block - Rendered Markdown block.
  * @returns Block text excluding comment controls and annotations.
  */
-function createBlockText(block: HTMLElement): string {
+export function readRenderedBlockAnchorText(block: HTMLElement): string {
   return getAnchorTextNodes(block)
     .map((textNode) => textNode.data)
     .join("");
