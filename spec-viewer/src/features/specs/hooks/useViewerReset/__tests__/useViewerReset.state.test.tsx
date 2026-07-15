@@ -1,4 +1,3 @@
-import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { act, type ReactElement, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
@@ -7,6 +6,7 @@ import {
   createViewerResetKey,
   useViewerReset,
 } from "@/features/specs/hooks/useViewerReset";
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 
 type ViewerResetHarnessProps = Readonly<{
   resetKey: string;
@@ -130,23 +130,67 @@ test("useViewerResetはフォーカス不要のresetKey変更時にスクロー�
   result.unmount();
 });
 
-test("createViewerResetKeyはdocumentの場所と本文長からstable keyを作る", () => {
+test("createViewerResetKeyはselection identityとload revisionからstable keyを作る", () => {
   const state: SpecDocumentState = {
     status: "ready",
     workspacePath: "/workspace/project",
     specId: TestValues.specId("auth"),
     fileKey: "tasks",
+    loadRevision: "load-reset",
     document: {
+      kind: "markdown",
       key: "tasks",
       path: "/workspace/project/.plugin-workspace/.specs/auth/tasks.md",
       contents: "# Task",
-      missing: false,
       blocks: [],
     },
     error: null,
   };
 
   expect(createViewerResetKey(state)).toBe(
-    "ready:/workspace/project:auth:tasks:/workspace/project/.plugin-workspace/.specs/auth/tasks.md:6",
+    JSON.stringify([
+      "ready",
+      "/workspace/project",
+      "auth",
+      "tasks",
+      "load-reset",
+    ]),
+  );
+});
+
+test("createViewerResetKeyは区切り文字を含む別identityを同じkeyにしない", () => {
+  const firstState: SpecDocumentState = {
+    status: "ready",
+    workspacePath: "/workspace:auth",
+    specId: TestValues.specId("tasks"),
+    fileKey: "requirements",
+    loadRevision: "revision",
+    document: {
+      kind: "markdown",
+      key: "requirements",
+      path: "/workspace:auth/tasks/requirements.md",
+      contents: "# Requirements",
+      blocks: [],
+    },
+    error: null,
+  };
+  const secondState: SpecDocumentState = {
+    status: "ready",
+    workspacePath: "/workspace",
+    specId: TestValues.specId("auth"),
+    fileKey: "tasks",
+    loadRevision: "requirements:revision",
+    document: {
+      kind: "markdown",
+      key: "tasks",
+      path: "/workspace/auth/tasks.md",
+      contents: "# Tasks",
+      blocks: [],
+    },
+    error: null,
+  };
+
+  expect(createViewerResetKey(firstState)).not.toBe(
+    createViewerResetKey(secondState),
   );
 });

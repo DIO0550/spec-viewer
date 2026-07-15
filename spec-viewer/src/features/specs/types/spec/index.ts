@@ -1,7 +1,4 @@
-import type {
-  SpecDocumentFormat,
-  SpecFileKey,
-} from "@/features/specs/domain/specFile";
+import type { SpecFileKey } from "@/features/specs/domain/specFile";
 import type { SpecId } from "@/shared/domain/specId";
 
 export type {
@@ -18,30 +15,12 @@ export type {
 } from "@/features/specs/domain/specNode";
 export type { SpecFileCollection } from "@/features/specs/domain/specFileCollection";
 export type { SpecTree } from "@/features/specs/domain/specTree";
-
-export type MarkdownBlockType =
-  | "paragraph"
-  | "heading"
-  | "list_item"
-  | "code_block"
-  | "block_quote"
-  | "table"
-  | "thematic_break"
-  | "html"
-  | "other";
-
-export type MarkdownBlockSourceRange = Readonly<{
-  startByteOffset: number;
-  endByteOffset: number;
-}>;
-
-export type MarkdownBlockMetadata = Readonly<{
-  blockType: MarkdownBlockType;
-  blockIndex: number;
-  textHash: string;
-  textSnippet: string;
-  sourceRange: MarkdownBlockSourceRange | null;
-}>;
+export type {
+  MarkdownBlockMetadata,
+  MarkdownBlockSourceRange,
+  MarkdownBlockType,
+  SpecDocument,
+} from "@/features/specs/domain/specDocument";
 
 export type ListSpecsRequest = Readonly<{
   workspacePath: string;
@@ -62,13 +41,4 @@ export type ArchiveSpecRequest = Readonly<{
 export type ArchiveSpecResponse = Readonly<{
   archivedSpecId: SpecId;
   archivePath: string;
-}>;
-
-export type SpecDocument = Readonly<{
-  key: SpecFileKey;
-  format?: SpecDocumentFormat;
-  path: string;
-  contents: string | null;
-  missing: boolean;
-  blocks: readonly MarkdownBlockMetadata[];
 }>;

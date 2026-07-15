@@ -6,7 +6,7 @@ import { expect, test, vi } from "vitest";
 
 import { toSpecFeatureError } from "@/features/specs";
 import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
-import type { SpecDocument } from "@/features/specs/types/spec";
+import { SpecDocument } from "@/features/specs/domain/specDocument";
 import { MarkdownViewerPanel } from "@/features/specs/components/MarkdownViewer/MarkdownViewerPanel";
 import { MarkdownViewerStatusPanel } from "@/features/specs/components/MarkdownViewer/MarkdownViewerStatusPanel";
 
@@ -32,22 +32,23 @@ function renderComponent(component: ReactNode) {
   };
 }
 
-function createDocument(contents: string | null): SpecDocument {
-  return {
+function createDocument(contents: string) {
+  return SpecDocument.loaded({
     key: "tasks",
+    format: "markdown",
     path: "/workspace/spec-reviewer/docs/plans/tasks.md",
     contents,
-    missing: false,
     blocks: [],
-  };
+  });
 }
 
-function createReadyState(contents: string | null): SpecDocumentState {
+function createReadyState(contents: string): SpecDocumentState {
   return {
     status: "ready",
     workspacePath,
     specId: TestValues.specId("phase-1-viewer"),
     fileKey: "tasks",
+    loadRevision: "test-ready",
     document: createDocument(contents),
     error: null,
   };
@@ -110,10 +111,12 @@ test.each([
       workspacePath,
       specId: TestValues.specId("phase-1-viewer"),
       fileKey: "tasks",
-      document: {
-        ...createDocument(null),
-        missing: true,
-      },
+      loadRevision: "test-missing",
+      document: SpecDocument.missing({
+        key: "tasks",
+        format: "markdown",
+        path: "/workspace/spec-reviewer/docs/plans/tasks.md",
+      }),
       error: null,
     } satisfies SpecDocumentState,
     "Phase 1 Viewer",

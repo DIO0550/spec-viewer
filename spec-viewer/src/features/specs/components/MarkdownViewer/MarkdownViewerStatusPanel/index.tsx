@@ -84,10 +84,7 @@ export function MarkdownViewerStatusPanel({
     );
   }
 
-  if (
-    state.document.contents === null ||
-    state.document.contents.trim().length === 0
-  ) {
+  if (state.document.kind === "empty") {
     return (
       <MarkdownViewerPanel panelRef={panelRef} variant="center">
         <EmptyState

@@ -57,6 +57,7 @@ import type {
   CommentId,
   CommentSelectionBounds,
 } from "@/features/comments/types/comment";
+import { SpecDocumentPolicy } from "@/features/specs/domain/specDocument";
 import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
 import {
   createViewerResetKey,
@@ -243,14 +244,18 @@ export function MarkdownViewer({
     HTML_ZOOM_DEFAULT_PERCENT,
   );
   const resetKey = createViewerResetKey(state);
-  const isHtmlDocument =
-    state.status === "ready" && state.document.format === "html";
+  const readyDocument = state.status === "ready" ? state.document : null;
+  const documentPreview =
+    readyDocument === null ? "none" : SpecDocumentPolicy.preview(readyDocument);
+  const isHtmlDocument = documentPreview === "html";
   const normalizedDocumentSearchQuery =
     normalizeDocumentSearchQuery(documentSearchQuery);
   const selectionFileKey =
-    state.status === "ready" && !isHtmlDocument ? state.fileKey : null;
+    readyDocument?.kind === "markdown" ? readyDocument.key : null;
   const readyContents =
-    state.status === "ready" ? state.document.contents : null;
+    readyDocument?.kind === "markdown" || readyDocument?.kind === "html"
+      ? readyDocument.contents
+      : null;
   const htmlSearchIndex = useMemo(() => {
     if (!isHtmlDocument || readyContents === null) {
       return null;
@@ -318,7 +323,7 @@ export function MarkdownViewer({
     setActiveDocumentSearchIndex(0);
   }, [normalizedDocumentSearchQuery]);
   useEffect(() => {
-    if (state.status !== "ready" || readyContents === null || isHtmlDocument) {
+    if (readyDocument?.kind !== "markdown" || readyContents === null) {
       setAnchorDisplayStates([]);
       onAnchorDisplayStatesChange?.([]);
       return;
@@ -340,7 +345,7 @@ export function MarkdownViewer({
     isHtmlDocument,
     onAnchorDisplayStatesChange,
     readyContents,
-    state.status,
+    readyDocument,
   ]);
   useEffect(() => {
     scrollActiveCommentIntoView({
@@ -413,7 +418,7 @@ export function MarkdownViewer({
    * @param block - The block element the draft should anchor to.
    */
   const createBlockDraft = (block: HTMLElement): void => {
-    if (state.status !== "ready" || state.document.format === "html") {
+    if (state.status !== "ready" || state.document.kind !== "markdown") {
       return;
     }
 
@@ -556,11 +561,7 @@ export function MarkdownViewer({
     [activeEditDraft, visibleViewerComments],
   );
 
-  if (
-    state.status !== "ready" ||
-    state.document.contents === null ||
-    state.document.contents.trim().length === 0
-  ) {
+  if (state.status !== "ready" || state.document.kind === "empty") {
     return (
       <MarkdownViewerStatusPanel
         state={state}
@@ -571,13 +572,14 @@ export function MarkdownViewer({
     );
   }
 
-  const contents = state.document.contents;
+  const document = state.document;
+  const contents = document.contents;
 
   return (
     <MarkdownViewerPanel
       as="article"
       panelRef={panelRef}
-      variant={state.document.format === "html" ? "html" : "default"}
+      variant={document.kind === "html" ? "html" : "default"}
       dataCommentDialogOpen={
         activeAnchorDraft !== null || activeEditDraft !== null
           ? "true"
@@ -588,7 +590,7 @@ export function MarkdownViewer({
         selectedSpecLabel={selectedSpecLabel}
         selectedFileLabel={selectedFileLabel}
         fileKey={state.fileKey}
-        path={state.document.path}
+        path={document.path}
         htmlZoom={
           isHtmlDocument
             ? {
@@ -616,19 +618,20 @@ export function MarkdownViewer({
         }}
         onReload={onReload}
       />
-      {state.document.format === "html" ? (
+      {document.kind === "html" ? (
         <HtmlDocument
           contents={contents}
-          path={state.document.path}
+          path={document.path}
           zoomPercent={htmlZoomPercent}
           searchQuery={normalizedDocumentSearchQuery}
           activeSearchMatchIndex={activeDocumentSearchIndex}
+          allowsScripts={SpecDocumentPolicy.allowsScripts(document)}
         />
       ) : (
         <>
           <MarkdownDocument
             contents={contents}
-            blocks={state.document.blocks}
+            blocks={document.blocks}
             renderedRootRef={renderedRootRef}
             comments={visibleViewerComments}
             activeCommentId={activeCommentId}

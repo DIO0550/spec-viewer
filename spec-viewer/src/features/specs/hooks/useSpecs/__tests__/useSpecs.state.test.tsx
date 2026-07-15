@@ -250,44 +250,40 @@ const missingTasksTree: SpecTree = {
 };
 
 const loadedDocument: SpecDocument = {
+  kind: "markdown",
   key: "tasks",
   path: "/workspace/spec-reviewer/.plugin-workspace/specs/phase-1-viewer/tasks.md",
   contents: "# Tasks",
-  missing: false,
   blocks: [],
 };
 
 const missingDocument: SpecDocument = {
+  kind: "missing",
   key: "impl",
+  format: "markdown",
   path: "/workspace/spec-reviewer/.plugin-workspace/specs/phase-1-viewer/implementation-plan.md",
-  contents: null,
-  missing: true,
-  blocks: [],
 };
 
 const missingTasksDocument: SpecDocument = {
+  kind: "missing",
   key: "tasks",
+  format: "markdown",
   path: "/workspace/spec-reviewer/.plugin-workspace/specs/phase-1-viewer/tasks.md",
-  contents: null,
-  missing: true,
-  blocks: [],
 };
 
 const designDocument: SpecDocument = {
+  kind: "markdown",
   key: "design",
   path: "/workspace/spec-reviewer/.plugin-workspace/specs/phase-child/design.md",
   contents: "# Design",
-  missing: false,
   blocks: [],
 };
 
 const techReferenceDocument: SpecDocument = {
+  kind: "missing",
   key: "tech-reference",
   format: "html",
   path: "/workspace/spec-reviewer/.plugin-workspace/.specs/tech-reference-tab/tech-reference.html",
-  contents: null,
-  missing: true,
-  blocks: [],
 };
 
 type HookResult<Props, Result> = Readonly<{

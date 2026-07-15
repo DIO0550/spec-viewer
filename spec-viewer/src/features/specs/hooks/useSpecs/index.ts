@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { SpecDocumentFeatureState } from "@/features/specs/application/specError";
+import type {
+  SpecDocumentFeatureState,
+  SpecTreeFeatureState,
+} from "@/features/specs/application/specError";
 import { SpecDocumentState as SpecDocumentFeatureStateFactory } from "@/features/specs/domain/specDocumentState";
 import { SpecNode as SpecNodeDomain } from "@/features/specs/domain/specNode";
 import { SpecTree as SpecTreeDomain } from "@/features/specs/domain/specTree";
-import type { SpecTreeFeatureState } from "@/features/specs/application/specError";
 import { SpecTreeState as SpecTreeFeatureStateFactory } from "@/features/specs/domain/specTreeState";
 import {
   buildSpecsSelectors,
@@ -24,8 +26,10 @@ import {
   startPerformanceSpan,
 } from "@/shared/lib/performance";
 
-export type { SpecDocumentFeatureState as SpecDocumentState } from "@/features/specs/application/specError";
-export type { SpecTreeFeatureState as SpecTreeState } from "@/features/specs/application/specError";
+export type {
+  SpecDocumentFeatureState as SpecDocumentState,
+  SpecTreeFeatureState as SpecTreeState,
+} from "@/features/specs/application/specError";
 export type { UseSpecsResult } from "@/features/specs/hooks/useSpecs/types";
 
 export type SpecSelectionChange = Readonly<{
@@ -216,9 +220,12 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
           }),
         );
         endSpan({
-          bytes: document.contents?.length ?? 0,
-          blockCount: document.blocks.length,
-          missing: document.missing,
+          bytes:
+            document.kind === "markdown" || document.kind === "html"
+              ? document.contents.length
+              : 0,
+          blockCount: document.kind === "markdown" ? document.blocks.length : 0,
+          missing: document.kind === "missing",
         });
 
         if (!canCommit()) {
@@ -230,9 +237,8 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
           documentState: SpecDocumentFeatureStateFactory.loaded(
             activeWorkspacePath,
             specId,
-            fileKey,
             document,
-            correlationId,
+            { loadRevision: correlationId, correlationId },
           ),
         }));
         return true;

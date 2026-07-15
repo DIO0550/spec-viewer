@@ -217,6 +217,7 @@ pub struct ReadSpecFileResponse {
     path: String,
     contents: Option<String>,
     missing: bool,
+    allows_scripts: bool,
     blocks: Vec<MarkdownBlockResponse>,
 }
 
@@ -444,11 +445,14 @@ impl From<ArchiveSpecResult> for ArchiveSpecResponse {
 
 impl From<AppMarkdownDocument> for ReadSpecFileResponse {
     fn from(document: AppMarkdownDocument) -> Self {
+        let allows_scripts = document.key().allows_scripts(document.format());
+
         Self {
             key: document.key().as_str().to_string(),
             format: format_label(document.format()).to_string(),
             path: document.path().to_string(),
             contents: Some(document.contents().to_string()),
+            allows_scripts,
             missing: false,
             blocks: document
                 .blocks()
@@ -466,6 +470,7 @@ impl From<AppMissingMarkdownFile> for ReadSpecFileResponse {
             format: format_label(missing.format()).to_string(),
             path: missing.path().to_string(),
             contents: None,
+            allows_scripts: false,
             missing: true,
             blocks: Vec::new(),
         }
@@ -688,5 +693,34 @@ mod tests {
         assert_eq!("html", response.format());
         assert_eq!("/workspace/auth/tasks.html", response.path());
         assert!(response.blocks().is_empty());
+    }
+    #[test]
+    fn read_spec_file_response_serializes_explicit_script_capability_from_logical_key() {
+        let requirements = AppMarkdownDocument::with_format_and_blocks(
+            SpecFileKey::Requirements,
+            SpecDocumentFormat::Html,
+            "/workspace/auth/custom-preview.html",
+            "<script>render()</script>",
+            Vec::new(),
+        );
+        let ordinary_html = AppMarkdownDocument::with_format_and_blocks(
+            SpecFileKey::Tasks,
+            SpecDocumentFormat::Html,
+            "/workspace/auth/requirements.html",
+            "<script>render()</script>",
+            Vec::new(),
+        );
+
+        let requirements_json = serde_json::to_value(ReadSpecFileResponse::from(
+            ReadSpecFileResult::Found(requirements),
+        ))
+        .expect("requirements response should serialize");
+        let ordinary_html_json = serde_json::to_value(ReadSpecFileResponse::from(
+            ReadSpecFileResult::Found(ordinary_html),
+        ))
+        .expect("ordinary HTML response should serialize");
+
+        assert_eq!(true, requirements_json["allowsScripts"]);
+        assert_eq!(false, ordinary_html_json["allowsScripts"]);
     }
 }

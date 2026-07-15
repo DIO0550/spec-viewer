@@ -6,28 +6,15 @@ import {
   createHtmlPreviewHead,
   createHtmlPreviewSandbox,
   formatHtmlZoomPercent,
-  isScriptEnabledHtmlPath,
   removeHtmlBaseElements,
   rewriteSameDocumentHtmlLinks,
 } from "../htmlPreviewDocument";
 
 test.each([
-  ["docs/notes.html"],
-  ["docs/requirements-copy.html"],
-  ["docs/test-cases-copy.html"],
-])("createHtmlPreviewSandboxは%sでscriptを許可しない", (path) => {
-  expect(createHtmlPreviewSandbox(path)).toBe("");
-  expect(isScriptEnabledHtmlPath(path)).toBe(false);
-});
-
-test.each([
-  ["docs/requirements.html"],
-  ["docs/REQUIREMENTS.HTML"],
-  ["docs/test-cases.html#cases"],
-  ["docs/test-cases.html?version=1#cases"],
-])("createHtmlPreviewSandboxは%sでscriptを許可する", (path) => {
-  expect(createHtmlPreviewSandbox(path)).toBe("allow-scripts");
-  expect(isScriptEnabledHtmlPath(path)).toBe(true);
+  [false, ""],
+  [true, "allow-scripts"],
+] as const)("createHtmlPreviewSandboxは明示script capability %sをsandboxへ反映する", (allowsScripts, expected) => {
+  expect(createHtmlPreviewSandbox(allowsScripts)).toBe(expected);
 });
 
 test("removeHtmlBaseElementsは文書由来のbaseタグを除去する", () => {

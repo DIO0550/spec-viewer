@@ -1,56 +1,82 @@
 import { useCallback, useMemo, useState } from "react";
 
-import type { SpecDocumentState } from "@/features/specs";
+import {
+  DocumentIdentity,
+  SpecDocumentPolicy,
+  type DocumentIdentityType,
+  type SpecDocumentState,
+  type SpecNodeCapabilities,
+} from "@/features/specs";
+import { WorkspacePath } from "@/shared/domain/workspacePath";
 
 export type DocumentReadiness = Readonly<{
-  currentDocumentKey: string | null;
+  documentIdentity: DocumentIdentityType | null;
   isDocumentReadable: boolean;
-  isHtmlDocument: boolean;
+  isDocumentCommentable: boolean;
   /** Marks the current document as readable. */
   markCurrentDocumentReadable: () => void;
 }>;
 
-/** @returns UI readiness state for comment scope opening around the current document. */
+/**
+ * @param documentState - Current document load state.
+ * @param nodeCapabilities - Explicit capabilities of the selected spec node.
+ * @returns UI readiness and commentability for the current document.
+ */
 export function useDocumentReadiness(
   documentState: SpecDocumentState,
+  nodeCapabilities: SpecNodeCapabilities,
 ): DocumentReadiness {
-  const [readableDocumentKey, setReadableDocumentKey] = useState<string | null>(
-    null,
-  );
-  const currentDocumentKey = useMemo(
-    () => createDocumentReadableKey(documentState),
+  const [readableDocumentIdentity, setReadableDocumentIdentity] =
+    useState<DocumentIdentityType | null>(null);
+  const documentIdentity = useMemo(
+    () => createDocumentIdentity(documentState),
     [documentState],
   );
-  const isHtmlDocument =
-    documentState.status === "ready" &&
-    documentState.document.format === "html";
-  const isDocumentReadable =
-    documentState.status === "missing" ||
-    (currentDocumentKey !== null && readableDocumentKey === currentDocumentKey);
+  const capabilities = useMemo(() => {
+    if (
+      documentState.status !== "ready" &&
+      documentState.status !== "missing"
+    ) {
+      return null;
+    }
+
+    return SpecDocumentPolicy.capabilities(
+      documentState.document,
+      nodeCapabilities,
+    );
+  }, [documentState, nodeCapabilities]);
+  const isImmediatelyReadable = capabilities?.readability === "immediate";
+  const hasRenderAcknowledgement =
+    documentIdentity !== null &&
+    DocumentIdentity.equals(documentIdentity, readableDocumentIdentity);
+  const isDocumentReadable = isImmediatelyReadable || hasRenderAcknowledgement;
   const markCurrentDocumentReadable = useCallback((): void => {
-    setReadableDocumentKey(currentDocumentKey);
-  }, [currentDocumentKey]);
+    setReadableDocumentIdentity(documentIdentity);
+  }, [documentIdentity]);
 
   return {
-    currentDocumentKey,
+    documentIdentity,
     isDocumentReadable,
-    isHtmlDocument,
+    isDocumentCommentable: capabilities?.commentable ?? false,
     markCurrentDocumentReadable,
   };
 }
 
-/** @returns A stable identity for the document load that must become readable. */
-export function createDocumentReadableKey(
+/**
+ * @param state - Current document state.
+ * @returns Structured identity for a loaded document, or null otherwise.
+ */
+export function createDocumentIdentity(
   state: SpecDocumentState,
-): string | null {
-  if (state.status !== "ready") {
+): DocumentIdentityType | null {
+  if (state.status !== "ready" && state.status !== "missing") {
     return null;
   }
 
-  return [
-    state.workspacePath,
-    state.specId,
-    state.fileKey,
-    state.correlationId ?? "no-correlation",
-  ].join("\u0000");
+  return DocumentIdentity.create({
+    workspacePath: WorkspacePath.fromString(state.workspacePath),
+    specId: state.specId,
+    fileKey: state.fileKey,
+    loadRevision: state.loadRevision,
+  });
 }

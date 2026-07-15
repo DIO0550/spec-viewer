@@ -11,6 +11,7 @@ export type HtmlDocumentProps = Readonly<{
   zoomPercent: number;
   searchQuery: string;
   activeSearchMatchIndex: number;
+  allowsScripts: boolean;
 }>;
 
 /** @returns Sandboxed HTML preview for non-Markdown spec files. */
@@ -20,12 +21,13 @@ export function HtmlDocument({
   zoomPercent,
   searchQuery,
   activeSearchMatchIndex,
+  allowsScripts,
 }: HtmlDocumentProps) {
   return (
     <iframe
       className="html-rendered"
       title={uiText.markdown.renderedHtmlDocument}
-      sandbox={createHtmlPreviewSandbox(path)}
+      sandbox={createHtmlPreviewSandbox(allowsScripts)}
       srcDoc={createHtmlPreviewDocument({
         contents,
         sourcePath: path,

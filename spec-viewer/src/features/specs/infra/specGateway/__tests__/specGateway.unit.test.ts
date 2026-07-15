@@ -15,11 +15,10 @@ const tree: SpecTree = {
 };
 
 const document: SpecDocument = {
+  kind: "markdown",
   key: "impl",
-  format: "markdown",
   path: "/workspace/spec-viewer/.plugin-workspace/.specs/001/implementation-plan.md",
   contents: "# Plan",
-  missing: false,
   blocks: [],
 };
 

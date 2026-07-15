@@ -1,15 +1,14 @@
-import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { invoke } from "@tauri-apps/api/core";
 import { expect, test, vi } from "vitest";
-
 import {
   archiveSpec,
   listSpecs,
   readSpecFile,
 } from "@/features/specs/infra/tauri";
 import { ArchiveSpecCommandError } from "@/features/specs/infra/tauri/archiveSpec";
-import { ReadSpecFileCommandError } from "@/features/specs/infra/tauri/readSpecFile";
 import { ListSpecsCommandError } from "@/features/specs/infra/tauri/listSpecs";
+import { ReadSpecFileCommandError } from "@/features/specs/infra/tauri/readSpecFile";
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
@@ -169,6 +168,7 @@ test("readSpecFileはread_spec_fileへspecIdとfileKeyを渡す", async () => {
     path: "/workspace/spec-reviewer/.plugin-workspace/specs/auth/tasks.md",
     contents: "# Tasks",
     missing: false,
+    allowsScripts: false,
     blocks: [
       {
         blockType: "heading",
@@ -189,15 +189,94 @@ test("readSpecFileはread_spec_fileへspecIdとfileKeyを渡す", async () => {
     fileKey: "tasks",
   });
 
-  expect(result.contents).toBe("# Tasks");
-  expect(result.format).toBe("markdown");
-  expect(result.blocks[0]?.textHash).toBe("sha256:abc12345");
+  expect(result).toMatchObject({
+    kind: "markdown",
+    contents: "# Tasks",
+    blocks: [{ textHash: "sha256:abc12345" }],
+  });
   expect(invokeMock).toHaveBeenCalledWith("read_spec_file", {
     request: {
       workspacePath: "/workspace/spec-reviewer",
       specId: TestValues.specId("auth"),
       fileKey: "tasks",
     },
+  });
+});
+
+test("readSpecFileはbackendの明示script capabilityをHTML variantへ復元する", async () => {
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue({
+    key: "requirements",
+    format: "html",
+    path: "/workspace/spec-reviewer/custom-preview.html",
+    contents: "<script>render()</script>",
+    missing: false,
+    allowsScripts: true,
+    blocks: [],
+  });
+
+  const result = await readSpecFile({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: TestValues.specId("auth"),
+    fileKey: "requirements",
+  });
+
+  expect(result).toEqual({
+    kind: "html",
+    key: "requirements",
+    path: "/workspace/spec-reviewer/custom-preview.html",
+    contents: "<script>render()</script>",
+    allowsScripts: true,
+  });
+});
+
+test("readSpecFileはmissingなのにcontentsがある不正DTOを拒否する", async () => {
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue({
+    key: "tasks",
+    format: "markdown",
+    path: "/workspace/spec-reviewer/tasks.md",
+    contents: "# Unexpected",
+    missing: true,
+    allowsScripts: false,
+    blocks: [],
+  });
+
+  await expect(
+    readSpecFile({
+      workspacePath: "/workspace/spec-reviewer",
+      specId: TestValues.specId("auth"),
+      fileKey: "tasks",
+    }),
+  ).rejects.toMatchObject({
+    command: "read_spec_file",
+    code: "invalidResponse",
+    path: "$.contents",
+  });
+});
+
+test("readSpecFileはmissingでないのにcontentsがnullの不正DTOを拒否する", async () => {
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue({
+    key: "tasks",
+    format: "markdown",
+    path: "/workspace/spec-reviewer/tasks.md",
+    contents: null,
+    missing: false,
+    allowsScripts: false,
+    blocks: [],
+  });
+
+  await expect(
+    readSpecFile({
+      workspacePath: "/workspace/spec-reviewer",
+      specId: TestValues.specId("auth"),
+      fileKey: "tasks",
+    }),
+  ).rejects.toMatchObject({
+    command: "read_spec_file",
+    code: "invalidResponse",
+    path: "$.contents",
   });
 });
 
