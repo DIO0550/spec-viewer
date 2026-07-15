@@ -6,6 +6,23 @@ use thiserror::Error;
 
 use crate::domain::workspace::WorkspaceConfigSource;
 
+pub const MARKDOWN_ANCHOR_FINGERPRINT_CONTRACT_ID: &str = "markdown-anchor-v1";
+pub const MARKDOWN_BLOCK_NORMALIZATION_VERSION: &str = "markdown-block-v1";
+pub const MARKDOWN_ANCHOR_FINGERPRINT_ALGORITHM: &str = "sha256";
+pub const MARKDOWN_ANCHOR_FINGERPRINT_WIRE_FORMAT: &str = "sha256:<8 lowercase hex>";
+pub const MARKDOWN_ANCHOR_FINGERPRINT_PREFIX_LENGTH: usize = 8;
+
+pub fn is_canonical_markdown_anchor_fingerprint(value: &str) -> bool {
+    let Some(prefix) = value.strip_prefix("sha256:") else {
+        return false;
+    };
+
+    prefix.len() == MARKDOWN_ANCHOR_FINGERPRINT_PREFIX_LENGTH
+        && prefix
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct SpecId {
     value: String,
@@ -375,6 +392,12 @@ impl MarkdownBlockHash {
             return Err(SpecDomainError::MissingMarkdownBlockHash);
         }
 
+        if !is_canonical_markdown_anchor_fingerprint(trimmed) {
+            return Err(SpecDomainError::InvalidMarkdownBlockHash {
+                value: trimmed.to_string(),
+            });
+        }
+
         Ok(Self {
             value: trimmed.to_string(),
         })
@@ -563,6 +586,8 @@ pub enum SpecDomainError {
     MissingNormalizedMarkdownBlockText,
     #[error("markdown block hash is required")]
     MissingMarkdownBlockHash,
+    #[error("invalid canonical markdown block hash: {value}")]
+    InvalidMarkdownBlockHash { value: String },
     #[error(
         "markdown block source range end byte offset {end_byte_offset} cannot be before start byte offset {start_byte_offset}"
     )]
@@ -760,6 +785,36 @@ mod tests {
         let result = MarkdownBlockHash::new("   ");
 
         assert_eq!(Err(SpecDomainError::MissingMarkdownBlockHash), result);
+    }
+
+    #[test]
+    fn markdown_anchor_fingerprint_contract_has_one_versioned_canonical_shape() {
+        assert_eq!(
+            "markdown-anchor-v1",
+            MARKDOWN_ANCHOR_FINGERPRINT_CONTRACT_ID
+        );
+        assert_eq!("markdown-block-v1", MARKDOWN_BLOCK_NORMALIZATION_VERSION);
+        assert_eq!("sha256", MARKDOWN_ANCHOR_FINGERPRINT_ALGORITHM);
+        assert_eq!(8, MARKDOWN_ANCHOR_FINGERPRINT_PREFIX_LENGTH);
+    }
+
+    #[test]
+    fn markdown_block_hash_rejects_noncanonical_fingerprints() {
+        for value in [
+            "fnv1a:12345678",
+            "md5:12345678",
+            "sha256:1234567",
+            "sha256:123456789",
+            "sha256:ABCDEF12",
+            "sha256:abcdefg1",
+        ] {
+            assert_eq!(
+                Err(SpecDomainError::InvalidMarkdownBlockHash {
+                    value: value.to_string(),
+                }),
+                MarkdownBlockHash::new(value)
+            );
+        }
     }
 
     #[test]
