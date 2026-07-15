@@ -1,0 +1,85 @@
+{
+  "contract": {
+    "id": "markdown-anchor-v1",
+    "normalization": "markdown-block-v1",
+    "algorithm": "sha256",
+    "prefixLength": 8,
+    "wireFormat": "sha256:<8 lowercase hex>",
+    "snippetPurpose": "selected-text-display-and-fuzzy-recovery",
+    "snippetMaxUnicodeScalars": 160
+  },
+  "cases": [
+    {
+      "id": "punctuation",
+      "blockType": "paragraph",
+      "markdown": "“Résumé” — done… Wait, really?",
+      "normalizedText": "\"Résumé\" - done... Wait, really?",
+      "fingerprint": "sha256:1c498d51",
+      "snippetSource": "“Résumé” — done… Wait, really?",
+      "snippet": "“Résumé” — done… Wait, really?"
+    },
+    {
+      "id": "unicode-composed",
+      "blockType": "paragraph",
+      "markdown": "Café",
+      "normalizedText": "Café",
+      "fingerprint": "sha256:73473dcc",
+      "snippetSource": "Café",
+      "snippet": "Café"
+    },
+    {
+      "id": "unicode-decomposed",
+      "blockType": "paragraph",
+      "markdown": "Café",
+      "normalizedText": "Café",
+      "fingerprint": "sha256:c42cc7a1",
+      "snippetSource": "Café",
+      "snippet": "Café"
+    },
+    {
+      "id": "whitespace",
+      "blockType": "paragraph",
+      "markdown": "Alpha \r\n Beta\tGamma Delta",
+      "normalizedText": "Alpha Beta Gamma Delta",
+      "fingerprint": "sha256:f42b9d44",
+      "snippetSource": " Alpha \r\n Beta\tGamma Delta ",
+      "snippet": "Alpha Beta Gamma Delta"
+    },
+    {
+      "id": "code-block",
+      "blockType": "code_block",
+      "markdown": "```ts\r\nlet value = \"raw\";\r\n  return value;\r\n```",
+      "normalizedText": "let value = \"raw\";\n  return value;",
+      "fingerprint": "sha256:8a2430f1",
+      "snippetSource": "let value = \"raw\";\n  return value;",
+      "snippet": "let value = \"raw\"; return value;"
+    },
+    {
+      "id": "astral",
+      "blockType": "paragraph",
+      "markdown": "Alpha 😀 beta",
+      "normalizedText": "Alpha 😀 beta",
+      "fingerprint": "sha256:4e4b3a6c",
+      "snippetSource": "Alpha 😀 beta",
+      "snippet": "Alpha 😀 beta"
+    },
+    {
+      "id": "snippet-160-scalars",
+      "blockType": "paragraph",
+      "markdown": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "normalizedText": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "fingerprint": "sha256:bf18b43b",
+      "snippetSource": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "snippet": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "id": "snippet-161-scalars",
+      "blockType": "paragraph",
+      "markdown": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa😀Z",
+      "normalizedText": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa😀Z",
+      "fingerprint": "sha256:1b7aed1c",
+      "snippetSource": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa😀Z",
+      "snippet": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa😀"
+    }
+  ]
+}
