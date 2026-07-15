@@ -11,6 +11,7 @@ import {
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
 import { createTextHash } from "@/features/comments/lib/comment-anchor-draft";
+import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
 import type {
   Comment,
   CommentAnchorResolution,
@@ -135,14 +136,14 @@ function createComment({
 }>): Comment {
   return {
     id: commentId(id),
-    anchor: {
+    anchor: createCommentAnchorTestFixture({
       fileKey: "tasks",
       blockType,
       blockIndex,
       textHash: createTextHash(text),
       textSnippet: text,
       charRange,
-    },
+    }),
     body: `${id} body`,
     status: resolved ? "resolved" : "open",
     resolved,
@@ -1194,6 +1195,88 @@ test("MarkdownViewerはstaleとorphanedのコメントアンカー状態を通�
     {
       commentId: "cmt_orphaned",
       status: "orphaned",
+    },
+  ]);
+  result.unmount();
+});
+
+test("MarkdownViewerのlegacy hash fallbackはコメントUIの文字列を除外する", () => {
+  const onAnchorDisplayStatesChange = vi.fn();
+  const anchorText = "An unchanged list item with a legacy anchor.";
+  const contents = `- ${anchorText}`;
+  const comments: readonly Comment[] = [
+    createComment({
+      id: "cmt_legacy_exact",
+      blockIndex: 0,
+      text: anchorText,
+      resolved: false,
+      blockType: "list_item",
+    }),
+  ];
+  const result = renderComponent(
+    <MarkdownViewer
+      state={createReadyState(contents)}
+      selectedSpecLabel={selectedSpecLabel}
+      selectedFileLabel={selectedFileLabel}
+      comments={comments}
+      activeCommentId={null}
+      onReload={vi.fn()}
+      onAddComment={vi.fn().mockResolvedValue(true)}
+      onSelectComment={vi.fn()}
+      onAnchorDisplayStatesChange={onAnchorDisplayStatesChange}
+    />,
+  );
+
+  expect(onAnchorDisplayStatesChange).toHaveBeenLastCalledWith([
+    {
+      commentId: "cmt_legacy_exact",
+      status: "exact",
+    },
+  ]);
+  result.unmount();
+});
+
+test("MarkdownViewerは空白のbackend text hashをlegacy欠落として扱わない", () => {
+  const onAnchorDisplayStatesChange = vi.fn();
+  const contents = "A paragraph with malformed backend hash metadata.";
+  const comments: readonly Comment[] = [
+    createComment({
+      id: "cmt_malformed_hash",
+      blockIndex: 0,
+      text: contents,
+      resolved: false,
+    }),
+  ];
+  const blocks: readonly MarkdownBlockMetadata[] = [
+    {
+      blockType: "paragraph",
+      blockIndex: 0,
+      textHash: "   ",
+      textSnippet: contents,
+      sourceRange: {
+        startByteOffset: 0,
+        endByteOffset: contents.length,
+      },
+    },
+  ];
+  const result = renderComponent(
+    <MarkdownViewer
+      state={createReadyState(contents, blocks)}
+      selectedSpecLabel={selectedSpecLabel}
+      selectedFileLabel={selectedFileLabel}
+      comments={comments}
+      activeCommentId={null}
+      onReload={vi.fn()}
+      onAddComment={vi.fn().mockResolvedValue(true)}
+      onSelectComment={vi.fn()}
+      onAnchorDisplayStatesChange={onAnchorDisplayStatesChange}
+    />,
+  );
+
+  expect(onAnchorDisplayStatesChange).toHaveBeenLastCalledWith([
+    {
+      commentId: "cmt_malformed_hash",
+      status: "stale",
     },
   ]);
   result.unmount();

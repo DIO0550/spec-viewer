@@ -1,4 +1,5 @@
 import * as TestValues from "@/shared/testing/validatedValueObjects";
+import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
@@ -21,14 +22,14 @@ import { getUnknownErrorMessage } from "@/shared/lib/errorMessage";
 
 const commentId = TestValues.commentId;
 
-const anchor: CommentAnchor = {
+const anchor: CommentAnchor = createCommentAnchorTestFixture({
   fileKey: "impl",
   blockType: "paragraph",
   blockIndex: 0,
   textHash: "sha256:anchor",
   textSnippet: "snippet",
   charRange: { start: 0, end: 7 },
-};
+});
 
 const openComment: Comment = {
   id: commentId("cmt_1"),

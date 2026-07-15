@@ -1,4 +1,5 @@
 import type { CommentBody } from "@/features/comments/domain/commentBody";
+import type { CommentAnchor } from "@/features/comments/domain/commentAnchor";
 import {
   CommentStatusFilter,
   type CommentStatus,
@@ -6,7 +7,6 @@ import {
 } from "@/features/comments/domain/commentStatusFilter";
 import { Comments } from "@/features/comments/domain/comments";
 import type {
-  CommentAnchor,
   CommentAnchorResolution,
   CommentId,
 } from "@/features/comments/types/comment";

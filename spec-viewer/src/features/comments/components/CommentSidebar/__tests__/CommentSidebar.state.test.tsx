@@ -1,4 +1,5 @@
 import * as TestValues from "@/shared/testing/validatedValueObjects";
+import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
 import type { ReactNode } from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
@@ -19,7 +20,7 @@ import type {
 
 const commentId = TestValues.commentId;
 
-const anchor: CommentAnchor = {
+const anchor: CommentAnchor = createCommentAnchorTestFixture({
   fileKey: "tasks",
   blockType: "paragraph",
   blockIndex: 2,
@@ -29,7 +30,7 @@ const anchor: CommentAnchor = {
     start: 0,
     end: 22,
   },
-};
+});
 
 const openComment: Comment = {
   id: commentId("cmt_open"),
@@ -78,11 +79,11 @@ const orphanedComment: Comment = {
 const overviewComment: Comment = {
   ...openComment,
   id: commentId("cmt_overview"),
-  anchor: {
+  anchor: createCommentAnchorTestFixture({
     ...anchor,
     fileKey: "design",
     textSnippet: "Searchable orphaned snippet for release notes",
-  },
+  }),
   body: "Summarize release risk for reviewers.",
   createdAt: TestValues.isoDateTime("2026-05-05T15:00:00Z"),
   updatedAt: TestValues.isoDateTime("2026-05-05T15:15:00Z"),

@@ -1,4 +1,5 @@
 import * as TestValues from "@/shared/testing/validatedValueObjects";
+import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
 import { invoke } from "@tauri-apps/api/core";
 import { expect, test, vi } from "vitest";
 
@@ -21,7 +22,7 @@ const commentId = TestValues.commentId;
 
 const comment: Comment = {
   id: commentId("cmt_1"),
-  anchor: {
+  anchor: createCommentAnchorTestFixture({
     fileKey: "tasks",
     blockType: "paragraph",
     blockIndex: 1,
@@ -31,7 +32,7 @@ const comment: Comment = {
       start: 0,
       end: 18,
     },
-  },
+  }),
   body: "Clarify this task",
   status: "open",
   resolved: false,

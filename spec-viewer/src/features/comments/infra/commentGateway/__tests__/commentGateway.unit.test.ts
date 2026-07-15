@@ -1,4 +1,5 @@
 import * as TestValues from "@/shared/testing/validatedValueObjects";
+import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
 import { expect, test, vi } from "vitest";
 import {
   CommentScope,
@@ -32,7 +33,7 @@ const scopeSelection = SpecViewSelection.synchronize(
 );
 const scope = CommentScope.fromSelection(scopeSelection) as CommentScopeType;
 
-const anchor: CommentAnchor = {
+const anchor: CommentAnchor = createCommentAnchorTestFixture({
   fileKey: "tasks",
   blockType: "paragraph",
   blockIndex: 0,
@@ -42,7 +43,7 @@ const anchor: CommentAnchor = {
     start: 0,
     end: 18,
   },
-};
+});
 
 const comment: Comment = {
   id: commentId("cmt_1"),

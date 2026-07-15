@@ -1,4 +1,5 @@
 import * as TestValues from "@/shared/testing/validatedValueObjects";
+import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
 import { expect, expectTypeOf, test } from "vitest";
 
 import { Comment } from "@/features/comments/domain/comment";
@@ -13,7 +14,7 @@ import type {
 
 const commentId = TestValues.commentId;
 
-const anchor: CommentAnchor = {
+const anchor: CommentAnchor = createCommentAnchorTestFixture({
   fileKey: "tasks",
   blockType: "paragraph",
   blockIndex: 0,
@@ -23,7 +24,7 @@ const anchor: CommentAnchor = {
     start: 0,
     end: 18,
   },
-};
+});
 
 const openComment: Comment = {
   id: commentId("cmt_1"),

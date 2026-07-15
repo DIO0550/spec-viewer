@@ -1,4 +1,5 @@
 import * as TestValues from "@/shared/testing/validatedValueObjects";
+import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
@@ -24,7 +25,7 @@ import { configurePerformanceLoggerForTest } from "@/shared/lib/performance";
 
 const commentId = TestValues.commentId;
 
-const anchor: CommentAnchor = {
+const anchor: CommentAnchor = createCommentAnchorTestFixture({
   fileKey: "tasks",
   blockType: "paragraph",
   blockIndex: 0,
@@ -34,7 +35,7 @@ const anchor: CommentAnchor = {
     start: 0,
     end: 18,
   },
-};
+});
 
 const firstComment: Comment = {
   id: commentId("cmt_1"),

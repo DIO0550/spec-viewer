@@ -35,9 +35,13 @@ import ReactMarkdown, { type Components } from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
 import {
+  BlockType as CommentAnchorBlockType,
+  TextHash as CommentAnchorTextHash,
   CommentBody,
   type CommentBodyDraft,
   type CommentOperationState,
+  type RenderedBlockType,
+  readRenderedBlockAnchorText,
   toCommentBodyValidationMessage,
 } from "@/features/comments";
 import { AddCommentPopover } from "@/features/comments/components/AddCommentPopover";
@@ -91,7 +95,7 @@ import { MarkdownViewerHeader } from "./MarkdownViewerHeader";
 import { MarkdownViewerPanel } from "./MarkdownViewerPanel";
 import { MarkdownViewerStatusPanel } from "./MarkdownViewerStatusPanel";
 
-type BlockType = "heading" | "paragraph" | "list-item" | "table" | "code";
+type BlockType = RenderedBlockType;
 
 type BlockMetadata = Readonly<{
   "data-block-type": BlockType;
@@ -1029,16 +1033,17 @@ function createResolvedAnchorDisplayStatus({
 
 /**
  * @param block - The rendered block element to read the hash from.
- * @returns The backend text hash for a rendered block, or a legacy fallback hash.
+ * @returns The validated backend hash, a legacy fallback when absent, or null when malformed.
  */
-function readRenderedBlockTextHash(block: HTMLElement): string {
+function readRenderedBlockTextHash(block: HTMLElement): string | null {
   const textHash = block.dataset.textHash;
 
-  if (textHash !== undefined && textHash.trim().length > 0) {
-    return textHash;
+  if (textHash === undefined) {
+    return createTextHash(readRenderedBlockAnchorText(block));
   }
 
-  return createTextHash(block.textContent ?? "");
+  const parsedTextHash = CommentAnchorTextHash.parse(textHash);
+  return parsedTextHash.ok ? parsedTextHash.value : null;
 }
 
 /** Scrolls the active comment's Markdown block into view when it exists. */
@@ -1450,30 +1455,14 @@ function findCommentBlockForScroll({
 function mapCommentBlockTypeToBlockType(
   blockType: CommentBlockType,
 ): BlockType | null {
-  const blockTypeMap: Partial<Record<CommentBlockType, BlockType>> = {
-    heading: "heading",
-    paragraph: "paragraph",
-    list_item: "list-item",
-    table: "table",
-    code_block: "code",
-  };
-
-  return blockTypeMap[blockType] ?? null;
+  return CommentAnchorBlockType.toRendered(blockType);
 }
 
 /** @returns The rendered block type corresponding to backend Markdown metadata. */
 function mapMarkdownBlockTypeToBlockType(
   blockType: MarkdownBlockType,
 ): BlockType | null {
-  const blockTypeMap: Partial<Record<MarkdownBlockType, BlockType>> = {
-    heading: "heading",
-    paragraph: "paragraph",
-    list_item: "list-item",
-    table: "table",
-    code_block: "code",
-  };
-
-  return blockTypeMap[blockType] ?? null;
+  return CommentAnchorBlockType.toRendered(blockType);
 }
 
 /**

@@ -1,4 +1,5 @@
 import * as TestValues from "@/shared/testing/validatedValueObjects";
+import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
 import { act, type ReactNode } from "react";
 import { vi } from "vitest";
 
@@ -30,14 +31,14 @@ export type Deferred<T> = Readonly<{
 
 export const addedComment: Comment = {
   id: TestValues.commentId("cmt_concurrent"),
-  anchor: {
+  anchor: createCommentAnchorTestFixture({
     fileKey: "tasks",
     blockType: "paragraph",
     blockIndex: 0,
     textHash: "sha256:concurrent",
     textSnippet: "Keep the committed selection",
     charRange: { start: 0, end: 28 },
-  },
+  }),
   body: "Keep the committed selection",
   status: "open",
   resolved: false,
