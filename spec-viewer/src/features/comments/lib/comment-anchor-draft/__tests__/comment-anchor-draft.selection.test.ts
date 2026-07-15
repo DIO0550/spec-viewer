@@ -2,7 +2,6 @@ import { afterEach, expect, test } from "vitest";
 
 import {
   createCommentAnchorDraftFromSelection,
-  createTextHash,
   createTextSnippet,
 } from "@/features/comments/lib/comment-anchor-draft";
 
@@ -36,7 +35,7 @@ function selectText(textNode: Text, start: number, end: number): Selection {
 
 test("Markdownブロック内の選択からコメントアンカードラフトを作成する", () => {
   const root = createRenderedRoot(
-    '<p data-block-type="paragraph" data-block-index="3">Alpha beta gamma</p>',
+    '<p data-block-type="paragraph" data-block-index="3" data-comment-block-type="paragraph" data-text-hash="sha256:a5dd5c34">Alpha beta gamma</p>',
   );
   const paragraph = root.querySelector("p");
   const textNode = paragraph?.firstChild;
@@ -53,7 +52,7 @@ test("Markdownブロック内の選択からコメントアンカードラフト
     fileKey: "tasks",
     blockType: "paragraph",
     blockIndex: 3,
-    textHash: createTextHash("Alpha beta gamma"),
+    textHash: "sha256:a5dd5c34",
     textSnippet: "beta",
     charRange: {
       start: 6,
@@ -65,9 +64,9 @@ test("Markdownブロック内の選択からコメントアンカードラフト
 test("Markdownブロック内のコメントUIは選択アンカー文字列に含めない", () => {
   const root = createRenderedRoot(
     [
-      '<ul><li data-block-type="list-item" data-block-index="2">',
+      '<ul><li data-block-type="list-item" data-block-index="2" data-comment-block-type="list_item" data-text-hash="sha256:a5dd5c34">',
       '<button class="markdown-block-comment-button"><span>コメント追加</span></button>',
-      '<span>Alpha beta gamma</span>',
+      "<span>Alpha beta gamma</span>",
       '<aside class="markdown-comment-annotations">Unrelated comment body</aside>',
       "</li></ul>",
     ].join(""),
@@ -86,7 +85,7 @@ test("Markdownブロック内のコメントUIは選択アンカー文字列に�
     fileKey: "tasks",
     blockType: "list_item",
     blockIndex: 2,
-    textHash: createTextHash("Alpha beta gamma"),
+    textHash: "sha256:a5dd5c34",
     textSnippet: "beta",
     charRange: {
       start: 6,
@@ -99,7 +98,7 @@ test("backendメタデータ付きMarkdownブロックではbackend hashをア�
   const root = createRenderedRoot(
     [
       '<p data-block-type="paragraph" data-block-index="3" ',
-      'data-comment-block-type="paragraph" data-text-hash="sha256:backend1">',
+      'data-comment-block-type="paragraph" data-text-hash="sha256:abc12345">',
       "Alpha beta gamma</p>",
     ].join(""),
   );
@@ -114,7 +113,7 @@ test("backendメタデータ付きMarkdownブロックではbackend hashをア�
     fileKey: "tasks",
   });
 
-  expect(draft?.anchor.textHash).toBe("sha256:backend1");
+  expect(draft?.anchor.textHash).toBe("sha256:abc12345");
   expect(draft?.anchor.textSnippet).toBe("beta");
 });
 
@@ -126,7 +125,7 @@ test.each([
   ["table", "table"],
 ] as const)("Markdownブロック種別%sをコメントブロック種別%sに変換する", (markdownBlockType, commentBlockType) => {
   const root = createRenderedRoot(
-    `<p data-block-type="${markdownBlockType}" data-block-index="0">Selected text</p>`,
+    `<p data-block-type="${markdownBlockType}" data-block-index="0" data-comment-block-type="${commentBlockType}" data-text-hash="sha256:a5dd5c34">Selected text</p>`,
   );
   const textNode = root.querySelector("p")?.firstChild;
   expect(textNode).toBeInstanceOf(Text);
