@@ -13,7 +13,7 @@ const anchor: CommentAnchor = createCommentAnchorTestFixture({
   fileKey: "tasks",
   blockType: "paragraph",
   blockIndex: 0,
-  textHash: "sha256:first",
+  textHash: "sha256:f1a57001",
   textSnippet: "Clarify this task",
   charRange: {
     start: 0,
@@ -46,7 +46,7 @@ const movedAnchorResolution = {
   target: {
     blockType: "paragraph",
     blockIndex: 1,
-    textHash: "sha256:moved",
+    textHash: "sha256:b00b1e02",
     textSnippet: "Clarify the updated task",
     sourceRange: {
       startByteOffset: 10,

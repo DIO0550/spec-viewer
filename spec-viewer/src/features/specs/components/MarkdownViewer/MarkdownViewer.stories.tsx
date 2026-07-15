@@ -1,27 +1,52 @@
-import * as TestValues from "@/shared/testing/validatedValueObjects";
-import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { fn } from "storybook/test";
-import { createTextHash } from "@/features/comments/lib/comment-anchor-draft";
+import { expect, fn } from "storybook/test";
+import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
 import type { Comment } from "@/features/comments/types/comment";
 import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
 import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 
 const commentId = TestValues.commentId;
 
 const workspacePath = "/workspace/spec-reviewer";
-const markdownContents = [
-  "# Selection reliability",
-  "",
-  "Users can select only this paragraph fragment without activating the highlight.",
-  "",
-  "- Copy should keep the exact selected range.",
-  "- Comment creation should still work from the selection button.",
-  "",
+const headingMarkdown = "# Selection reliability";
+const highlightedParagraph =
+  "Users can select only this paragraph fragment without activating the highlight.";
+const firstListItemMarkdown = "- Copy should keep the exact selected range.";
+const secondListItemMarkdown =
+  "- Comment creation should still work from the selection button.";
+const codeBlockMarkdown = [
   "```ts",
   'const selectedText = "paragraph fragment";',
   "```",
 ].join("\n");
+const markdownContents = [
+  headingMarkdown,
+  "",
+  highlightedParagraph,
+  "",
+  firstListItemMarkdown,
+  secondListItemMarkdown,
+  "",
+  codeBlockMarkdown,
+].join("\n");
+
+function createStorySourceRange(source: string) {
+  const startOffset = markdownContents.indexOf(source);
+
+  if (startOffset < 0) {
+    throw new Error(`Story Markdown source not found: ${source}`);
+  }
+
+  const encoder = new TextEncoder();
+  return {
+    startByteOffset: encoder.encode(markdownContents.slice(0, startOffset))
+      .byteLength,
+    endByteOffset: encoder.encode(
+      markdownContents.slice(0, startOffset + source.length),
+    ).byteLength,
+  };
+}
 
 const readyState: SpecDocumentState = {
   status: "ready",
@@ -33,7 +58,45 @@ const readyState: SpecDocumentState = {
     path: "/workspace/spec-reviewer/docs/plans/tasks/later-phases/p7-02-markdown-copy-selection-reliability.md",
     contents: markdownContents,
     missing: false,
-    blocks: [],
+    blocks: [
+      {
+        blockType: "heading",
+        blockIndex: 0,
+        textHash: "sha256:11111111",
+        textSnippet: "Selection reliability",
+        sourceRange: createStorySourceRange(headingMarkdown),
+      },
+      {
+        blockType: "paragraph",
+        blockIndex: 1,
+        textHash: "sha256:a5dd5c34",
+        textSnippet:
+          "Users can select only this paragraph fragment without activating the highlight.",
+        sourceRange: createStorySourceRange(highlightedParagraph),
+      },
+      {
+        blockType: "list_item",
+        blockIndex: 2,
+        textHash: "sha256:22222222",
+        textSnippet: "Copy should keep the exact selected range.",
+        sourceRange: createStorySourceRange(firstListItemMarkdown),
+      },
+      {
+        blockType: "list_item",
+        blockIndex: 3,
+        textHash: "sha256:33333333",
+        textSnippet:
+          "Comment creation should still work from the selection button.",
+        sourceRange: createStorySourceRange(secondListItemMarkdown),
+      },
+      {
+        blockType: "code_block",
+        blockIndex: 4,
+        textHash: "sha256:abc12345",
+        textSnippet: 'const selectedText = "paragraph fragment";',
+        sourceRange: createStorySourceRange(codeBlockMarkdown),
+      },
+    ],
   },
   error: null,
 };
@@ -106,9 +169,6 @@ const testCasesHtmlState: SpecDocumentState = {
   error: null,
 };
 
-const highlightedParagraph =
-  "Users can select only this paragraph fragment without activating the highlight.";
-
 const comments: readonly Comment[] = [
   {
     id: commentId("cmt_active_selection"),
@@ -116,7 +176,7 @@ const comments: readonly Comment[] = [
       fileKey: "tasks",
       blockType: "paragraph",
       blockIndex: 1,
-      textHash: createTextHash(highlightedParagraph),
+      textHash: "sha256:a5dd5c34",
       textSnippet: "paragraph fragment",
       charRange: {
         start: 27,
@@ -140,7 +200,7 @@ const commentCardComments: readonly Comment[] = [
       fileKey: "tasks",
       blockType: "paragraph",
       blockIndex: 1,
-      textHash: createTextHash(highlightedParagraph),
+      textHash: "sha256:a5dd5c34",
       textSnippet: highlightedParagraph,
       charRange: {
         start: 0,
@@ -160,7 +220,7 @@ const commentCardComments: readonly Comment[] = [
       fileKey: "tasks",
       blockType: "code_block",
       blockIndex: 4,
-      textHash: createTextHash('const selectedText = "paragraph fragment";'),
+      textHash: "sha256:abc12345",
       textSnippet: "selectedText",
       charRange: {
         start: 6,
@@ -199,7 +259,25 @@ export default meta;
 
 type Story = StoryObj<typeof MarkdownViewer>;
 
-export const HighlightedSelectionSurface: Story = {};
+export const HighlightedSelectionSurface: Story = {
+  play: async ({ canvasElement }) => {
+    const highlightedBlock = canvasElement.querySelector(
+      '[data-text-hash="sha256:a5dd5c34"]',
+    );
+
+    if (highlightedBlock === null) {
+      throw new Error("Canonical highlighted paragraph was not rendered");
+    }
+
+    await expect(highlightedBlock).toHaveAttribute(
+      "data-comment-highlight-state",
+      "active",
+    );
+    await expect(
+      canvasElement.querySelectorAll(".markdown-block-comment-button"),
+    ).toHaveLength(5);
+  },
+};
 
 export const ExistingCommentCards: Story = {
   args: {

@@ -26,7 +26,7 @@ const anchor: CommentAnchor = createCommentAnchorTestFixture({
   fileKey: "impl",
   blockType: "paragraph",
   blockIndex: 0,
-  textHash: "sha256:anchor",
+  textHash: "sha256:a11ce001",
   textSnippet: "snippet",
   charRange: { start: 0, end: 7 },
 });

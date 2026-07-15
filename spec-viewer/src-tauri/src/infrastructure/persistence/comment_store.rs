@@ -542,7 +542,7 @@ mod tests {
                 file_key,
                 BlockType::Paragraph,
                 BlockIndex::new(2),
-                TextHash::new("sha256_prefix_8chars").expect("hash should be valid"),
+                TextHash::new("sha256:11111111").expect("hash should be valid"),
                 TextSnippet::new("selected text").expect("snippet should be valid"),
                 CharRange::new(3, 16).expect("range should be valid"),
             ),
@@ -757,7 +757,7 @@ mod tests {
       "anchor": {
         "blockType": "paragraph",
         "blockIndex": 2,
-        "textHash": "sha256_prefix_8chars",
+        "textHash": "sha256:11111111",
         "textSnippet": "selected text",
         "charOffset": [3, 16]
       },
@@ -771,7 +771,7 @@ mod tests {
       "anchor": {
         "blockType": "paragraph",
         "blockIndex": 2,
-        "textHash": "sha256_prefix_8chars",
+        "textHash": "sha256:11111111",
         "textSnippet": "selected text",
         "charOffset": [3, 16]
       },
@@ -817,7 +817,7 @@ mod tests {
       "anchor": {
         "blockType": "paragraph",
         "blockIndex": 2,
-        "textHash": "sha256_prefix_8chars",
+        "textHash": "sha256:11111111",
         "textSnippet": "selected text",
         "charOffset": [3, 16],
         "externalAnchorField": "preserve"

@@ -5,7 +5,10 @@ use std::{collections::HashSet, fmt};
 use chrono::{DateTime, Utc};
 use thiserror::Error;
 
-use crate::domain::spec::{MarkdownBlock, MarkdownBlockType, SpecFileKey};
+use crate::domain::spec::{
+    is_canonical_markdown_anchor_fingerprint, MarkdownBlock, MarkdownBlockType, SpecFileKey,
+    MARKDOWN_ANCHOR_FINGERPRINT_PREFIX_LENGTH,
+};
 
 mod repository;
 
@@ -142,20 +145,59 @@ pub struct TextHash {
 impl TextHash {
     pub fn new(value: impl Into<String>) -> Result<Self, CommentDomainError> {
         let value = value.into();
-        let trimmed = value.trim();
 
-        if trimmed.is_empty() {
+        if value.is_empty() {
             return Err(CommentDomainError::MissingTextHash);
         }
 
-        Ok(Self {
-            value: trimmed.to_string(),
-        })
+        if !is_canonical_markdown_anchor_fingerprint(&value) && !is_legacy_fnv1a_fingerprint(&value)
+        {
+            return Err(CommentDomainError::InvalidTextHash { value });
+        }
+
+        Ok(Self { value })
+    }
+
+    pub fn new_canonical(value: impl Into<String>) -> Result<Self, CommentDomainError> {
+        let value = value.into();
+
+        if value.is_empty() {
+            return Err(CommentDomainError::MissingTextHash);
+        }
+
+        if is_legacy_fnv1a_fingerprint(&value) {
+            return Err(CommentDomainError::NonCanonicalTextHash { value });
+        }
+
+        if !is_canonical_markdown_anchor_fingerprint(&value) {
+            return Err(CommentDomainError::InvalidTextHash { value });
+        }
+
+        Ok(Self { value })
     }
 
     pub fn as_str(&self) -> &str {
         &self.value
     }
+
+    pub fn is_canonical(&self) -> bool {
+        is_canonical_markdown_anchor_fingerprint(self.as_str())
+    }
+
+    pub fn is_legacy_fnv1a(&self) -> bool {
+        is_legacy_fnv1a_fingerprint(self.as_str())
+    }
+}
+
+fn is_legacy_fnv1a_fingerprint(value: &str) -> bool {
+    let Some(prefix) = value.strip_prefix("fnv1a:") else {
+        return false;
+    };
+
+    prefix.len() == MARKDOWN_ANCHOR_FINGERPRINT_PREFIX_LENGTH
+        && prefix
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
 }
 
 impl fmt::Display for TextHash {
@@ -256,7 +298,7 @@ impl CommentAnchor {
             file_key,
             BlockType::from(block.block_type()),
             BlockIndex::new(block.index().value()),
-            TextHash::new(block.text_hash().as_str())?,
+            TextHash::new_canonical(block.text_hash().as_str())?,
             text_snippet,
             char_range,
         ))
@@ -465,6 +507,10 @@ pub enum CommentDomainError {
     MissingCommentBody,
     #[error("anchor text hash is required")]
     MissingTextHash,
+    #[error("invalid anchor text hash: {value}")]
+    InvalidTextHash { value: String },
+    #[error("new comment anchors require a canonical text hash, got: {value}")]
+    NonCanonicalTextHash { value: String },
     #[error("anchor text snippet is required")]
     MissingTextSnippet,
     #[error("anchor char range end {end} cannot be before start {start}")]
@@ -494,7 +540,7 @@ mod tests {
             file_key,
             BlockType::Paragraph,
             BlockIndex::new(2),
-            TextHash::new("block-hash").expect("hash should be valid"),
+            TextHash::new("sha256:24681357").expect("hash should be valid"),
             TextSnippet::new("Selected text").expect("snippet should be valid"),
             CharRange::new(4, 17).expect("range should be valid"),
         )
@@ -548,18 +594,72 @@ mod tests {
     }
 
     #[test]
-    fn text_hash_accepts_and_trims_non_empty_value() {
-        let hash = TextHash::new("  sha256-prefix  ").expect("hash should be valid");
-
-        assert_eq!("sha256-prefix", hash.as_str());
-        assert_eq!("sha256-prefix", hash.to_string());
+    fn text_hash_rejects_outer_whitespace_without_normalizing_wire_value() {
+        for value in [
+            " sha256:1234abcd",
+            "sha256:1234abcd ",
+            " fnv1a:89abcdef",
+            "fnv1a:89abcdef ",
+        ] {
+            assert_eq!(
+                Err(CommentDomainError::InvalidTextHash {
+                    value: value.to_string(),
+                }),
+                TextHash::new(value)
+            );
+        }
     }
 
     #[test]
     fn text_hash_rejects_empty_value() {
-        let result = TextHash::new("   ");
+        let result = TextHash::new("");
 
         assert_eq!(Err(CommentDomainError::MissingTextHash), result);
+    }
+
+    #[test]
+    fn text_hash_restores_canonical_and_legacy_fingerprints() {
+        let canonical = TextHash::new("sha256:1234abcd").expect("canonical hash should be valid");
+        let legacy = TextHash::new("fnv1a:89abcdef").expect("legacy hash should be valid");
+
+        assert!(canonical.is_canonical());
+        assert!(!canonical.is_legacy_fnv1a());
+        assert!(legacy.is_legacy_fnv1a());
+        assert!(!legacy.is_canonical());
+    }
+
+    #[test]
+    fn canonical_text_hash_constructor_rejects_legacy_fingerprint() {
+        assert_eq!(
+            Err(CommentDomainError::NonCanonicalTextHash {
+                value: "fnv1a:89abcdef".to_string(),
+            }),
+            TextHash::new_canonical("fnv1a:89abcdef")
+        );
+    }
+
+    #[test]
+    fn canonical_text_hash_constructor_rejects_outer_whitespace() {
+        for value in [" sha256:1234abcd", "sha256:1234abcd "] {
+            assert_eq!(
+                Err(CommentDomainError::InvalidTextHash {
+                    value: value.to_string(),
+                }),
+                TextHash::new_canonical(value)
+            );
+        }
+    }
+
+    #[test]
+    fn text_hash_rejects_unknown_and_malformed_fingerprints() {
+        for value in ["md5:12345678", "sha256:ABCDEF12", "sha256:1234567"] {
+            assert_eq!(
+                Err(CommentDomainError::InvalidTextHash {
+                    value: value.to_string(),
+                }),
+                TextHash::new(value)
+            );
+        }
     }
 
     #[test]
@@ -610,7 +710,7 @@ mod tests {
         assert_eq!(SpecFileKey::Tasks, anchor.file_key());
         assert_eq!(BlockType::Paragraph, anchor.block_type());
         assert_eq!(2, anchor.block_index().value());
-        assert_eq!("block-hash", anchor.text_hash().as_str());
+        assert_eq!("sha256:24681357", anchor.text_hash().as_str());
         assert_eq!("Selected text", anchor.text_snippet().as_str());
         assert_eq!(
             CharRange::new(4, 17).expect("range should be valid"),

@@ -783,7 +783,7 @@ impl CommentAnchorRequest {
             file_key,
             block_type,
             BlockIndex::new(self.block_index),
-            TextHash::new(self.text_hash).map_err(invalid_comment)?,
+            TextHash::new_canonical(self.text_hash).map_err(invalid_comment)?,
             TextSnippet::new(self.text_snippet).map_err(invalid_comment)?,
             char_range,
         ))
@@ -1693,7 +1693,7 @@ mod tests {
             file_key,
             block_type,
             BlockIndex::new(3),
-            TextHash::new("sha256_prefix_8chars").expect("hash should be valid"),
+            TextHash::new("sha256:11111111").expect("hash should be valid"),
             TextSnippet::new("JWT token").expect("snippet should be valid"),
             CharRange::new(12, 24).expect("range should be valid"),
         )
@@ -1717,7 +1717,7 @@ mod tests {
         assert_eq!("impl", response.anchor().file_key());
         assert_eq!("code_block", response.anchor().block_type());
         assert_eq!(3, response.anchor().block_index());
-        assert_eq!("sha256_prefix_8chars", response.anchor().text_hash());
+        assert_eq!("sha256:11111111", response.anchor().text_hash());
         assert_eq!("JWT token", response.anchor().text_snippet());
         assert_eq!(12, response.anchor().char_range().start());
         assert_eq!(24, response.anchor().char_range().end());
@@ -2040,7 +2040,7 @@ mod tests {
             file_key: "impl".to_string(),
             block_type: "heading".to_string(),
             block_index: 2,
-            text_hash: "hash".to_string(),
+            text_hash: "sha256:1234abcd".to_string(),
             text_snippet: "Selected text".to_string(),
             char_range: CharRangeDto { start: 4, end: 17 },
         };
@@ -2050,7 +2050,7 @@ mod tests {
         assert_eq!(SpecFileKey::Impl, anchor.file_key());
         assert_eq!(BlockType::Heading, anchor.block_type());
         assert_eq!(2, anchor.block_index().value());
-        assert_eq!("hash", anchor.text_hash().as_str());
+        assert_eq!("sha256:1234abcd", anchor.text_hash().as_str());
         assert_eq!("Selected text", anchor.text_snippet().as_str());
         assert_eq!(4, anchor.char_range().start());
         assert_eq!(17, anchor.char_range().end());
@@ -2076,6 +2076,46 @@ mod tests {
             "unsupported comment anchor block type: diagram",
             error.message()
         );
+    }
+
+    #[test]
+    fn add_comment_anchor_request_rejects_legacy_fnv1a_fingerprint() {
+        let request = CommentAnchorRequest {
+            file_key: "impl".to_string(),
+            block_type: "paragraph".to_string(),
+            block_index: 2,
+            text_hash: "fnv1a:89abcdef".to_string(),
+            text_snippet: "Selected text".to_string(),
+            char_range: CharRangeDto { start: 4, end: 17 },
+        };
+
+        let error = request
+            .into_domain()
+            .expect_err("new anchor must use canonical fingerprint");
+
+        assert_eq!("invalidComment", error.code());
+        assert!(error.message().contains("canonical"));
+    }
+
+    #[test]
+    fn add_comment_anchor_request_rejects_canonical_hash_with_outer_whitespace() {
+        for text_hash in [" sha256:1234abcd", "sha256:1234abcd "] {
+            let request = CommentAnchorRequest {
+                file_key: "impl".to_string(),
+                block_type: "paragraph".to_string(),
+                block_index: 2,
+                text_hash: text_hash.to_string(),
+                text_snippet: "Selected text".to_string(),
+                char_range: CharRangeDto { start: 4, end: 17 },
+            };
+
+            let error = request
+                .into_domain()
+                .expect_err("outer whitespace must be rejected");
+
+            assert_eq!("invalidComment", error.code());
+            assert!(error.message().contains(text_hash));
+        }
     }
 
     #[test]

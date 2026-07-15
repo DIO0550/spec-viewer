@@ -188,7 +188,7 @@ mod tests {
                 file_key,
                 BlockType::Paragraph,
                 BlockIndex::new(1),
-                TextHash::new("hash").expect("hash should be valid"),
+                TextHash::new("sha256:24681357").expect("hash should be valid"),
                 TextSnippet::new("selected text").expect("snippet should be valid"),
                 CharRange::new(0, 8).expect("range should be valid"),
             ),

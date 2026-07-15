@@ -24,7 +24,7 @@ const anchor: CommentAnchor = createCommentAnchorTestFixture({
   fileKey: "tasks",
   blockType: "paragraph",
   blockIndex: 2,
-  textHash: "sha256:comment-anchor",
+  textHash: "sha256:c0ffee01",
   textSnippet: "Users can scan comments for the active spec file",
   charRange: {
     start: 0,

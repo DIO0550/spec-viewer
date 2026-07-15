@@ -3,11 +3,7 @@ import { createCommentAnchorTestFixture } from "@/features/comments/testing/comm
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type ComponentProps, type ReactNode, useState } from "react";
 import { fn } from "storybook/test";
-import {
-  type Comment,
-  CommentSidebar,
-  createTextHash,
-} from "@/features/comments";
+import { type Comment, CommentSidebar } from "@/features/comments";
 import { ThemeProvider } from "@/features/preferences";
 import type {
   SpecDocument,
@@ -140,7 +136,7 @@ const sampleComments: readonly Comment[] = [
       fileKey: "tasks",
       blockType: "list_item",
       blockIndex: 5,
-      textHash: createTextHash("Comment behavior follows in P1.15"),
+      textHash: "sha256:c0ffee01",
       textSnippet: "Comment behavior follows in P1.15",
       charRange: {
         start: 0,
@@ -159,7 +155,7 @@ const sampleComments: readonly Comment[] = [
       fileKey: "tasks",
       blockType: "heading",
       blockIndex: 0,
-      textHash: createTextHash("P1.14 Markdown Rendering"),
+      textHash: "sha256:c0ffee02",
       textSnippet: "P1.14 Markdown Rendering",
       charRange: {
         start: 0,

@@ -15,7 +15,7 @@ test("有効な値からコメントアンカーを生成する", () => {
     fileKey: "tasks",
     blockType: "paragraph",
     blockIndex: 3,
-    textHash: "  sha256:abc12345  ",
+    textHash: "sha256:abc12345",
     textSnippet: "Selected text",
     charRange: { start: 4, end: 17 },
   });

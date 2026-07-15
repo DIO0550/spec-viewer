@@ -31,7 +31,7 @@ function selectText(textNode: Text, start: number, end: number): Selection {
 
 test("DOM selectionをDOM-freeなdraft inputへdecodeする", () => {
   const root = createRenderedRoot(
-    '<p data-block-type="paragraph" data-block-index="3">Alpha beta gamma</p>',
+    '<p data-block-type="paragraph" data-block-index="3" data-comment-block-type="paragraph" data-text-hash="sha256:a5dd5c34">Alpha beta gamma</p>',
   );
   const textNode = root.querySelector("p")?.firstChild as Text;
 
@@ -44,7 +44,7 @@ test("DOM selectionをDOM-freeなdraft inputへdecodeする", () => {
     block: {
       identity: { blockType: "paragraph", blockIndex: 3 },
       text: "Alpha beta gamma",
-      textHash: null,
+      textHash: "sha256:a5dd5c34",
     },
     selectionOffsets: { start: 6, end: 10 },
     selectionBounds: { top: 0, left: 0, width: 0, height: 0 },
@@ -55,7 +55,7 @@ test("backend block metadataをrendered block mappingより優先する", () => 
   const root = createRenderedRoot(
     [
       '<p data-block-type="paragraph" data-block-index="3" ',
-      'data-comment-block-type="heading" data-text-hash="sha256:backend1">',
+      'data-comment-block-type="heading" data-text-hash="sha256:abc12345">',
       "Alpha beta gamma</p>",
     ].join(""),
   );
@@ -65,7 +65,7 @@ test("backend block metadataをrendered block mappingより優先する", () => 
     ok: true,
     value: {
       identity: { blockType: "heading", blockIndex: 3 },
-      textHash: "sha256:backend1",
+      textHash: "sha256:abc12345",
     },
   });
 });
@@ -80,15 +80,23 @@ test.each([
     "unsupported_block_type",
   ],
   [
-    '<p data-block-type="paragraph" data-block-index="2oops">Text</p>',
+    '<p data-block-type="paragraph" data-comment-block-type="paragraph" data-block-index="2oops">Text</p>',
     "invalid_block_index",
   ],
   [
-    '<p data-block-type="paragraph" data-block-index="-1">Text</p>',
+    '<p data-block-type="paragraph" data-comment-block-type="paragraph" data-block-index="-1">Text</p>',
     "invalid_block_index",
   ],
   [
-    '<p data-block-type="paragraph" data-block-index="0" data-text-hash="   ">Text</p>',
+    '<p data-block-type="paragraph" data-comment-block-type="paragraph" data-block-index="0" data-text-hash="   ">Text</p>',
+    "invalid_text_hash",
+  ],
+  [
+    '<p data-block-type="paragraph" data-block-index="0" data-comment-block-type="paragraph">Text</p>',
+    "invalid_text_hash",
+  ],
+  [
+    '<p data-block-type="paragraph" data-block-index="0" data-comment-block-type="paragraph" data-text-hash="fnv1a:12345678">Text</p>',
     "invalid_text_hash",
   ],
 ] as const)("malformed datasetをtyped errorで拒否する", (html, reason) => {
@@ -104,7 +112,7 @@ test.each([
 test("コメントUIのtextをsnapshotとselection offsetから除外する", () => {
   const root = createRenderedRoot(
     [
-      '<p data-block-type="paragraph" data-block-index="0">',
+      '<p data-block-type="paragraph" data-block-index="0" data-comment-block-type="paragraph" data-text-hash="sha256:a5dd5c34">',
       '<button class="markdown-block-comment-button">コメント追加</button>',
       "Alpha <strong>beta</strong> gamma",
       '<aside class="markdown-comment-annotations">annotation</aside>',
@@ -127,7 +135,7 @@ test("コメントUIのtextをsnapshotとselection offsetから除外する", ()
 test("block comment用のDOM-free inputはコメントUIを除くblock全体を選択する", () => {
   const root = createRenderedRoot(
     [
-      '<p data-block-type="paragraph" data-block-index="4">',
+      '<p data-block-type="paragraph" data-block-index="4" data-comment-block-type="paragraph" data-text-hash="sha256:a5dd5c34">',
       '<button class="markdown-block-comment-button">コメント追加</button>',
       "Whole block text",
       "</p>",
@@ -145,4 +153,18 @@ test("block comment用のDOM-free inputはコメントUIを除くblock全体を�
     selectionOffsets: { start: 0, end: 16 },
     selectionBounds: { top: 0, left: 0, width: 0, height: 0 },
   });
+});
+
+test("backend metadataが欠けたrendered blockからselection draftを作らない", () => {
+  const root = createRenderedRoot(
+    '<p data-block-type="paragraph" data-block-index="0">Text</p>',
+  );
+  const textNode = root.querySelector("p")?.firstChild as Text;
+
+  expect(
+    decodeCommentAnchorSelection({
+      selection: selectText(textNode, 0, 4),
+      renderedRoot: root,
+    }),
+  ).toBeNull();
 });

@@ -7,6 +7,14 @@ declare const textSnippetBrand: unique symbol;
 declare const blockIdentityBrand: unique symbol;
 declare const commentAnchorBrand: unique symbol;
 
+export const MARKDOWN_ANCHOR_FINGERPRINT_CONTRACT = "markdown-anchor-v1";
+export const MARKDOWN_ANCHOR_NORMALIZATION_VERSION = "markdown-block-v1";
+export const CANONICAL_FINGERPRINT_ALGORITHM = "sha256";
+export const CANONICAL_FINGERPRINT_PREFIX_LENGTH = 8;
+
+const canonicalFingerprintPattern = /^sha256:[0-9a-f]{8}$/;
+const legacyFnv1aFingerprintPattern = /^fnv1a:[0-9a-f]{8}$/;
+
 export type BlockType =
   | "paragraph"
   | "heading"
@@ -240,18 +248,56 @@ export const CharRange = {
 
 export const TextHash = {
   /**
-   * @param value - Candidate rendered-text hash.
-   * @returns A trimmed non-empty hash or a typed domain error.
+   * @param value - Candidate persisted anchor fingerprint.
+   * @returns A canonical or supported legacy fingerprint.
    */
   parse(value: unknown): CommentAnchorParseResult<TextHash> {
-    if (typeof value !== "string" || value.trim().length === 0) {
+    if (typeof value !== "string") {
       return failure({ reason: "invalid_text_hash", value });
     }
 
-    return success(value.trim() as TextHash);
+    if (
+      !canonicalFingerprintPattern.test(value) &&
+      !legacyFnv1aFingerprintPattern.test(value)
+    ) {
+      return failure({ reason: "invalid_text_hash", value });
+    }
+
+    return success(value as TextHash);
+  },
+
+  /**
+   * @param value - Candidate fingerprint for a newly created anchor.
+   * @returns A canonical SHA-256 fingerprint or a typed domain error.
+   */
+  parseCanonical(value: unknown): CommentAnchorParseResult<TextHash> {
+    if (typeof value !== "string") {
+      return failure({ reason: "invalid_text_hash", value });
+    }
+
+    if (!canonicalFingerprintPattern.test(value)) {
+      return failure({ reason: "invalid_text_hash", value });
+    }
+
+    return success(value as TextHash);
+  },
+
+  /**
+   * @param value - Persisted fingerprint.
+   * @returns Whether it uses the canonical SHA-256 contract.
+   */
+  isCanonical(value: TextHash): boolean {
+    return canonicalFingerprintPattern.test(value);
+  },
+
+  /**
+   * @param value - Persisted fingerprint.
+   * @returns Whether it uses the supported legacy FNV-1a contract.
+   */
+  isLegacyFnv1a(value: TextHash): boolean {
+    return legacyFnv1aFingerprintPattern.test(value);
   },
 } as const;
-
 export const TextSnippet = {
   /**
    * @param value - Candidate selected-text snippet.

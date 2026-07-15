@@ -1,12 +1,16 @@
-import * as TestValues from "@/shared/testing/validatedValueObjects";
-import { act } from "react";
 import type { ReactNode } from "react";
+import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-
-import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
-import type { SpecDocument } from "@/features/specs/types/spec";
+import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
+import type { Comment } from "@/features/comments/types/comment";
 import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
+import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
+import type {
+  MarkdownBlockMetadata,
+  SpecDocument,
+} from "@/features/specs/types/spec";
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 
 const workspacePath = "/workspace/spec-reviewer";
 
@@ -53,14 +57,17 @@ function createLoadingState(): SpecDocumentState {
   };
 }
 
-function createReadyState(contents: string): SpecDocumentState {
+function createReadyState(
+  contents: string,
+  blocks: readonly MarkdownBlockMetadata[] = [],
+): SpecDocumentState {
   const document: SpecDocument = {
     key: "tasks",
     format: "markdown",
     path: "/workspace/spec-reviewer/docs/plans/tasks.md",
     contents,
     missing: false,
-    blocks: [],
+    blocks,
   };
 
   return {
@@ -162,5 +169,140 @@ test("MarkdownViewerは非ASCIIの実バイト数が大きいMarkdownでsyntax h
   const codeBlock = result.container.querySelector("pre code");
 
   expect(codeBlock?.classList.contains("hljs")).toBe(false);
+  result.unmount();
+});
+test("MarkdownViewerはblockごとにMarkdown prefixを再encodeしない", () => {
+  const blockCount = 200;
+  const paragraphs = Array.from(
+    { length: blockCount },
+    (_, index) => `Paragraph ${index} 😀`,
+  );
+  const contents = paragraphs.join("\n\n");
+  const encoder = new TextEncoder();
+  let startByteOffset = 0;
+  const blocks: readonly MarkdownBlockMetadata[] = paragraphs.map(
+    (paragraph, blockIndex) => {
+      const paragraphEndByteOffset =
+        startByteOffset + encoder.encode(paragraph).byteLength;
+      const endByteOffset =
+        paragraphEndByteOffset + (blockIndex < blockCount - 1 ? 2 : 0);
+      const block: MarkdownBlockMetadata = {
+        blockType: "paragraph",
+        blockIndex,
+        textHash: `sha256:${blockIndex.toString(16).padStart(8, "0")}`,
+        textSnippet: paragraph,
+        sourceRange: {
+          startByteOffset,
+          endByteOffset,
+        },
+      };
+
+      startByteOffset = endByteOffset;
+      return block;
+    },
+  );
+  const encodeSpy = vi.spyOn(TextEncoder.prototype, "encode");
+  const result = renderComponent(
+    <MarkdownViewer
+      state={createReadyState(contents, blocks)}
+      selectedSpecLabel="Phase 1 Viewer"
+      selectedFileLabel="Tasks"
+      onReload={vi.fn()}
+    />,
+  );
+  const renderedBlocks = result.container.querySelectorAll(
+    '[data-comment-block-type="paragraph"]',
+  );
+
+  expect(renderedBlocks).toHaveLength(blockCount);
+  expect(renderedBlocks[blockCount - 1]?.getAttribute("data-text-hash")).toBe(
+    `sha256:${(blockCount - 1).toString(16).padStart(8, "0")}`,
+  );
+  expect(encodeSpy.mock.calls.length).toBeLessThanOrEqual(8);
+  result.unmount();
+  encodeSpy.mockRestore();
+});
+
+test("MarkdownViewerはresolution targetごとにbackend blocksを再走査しない", () => {
+  const blockCount = 120;
+  const paragraphs = Array.from(
+    { length: blockCount },
+    (_, index) => `Resolved paragraph ${index}`,
+  );
+  const contents = paragraphs.join("\n\n");
+  const encoder = new TextEncoder();
+  let startByteOffset = 0;
+  const blocks: readonly MarkdownBlockMetadata[] = paragraphs.map(
+    (paragraph, blockIndex) => {
+      const paragraphEndByteOffset =
+        startByteOffset + encoder.encode(paragraph).byteLength;
+      const endByteOffset =
+        paragraphEndByteOffset + (blockIndex < blockCount - 1 ? 2 : 0);
+      const block: MarkdownBlockMetadata = {
+        blockType: "paragraph",
+        blockIndex,
+        textHash: `sha256:${blockIndex.toString(16).padStart(8, "0")}`,
+        textSnippet: paragraph,
+        sourceRange: {
+          startByteOffset,
+          endByteOffset,
+        },
+      };
+
+      startByteOffset = endByteOffset;
+      return block;
+    },
+  );
+  const comments: readonly Comment[] = blocks.map((block) => ({
+    id: TestValues.commentId(`cmt_resolution_${block.blockIndex}`),
+    anchor: createCommentAnchorTestFixture({
+      blockIndex: block.blockIndex,
+      textHash: block.textHash,
+      textSnippet: block.textSnippet,
+    }),
+    body: `Review ${block.blockIndex}`,
+    status: "open",
+    resolved: false,
+    anchorResolution: {
+      status: "resolved",
+      reason: "exact_match",
+      details: null,
+      target: {
+        blockType: "paragraph",
+        blockIndex: block.blockIndex,
+        textHash: block.textHash,
+        textSnippet: block.textSnippet,
+        sourceRange: block.sourceRange,
+        score: 1,
+      },
+    },
+    createdAt: TestValues.isoDateTime("2026-07-15T00:00:00Z"),
+    updatedAt: TestValues.isoDateTime("2026-07-15T00:00:00Z"),
+  }));
+  let blockElementReads = 0;
+  const trackedBlocks = new Proxy(blocks, {
+    get(target, property, receiver) {
+      if (typeof property === "string" && /^\d+$/.test(property)) {
+        blockElementReads += 1;
+      }
+
+      return Reflect.get(target, property, receiver);
+    },
+  });
+  const result = renderComponent(
+    <MarkdownViewer
+      state={createReadyState(contents, trackedBlocks)}
+      selectedSpecLabel="Phase 1 Viewer"
+      selectedFileLabel="Tasks"
+      comments={comments}
+      activeCommentId={null}
+      onReload={vi.fn()}
+    />,
+  );
+
+  expect(
+    result.container.querySelectorAll("[data-comment-highlight]"),
+  ).toHaveLength(blockCount);
+  expect(blockElementReads).toBeLessThanOrEqual(blockCount * 8);
   result.unmount();
 });

@@ -138,9 +138,12 @@ impl CommentRecordDto {
             CommentStatus::Open
         };
 
+        let id = CommentId::new(self.id).map_err(CommentJsonError::Domain)?;
+        let anchor = self.anchor.into_domain(file_key, id.as_str())?;
+
         Comment::restore(
-            CommentId::new(self.id).map_err(CommentJsonError::Domain)?,
-            self.anchor.into_domain(file_key)?,
+            id,
+            anchor,
             CommentBody::new(self.body).map_err(CommentJsonError::Domain)?,
             status,
             self.created_at,
@@ -183,12 +186,22 @@ impl CommentAnchorDto {
         })
     }
 
-    fn into_domain(self, file_key: SpecFileKey) -> Result<CommentAnchor, CommentJsonError> {
+    fn into_domain(
+        self,
+        file_key: SpecFileKey,
+        comment_id: &str,
+    ) -> Result<CommentAnchor, CommentJsonError> {
+        let text_hash =
+            TextHash::new(&self.text_hash).map_err(|_| CommentJsonError::InvalidTextHash {
+                comment_id: comment_id.to_string(),
+                text_hash: self.text_hash.clone(),
+            })?;
+
         Ok(CommentAnchor::new(
             file_key,
             block_type_from_json(&self.block_type)?,
             BlockIndex::new(self.block_index),
-            TextHash::new(self.text_hash).map_err(CommentJsonError::Domain)?,
+            text_hash,
             TextSnippet::new(self.text_snippet).map_err(CommentJsonError::Domain)?,
             CharRange::new(self.char_offset[0], self.char_offset[1])
                 .map_err(CommentJsonError::Domain)?,
@@ -213,6 +226,11 @@ pub enum CommentJsonError {
     },
     #[error("comment JSON contains invalid domain data")]
     Domain(CommentDomainError),
+    #[error("persisted comment {comment_id} contains invalid text hash: {text_hash}")]
+    InvalidTextHash {
+        comment_id: String,
+        text_hash: String,
+    },
 }
 
 fn default_comment_json_version() -> u32 {
@@ -281,7 +299,7 @@ mod tests {
                 file_key,
                 block_type,
                 BlockIndex::new(3),
-                TextHash::new("sha256_prefix_8chars").expect("hash should be valid"),
+                TextHash::new("sha256:11111111").expect("hash should be valid"),
                 TextSnippet::new("JWT token").expect("snippet should be valid"),
                 CharRange::new(12, 24).expect("range should be valid"),
             ),
@@ -377,7 +395,7 @@ mod tests {
     "anchor": {
       "blockType": "heading",
       "blockIndex": 3,
-      "textHash": "sha256_prefix_8chars",
+      "textHash": "sha256:11111111",
       "textSnippet": "JWT token",
       "charOffset": [12, 24]
     },
@@ -422,7 +440,7 @@ mod tests {
       "anchor": {
         "blockType": "paragraph",
         "blockIndex": 3,
-        "textHash": "sha256_prefix_8chars",
+        "textHash": "sha256:11111111",
         "textSnippet": "JWT token",
         "charOffset": [12, 24]
       },
@@ -468,7 +486,7 @@ mod tests {
       "anchor": {
         "blockType": "image",
         "blockIndex": 3,
-        "textHash": "sha256_prefix_8chars",
+        "textHash": "sha256:11111111",
         "textSnippet": "JWT token",
         "charOffset": [12, 24]
       },
@@ -501,7 +519,7 @@ mod tests {
       "anchor": {
         "blockType": "paragraph",
         "blockIndex": 3,
-        "textHash": "sha256_prefix_8chars",
+        "textHash": "sha256:11111111",
         "textSnippet": "JWT token",
         "charOffset": [24, 12]
       },
@@ -521,6 +539,94 @@ mod tests {
             Err(CommentJsonError::Domain(
                 CommentDomainError::InvalidCharRange { start: 24, end: 12 }
             ))
+        ));
+    }
+
+    #[test]
+    fn deserialize_comments_restores_legacy_fnv1a_without_migrating_it() {
+        let json = r#"{
+  "version": 1,
+  "comments": [{
+    "id": "cmt_legacy_hash",
+    "anchor": {
+      "blockType": "paragraph",
+      "blockIndex": 3,
+      "textHash": "fnv1a:89abcdef",
+      "textSnippet": "Legacy selected text",
+      "charOffset": [0, 20]
+    },
+    "body": "Legacy hash",
+    "resolved": false,
+    "createdAt": "2026-05-05T10:00:00Z",
+    "updatedAt": "2026-05-05T10:00:01Z"
+  }]
+}"#;
+
+        let comments = deserialize_comments(SpecFileKey::Impl, json)
+            .expect("legacy FNV-1a hash should restore");
+        let serialized = serialize_comments(SpecFileKey::Impl, &comments)
+            .expect("legacy FNV-1a hash should serialize without migration");
+
+        assert_eq!("fnv1a:89abcdef", comments[0].anchor().text_hash().as_str());
+        assert!(serialized.contains("fnv1a:89abcdef"));
+        assert!(!serialized.contains("sha256:"));
+    }
+
+    #[test]
+    fn deserialize_comments_reports_invalid_hash_with_comment_id_and_value() {
+        let json = r#"{
+  "version": 1,
+  "comments": [{
+    "id": "cmt_bad_hash",
+    "anchor": {
+      "blockType": "paragraph",
+      "blockIndex": 3,
+      "textHash": "md5:89abcdef",
+      "textSnippet": "Selected text",
+      "charOffset": [0, 13]
+    },
+    "body": "Bad hash",
+    "resolved": false,
+    "createdAt": "2026-05-05T10:00:00Z",
+    "updatedAt": "2026-05-05T10:00:01Z"
+  }]
+}"#;
+
+        let result = deserialize_comments(SpecFileKey::Impl, json);
+
+        assert!(matches!(
+            result,
+            Err(CommentJsonError::InvalidTextHash { comment_id, text_hash })
+                if comment_id == "cmt_bad_hash" && text_hash == "md5:89abcdef"
+        ));
+    }
+
+    #[test]
+    fn deserialize_comments_reports_outer_whitespace_with_comment_id_and_original_value() {
+        let json = r#"{
+  "version": 1,
+  "comments": [{
+    "id": "cmt_spaced_hash",
+    "anchor": {
+      "blockType": "paragraph",
+      "blockIndex": 3,
+      "textHash": "fnv1a:89abcdef ",
+      "textSnippet": "Selected text",
+      "charOffset": [0, 13]
+    },
+    "body": "Spaced hash",
+    "resolved": false,
+    "createdAt": "2026-05-05T10:00:00Z",
+    "updatedAt": "2026-05-05T10:00:01Z"
+  }]
+}"#;
+
+        let result = deserialize_comments(SpecFileKey::Impl, json);
+
+        assert!(matches!(
+            result,
+            Err(CommentJsonError::InvalidTextHash { comment_id, text_hash })
+                if comment_id == "cmt_spaced_hash" && text_hash == "fnv1a:89abcdef "
         ));
     }
 }

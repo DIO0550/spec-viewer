@@ -1803,7 +1803,7 @@ mod tests {
       "anchor": {{
         "blockType": "paragraph",
         "blockIndex": 1,
-        "textHash": "sha256:stale",
+        "textHash": "sha256:13572468",
         "textSnippet": "Clarify checkout task",
         "charOffset": [0, 22]
       }},
@@ -1834,7 +1834,7 @@ mod tests {
       "anchor": {{
         "blockType": "paragraph",
         "blockIndex": 1,
-        "textHash": "sha256:stale",
+        "textHash": "sha256:13572468",
         "textSnippet": "Clarify implementation plan",
         "charOffset": [0, 27]
       }},

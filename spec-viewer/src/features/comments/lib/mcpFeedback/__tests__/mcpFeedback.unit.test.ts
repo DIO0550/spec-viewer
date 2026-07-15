@@ -14,7 +14,7 @@ const anchoredComment: Comment = {
     fileKey: "tasks",
     blockType: "paragraph",
     blockIndex: 4,
-    textHash: "sha256:open",
+    textHash: "sha256:0e3a0001",
     textSnippet: "Feedback payload should stay copyable",
     charRange: {
       start: 0,

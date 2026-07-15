@@ -15,7 +15,7 @@ const defaultInput: CommentAnchorParseInput = {
   fileKey: "tasks",
   blockType: "paragraph",
   blockIndex: 0,
-  textHash: "sha256:test-anchor",
+  textHash: "sha256:7e57a001",
   textSnippet: "Selected test text",
   charRange: { start: 0, end: 18 },
 };

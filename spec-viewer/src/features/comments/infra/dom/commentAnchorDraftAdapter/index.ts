@@ -22,8 +22,7 @@ export type DecodedCommentAnchorDraftInput = Readonly<{
   selectionBounds: CommentSelectionBounds;
 }>;
 
-const BLOCK_SELECTOR = "[data-block-type][data-block-index]";
-const BACKEND_BLOCK_SELECTOR =
+const BLOCK_SELECTOR =
   "[data-block-type][data-block-index][data-comment-block-type][data-text-hash]";
 const COMMENT_TARGET_SELECTOR = ".markdown-comment-target";
 const COMMENT_UI_SELECTOR =
@@ -145,18 +144,12 @@ export function decodeRenderedBlockSnapshot(
 
 /**
  * @param block - Rendered Markdown block element.
- * @returns Validated backend block type when present, otherwise rendered mapping.
+ * @returns Validated backend block type metadata.
  */
 function decodeBlockType(
   block: HTMLElement,
 ): CommentAnchorParseResult<BlockType> {
-  const backendBlockType = block.dataset.commentBlockType;
-
-  if (backendBlockType !== undefined) {
-    return BlockType.parse(backendBlockType);
-  }
-
-  return BlockType.fromRendered(block.dataset.blockType);
+  return BlockType.parse(block.dataset.commentBlockType);
 }
 
 /**
@@ -180,17 +173,13 @@ function decodeBlockIndex(
 }
 
 /**
- * @param value - Raw optional data-text-hash value.
- * @returns A validated backend hash or null when metadata is absent.
+ * @param value - Raw data-text-hash value.
+ * @returns A validated canonical backend fingerprint.
  */
 function decodeTextHash(
   value: string | undefined,
-): CommentAnchorParseResult<TextHashValue | null> {
-  if (value === undefined) {
-    return { ok: true, value: null };
-  }
-
-  return TextHash.parse(value);
+): CommentAnchorParseResult<TextHashValue> {
+  return TextHash.parseCanonical(value);
 }
 
 /**
@@ -249,12 +238,6 @@ function findSelectionBlock(
     return null;
   }
 
-  const backendBlock = element.closest<HTMLElement>(BACKEND_BLOCK_SELECTOR);
-
-  if (backendBlock !== null && renderedRoot.contains(backendBlock)) {
-    return backendBlock;
-  }
-
   const block = element.closest<HTMLElement>(BLOCK_SELECTOR);
 
   if (block === null || !renderedRoot.contains(block)) {
@@ -305,7 +288,7 @@ function getTextOffsetWithinBlock(
  * @param block - Rendered Markdown block.
  * @returns Block text excluding comment controls and annotations.
  */
-export function readRenderedBlockAnchorText(block: HTMLElement): string {
+function readRenderedBlockAnchorText(block: HTMLElement): string {
   return getAnchorTextNodes(block)
     .map((textNode) => textNode.data)
     .join("");
