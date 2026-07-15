@@ -1331,9 +1331,14 @@ function createCommentBlockHighlights({
   >;
 }>): CommentBlockHighlights {
   const commentsByBlock = new Map<string, Comment[]>();
+  const canonicalBackendBlockIdentities =
+    createCanonicalBackendBlockIdentitySet(blocks);
 
   for (const comment of comments) {
-    const key = createCommentHighlightBlockKey(comment, blocks);
+    const key = createCommentHighlightBlockKey(
+      comment,
+      canonicalBackendBlockIdentities,
+    );
 
     if (key === null) {
       continue;
@@ -1355,6 +1360,40 @@ function createCommentBlockHighlights({
       }),
     ]),
   );
+}
+
+/** @returns Canonical backend block identities for constant-time target validation. */
+function createCanonicalBackendBlockIdentitySet(
+  blocks: readonly MarkdownBlockMetadata[],
+): ReadonlySet<string> {
+  const identities = new Set<string>();
+
+  for (const block of blocks) {
+    const canonicalBlock = getCanonicalBackendBlock(block);
+
+    if (canonicalBlock === null) {
+      continue;
+    }
+
+    identities.add(
+      createCanonicalBackendBlockIdentity(
+        canonicalBlock.blockType,
+        canonicalBlock.blockIndex,
+        canonicalBlock.textHash,
+      ),
+    );
+  }
+
+  return identities;
+}
+
+/** @returns A collision-safe identity for a canonical backend block. */
+function createCanonicalBackendBlockIdentity(
+  blockType: MarkdownBlockType | CommentBlockType,
+  blockIndex: number,
+  textHash: string,
+): string {
+  return JSON.stringify([blockType, blockIndex, textHash]);
 }
 
 /** @returns Highlight metadata for all comments attached to one block. */
@@ -1420,7 +1459,7 @@ function createCommentBlockAnnotations({
  */
 function createCommentHighlightBlockKey(
   comment: Comment,
-  blocks: readonly MarkdownBlockMetadata[],
+  canonicalBackendBlockIdentities: ReadonlySet<string>,
 ): string | null {
   const target = comment.anchorResolution?.target;
 
@@ -1430,11 +1469,12 @@ function createCommentHighlightBlockKey(
 
   if (target !== undefined && target !== null) {
     const blockType = mapCommentBlockTypeToBlockType(target.blockType);
-    const matchesCurrentBackendBlock = blocks.some(
-      (block) =>
-        block.blockType === target.blockType &&
-        block.blockIndex === target.blockIndex &&
-        getCanonicalBackendBlock(block)?.textHash === target.textHash,
+    const matchesCurrentBackendBlock = canonicalBackendBlockIdentities.has(
+      createCanonicalBackendBlockIdentity(
+        target.blockType,
+        target.blockIndex,
+        target.textHash,
+      ),
     );
 
     if (blockType === null || !matchesCurrentBackendBlock) {
