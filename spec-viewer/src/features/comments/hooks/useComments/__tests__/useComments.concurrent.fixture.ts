@@ -35,7 +35,7 @@ export const addedComment: Comment = {
     fileKey: "tasks",
     blockType: "paragraph",
     blockIndex: 0,
-    textHash: "sha256:concurrent",
+    textHash: "sha256:c0ffee02",
     textSnippet: "Keep the committed selection",
     charRange: { start: 0, end: 28 },
   }),

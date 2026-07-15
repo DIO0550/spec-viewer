@@ -11,7 +11,7 @@ const draft: CommentAnchorDraft = {
     fileKey: "tasks",
     blockType: "paragraph",
     blockIndex: 2,
-    textHash: "fnv1a:12345678",
+    textHash: "sha256:12345678",
     textSnippet: "selected requirement text",
     charRange: {
       start: 4,
@@ -569,7 +569,7 @@ test("AddCommentPopoverはkey変更remountで本文とvalidation errorを初期�
           anchor: createCommentAnchorTestFixture({
             ...draft.anchor,
             blockIndex: 3,
-            textHash: "fnv1a:87654321",
+            textHash: "sha256:87654321",
             textSnippet: "next selected requirement text",
           }),
         }}

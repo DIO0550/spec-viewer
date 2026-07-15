@@ -37,7 +37,7 @@ const anchor: CommentAnchor = createCommentAnchorTestFixture({
   fileKey: "tasks",
   blockType: "paragraph",
   blockIndex: 0,
-  textHash: "sha256:first",
+  textHash: "sha256:f1a57001",
   textSnippet: "Clarify this task",
   charRange: {
     start: 0,

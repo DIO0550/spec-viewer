@@ -40,7 +40,7 @@ const comment: Comment = {
     fileKey: "tasks",
     blockType: "paragraph",
     blockIndex: 1,
-    textHash: "sha256:anchor",
+    textHash: "sha256:a11ce001",
     textSnippet: "Clarify this task",
     charRange: {
       start: 0,
