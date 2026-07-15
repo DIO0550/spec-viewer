@@ -1,74 +1,67 @@
-import type { SpecFileKey } from "@/features/specs/domain/specFile";
-import type { SpecId } from "@/shared/domain/specId";
-import type { SpecTree } from "@/features/specs/domain/specTree";
-import type {
-  ArchiveSpecRequest,
-  ArchiveSpecResponse,
-  ReadSpecFileRequest,
-  SpecDocument,
-} from "@/features/specs/types/spec";
 import type { SpecCommands } from "@/features/specs/application/ports/specCommands";
+import type {
+  SpecGateway,
+  SpecGatewayResult,
+} from "@/features/specs/application/ports/specGateway";
+import type { SpecFeatureError } from "@/features/specs/application/specError";
+import { toSpecFeatureError } from "@/features/specs/infra/tauri/specErrorMapper";
+import { WorkspacePath } from "@/shared/domain/workspacePath";
 
 /**
- * @param commands - Spec command boundary
- * @param workspacePath - Active workspace path
- * @returns Spec tree from the command boundary.
+ * @param commands - Concrete Tauri spec command adapter.
+ * @returns A typed application gateway that owns DTO conversion and error mapping.
  */
-export async function listSpecs(
-  commands: SpecCommands,
-  workspacePath: string,
-): Promise<SpecTree> {
-  return commands.listSpecs(workspacePath);
-}
-
-/**
- * @param commands - Spec command boundary
- * @param request - Read request DTO
- * @returns Spec document from the command boundary.
- */
-export async function readSpecFile(
-  commands: SpecCommands,
-  request: ReadSpecFileRequest,
-): Promise<SpecDocument> {
-  return commands.readSpecFile(request);
-}
-
-/**
- * @param commands - Spec command boundary
- * @param request - Archive request DTO
- * @returns Archive response from the command boundary.
- */
-export async function archiveSpec(
-  commands: SpecCommands,
-  request: ArchiveSpecRequest,
-): Promise<ArchiveSpecResponse> {
-  return commands.archiveSpec(request);
-}
-
-/**
- * @param request - Document read input
- * @returns IPC read request for the selected spec file.
- */
-export function createReadSpecFileRequest(
-  request: Readonly<{
-    workspacePath: string;
-    specId: SpecId;
-    fileKey: SpecFileKey;
-    correlationId?: string;
-  }>,
-): ReadSpecFileRequest {
-  if (request.correlationId === undefined) {
-    return {
-      workspacePath: request.workspacePath,
-      specId: request.specId,
-      fileKey: request.fileKey,
-    };
-  }
-
+export function createSpecGateway(commands: SpecCommands): SpecGateway {
   return {
-    workspacePath: request.workspacePath,
-    specId: request.specId,
-    fileKey: request.fileKey,
-    correlationId: request.correlationId,
+    listSpecs: async (workspacePath) => {
+      try {
+        const tree = await commands.listSpecs(
+          WorkspacePath.toString(workspacePath),
+        );
+        return success(tree);
+      } catch (error) {
+        return failure(toSpecFeatureError("list", error));
+      }
+    },
+    readSpecDocument: async (input) => {
+      try {
+        const document = await commands.readSpecFile({
+          workspacePath: WorkspacePath.toString(input.workspacePath),
+          specId: input.specId,
+          fileKey: input.fileKey,
+          correlationId: input.correlationId,
+        });
+        return success(document);
+      } catch (error) {
+        return failure(toSpecFeatureError("read", error));
+      }
+    },
+    archiveSpec: async (input) => {
+      try {
+        await commands.archiveSpec({
+          workspacePath: WorkspacePath.toString(input.workspacePath),
+          specId: input.specId,
+        });
+        return success(undefined);
+      } catch (error) {
+        return failure(toSpecFeatureError("archive", error));
+      }
+    },
   };
+}
+
+/**
+ * @param value - Successful gateway value.
+ * @returns A typed success result.
+ */
+function success<Value>(value: Value): SpecGatewayResult<Value> {
+  return { ok: true, value };
+}
+
+/**
+ * @param error - Mapped feature error.
+ * @returns A typed failure result.
+ */
+function failure(error: SpecFeatureError): SpecGatewayResult<never> {
+  return { ok: false, error };
 }
