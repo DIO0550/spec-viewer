@@ -1,17 +1,16 @@
-import * as TestValues from "@/shared/testing/validatedValueObjects";
-import { act } from "react";
 import type { ReactNode } from "react";
+import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-
 import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
 import type { Comment } from "@/features/comments/types/comment";
+import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
 import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
 import type {
   MarkdownBlockMetadata,
   SpecDocument,
 } from "@/features/specs/types/spec";
-import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 
 const workspacePath = "/workspace/spec-reviewer";
 
