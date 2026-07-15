@@ -288,7 +288,7 @@ function getTextOffsetWithinBlock(
  * @param block - Rendered Markdown block.
  * @returns Block text excluding comment controls and annotations.
  */
-export function readRenderedBlockAnchorText(block: HTMLElement): string {
+function readRenderedBlockAnchorText(block: HTMLElement): string {
   return getAnchorTextNodes(block)
     .map((textNode) => textNode.data)
     .join("");
