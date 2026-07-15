@@ -1,26 +1,12 @@
 import type {
-  SpecDocumentFeatureState,
-  SpecFeatureError,
-  SpecTreeFeatureState,
-} from "@/features/specs/application/specError";
+  SpecSelectionState,
+  SpecsState,
+} from "@/features/specs/application/specsState";
 import type { SpecsSelectors } from "@/features/specs/hooks/useSpecs/selectors";
 import type { SpecFileKey } from "@/shared/domain/specFileKey";
 import type { SpecId } from "@/shared/domain/specId";
 
-export type SpecSelectionState = Readonly<{
-  specId: SpecId | null;
-  fileKey: SpecFileKey | null;
-}>;
-
-export type SpecsState = Readonly<{
-  specTreeState: SpecTreeFeatureState;
-  documentState: SpecDocumentFeatureState;
-  selection: SpecSelectionState;
-  isLoading: boolean;
-  activeOperationId: string | null;
-  archivingSpecId: SpecId | null;
-  archiveSpecError: SpecFeatureError | null;
-}>;
+export type { SpecSelectionState, SpecsState };
 
 export type SpecsActions = Readonly<{
   /** Archives a spec. @param specId - ID of the spec to archive. */

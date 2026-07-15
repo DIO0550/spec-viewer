@@ -36,7 +36,9 @@ import {
   useSidebarPreference,
 } from "@/features/sidebar";
 import {
+  createSpecGateway,
   MarkdownViewer,
+  specCommands,
   type SpecSelectionChange,
   SpecTabs,
   SpecTree,
@@ -51,7 +53,6 @@ import {
   WorkspaceSidebarSection,
   WorkspaceToolbar,
 } from "@/features/workspace";
-import { WorkspacePath } from "@/shared/domain/workspacePath";
 import { uiText } from "@/shared/lib/uiText";
 import { WorkspaceLayout } from "@/shared/ui";
 
@@ -59,6 +60,7 @@ const unavailableSpecNodeCapabilities = {
   reviewable: false,
   archiveable: false,
 } as const;
+const tauriSpecGateway = createSpecGateway(specCommands);
 
 /**
  * Application root that wires the theme, workspace and selection providers.
@@ -105,10 +107,7 @@ function SpecViewAppContent(): ReactElement {
   const selectCurrentSpecView = useCallback(
     (selection: SpecSelectionChange): void => {
       synchronizeSelection({
-        workspacePath:
-          selection.workspacePath === null
-            ? null
-            : WorkspacePath.fromString(selection.workspacePath),
+        workspacePath: selection.workspacePath,
         specId: selection.specId,
         fileKey: selection.fileKey,
       });
@@ -116,6 +115,7 @@ function SpecViewAppContent(): ReactElement {
     [synchronizeSelection],
   );
   const specs = useSpecs({
+    gateway: tauriSpecGateway,
     workspacePath: activeWorkspaceRoot,
     onSelectionChange: selectCurrentSpecView,
   });
