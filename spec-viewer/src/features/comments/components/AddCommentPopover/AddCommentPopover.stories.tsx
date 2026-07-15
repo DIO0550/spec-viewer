@@ -10,7 +10,7 @@ const defaultDraft: CommentAnchorDraft = {
     fileKey: "tasks",
     blockType: "paragraph",
     blockIndex: 2,
-    textHash: "fnv1a:12345678",
+    textHash: "sha256:12345678",
     textSnippet: "selected requirement text",
     charRange: {
       start: 4,

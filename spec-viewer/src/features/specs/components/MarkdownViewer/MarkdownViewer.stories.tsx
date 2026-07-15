@@ -2,7 +2,6 @@ import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
-import { createTextHash } from "@/features/comments/lib/comment-anchor-draft";
 import type { Comment } from "@/features/comments/types/comment";
 import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
 import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
@@ -33,7 +32,45 @@ const readyState: SpecDocumentState = {
     path: "/workspace/spec-reviewer/docs/plans/tasks/later-phases/p7-02-markdown-copy-selection-reliability.md",
     contents: markdownContents,
     missing: false,
-    blocks: [],
+    blocks: [
+      {
+        blockType: "heading",
+        blockIndex: 0,
+        textHash: "sha256:11111111",
+        textSnippet: "Selection reliability",
+        sourceRange: null,
+      },
+      {
+        blockType: "paragraph",
+        blockIndex: 1,
+        textHash: "sha256:a5dd5c34",
+        textSnippet:
+          "Users can select only this paragraph fragment without activating the highlight.",
+        sourceRange: null,
+      },
+      {
+        blockType: "list_item",
+        blockIndex: 2,
+        textHash: "sha256:22222222",
+        textSnippet: "Copy should keep the exact selected range.",
+        sourceRange: null,
+      },
+      {
+        blockType: "list_item",
+        blockIndex: 3,
+        textHash: "sha256:33333333",
+        textSnippet:
+          "Comment creation should still work from the selection button.",
+        sourceRange: null,
+      },
+      {
+        blockType: "code_block",
+        blockIndex: 4,
+        textHash: "sha256:abc12345",
+        textSnippet: 'const selectedText = "paragraph fragment";',
+        sourceRange: null,
+      },
+    ],
   },
   error: null,
 };
@@ -116,7 +153,7 @@ const comments: readonly Comment[] = [
       fileKey: "tasks",
       blockType: "paragraph",
       blockIndex: 1,
-      textHash: createTextHash(highlightedParagraph),
+      textHash: "sha256:a5dd5c34",
       textSnippet: "paragraph fragment",
       charRange: {
         start: 27,
@@ -140,7 +177,7 @@ const commentCardComments: readonly Comment[] = [
       fileKey: "tasks",
       blockType: "paragraph",
       blockIndex: 1,
-      textHash: createTextHash(highlightedParagraph),
+      textHash: "sha256:a5dd5c34",
       textSnippet: highlightedParagraph,
       charRange: {
         start: 0,
@@ -160,7 +197,7 @@ const commentCardComments: readonly Comment[] = [
       fileKey: "tasks",
       blockType: "code_block",
       blockIndex: 4,
-      textHash: createTextHash('const selectedText = "paragraph fragment";'),
+      textHash: "sha256:abc12345",
       textSnippet: "selectedText",
       charRange: {
         start: 6,
