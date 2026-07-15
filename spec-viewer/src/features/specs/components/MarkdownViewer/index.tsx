@@ -36,6 +36,7 @@ import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
 import {
   BlockType as CommentAnchorBlockType,
+  TextHash as CommentAnchorTextHash,
   CommentBody,
   type CommentBodyDraft,
   type CommentOperationState,
@@ -1031,16 +1032,17 @@ function createResolvedAnchorDisplayStatus({
 
 /**
  * @param block - The rendered block element to read the hash from.
- * @returns The backend text hash for a rendered block, or a legacy fallback hash.
+ * @returns The validated backend hash, a legacy fallback when absent, or null when malformed.
  */
-function readRenderedBlockTextHash(block: HTMLElement): string {
+function readRenderedBlockTextHash(block: HTMLElement): string | null {
   const textHash = block.dataset.textHash;
 
-  if (textHash !== undefined && textHash.trim().length > 0) {
-    return textHash;
+  if (textHash === undefined) {
+    return createTextHash(block.textContent ?? "");
   }
 
-  return createTextHash(block.textContent ?? "");
+  const parsedTextHash = CommentAnchorTextHash.parse(textHash);
+  return parsedTextHash.ok ? parsedTextHash.value : null;
 }
 
 /** Scrolls the active comment's Markdown block into view when it exists. */
