@@ -312,7 +312,7 @@ test("listCommentsは配列内の不正日時を最深path付きdecode errorと�
   });
 });
 
-test("addCommentは不正なanchor hashを正確なfield pathで拒否する", async () => {
+test("addCommentは不正なanchor hashの実値を診断に保持する", async () => {
   invokeMock.mockReset();
   invokeMock.mockResolvedValue({
     ...comment,
@@ -324,11 +324,11 @@ test("addCommentは不正なanchor hashを正確なfield pathで拒否する", a
     code: "invalidResponse",
     path: "$.anchor.textHash",
     expected: "non-blank text hash",
-    actual: "invalid_text_hash",
+    actual: "   ",
   });
 });
 
-test("listCommentsは不正なanchor rangeに配列index付きfield pathを付ける", async () => {
+test("listCommentsは不正なanchor rangeの実値を診断に保持する", async () => {
   invokeMock.mockReset();
   invokeMock.mockResolvedValue({
     comments: [
@@ -349,6 +349,6 @@ test("listCommentsは不正なanchor rangeに配列index付きfield pathを付�
     code: "invalidResponse",
     path: "$.comments[1].anchor.charRange",
     expected: "non-empty ordered character range",
-    actual: "invalid_char_range",
+    actual: '{"start":3,"end":3}',
   });
 });
