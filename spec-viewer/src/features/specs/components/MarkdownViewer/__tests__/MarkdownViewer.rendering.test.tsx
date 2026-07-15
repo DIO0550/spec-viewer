@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
 import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
+import { SpecDocument } from "@/features/specs/domain/specDocument";
 import {
   CommentOperationFailedState,
   CommentOperationIdleState,
@@ -19,10 +20,7 @@ import type {
   CommentBlockType,
   CommentId,
 } from "@/features/comments/types/comment";
-import type {
-  MarkdownBlockMetadata,
-  SpecDocument,
-} from "@/features/specs/types/spec";
+import type { MarkdownBlockMetadata } from "@/features/specs/types/spec";
 import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
 
 const commentId = TestValues.commentId;
@@ -85,21 +83,30 @@ function renderComponent(component: ReactNode): RenderResult {
 }
 
 function createReadyState(
-  contents: string | null,
+  contents: string,
   blocks: readonly MarkdownBlockMetadata[] = [],
-  format: SpecDocument["format"] = "markdown",
+  format: "markdown" | "html" = "markdown",
   documentPath: string = format === "html"
     ? "/workspace/spec-reviewer/docs/plans/tasks.html"
     : "/workspace/spec-reviewer/docs/plans/tasks.md",
+  allowsScripts = false,
 ): SpecDocumentState {
-  const document: SpecDocument = {
-    key: "tasks",
-    format,
-    path: documentPath,
-    contents,
-    missing: false,
-    blocks,
-  };
+  const document =
+    format === "html"
+      ? SpecDocument.loaded({
+          key: "tasks",
+          format,
+          path: documentPath,
+          contents,
+          allowsScripts,
+        })
+      : SpecDocument.loaded({
+          key: "tasks",
+          format,
+          path: documentPath,
+          contents,
+          blocks,
+        });
 
   return {
     status: "ready",
@@ -107,6 +114,7 @@ function createReadyState(
     specId: TestValues.specId("phase-1-viewer"),
     fileKey: "tasks",
     document,
+    loadRevision: "markdown-viewer-test-load",
     error: null,
   };
 }
@@ -307,13 +315,14 @@ test("MarkdownViewerはHTML文書をsandbox iframeで閲覧表示する", () => 
   result.unmount();
 });
 
-test("MarkdownViewerは特定HTML文書のscript実行を許可する", () => {
+test("MarkdownViewerは明示されたcapabilityに従ってscript実行を許可する", () => {
   const requirementsResult = renderViewer(
     createReadyState(
       "<main><h1>Requirements</h1></main><script>window.__requirementsRendered = true;</script>",
       [],
       "html",
-      "/workspace/spec-reviewer/docs/plans/requirements.html",
+      "/workspace/spec-reviewer/docs/plans/custom-preview.html",
+      true,
     ),
   );
   const requirementsIframe = requirementsResult.container.querySelector(
@@ -331,7 +340,8 @@ test("MarkdownViewerは特定HTML文書のscript実行を許可する", () => {
       "<main><h1>Test Cases</h1></main><script>window.__testCasesRendered = true;</script>",
       [],
       "html",
-      "/workspace/spec-reviewer/docs/plans/test-cases.html",
+      "/workspace/spec-reviewer/docs/plans/tasks.html",
+      true,
     ),
   );
   const iframe = result.container.querySelector(
@@ -1784,19 +1794,18 @@ test("MarkdownViewerは空ファイル状態を表示する", () => {
 });
 
 test("MarkdownViewerはmissing状態を表示する", () => {
-  const missingDocument: SpecDocument = {
+  const missingDocument = SpecDocument.missing({
     key: "tasks",
+    format: "markdown",
     path: "/workspace/spec-reviewer/docs/plans/tasks.md",
-    contents: null,
-    missing: true,
-    blocks: [],
-  };
+  });
   const result = renderViewer({
     status: "missing",
     workspacePath,
     specId: TestValues.specId("phase-1-viewer"),
     fileKey: "tasks",
     document: missingDocument,
+    loadRevision: "markdown-viewer-test-missing-load",
     error: null,
   });
 

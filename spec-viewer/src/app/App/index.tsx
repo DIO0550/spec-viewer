@@ -55,6 +55,11 @@ import { WorkspacePath } from "@/shared/domain/workspacePath";
 import { uiText } from "@/shared/lib/uiText";
 import { WorkspaceLayout } from "@/shared/ui";
 
+const unavailableSpecNodeCapabilities = {
+  reviewable: false,
+  archiveable: false,
+} as const;
+
 /**
  * Application root that wires the theme, workspace and selection providers.
  *
@@ -118,19 +123,22 @@ function SpecViewAppContent(): ReactElement {
   const specActions = specs.actions;
   const specSelectors = specs.selectors;
   const isCurrentViewLoading = specSelectors.isLoading;
-  const documentReadiness = useDocumentReadiness(specState.documentState);
+  const documentReadiness = useDocumentReadiness(
+    specState.documentState,
+    specSelectors.selectedSpec?.capabilities ?? unavailableSpecNodeCapabilities,
+  );
   const commentScope = useMemo(() => {
     if (
-      documentReadiness.isHtmlDocument ||
-      !documentReadiness.isDocumentReadable
+      !documentReadiness.isDocumentReadable ||
+      !documentReadiness.isDocumentCommentable
     ) {
       return null;
     }
 
     return CommentScope.fromSelection(specViewSelection);
   }, [
+    documentReadiness.isDocumentCommentable,
     documentReadiness.isDocumentReadable,
-    documentReadiness.isHtmlDocument,
     specViewSelection.fileKey,
     specViewSelection.specId,
     specViewSelection.targetScope,
@@ -214,11 +222,7 @@ function SpecViewAppContent(): ReactElement {
     comments.operationState,
     "update",
   );
-  const isCommentScopeReady =
-    activeWorkspaceRoot !== null &&
-    resetKeys.specId !== null &&
-    resetKeys.fileKey !== null &&
-    documentReadiness.isDocumentReadable;
+  const isCommentScopeReady = commentScope !== null;
   const canRefresh =
     activeWorkspaceRoot !== null && specSelectors.canReloadDocument;
   const leftNavigationSubtitle =

@@ -1,10 +1,10 @@
-import * as TestValues from "@/shared/testing/validatedValueObjects";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
 import { createTextHash } from "@/features/comments/lib/comment-anchor-draft";
 import type { Comment } from "@/features/comments/types/comment";
 import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
 import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 
 const commentId = TestValues.commentId;
 
@@ -27,11 +27,12 @@ const readyState: SpecDocumentState = {
   workspacePath,
   specId: TestValues.specId("selection-reliability"),
   fileKey: "tasks",
+  loadRevision: "story-markdown",
   document: {
+    kind: "markdown",
     key: "tasks",
     path: "/workspace/spec-reviewer/docs/plans/tasks/later-phases/p7-02-markdown-copy-selection-reliability.md",
     contents: markdownContents,
-    missing: false,
     blocks: [],
   },
   error: null,
@@ -62,13 +63,13 @@ const techReferenceHtmlState: SpecDocumentState = {
   workspacePath,
   specId: TestValues.specId("tech-reference-tab"),
   fileKey: "tech-reference",
+  loadRevision: "story-tech-reference",
   document: {
+    kind: "html",
     key: "tech-reference",
-    format: "html",
     path: "/workspace/spec-reviewer/.plugin-workspace/.specs/tech-reference-tab/tech-reference.html",
     contents: techReferenceHtmlContents,
-    missing: false,
-    blocks: [],
+    allowsScripts: false,
   },
   error: null,
 };
@@ -81,7 +82,7 @@ const testCasesHtmlContents = [
   "<main>",
   '<h1 id="cases">Test Cases</h1>',
   '<p data-search-noise="edge scenario">Searchable body case for login and logout scenarios.</p>',
-  "<script>Searchable body case script noise</script>",
+  '<script>"Searchable body case script noise";</script>',
   "<style>.searchable-body-case { color: red; }</style>",
   "<table><tbody><tr><td>Scenario</td><td>Expected result</td></tr><tr><td>Login</td><td>Dashboard opens</td></tr></tbody></table>",
   "</main>",
@@ -94,13 +95,13 @@ const testCasesHtmlState: SpecDocumentState = {
   workspacePath,
   specId: TestValues.specId("test-cases-tab"),
   fileKey: "test-cases",
+  loadRevision: "story-test-cases",
   document: {
+    kind: "html",
     key: "test-cases",
-    format: "html",
     path: "/workspace/spec-reviewer/.plugin-workspace/.specs/test-cases-tab/test-cases.html",
     contents: testCasesHtmlContents,
-    missing: false,
-    blocks: [],
+    allowsScripts: true,
   },
   error: null,
 };

@@ -3,6 +3,10 @@ import {
   type SpecFile as SpecFileDomain,
 } from "@/features/specs/domain/specFile";
 import {
+  SpecDocument,
+  type SpecDocument as SpecDocumentDomain,
+} from "@/features/specs/domain/specDocument";
+import {
   SpecNode,
   type SpecNode as SpecNodeDomain,
   type SpecNodeCapabilities,
@@ -17,7 +21,6 @@ import type {
   ArchiveSpecResponse,
   ListSpecsRequest,
   ReadSpecFileRequest,
-  SpecDocument,
 } from "@/features/specs/types/spec";
 import type {
   SpecFileWatchChangedEvent,
@@ -86,6 +89,7 @@ type SpecDocumentDto = Readonly<{
   path: string;
   contents: string | null;
   missing: boolean;
+  allowsScripts: boolean;
   blocks: readonly Readonly<{
     blockType:
       | "paragraph"
@@ -192,6 +196,7 @@ const specDocumentCodec: RuntimeCodecType<SpecDocumentDto> =
     path: RuntimeCodec.nonEmptyString,
     contents: RuntimeCodec.nullable(RuntimeCodec.string),
     missing: RuntimeCodec.boolean,
+    allowsScripts: RuntimeCodec.boolean,
     blocks: RuntimeCodec.array(markdownBlockCodec),
   });
 
@@ -267,8 +272,52 @@ export function decodeListSpecsResponse(value: unknown): SpecTreeDomain {
   );
 }
 
-export function decodeReadSpecFileResponse(value: unknown): SpecDocument {
-  return { ...decodeRuntimeValue("read_spec_file", specDocumentCodec, value) };
+export function decodeReadSpecFileResponse(value: unknown): SpecDocumentDomain {
+  const dto = decodeRuntimeValue("read_spec_file", specDocumentCodec, value);
+
+  if (dto.missing) {
+    if (dto.contents !== null) {
+      throw new IpcResponseDecodeError(
+        "read_spec_file",
+        "$.contents",
+        "null when missing is true",
+        "string",
+      );
+    }
+
+    return SpecDocument.missing({
+      key: dto.key,
+      format: dto.format,
+      path: dto.path,
+    });
+  }
+
+  if (dto.contents === null) {
+    throw new IpcResponseDecodeError(
+      "read_spec_file",
+      "$.contents",
+      "string when missing is false",
+      "null",
+    );
+  }
+
+  if (dto.format === "html") {
+    return SpecDocument.loaded({
+      key: dto.key,
+      format: dto.format,
+      path: dto.path,
+      contents: dto.contents,
+      allowsScripts: dto.allowsScripts,
+    });
+  }
+
+  return SpecDocument.loaded({
+    key: dto.key,
+    format: dto.format,
+    path: dto.path,
+    contents: dto.contents,
+    blocks: dto.blocks,
+  });
 }
 
 export function decodeArchiveSpecResponse(value: unknown): ArchiveSpecResponse {

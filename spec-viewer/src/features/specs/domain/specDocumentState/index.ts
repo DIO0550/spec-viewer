@@ -1,5 +1,5 @@
+import type { SpecDocument } from "@/features/specs/domain/specDocument";
 import type { SpecFileKey } from "@/features/specs/domain/specFile";
-import type { SpecDocument } from "@/features/specs/types/spec";
 import type { SpecId } from "@/shared/domain/specId";
 
 export type SpecDocumentState<TError = unknown> =
@@ -27,7 +27,8 @@ export type SpecDocumentState<TError = unknown> =
       specId: SpecId;
       fileKey: SpecFileKey;
       correlationId?: string;
-      document: SpecDocument;
+      loadRevision: string;
+      document: Exclude<SpecDocument, { kind: "missing" }>;
       error: null;
     }>
   | Readonly<{
@@ -36,7 +37,8 @@ export type SpecDocumentState<TError = unknown> =
       specId: SpecId;
       fileKey: SpecFileKey;
       correlationId?: string;
-      document: SpecDocument;
+      loadRevision: string;
+      document: Extract<SpecDocument, { kind: "missing" }>;
       error: null;
     }>
   | Readonly<{
@@ -50,6 +52,10 @@ export type SpecDocumentState<TError = unknown> =
     }>;
 
 type CorrelationFields = Readonly<{ correlationId?: string }>;
+type LoadedDocumentContext = Readonly<{
+  loadRevision: string;
+  correlationId?: string;
+}>;
 
 export const SpecDocumentState = {
   /**
@@ -96,26 +102,39 @@ export const SpecDocumentState = {
   /**
    * @param workspacePath - Active workspace path
    * @param specId - Selected spec id
-   * @param fileKey - Selected file key
    * @param document - Loaded document
-   * @param correlationId - Optional performance correlation id
+   * @param context - Required load revision and optional correlation id
    * @returns Ready or missing document state based on the loaded document.
    */
   loaded: (
     workspacePath: string,
     specId: SpecId,
-    fileKey: SpecFileKey,
     document: SpecDocument,
-    correlationId?: string,
-  ): SpecDocumentState<never> => ({
-    status: document.missing ? "missing" : "ready",
-    workspacePath,
-    specId,
-    fileKey,
-    ...createCorrelationFields(correlationId),
-    document,
-    error: null,
-  }),
+    context: LoadedDocumentContext,
+  ): SpecDocumentState<never> => {
+    const sharedState = {
+      workspacePath,
+      specId,
+      fileKey: document.key,
+      ...createCorrelationFields(context.correlationId),
+      loadRevision: context.loadRevision,
+      error: null,
+    };
+
+    if (document.kind === "missing") {
+      return {
+        ...sharedState,
+        status: "missing",
+        document,
+      };
+    }
+
+    return {
+      ...sharedState,
+      status: "ready",
+      document,
+    };
+  },
 
   /**
    * @param workspacePath - Active workspace path

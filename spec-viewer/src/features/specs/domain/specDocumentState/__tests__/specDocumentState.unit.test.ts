@@ -1,24 +1,22 @@
-import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { expect, test } from "vitest";
-
+import { SpecDocument } from "@/features/specs/domain/specDocument";
 import { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
-import type { SpecDocument } from "@/features/specs/types/spec";
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import type { IpcCommandError } from "@/shared/types/ipc";
 
-const document: SpecDocument = {
+const document = SpecDocument.loaded({
   key: "impl",
   format: "markdown",
   path: "/workspace/spec-viewer/.plugin-workspace/.specs/001/implementation-plan.md",
   contents: "# Plan",
-  missing: false,
   blocks: [],
-};
+});
 
-const missingDocument: SpecDocument = {
-  ...document,
-  contents: null,
-  missing: true,
-};
+const missingDocument = SpecDocument.missing({
+  key: "impl",
+  format: "markdown",
+  path: "/workspace/spec-viewer/.plugin-workspace/.specs/001/implementation-plan.md",
+});
 
 const error: IpcCommandError = {
   code: "markdownRead",
@@ -73,14 +71,13 @@ test("SpecDocumentState.loadingはcorrelation id付きの読み込み中状態�
   });
 });
 
-test("SpecDocumentState.loadedはmissing=falseならready状態を生成する", () => {
+test("SpecDocumentState.loadedはMarkdownならready状態を生成する", () => {
   expect(
     SpecDocumentState.loaded(
       "/workspace/spec-viewer",
       TestValues.specId("spec-1"),
-      "impl",
       document,
-      "document-read-1",
+      { loadRevision: "load-1", correlationId: "document-read-1" },
     ),
   ).toEqual({
     status: "ready",
@@ -88,24 +85,26 @@ test("SpecDocumentState.loadedはmissing=falseならready状態を生成する",
     specId: TestValues.specId("spec-1"),
     fileKey: "impl",
     correlationId: "document-read-1",
+    loadRevision: "load-1",
     document,
     error: null,
   });
 });
 
-test("SpecDocumentState.loadedはmissing=trueならmissing状態を生成する", () => {
+test("SpecDocumentState.loadedはMissing variantならmissing状態を生成する", () => {
   expect(
     SpecDocumentState.loaded(
       "/workspace/spec-viewer",
       TestValues.specId("spec-1"),
-      "impl",
       missingDocument,
+      { loadRevision: "load-2" },
     ),
   ).toEqual({
     status: "missing",
     workspacePath: "/workspace/spec-viewer",
     specId: TestValues.specId("spec-1"),
     fileKey: "impl",
+    loadRevision: "load-2",
     document: missingDocument,
     error: null,
   });

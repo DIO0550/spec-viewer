@@ -55,11 +55,10 @@ function createLoadingState(): SpecDocumentState {
 
 function createReadyState(contents: string): SpecDocumentState {
   const document: SpecDocument = {
+    kind: "markdown",
     key: "tasks",
-    format: "markdown",
     path: "/workspace/spec-reviewer/docs/plans/tasks.md",
     contents,
-    missing: false,
     blocks: [],
   };
 
@@ -69,6 +68,7 @@ function createReadyState(contents: string): SpecDocumentState {
     specId: TestValues.specId("phase-1-viewer"),
     fileKey: "tasks",
     correlationId: "cid-1",
+    loadRevision: "load-1",
     document,
     error: null,
   };

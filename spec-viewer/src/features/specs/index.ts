@@ -4,6 +4,16 @@ export { SpecTabs } from "@/features/specs/components/SpecTabs";
 export { SpecTree } from "@/features/specs/components/SpecTree";
 export { SpecFileCollection } from "@/features/specs/domain/specFileCollection";
 export {
+  DocumentIdentity,
+  SpecDocument,
+  SpecDocumentPolicy,
+  type DocumentIdentity as DocumentIdentityType,
+  type DocumentPreview,
+  type DocumentReadability,
+  type LoadedSpecDocument,
+  type SpecDocumentCapabilities,
+} from "@/features/specs/domain/specDocument";
+export {
   type SpecDocumentState,
   type SpecSelectionChange,
   type SpecTreeState,
@@ -18,7 +28,6 @@ export type {
 export type {
   MarkdownBlockMetadata,
   MarkdownBlockType,
-  SpecDocument,
   SpecFile,
   SpecNodeCapabilities,
   SpecNodeKind,

@@ -93,7 +93,8 @@ const sampleTree: SpecTreeShape = {
   specs: [sampleSpec],
 };
 
-const sampleDocument: SpecDocument = {
+const sampleDocument = {
+  kind: "markdown",
   key: "tasks",
   path: "/workspace/spec-reviewer/docs/plans/tasks/phase-1-viewer/p1-13-layout-components.md",
   contents: [
@@ -116,9 +117,8 @@ const sampleDocument: SpecDocument = {
     "| GFM table | Ready |",
     "| External link | [Docs](https://example.com/docs) |",
   ].join("\n"),
-  missing: false,
   blocks: [],
-};
+} satisfies SpecDocument;
 
 const readyTreeState: SpecTreeState = {
   status: "ready",
@@ -132,6 +132,7 @@ const readyDocumentState: SpecDocumentState = {
   workspacePath,
   specId: sampleSpec.id,
   fileKey: "tasks",
+  loadRevision: "layout-ready",
   document: sampleDocument,
   error: null,
 };

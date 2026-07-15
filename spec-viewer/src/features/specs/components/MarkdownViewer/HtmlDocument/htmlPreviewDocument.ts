@@ -5,10 +5,6 @@ export const HTML_ZOOM_MIN_PERCENT = 50;
 export const HTML_ZOOM_MAX_PERCENT = 160;
 export const HTML_ZOOM_STEP_PERCENT = 10;
 
-const SCRIPT_ENABLED_HTML_FILE_NAMES: readonly string[] = [
-  "requirements.html",
-  "test-cases.html",
-];
 const HTML_PREVIEW_DEFAULT_SANDBOX = "";
 const HTML_PREVIEW_SCRIPT_SANDBOX = "allow-scripts";
 
@@ -21,25 +17,15 @@ export type CreateHtmlPreviewDocumentInput = Readonly<{
 }>;
 
 /**
- * @param path - The source path of the HTML document.
+ * @param allowsScripts - Explicit script capability from the document boundary.
  * @returns Sandbox policy for the HTML preview iframe.
  */
-export function createHtmlPreviewSandbox(path: string): string {
-  if (isScriptEnabledHtmlPath(path)) {
+export function createHtmlPreviewSandbox(allowsScripts: boolean): string {
+  if (allowsScripts) {
     return HTML_PREVIEW_SCRIPT_SANDBOX;
   }
 
   return HTML_PREVIEW_DEFAULT_SANDBOX;
-}
-
-/**
- * @param path - The source path of the HTML document.
- * @returns Whether the HTML preview path is a generated document that needs scripts.
- */
-export function isScriptEnabledHtmlPath(path: string): boolean {
-  const fileName = getPathFileName(path).toLocaleLowerCase();
-
-  return SCRIPT_ENABLED_HTML_FILE_NAMES.includes(fileName);
 }
 
 /**

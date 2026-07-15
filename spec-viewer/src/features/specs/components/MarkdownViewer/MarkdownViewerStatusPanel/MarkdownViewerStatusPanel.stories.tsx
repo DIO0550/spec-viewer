@@ -5,22 +5,19 @@ import { fn } from "storybook/test";
 
 import { toSpecFeatureError } from "@/features/specs";
 import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
-import type { SpecDocument } from "@/features/specs/types/spec";
+import { SpecDocument } from "@/features/specs/domain/specDocument";
 import { MarkdownViewerStatusPanel } from "./index";
 
 const workspacePath = "/workspace/spec-reviewer";
 
-function createDocument(
-  contents: string | null,
-  missing = false,
-): SpecDocument {
-  return {
+function createDocument(contents: string) {
+  return SpecDocument.loaded({
     key: "tasks",
+    format: "markdown",
     path: "/workspace/spec-reviewer/docs/plans/tasks.md",
     contents,
-    missing,
     blocks: [],
-  };
+  });
 }
 
 const idleState: SpecDocumentState = {
@@ -58,7 +55,12 @@ const missingState: SpecDocumentState = {
   workspacePath,
   specId: TestValues.specId("phase-1-viewer"),
   fileKey: "tasks",
-  document: createDocument(null, true),
+  loadRevision: "story-missing",
+  document: SpecDocument.missing({
+    key: "tasks",
+    format: "markdown",
+    path: "/workspace/spec-reviewer/docs/plans/tasks.md",
+  }),
   error: null,
 };
 
@@ -67,6 +69,7 @@ const emptyState: SpecDocumentState = {
   workspacePath,
   specId: TestValues.specId("phase-1-viewer"),
   fileKey: "tasks",
+  loadRevision: "story-empty",
   document: createDocument(" \n\t "),
   error: null,
 };

@@ -1,4 +1,4 @@
-import { useEffect, useRef, type RefObject } from "react";
+import { type RefObject, useEffect, useRef } from "react";
 
 import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
 
@@ -41,15 +41,20 @@ export function useViewerReset(
  * @returns A stable key for viewer content state transitions.
  */
 export function createViewerResetKey(state: SpecDocumentState): string {
-  const path = state.document?.path ?? "";
-  const contentsLength = state.document?.contents?.length ?? 0;
+  if (state.status === "ready" || state.status === "missing") {
+    return JSON.stringify([
+      state.status,
+      state.workspacePath,
+      state.specId,
+      state.fileKey,
+      state.loadRevision,
+    ]);
+  }
 
-  return [
+  return JSON.stringify([
     state.status,
     state.workspacePath ?? "",
     state.specId ?? "",
     state.fileKey ?? "",
-    path,
-    String(contentsLength),
-  ].join(":");
+  ]);
 }

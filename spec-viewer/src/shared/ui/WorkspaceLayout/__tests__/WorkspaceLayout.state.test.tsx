@@ -131,19 +131,20 @@ const readyTreeState: SpecTreeState = {
   error: null,
 };
 
-const readyDocument: SpecDocument = {
+const readyDocument = {
+  kind: "markdown",
   key: "tasks",
   path: "/workspace/spec-reviewer/docs/plans/tasks.md",
   contents: "# Phase 1 Viewer\n\n- Layout components",
-  missing: false,
   blocks: [],
-};
+} satisfies SpecDocument;
 
 const readyDocumentState: SpecDocumentState = {
   status: "ready",
   workspacePath,
   specId: selectedSpec.id,
   fileKey: "tasks",
+  loadRevision: "layout-ready",
   document: readyDocument,
   error: null,
 };
