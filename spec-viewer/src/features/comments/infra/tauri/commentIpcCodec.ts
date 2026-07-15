@@ -430,7 +430,8 @@ function describeAnchorError(
     case "invalid_text_hash":
       return {
         path: `${basePath}.anchor.textHash`,
-        expected: "non-blank text hash",
+        expected:
+          "sha256:<8 lowercase hex> or fnv1a:<8 lowercase hex> text hash",
         actual: String(error.value),
       };
     case "invalid_text_snippet":
