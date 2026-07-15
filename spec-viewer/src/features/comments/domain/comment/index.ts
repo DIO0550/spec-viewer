@@ -1,3 +1,4 @@
+import type { CommentBody } from "@/features/comments/domain/commentBody";
 import {
   CommentStatusFilter,
   type CommentStatus,
@@ -34,7 +35,7 @@ export const Comment = {
    * @param body - Replacement body text
    * @returns Comment with only the body changed.
    */
-  updateBody(comment: Comment, body: string): Comment {
+  updateBody(comment: Comment, body: CommentBody): Comment {
     return { ...comment, body };
   },
   /** @returns Comment with resolved status and flag synchronized. */

@@ -1,4 +1,5 @@
 import type { Comment as DomainComment } from "@/features/comments/domain/comment";
+import type { CommentBody } from "@/features/comments/domain/commentBody";
 import type {
   CommentStatus,
   CommentStatusFilter,
@@ -91,7 +92,7 @@ export type CommentAnchorDraft = Readonly<{
 
 export type AddCommentSubmitInput = Readonly<{
   anchor: CommentAnchor;
-  body: string;
+  body: CommentBody;
 }>;
 
 export type CommentAnchorResolutionTarget = Readonly<{
@@ -140,7 +141,7 @@ export type AddCommentRequest = Readonly<{
   workspacePath: string;
   specId: SpecId;
   anchor: CommentAnchor;
-  body: string;
+  body: CommentBody;
 }>;
 
 export type UpdateCommentRequest = Readonly<{
@@ -148,7 +149,7 @@ export type UpdateCommentRequest = Readonly<{
   specId: SpecId;
   fileKey: SpecFileKey;
   commentId: CommentId;
-  body: string;
+  body: CommentBody;
 }>;
 
 export type DeleteCommentRequest = Readonly<{

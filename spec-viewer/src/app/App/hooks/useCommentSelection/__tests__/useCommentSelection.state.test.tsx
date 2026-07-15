@@ -9,6 +9,7 @@ import {
   useCommentSelection,
 } from "@/app/App/hooks/useCommentSelection";
 import { CommentListState } from "@/features/comments";
+import { commentBody } from "@/features/comments/testing/comment-body-test-fixture";
 import type { Comment, CommentAnchor } from "@/features/comments/types/comment";
 import * as TestValues from "@/shared/testing/validatedValueObjects";
 
@@ -148,7 +149,10 @@ test("addComment成功でtrueを返しactiveが追加コメントになる", asy
 
   let returned: boolean | undefined;
   await act(async () => {
-    returned = await hook.current.addComment({ anchor, body: "new" });
+    returned = await hook.current.addComment({
+      anchor,
+      body: commentBody("new"),
+    });
   });
 
   expect(returned).toBe(true);
@@ -162,7 +166,10 @@ test("addComment失敗（null）でfalseを返しactiveは変化しない", asyn
 
   let returned: boolean | undefined;
   await act(async () => {
-    returned = await hook.current.addComment({ anchor, body: "new" });
+    returned = await hook.current.addComment({
+      anchor,
+      body: commentBody("new"),
+    });
   });
 
   expect(returned).toBe(false);
@@ -224,7 +231,7 @@ test("非アクティブなコメントを削除してもactiveは維持され�
 test.each([
   [
     "updateComment",
-    (r: UseCommentSelectionResult) => r.updateComment(c1.id, "x"),
+    (r: UseCommentSelectionResult) => r.updateComment(c1.id, commentBody("x")),
     "updateComment",
   ],
   [
@@ -256,7 +263,7 @@ test.each([
 test.each([
   [
     "updateComment",
-    (r: UseCommentSelectionResult) => r.updateComment(c1.id, "x"),
+    (r: UseCommentSelectionResult) => r.updateComment(c1.id, commentBody("x")),
     "updateComment",
   ],
   [

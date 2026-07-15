@@ -1,10 +1,9 @@
-import { act } from "react";
 import type { ReactNode } from "react";
+import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-
-import type { CommentAnchorDraft } from "@/features/comments/types/comment";
 import { AddCommentPopover } from "@/features/comments/components/AddCommentPopover";
+import type { CommentAnchorDraft } from "@/features/comments/types/comment";
 
 const draft: CommentAnchorDraft = {
   anchor: {
@@ -134,7 +133,7 @@ test("AddCommentPopoverは空白のみ本文を保存せず理由を表示する
 
   expect(onSubmit).not.toHaveBeenCalled();
   expect(result.container.textContent).toContain(
-    "保存するコメントを入力してください。",
+    "コメント本文を入力してください。",
   );
   expect(result.container.querySelector('[role="alert"]')).not.toBeNull();
   result.unmount();
@@ -182,7 +181,7 @@ test("AddCommentPopoverはscope不足を本文validationより優先して表示
     "保存する前にワークスペース、Spec、ファイルを選択してください。",
   );
   expect(result.container.textContent).not.toContain(
-    "保存するコメントを入力してください。",
+    "コメント本文を入力してください。",
   );
   expect(onSubmit).not.toHaveBeenCalled();
   result.unmount();
@@ -558,9 +557,7 @@ test("AddCommentPopoverはkey変更remountで本文とvalidation errorを初期�
     );
   });
 
-  expect(container.textContent).toContain(
-    "保存するコメントを入力してください。",
-  );
+  expect(container.textContent).toContain("コメント本文を入力してください。");
 
   act(() => {
     root.render(
@@ -587,7 +584,7 @@ test("AddCommentPopoverはkey変更remountで本文とvalidation errorを初期�
 
   expect(findTextarea(container).value).toBe("");
   expect(container.textContent).not.toContain(
-    "保存するコメントを入力してください。",
+    "コメント本文を入力してください。",
   );
 
   act(() => {

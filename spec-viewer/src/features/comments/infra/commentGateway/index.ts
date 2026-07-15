@@ -1,8 +1,10 @@
+import type { CommentCommands } from "@/features/comments/application/ports/commentCommands";
+import type { CommentBody } from "@/features/comments/domain/commentBody";
+import type { CommentScope } from "@/features/comments/domain/commentScope";
 import {
   CommentStatusFilter,
   type CommentStatusFilter as CommentStatusFilterType,
 } from "@/features/comments/domain/commentStatusFilter";
-import type { CommentScope } from "@/features/comments/domain/commentScope";
 import type {
   Comment,
   CommentAnchor,
@@ -12,16 +14,15 @@ import type {
   ListCommentsRequest,
   ListCommentsResponse,
 } from "@/features/comments/types/comment";
-import type { CommentCommands } from "@/features/comments/application/ports/commentCommands";
 
 export type AddCommentParam = Readonly<{
   anchor: CommentAnchor;
-  body: string;
+  body: CommentBody;
 }>;
 
 export type UpdateCommentParam = Readonly<{
   commentId: CommentId;
-  body: string;
+  body: CommentBody;
 }>;
 
 /**

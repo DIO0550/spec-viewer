@@ -2,8 +2,10 @@ import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { expect, expectTypeOf, test } from "vitest";
 
 import { Comment } from "@/features/comments/domain/comment";
+import type { CommentBody } from "@/features/comments/domain/commentBody";
 import { Comments } from "@/features/comments/domain/comments";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
+import { commentBody } from "@/features/comments/testing/comment-body-test-fixture";
 import type {
   Comment as CompatComment,
   CommentAnchor,
@@ -78,10 +80,16 @@ test("Comment.createは既存のコメントshapeを維持する", () => {
 });
 
 test("Comment.updateBodyはbodyのみ更新する", () => {
-  expect(Comment.updateBody(openComment, "Updated body")).toEqual({
+  expect(Comment.updateBody(openComment, commentBody("Updated body"))).toEqual({
     ...openComment,
     body: "Updated body",
   });
+});
+
+test("Comment.updateBodyはvalidated CommentBodyを要求する", () => {
+  expectTypeOf<
+    Parameters<typeof Comment.updateBody>[1]
+  >().toEqualTypeOf<CommentBody>();
 });
 
 test("Comment.resolveはstatusとresolvedを解決済みへ同期する", () => {

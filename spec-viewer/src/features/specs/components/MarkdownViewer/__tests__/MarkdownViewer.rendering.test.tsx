@@ -1,15 +1,13 @@
 import * as TestValues from "@/shared/testing/validatedValueObjects";
-import { act } from "react";
 import type { ReactNode } from "react";
+import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-
-import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
 import {
   CommentOperationFailedState,
   CommentOperationIdleState,
-  CommentOperationSavingState,
   type CommentOperationKind,
+  CommentOperationSavingState,
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
 import { createTextHash } from "@/features/comments/lib/comment-anchor-draft";
@@ -19,11 +17,12 @@ import type {
   CommentBlockType,
   CommentId,
 } from "@/features/comments/types/comment";
+import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
+import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
 import type {
   MarkdownBlockMetadata,
   SpecDocument,
 } from "@/features/specs/types/spec";
-import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
 
 const commentId = TestValues.commentId;
 
@@ -778,6 +777,50 @@ test("MarkdownViewerは既存コメントを本文右側のカードから編集
   expect(
     result.container.querySelector(".markdown-block-comment-button"),
   ).not.toBeNull();
+  result.unmount();
+});
+
+test("MarkdownViewerのinline editは空白本文を共通理由で拒否する", async () => {
+  const onUpdateComment = vi.fn().mockResolvedValue(true);
+  const contents = "Existing comments should be visible beside the paragraph.";
+  const comments: readonly Comment[] = [
+    createComment({
+      id: "cmt_open",
+      blockIndex: 0,
+      text: contents,
+      resolved: false,
+    }),
+  ];
+  const result = renderViewer(
+    createReadyState(contents),
+    vi.fn(),
+    vi.fn().mockResolvedValue(true),
+    comments,
+    commentId("cmt_open"),
+    vi.fn(),
+    onUpdateComment,
+  );
+  const popover = openFirstCommentEditPopover(result.container);
+  const editor = popover.querySelector("textarea") as HTMLTextAreaElement;
+
+  act(() => {
+    editor.value = "   ";
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await act(async () => {
+    editor.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Enter",
+        ctrlKey: true,
+        bubbles: true,
+      }),
+    );
+  });
+
+  expect(onUpdateComment).not.toHaveBeenCalled();
+  expect(popover.querySelector('[role="alert"]')?.textContent).toBe(
+    "コメント本文を入力してください。",
+  );
   result.unmount();
 });
 
@@ -1697,7 +1740,7 @@ test("MarkdownViewerは別ブロックのコメントdraftへ切り替えると�
   });
 
   expect(result.container.textContent).toContain(
-    "保存するコメントを入力してください。",
+    "コメント本文を入力してください。",
   );
 
   const refreshedAddButtons = result.container.querySelectorAll(
@@ -1713,7 +1756,7 @@ test("MarkdownViewerは別ブロックのコメントdraftへ切り替えると�
   expect(nextTextarea.value).toBe("");
   expect(result.container.textContent).toContain("paragraphブロック 2");
   expect(result.container.textContent).not.toContain(
-    "保存するコメントを入力してください。",
+    "コメント本文を入力してください。",
   );
   result.unmount();
 });

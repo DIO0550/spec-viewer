@@ -15,7 +15,13 @@ import {
 } from "react";
 
 import type { CommentOperationFeatureState as CommentOperationState } from "@/features/comments/application/commentError";
+import {
+  CommentBody,
+  type CommentBodyDraft,
+  type CommentBodyParseError,
+} from "@/features/comments/domain/commentBody";
 import { CommentOperationSavingState } from "@/features/comments/domain/commentOperation";
+import { toCommentBodyValidationMessage } from "@/features/comments/lib/comment-body-validation-message";
 import type {
   Comment,
   CommentAnchorDisplayStatus,
@@ -23,8 +29,6 @@ import type {
 } from "@/features/comments/types/comment";
 import { CommentId as CommentIdValue } from "@/features/comments/types/comment";
 import { uiText } from "@/shared/lib/uiText";
-
-const emptyBodyMessage = uiText.commentThread.emptyBody;
 
 type Props = Readonly<{
   comment: Comment;
@@ -42,7 +46,7 @@ type Props = Readonly<{
    * @param commentId - The comment to update.
    * @param body - The new comment body text.
    */
-  onUpdateComment: (commentId: CommentId, body: string) => void;
+  onUpdateComment: (commentId: CommentId, body: CommentBody) => void;
   /**
    * Marks the given comment as resolved.
    * @param commentId - The comment to resolve.
@@ -75,10 +79,9 @@ export function CommentThread({
 }: Props) {
   const [isEditing, setIsEditing] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
-  const [draftBody, setDraftBody] = useState(comment.body);
-  const [validationMessage, setValidationMessage] = useState<string | null>(
-    null,
-  );
+  const [draftBody, setDraftBody] = useState<CommentBodyDraft>(comment.body);
+  const [validationError, setValidationError] =
+    useState<CommentBodyParseError | null>(null);
   const titleId = useId();
   const bodyId = useId();
   const validationId = useId();
@@ -91,13 +94,13 @@ export function CommentThread({
 
   const beginEdit = (): void => {
     setIsConfirmingDelete(false);
-    setValidationMessage(null);
+    setValidationError(null);
     setDraftBody(comment.body);
     setIsEditing(true);
   };
 
   const cancelEdit = (): void => {
-    setValidationMessage(null);
+    setValidationError(null);
     setDraftBody(comment.body);
     setIsEditing(false);
   };
@@ -105,15 +108,15 @@ export function CommentThread({
   const submitEdit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
 
-    const nextBody = draftBody.trim();
+    const parseResult = CommentBody.parse(draftBody);
 
-    if (nextBody.length === 0) {
-      setValidationMessage(emptyBodyMessage);
+    if (!parseResult.ok) {
+      setValidationError(parseResult.error);
       return;
     }
 
-    onUpdateComment(comment.id, nextBody);
-    setValidationMessage(null);
+    onUpdateComment(comment.id, parseResult.commentBody);
+    setValidationError(null);
     setIsEditing(false);
   };
 
@@ -128,7 +131,7 @@ export function CommentThread({
 
   const requestDelete = (): void => {
     setIsEditing(false);
-    setValidationMessage(null);
+    setValidationError(null);
     setIsConfirmingDelete(true);
   };
 
@@ -284,7 +287,7 @@ export function CommentThread({
             id={bodyId}
             aria-label={`${uiText.commentThread.bodyLabel} ${comment.id}`}
             aria-describedby={
-              validationMessage === null ? undefined : validationId
+              validationError === null ? undefined : validationId
             }
             value={draftBody}
             rows={4}
@@ -292,13 +295,13 @@ export function CommentThread({
               setDraftBody(event.currentTarget.value);
             }}
           />
-          {validationMessage === null ? null : (
+          {validationError === null ? null : (
             <p
               id={validationId}
               className="comment-thread__validation"
               role="alert"
             >
-              {validationMessage}
+              {toCommentBodyValidationMessage(validationError)}
             </p>
           )}
           <div className="comment-thread__editor-actions">
