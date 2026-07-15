@@ -357,10 +357,11 @@ fn resolve_comment_anchor(
         block.index().value() == anchor.block_index().value()
             && crate::domain::comment::BlockType::from(block.block_type()) == anchor.block_type()
     });
+    let has_canonical_fingerprint = anchor.text_hash().is_canonical();
 
-    if let Some(block) =
-        indexed_block.filter(|block| block.text_hash().as_str() == anchor.text_hash().as_str())
-    {
+    if let Some(block) = indexed_block.filter(|block| {
+        has_canonical_fingerprint && block.text_hash().as_str() == anchor.text_hash().as_str()
+    }) {
         return CommentAnchorResolution::new(
             comment,
             AnchorResolutionStatus::Resolved,
@@ -370,10 +371,9 @@ fn resolve_comment_anchor(
         );
     }
 
-    if let Some(block) = current_blocks
-        .iter()
-        .find(|block| block.text_hash().as_str() == anchor.text_hash().as_str())
-    {
+    if let Some(block) = current_blocks.iter().find(|block| {
+        has_canonical_fingerprint && block.text_hash().as_str() == anchor.text_hash().as_str()
+    }) {
         return CommentAnchorResolution::new(
             comment,
             AnchorResolutionStatus::Moved,
@@ -879,7 +879,7 @@ mod tests {
             file_key,
             BlockType::Paragraph,
             2,
-            "sha256_prefix_8chars",
+            "sha256:11111111",
             "selected text",
         )
     }
@@ -1089,7 +1089,7 @@ mod tests {
             2,
             "selected text",
             "selected text",
-            "sha256_prefix_8chars",
+            "sha256:11111111",
         )];
 
         let result = use_cases
@@ -1115,7 +1115,48 @@ mod tests {
                 .value()
         );
         assert_eq!(
-            "sha256_prefix_8chars",
+            "sha256:11111111",
+            resolution.original_anchor().text_hash().as_str()
+        );
+    }
+
+    #[test]
+    fn resolve_comment_anchors_uses_snippet_not_hash_exact_for_legacy_fnv1a() {
+        let repository = FakeCommentRepository::default();
+        let legacy_anchor = anchor_with(
+            SpecFileKey::Impl,
+            BlockType::Paragraph,
+            2,
+            "fnv1a:89abcdef",
+            "selected text",
+        );
+        repository
+            .comments
+            .borrow_mut()
+            .push(comment_with_anchor("cmt_legacy", legacy_anchor));
+        let use_cases = use_cases(repository);
+        let blocks = [markdown_block(
+            MarkdownBlockType::Paragraph,
+            2,
+            "selected text",
+            "selected text",
+            "sha256:1234abcd",
+        )];
+
+        let result = use_cases
+            .resolve_comment_anchors(
+                "auth-flow",
+                SpecFileKey::Impl,
+                CommentStatusFilter::All,
+                &blocks,
+            )
+            .expect("legacy anchor should remain recoverable");
+
+        let resolution = &result.resolutions()[0];
+        assert_eq!(AnchorResolutionStatus::Moved, resolution.status());
+        assert_eq!(AnchorResolutionReason::StaleSnippet, resolution.reason());
+        assert_eq!(
+            "fnv1a:89abcdef",
             resolution.original_anchor().text_hash().as_str()
         );
     }
@@ -1134,14 +1175,14 @@ mod tests {
                 0,
                 "selected text",
                 "selected text",
-                "sha256_prefix_8chars",
+                "sha256:11111111",
             ),
             markdown_block(
                 MarkdownBlockType::Paragraph,
                 2,
                 "replacement",
                 "replacement",
-                "sha256_replacement",
+                "sha256:22222222",
             ),
         ];
 
@@ -1181,7 +1222,7 @@ mod tests {
             2,
             "different block text after deletion",
             "different block text after deletion",
-            "sha256_different",
+            "sha256:33333333",
         )];
 
         let result = use_cases
@@ -1218,14 +1259,14 @@ mod tests {
                 2,
                 "different block text after deletion",
                 "different block text after deletion",
-                "sha256_different",
+                "sha256:33333333",
             ),
             markdown_block(
                 MarkdownBlockType::Paragraph,
                 7,
                 "selected text",
                 "selected text",
-                "sha256_elsewhere",
+                "sha256:44444444",
             ),
         ];
 
@@ -1257,7 +1298,7 @@ mod tests {
             3,
             "selected text with edits",
             "selected text with edits",
-            "sha256_changed",
+            "sha256:55555555",
         )];
 
         let result = use_cases
@@ -1296,7 +1337,7 @@ mod tests {
             4,
             "selected tezt",
             "selected tezt",
-            "sha256_typo",
+            "sha256:66666666",
         )];
 
         let result = use_cases
@@ -1326,7 +1367,7 @@ mod tests {
                 SpecFileKey::Impl,
                 BlockType::Paragraph,
                 2,
-                "sha256_old",
+                "sha256:77777777",
                 "review payment failure handling",
             ),
         ));
@@ -1336,7 +1377,7 @@ mod tests {
             7,
             "Review payment error handling",
             "Review payment error handling",
-            "sha256_reworded",
+            "sha256:88888888",
         )];
 
         let result = use_cases
@@ -1365,7 +1406,7 @@ mod tests {
                 SpecFileKey::Impl,
                 BlockType::Paragraph,
                 2,
-                "sha256_old",
+                "sha256:77777777",
                 "review payment failure handling",
             ),
         ));
@@ -1375,7 +1416,7 @@ mod tests {
             8,
             "Release checklist and deployment notes",
             "Release checklist and deployment notes",
-            "sha256_unrelated",
+            "sha256:99999999",
         )];
 
         let result = use_cases
@@ -1411,14 +1452,14 @@ mod tests {
                 0,
                 "selected text",
                 "selected text",
-                "sha256_first",
+                "sha256:aaaaaaaa",
             ),
             markdown_block(
                 MarkdownBlockType::Paragraph,
                 3,
                 "selected text",
                 "selected text",
-                "sha256_nearest",
+                "sha256:bbbbbbbb",
             ),
         ];
 
@@ -1453,14 +1494,14 @@ mod tests {
                 0,
                 "selected text",
                 "selected text",
-                "sha256_first",
+                "sha256:aaaaaaaa",
             ),
             markdown_block(
                 MarkdownBlockType::Paragraph,
                 4,
                 "selected text",
                 "selected text",
-                "sha256_second",
+                "sha256:cccccccc",
             ),
         ];
 
@@ -1499,7 +1540,7 @@ mod tests {
             4,
             "selected text",
             "selected text",
-            "sha256_heading",
+            "sha256:dddddddd",
         )];
 
         let result = use_cases
@@ -1534,21 +1575,21 @@ mod tests {
                 0,
                 "selected text",
                 "selected text",
-                "sha256_elsewhere",
+                "sha256:44444444",
             ),
             markdown_block(
                 MarkdownBlockType::Paragraph,
                 2,
                 "selected text",
                 "selected text",
-                "sha256_prefix_8chars",
+                "sha256:11111111",
             ),
             markdown_block(
                 MarkdownBlockType::Paragraph,
                 4,
                 "selected text",
                 "selected text",
-                "sha256_another",
+                "sha256:abcdef12",
             ),
         ];
 
@@ -1584,7 +1625,7 @@ mod tests {
                 SpecFileKey::Impl,
                 BlockType::Heading,
                 1,
-                "sha256_heading",
+                "sha256:dddddddd",
                 "Overview",
             ),
         ));
@@ -1595,14 +1636,14 @@ mod tests {
                 0,
                 "# Overview",
                 "Overview",
-                "sha256_other_heading",
+                "sha256:eeeeeeee",
             ),
             markdown_block(
                 MarkdownBlockType::Heading,
                 1,
                 "## Overview",
                 "Overview",
-                "sha256_heading",
+                "sha256:dddddddd",
             ),
         ];
 
@@ -1638,7 +1679,7 @@ mod tests {
                 SpecFileKey::Impl,
                 BlockType::Paragraph,
                 2,
-                "sha256_old",
+                "sha256:77777777",
                 "short",
             ),
         ));
@@ -1648,7 +1689,7 @@ mod tests {
             9,
             "short",
             "short",
-            "sha256_short",
+            "sha256:fedcba98",
         )];
 
         let result = use_cases
@@ -1682,7 +1723,7 @@ mod tests {
             0,
             "Overview",
             "Overview",
-            "sha256_overview",
+            "sha256:0123abcd",
         )];
 
         let result = use_cases
@@ -1713,7 +1754,7 @@ mod tests {
                 SpecFileKey::Impl,
                 BlockType::Other,
                 2,
-                "sha256_old",
+                "sha256:77777777",
                 "selected text",
             ),
         ));
@@ -1723,7 +1764,7 @@ mod tests {
             2,
             "selected text",
             "selected text",
-            "sha256_old",
+            "sha256:77777777",
         )];
 
         let result = use_cases
