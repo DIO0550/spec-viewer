@@ -1200,6 +1200,42 @@ test("MarkdownViewerはstaleとorphanedのコメントアンカー状態を通�
   result.unmount();
 });
 
+test("MarkdownViewerのlegacy hash fallbackはコメントUIの文字列を除外する", () => {
+  const onAnchorDisplayStatesChange = vi.fn();
+  const anchorText = "An unchanged list item with a legacy anchor.";
+  const contents = `- ${anchorText}`;
+  const comments: readonly Comment[] = [
+    createComment({
+      id: "cmt_legacy_exact",
+      blockIndex: 0,
+      text: anchorText,
+      resolved: false,
+      blockType: "list_item",
+    }),
+  ];
+  const result = renderComponent(
+    <MarkdownViewer
+      state={createReadyState(contents)}
+      selectedSpecLabel={selectedSpecLabel}
+      selectedFileLabel={selectedFileLabel}
+      comments={comments}
+      activeCommentId={null}
+      onReload={vi.fn()}
+      onAddComment={vi.fn().mockResolvedValue(true)}
+      onSelectComment={vi.fn()}
+      onAnchorDisplayStatesChange={onAnchorDisplayStatesChange}
+    />,
+  );
+
+  expect(onAnchorDisplayStatesChange).toHaveBeenLastCalledWith([
+    {
+      commentId: "cmt_legacy_exact",
+      status: "exact",
+    },
+  ]);
+  result.unmount();
+});
+
 test("MarkdownViewerは空白のbackend text hashをlegacy欠落として扱わない", () => {
   const onAnchorDisplayStatesChange = vi.fn();
   const contents = "A paragraph with malformed backend hash metadata.";
