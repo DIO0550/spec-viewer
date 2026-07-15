@@ -312,21 +312,25 @@ test("listCommentsは配列内の不正日時を最深path付きdecode errorと�
   });
 });
 
-test("addCommentは不正なanchor hashの実値を診断に保持する", async () => {
-  invokeMock.mockReset();
-  invokeMock.mockResolvedValue({
-    ...comment,
-    anchor: { ...comment.anchor, textHash: "   " },
-  });
+test.each(["   ", "md5:12345678", "sha256:ABCDEF12"])(
+  "addCommentは不正なanchor hash %sと許可fingerprint契約を診断する",
+  async (textHash) => {
+    invokeMock.mockReset();
+    invokeMock.mockResolvedValue({
+      ...comment,
+      anchor: { ...comment.anchor, textHash },
+    });
 
-  await expect(addComment(addRequest)).rejects.toMatchObject({
-    command: "add_comment",
-    code: "invalidResponse",
-    path: "$.anchor.textHash",
-    expected: "non-blank text hash",
-    actual: "   ",
-  });
-});
+    await expect(addComment(addRequest)).rejects.toMatchObject({
+      command: "add_comment",
+      code: "invalidResponse",
+      path: "$.anchor.textHash",
+      expected:
+        "sha256:<8 lowercase hex> or fnv1a:<8 lowercase hex> text hash",
+      actual: textHash,
+    });
+  },
+);
 
 test("listCommentsは不正なanchor rangeの実値を診断に保持する", async () => {
   invokeMock.mockReset();
