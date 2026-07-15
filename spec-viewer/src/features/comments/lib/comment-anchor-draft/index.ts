@@ -1,7 +1,4 @@
-export {
-  createTextHash,
-  createTextSnippet,
-} from "@/features/comments/application/commentAnchorDraftFactory";
+export { createTextSnippet } from "@/features/comments/application/commentAnchorDraftFactory";
 
 import { CommentAnchorDraftFactory } from "@/features/comments/application/commentAnchorDraftFactory";
 import {

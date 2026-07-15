@@ -27,8 +27,6 @@ type CreateCommentAnchorDraftInput = Readonly<{
 }>;
 
 const MAX_SNIPPET_LENGTH = 160;
-const FNV_32_OFFSET = 0x811c9dc5;
-const FNV_32_PRIME = 0x01000193;
 
 export const CommentAnchorDraftFactory = {
   /**
@@ -74,42 +72,25 @@ export const CommentAnchorDraftFactory = {
 } as const;
 
 /**
- * @param text - Rendered block text.
- * @returns Stable legacy-compatible FNV-1a hash for the normalized text.
- */
-export function createTextHash(text: string): string {
-  let hash = FNV_32_OFFSET;
-
-  for (const character of normalizeWhitespace(text)) {
-    hash ^= character.codePointAt(0) ?? 0;
-    hash = Math.imul(hash, FNV_32_PRIME);
-  }
-
-  return `fnv1a:${(hash >>> 0).toString(16).padStart(8, "0")}`;
-}
-
-/**
  * @param text - Selected rendered text.
  * @returns Compact display snippet capped at the persisted maximum length.
  */
 export function createTextSnippet(text: string): string | null {
-  const snippet = normalizeWhitespace(text).slice(0, MAX_SNIPPET_LENGTH);
+  const snippet = Array.from(normalizeWhitespace(text))
+    .slice(0, MAX_SNIPPET_LENGTH)
+    .join("");
 
   return snippet.length === 0 ? null : snippet;
 }
 
 /**
  * @param block - Rendered block snapshot.
- * @returns Its backend hash when present, otherwise a validated fallback hash.
+ * @returns Its required canonical backend fingerprint.
  */
 function resolveTextHash(
   block: RenderedBlockSnapshot,
 ): CommentAnchorParseResult<TextHashValue> {
-  if (block.textHash !== null) {
-    return { ok: true, value: block.textHash };
-  }
-
-  return TextHash.parse(createTextHash(block.text));
+  return TextHash.parseCanonical(block.textHash);
 }
 
 /**
