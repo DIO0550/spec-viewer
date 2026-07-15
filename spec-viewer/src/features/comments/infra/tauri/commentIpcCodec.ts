@@ -317,7 +317,7 @@ function mapComment(
       command,
       description.path,
       description.expected,
-      anchor.error.reason,
+      description.actual,
     );
   }
 
@@ -402,37 +402,42 @@ function decodeIsoDateTime(
 /**
  * @param basePath - Comment response path.
  * @param error - Typed anchor validation error.
- * @returns Exact response field and expected invariant.
+ * @returns Exact response field, expected invariant, and received value.
  */
 function describeAnchorError(
   basePath: string,
   error: CommentAnchorDomainError,
-): Readonly<{ path: string; expected: string }> {
+): Readonly<{ path: string; expected: string; actual: string }> {
   switch (error.reason) {
     case "unsupported_block_type":
       return {
         path: `${basePath}.anchor.blockType`,
         expected: "supported comment block type",
+        actual: String(error.value),
       };
     case "invalid_block_index":
       return {
         path: `${basePath}.anchor.blockIndex`,
         expected: "non-negative safe integer",
+        actual: String(error.value),
       };
     case "invalid_char_range":
       return {
         path: `${basePath}.anchor.charRange`,
         expected: "non-empty ordered character range",
+        actual: JSON.stringify({ start: error.start, end: error.end }),
       };
     case "invalid_text_hash":
       return {
         path: `${basePath}.anchor.textHash`,
         expected: "non-blank text hash",
+        actual: String(error.value),
       };
     case "invalid_text_snippet":
       return {
         path: `${basePath}.anchor.textSnippet`,
         expected: "non-blank text snippet",
+        actual: String(error.value),
       };
   }
 }
