@@ -93,6 +93,10 @@ impl SpecFileKey {
     pub fn compatibility_keys() -> &'static [Self] {
         &Self::COMPATIBILITY_KEYS
     }
+
+    pub fn allows_scripts(self, format: SpecDocumentFormat) -> bool {
+        format == SpecDocumentFormat::Html && matches!(self, Self::Requirements | Self::TestCases)
+    }
 }
 
 impl fmt::Display for SpecFileKey {
