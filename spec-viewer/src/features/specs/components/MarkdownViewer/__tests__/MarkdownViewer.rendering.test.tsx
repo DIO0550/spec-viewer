@@ -10,7 +10,6 @@ import {
   CommentOperationSavingState,
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
-import { createTextHash } from "@/features/comments/lib/comment-anchor-draft";
 import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
 import type {
   Comment,
@@ -22,6 +21,7 @@ import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
 import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
 import type {
   MarkdownBlockMetadata,
+  MarkdownBlockType,
   SpecDocument,
 } from "@/features/specs/types/spec";
 
@@ -31,6 +31,7 @@ const workspacePath = "/workspace/spec-reviewer";
 const selectedSpecLabel = "Phase 1 Viewer";
 const selectedFileLabel = "Tasks";
 const idleOperationState = CommentOperationIdleState.create();
+const canonicalTestTextHash = "sha256:a5dd5c34";
 
 const richMarkdown = [
   "## Rendering Plan",
@@ -110,6 +111,61 @@ function createReadyState(
     error: null,
   };
 }
+function createBackendBlocks(
+  contents: string,
+  blockTypes: readonly MarkdownBlockType[],
+  textHash = canonicalTestTextHash,
+): readonly MarkdownBlockMetadata[] {
+  const sourceBlocks = contents.split("\n\n");
+  const encoder = new TextEncoder();
+  let searchStartOffset = 0;
+
+  if (sourceBlocks.length !== blockTypes.length) {
+    throw new Error("Test Markdown blocks must match backend block types");
+  }
+
+  return blockTypes.map((blockType, blockIndex) => {
+    const sourceBlock = sourceBlocks[blockIndex];
+
+    if (sourceBlock === undefined) {
+      throw new Error("Test Markdown block is missing");
+    }
+
+    const startOffset = contents.indexOf(sourceBlock, searchStartOffset);
+
+    if (startOffset < 0) {
+      throw new Error("Test Markdown block range is missing");
+    }
+
+    const endOffset = startOffset + sourceBlock.length;
+    searchStartOffset = endOffset;
+
+    return {
+      blockType,
+      blockIndex,
+      textHash,
+      textSnippet: sourceBlock,
+      sourceRange: {
+        startByteOffset: encoder.encode(contents.slice(0, startOffset))
+          .byteLength,
+        endByteOffset: encoder.encode(contents.slice(0, endOffset)).byteLength,
+      },
+    };
+  });
+}
+
+function createRangeLessBackendBlocks(
+  blockTypes: readonly MarkdownBlockType[],
+  textHash = canonicalTestTextHash,
+): readonly MarkdownBlockMetadata[] {
+  return blockTypes.map((blockType, blockIndex) => ({
+    blockType,
+    blockIndex,
+    textHash,
+    textSnippet: "Backend test block",
+    sourceRange: null,
+  }));
+}
 
 function createComment({
   id,
@@ -140,7 +196,7 @@ function createComment({
       fileKey: "tasks",
       blockType,
       blockIndex,
-      textHash: createTextHash(text),
+      textHash: canonicalTestTextHash,
       textSnippet: text,
       charRange,
     }),
@@ -528,11 +584,11 @@ test("MarkdownViewerはbackend block metadataをコメントアンカー用data�
     {
       blockType: "paragraph",
       blockIndex: 5,
-      textHash: "sha256:backend5",
+      textHash: "sha256:bace0005",
       textSnippet: "A paragraph with selectable text.",
       sourceRange: {
-        startByteOffset: 10,
-        endByteOffset: 43,
+        startByteOffset: 0,
+        endByteOffset: 33,
       },
     },
   ];
@@ -543,9 +599,291 @@ test("MarkdownViewerはbackend block metadataをコメントアンカー用data�
 
   expect(paragraph?.getAttribute("data-block-index")).toBe("5");
   expect(paragraph?.getAttribute("data-comment-block-type")).toBe("paragraph");
-  expect(paragraph?.getAttribute("data-text-hash")).toBe("sha256:backend5");
-  expect(paragraph?.getAttribute("data-source-start-byte-offset")).toBe("10");
-  expect(paragraph?.getAttribute("data-source-end-byte-offset")).toBe("43");
+  expect(paragraph?.getAttribute("data-text-hash")).toBe("sha256:bace0005");
+  expect(paragraph?.getAttribute("data-source-start-byte-offset")).toBe("0");
+  expect(paragraph?.getAttribute("data-source-end-byte-offset")).toBe("33");
+  result.unmount();
+});
+
+test("MarkdownViewerはbackendとViewerのblock対応がずれた要素へmetadataを誤付与しない", () => {
+  const contents = "> Quoted context.\n\nCanonical paragraph.";
+  const blocks: readonly MarkdownBlockMetadata[] = [
+    {
+      blockType: "block_quote",
+      blockIndex: 0,
+      textHash: "sha256:11111111",
+      textSnippet: "Quoted context.",
+      sourceRange: { startByteOffset: 0, endByteOffset: 17 },
+    },
+    {
+      blockType: "paragraph",
+      blockIndex: 1,
+      textHash: "sha256:22222222",
+      textSnippet: "Canonical paragraph.",
+      sourceRange: { startByteOffset: 19, endByteOffset: 39 },
+    },
+  ];
+  const result = renderViewer(createReadyState(contents, blocks));
+  const paragraphs = result.container.querySelectorAll(".markdown-rendered p");
+
+  expect(paragraphs[0]?.getAttribute("data-text-hash")).toBeNull();
+  expect(paragraphs[1]?.getAttribute("data-text-hash")).toBe("sha256:22222222");
+  result.unmount();
+});
+test("MarkdownViewerはbackend末尾空白を許容して全block typeのmetadataを対応付ける", () => {
+  const contents = [
+    "# Title",
+    "",
+    "Paragraph",
+    "",
+    "- Item",
+    "",
+    "```ts",
+    "code",
+    "```",
+  ].join("\n");
+  const blocks: readonly MarkdownBlockMetadata[] = [
+    {
+      blockType: "heading",
+      blockIndex: 0,
+      textHash: "sha256:11111111",
+      textSnippet: "Title",
+      sourceRange: { startByteOffset: 0, endByteOffset: 8 },
+    },
+    {
+      blockType: "paragraph",
+      blockIndex: 1,
+      textHash: "sha256:22222222",
+      textSnippet: "Paragraph",
+      sourceRange: { startByteOffset: 9, endByteOffset: 19 },
+    },
+    {
+      blockType: "list_item",
+      blockIndex: 2,
+      textHash: "sha256:33333333",
+      textSnippet: "Item",
+      sourceRange: { startByteOffset: 20, endByteOffset: 28 },
+    },
+    {
+      blockType: "code_block",
+      blockIndex: 3,
+      textHash: "sha256:44444444",
+      textSnippet: "code",
+      sourceRange: { startByteOffset: 28, endByteOffset: 42 },
+    },
+  ];
+  const result = renderViewer(createReadyState(contents, blocks));
+  const renderedBlocks = result.container.querySelectorAll(
+    ".markdown-rendered h1, .markdown-rendered p, .markdown-rendered li, .markdown-rendered pre",
+  );
+
+  expect(
+    Array.from(renderedBlocks, (block) => block.getAttribute("data-text-hash")),
+  ).toEqual([
+    "sha256:11111111",
+    "sha256:22222222",
+    "sha256:33333333",
+    "sha256:44444444",
+  ]);
+  result.unmount();
+});
+
+test("MarkdownViewerはCRLFとastral文字を含むUTF-8 source rangeを対応付ける", () => {
+  const contents = "# 😀\r\n\r\nCafé";
+  const blocks: readonly MarkdownBlockMetadata[] = [
+    {
+      blockType: "heading",
+      blockIndex: 0,
+      textHash: "sha256:11111111",
+      textSnippet: "😀",
+      sourceRange: { startByteOffset: 0, endByteOffset: 8 },
+    },
+    {
+      blockType: "paragraph",
+      blockIndex: 1,
+      textHash: "sha256:22222222",
+      textSnippet: "Café",
+      sourceRange: { startByteOffset: 10, endByteOffset: 15 },
+    },
+  ];
+  const result = renderViewer(createReadyState(contents, blocks));
+  const renderedBlocks = result.container.querySelectorAll(
+    ".markdown-rendered h1, .markdown-rendered p",
+  );
+
+  expect(
+    Array.from(renderedBlocks, (block) => block.getAttribute("data-text-hash")),
+  ).toEqual(["sha256:11111111", "sha256:22222222"]);
+  result.unmount();
+});
+
+test("MarkdownViewerはloose list内のnested paragraphへ別blockのmetadataやhighlightを誤付与しない", () => {
+  const onAnchorDisplayStatesChange = vi.fn();
+  const contents =
+    "- first paragraph\n\n  second paragraph\n\nAfter list.\n\n> Quote text.\n\nFinal paragraph.";
+  const blocks: readonly MarkdownBlockMetadata[] = [
+    {
+      blockType: "list_item",
+      blockIndex: 0,
+      textHash: "sha256:11111111",
+      textSnippet: "first paragraph second paragraph",
+      sourceRange: { startByteOffset: 0, endByteOffset: 37 },
+    },
+    {
+      blockType: "paragraph",
+      blockIndex: 1,
+      textHash: canonicalTestTextHash,
+      textSnippet: "After list.",
+      sourceRange: { startByteOffset: 39, endByteOffset: 50 },
+    },
+    {
+      blockType: "block_quote",
+      blockIndex: 2,
+      textHash: "sha256:33333333",
+      textSnippet: "Quote text.",
+      sourceRange: { startByteOffset: 52, endByteOffset: 65 },
+    },
+    {
+      blockType: "paragraph",
+      blockIndex: 3,
+      textHash: canonicalTestTextHash,
+      textSnippet: "Final paragraph.",
+      sourceRange: { startByteOffset: 67, endByteOffset: 83 },
+    },
+  ];
+  const comments: readonly Comment[] = [
+    createComment({
+      id: "cmt_after_list",
+      blockIndex: 1,
+      text: "After list.",
+      resolved: false,
+    }),
+    createComment({
+      id: "cmt_final",
+      blockIndex: 3,
+      text: "Final paragraph.",
+      resolved: false,
+    }),
+  ];
+  const result = renderComponent(
+    <MarkdownViewer
+      state={createReadyState(contents, blocks)}
+      selectedSpecLabel={selectedSpecLabel}
+      selectedFileLabel={selectedFileLabel}
+      comments={comments}
+      activeCommentId={null}
+      onReload={vi.fn()}
+      onAddComment={vi.fn().mockResolvedValue(true)}
+      onSelectComment={vi.fn()}
+      onAnchorDisplayStatesChange={onAnchorDisplayStatesChange}
+    />,
+  );
+  const listItem = result.container.querySelector(".markdown-rendered li");
+  const nestedParagraphs = listItem?.querySelectorAll("p") ?? [];
+  const quoteParagraph = result.container.querySelector(
+    ".markdown-rendered blockquote p",
+  );
+  const afterList = result.container.querySelector(
+    '[data-comment-block-type="paragraph"][data-block-index="1"]',
+  );
+  const finalParagraph = result.container.querySelector(
+    '[data-comment-block-type="paragraph"][data-block-index="3"]',
+  );
+
+  for (const paragraph of [...nestedParagraphs, quoteParagraph]) {
+    expect(paragraph?.getAttribute("data-comment-block-type")).toBeNull();
+    expect(paragraph?.getAttribute("data-text-hash")).toBeNull();
+    expect(paragraph?.getAttribute("data-comment-highlight")).toBeNull();
+  }
+  expect(afterList?.getAttribute("data-text-hash")).toBe(canonicalTestTextHash);
+  expect(finalParagraph?.getAttribute("data-text-hash")).toBe(
+    canonicalTestTextHash,
+  );
+  expect(
+    result.container.querySelectorAll('[data-comment-highlight="true"]'),
+  ).toHaveLength(2);
+  expect(onAnchorDisplayStatesChange).toHaveBeenLastCalledWith([
+    { commentId: "cmt_after_list", status: "exact" },
+    { commentId: "cmt_final", status: "exact" },
+  ]);
+  result.unmount();
+});
+test("MarkdownViewerはsource rangeなしmetadataをloose listへ順序fallbackしない", () => {
+  const contents =
+    "- first paragraph\n\n  second paragraph\n\nAfter list.\n\n> Quote text.\n\nFinal paragraph.";
+  const comments: readonly Comment[] = [
+    createComment({
+      id: "cmt_after_list",
+      blockIndex: 1,
+      text: "After list.",
+      resolved: false,
+    }),
+  ];
+  const blocks = createRangeLessBackendBlocks([
+    "list_item",
+    "paragraph",
+    "block_quote",
+    "paragraph",
+  ]);
+  const result = renderViewer(
+    createReadyState(contents, blocks),
+    vi.fn(),
+    vi.fn().mockResolvedValue(true),
+    comments,
+  );
+
+  expect(
+    result.container.querySelector("[data-comment-block-type]"),
+  ).toBeNull();
+  expect(result.container.querySelector("[data-comment-highlight]")).toBeNull();
+  expect(
+    result.container.querySelector(".markdown-block-comment-button"),
+  ).toBeNull();
+  result.unmount();
+});
+
+test.each([
+  "",
+  "fnv1a:89abcdef",
+  "sha256:ABCDEF12",
+  "md5:89abcdef",
+])("MarkdownViewerは不正なbackend hash %sをfail closedで扱う", (textHash) => {
+  const onAnchorDisplayStatesChange = vi.fn();
+  const comments: readonly Comment[] = [
+    createComment({
+      id: "cmt_invalid_backend_hash",
+      blockIndex: 0,
+      text: "Invalid backend hash.",
+      resolved: false,
+    }),
+  ];
+  const result = renderComponent(
+    <MarkdownViewer
+      state={createReadyState(
+        "Invalid backend hash.",
+        createBackendBlocks("Invalid backend hash.", ["paragraph"], textHash),
+      )}
+      selectedSpecLabel={selectedSpecLabel}
+      selectedFileLabel={selectedFileLabel}
+      comments={comments}
+      activeCommentId={null}
+      onReload={vi.fn()}
+      onAddComment={vi.fn().mockResolvedValue(true)}
+      onSelectComment={vi.fn()}
+      onAnchorDisplayStatesChange={onAnchorDisplayStatesChange}
+    />,
+  );
+  const paragraph = result.container.querySelector(".markdown-rendered p");
+
+  expect(paragraph?.getAttribute("data-comment-block-type")).toBeNull();
+  expect(paragraph?.getAttribute("data-text-hash")).toBeNull();
+  expect(paragraph?.getAttribute("data-comment-highlight")).toBeNull();
+  expect(
+    result.container.querySelector(".markdown-block-comment-button"),
+  ).toBeNull();
+  expect(onAnchorDisplayStatesChange).toHaveBeenLastCalledWith([
+    { commentId: "cmt_invalid_backend_hash", status: "orphaned" },
+  ]);
   result.unmount();
 });
 
@@ -573,7 +911,10 @@ test("MarkdownViewerはコメント付きブロックを状態別にハイライ
     }),
   ];
   const result = renderViewer(
-    createReadyState(contents),
+    createReadyState(
+      contents,
+      createBackendBlocks(contents, ["heading", "paragraph", "paragraph"]),
+    ),
     vi.fn(),
     vi.fn().mockResolvedValue(true),
     comments,
@@ -602,7 +943,12 @@ test("MarkdownViewerはコメント付きブロックを状態別にハイライ
 });
 
 test("MarkdownViewerはリスト項目の本文より前にコメントボタンを置かない", () => {
-  const result = renderViewer(createReadyState("- Selectable list text"));
+  const result = renderViewer(
+    createReadyState(
+      "- Selectable list text",
+      createBackendBlocks("- Selectable list text", ["list_item"]),
+    ),
+  );
   const listItem = result.container.querySelector(
     '.markdown-rendered li[data-block-type="list-item"]',
   );
@@ -619,7 +965,12 @@ test("MarkdownViewerはリスト項目の本文より前にコメントボタン
 });
 
 test("MarkdownViewerは段落本文より前にコメントボタンを置かない", () => {
-  const result = renderViewer(createReadyState("Selectable paragraph text."));
+  const result = renderViewer(
+    createReadyState(
+      "Selectable paragraph text.",
+      createBackendBlocks("Selectable paragraph text.", ["paragraph"]),
+    ),
+  );
   const target = result.container.querySelector(".markdown-comment-target");
   const paragraph = target?.querySelector("p");
   const blockCommentButton = target?.querySelector(
@@ -707,7 +1058,7 @@ test("MarkdownViewerは既存コメントを本文右側のカードから編集
     }),
   ];
   const result = renderViewer(
-    createReadyState(contents),
+    createReadyState(contents, createBackendBlocks(contents, ["paragraph"])),
     vi.fn(),
     vi.fn().mockResolvedValue(true),
     comments,
@@ -793,7 +1144,7 @@ test("MarkdownViewerのinline editは空白本文を共通理由で拒否する"
     }),
   ];
   const result = renderViewer(
-    createReadyState(contents),
+    createReadyState(contents, createBackendBlocks(contents, ["paragraph"])),
     vi.fn(),
     vi.fn().mockResolvedValue(true),
     comments,
@@ -837,7 +1188,7 @@ test("MarkdownViewerは編集ポップオーバーから未解決コメントを
     }),
   ];
   const result = renderViewer(
-    createReadyState(contents),
+    createReadyState(contents, createBackendBlocks(contents, ["paragraph"])),
     vi.fn(),
     vi.fn().mockResolvedValue(true),
     comments,
@@ -879,7 +1230,10 @@ test("MarkdownViewerはコメント解決後に左ビューの表示から外す
   });
   const renderMarkdownViewer = (comments: readonly Comment[]): ReactNode => (
     <MarkdownViewer
-      state={createReadyState(contents)}
+      state={createReadyState(
+        contents,
+        createBackendBlocks(contents, ["paragraph"]),
+      )}
       selectedSpecLabel={selectedSpecLabel}
       selectedFileLabel={selectedFileLabel}
       comments={comments}
@@ -926,7 +1280,10 @@ test("MarkdownViewerは親ビュー再描画後も編集中の本文を維持す
     });
   const renderMarkdownViewer = (comments: readonly Comment[]): ReactNode => (
     <MarkdownViewer
-      state={createReadyState(contents)}
+      state={createReadyState(
+        contents,
+        createBackendBlocks(contents, ["paragraph"]),
+      )}
       selectedSpecLabel={selectedSpecLabel}
       selectedFileLabel={selectedFileLabel}
       comments={comments}
@@ -967,7 +1324,7 @@ test("MarkdownViewerは初期表示の解決済みコメントを左ビューか
     }),
   ];
   const result = renderViewer(
-    createReadyState(contents),
+    createReadyState(contents, createBackendBlocks(contents, ["paragraph"])),
     vi.fn(),
     vi.fn().mockResolvedValue(true),
     comments,
@@ -999,7 +1356,7 @@ test("MarkdownViewerは編集ポップオーバーの削除初回クリックで
     }),
   ];
   const result = renderViewer(
-    createReadyState(contents),
+    createReadyState(contents, createBackendBlocks(contents, ["paragraph"])),
     vi.fn(),
     vi.fn().mockResolvedValue(true),
     comments,
@@ -1037,7 +1394,7 @@ test("MarkdownViewerは編集ポップオーバーの削除確認後にコメン
     }),
   ];
   const result = renderViewer(
-    createReadyState(contents),
+    createReadyState(contents, createBackendBlocks(contents, ["paragraph"])),
     vi.fn(),
     vi.fn().mockResolvedValue(true),
     comments,
@@ -1085,7 +1442,7 @@ test("MarkdownViewerは対象コメントの操作中に編集ポップオーバ
     commentId("cmt_busy"),
   );
   const result = renderViewer(
-    createReadyState(contents),
+    createReadyState(contents, createBackendBlocks(contents, ["paragraph"])),
     vi.fn(),
     vi.fn().mockResolvedValue(true),
     comments,
@@ -1135,7 +1492,7 @@ test("MarkdownViewerは対象コメントの操作エラーを編集ポップオ
     "削除に失敗しました。",
   );
   const result = renderViewer(
-    createReadyState(contents),
+    createReadyState(contents, createBackendBlocks(contents, ["paragraph"])),
     vi.fn(),
     vi.fn().mockResolvedValue(true),
     comments,
@@ -1169,7 +1526,10 @@ test("MarkdownViewerはstaleとorphanedのコメントアンカー状態を通�
   ];
   const result = renderComponent(
     <MarkdownViewer
-      state={createReadyState(contents)}
+      state={createReadyState(
+        contents,
+        createBackendBlocks(contents, ["paragraph"], "sha256:bbbbbbbb"),
+      )}
       selectedSpecLabel={selectedSpecLabel}
       selectedFileLabel={selectedFileLabel}
       comments={comments}
@@ -1301,7 +1661,7 @@ test("MarkdownViewerはexact解決済みアンカーの選択範囲をハイラ�
         target: {
           blockType: "paragraph",
           blockIndex: 0,
-          textHash: createTextHash(contents),
+          textHash: canonicalTestTextHash,
           textSnippet: contents,
           sourceRange: null,
           score: 100,
@@ -1310,7 +1670,7 @@ test("MarkdownViewerはexact解決済みアンカーの選択範囲をハイラ�
     }),
   ];
   const result = renderViewer(
-    createReadyState(contents),
+    createReadyState(contents, createBackendBlocks(contents, ["paragraph"])),
     vi.fn(),
     vi.fn().mockResolvedValue(true),
     comments,
@@ -1346,7 +1706,7 @@ test("MarkdownViewerはインラインコード内のコメント範囲に背景
         target: {
           blockType: "paragraph",
           blockIndex: 0,
-          textHash: createTextHash(contents),
+          textHash: canonicalTestTextHash,
           textSnippet: contents,
           sourceRange: null,
           score: 100,
@@ -1355,7 +1715,7 @@ test("MarkdownViewerはインラインコード内のコメント範囲に背景
     }),
   ];
   const result = renderViewer(
-    createReadyState(contents),
+    createReadyState(contents, createBackendBlocks(contents, ["paragraph"])),
     vi.fn(),
     vi.fn().mockResolvedValue(true),
     comments,
@@ -1388,7 +1748,7 @@ test("MarkdownViewerはコードブロックコメントを範囲色ではなく
     }),
   ];
   const result = renderViewer(
-    createReadyState(contents),
+    createReadyState(contents, createBackendBlocks(contents, ["code_block"])),
     vi.fn(),
     vi.fn().mockResolvedValue(true),
     comments,
@@ -1423,7 +1783,7 @@ test("MarkdownViewerはmoved/fuzzy/orphaned解決結果をtarget blockへ反映�
         target: {
           blockType: "paragraph",
           blockIndex: 1,
-          textHash: createTextHash("Exact target paragraph."),
+          textHash: canonicalTestTextHash,
           textSnippet: "Exact target paragraph.",
           sourceRange: null,
           score: 100,
@@ -1442,7 +1802,7 @@ test("MarkdownViewerはmoved/fuzzy/orphaned解決結果をtarget blockへ反映�
         target: {
           blockType: "paragraph",
           blockIndex: 2,
-          textHash: createTextHash("Fuzzy target paragraph with edits."),
+          textHash: canonicalTestTextHash,
           textSnippet: "Fuzzy target paragraph with edits.",
           sourceRange: null,
           score: 82,
@@ -1464,7 +1824,10 @@ test("MarkdownViewerはmoved/fuzzy/orphaned解決結果をtarget blockへ反映�
   ];
   const result = renderComponent(
     <MarkdownViewer
-      state={createReadyState(contents)}
+      state={createReadyState(
+        contents,
+        createBackendBlocks(contents, ["paragraph", "paragraph", "paragraph"]),
+      )}
       selectedSpecLabel={selectedSpecLabel}
       selectedFileLabel={selectedFileLabel}
       comments={comments}
@@ -1502,11 +1865,79 @@ test("MarkdownViewerはmoved/fuzzy/orphaned解決結果をtarget blockへ反映�
   ]);
   result.unmount();
 });
+test("MarkdownViewerはresolution target hashがcurrent blockと不一致ならfail closedにする", () => {
+  const onAnchorDisplayStatesChange = vi.fn();
+  const contents = "Current replacement paragraph.";
+  const comments: readonly Comment[] = [
+    createComment({
+      id: "cmt_reload_race",
+      blockIndex: 0,
+      text: "Previous paragraph.",
+      resolved: false,
+      anchorResolution: {
+        status: "resolved",
+        reason: "exact_match",
+        details: null,
+        target: {
+          blockType: "paragraph",
+          blockIndex: 0,
+          textHash: canonicalTestTextHash,
+          textSnippet: "Previous paragraph.",
+          sourceRange: null,
+          score: 100,
+        },
+      },
+    }),
+  ];
+  const state = createReadyState(
+    contents,
+    createBackendBlocks(contents, ["paragraph"], "sha256:bbbbbbbb"),
+  );
+  const renderMarkdownViewer = (
+    activeCommentId: CommentId | null,
+  ): ReactNode => (
+    <MarkdownViewer
+      state={state}
+      selectedSpecLabel={selectedSpecLabel}
+      selectedFileLabel={selectedFileLabel}
+      comments={comments}
+      activeCommentId={activeCommentId}
+      onReload={vi.fn()}
+      onAddComment={vi.fn().mockResolvedValue(true)}
+      onSelectComment={vi.fn()}
+      onAnchorDisplayStatesChange={onAnchorDisplayStatesChange}
+    />
+  );
+  const result = renderComponent(renderMarkdownViewer(null));
+  const paragraph = result.container.querySelector(
+    ".markdown-rendered p",
+  ) as HTMLElement;
+  const scrollIntoView = vi.fn();
+
+  Object.defineProperty(paragraph, "scrollIntoView", {
+    configurable: true,
+    value: scrollIntoView,
+  });
+  result.rerender(renderMarkdownViewer(commentId("cmt_reload_race")));
+
+  expect(paragraph?.getAttribute("data-comment-highlight")).toBeNull();
+  expect(
+    result.container.querySelector(".markdown-comment-annotation"),
+  ).toBeNull();
+  expect(scrollIntoView).not.toHaveBeenCalled();
+  expect(onAnchorDisplayStatesChange).toHaveBeenLastCalledWith([
+    { commentId: "cmt_reload_race", status: "stale" },
+  ]);
+  result.unmount();
+});
 
 test("MarkdownViewerはMarkdown内の選択から追加コメントを保存する", async () => {
   const onAddComment = vi.fn().mockResolvedValue(true);
   const result = renderViewer(
-    createReadyState("A paragraph with selectable text."),
+    createReadyState(
+      "A paragraph with selectable text.",
+      createBackendBlocks("A paragraph with selectable text.", ["paragraph"]),
+    ),
     vi.fn(),
     onAddComment,
   );
@@ -1615,7 +2046,13 @@ test("MarkdownViewerはMarkdown内の選択から追加コメントを保存す�
 test("MarkdownViewerはコードブロック内の選択から追加コメントを保存する", async () => {
   const onAddComment = vi.fn().mockResolvedValue(true);
   const result = renderViewer(
-    createReadyState(["```ts", "const enabled = true;", "```"].join("\n")),
+    createReadyState(
+      ["```ts", "const enabled = true;", "```"].join("\n"),
+      createBackendBlocks(
+        ["```ts", "const enabled = true;", "```"].join("\n"),
+        ["code_block"],
+      ),
+    ),
     vi.fn(),
     onAddComment,
   );
@@ -1695,7 +2132,7 @@ test("MarkdownViewerはハイライト内の部分選択をコメント選択ク
   const contents = "A paragraph with selectable text.";
   const onSelectComment = vi.fn();
   const result = renderViewer(
-    createReadyState(contents),
+    createReadyState(contents, createBackendBlocks(contents, ["paragraph"])),
     vi.fn(),
     vi.fn().mockResolvedValue(true),
     [
@@ -1743,7 +2180,12 @@ test("MarkdownViewerはハイライト内の部分選択をコメント選択ク
 test("MarkdownViewerはMarkdownブロックのコメントボタンから追加コメントを保存する", async () => {
   const onAddComment = vi.fn().mockResolvedValue(true);
   const result = renderViewer(
-    createReadyState("A paragraph with block comment affordance."),
+    createReadyState(
+      "A paragraph with block comment affordance.",
+      createBackendBlocks("A paragraph with block comment affordance.", [
+        "paragraph",
+      ]),
+    ),
     vi.fn(),
     onAddComment,
   );
@@ -1794,7 +2236,13 @@ test("MarkdownViewerはMarkdownブロックのコメントボタンから追加�
 
 test("MarkdownViewerは別ブロックのコメントdraftへ切り替えると追加popoverを初期化する", async () => {
   const result = renderViewer(
-    createReadyState(["First paragraph.", "", "Second paragraph."].join("\n")),
+    createReadyState(
+      ["First paragraph.", "", "Second paragraph."].join("\n"),
+      createBackendBlocks(
+        ["First paragraph.", "", "Second paragraph."].join("\n"),
+        ["paragraph", "paragraph"],
+      ),
+    ),
   );
   const addButtons = result.container.querySelectorAll(
     ".markdown-block-comment-button",
@@ -1846,7 +2294,13 @@ test("MarkdownViewerは別ブロックのコメントdraftへ切り替えると�
 
 test("MarkdownViewerはコードブロックのコメントボタンから追加popoverを開く", () => {
   const result = renderViewer(
-    createReadyState(["```ts", "const enabled = true;", "```"].join("\n")),
+    createReadyState(
+      ["```ts", "const enabled = true;", "```"].join("\n"),
+      createBackendBlocks(
+        ["```ts", "const enabled = true;", "```"].join("\n"),
+        ["code_block"],
+      ),
+    ),
   );
   const codeBlock = result.container.querySelector("pre[data-block-type]");
   const target = codeBlock?.closest(".markdown-comment-target");
@@ -1867,7 +2321,12 @@ test("MarkdownViewerはコードブロックのコメントボタンから追加
 });
 
 test("MarkdownViewerはブロックコメント追加popoverを範囲外クリックで閉じる", () => {
-  const result = renderViewer(createReadyState("Close this draft outside."));
+  const result = renderViewer(
+    createReadyState(
+      "Close this draft outside.",
+      createBackendBlocks("Close this draft outside.", ["paragraph"]),
+    ),
+  );
   const addButton = result.container.querySelector(
     ".markdown-block-comment-button",
   ) as HTMLButtonElement;
@@ -1889,7 +2348,12 @@ test("MarkdownViewerはブロックコメント追加popoverを範囲外クリ�
 });
 
 test("MarkdownViewerはコメント追加ボタンをキーボードでフォーカスできる", () => {
-  const result = renderViewer(createReadyState("Focusable paragraph."));
+  const result = renderViewer(
+    createReadyState(
+      "Focusable paragraph.",
+      createBackendBlocks("Focusable paragraph.", ["paragraph"]),
+    ),
+  );
   const addButton = result.container.querySelector(
     '[aria-label="コメント追加"]',
   ) as HTMLButtonElement;

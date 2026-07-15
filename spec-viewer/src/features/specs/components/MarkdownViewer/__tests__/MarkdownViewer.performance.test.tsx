@@ -5,7 +5,10 @@ import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
 import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
-import type { SpecDocument } from "@/features/specs/types/spec";
+import type {
+  MarkdownBlockMetadata,
+  SpecDocument,
+} from "@/features/specs/types/spec";
 import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
 
 const workspacePath = "/workspace/spec-reviewer";
@@ -53,14 +56,17 @@ function createLoadingState(): SpecDocumentState {
   };
 }
 
-function createReadyState(contents: string): SpecDocumentState {
+function createReadyState(
+  contents: string,
+  blocks: readonly MarkdownBlockMetadata[] = [],
+): SpecDocumentState {
   const document: SpecDocument = {
     key: "tasks",
     format: "markdown",
     path: "/workspace/spec-reviewer/docs/plans/tasks.md",
     contents,
     missing: false,
-    blocks: [],
+    blocks,
   };
 
   return {
@@ -163,4 +169,55 @@ test("MarkdownViewerは非ASCIIの実バイト数が大きいMarkdownでsyntax h
 
   expect(codeBlock?.classList.contains("hljs")).toBe(false);
   result.unmount();
+});
+test("MarkdownViewerはblockごとにMarkdown prefixを再encodeしない", () => {
+  const blockCount = 200;
+  const paragraphs = Array.from(
+    { length: blockCount },
+    (_, index) => `Paragraph ${index} 😀`,
+  );
+  const contents = paragraphs.join("\n\n");
+  const encoder = new TextEncoder();
+  let startByteOffset = 0;
+  const blocks: readonly MarkdownBlockMetadata[] = paragraphs.map(
+    (paragraph, blockIndex) => {
+      const paragraphEndByteOffset =
+        startByteOffset + encoder.encode(paragraph).byteLength;
+      const endByteOffset =
+        paragraphEndByteOffset + (blockIndex < blockCount - 1 ? 2 : 0);
+      const block: MarkdownBlockMetadata = {
+        blockType: "paragraph",
+        blockIndex,
+        textHash: `sha256:${blockIndex.toString(16).padStart(8, "0")}`,
+        textSnippet: paragraph,
+        sourceRange: {
+          startByteOffset,
+          endByteOffset,
+        },
+      };
+
+      startByteOffset = endByteOffset;
+      return block;
+    },
+  );
+  const encodeSpy = vi.spyOn(TextEncoder.prototype, "encode");
+  const result = renderComponent(
+    <MarkdownViewer
+      state={createReadyState(contents, blocks)}
+      selectedSpecLabel="Phase 1 Viewer"
+      selectedFileLabel="Tasks"
+      onReload={vi.fn()}
+    />,
+  );
+  const renderedBlocks = result.container.querySelectorAll(
+    '[data-comment-block-type="paragraph"]',
+  );
+
+  expect(renderedBlocks).toHaveLength(blockCount);
+  expect(renderedBlocks[blockCount - 1]?.getAttribute("data-text-hash")).toBe(
+    `sha256:${(blockCount - 1).toString(16).padStart(8, "0")}`,
+  );
+  expect(encodeSpy.mock.calls.length).toBeLessThanOrEqual(8);
+  result.unmount();
+  encodeSpy.mockRestore();
 });
