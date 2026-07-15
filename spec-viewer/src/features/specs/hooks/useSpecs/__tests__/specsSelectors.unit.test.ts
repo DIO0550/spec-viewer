@@ -6,6 +6,7 @@ import { SpecTreeState } from "@/features/specs/domain/specTreeState";
 import { buildSpecsSelectors } from "@/features/specs/hooks/useSpecs/selectors";
 import type { SpecsState } from "@/features/specs/hooks/useSpecs/types";
 import type { SpecTreeData } from "@/features/specs";
+import { WorkspacePath } from "@/shared/domain/workspacePath";
 
 const tree: SpecTreeData = {
   specs: [
@@ -34,6 +35,7 @@ const tree: SpecTreeData = {
 };
 
 const baseState: SpecsState = {
+  workspacePath: WorkspacePath.fromString("/workspace/spec-reviewer"),
   specTreeState: SpecTreeState.loaded("/workspace/spec-reviewer", tree),
   documentState: SpecDocumentState.idle("/workspace/spec-reviewer"),
   selection: {
@@ -41,7 +43,7 @@ const baseState: SpecsState = {
     fileKey: "tasks",
   },
   isLoading: false,
-  activeOperationId: null,
+  activeOperationToken: null,
   archivingSpecId: null,
   archiveSpecError: null,
 };

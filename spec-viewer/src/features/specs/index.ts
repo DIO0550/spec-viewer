@@ -1,4 +1,7 @@
 export { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
+export type { SpecGateway } from "@/features/specs/application/ports/specGateway";
+export { createSpecGateway } from "@/features/specs/infra/specGateway";
+export { specCommands } from "@/features/specs/infra/tauri";
 export { toSpecFeatureError } from "@/features/specs/infra/tauri/specErrorMapper";
 export { SpecTabs } from "@/features/specs/components/SpecTabs";
 export { SpecTree } from "@/features/specs/components/SpecTree";

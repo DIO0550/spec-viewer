@@ -1,6 +1,6 @@
 import { SpecNode as SpecNodeDomain } from "@/features/specs/domain/specNode";
 import { SpecTree as SpecTreeDomain } from "@/features/specs/domain/specTree";
-import type { SpecsState } from "@/features/specs/hooks/useSpecs/types";
+import type { SpecsState } from "@/features/specs/application/specsState";
 import type { SpecFile, SpecNode } from "@/features/specs/types/spec";
 
 export type SpecsSelectors = Readonly<{
