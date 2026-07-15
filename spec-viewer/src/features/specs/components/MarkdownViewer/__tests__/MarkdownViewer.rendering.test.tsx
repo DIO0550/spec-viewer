@@ -1560,7 +1560,7 @@ test("MarkdownViewerはstaleとorphanedのコメントアンカー状態を通�
   result.unmount();
 });
 
-test("MarkdownViewerのlegacy hash fallbackはコメントUIの文字列を除外する", () => {
+test("MarkdownViewerはbackend metadata欠落時にlegacy hashを再計算しない", () => {
   const onAnchorDisplayStatesChange = vi.fn();
   const anchorText = "An unchanged list item with a legacy anchor.";
   const contents = `- ${anchorText}`;
@@ -1590,13 +1590,17 @@ test("MarkdownViewerのlegacy hash fallbackはコメントUIの文字列を除�
   expect(onAnchorDisplayStatesChange).toHaveBeenLastCalledWith([
     {
       commentId: "cmt_legacy_exact",
-      status: "exact",
+      status: "orphaned",
     },
   ]);
+  expect(result.container.querySelector("[data-text-hash]")).toBeNull();
+  expect(
+    result.container.querySelector(".markdown-block-comment-button"),
+  ).toBeNull();
   result.unmount();
 });
 
-test("MarkdownViewerは空白のbackend text hashをlegacy欠落として扱わない", () => {
+test("MarkdownViewerは空白のbackend text hashをfail closedで扱う", () => {
   const onAnchorDisplayStatesChange = vi.fn();
   const contents = "A paragraph with malformed backend hash metadata.";
   const comments: readonly Comment[] = [
@@ -1636,9 +1640,13 @@ test("MarkdownViewerは空白のbackend text hashをlegacy欠落として扱わ�
   expect(onAnchorDisplayStatesChange).toHaveBeenLastCalledWith([
     {
       commentId: "cmt_malformed_hash",
-      status: "stale",
+      status: "orphaned",
     },
   ]);
+  expect(result.container.querySelector("[data-text-hash]")).toBeNull();
+  expect(
+    result.container.querySelector(".markdown-block-comment-button"),
+  ).toBeNull();
   result.unmount();
 });
 

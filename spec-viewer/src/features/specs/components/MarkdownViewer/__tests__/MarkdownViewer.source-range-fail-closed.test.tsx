@@ -1,3 +1,4 @@
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 import type { ComponentType, ReactNode } from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
@@ -61,7 +62,7 @@ test("MarkdownViewerはrender nodeのsource range欠落時に順序fallbackし�
   const state: SpecDocumentState = {
     status: "ready",
     workspacePath: "/workspace/spec-reviewer",
-    specId: "phase-1-viewer",
+    specId: TestValues.specId("phase-1-viewer"),
     fileKey: "tasks",
     document: {
       key: "tasks",
