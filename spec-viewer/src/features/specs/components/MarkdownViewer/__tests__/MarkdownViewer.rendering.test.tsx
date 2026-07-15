@@ -1,5 +1,4 @@
 import * as TestValues from "@/shared/testing/validatedValueObjects";
-import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
 import type { ReactNode } from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
@@ -12,6 +11,7 @@ import {
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
 import { createTextHash } from "@/features/comments/lib/comment-anchor-draft";
+import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
 import type {
   Comment,
   CommentAnchorResolution,
@@ -1195,6 +1195,52 @@ test("MarkdownViewerはstaleとorphanedのコメントアンカー状態を通�
     {
       commentId: "cmt_orphaned",
       status: "orphaned",
+    },
+  ]);
+  result.unmount();
+});
+
+test("MarkdownViewerは空白のbackend text hashをlegacy欠落として扱わない", () => {
+  const onAnchorDisplayStatesChange = vi.fn();
+  const contents = "A paragraph with malformed backend hash metadata.";
+  const comments: readonly Comment[] = [
+    createComment({
+      id: "cmt_malformed_hash",
+      blockIndex: 0,
+      text: contents,
+      resolved: false,
+    }),
+  ];
+  const blocks: readonly MarkdownBlockMetadata[] = [
+    {
+      blockType: "paragraph",
+      blockIndex: 0,
+      textHash: "   ",
+      textSnippet: contents,
+      sourceRange: {
+        startByteOffset: 0,
+        endByteOffset: contents.length,
+      },
+    },
+  ];
+  const result = renderComponent(
+    <MarkdownViewer
+      state={createReadyState(contents, blocks)}
+      selectedSpecLabel={selectedSpecLabel}
+      selectedFileLabel={selectedFileLabel}
+      comments={comments}
+      activeCommentId={null}
+      onReload={vi.fn()}
+      onAddComment={vi.fn().mockResolvedValue(true)}
+      onSelectComment={vi.fn()}
+      onAnchorDisplayStatesChange={onAnchorDisplayStatesChange}
+    />,
+  );
+
+  expect(onAnchorDisplayStatesChange).toHaveBeenLastCalledWith([
+    {
+      commentId: "cmt_malformed_hash",
+      status: "stale",
     },
   ]);
   result.unmount();
