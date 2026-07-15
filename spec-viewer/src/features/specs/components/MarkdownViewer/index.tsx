@@ -41,7 +41,6 @@ import {
   type CommentBodyDraft,
   type CommentOperationState,
   type RenderedBlockType,
-  readRenderedBlockAnchorText,
   toCommentBodyValidationMessage,
 } from "@/features/comments";
 import { AddCommentPopover } from "@/features/comments/components/AddCommentPopover";
@@ -51,10 +50,7 @@ import {
   CommentOperationSavingState,
 } from "@/features/comments/domain/commentOperation";
 import { useMarkdownTextSelection } from "@/features/comments/hooks/useMarkdownTextSelection";
-import {
-  createCommentAnchorDraftFromBlock,
-  createTextHash,
-} from "@/features/comments/lib/comment-anchor-draft";
+import { createCommentAnchorDraftFromBlock } from "@/features/comments/lib/comment-anchor-draft";
 import type {
   AddCommentSubmitInput,
   Comment,
@@ -73,6 +69,7 @@ import {
 } from "@/features/specs/hooks/useViewerReset";
 import type {
   MarkdownBlockMetadata,
+  MarkdownBlockSourceRange,
   MarkdownBlockType,
 } from "@/features/specs/types/spec";
 import {
@@ -122,7 +119,7 @@ type BlockIndexer = Readonly<{
    * Returns the next indexed block for the given block type.
    * @param blockType - The Markdown block type being indexed.
    */
-  next: (blockType: BlockType) => IndexedBlock;
+  next: (blockType: BlockType, node: unknown) => IndexedBlock;
 }>;
 
 type CreateBlockCommentDraft = (block: HTMLElement) => void;
@@ -141,6 +138,7 @@ type CommentHighlightMode = "block" | "range";
 
 type IndexedBlock = Readonly<{
   metadata: BlockMetadata;
+  canCreateComment: boolean;
   rangeHighlights: readonly CommentRangeHighlight[];
   commentAnnotations: readonly CommentBlockAnnotation[];
 }>;
@@ -148,6 +146,16 @@ type IndexedBlock = Readonly<{
 type BackendBlockMatch = Readonly<{
   block: MarkdownBlockMetadata;
   index: number;
+}>;
+type BackendBlocksBySourceStart = ReadonlyMap<
+  string,
+  readonly BackendBlockMatch[]
+>;
+
+type RenderedMarkdownSourceRange = Readonly<{
+  startByteOffset: number;
+  endByteOffset: number;
+  endByteOffsetAfterTrailingWhitespace: number;
 }>;
 
 type CommentBlockAnnotation = Readonly<{
@@ -814,11 +822,13 @@ function MarkdownDocument({
     createAnchorDisplayStateByCommentId(anchorDisplayStates);
   const highlights = createCommentBlockHighlights({
     comments,
+    blocks,
     activeCommentId,
     anchorDisplayStateByCommentId,
   });
   const blockIndexer = createBlockIndexer({
     blocks,
+    contents,
     highlights,
   });
   const documentSearchCursor = createDocumentSearchCursor({
@@ -853,45 +863,62 @@ function MarkdownDocument({
   );
 }
 
-/** @returns A sequential block indexer scoped to one Markdown render. */
+/** @returns A source-range-aware block indexer scoped to one Markdown render. */
 function createBlockIndexer({
   blocks,
+  contents,
   highlights,
 }: Readonly<{
   blocks: readonly MarkdownBlockMetadata[];
+  contents: string;
   highlights: CommentBlockHighlights;
 }>): BlockIndexer {
   let fallbackBlockIndex = 0;
-  let backendBlockCursor = 0;
+  const usedBackendBlockIndexes = new Set<number>();
+  const utf8ByteOffsets = createUtf8ByteOffsetTable(contents);
+  const backendBlocksBySourceStart = createBackendBlocksBySourceStart(blocks);
 
   return {
-    next: (blockType: BlockType): IndexedBlock => {
-      const backendBlockMatch = findNextBackendBlockWithIndex({
-        blocks,
-        blockType,
-        startIndex: backendBlockCursor,
-      });
+    next: (blockType: BlockType, node: unknown): IndexedBlock => {
+      const sourceRange = createMarkdownNodeSourceRange(
+        contents,
+        utf8ByteOffsets,
+        node,
+      );
+      const backendBlockMatch =
+        sourceRange === null
+          ? null
+          : findBackendBlockBySourceRange({
+              backendBlocksBySourceStart,
+              blockType,
+              sourceRange,
+              usedBackendBlockIndexes,
+            });
       const backendBlock = backendBlockMatch?.block ?? null;
-      const currentBlockIndex = backendBlock?.blockIndex ?? fallbackBlockIndex;
+      const canonicalBackendBlock = getCanonicalBackendBlock(backendBlock);
+      const currentBlockIndex =
+        canonicalBackendBlock?.blockIndex ?? fallbackBlockIndex;
       const metadata: BlockMetadata = {
         "data-block-type": blockType,
         "data-block-index": currentBlockIndex,
       };
-      const highlight = highlights.get(
-        createBlockKey(blockType, currentBlockIndex),
-      );
+      const highlight =
+        canonicalBackendBlock === null
+          ? undefined
+          : highlights.get(createBlockKey(blockType, currentBlockIndex));
 
       fallbackBlockIndex += 1;
 
       if (backendBlockMatch !== null) {
-        backendBlockCursor = backendBlockMatch.index + 1;
+        usedBackendBlockIndexes.add(backendBlockMatch.index);
       }
 
       return {
         metadata: createHighlightedBlockMetadata({
-          metadata: attachBackendBlockMetadata(metadata, backendBlock),
+          metadata: attachBackendBlockMetadata(metadata, canonicalBackendBlock),
           highlight,
         }),
+        canCreateComment: canonicalBackendBlock !== null,
         rangeHighlights: highlight?.rangeHighlights ?? [],
         commentAnnotations: highlight?.annotations ?? [],
       };
@@ -899,25 +926,221 @@ function createBlockIndexer({
   };
 }
 
-/** @returns The next backend block and index that can describe this rendered block. */
-function findNextBackendBlockWithIndex({
-  blocks,
+/** @returns The backend block whose source range starts with this rendered node. */
+function findBackendBlockBySourceRange({
+  backendBlocksBySourceStart,
   blockType,
-  startIndex,
+  sourceRange,
+  usedBackendBlockIndexes,
 }: Readonly<{
-  blocks: readonly MarkdownBlockMetadata[];
+  backendBlocksBySourceStart: BackendBlocksBySourceStart;
   blockType: BlockType;
-  startIndex: number;
+  sourceRange: RenderedMarkdownSourceRange;
+  usedBackendBlockIndexes: ReadonlySet<number>;
 }>): BackendBlockMatch | null {
-  for (let index = startIndex; index < blocks.length; index += 1) {
-    const block = blocks[index];
+  const candidates =
+    backendBlocksBySourceStart.get(
+      createBackendBlockSourceStartKey(blockType, sourceRange.startByteOffset),
+    ) ?? [];
 
-    if (mapMarkdownBlockTypeToBlockType(block.blockType) === blockType) {
-      return { block, index };
+  for (const candidate of candidates) {
+    if (
+      !usedBackendBlockIndexes.has(candidate.index) &&
+      sourceRangesEqual(candidate.block.sourceRange, sourceRange)
+    ) {
+      return candidate;
     }
   }
 
   return null;
+}
+/** @returns Backend blocks indexed by rendered type and source start byte. */
+function createBackendBlocksBySourceStart(
+  blocks: readonly MarkdownBlockMetadata[],
+): BackendBlocksBySourceStart {
+  const backendBlocksBySourceStart = new Map<string, BackendBlockMatch[]>();
+
+  for (const [index, block] of blocks.entries()) {
+    const blockType = mapMarkdownBlockTypeToBlockType(block.blockType);
+    const sourceRange = block.sourceRange;
+
+    if (blockType === null || sourceRange === null) {
+      continue;
+    }
+
+    const key = createBackendBlockSourceStartKey(
+      blockType,
+      sourceRange.startByteOffset,
+    );
+    const candidates = backendBlocksBySourceStart.get(key);
+    const match = { block, index };
+
+    if (candidates === undefined) {
+      backendBlocksBySourceStart.set(key, [match]);
+      continue;
+    }
+
+    candidates.push(match);
+  }
+
+  return backendBlocksBySourceStart;
+}
+
+/** @returns Stable lookup key for one rendered block type and source start. */
+function createBackendBlockSourceStartKey(
+  blockType: BlockType,
+  startByteOffset: number,
+): string {
+  return `${blockType}:${startByteOffset}`;
+}
+
+/** @returns The UTF-8 source byte range recorded on a React Markdown node. */
+function createMarkdownNodeSourceRange(
+  contents: string,
+  utf8ByteOffsets: Uint32Array,
+  node: unknown,
+): RenderedMarkdownSourceRange | null {
+  const startOffset = readMarkdownNodeOffset(node, "start");
+  const endOffset = readMarkdownNodeOffset(node, "end");
+
+  if (
+    startOffset === null ||
+    endOffset === null ||
+    startOffset > endOffset ||
+    endOffset > contents.length
+  ) {
+    return null;
+  }
+
+  const endOffsetAfterTrailingWhitespace = advancePastTrailingWhitespace(
+    contents,
+    endOffset,
+  );
+  const startByteOffset = utf8ByteOffsets[startOffset];
+  const endByteOffset = utf8ByteOffsets[endOffset];
+  const endByteOffsetAfterTrailingWhitespace =
+    utf8ByteOffsets[endOffsetAfterTrailingWhitespace];
+
+  if (
+    startByteOffset === undefined ||
+    endByteOffset === undefined ||
+    endByteOffsetAfterTrailingWhitespace === undefined
+  ) {
+    return null;
+  }
+
+  return {
+    startByteOffset,
+    endByteOffset,
+    endByteOffsetAfterTrailingWhitespace,
+  };
+}
+/** @returns UTF-8 byte offset for every UTF-16 source boundary. */
+function createUtf8ByteOffsetTable(contents: string): Uint32Array {
+  const byteOffsets = new Uint32Array(contents.length + 1);
+  let sourceOffset = 0;
+  let byteOffset = 0;
+
+  while (sourceOffset < contents.length) {
+    const codePoint = contents.codePointAt(sourceOffset);
+
+    if (codePoint === undefined) {
+      break;
+    }
+
+    const codeUnitLength = codePoint > 0xffff ? 2 : 1;
+
+    if (codeUnitLength === 2) {
+      byteOffsets[sourceOffset + 1] = byteOffset + 3;
+    }
+
+    byteOffset += getUtf8CodePointByteLength(codePoint);
+    sourceOffset += codeUnitLength;
+    byteOffsets[sourceOffset] = byteOffset;
+  }
+
+  return byteOffsets;
+}
+
+/** @returns UTF-8 byte length for one Unicode code point. */
+function getUtf8CodePointByteLength(codePoint: number): number {
+  if (codePoint <= 0x7f) {
+    return 1;
+  }
+
+  if (codePoint <= 0x7ff) {
+    return 2;
+  }
+
+  return codePoint <= 0xffff ? 3 : 4;
+}
+
+/** @returns The first source offset after contiguous trailing whitespace. */
+function advancePastTrailingWhitespace(
+  contents: string,
+  startOffset: number,
+): number {
+  let offset = startOffset;
+
+  while (offset < contents.length && /\s/u.test(contents[offset] ?? "")) {
+    offset += 1;
+  }
+
+  return offset;
+}
+
+/** @returns One JavaScript source offset from an unknown React Markdown node. */
+function readMarkdownNodeOffset(
+  node: unknown,
+  boundary: "start" | "end",
+): number | null {
+  if (typeof node !== "object" || node === null) {
+    return null;
+  }
+
+  const position = Reflect.get(node, "position") as unknown;
+
+  if (typeof position !== "object" || position === null) {
+    return null;
+  }
+
+  const point = Reflect.get(position, boundary) as unknown;
+
+  if (typeof point !== "object" || point === null) {
+    return null;
+  }
+
+  const offset = Reflect.get(point, "offset") as unknown;
+
+  return typeof offset === "number" &&
+    Number.isSafeInteger(offset) &&
+    offset >= 0
+    ? offset
+    : null;
+}
+
+/** @returns Whether a backend range differs only by trailing source whitespace. */
+function sourceRangesEqual(
+  backendRange: MarkdownBlockSourceRange | null,
+  renderedRange: RenderedMarkdownSourceRange,
+): boolean {
+  return (
+    backendRange !== null &&
+    backendRange.startByteOffset === renderedRange.startByteOffset &&
+    backendRange.endByteOffset >= renderedRange.endByteOffset &&
+    backendRange.endByteOffset <=
+      renderedRange.endByteOffsetAfterTrailingWhitespace
+  );
+}
+/** @returns The block only when its anchor hash is canonical. */
+function getCanonicalBackendBlock(
+  block: MarkdownBlockMetadata | null,
+): MarkdownBlockMetadata | null {
+  if (block === null) {
+    return null;
+  }
+
+  return CommentAnchorTextHash.parseCanonical(block.textHash).ok ? block : null;
 }
 
 /** @returns Rendered block attributes enriched with backend anchor metadata. */
@@ -988,7 +1211,11 @@ function createCommentAnchorDisplayStates({
 
     const blockTextHash = readRenderedBlockTextHash(block);
     const status: CommentAnchorDisplayStatus =
-      blockTextHash === comment.anchor.textHash ? "exact" : "stale";
+      blockTextHash === null
+        ? "orphaned"
+        : blockTextHash === comment.anchor.textHash
+          ? "exact"
+          : "stale";
 
     return {
       commentId: comment.id,
@@ -1033,17 +1260,12 @@ function createResolvedAnchorDisplayStatus({
 
 /**
  * @param block - The rendered block element to read the hash from.
- * @returns The validated backend hash, a legacy fallback when absent, or null when malformed.
+ * @returns The canonical backend text hash for a rendered block, when present.
  */
 function readRenderedBlockTextHash(block: HTMLElement): string | null {
-  const textHash = block.dataset.textHash;
+  const textHash = CommentAnchorTextHash.parseCanonical(block.dataset.textHash);
 
-  if (textHash === undefined) {
-    return createTextHash(readRenderedBlockAnchorText(block));
-  }
-
-  const parsedTextHash = CommentAnchorTextHash.parse(textHash);
-  return parsedTextHash.ok ? parsedTextHash.value : null;
+  return textHash.ok ? textHash.value : null;
 }
 
 /** Scrolls the active comment's Markdown block into view when it exists. */
@@ -1096,10 +1318,12 @@ function createAnchorDisplayStateByCommentId(
 /** @returns Markdown blocks grouped with comments that target each block. */
 function createCommentBlockHighlights({
   comments,
+  blocks,
   activeCommentId,
   anchorDisplayStateByCommentId,
 }: Readonly<{
   comments: readonly Comment[];
+  blocks: readonly MarkdownBlockMetadata[];
   activeCommentId: CommentId | null;
   anchorDisplayStateByCommentId: ReadonlyMap<
     CommentId,
@@ -1109,7 +1333,7 @@ function createCommentBlockHighlights({
   const commentsByBlock = new Map<string, Comment[]>();
 
   for (const comment of comments) {
-    const key = createCommentHighlightBlockKey(comment);
+    const key = createCommentHighlightBlockKey(comment, blocks);
 
     if (key === null) {
       continue;
@@ -1194,7 +1418,10 @@ function createCommentBlockAnnotations({
  * @param comment - The comment whose anchor determines the highlight target.
  * @returns The rendered block key that should receive a comment highlight.
  */
-function createCommentHighlightBlockKey(comment: Comment): string | null {
+function createCommentHighlightBlockKey(
+  comment: Comment,
+  blocks: readonly MarkdownBlockMetadata[],
+): string | null {
   const target = comment.anchorResolution?.target;
 
   if (comment.anchorResolution?.status === "orphaned") {
@@ -1203,8 +1430,14 @@ function createCommentHighlightBlockKey(comment: Comment): string | null {
 
   if (target !== undefined && target !== null) {
     const blockType = mapCommentBlockTypeToBlockType(target.blockType);
+    const matchesCurrentBackendBlock = blocks.some(
+      (block) =>
+        block.blockType === target.blockType &&
+        block.blockIndex === target.blockIndex &&
+        getCanonicalBackendBlock(block)?.textHash === target.textHash,
+    );
 
-    if (blockType === null) {
+    if (blockType === null || !matchesCurrentBackendBlock) {
       return null;
     }
 
@@ -1403,9 +1636,12 @@ function findCommentAnchorBlock({
     return null;
   }
 
-  return renderedRoot.querySelector<HTMLElement>(
-    `[data-block-type="${blockType}"][data-block-index="${anchor.blockIndex}"]`,
-  );
+  return findCanonicalBackendBlock({
+    renderedRoot,
+    renderedBlockType: blockType,
+    commentBlockType: anchor.blockType,
+    blockIndex: anchor.blockIndex,
+  });
 }
 
 /** @returns The rendered Markdown block for a backend-resolved target. */
@@ -1431,9 +1667,46 @@ function findCommentResolutionTargetBlock({
     return null;
   }
 
-  return renderedRoot.querySelector<HTMLElement>(
-    `[data-block-type="${blockType}"][data-block-index="${target.blockIndex}"]`,
+  return findCanonicalBackendBlock({
+    renderedRoot,
+    renderedBlockType: blockType,
+    expectedTextHash: target.textHash,
+    commentBlockType: target.blockType,
+    blockIndex: target.blockIndex,
+  });
+}
+
+/** @returns A rendered block backed by canonical backend anchor metadata. */
+function findCanonicalBackendBlock({
+  renderedRoot,
+  renderedBlockType,
+  expectedTextHash,
+  commentBlockType,
+  blockIndex,
+}: Readonly<{
+  renderedRoot: HTMLElement;
+  renderedBlockType: BlockType;
+  commentBlockType: CommentBlockType;
+  expectedTextHash?: string;
+  blockIndex: number;
+}>): HTMLElement | null {
+  const block = renderedRoot.querySelector<HTMLElement>(
+    `[data-block-type="${renderedBlockType}"][data-block-index="${blockIndex}"][data-comment-block-type="${commentBlockType}"]`,
   );
+
+  if (block === null) {
+    return null;
+  }
+
+  const textHash = readRenderedBlockTextHash(block);
+
+  if (textHash === null) {
+    return null;
+  }
+
+  return expectedTextHash === undefined || textHash === expectedTextHash
+    ? block
+    : null;
 }
 
 /** @returns The best block to scroll for a selected comment. */
@@ -1489,11 +1762,12 @@ function createMarkdownComponents({
   onRequestCommentEdit?: RequestCommentEdit;
 }>): Components {
   return {
-    h1: ({ node: _node, children, ...props }) => {
-      const block = blockIndexer.next("heading");
+    h1: ({ node, children, ...props }) => {
+      const block = blockIndexer.next("heading", node);
 
       return (
         <MarkdownCommentableBlock
+          canCreateComment={block.canCreateComment}
           commentAnnotations={block.commentAnnotations}
           onCreateBlockDraft={onCreateBlockDraft}
           onSelectComment={onSelectComment}
@@ -1509,11 +1783,12 @@ function createMarkdownComponents({
         </MarkdownCommentableBlock>
       );
     },
-    h2: ({ node: _node, children, ...props }) => {
-      const block = blockIndexer.next("heading");
+    h2: ({ node, children, ...props }) => {
+      const block = blockIndexer.next("heading", node);
 
       return (
         <MarkdownCommentableBlock
+          canCreateComment={block.canCreateComment}
           commentAnnotations={block.commentAnnotations}
           onCreateBlockDraft={onCreateBlockDraft}
           onSelectComment={onSelectComment}
@@ -1529,11 +1804,12 @@ function createMarkdownComponents({
         </MarkdownCommentableBlock>
       );
     },
-    h3: ({ node: _node, children, ...props }) => {
-      const block = blockIndexer.next("heading");
+    h3: ({ node, children, ...props }) => {
+      const block = blockIndexer.next("heading", node);
 
       return (
         <MarkdownCommentableBlock
+          canCreateComment={block.canCreateComment}
           commentAnnotations={block.commentAnnotations}
           onCreateBlockDraft={onCreateBlockDraft}
           onSelectComment={onSelectComment}
@@ -1549,11 +1825,12 @@ function createMarkdownComponents({
         </MarkdownCommentableBlock>
       );
     },
-    h4: ({ node: _node, children, ...props }) => {
-      const block = blockIndexer.next("heading");
+    h4: ({ node, children, ...props }) => {
+      const block = blockIndexer.next("heading", node);
 
       return (
         <MarkdownCommentableBlock
+          canCreateComment={block.canCreateComment}
           commentAnnotations={block.commentAnnotations}
           onCreateBlockDraft={onCreateBlockDraft}
           onSelectComment={onSelectComment}
@@ -1569,11 +1846,12 @@ function createMarkdownComponents({
         </MarkdownCommentableBlock>
       );
     },
-    h5: ({ node: _node, children, ...props }) => {
-      const block = blockIndexer.next("heading");
+    h5: ({ node, children, ...props }) => {
+      const block = blockIndexer.next("heading", node);
 
       return (
         <MarkdownCommentableBlock
+          canCreateComment={block.canCreateComment}
           commentAnnotations={block.commentAnnotations}
           onCreateBlockDraft={onCreateBlockDraft}
           onSelectComment={onSelectComment}
@@ -1589,11 +1867,12 @@ function createMarkdownComponents({
         </MarkdownCommentableBlock>
       );
     },
-    h6: ({ node: _node, children, ...props }) => {
-      const block = blockIndexer.next("heading");
+    h6: ({ node, children, ...props }) => {
+      const block = blockIndexer.next("heading", node);
 
       return (
         <MarkdownCommentableBlock
+          canCreateComment={block.canCreateComment}
           commentAnnotations={block.commentAnnotations}
           onCreateBlockDraft={onCreateBlockDraft}
           onSelectComment={onSelectComment}
@@ -1609,11 +1888,12 @@ function createMarkdownComponents({
         </MarkdownCommentableBlock>
       );
     },
-    p: ({ node: _node, children, ...props }) => {
-      const block = blockIndexer.next("paragraph");
+    p: ({ node, children, ...props }) => {
+      const block = blockIndexer.next("paragraph", node);
 
       return (
         <MarkdownCommentableBlock
+          canCreateComment={block.canCreateComment}
           commentAnnotations={block.commentAnnotations}
           onCreateBlockDraft={onCreateBlockDraft}
           onSelectComment={onSelectComment}
@@ -1629,11 +1909,12 @@ function createMarkdownComponents({
         </MarkdownCommentableBlock>
       );
     },
-    li: ({ children, ...props }) => {
-      const block = blockIndexer.next("list-item");
+    li: ({ node, children, ...props }) => {
+      const block = blockIndexer.next("list-item", node);
 
       return (
         <MarkdownListItem
+          canCreateComment={block.canCreateComment}
           {...props}
           {...block.metadata}
           commentAnnotations={block.commentAnnotations}
@@ -1649,11 +1930,12 @@ function createMarkdownComponents({
         </MarkdownListItem>
       );
     },
-    pre: ({ node: _node, children, ...props }) => {
-      const block = blockIndexer.next("code");
+    pre: ({ node, children, ...props }) => {
+      const block = blockIndexer.next("code", node);
 
       return (
         <MarkdownCommentableBlock
+          canCreateComment={block.canCreateComment}
           commentAnnotations={block.commentAnnotations}
           onCreateBlockDraft={onCreateBlockDraft}
           onSelectComment={onSelectComment}
@@ -1669,11 +1951,12 @@ function createMarkdownComponents({
         </MarkdownCommentableBlock>
       );
     },
-    table: ({ node: _node, children, ...props }) => {
-      const block = blockIndexer.next("table");
+    table: ({ node, children, ...props }) => {
+      const block = blockIndexer.next("table", node);
 
       return (
         <MarkdownCommentableBlock
+          canCreateComment={block.canCreateComment}
           commentAnnotations={block.commentAnnotations}
           onCreateBlockDraft={onCreateBlockDraft}
           onSelectComment={onSelectComment}
@@ -1706,6 +1989,7 @@ function createMarkdownComponents({
 
 type MarkdownCommentableBlockProps = Readonly<{
   children: ReactElement;
+  canCreateComment: boolean;
   commentAnnotations: readonly CommentBlockAnnotation[];
   onCreateBlockDraft: CreateBlockCommentDraft;
   onSelectComment?: (commentId: CommentId) => void;
@@ -1715,6 +1999,7 @@ type MarkdownCommentableBlockProps = Readonly<{
 /** @returns A rendered Markdown block with a gutter comment affordance. */
 function MarkdownCommentableBlock({
   children,
+  canCreateComment,
   commentAnnotations,
   onCreateBlockDraft,
   onSelectComment,
@@ -1742,19 +2027,21 @@ function MarkdownCommentableBlock({
       }
     >
       {children}
-      <button
-        className="markdown-block-comment-button"
-        type="button"
-        aria-label="コメント追加"
-        title="コメント追加"
-        onMouseDown={(event) => {
-          event.preventDefault();
-        }}
-        onClick={createDraftFromRenderedBlock}
-      >
-        <MessageSquarePlus aria-hidden="true" size={14} />
-        <span>コメント追加</span>
-      </button>
+      {canCreateComment ? (
+        <button
+          className="markdown-block-comment-button"
+          type="button"
+          aria-label="コメント追加"
+          title="コメント追加"
+          onMouseDown={(event) => {
+            event.preventDefault();
+          }}
+          onClick={createDraftFromRenderedBlock}
+        >
+          <MessageSquarePlus aria-hidden="true" size={14} />
+          <span>コメント追加</span>
+        </button>
+      ) : null}
       <CommentAnnotationStack
         annotations={commentAnnotations}
         onSelectComment={onSelectComment}
@@ -2882,6 +3169,7 @@ type ListItemProps = Omit<ComponentPropsWithoutRef<"li">, keyof BlockMetadata> &
     checked?: boolean | null;
     node?: unknown;
     commentAnnotations: readonly CommentBlockAnnotation[];
+    canCreateComment: boolean;
     onCreateBlockDraft: CreateBlockCommentDraft;
     onSelectComment?: (commentId: CommentId) => void;
     onRequestCommentEdit?: RequestCommentEdit;
@@ -2893,6 +3181,7 @@ function MarkdownListItem({
   checked: _checked,
   node: _node,
   commentAnnotations,
+  canCreateComment,
   onCreateBlockDraft,
   onSelectComment,
   onRequestCommentEdit,
@@ -2916,18 +3205,20 @@ function MarkdownListItem({
   return (
     <li {...props}>
       {children}
-      <button
-        className="markdown-block-comment-button markdown-block-comment-button--inline"
-        type="button"
-        aria-label="コメント追加"
-        title="コメント追加"
-        onMouseDown={(event) => {
-          event.preventDefault();
-        }}
-        onClick={createDraftFromListItem}
-      >
-        <MessageSquarePlus aria-hidden="true" size={14} />
-      </button>
+      {canCreateComment ? (
+        <button
+          className="markdown-block-comment-button markdown-block-comment-button--inline"
+          type="button"
+          aria-label="コメント追加"
+          title="コメント追加"
+          onMouseDown={(event) => {
+            event.preventDefault();
+          }}
+          onClick={createDraftFromListItem}
+        >
+          <MessageSquarePlus aria-hidden="true" size={14} />
+        </button>
+      ) : null}
       <CommentAnnotationStack
         annotations={commentAnnotations}
         onSelectComment={onSelectComment}
