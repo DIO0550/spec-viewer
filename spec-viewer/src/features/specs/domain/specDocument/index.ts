@@ -215,7 +215,7 @@ export const SpecDocumentPolicy = {
   },
 
   /**
-   * @param document - Loaded document variant.
+   * @param document - Document variant to inspect.
    * @param nodeCapabilities - Explicit capabilities supplied by the spec tree boundary.
    * @returns Centralized readability, commentability, preview, and script policy.
    */
