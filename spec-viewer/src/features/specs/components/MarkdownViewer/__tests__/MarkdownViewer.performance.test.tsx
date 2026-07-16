@@ -3,6 +3,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
+import { createCommentTestFixture } from "@/features/comments/testing/comment-test-fixture";
 import type { Comment } from "@/features/comments/types/comment";
 import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
 import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
@@ -253,32 +254,32 @@ test("MarkdownViewerはresolution targetごとにbackend blocksを再走査し�
       return block;
     },
   );
-  const comments: readonly Comment[] = blocks.map((block) => ({
-    id: TestValues.commentId(`cmt_resolution_${block.blockIndex}`),
-    anchor: createCommentAnchorTestFixture({
-      blockIndex: block.blockIndex,
-      textHash: block.textHash,
-      textSnippet: block.textSnippet,
-    }),
-    body: `Review ${block.blockIndex}`,
-    status: "open",
-    resolved: false,
-    anchorResolution: {
-      status: "resolved",
-      reason: "exact_match",
-      details: null,
-      target: {
-        blockType: "paragraph",
+  const comments: readonly Comment[] = blocks.map((block) =>
+    createCommentTestFixture({
+      id: `cmt_resolution_${block.blockIndex}`,
+      anchor: createCommentAnchorTestFixture({
         blockIndex: block.blockIndex,
         textHash: block.textHash,
         textSnippet: block.textSnippet,
-        sourceRange: block.sourceRange,
-        score: 1,
+      }),
+      body: `Review ${block.blockIndex}`,
+      anchorResolution: {
+        status: "resolved",
+        reason: "exact_match",
+        details: null,
+        target: {
+          blockType: "paragraph",
+          blockIndex: block.blockIndex,
+          textHash: block.textHash,
+          textSnippet: block.textSnippet,
+          sourceRange: block.sourceRange,
+          score: 1,
+        },
       },
-    },
-    createdAt: TestValues.isoDateTime("2026-07-15T00:00:00Z"),
-    updatedAt: TestValues.isoDateTime("2026-07-15T00:00:00Z"),
-  }));
+      createdAt: "2026-07-15T00:00:00Z",
+      updatedAt: "2026-07-15T00:00:00Z",
+    }),
+  );
   let blockElementReads = 0;
   const trackedBlocks = new Proxy(blocks, {
     get(target, property, receiver) {
