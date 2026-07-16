@@ -1,5 +1,5 @@
+import { Comment } from "@/features/comments/domain/comment";
 import type {
-  Comment,
   SpecSkillMcpFeedbackComment,
   SpecSkillMcpFeedbackInterface,
   SpecSkillMcpFeedbackPayload,
@@ -32,12 +32,8 @@ export function createSpecSkillMcpFeedbackDryRunPayload({
   comments,
   generatedAt,
 }: CreateSpecSkillMcpFeedbackDryRunPayloadInput): SpecSkillMcpFeedbackPayload {
-  const openCommentCount = comments.filter(
-    (comment) => comment.status === "open",
-  ).length;
-  const resolvedCommentCount = comments.filter(
-    (comment) => comment.status === "resolved",
-  ).length;
+  const openCommentCount = comments.filter(Comment.isOpen).length;
+  const resolvedCommentCount = comments.filter(Comment.isResolved).length;
   const orphanedCommentCount = comments.filter(
     (comment) => comment.anchorResolution?.status === "orphaned",
   ).length;
@@ -101,7 +97,7 @@ function createSpecSkillMcpFeedbackComment(
     fileKey: comment.anchor.fileKey,
     body: comment.body,
     status: comment.status,
-    resolved: comment.resolved,
+    resolved: Comment.isResolved(comment),
     anchor: comment.anchor,
     anchorResolution: comment.anchorResolution ?? null,
     createdAt: IsoDateTime.toDto(comment.createdAt),

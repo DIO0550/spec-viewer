@@ -36,6 +36,7 @@ import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
 import {
   BlockType as CommentAnchorBlockType,
+  Comment as CommentAggregate,
   TextHash as CommentAnchorTextHash,
   CommentBody,
   type CommentBodyDraft,
@@ -1506,7 +1507,7 @@ function selectCommentIdForHighlight(
     return activeComment.id;
   }
 
-  const openComment = comments.find((comment) => !comment.resolved);
+  const openComment = comments.find(CommentAggregate.isOpen);
 
   return openComment?.id ?? comments[0].id;
 }
@@ -1556,7 +1557,7 @@ function selectCommentHighlightState({
     return "fuzzy";
   }
 
-  const hasOpenComment = comments.some((comment) => !comment.resolved);
+  const hasOpenComment = comments.some(CommentAggregate.isOpen);
 
   return hasOpenComment ? "open" : "resolved";
 }
@@ -1621,7 +1622,7 @@ function isReliableRangeHighlight({
  * @returns The subdued or prominent state for an exact range highlight.
  */
 function selectExactRangeState(comment: Comment): CommentHighlightState {
-  return comment.resolved ? "resolved" : "open";
+  return CommentAggregate.isResolved(comment) ? "resolved" : "open";
 }
 
 /** @returns Block metadata with highlight attributes and selection handlers. */
@@ -2165,7 +2166,7 @@ function CommentAnnotationCard({
       data-active={isActive ? "true" : "false"}
       data-anchor-display-status={anchorDisplayStatus}
       data-expanded={isExpanded ? "true" : "false"}
-      data-resolved={comment.resolved ? "true" : "false"}
+      data-resolved={CommentAggregate.isResolved(comment) ? "true" : "false"}
       aria-current={isActive ? "true" : undefined}
     >
       <div className="markdown-comment-annotation__header">
@@ -2184,14 +2185,14 @@ function CommentAnnotationCard({
         >
           {isExpanded ? (
             <ChevronDown aria-hidden="true" size={14} />
-          ) : comment.resolved ? (
+          ) : CommentAggregate.isResolved(comment) ? (
             <CheckCircle2 aria-hidden="true" size={14} />
           ) : (
             <MessageSquare aria-hidden="true" size={14} />
           )}
         </button>
         <span className="markdown-comment-annotation__status">
-          {comment.resolved ? (
+          {CommentAggregate.isResolved(comment) ? (
             <CheckCircle2 aria-hidden="true" size={13} />
           ) : (
             <MessageSquare aria-hidden="true" size={13} />
@@ -2240,7 +2241,9 @@ function formatCommentAnnotationStatus(
     return uiText.sidebar.orphaned;
   }
 
-  return comment.resolved ? uiText.sidebar.resolved : uiText.sidebar.openFilter;
+  return CommentAggregate.isResolved(comment)
+    ? uiText.sidebar.resolved
+    : uiText.sidebar.openFilter;
 }
 
 const COMMENT_PREVIEW_MAX_LENGTH = 84;
@@ -2667,7 +2670,7 @@ function createCommentAnchorDraftKey(draft: CommentAnchorDraft): string {
  * @returns Whether the comment should be rendered in the left Markdown viewer.
  */
 function isVisibleInMarkdownViewer(comment: Comment): boolean {
-  return !comment.resolved;
+  return CommentAggregate.isOpen(comment);
 }
 
 /** @returns The latest editable draft for a still-visible comment. */
@@ -2868,7 +2871,7 @@ function CommentEditPopover({
 
   const toggleResolved = async (): Promise<void> => {
     setValidationMessage(null);
-    const wasChanged = draft.comment.resolved
+    const wasChanged = CommentAggregate.isResolved(draft.comment)
       ? await onReopenComment(draft.comment.id)
       : await onResolveComment(draft.comment.id);
 
@@ -2929,7 +2932,7 @@ function CommentEditPopover({
     onCancel();
   };
 
-  const statusActionLabel = draft.comment.resolved
+  const statusActionLabel = CommentAggregate.isResolved(draft.comment)
     ? uiText.commentThread.reopen
     : uiText.commentThread.resolve;
 
@@ -3031,7 +3034,7 @@ function CommentEditPopover({
               void toggleResolved();
             }}
           >
-            {draft.comment.resolved ? (
+            {CommentAggregate.isResolved(draft.comment) ? (
               <RotateCcw aria-hidden="true" size={15} />
             ) : (
               <CheckCircle2 aria-hidden="true" size={15} />

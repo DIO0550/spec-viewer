@@ -1,6 +1,7 @@
 import {
   Comment,
   type Comment as CommentDomain,
+  type CommentAnchorResolution,
 } from "@/features/comments/domain/comment";
 import {
   CommentAnchor,
@@ -10,7 +11,6 @@ import {
 import { CommentBody } from "@/features/comments/domain/commentBody";
 import type {
   AddCommentRequest,
-  CommentAnchorResolution,
   CommentBlockType,
   CommentStatusRequest,
   DeleteCommentRequest,
@@ -321,16 +321,46 @@ function mapComment(
     );
   }
 
-  return Comment.create({
+  const body = CommentBody.parse(dto.body);
+  if (!body.ok) {
+    throw new IpcResponseDecodeError(
+      command,
+      `${path}.body`,
+      "non-blank comment body",
+      dto.body,
+    );
+  }
+
+  const createdAt = decodeIsoDateTime(
+    command,
+    `${path}.createdAt`,
+    dto.createdAt,
+  );
+  const updatedAt = decodeIsoDateTime(
+    command,
+    `${path}.updatedAt`,
+    dto.updatedAt,
+  );
+  const restored = Comment.restore({
     id: decodeCommentId(command, `${path}.id`, dto.id),
     anchor: anchor.value,
-    body: dto.body,
+    body: body.commentBody,
     status: dto.status,
-    resolved: dto.resolved,
     anchorResolution: mapAnchorResolutionDtoToDomain(dto.anchorResolution),
-    createdAt: decodeIsoDateTime(command, `${path}.createdAt`, dto.createdAt),
-    updatedAt: decodeIsoDateTime(command, `${path}.updatedAt`, dto.updatedAt),
+    createdAt,
+    updatedAt,
   });
+
+  if (!restored.ok) {
+    throw new IpcResponseDecodeError(
+      command,
+      `${path}.updatedAt`,
+      "date-time at or after createdAt",
+      dto.updatedAt,
+    );
+  }
+
+  return restored.value;
 }
 
 /**

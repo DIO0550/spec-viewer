@@ -1,4 +1,3 @@
-import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { invoke } from "@tauri-apps/api/core";
 import { expect, test, vi } from "vitest";
 import {
@@ -19,13 +18,14 @@ import { ToggleCommentResolvedCommandError } from "@/features/comments/infra/tau
 import { UpdateCommentCommandError } from "@/features/comments/infra/tauri/updateComment";
 import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
 import { commentBody } from "@/features/comments/testing/comment-body-test-fixture";
+import { createCommentTestFixture } from "@/features/comments/testing/comment-test-fixture";
 import type {
   AddCommentRequest,
-  Comment,
   DeleteCommentRequest,
   ListCommentsRequest,
   UpdateCommentRequest,
 } from "@/features/comments/types/comment";
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
@@ -34,8 +34,8 @@ vi.mock("@tauri-apps/api/core", () => ({
 const invokeMock = vi.mocked(invoke);
 const commentId = TestValues.commentId;
 
-const comment: Comment = {
-  id: commentId("cmt_1"),
+const comment = createCommentTestFixture({
+  id: "cmt_1",
   anchor: createCommentAnchorTestFixture({
     fileKey: "tasks",
     blockType: "paragraph",
@@ -48,12 +48,8 @@ const comment: Comment = {
     },
   }),
   body: "Clarify this task",
-  status: "open",
-  resolved: false,
-  anchorResolution: null,
-  createdAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
-  updatedAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
-};
+});
+const commentDto = { ...comment, resolved: false };
 
 const listRequest: ListCommentsRequest = {
   workspacePath: "/workspace/spec-reviewer",
@@ -86,7 +82,7 @@ const deleteRequest: DeleteCommentRequest = {
 
 test("listCommentsはlist_commentsへフィルター付きrequestを渡す", async () => {
   invokeMock.mockReset();
-  invokeMock.mockResolvedValue({ comments: [comment] });
+  invokeMock.mockResolvedValue({ comments: [commentDto] });
 
   const result = await listComments(listRequest);
 
@@ -98,7 +94,7 @@ test("listCommentsはlist_commentsへフィルター付きrequestを渡す", asy
 
 test("commentCommandsはadd_commentへ追加requestを渡す", async () => {
   invokeMock.mockReset();
-  invokeMock.mockResolvedValue(comment);
+  invokeMock.mockResolvedValue(commentDto);
 
   const result = await commentCommands.addComment(addRequest);
 
@@ -111,7 +107,7 @@ test("commentCommandsはadd_commentへ追加requestを渡す", async () => {
 test("updateCommentはupdate_commentへ本文更新requestを渡す", async () => {
   invokeMock.mockReset();
   invokeMock.mockResolvedValue({
-    ...comment,
+    ...commentDto,
     body: "Clarify token expiry",
   });
 
@@ -286,7 +282,7 @@ test("GenerateLlmPromptCommandError.fromUnknownは正規化済みunknownエラ�
 
 test("addCommentは空のcomment IDをstructured decode errorとして拒否する", async () => {
   invokeMock.mockReset();
-  invokeMock.mockResolvedValue({ ...comment, id: "" });
+  invokeMock.mockResolvedValue({ ...commentDto, id: "" });
 
   await expect(addComment(addRequest)).rejects.toMatchObject({
     command: "add_comment",
@@ -300,7 +296,7 @@ test("addCommentは空のcomment IDをstructured decode errorとして拒否す�
 test("listCommentsは配列内の不正日時を最深path付きdecode errorとして拒否する", async () => {
   invokeMock.mockReset();
   invokeMock.mockResolvedValue({
-    comments: [{ ...comment, createdAt: "2026-02-30T10:00:00Z" }],
+    comments: [{ ...commentDto, createdAt: "2026-02-30T10:00:00Z" }],
   });
 
   await expect(listComments(listRequest)).rejects.toMatchObject({
@@ -312,36 +308,79 @@ test("listCommentsは配列内の不正日時を最深path付きdecode errorと�
   });
 });
 
-test.each(["   ", "md5:12345678", "sha256:ABCDEF12"])(
-  "addCommentは不正なanchor hash %sと許可fingerprint契約を診断する",
-  async (textHash) => {
-    invokeMock.mockReset();
-    invokeMock.mockResolvedValue({
-      ...comment,
-      anchor: { ...comment.anchor, textHash },
-    });
+test.each([
+  ["open", true],
+  ["resolved", false],
+] as const)("addCommentはstatus %sとresolved %sが矛盾するDTOを拒否する", async (status, resolved) => {
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue({ ...commentDto, status, resolved });
 
-    await expect(addComment(addRequest)).rejects.toMatchObject({
-      command: "add_comment",
-      code: "invalidResponse",
-      path: "$.anchor.textHash",
-      expected:
-        "sha256:<8 lowercase hex> or fnv1a:<8 lowercase hex> text hash",
-      actual: textHash,
-    });
-  },
-);
+  await expect(addComment(addRequest)).rejects.toMatchObject({
+    command: "add_comment",
+    code: "invalidResponse",
+    path: "$.resolved",
+    expected: `boolean consistent with status ${status}`,
+    actual: String(resolved),
+  });
+});
+
+test("addCommentはblank bodyをaggregate restore errorとして拒否する", async () => {
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue({ ...commentDto, body: "   " });
+
+  await expect(addComment(addRequest)).rejects.toMatchObject({
+    command: "add_comment",
+    code: "invalidResponse",
+    path: "$.body",
+    expected: "non-blank comment body",
+    actual: "   ",
+  });
+});
+
+test("addCommentはupdatedAtがcreatedAtより前のDTOを拒否する", async () => {
+  const updatedAt = "2026-05-05T09:59:59.999999999Z";
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue({ ...commentDto, updatedAt });
+
+  await expect(addComment(addRequest)).rejects.toMatchObject({
+    command: "add_comment",
+    code: "invalidResponse",
+    path: "$.updatedAt",
+    expected: "date-time at or after createdAt",
+    actual: updatedAt,
+  });
+});
+
+test.each([
+  "   ",
+  "md5:12345678",
+  "sha256:ABCDEF12",
+])("addCommentは不正なanchor hash %sと許可fingerprint契約を診断する", async (textHash) => {
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue({
+    ...commentDto,
+    anchor: { ...commentDto.anchor, textHash },
+  });
+
+  await expect(addComment(addRequest)).rejects.toMatchObject({
+    command: "add_comment",
+    code: "invalidResponse",
+    path: "$.anchor.textHash",
+    expected: "sha256:<8 lowercase hex> or fnv1a:<8 lowercase hex> text hash",
+    actual: textHash,
+  });
+});
 
 test("listCommentsは不正なanchor rangeの実値を診断に保持する", async () => {
   invokeMock.mockReset();
   invokeMock.mockResolvedValue({
     comments: [
-      comment,
+      commentDto,
       {
-        ...comment,
+        ...commentDto,
         id: "cmt_2",
         anchor: {
-          ...comment.anchor,
+          ...commentDto.anchor,
           charRange: { start: 3, end: 3 },
         },
       },

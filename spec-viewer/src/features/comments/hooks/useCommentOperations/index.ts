@@ -1,15 +1,13 @@
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useReducer,
-  useRef,
-} from "react";
+import { useCallback, useLayoutEffect, useReducer, useRef } from "react";
 import type {
   CommentFeatureError as CommentFeatureErrorType,
   CommentOperationFeatureState,
 } from "@/features/comments/application/commentError";
 import type { CommentCommands } from "@/features/comments/application/ports/commentCommands";
+import {
+  Comment as CommentAggregate,
+  type ReconcileCommentCreationInput,
+} from "@/features/comments/domain/comment";
 import type { CommentBody } from "@/features/comments/domain/commentBody";
 import {
   CommentOperationFailedState,
@@ -19,7 +17,11 @@ import {
 } from "@/features/comments/domain/commentOperation";
 import type { CommentScope } from "@/features/comments/domain/commentScope";
 import type { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
-import { Comments } from "@/features/comments/domain/comments";
+import {
+  Comments,
+  type CommentsReconciliationResult,
+  type ReconcileCommentRevisionInput,
+} from "@/features/comments/domain/comments";
 import {
   addComment as addCommentViaGateway,
   deleteComment as deleteCommentViaGateway,
@@ -53,12 +55,23 @@ export type CommentListTransform = (
   comments: readonly Comment[],
 ) => readonly Comment[];
 
+export type CommentCollectionSnapshot = Readonly<{
+  comments: readonly Comment[];
+  revision: number;
+  isLoading: boolean;
+  selectionIdentity: SelectionIdentityType | null;
+  statusFilter: CommentStatusFilter;
+}>;
+
 export type UseCommentOperationsOptions = Readonly<{
   scope: CommentScope | null;
   selectionIdentity: SelectionIdentityType | null;
   statusFilter: CommentStatusFilter;
   commands: CommentCommands;
   currentComments: readonly Comment[];
+  isListLoading?: boolean;
+  listCollectionRevision?: number;
+  getCurrentScopeSnapshot?: () => CommentCollectionSnapshot;
   /** @param transform - Transform applied to the active scope comment list. */
   updateCurrentScopeComments: (transform: CommentListTransform) => void;
   /** Reloads comments for the active scope. */
@@ -98,9 +111,32 @@ type CommentOperationEvent =
 
 type AsyncOperationToken = Readonly<{
   requestId: number;
+  dataContextVersion: number;
+  listCollectionRevision: number;
+  commentId: CommentId | null;
   selectionIdentity: SelectionIdentityType;
   statusFilter: CommentStatusFilter;
+  statusFilterGeneration: number;
 }>;
+type OperationContext = Readonly<{
+  reloadComments: () => Promise<boolean>;
+  selectionIdentity: SelectionIdentityType | null;
+  statusFilter: CommentStatusFilter;
+}>;
+type OperationContextChanges = Readonly<{
+  reloadCommentsChanged: boolean;
+  selectionChanged: boolean;
+  statusFilterChanged: boolean;
+}>;
+type DataOperationOwnershipContext = Readonly<{
+  dataContextVersion: number;
+  latestDataRequestByComment: ReadonlyMap<CommentId, number>;
+  selectionIdentity: SelectionIdentityType | null;
+}>;
+type CommentRevisionOperationKind = Extract<
+  CommentOperationKind,
+  "update" | "resolve" | "reopen" | "toggle"
+>;
 
 const initialOperationState: CommentOperationFeatureState =
   CommentOperationIdleState.create();
@@ -115,6 +151,9 @@ export function useCommentOperations(
   const {
     commands,
     currentComments,
+    getCurrentScopeSnapshot,
+    isListLoading = false,
+    listCollectionRevision = 0,
     reloadComments,
     scope,
     selectionIdentity,
@@ -122,17 +161,92 @@ export function useCommentOperations(
     updateCurrentScopeComments,
   } = options;
   const operationRequestIdRef = useRef(0);
+  const dataContextVersionRef = useRef(0);
+  const latestDataRequestByCommentRef = useRef(new Map<CommentId, number>());
   const activeSelectionIdentityRef = useRef(selectionIdentity);
+  const activeCommentsRef = useRef(currentComments);
+  const activeListCollectionRevisionRef = useRef(listCollectionRevision);
+  const activeReloadCommentsRef = useRef(reloadComments);
   const activeStatusFilterRef = useRef(statusFilter);
+  const activeStatusFilterGenerationRef = useRef(0);
+  const committedOperationContextRef = useRef<OperationContext>({
+    reloadComments,
+    selectionIdentity,
+    statusFilter,
+  });
   const [operationState, dispatchOperation] = useReducer(
     commentOperationReducer,
     initialOperationState,
   );
 
+  const readCurrentScopeSnapshot = useCallback(
+    (): CommentCollectionSnapshot =>
+      getCurrentScopeSnapshot?.() ?? {
+        comments: activeCommentsRef.current,
+        revision: activeListCollectionRevisionRef.current,
+        isLoading: isListLoading,
+        selectionIdentity: activeSelectionIdentityRef.current,
+        statusFilter: activeStatusFilterRef.current,
+      },
+    [getCurrentScopeSnapshot, isListLoading],
+  );
+
   useLayoutEffect(() => {
+    const previousContext = committedOperationContextRef.current;
+    const selectionChanged = !isSameSelectionIdentity(
+      previousContext.selectionIdentity,
+      selectionIdentity,
+    );
+    const statusFilterChanged = previousContext.statusFilter !== statusFilter;
+    const reloadCommentsChanged =
+      previousContext.reloadComments !== reloadComments;
+    const contextChanges = {
+      reloadCommentsChanged,
+      selectionChanged,
+      statusFilterChanged,
+    };
+
     activeSelectionIdentityRef.current = selectionIdentity;
+    const sharedSnapshot = getCurrentScopeSnapshot?.();
+    activeListCollectionRevisionRef.current =
+      sharedSnapshot?.revision ?? listCollectionRevision;
+    activeReloadCommentsRef.current = reloadComments;
     activeStatusFilterRef.current = statusFilter;
-  }, [selectionIdentity, statusFilter]);
+    if (statusFilterChanged) {
+      activeStatusFilterGenerationRef.current += 1;
+    }
+    if (selectionChanged || statusFilterChanged) {
+      activeCommentsRef.current = sharedSnapshot?.comments ?? [];
+    } else if (!isListLoading) {
+      activeCommentsRef.current = sharedSnapshot?.comments ?? currentComments;
+    }
+
+    committedOperationContextRef.current = {
+      reloadComments,
+      selectionIdentity,
+      statusFilter,
+    };
+
+    if (!hasOperationContextChanged(contextChanges)) {
+      return;
+    }
+
+    operationRequestIdRef.current += 1;
+    dispatchOperation({ type: "operationInvalidated" });
+
+    if (shouldInvalidateOperationData(contextChanges)) {
+      dataContextVersionRef.current += 1;
+      latestDataRequestByCommentRef.current.clear();
+    }
+  }, [
+    currentComments,
+    getCurrentScopeSnapshot,
+    isListLoading,
+    listCollectionRevision,
+    reloadComments,
+    selectionIdentity,
+    statusFilter,
+  ]);
 
   const beginOperation = useCallback(
     (
@@ -145,38 +259,188 @@ export function useCommentOperations(
 
       const requestId = operationRequestIdRef.current + 1;
       operationRequestIdRef.current = requestId;
+      if (commentId !== null) {
+        latestDataRequestByCommentRef.current.set(commentId, requestId);
+      }
       dispatchOperation({
         type: "operationStarted",
         operation,
         commentId,
       });
 
-      return createOperationToken(requestId, selectionIdentity, statusFilter);
+      return {
+        requestId,
+        dataContextVersion: dataContextVersionRef.current,
+        listCollectionRevision: readCurrentScopeSnapshot().revision,
+        commentId,
+        selectionIdentity,
+        statusFilter,
+        statusFilterGeneration: activeStatusFilterGenerationRef.current,
+      };
     },
-    [scope, selectionIdentity, statusFilter],
+    [readCurrentScopeSnapshot, scope, selectionIdentity, statusFilter],
   );
 
-  const canApplyOperationResult = useCallback(
+  const canApplyOperationData = useCallback(
     (token: AsyncOperationToken): boolean =>
-      isMatchingOperationToken(
-        token,
-        operationRequestIdRef.current,
-        activeSelectionIdentityRef.current,
-        activeStatusFilterRef.current,
-      ),
+      isDataOperationOwner(token, {
+        dataContextVersion: dataContextVersionRef.current,
+        latestDataRequestByComment: latestDataRequestByCommentRef.current,
+        selectionIdentity: activeSelectionIdentityRef.current,
+      }),
     [],
   );
 
-  const markOperationSucceeded = useCallback((): void => {
-    dispatchOperation({ type: "operationSucceeded" });
-  }, []);
+  const canApplyOperationState = useCallback(
+    (token: AsyncOperationToken): boolean =>
+      token.requestId === operationRequestIdRef.current,
+    [],
+  );
+
+  const isOperationStatusFilterCurrent = useCallback(
+    (token: AsyncOperationToken): boolean =>
+      token.statusFilter === activeStatusFilterRef.current &&
+      token.statusFilterGeneration === activeStatusFilterGenerationRef.current,
+    [],
+  );
+
+  const updateVisibleComments = useCallback(
+    (transform: CommentListTransform): void => {
+      const currentSnapshot = readCurrentScopeSnapshot();
+      const nextActiveComments = transform(currentSnapshot.comments);
+      if (nextActiveComments === currentSnapshot.comments) {
+        activeCommentsRef.current = currentSnapshot.comments;
+        return;
+      }
+
+      activeCommentsRef.current = nextActiveComments;
+      updateCurrentScopeComments(() => nextActiveComments);
+    },
+    [readCurrentScopeSnapshot, updateCurrentScopeComments],
+  );
+
+  /**
+   * @param token - Operation ownership captured before the command.
+   * @param response - Decoded add command response.
+   * @param expectation - Anchor and body submitted to the command.
+   * @param previousComments - Visible collection captured before the command.
+   * @returns Reconciled created aggregate.
+   * @throws Error when the response violates creation invariants.
+   */
+  const reconcileCreationResponse = useCallback(
+    async (
+      token: AsyncOperationToken,
+      response: Comment,
+      expectation: ReconcileCommentCreationInput,
+      previousComments: readonly Comment[],
+    ): Promise<Comment> => {
+      const reconciled = requireReconciliation(
+        "add",
+        Comments.appendDisplayable(
+          previousComments,
+          response,
+          expectation,
+          token.statusFilter,
+        ),
+      );
+
+      if (!isOperationStatusFilterCurrent(token)) {
+        await activeReloadCommentsRef.current();
+        return reconciled.comment;
+      }
+
+      const applied = requireReconciliation(
+        "add",
+        Comments.appendDisplayable(
+          readCurrentScopeSnapshot().comments,
+          response,
+          expectation,
+          token.statusFilter,
+        ),
+      );
+      updateVisibleComments(() => applied.comments);
+      return applied.comment;
+    },
+    [
+      isOperationStatusFilterCurrent,
+      readCurrentScopeSnapshot,
+      updateVisibleComments,
+    ],
+  );
+
+  /**
+   * @param token - Operation ownership captured before the command.
+   * @param operation - Revision command being reconciled.
+   * @param response - Decoded revision command response.
+   * @param input - Expected id and operation-specific field changes.
+   * @param previousComments - Visible collection captured before the command.
+   * @returns Reconciled revised aggregate.
+   * @throws Error when the response violates revision invariants.
+   */
+  const reconcileRevisionResponse = useCallback(
+    async (
+      token: AsyncOperationToken,
+      operation: CommentRevisionOperationKind,
+      response: Comment,
+      input: ReconcileCommentRevisionInput,
+      previousComments: readonly Comment[],
+    ): Promise<Comment> => {
+      const reconciled = requireReconciliation(
+        operation,
+        Comments.replaceExistingDisplayable(
+          previousComments,
+          response,
+          input,
+          token.statusFilter,
+        ),
+      );
+
+      if (!isOperationStatusFilterCurrent(token)) {
+        await activeReloadCommentsRef.current();
+        return reconciled.comment;
+      }
+
+      const applied = requireReconciliation(
+        operation,
+        Comments.applyValidatedRevision(readCurrentScopeSnapshot().comments, {
+          response: reconciled.comment,
+          revision: input,
+          previousComments,
+          statusFilter: token.statusFilter,
+        }),
+      );
+      updateVisibleComments(() => applied.comments);
+      return applied.comment;
+    },
+    [
+      isOperationStatusFilterCurrent,
+      readCurrentScopeSnapshot,
+      updateVisibleComments,
+    ],
+  );
+
+  const markOperationSucceeded = useCallback(
+    (token: AsyncOperationToken): void => {
+      if (!canApplyOperationState(token)) {
+        return;
+      }
+
+      dispatchOperation({ type: "operationSucceeded" });
+    },
+    [canApplyOperationState],
+  );
 
   const markOperationFailed = useCallback(
     (
+      token: AsyncOperationToken,
       operation: CommentOperationKind,
       commentId: CommentId | null,
       error: unknown,
     ): void => {
+      if (!canApplyOperationState(token)) {
+        return;
+      }
+
       dispatchOperation({
         type: "operationFailed",
         operation,
@@ -184,17 +448,8 @@ export function useCommentOperations(
         error: toCommentFeatureError(operation, error),
       });
     },
-    [],
+    [canApplyOperationState],
   );
-
-  useEffect(() => {
-    // Each committed operation context invalidates work started by its predecessor.
-    void reloadComments;
-    void selectionIdentity;
-    void statusFilter;
-    operationRequestIdRef.current += 1;
-    dispatchOperation({ type: "operationInvalidated" });
-  }, [reloadComments, selectionIdentity, statusFilter]);
 
   const addComment = useCallback(
     async (input: AddCommentInput): Promise<Comment | null> => {
@@ -203,39 +458,57 @@ export function useCommentOperations(
         return null;
       }
 
+      const expectation = {
+        anchor: input.anchor,
+        body: input.body,
+      };
+      const previousComments = readCurrentScopeSnapshot().comments;
+
       try {
         const comment = await addCommentViaGateway(commands, scope, {
           anchor: input.anchor,
           body: input.body,
         });
 
-        if (!canApplyOperationResult(token)) {
+        if (!canApplyOperationData(token)) {
           return null;
         }
 
-        updateCurrentScopeComments((comments) =>
-          Comments.appendDisplayable(comments, comment, statusFilter),
+        const reconciledComment = await reconcileCreationResponse(
+          token,
+          comment,
+          expectation,
+          previousComments,
         );
-        markOperationSucceeded();
-        return comment;
-      } catch (error) {
-        if (!canApplyOperationResult(token)) {
+        if (!canApplyOperationData(token)) {
           return null;
         }
 
-        markOperationFailed("add", null, error);
+        markOperationSucceeded(token);
+        return reconciledComment;
+      } catch (error) {
+        if (!canApplyOperationData(token)) {
+          return null;
+        }
+
+        if (!isOperationStatusFilterCurrent(token)) {
+          return null;
+        }
+
+        markOperationFailed(token, "add", null, error);
         return null;
       }
     },
     [
       beginOperation,
-      canApplyOperationResult,
+      canApplyOperationData,
       commands,
+      isOperationStatusFilterCurrent,
       markOperationFailed,
       markOperationSucceeded,
       scope,
-      statusFilter,
-      updateCurrentScopeComments,
+      reconcileCreationResponse,
+      readCurrentScopeSnapshot,
     ],
   );
 
@@ -246,39 +519,61 @@ export function useCommentOperations(
         return null;
       }
 
+      const reconciliationInput = {
+        commentId: input.commentId,
+        revision: {
+          kind: "update",
+          body: input.body,
+        },
+      } as const;
+      const previousComments = readCurrentScopeSnapshot().comments;
+
       try {
         const comment = await updateCommentViaGateway(commands, scope, {
           commentId: input.commentId,
           body: input.body,
         });
 
-        if (!canApplyOperationResult(token)) {
+        if (!canApplyOperationData(token)) {
           return null;
         }
 
-        updateCurrentScopeComments((comments) =>
-          Comments.upsertDisplayable(comments, comment, statusFilter),
+        const reconciledComment = await reconcileRevisionResponse(
+          token,
+          "update",
+          comment,
+          reconciliationInput,
+          previousComments,
         );
-        markOperationSucceeded();
-        return comment;
-      } catch (error) {
-        if (!canApplyOperationResult(token)) {
+        if (!canApplyOperationData(token)) {
           return null;
         }
 
-        markOperationFailed("update", input.commentId, error);
+        markOperationSucceeded(token);
+        return reconciledComment;
+      } catch (error) {
+        if (!canApplyOperationData(token)) {
+          return null;
+        }
+
+        if (!isOperationStatusFilterCurrent(token)) {
+          return null;
+        }
+
+        markOperationFailed(token, "update", input.commentId, error);
         return null;
       }
     },
     [
       beginOperation,
-      canApplyOperationResult,
+      canApplyOperationData,
       commands,
+      isOperationStatusFilterCurrent,
       markOperationFailed,
       markOperationSucceeded,
       scope,
-      statusFilter,
-      updateCurrentScopeComments,
+      reconcileRevisionResponse,
+      readCurrentScopeSnapshot,
     ],
   );
 
@@ -296,39 +591,45 @@ export function useCommentOperations(
           commentId,
         );
 
-        if (!canApplyOperationResult(token)) {
+        if (!canApplyOperationData(token)) {
           return false;
         }
 
         if (!response.deleted) {
-          markOperationSucceeded();
+          markOperationSucceeded(token);
           return false;
         }
 
-        updateCurrentScopeComments((comments) =>
-          comments.filter((comment) => comment.id !== commentId),
-        );
-        markOperationSucceeded();
-        await reloadComments();
+        if (isOperationStatusFilterCurrent(token)) {
+          updateVisibleComments((comments) =>
+            Comments.remove(comments, commentId),
+          );
+        }
+        markOperationSucceeded(token);
+        await activeReloadCommentsRef.current();
         return true;
       } catch (error) {
-        if (!canApplyOperationResult(token)) {
+        if (!canApplyOperationData(token)) {
           return false;
         }
 
-        markOperationFailed("delete", commentId, error);
+        if (!isOperationStatusFilterCurrent(token)) {
+          return false;
+        }
+
+        markOperationFailed(token, "delete", commentId, error);
         return false;
       }
     },
     [
       beginOperation,
-      canApplyOperationResult,
+      canApplyOperationData,
       commands,
+      isOperationStatusFilterCurrent,
       markOperationFailed,
       markOperationSucceeded,
-      reloadComments,
       scope,
-      updateCurrentScopeComments,
+      updateVisibleComments,
     ],
   );
 
@@ -339,6 +640,12 @@ export function useCommentOperations(
         return null;
       }
 
+      const reconciliationInput = {
+        commentId,
+        revision: { kind: "resolve" },
+      } as const;
+      const previousComments = readCurrentScopeSnapshot().comments;
+
       try {
         const comment = await resolveCommentViaGateway(
           commands,
@@ -346,33 +653,46 @@ export function useCommentOperations(
           commentId,
         );
 
-        if (!canApplyOperationResult(token)) {
+        if (!canApplyOperationData(token)) {
           return null;
         }
 
-        updateCurrentScopeComments((comments) =>
-          Comments.upsertDisplayable(comments, comment, statusFilter),
+        const reconciledComment = await reconcileRevisionResponse(
+          token,
+          "resolve",
+          comment,
+          reconciliationInput,
+          previousComments,
         );
-        markOperationSucceeded();
-        return comment;
-      } catch (error) {
-        if (!canApplyOperationResult(token)) {
+        if (!canApplyOperationData(token)) {
           return null;
         }
 
-        markOperationFailed("resolve", commentId, error);
+        markOperationSucceeded(token);
+        return reconciledComment;
+      } catch (error) {
+        if (!canApplyOperationData(token)) {
+          return null;
+        }
+
+        if (!isOperationStatusFilterCurrent(token)) {
+          return null;
+        }
+
+        markOperationFailed(token, "resolve", commentId, error);
         return null;
       }
     },
     [
       beginOperation,
-      canApplyOperationResult,
+      canApplyOperationData,
       commands,
+      isOperationStatusFilterCurrent,
       markOperationFailed,
       markOperationSucceeded,
       scope,
-      statusFilter,
-      updateCurrentScopeComments,
+      reconcileRevisionResponse,
+      readCurrentScopeSnapshot,
     ],
   );
 
@@ -383,6 +703,12 @@ export function useCommentOperations(
         return null;
       }
 
+      const reconciliationInput = {
+        commentId,
+        revision: { kind: "reopen" },
+      } as const;
+      const previousComments = readCurrentScopeSnapshot().comments;
+
       try {
         const comment = await reopenCommentViaGateway(
           commands,
@@ -390,33 +716,46 @@ export function useCommentOperations(
           commentId,
         );
 
-        if (!canApplyOperationResult(token)) {
+        if (!canApplyOperationData(token)) {
           return null;
         }
 
-        updateCurrentScopeComments((comments) =>
-          Comments.upsertDisplayable(comments, comment, statusFilter),
+        const reconciledComment = await reconcileRevisionResponse(
+          token,
+          "reopen",
+          comment,
+          reconciliationInput,
+          previousComments,
         );
-        markOperationSucceeded();
-        return comment;
-      } catch (error) {
-        if (!canApplyOperationResult(token)) {
+        if (!canApplyOperationData(token)) {
           return null;
         }
 
-        markOperationFailed("reopen", commentId, error);
+        markOperationSucceeded(token);
+        return reconciledComment;
+      } catch (error) {
+        if (!canApplyOperationData(token)) {
+          return null;
+        }
+
+        if (!isOperationStatusFilterCurrent(token)) {
+          return null;
+        }
+
+        markOperationFailed(token, "reopen", commentId, error);
         return null;
       }
     },
     [
       beginOperation,
-      canApplyOperationResult,
+      canApplyOperationData,
       commands,
+      isOperationStatusFilterCurrent,
       markOperationFailed,
       markOperationSucceeded,
       scope,
-      statusFilter,
-      updateCurrentScopeComments,
+      reconcileRevisionResponse,
+      readCurrentScopeSnapshot,
     ],
   );
 
@@ -427,10 +766,31 @@ export function useCommentOperations(
         return null;
       }
 
-      const previousComments = currentComments;
-      updateCurrentScopeComments((comments) =>
-        Comments.upsertOptimisticToggle(comments, commentId, statusFilter),
+      const previousComments = readCurrentScopeSnapshot().comments;
+      const currentComment = Comments.findById(previousComments, commentId);
+      if (currentComment === undefined) {
+        markOperationFailed(
+          token,
+          "toggle",
+          commentId,
+          new Error("Cannot toggle a comment outside the active collection"),
+        );
+        return null;
+      }
+
+      const expectedStatus = CommentAggregate.isResolved(currentComment)
+        ? "open"
+        : "resolved";
+      const reconciliationInput = {
+        commentId,
+        revision: { kind: "toggle", status: expectedStatus },
+      } as const;
+      const optimisticComments = Comments.upsertOptimisticToggle(
+        previousComments,
+        commentId,
+        token.statusFilter,
       );
+      updateVisibleComments(() => optimisticComments);
 
       try {
         const comment = await toggleCommentResolvedViaGateway(
@@ -439,35 +799,61 @@ export function useCommentOperations(
           commentId,
         );
 
-        if (!canApplyOperationResult(token)) {
+        if (!canApplyOperationData(token)) {
           return null;
         }
 
-        updateCurrentScopeComments((comments) =>
-          Comments.upsertDisplayable(comments, comment, statusFilter),
+        const reconciledComment = await reconcileRevisionResponse(
+          token,
+          "toggle",
+          comment,
+          reconciliationInput,
+          previousComments,
         );
-        markOperationSucceeded();
-        return comment;
-      } catch (error) {
-        if (!canApplyOperationResult(token)) {
+        if (!canApplyOperationData(token)) {
           return null;
         }
 
-        updateCurrentScopeComments(() => previousComments);
-        markOperationFailed("toggle", commentId, error);
+        markOperationSucceeded(token);
+        return reconciledComment;
+      } catch (error) {
+        if (!canApplyOperationData(token)) {
+          return null;
+        }
+
+        if (!isOperationStatusFilterCurrent(token)) {
+          return null;
+        }
+
+        if (
+          readCurrentScopeSnapshot().revision === token.listCollectionRevision
+        ) {
+          const rolledBackComments = Comments.rollbackOptimisticToggle(
+            readCurrentScopeSnapshot().comments,
+            {
+              commentId,
+              previousComments,
+              optimisticComments,
+              statusFilter: token.statusFilter,
+            },
+          );
+          updateVisibleComments(() => rolledBackComments);
+        }
+        markOperationFailed(token, "toggle", commentId, error);
         return null;
       }
     },
     [
       beginOperation,
-      canApplyOperationResult,
+      canApplyOperationData,
       commands,
-      currentComments,
+      isOperationStatusFilterCurrent,
       markOperationFailed,
       markOperationSucceeded,
       scope,
-      statusFilter,
-      updateCurrentScopeComments,
+      updateVisibleComments,
+      reconcileRevisionResponse,
+      readCurrentScopeSnapshot,
     ],
   );
 
@@ -480,6 +866,30 @@ export function useCommentOperations(
     reopenComment,
     toggleCommentResolved,
   };
+}
+
+type SuccessfulReconciliation = Extract<
+  CommentsReconciliationResult,
+  Readonly<{ ok: true }>
+>["value"];
+
+/**
+ * @param operation - Operation whose response is being reconciled.
+ * @param result - Aggregate reconciliation result.
+ * @returns Reconciled collection and aggregate.
+ * @throws Error when the command response violates an aggregate invariant.
+ */
+function requireReconciliation(
+  operation: CommentOperationKind,
+  result: CommentsReconciliationResult,
+): SuccessfulReconciliation {
+  if (!result.ok) {
+    throw new Error(
+      `Rejected ${operation} comment response: ${result.error.reason}`,
+    );
+  }
+
+  return result.value;
 }
 
 /**
@@ -523,39 +933,83 @@ function assertNever(value: never): never {
 }
 
 /**
- * @param requestId - Operation request id.
- * @param selectionIdentity - Selection captured when the operation started.
- * @param statusFilter - Comment filter captured when the operation started.
- * @returns Token used to reject stale operation results.
- */
-function createOperationToken(
-  requestId: number,
-  selectionIdentity: SelectionIdentityType,
-  statusFilter: CommentStatusFilter,
-): AsyncOperationToken {
-  return { requestId, selectionIdentity, statusFilter };
-}
-
-/**
  * @param token - Captured operation token.
- * @param latestRequestId - Most recent operation request id.
- * @param currentIdentity - Current active selection identity.
- * @param currentStatusFilter - Current active comment filter.
- * @returns True when the async operation still belongs to the current scope.
+ * @param context - Current data context and per-comment ownership.
+ * @returns True when the async operation still owns its target data.
  */
-function isMatchingOperationToken(
+function isDataOperationOwner(
   token: AsyncOperationToken,
-  latestRequestId: number,
-  currentIdentity: SelectionIdentityType | null,
-  currentStatusFilter: CommentStatusFilter,
+  context: DataOperationOwnershipContext,
 ): boolean {
-  if (currentIdentity === null) {
+  if (token.dataContextVersion !== context.dataContextVersion) {
     return false;
   }
 
+  if (
+    !isSameSelectionIdentity(token.selectionIdentity, context.selectionIdentity)
+  ) {
+    return false;
+  }
+
+  if (token.commentId === null) {
+    return true;
+  }
+
   return (
-    token.requestId === latestRequestId &&
-    token.statusFilter === currentStatusFilter &&
-    SelectionIdentity.equals(token.selectionIdentity, currentIdentity)
+    context.latestDataRequestByComment.get(token.commentId) === token.requestId
   );
+}
+
+/**
+ * @param left - First nullable selection identity.
+ * @param right - Second nullable selection identity.
+ * @returns True when both identities refer to the same committed selection.
+ */
+function isSameSelectionIdentity(
+  left: SelectionIdentityType | null,
+  right: SelectionIdentityType | null,
+): boolean {
+  if (left === null) {
+    return right === null;
+  }
+
+  if (right === null) {
+    return false;
+  }
+
+  return SelectionIdentity.equals(left, right);
+}
+
+/**
+ * @param changes - Changes detected between committed operation contexts.
+ * @returns True when operation UI ownership must be invalidated.
+ */
+function hasOperationContextChanged(changes: OperationContextChanges): boolean {
+  if (changes.selectionChanged) {
+    return true;
+  }
+
+  if (changes.statusFilterChanged) {
+    return true;
+  }
+
+  return changes.reloadCommentsChanged;
+}
+
+/**
+ * @param changes - Changes detected between committed operation contexts.
+ * @returns True when pending operation data no longer belongs to the context.
+ */
+function shouldInvalidateOperationData(
+  changes: OperationContextChanges,
+): boolean {
+  if (changes.selectionChanged) {
+    return true;
+  }
+
+  if (changes.statusFilterChanged) {
+    return false;
+  }
+
+  return changes.reloadCommentsChanged;
 }

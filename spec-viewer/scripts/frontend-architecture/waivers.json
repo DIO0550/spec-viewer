@@ -32,30 +32,6 @@
     },
     {
       "rule": "domain-forbidden-dependency",
-      "source": "features/comments/domain/comment/index.ts",
-      "specifier": "@/features/comments/types/comment",
-      "issue": 120
-    },
-    {
-      "rule": "domain-forbidden-dependency",
-      "source": "features/comments/domain/commentListState/index.ts",
-      "specifier": "@/features/comments/types/comment",
-      "issue": 120
-    },
-    {
-      "rule": "domain-forbidden-dependency",
-      "source": "features/comments/domain/commentOperation/index.ts",
-      "specifier": "@/features/comments/types/comment",
-      "issue": 120
-    },
-    {
-      "rule": "domain-forbidden-dependency",
-      "source": "features/comments/domain/comments/index.ts",
-      "specifier": "@/features/comments/types/comment",
-      "issue": 120
-    },
-    {
-      "rule": "domain-forbidden-dependency",
       "source": "features/specs/domain/specDocumentState/index.ts",
       "specifier": "@/features/specs/types/spec",
       "issue": 118

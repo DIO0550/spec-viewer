@@ -17,11 +17,10 @@ import {
 } from "@/features/comments/infra/commentGateway";
 import { commentBody } from "@/features/comments/testing/comment-body-test-fixture";
 import { createCommentCommandTestDouble } from "@/features/comments/testing/comment-command-test-double";
-import type { Comment, CommentAnchor } from "@/features/comments/types/comment";
+import { createCommentTestFixture } from "@/features/comments/testing/comment-test-fixture";
+import type { CommentAnchor } from "@/features/comments/types/comment";
 import { SpecViewSelection } from "@/shared/domain/specViewSelection";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
-
-const commentId = TestValues.commentId;
 
 const scopeSelection = SpecViewSelection.synchronize(
   SpecViewSelection.empty(),
@@ -45,15 +44,11 @@ const anchor: CommentAnchor = createCommentAnchorTestFixture({
   },
 });
 
-const comment: Comment = {
-  id: commentId("cmt_1"),
+const comment = createCommentTestFixture({
+  id: "cmt_1",
   anchor,
   body: "Clarify this task",
-  status: "open",
-  resolved: false,
-  createdAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
-  updatedAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
-};
+});
 
 test("listCommentsはscopeとfilterとcorrelationIdをrequest DTOへ変換する", async () => {
   const double = createCommentCommandTestDouble({
@@ -116,11 +111,11 @@ test("addCommentはCommentCommandsへ追加request DTOを渡す", async () => {
 });
 
 test("updateCommentはCommentCommandsへ更新request DTOを渡す", async () => {
-  const updatedComment: Comment = {
-    ...comment,
+  const updatedComment = createCommentTestFixture({
+    anchor,
     body: "Updated body",
-    updatedAt: TestValues.isoDateTime("2026-05-05T10:15:00Z"),
-  };
+    updatedAt: "2026-05-05T10:15:00Z",
+  });
   const double = createCommentCommandTestDouble({
     updateComment: updatedComment,
   });

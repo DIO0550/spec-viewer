@@ -1,4 +1,5 @@
-import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
+import { Comment as CommentAggregate } from "@/features/comments/domain/comment";
+import { createCommentTestFixture } from "@/features/comments/testing/comment-test-fixture";
 import type {
   AddCommentRequest,
   Comment,
@@ -10,7 +11,6 @@ import type {
   UpdateCommentRequest,
 } from "@/features/comments/types/comment";
 import type { CommentCommands } from "@/features/comments/application/ports/commentCommands";
-import { commentId, isoDateTime } from "@/shared/testing/validatedValueObjects";
 
 export type CommentCommandTestDoubleResponses = Readonly<{
   listComments?: ListCommentsResponse;
@@ -37,25 +37,40 @@ export type CommentCommandTestDouble = Readonly<{
   calls: CommentCommandTestDoubleCalls;
 }>;
 
-const defaultComment: Comment = {
-  id: commentId("cmt_test"),
-  anchor: createCommentAnchorTestFixture({
-    fileKey: "tasks",
-    blockType: "paragraph",
-    blockIndex: 0,
-    textHash: "sha256:7e570001",
-    textSnippet: "Clarify this task",
-    charRange: {
-      start: 0,
-      end: 18,
-    },
-  }),
-  body: "Clarify this task",
-  status: "open",
-  resolved: false,
-  createdAt: isoDateTime("2026-05-05T10:00:00Z"),
-  updatedAt: isoDateTime("2026-05-05T10:00:00Z"),
-};
+const defaultComment = createCommentTestFixture({ id: "cmt_test" });
+
+/**
+ * @param comment - Valid aggregate whose status should change.
+ * @param status - Target status for the test response.
+ * @returns Aggregate changed through the production status API.
+ * @throws Error when the unchanged test timestamp violates aggregate ordering.
+ */
+function changeCommentStatus(
+  comment: Comment,
+  status: Comment["status"],
+): Comment {
+  const result =
+    status === "resolved"
+      ? CommentAggregate.resolve(comment, { updatedAt: comment.updatedAt })
+      : CommentAggregate.reopen(comment, { updatedAt: comment.updatedAt });
+
+  if (!result.ok) {
+    throw new Error(result.error.reason);
+  }
+
+  return result.value;
+}
+
+/**
+ * @param comment - Valid aggregate whose status should be inverted.
+ * @returns Aggregate toggled through the production status API.
+ */
+function toggleCommentStatus(comment: Comment): Comment {
+  return changeCommentStatus(
+    comment,
+    CommentAggregate.isResolved(comment) ? "open" : "resolved",
+  );
+}
 
 /** @returns A typed comment command double for component and hook tests. */
 export function createCommentCommandTestDouble(
@@ -120,11 +135,7 @@ export function createCommentCommandTestDouble(
       resolveComment: async (request) => {
         resolveCommentCalls.push(request);
         return (
-          responses.resolveComment ?? {
-            ...comment,
-            status: "resolved",
-            resolved: true,
-          }
+          responses.resolveComment ?? changeCommentStatus(comment, "resolved")
         );
       },
       /**
@@ -133,13 +144,7 @@ export function createCommentCommandTestDouble(
        */
       reopenComment: async (request) => {
         reopenCommentCalls.push(request);
-        return (
-          responses.reopenComment ?? {
-            ...comment,
-            status: "open",
-            resolved: false,
-          }
-        );
+        return responses.reopenComment ?? changeCommentStatus(comment, "open");
       },
       /**
        * Records the toggle request and returns the stubbed toggled comment.
@@ -147,13 +152,7 @@ export function createCommentCommandTestDouble(
        */
       toggleCommentResolved: async (request) => {
         toggleCommentResolvedCalls.push(request);
-        return (
-          responses.toggleCommentResolved ?? {
-            ...comment,
-            status: "resolved",
-            resolved: true,
-          }
-        );
+        return responses.toggleCommentResolved ?? toggleCommentStatus(comment);
       },
     },
   };

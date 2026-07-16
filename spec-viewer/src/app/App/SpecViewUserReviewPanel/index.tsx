@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import type { SpecViewResetKeys } from "@/app/App/hooks/types";
 import { useUserReviewWorkspaceMode } from "@/app/App/hooks/useUserReviewWorkspaceMode";
 import { useSpecViewSelection } from "@/app/context/specViewSelection";
-import type { Comment, CommentId } from "@/features/comments";
+import { Comment, type CommentId } from "@/features/comments";
 import { UserReviewPanel, useUserReviews } from "@/features/review-runs";
 import { copyTextToClipboard } from "@/shared/lib/clipboard";
 
@@ -46,7 +46,7 @@ export function SpecViewUserReviewPanel(
       onWorkspaceModeChange={setWorkspaceMode}
       onCreateUserReview={() => {
         const openCommentIds = comments
-          .filter((comment) => comment.status === "open")
+          .filter(Comment.isOpen)
           .map((comment) => comment.id);
 
         void userReviews.createUserReview({
@@ -69,5 +69,5 @@ export function SpecViewUserReviewPanel(
 function countOpenComments(
   comments: readonly UserReviewCommentSummary[],
 ): number {
-  return comments.filter((comment) => comment.status === "open").length;
+  return comments.filter(Comment.isOpen).length;
 }

@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn } from "storybook/test";
 import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
+import { createCommentTestFixture } from "@/features/comments/testing/comment-test-fixture";
 import type { Comment } from "@/features/comments/types/comment";
 import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
 import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
@@ -170,8 +171,8 @@ const testCasesHtmlState: SpecDocumentState = {
 };
 
 const comments: readonly Comment[] = [
-  {
-    id: commentId("cmt_active_selection"),
+  createCommentTestFixture({
+    id: "cmt_active_selection",
     anchor: createCommentAnchorTestFixture({
       fileKey: "tasks",
       blockType: "paragraph",
@@ -184,18 +185,15 @@ const comments: readonly Comment[] = [
       },
     }),
     body: "Verify partial selection stays copyable inside this highlight.",
-    status: "open",
-    resolved: false,
-    anchorResolution: null,
-    createdAt: TestValues.isoDateTime("2026-05-07T00:00:00Z"),
-    updatedAt: TestValues.isoDateTime("2026-05-07T00:00:00Z"),
-  },
+    createdAt: "2026-05-07T00:00:00Z",
+    updatedAt: "2026-05-07T00:00:00Z",
+  }),
 ];
 
 const commentCardComments: readonly Comment[] = [
   ...comments,
-  {
-    id: commentId("cmt_resolved_card"),
+  createCommentTestFixture({
+    id: "cmt_resolved_card",
     anchor: createCommentAnchorTestFixture({
       fileKey: "tasks",
       blockType: "paragraph",
@@ -209,13 +207,11 @@ const commentCardComments: readonly Comment[] = [
     }),
     body: "Resolved note stays visible without making the paragraph feel busy.",
     status: "resolved",
-    resolved: true,
-    anchorResolution: null,
-    createdAt: TestValues.isoDateTime("2026-05-07T00:10:00Z"),
-    updatedAt: TestValues.isoDateTime("2026-05-07T00:20:00Z"),
-  },
-  {
-    id: commentId("cmt_code_card"),
+    createdAt: "2026-05-07T00:10:00Z",
+    updatedAt: "2026-05-07T00:20:00Z",
+  }),
+  createCommentTestFixture({
+    id: "cmt_code_card",
     anchor: createCommentAnchorTestFixture({
       fileKey: "tasks",
       blockType: "code_block",
@@ -228,12 +224,9 @@ const commentCardComments: readonly Comment[] = [
       },
     }),
     body: "Code block comments keep the gutter add button available.",
-    status: "open",
-    resolved: false,
-    anchorResolution: null,
-    createdAt: TestValues.isoDateTime("2026-05-07T00:30:00Z"),
-    updatedAt: TestValues.isoDateTime("2026-05-07T00:30:00Z"),
-  },
+    createdAt: "2026-05-07T00:30:00Z",
+    updatedAt: "2026-05-07T00:30:00Z",
+  }),
 ];
 
 const meta: Meta<typeof MarkdownViewer> = {

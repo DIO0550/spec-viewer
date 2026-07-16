@@ -1,15 +1,12 @@
 import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
+import { createCommentTestFixture } from "@/features/comments/testing/comment-test-fixture";
 import { expect, test } from "vitest";
 
 import { createSpecSkillMcpFeedbackDryRunPayload } from "@/features/comments/lib/mcpFeedback";
 import { renderSpecSkillMcpFeedbackDryRunPayload } from "@/features/comments/lib/mcpFeedback";
-import type { Comment } from "@/features/comments/types/comment";
-
-const commentId = TestValues.commentId;
-
-const anchoredComment: Comment = {
-  id: commentId("cmt_open"),
+const anchoredComment = createCommentTestFixture({
+  id: "cmt_open",
   anchor: createCommentAnchorTestFixture({
     fileKey: "tasks",
     blockType: "paragraph",
@@ -22,33 +19,30 @@ const anchoredComment: Comment = {
     },
   }),
   body: "Clarify the feedback handoff boundary.",
-  status: "open",
-  resolved: false,
   anchorResolution: {
     status: "resolved",
     reason: "exact_match",
     details: null,
     target: null,
   },
-  createdAt: TestValues.isoDateTime("2026-05-06T10:00:00Z"),
-  updatedAt: TestValues.isoDateTime("2026-05-06T10:15:00Z"),
-};
+  createdAt: "2026-05-06T10:00:00Z",
+  updatedAt: "2026-05-06T10:15:00Z",
+});
 
-const orphanedComment: Comment = {
-  ...anchoredComment,
-  id: commentId("cmt_orphaned"),
+const orphanedComment = createCommentTestFixture({
+  id: "cmt_orphaned",
+  anchor: anchoredComment.anchor,
   body: "Carry orphaned comments into the Spec Skill feedback path.",
   status: "resolved",
-  resolved: true,
   anchorResolution: {
     status: "orphaned",
     reason: "deleted_text",
     details: "Original paragraph was removed.",
     target: null,
   },
-  createdAt: TestValues.isoDateTime("2026-05-06T11:00:00Z"),
-  updatedAt: TestValues.isoDateTime("2026-05-06T11:15:00Z"),
-};
+  createdAt: "2026-05-06T11:00:00Z",
+  updatedAt: "2026-05-06T11:15:00Z",
+});
 
 test("Spec Skill MCP feedback dry-run payloadは対象interfaceとcomment summaryを含む", () => {
   const payload = createSpecSkillMcpFeedbackDryRunPayload({

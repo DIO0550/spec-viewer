@@ -1,5 +1,6 @@
 import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
+import { createCommentTestFixture } from "@/features/comments/testing/comment-test-fixture";
 import { invoke } from "@tauri-apps/api/core";
 import { expect, test, vi } from "vitest";
 
@@ -20,8 +21,8 @@ vi.mock("@tauri-apps/api/core", () => ({
 const invokeMock = vi.mocked(invoke);
 const commentId = TestValues.commentId;
 
-const comment: Comment = {
-  id: commentId("cmt_1"),
+const comment = createCommentTestFixture({
+  id: "cmt_1",
   anchor: createCommentAnchorTestFixture({
     fileKey: "tasks",
     blockType: "paragraph",
@@ -34,12 +35,8 @@ const comment: Comment = {
     },
   }),
   body: "Clarify this task",
-  status: "open",
-  resolved: false,
-  anchorResolution: null,
-  createdAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
-  updatedAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
-};
+});
+const commentDto = { ...comment, resolved: false };
 
 const statusRequest: CommentStatusRequest = {
   workspacePath: "/workspace/spec-reviewer",
@@ -77,17 +74,25 @@ test.each([
   status: Comment["status"];
   resolved: boolean;
 }[])("$labelは対応するstatus更新commandへrequestを渡す", async (testCase) => {
-  const nextComment = {
-    ...comment,
+  const nextCommentDto = {
+    ...commentDto,
     status: testCase.status,
     resolved: testCase.resolved,
   };
+  const expectedComment = createCommentTestFixture({
+    id: comment.id,
+    anchor: comment.anchor,
+    body: comment.body,
+    status: testCase.status,
+    createdAt: comment.createdAt,
+    updatedAt: comment.updatedAt,
+  });
   invokeMock.mockReset();
-  invokeMock.mockResolvedValue(nextComment);
+  invokeMock.mockResolvedValue(nextCommentDto);
 
   const result = await testCase.wrapper(statusRequest);
 
-  expect(result).toEqual(nextComment);
+  expect(result).toEqual(expectedComment);
   expect(invokeMock).toHaveBeenCalledWith(testCase.commandName, {
     request: statusRequest,
   });

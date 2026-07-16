@@ -5,29 +5,32 @@ import {
   useRef,
   useState,
 } from "react";
-import type {
-  CommentFeatureError as CommentFeatureErrorType,
-  CommentListFeatureState,
-} from "@/features/comments/application/commentError";
-import { CommentListState } from "@/features/comments/domain/commentListState";
 import type { CommentOperationFeatureState } from "@/features/comments/application/commentError";
+import {
+  type CommentFeatureError as CommentFeatureErrorType,
+  type CommentListFeatureState,
+  toCommentListRestorationFeatureError,
+} from "@/features/comments/application/commentError";
+import type { CommentCommands } from "@/features/comments/application/ports/commentCommands";
+import { CommentListState } from "@/features/comments/domain/commentListState";
 import {
   CommentScope,
   type CommentScope as CommentScopeType,
 } from "@/features/comments/domain/commentScope";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
+import { Comments } from "@/features/comments/domain/comments";
 import { buildCommentsResult } from "@/features/comments/hooks/buildCommentsResult";
 import {
   type AddCommentInput,
+  type CommentCollectionSnapshot,
   type CommentListTransform,
   type UpdateCommentInput,
   useCommentOperations,
 } from "@/features/comments/hooks/useCommentOperations";
 import { listComments as listCommentsViaGateway } from "@/features/comments/infra/commentGateway";
-import type { Comment, CommentId } from "@/features/comments/types/comment";
-import type { CommentCommands } from "@/features/comments/application/ports/commentCommands";
 import { commentCommands as defaultCommentCommands } from "@/features/comments/infra/tauri";
 import { toCommentFeatureError } from "@/features/comments/infra/tauri/commentErrorMapper";
+import type { Comment, CommentId } from "@/features/comments/types/comment";
 import {
   SelectionIdentity,
   type SelectionIdentity as SelectionIdentityType,
@@ -37,8 +40,10 @@ import {
   startPerformanceSpan,
 } from "@/shared/lib/performance";
 
-export type { CommentListFeatureState as CommentListState } from "@/features/comments/application/commentError";
-export type { CommentOperationFeatureState as CommentOperationState } from "@/features/comments/application/commentError";
+export type {
+  CommentListFeatureState as CommentListState,
+  CommentOperationFeatureState as CommentOperationState,
+} from "@/features/comments/application/commentError";
 export type { CommentOperationKind } from "@/features/comments/domain/commentOperation";
 export type {
   AddCommentInput,
@@ -91,14 +96,44 @@ export function useComments({
   const listRequestIdRef = useRef(0);
   const activeListSelectionIdentityRef = useRef(selectionIdentity);
   const activeListStatusFilterRef = useRef(statusFilter);
+  const currentScopeSnapshotRef = useRef<CommentCollectionSnapshot>({
+    comments: [],
+    revision: 0,
+    isLoading: false,
+    selectionIdentity,
+    statusFilter,
+  });
   const [listState, setListState] = useState<CommentListFeatureState>(
     CommentListState.idle(),
   );
 
   useLayoutEffect(() => {
+    const selectionChanged = !isSameSelectionIdentity(
+      activeListSelectionIdentityRef.current,
+      selectionIdentity,
+    );
+    const statusFilterChanged =
+      activeListStatusFilterRef.current !== statusFilter;
     activeListSelectionIdentityRef.current = selectionIdentity;
     activeListStatusFilterRef.current = statusFilter;
+
+    if (!selectionChanged && !statusFilterChanged) {
+      return;
+    }
+
+    currentScopeSnapshotRef.current = {
+      ...currentScopeSnapshotRef.current,
+      comments: [],
+      isLoading: false,
+      selectionIdentity,
+      statusFilter,
+    };
   }, [selectionIdentity, statusFilter]);
+
+  const getCurrentScopeSnapshot = useCallback(
+    (): CommentCollectionSnapshot => currentScopeSnapshotRef.current,
+    [],
+  );
 
   const isLatestListRequest = useCallback(
     (requestId: number): boolean => listRequestIdRef.current === requestId,
@@ -119,13 +154,26 @@ export function useComments({
   );
   const updateCurrentScopeComments = useCallback(
     (transform: CommentListTransform): void => {
+      const currentSnapshot = currentScopeSnapshotRef.current;
+      const nextComments = transform(currentSnapshot.comments);
+      if (nextComments === currentSnapshot.comments) {
+        return;
+      }
+
+      if (currentSnapshot.isLoading) {
+        listRequestIdRef.current += 1;
+      }
+      currentScopeSnapshotRef.current = {
+        ...currentSnapshot,
+        comments: nextComments,
+        isLoading: false,
+      };
+
       setListState((currentState) => {
-        const result = CommentListState.applyTransform(currentState, transform);
-
-        if (result.invalidatesRequest) {
-          listRequestIdRef.current += 1;
-        }
-
+        const result = CommentListState.applyTransform(
+          currentState,
+          () => nextComments,
+        );
         return result.state;
       });
     },
@@ -137,6 +185,13 @@ export function useComments({
 
     if (activeScope === null) {
       listRequestIdRef.current += 1;
+      currentScopeSnapshotRef.current = {
+        ...currentScopeSnapshotRef.current,
+        comments: [],
+        isLoading: false,
+        selectionIdentity: null,
+        statusFilter,
+      };
       setListState(CommentListState.idle());
       return true;
     }
@@ -146,6 +201,20 @@ export function useComments({
       CommentScope.selectionIdentity(activeScope);
     const requestStatusFilter = statusFilter;
     listRequestIdRef.current = requestId;
+    const currentSnapshot = currentScopeSnapshotRef.current;
+    const snapshotOwnsRequestView =
+      currentSnapshot.statusFilter === requestStatusFilter &&
+      isSameSelectionIdentity(
+        currentSnapshot.selectionIdentity,
+        requestSelectionIdentity,
+      );
+    currentScopeSnapshotRef.current = {
+      ...currentSnapshot,
+      comments: snapshotOwnsRequestView ? currentSnapshot.comments : [],
+      isLoading: true,
+      selectionIdentity: requestSelectionIdentity,
+      statusFilter: requestStatusFilter,
+    };
     setListState(CommentListState.loading());
 
     const endSpan = startPerformanceSpan(
@@ -165,18 +234,45 @@ export function useComments({
         statusFilter,
         correlationId,
       );
-      endSpan({
-        commentCount: response.comments.length,
-      });
 
       if (
         !isLatestListRequest(requestId) ||
         !isSameListScopeResult(requestSelectionIdentity, requestStatusFilter)
       ) {
+        endSpan({ commentCount: response.comments.length });
         return false;
       }
 
-      setListState(CommentListState.loaded(response.comments));
+      const restoredComments = Comments.restoreList(
+        response.comments,
+        requestStatusFilter,
+      );
+      if (!restoredComments.ok) {
+        endSpan({ error: true });
+        currentScopeSnapshotRef.current = {
+          comments: [],
+          revision: currentScopeSnapshotRef.current.revision + 1,
+          isLoading: false,
+          selectionIdentity: requestSelectionIdentity,
+          statusFilter: requestStatusFilter,
+        };
+        setListState(
+          CommentListState.error(
+            toCommentListRestorationFeatureError(restoredComments.error),
+          ),
+        );
+        return false;
+      }
+
+      endSpan({ commentCount: restoredComments.value.length });
+      currentScopeSnapshotRef.current = {
+        comments: restoredComments.value,
+        revision: currentScopeSnapshotRef.current.revision + 1,
+        isLoading: false,
+        selectionIdentity: requestSelectionIdentity,
+        statusFilter: requestStatusFilter,
+      };
+      setListState(CommentListState.loaded(restoredComments.value));
       return true;
     } catch (error) {
       endSpan({
@@ -190,6 +286,13 @@ export function useComments({
         return false;
       }
 
+      currentScopeSnapshotRef.current = {
+        comments: [],
+        revision: currentScopeSnapshotRef.current.revision + 1,
+        isLoading: false,
+        selectionIdentity: requestSelectionIdentity,
+        statusFilter: requestStatusFilter,
+      };
       setListState(
         CommentListState.error(toCommentFeatureError("list", error)),
       );
@@ -214,6 +317,9 @@ export function useComments({
     statusFilter,
     commands,
     currentComments: listState.comments,
+    getCurrentScopeSnapshot,
+    isListLoading: CommentListState.isLoading(listState),
+    listCollectionRevision: currentScopeSnapshotRef.current.revision,
     updateCurrentScopeComments,
     reloadComments,
   });
@@ -225,4 +331,24 @@ export function useComments({
     },
     operations: commentOperations,
   });
+}
+
+/**
+ * @param left - First nullable selection identity.
+ * @param right - Second nullable selection identity.
+ * @returns True when both identities refer to the same selection.
+ */
+function isSameSelectionIdentity(
+  left: SelectionIdentityType | null,
+  right: SelectionIdentityType | null,
+): boolean {
+  if (left === null) {
+    return right === null;
+  }
+
+  if (right === null) {
+    return false;
+  }
+
+  return SelectionIdentity.equals(left, right);
 }

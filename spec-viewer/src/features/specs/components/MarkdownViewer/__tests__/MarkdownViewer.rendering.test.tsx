@@ -11,6 +11,7 @@ import {
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
 import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
+import { createCommentTestFixture } from "@/features/comments/testing/comment-test-fixture";
 import type {
   Comment,
   CommentAnchorResolution,
@@ -190,8 +191,8 @@ function createComment({
   }>;
   blockType?: CommentBlockType;
 }>): Comment {
-  return {
-    id: commentId(id),
+  return createCommentTestFixture({
+    id,
     anchor: createCommentAnchorTestFixture({
       fileKey: "tasks",
       blockType,
@@ -202,11 +203,8 @@ function createComment({
     }),
     body: `${id} body`,
     status: resolved ? "resolved" : "open",
-    resolved,
     anchorResolution,
-    createdAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
-    updatedAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
-  };
+  });
 }
 
 function renderViewer(

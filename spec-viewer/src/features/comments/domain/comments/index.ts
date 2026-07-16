@@ -1,145 +1,398 @@
 import {
+  Comment,
+  type CommentReconciliationError,
+  type CommentRevisionExpectation,
+  type Comment as CommentType,
+  type ReconcileCommentCreationInput,
+} from "@/features/comments/domain/comment";
+import type {
+  CommentStatus,
   CommentStatusFilter,
-  type CommentStatusFilter as CommentStatusFilterType,
 } from "@/features/comments/domain/commentStatusFilter";
-import type { Comment, CommentId } from "@/features/comments/types/comment";
+import type { CommentId } from "@/shared/domain/commentId";
 
-declare const commentsBrand: unique symbol;
+export type ReconcileCommentRevisionInput = Readonly<{
+  commentId: CommentId;
+  revision: CommentRevisionExpectation;
+}>;
 
-export type Comments = readonly Comment[] & {
-  readonly [commentsBrand]: "Comments";
-};
+export type ApplyValidatedRevisionInput = Readonly<{
+  response: CommentType;
+  revision: ReconcileCommentRevisionInput;
+  previousComments: readonly CommentType[];
+  statusFilter: CommentStatusFilter;
+}>;
+
+export type RollbackOptimisticToggleInput = Readonly<{
+  commentId: CommentId;
+  previousComments: readonly CommentType[];
+  optimisticComments: readonly CommentType[];
+  statusFilter: CommentStatusFilter;
+}>;
+
+export type CommentListRestorationError =
+  | Readonly<{
+      reason: "duplicateCommentId";
+      commentId: CommentId;
+      firstIndex: number;
+      duplicateIndex: number;
+    }>
+  | Readonly<{
+      reason: "statusFilterMismatch";
+      commentId: CommentId;
+      index: number;
+      expectedStatusFilter: CommentStatusFilter;
+      actualStatus: CommentStatus;
+    }>;
+
+export type CommentListRestorationResult =
+  | Readonly<{ ok: true; value: readonly CommentType[] }>
+  | Readonly<{ ok: false; error: CommentListRestorationError }>;
+
+export type CommentsReconciliationError =
+  | CommentReconciliationError
+  | Readonly<{ reason: "commentNotFound"; commentId: CommentId }>
+  | Readonly<{ reason: "duplicateCommentId"; commentId: CommentId }>;
+
+export type CommentsReconciliationResult =
+  | Readonly<{
+      ok: true;
+      value: Readonly<{
+        comments: readonly CommentType[];
+        comment: CommentType;
+      }>;
+    }>
+  | Readonly<{ ok: false; error: CommentsReconciliationError }>;
 
 export const Comments = {
-  /** @returns Branded comments collection while preserving readonly array compatibility. */
-  create(comments: readonly Comment[]): Comments {
-    return comments as Comments;
-  },
-  /** @returns The collection as a readonly comment array. */
-  toArray(comments: Comments): readonly Comment[] {
-    return comments;
-  },
   /**
-   * @param comments - Current visible comments
-   * @param comment - Comment to append when displayable
-   * @param statusFilter - Active status filter
-   * @returns Comments with the displayable comment appended once.
+   * @param comments - Decoded comments returned by the list boundary.
+   * @param statusFilter - Status filter used for the list request.
+   * @returns A fresh validated collection, or the first collection invariant violation.
    */
-  appendDisplayable(
-    comments: readonly Comment[],
-    comment: Comment,
-    statusFilter: CommentStatusFilterType,
-  ): readonly Comment[] {
-    if (!shouldDisplay(comment, statusFilter)) {
-      return comments;
-    }
+  restoreList(
+    comments: readonly CommentType[],
+    statusFilter: CommentStatusFilter,
+  ): CommentListRestorationResult {
+    const firstIndexByCommentId = new Map<CommentId, number>();
+    const restoredComments: CommentType[] = [];
 
-    if (comments.some((currentComment) => currentComment.id === comment.id)) {
-      return comments;
-    }
-
-    return Comments.create([...comments, comment]);
-  },
-  /**
-   * @param comments - Current visible comments
-   * @param comment - Incoming command result
-   * @param statusFilter - Active status filter
-   * @returns Comments with the comment inserted, replaced, or removed by filter.
-   */
-  upsertDisplayable(
-    comments: readonly Comment[],
-    comment: Comment,
-    statusFilter: CommentStatusFilterType,
-  ): readonly Comment[] {
-    const currentComment = comments.find(
-      (candidate) => candidate.id === comment.id,
-    );
-    const commentWithResolution = preserveAnchorResolution(
-      currentComment,
-      comment,
-    );
-
-    if (!shouldDisplay(commentWithResolution, statusFilter)) {
-      if (currentComment === undefined) {
-        return comments;
+    for (const [index, comment] of comments.entries()) {
+      const firstIndex = firstIndexByCommentId.get(comment.id);
+      if (firstIndex !== undefined) {
+        return {
+          ok: false,
+          error: {
+            reason: "duplicateCommentId",
+            commentId: comment.id,
+            firstIndex,
+            duplicateIndex: index,
+          },
+        };
       }
 
-      return Comments.create(
-        comments.filter(
-          (candidate) => candidate.id !== commentWithResolution.id,
-        ),
+      if (!Comment.matchesStatusFilter(comment, statusFilter)) {
+        return {
+          ok: false,
+          error: {
+            reason: "statusFilterMismatch",
+            commentId: comment.id,
+            index,
+            expectedStatusFilter: statusFilter,
+            actualStatus: comment.status,
+          },
+        };
+      }
+
+      firstIndexByCommentId.set(comment.id, index);
+      restoredComments.push(comment);
+    }
+
+    return { ok: true, value: restoredComments };
+  },
+
+  /**
+   * @param comments - Current visible comments.
+   * @param commentId - Comment identity to find.
+   * @returns The matching aggregate, or undefined.
+   */
+  findById(
+    comments: readonly CommentType[],
+    commentId: CommentId,
+  ): CommentType | undefined {
+    return comments.find((comment) => comment.id === commentId);
+  },
+
+  /**
+   * @param comments - Current visible comments.
+   * @param response - Decoded add response.
+   * @param expectation - Submitted anchor and body.
+   * @param statusFilter - Active status filter.
+   * @returns Reconciled creation and next visible collection.
+   */
+  appendDisplayable(
+    comments: readonly CommentType[],
+    response: CommentType,
+    expectation: ReconcileCommentCreationInput,
+    statusFilter: CommentStatusFilter,
+  ): CommentsReconciliationResult {
+    const reconciled = Comment.reconcileCreation(response, expectation);
+    if (!reconciled.ok) {
+      return reconciled;
+    }
+
+    const existingComment = Comments.findById(comments, reconciled.value.id);
+    if (existingComment !== undefined) {
+      if (Comment.hasSamePersistedState(existingComment, reconciled.value)) {
+        return reconciliationSuccess(comments, existingComment);
+      }
+
+      return {
+        ok: false,
+        error: {
+          reason: "duplicateCommentId",
+          commentId: reconciled.value.id,
+        },
+      };
+    }
+
+    const nextComments = Comment.matchesStatusFilter(
+      reconciled.value,
+      statusFilter,
+    )
+      ? [...comments, reconciled.value]
+      : comments;
+
+    return reconciliationSuccess(nextComments, reconciled.value);
+  },
+
+  /**
+   * @param comments - Latest visible comments.
+   * @param response - Decoded revision response.
+   * @param input - Expected identity and operation-specific revision.
+   * @param statusFilter - Active status filter.
+   * @returns Reconciled revision and next visible collection.
+   */
+  replaceExistingDisplayable(
+    comments: readonly CommentType[],
+    response: CommentType,
+    input: ReconcileCommentRevisionInput,
+    statusFilter: CommentStatusFilter,
+  ): CommentsReconciliationResult {
+    const currentComment = Comments.findById(comments, input.commentId);
+    if (currentComment === undefined) {
+      return {
+        ok: false,
+        error: {
+          reason: "commentNotFound",
+          commentId: input.commentId,
+        },
+      };
+    }
+
+    const reconciled = Comment.reconcileRevision(
+      currentComment,
+      response,
+      input.revision,
+    );
+    if (!reconciled.ok) {
+      return reconciled;
+    }
+
+    return reconciliationSuccess(
+      replaceDisplayable(comments, reconciled.value, statusFilter),
+      reconciled.value,
+    );
+  },
+
+  /**
+   * @param comments - Latest visible comments.
+   * @param input - Validated response, original collection, and revision contract.
+   * @returns Response reapplied after validating it against the latest target revision.
+   */
+  applyValidatedRevision(
+    comments: readonly CommentType[],
+    input: ApplyValidatedRevisionInput,
+  ): CommentsReconciliationResult {
+    const currentComment = Comments.findById(
+      comments,
+      input.revision.commentId,
+    );
+    if (currentComment !== undefined) {
+      const reconciled = Comment.reconcileRevision(
+        currentComment,
+        input.response,
+        input.revision.revision,
+      );
+      if (!reconciled.ok) {
+        return reconciled;
+      }
+
+      return reconciliationSuccess(
+        replaceDisplayable(comments, reconciled.value, input.statusFilter),
+        reconciled.value,
       );
     }
 
-    if (currentComment === undefined) {
-      return Comments.create([...comments, commentWithResolution]);
+    if (!Comment.matchesStatusFilter(input.response, input.statusFilter)) {
+      return reconciliationSuccess(comments, input.response);
     }
 
-    return Comments.create(
-      comments.map((candidate) =>
-        candidate.id === commentWithResolution.id
-          ? commentWithResolution
-          : candidate,
-      ),
+    const previousIndex = input.previousComments.findIndex(
+      (comment) => comment.id === input.revision.commentId,
+    );
+    if (previousIndex < 0) {
+      return {
+        ok: false,
+        error: {
+          reason: "commentNotFound",
+          commentId: input.revision.commentId,
+        },
+      };
+    }
+
+    return reconciliationSuccess(
+      insertAtCommentIndex(comments, input.response, previousIndex),
+      input.response,
     );
   },
+
   /**
-   * @param comments - Current visible comments
-   * @param commentId - Comment id to toggle locally
-   * @param statusFilter - Active status filter
-   * @returns Comments after an optimistic resolved-state toggle.
+   * @param comments - Current visible comments.
+   * @param commentId - Comment id to toggle locally.
+   * @param statusFilter - Active status filter.
+   * @returns Comments after an optimistic status toggle with unchanged timestamp.
    */
   upsertOptimisticToggle(
-    comments: readonly Comment[],
+    comments: readonly CommentType[],
     commentId: CommentId,
-    statusFilter: CommentStatusFilterType,
-  ): readonly Comment[] {
-    const currentComment = comments.find((comment) => comment.id === commentId);
+    statusFilter: CommentStatusFilter,
+  ): readonly CommentType[] {
+    const currentComment = Comments.findById(comments, commentId);
 
     if (currentComment === undefined) {
       return comments;
     }
 
-    return Comments.upsertDisplayable(
-      comments,
-      toggleResolved(currentComment),
-      statusFilter,
+    const statusChange = Comment.isResolved(currentComment)
+      ? Comment.reopen(currentComment, { updatedAt: currentComment.updatedAt })
+      : Comment.resolve(currentComment, {
+          updatedAt: currentComment.updatedAt,
+        });
+
+    if (!statusChange.ok) {
+      return comments;
+    }
+
+    return replaceDisplayable(comments, statusChange.value, statusFilter);
+  },
+
+  /**
+   * @param comments - Latest visible comments.
+   * @param input - Before-image and optimistic collection captured by the toggle.
+   * @returns Collection with only the still-owned optimistic target restored.
+   */
+  rollbackOptimisticToggle(
+    comments: readonly CommentType[],
+    input: RollbackOptimisticToggleInput,
+  ): readonly CommentType[] {
+    const previousComment = Comments.findById(
+      input.previousComments,
+      input.commentId,
     );
+    if (
+      previousComment === undefined ||
+      !Comment.matchesStatusFilter(previousComment, input.statusFilter)
+    ) {
+      return comments;
+    }
+
+    const currentComment = Comments.findById(comments, input.commentId);
+    const optimisticComment = Comments.findById(
+      input.optimisticComments,
+      input.commentId,
+    );
+    if (optimisticComment === undefined) {
+      if (currentComment !== undefined) {
+        return comments;
+      }
+
+      const previousIndex = input.previousComments.findIndex(
+        (comment) => comment.id === input.commentId,
+      );
+      return insertAtCommentIndex(comments, previousComment, previousIndex);
+    }
+
+    if (currentComment !== optimisticComment) {
+      return comments;
+    }
+
+    return comments.map((comment) =>
+      comment.id === input.commentId ? previousComment : comment,
+    );
+  },
+
+  /**
+   * @param comments - Current visible comments.
+   * @param commentId - Comment identity to remove.
+   * @returns A collection without the comment, preserving the original reference when absent.
+   */
+  remove(
+    comments: readonly CommentType[],
+    commentId: CommentId,
+  ): readonly CommentType[] {
+    if (Comments.findById(comments, commentId) === undefined) {
+      return comments;
+    }
+
+    return comments.filter((comment) => comment.id !== commentId);
   },
 } as const;
 
-/** @returns Incoming comment with known anchor resolution preserved when omitted. */
-function preserveAnchorResolution(
-  current: Comment | undefined,
-  next: Comment,
-): Comment {
-  if (next.anchorResolution !== undefined && next.anchorResolution !== null) {
-    return next;
+/**
+ * @param comments - Current visible collection.
+ * @param comment - Reconciled aggregate.
+ * @param statusFilter - Active status filter.
+ * @returns Collection with the reconciled aggregate replaced or hidden.
+ */
+function replaceDisplayable(
+  comments: readonly CommentType[],
+  comment: CommentType,
+  statusFilter: CommentStatusFilter,
+): readonly CommentType[] {
+  if (!Comment.matchesStatusFilter(comment, statusFilter)) {
+    return comments.filter((candidate) => candidate.id !== comment.id);
   }
 
-  if (current?.anchorResolution === undefined) {
-    return next;
-  }
-
-  return { ...next, anchorResolution: current.anchorResolution };
-}
-
-/** @returns True when the filter should include the comment. */
-function shouldDisplay(
-  comment: Comment,
-  statusFilter: CommentStatusFilterType,
-): boolean {
-  return CommentStatusFilter.matches(statusFilter, comment.status);
+  return comments.map((candidate) =>
+    candidate.id === comment.id ? comment : candidate,
+  );
 }
 
 /**
- * @param comment - Comment whose resolved state should be inverted.
- * @returns Comment with resolved state inverted.
+ * @param comments - Current visible collection.
+ * @param comment - Comment to insert.
+ * @param requestedIndex - Preferred index from the operation start snapshot.
+ * @returns Collection with the comment inserted at a bounded index.
  */
-function toggleResolved(comment: Comment): Comment {
-  if (comment.resolved) {
-    return { ...comment, status: "open", resolved: false };
-  }
+function insertAtCommentIndex(
+  comments: readonly CommentType[],
+  comment: CommentType,
+  requestedIndex: number,
+): readonly CommentType[] {
+  const index = Math.min(Math.max(requestedIndex, 0), comments.length);
 
-  return { ...comment, status: "resolved", resolved: true };
+  return [...comments.slice(0, index), comment, ...comments.slice(index)];
+}
+
+/**
+ * @param comments - Reconciled visible collection.
+ * @param comment - Reconciled aggregate returned to the caller.
+ * @returns Successful collection reconciliation result.
+ */
+function reconciliationSuccess(
+  comments: readonly CommentType[],
+  comment: CommentType,
+): CommentsReconciliationResult {
+  return { ok: true, value: { comments, comment } };
 }

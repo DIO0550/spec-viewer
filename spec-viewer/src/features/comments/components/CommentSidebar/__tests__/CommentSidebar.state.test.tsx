@@ -1,5 +1,6 @@
 import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
+import { createCommentTestFixture } from "@/features/comments/testing/comment-test-fixture";
 import type { ReactNode } from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
@@ -32,62 +33,58 @@ const anchor: CommentAnchor = createCommentAnchorTestFixture({
   },
 });
 
-const openComment: Comment = {
-  id: commentId("cmt_open"),
+const openComment = createCommentTestFixture({
+  id: "cmt_open",
   anchor,
   body: "Clarify what counts as an active comment highlight.",
-  status: "open",
-  resolved: false,
-  createdAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
-  updatedAt: TestValues.isoDateTime("2026-05-05T10:15:00Z"),
-};
+  createdAt: "2026-05-05T10:00:00Z",
+  updatedAt: "2026-05-05T10:15:00Z",
+});
 
-const resolvedComment: Comment = {
-  ...openComment,
-  id: commentId("cmt_resolved"),
+const resolvedComment = createCommentTestFixture({
+  id: "cmt_resolved",
+  anchor,
   body: "This acceptance item is covered.",
   status: "resolved",
-  resolved: true,
-  createdAt: TestValues.isoDateTime("2026-05-05T11:00:00Z"),
-  updatedAt: TestValues.isoDateTime("2026-05-05T11:30:00Z"),
-};
+  createdAt: "2026-05-05T11:00:00Z",
+  updatedAt: "2026-05-05T11:30:00Z",
+});
 
-const fuzzyComment: Comment = {
-  ...openComment,
-  id: commentId("cmt_fuzzy"),
+const fuzzyComment = createCommentTestFixture({
+  id: "cmt_fuzzy",
+  anchor,
   body: "Re-check this moved paragraph before final review.",
-  createdAt: TestValues.isoDateTime("2026-05-05T12:00:00Z"),
-  updatedAt: TestValues.isoDateTime("2026-05-05T12:15:00Z"),
-};
+  createdAt: "2026-05-05T12:00:00Z",
+  updatedAt: "2026-05-05T12:15:00Z",
+});
 
-const staleComment: Comment = {
-  ...openComment,
-  id: commentId("cmt_stale"),
+const staleComment = createCommentTestFixture({
+  id: "cmt_stale",
+  anchor,
   body: "Original snippet changed after this comment was created.",
-  createdAt: TestValues.isoDateTime("2026-05-05T13:00:00Z"),
-  updatedAt: TestValues.isoDateTime("2026-05-05T13:15:00Z"),
-};
+  createdAt: "2026-05-05T13:00:00Z",
+  updatedAt: "2026-05-05T13:15:00Z",
+});
 
-const orphanedComment: Comment = {
-  ...openComment,
-  id: commentId("cmt_orphaned"),
+const orphanedComment = createCommentTestFixture({
+  id: "cmt_orphaned",
+  anchor,
   body: "This anchor can no longer be found in the document.",
-  createdAt: TestValues.isoDateTime("2026-05-05T14:00:00Z"),
-  updatedAt: TestValues.isoDateTime("2026-05-05T14:15:00Z"),
-};
+  createdAt: "2026-05-05T14:00:00Z",
+  updatedAt: "2026-05-05T14:15:00Z",
+});
 
-const overviewComment: Comment = {
-  ...openComment,
-  id: commentId("cmt_overview"),
+const overviewComment = createCommentTestFixture({
+  id: "cmt_overview",
   anchor: createCommentAnchorTestFixture({
     ...anchor,
     fileKey: "design",
     textSnippet: "Searchable orphaned snippet for release notes",
   }),
   body: "Summarize release risk for reviewers.",
-  createdAt: TestValues.isoDateTime("2026-05-05T15:00:00Z"),
-  updatedAt: TestValues.isoDateTime("2026-05-05T15:15:00Z"),
-};
+  createdAt: "2026-05-05T15:00:00Z",
+  updatedAt: "2026-05-05T15:15:00Z",
+});
 
 type RenderResult = Readonly<{
   container: HTMLDivElement;

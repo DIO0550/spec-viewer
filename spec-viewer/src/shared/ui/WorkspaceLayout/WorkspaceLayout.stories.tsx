@@ -1,5 +1,6 @@
 import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
+import { createCommentTestFixture } from "@/features/comments/testing/comment-test-fixture";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type ComponentProps, type ReactNode, useState } from "react";
 import { fn } from "storybook/test";
@@ -130,8 +131,8 @@ const readyDocumentState: SpecDocumentState = {
 };
 
 const sampleComments: readonly Comment[] = [
-  {
-    id: commentId("cmt_story_open"),
+  createCommentTestFixture({
+    id: "cmt_story_open",
     anchor: createCommentAnchorTestFixture({
       fileKey: "tasks",
       blockType: "list_item",
@@ -144,13 +145,11 @@ const sampleComments: readonly Comment[] = [
       },
     }),
     body: "Check whether this note should move to Phase 2.",
-    status: "open",
-    resolved: false,
-    createdAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
-    updatedAt: TestValues.isoDateTime("2026-05-05T10:15:00Z"),
-  },
-  {
-    id: commentId("cmt_story_resolved"),
+    createdAt: "2026-05-05T10:00:00Z",
+    updatedAt: "2026-05-05T10:15:00Z",
+  }),
+  createCommentTestFixture({
+    id: "cmt_story_resolved",
     anchor: createCommentAnchorTestFixture({
       fileKey: "tasks",
       blockType: "heading",
@@ -164,10 +163,9 @@ const sampleComments: readonly Comment[] = [
     }),
     body: "Rendering checklist is already reflected in the plan.",
     status: "resolved",
-    resolved: true,
-    createdAt: TestValues.isoDateTime("2026-05-05T11:00:00Z"),
-    updatedAt: TestValues.isoDateTime("2026-05-05T11:30:00Z"),
-  },
+    createdAt: "2026-05-05T11:00:00Z",
+    updatedAt: "2026-05-05T11:30:00Z",
+  }),
 ];
 
 type WorkspaceLayoutStoryProps = Readonly<{
