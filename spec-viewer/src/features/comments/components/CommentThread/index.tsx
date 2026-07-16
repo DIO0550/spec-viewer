@@ -15,6 +15,7 @@ import {
 } from "react";
 
 import type { CommentOperationFeatureState as CommentOperationState } from "@/features/comments/application/commentError";
+import { Comment } from "@/features/comments/domain/comment";
 import {
   CommentBody,
   type CommentBodyDraft,
@@ -23,7 +24,6 @@ import {
 import { CommentOperationSavingState } from "@/features/comments/domain/commentOperation";
 import { toCommentBodyValidationMessage } from "@/features/comments/lib/comment-body-validation-message";
 import type {
-  Comment,
   CommentAnchorDisplayStatus,
   CommentId,
 } from "@/features/comments/types/comment";
@@ -89,7 +89,7 @@ export function CommentThread({
     operationState,
     comment.id,
   );
-  const isResolved = comment.resolved;
+  const isResolved = Comment.isResolved(comment);
   const anchorStatusLabel = formatAnchorDisplayStatus(anchorDisplayStatus);
 
   const beginEdit = (): void => {

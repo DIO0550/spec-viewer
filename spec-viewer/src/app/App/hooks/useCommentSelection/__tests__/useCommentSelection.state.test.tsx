@@ -1,4 +1,5 @@
 import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
+import { createCommentTestFixture } from "@/features/comments/testing/comment-test-fixture";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
@@ -26,15 +27,11 @@ const anchor: CommentAnchor = createCommentAnchorTestFixture({
 });
 
 function makeComment(id: string): Comment {
-  return {
-    id: commentId(id),
+  return createCommentTestFixture({
+    id,
     anchor,
     body: `body-${id}`,
-    status: "open",
-    resolved: false,
-    createdAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
-    updatedAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
-  };
+  });
 }
 
 const c1 = makeComment("cmt_1");

@@ -1,5 +1,6 @@
 import * as TestValues from "@/shared/testing/validatedValueObjects";
 import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
+import { createCommentTestFixture } from "@/features/comments/testing/comment-test-fixture";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
@@ -11,7 +12,6 @@ import {
   useCommentExport,
 } from "@/app/App/hooks/useCommentExport";
 import type {
-  Comment,
   CommentAnchor,
   CommentExportScope,
   ExportCommentsResponse,
@@ -19,8 +19,6 @@ import type {
 } from "@/features/comments/types/comment";
 import { toCommentFeatureError } from "@/features/comments";
 import { getUnknownErrorMessage } from "@/shared/lib/errorMessage";
-
-const commentId = TestValues.commentId;
 
 const anchor: CommentAnchor = createCommentAnchorTestFixture({
   fileKey: "impl",
@@ -31,15 +29,11 @@ const anchor: CommentAnchor = createCommentAnchorTestFixture({
   charRange: { start: 0, end: 7 },
 });
 
-const openComment: Comment = {
-  id: commentId("cmt_1"),
+const openComment = createCommentTestFixture({
+  id: "cmt_1",
   anchor,
   body: "body",
-  status: "open",
-  resolved: false,
-  createdAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
-  updatedAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
-};
+});
 
 const baseKeys: SpecViewResetKeys = {
   workspaceRoot: "/workspace",

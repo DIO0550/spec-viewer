@@ -1,4 +1,5 @@
-import type { Comment, CommentId } from "@/features/comments/types/comment";
+import type { Comment } from "@/features/comments/domain/comment";
+import type { CommentId } from "@/shared/domain/commentId";
 
 export type CommentOperationKind =
   | "add"

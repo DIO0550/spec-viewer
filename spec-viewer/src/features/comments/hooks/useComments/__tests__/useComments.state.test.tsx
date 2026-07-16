@@ -1,5 +1,3 @@
-import * as TestValues from "@/shared/testing/validatedValueObjects";
-import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
@@ -12,8 +10,10 @@ import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFil
 import { useCommentOperations } from "@/features/comments/hooks/useCommentOperations";
 import { useComments } from "@/features/comments/hooks/useComments";
 import { toCommentFeatureError } from "@/features/comments/infra/tauri/commentErrorMapper";
+import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
 import { commentBody } from "@/features/comments/testing/comment-body-test-fixture";
 import { createCommentCommandTestDouble } from "@/features/comments/testing/comment-command-test-double";
+import { createCommentTestFixture } from "@/features/comments/testing/comment-test-fixture";
 import type {
   Comment,
   CommentAnchor,
@@ -22,6 +22,7 @@ import type {
 import { SpecViewSelection } from "@/shared/domain/specViewSelection";
 import { WorkspacePath } from "@/shared/domain/workspacePath";
 import { configurePerformanceLoggerForTest } from "@/shared/lib/performance";
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 
 const commentId = TestValues.commentId;
 
@@ -37,36 +38,48 @@ const anchor: CommentAnchor = createCommentAnchorTestFixture({
   },
 });
 
-const firstComment: Comment = {
-  id: commentId("cmt_1"),
+const firstComment = createCommentTestFixture({
+  id: "cmt_1",
+  anchor,
+  body: "Clarify this task",
+});
+
+const secondComment = createCommentTestFixture({
+  id: "cmt_2",
+  anchor,
+  body: "Add acceptance criteria",
+  createdAt: "2026-05-05T10:05:00Z",
+  updatedAt: "2026-05-05T10:05:00Z",
+});
+
+const resolvedComment = createCommentTestFixture({
+  id: "cmt_1",
+  anchor,
+  body: "Clarify this task",
+  status: "resolved",
+  updatedAt: "2026-05-05T10:10:00Z",
+});
+const reopenedComment = createCommentTestFixture({
+  id: "cmt_1",
   anchor,
   body: "Clarify this task",
   status: "open",
-  resolved: false,
-  createdAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
-  updatedAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
-};
+  updatedAt: "2026-05-05T10:20:00Z",
+});
 
-const secondComment: Comment = {
-  ...firstComment,
-  id: commentId("cmt_2"),
-  body: "Add acceptance criteria",
-  createdAt: TestValues.isoDateTime("2026-05-05T10:05:00Z"),
-  updatedAt: TestValues.isoDateTime("2026-05-05T10:05:00Z"),
-};
-
-const resolvedComment: Comment = {
-  ...firstComment,
+const optimisticResolvedComment = createCommentTestFixture({
+  id: "cmt_1",
+  anchor,
+  body: "Clarify this task",
   status: "resolved",
-  resolved: true,
-  updatedAt: TestValues.isoDateTime("2026-05-05T10:10:00Z"),
-};
+});
 
-const optimisticResolvedComment: Comment = {
-  ...firstComment,
-  status: "resolved",
-  resolved: true,
-};
+const updatedComment = createCommentTestFixture({
+  id: "cmt_1",
+  anchor,
+  body: "Updated body",
+  updatedAt: "2026-05-05T10:15:00Z",
+});
 
 function createCommentScope(
   fileKey: CommentScopeType["fileKey"],
@@ -177,13 +190,9 @@ function createCommands(
   const double = createCommentCommandTestDouble({
     listComments: { comments: [firstComment] },
     addComment: secondComment,
-    updateComment: {
-      ...firstComment,
-      body: "Updated body",
-      updatedAt: TestValues.isoDateTime("2026-05-05T10:15:00Z"),
-    },
+    updateComment: updatedComment,
     resolveComment: resolvedComment,
-    reopenComment: firstComment,
+    reopenComment: reopenedComment,
     toggleCommentResolved: resolvedComment,
   });
 
@@ -519,11 +528,7 @@ test("useCommentsは同一scopeで古いoperation完了を現在の一覧へ反�
   expect(result.current.comments).toEqual([resolvedComment]);
   expect(result.current.operationState.status).toBe("idle");
 
-  updateDeferred.resolve({
-    ...firstComment,
-    body: "Updated body",
-    updatedAt: TestValues.isoDateTime("2026-05-05T10:15:00Z"),
-  });
+  updateDeferred.resolve(updatedComment);
   await act(async () => {
     await expect(updatePromise).resolves.toBeNull();
   });
@@ -594,7 +599,7 @@ test("useCommentsはresolveとreopenを一覧へ反映する", async () => {
   await act(async () => {
     await result.current.reopenComment(commentId("cmt_1"));
   });
-  expect(result.current.comments).toEqual([firstComment]);
+  expect(result.current.comments).toEqual([reopenedComment]);
   result.unmount();
 });
 

@@ -1,39 +1,14 @@
-import * as TestValues from "@/shared/testing/validatedValueObjects";
-import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
 import { expect, test } from "vitest";
 
+import type { Comment } from "@/features/comments/domain/comment";
 import { CommentListState } from "@/features/comments/domain/commentListState";
-import type { Comment, CommentAnchor } from "@/features/comments/types/comment";
+import { createCommentTestFixture } from "@/features/comments/testing/comment-test-fixture";
 
-const commentId = TestValues.commentId;
-
-const anchor: CommentAnchor = createCommentAnchorTestFixture({
-  fileKey: "tasks",
-  blockType: "paragraph",
-  blockIndex: 0,
-  textHash: "sha256:f1a57001",
-  textSnippet: "Clarify this task",
-  charRange: {
-    start: 0,
-    end: 18,
-  },
-});
-
-const comment: Comment = {
-  id: commentId("cmt_1"),
-  anchor,
-  body: "Clarify this task",
-  status: "open",
-  resolved: false,
-  createdAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
-  updatedAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
-};
-
-const updatedComment: Comment = {
-  ...comment,
+const comment = createCommentTestFixture();
+const updatedComment = createCommentTestFixture({
   body: "Updated body",
-  updatedAt: TestValues.isoDateTime("2026-05-05T10:15:00Z"),
-};
+  updatedAt: "2026-05-05T10:15:00Z",
+});
 
 const featureError = { kind: "commentFailure" } as const;
 

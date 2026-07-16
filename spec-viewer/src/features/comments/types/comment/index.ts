@@ -1,4 +1,10 @@
-import type { Comment as DomainComment } from "@/features/comments/domain/comment";
+import type {
+  Comment as DomainComment,
+  CommentAnchorResolution as DomainCommentAnchorResolution,
+  CommentAnchorResolutionReason as DomainCommentAnchorResolutionReason,
+  CommentAnchorResolutionStatus as DomainCommentAnchorResolutionStatus,
+  CommentAnchorResolutionTarget as DomainCommentAnchorResolutionTarget,
+} from "@/features/comments/domain/comment";
 import type { CommentBody } from "@/features/comments/domain/commentBody";
 import type {
   BlockType,
@@ -42,22 +48,9 @@ export type CommentAnchorDisplayStatus =
   | "orphaned"
   | "stale";
 
-export type CommentAnchorResolutionStatus =
-  | "resolved"
-  | "moved"
-  | "fuzzy"
-  | "orphaned";
+export type CommentAnchorResolutionStatus = DomainCommentAnchorResolutionStatus;
 
-export type CommentAnchorResolutionReason =
-  | "exact_match"
-  | "moved_by_hash"
-  | "stale_snippet"
-  | "fuzzy_match"
-  | "missing_original_block"
-  | "ambiguous_fuzzy_candidates"
-  | "below_threshold"
-  | "deleted_text"
-  | "unsupported_block_type";
+export type CommentAnchorResolutionReason = DomainCommentAnchorResolutionReason;
 
 export type CommentCharRange = CharRange;
 
@@ -81,24 +74,9 @@ export type AddCommentSubmitInput = Readonly<{
   body: CommentBody;
 }>;
 
-export type CommentAnchorResolutionTarget = Readonly<{
-  blockType: CommentBlockType;
-  blockIndex: number;
-  textHash: string;
-  textSnippet: string;
-  sourceRange: Readonly<{
-    startByteOffset: number;
-    endByteOffset: number;
-  }> | null;
-  score: number;
-}>;
+export type CommentAnchorResolutionTarget = DomainCommentAnchorResolutionTarget;
 
-export type CommentAnchorResolution = Readonly<{
-  status: CommentAnchorResolutionStatus;
-  reason: CommentAnchorResolutionReason;
-  details: string | null;
-  target: CommentAnchorResolutionTarget | null;
-}>;
+export type CommentAnchorResolution = DomainCommentAnchorResolution;
 
 export type Comment = DomainComment;
 

@@ -1,44 +1,17 @@
-import * as TestValues from "@/shared/testing/validatedValueObjects";
-import { createCommentAnchorTestFixture } from "@/features/comments/testing/comment-anchor-test-fixture";
-import { expect, expectTypeOf, test } from "vitest";
-
-import type { Comment } from "@/features/comments/domain/comment";
-import { Comments } from "@/features/comments/domain/comments";
+import { expect, test } from "vitest";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
-import type { CommentAnchor } from "@/features/comments/types/comment";
 
-const commentId = TestValues.commentId;
+import { Comments } from "@/features/comments/domain/comments";
+import { createCommentTestFixture } from "@/features/comments/testing/comment-test-fixture";
+import * as TestValues from "@/shared/testing/validatedValueObjects";
 
-const anchor: CommentAnchor = createCommentAnchorTestFixture({
-  fileKey: "tasks",
-  blockType: "paragraph",
-  blockIndex: 0,
-  textHash: "sha256:f1a57001",
-  textSnippet: "Clarify this task",
-  charRange: {
-    start: 0,
-    end: 18,
-  },
-});
-
-const openComment: Comment = {
-  id: commentId("cmt_1"),
-  anchor,
-  body: "Clarify this task",
-  status: "open",
-  resolved: false,
-  createdAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
-  updatedAt: TestValues.isoDateTime("2026-05-05T10:00:00Z"),
-};
-
-const secondOpenComment: Comment = {
-  ...openComment,
-  id: commentId("cmt_2"),
+const openComment = createCommentTestFixture();
+const secondOpenComment = createCommentTestFixture({
+  id: "cmt_2",
   body: "Add acceptance criteria",
-  createdAt: TestValues.isoDateTime("2026-05-05T10:05:00Z"),
-  updatedAt: TestValues.isoDateTime("2026-05-05T10:05:00Z"),
-};
-
+  createdAt: "2026-05-05T10:05:00Z",
+  updatedAt: "2026-05-05T10:05:00Z",
+});
 const movedAnchorResolution = {
   status: "moved",
   reason: "moved_by_hash",
@@ -48,174 +21,97 @@ const movedAnchorResolution = {
     blockIndex: 1,
     textHash: "sha256:b00b1e02",
     textSnippet: "Clarify the updated task",
-    sourceRange: {
-      startByteOffset: 10,
-      endByteOffset: 38,
-    },
+    sourceRange: { startByteOffset: 10, endByteOffset: 38 },
     score: 0.92,
   },
 } as const;
 
-test("Comments型はreadonly Comment配列として扱える", () => {
-  expectTypeOf<Comments>().toMatchTypeOf<readonly Comment[]>();
-});
-
-test("Comments.createはreadonly配列互換のCommentsを作成する", () => {
-  const comments = [openComment] as const;
-
-  expect(Comments.toArray(Comments.create(comments))).toBe(comments);
-});
-
-test("Comments.appendDisplayableは表示対象コメントを末尾に追加する", () => {
-  expect(
-    Comments.appendDisplayable(
-      [openComment],
-      secondOpenComment,
-      CommentStatusFilter.Open,
-    ),
-  ).toEqual([openComment, secondOpenComment]);
-});
-
-test("Comments.appendDisplayableはfilter対象外なら元配列を返す", () => {
-  const comments = [openComment] as const;
-  const resolvedComment: Comment = {
-    ...secondOpenComment,
-    status: "resolved",
-    resolved: true,
-  };
-
-  expect(
-    Comments.appendDisplayable(
-      comments,
-      resolvedComment,
-      CommentStatusFilter.Open,
-    ),
-  ).toBe(comments);
-});
-
-test("Comments.appendDisplayableは重複idなら元配列を返す", () => {
-  const comments = [openComment] as const;
-  const updatedComment: Comment = {
-    ...openComment,
+test("Comments.replaceExistingDisplayableは既存コメントを同じ位置で置換する", () => {
+  const updatedComment = createCommentTestFixture({
     body: "Updated body",
-  };
+    updatedAt: "2026-05-05T10:15:00Z",
+  });
 
   expect(
-    Comments.appendDisplayable(
-      comments,
-      updatedComment,
-      CommentStatusFilter.All,
-    ),
-  ).toBe(comments);
-});
-
-test("Comments.upsertDisplayableは既存コメントを同じ位置で置換する", () => {
-  const updatedComment: Comment = {
-    ...openComment,
-    body: "Updated body",
-    updatedAt: TestValues.isoDateTime("2026-05-05T10:15:00Z"),
-  };
-
-  expect(
-    Comments.upsertDisplayable(
+    Comments.replaceExistingDisplayable(
       [openComment, secondOpenComment],
       updatedComment,
+      {
+        commentId: openComment.id,
+        revision: { kind: "update", body: updatedComment.body },
+      },
       CommentStatusFilter.All,
     ),
-  ).toEqual([updatedComment, secondOpenComment]);
+  ).toEqual({
+    ok: true,
+    value: {
+      comments: [updatedComment, secondOpenComment],
+      comment: updatedComment,
+    },
+  });
 });
 
-test("Comments.upsertDisplayableは新規表示対象コメントを末尾に追加する", () => {
-  expect(
-    Comments.upsertDisplayable(
-      [openComment],
-      secondOpenComment,
-      CommentStatusFilter.Open,
-    ),
-  ).toEqual([openComment, secondOpenComment]);
-});
-
-test("Comments.upsertDisplayableはfilter対象外になった既存コメントを削除する", () => {
-  const resolvedComment: Comment = {
-    ...openComment,
+test("Comments.replaceExistingDisplayableはfilter対象外になった既存コメントを削除する", () => {
+  const resolvedComment = createCommentTestFixture({
     status: "resolved",
-    resolved: true,
-  };
+    updatedAt: "2026-05-05T10:15:00Z",
+  });
 
   expect(
-    Comments.upsertDisplayable(
+    Comments.replaceExistingDisplayable(
       [openComment, secondOpenComment],
       resolvedComment,
+      {
+        commentId: openComment.id,
+        revision: { kind: "resolve" },
+      },
       CommentStatusFilter.Open,
     ),
-  ).toEqual([secondOpenComment]);
+  ).toEqual({
+    ok: true,
+    value: {
+      comments: [secondOpenComment],
+      comment: resolvedComment,
+    },
+  });
 });
 
-test("Comments.upsertDisplayableはfilter対象外かつ未存在のコメントでは元配列を返す", () => {
-  const comments = [openComment] as const;
-  const resolvedComment: Comment = {
-    ...secondOpenComment,
-    status: "resolved",
-    resolved: true,
-  };
-
-  expect(
-    Comments.upsertDisplayable(
-      comments,
-      resolvedComment,
-      CommentStatusFilter.Open,
-    ),
-  ).toBe(comments);
-});
-
-test.each([
-  [
-    {
-      ...openComment,
-      body: "Updated body",
-      updatedAt: TestValues.isoDateTime("2026-05-05T10:15:00Z"),
-    },
-  ],
-  [
-    {
-      ...openComment,
-      anchorResolution: null,
-    },
-  ],
-] as const)("Comments.upsertDisplayableはresponseのanchorResolutionがない場合に既存値を維持する", (nextComment) => {
-  const currentComment: Comment = {
-    ...openComment,
+test("Comments.replaceExistingDisplayableはresponseのanchorResolutionがnullなら既存値を維持する", () => {
+  const currentComment = createCommentTestFixture({
     anchorResolution: movedAnchorResolution,
-  };
+  });
+  const nextComment = createCommentTestFixture({
+    body: "Updated body",
+    updatedAt: "2026-05-05T10:15:00Z",
+  });
 
   expect(
-    Comments.upsertDisplayable(
+    Comments.replaceExistingDisplayable(
       [currentComment],
       nextComment,
+      {
+        commentId: currentComment.id,
+        revision: { kind: "update", body: nextComment.body },
+      },
       CommentStatusFilter.All,
     ),
-  ).toEqual([
-    {
-      ...nextComment,
-      anchorResolution: movedAnchorResolution,
+  ).toEqual({
+    ok: true,
+    value: {
+      comments: [{ ...nextComment, anchorResolution: movedAnchorResolution }],
+      comment: { ...nextComment, anchorResolution: movedAnchorResolution },
     },
-  ]);
+  });
 });
 
-test("Comments.upsertOptimisticToggleは既存コメントのresolved stateを反転する", () => {
+test("Comments.upsertOptimisticToggleはaggregate APIでstatusを反転する", () => {
   expect(
     Comments.upsertOptimisticToggle(
       [openComment],
       openComment.id,
       CommentStatusFilter.All,
     ),
-  ).toEqual([
-    {
-      ...openComment,
-      status: "resolved",
-      resolved: true,
-    },
-  ]);
+  ).toEqual([{ ...openComment, status: "resolved" }]);
 });
 
 test("Comments.upsertOptimisticToggleはfilter適用後に非表示のコメントを除外する", () => {
@@ -234,7 +130,7 @@ test("Comments.upsertOptimisticToggleは対象idがない場合に元配列を�
   expect(
     Comments.upsertOptimisticToggle(
       comments,
-      commentId("cmt_missing"),
+      TestValues.commentId("cmt_missing"),
       CommentStatusFilter.All,
     ),
   ).toBe(comments);
