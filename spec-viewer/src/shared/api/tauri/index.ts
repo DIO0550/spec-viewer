@@ -4,15 +4,12 @@ export {
   addComment,
 } from "./addComment";
 export { archiveSpec } from "./archiveSpec";
-export { archiveUserReview } from "./archiveUserReview";
 export { commentCommands } from "./commentCommands";
-export { createUserReview } from "./createUserReview";
 export { deleteComment } from "./deleteComment";
 export { exportComments } from "./exportComments";
 export { generateLlmPrompt } from "./generateLlmPrompt";
 export { listComments } from "./listComments";
 export { listSpecs } from "./listSpecs";
-export { listUserReviews } from "./listUserReviews";
 export { loadWorkspace } from "./loadWorkspace";
 export { readSpecFile } from "./readSpecFile";
 export { reopenComment } from "./reopenComment";
@@ -29,7 +26,6 @@ export {
 export { toIpcCommandError } from "./toIpcCommandError";
 export { toggleCommentResolved } from "./toggleCommentResolved";
 export { updateComment } from "./updateComment";
-export { userReviewCommands } from "./userReviewCommands";
 export { validateWorkspaceDirectory } from "./validateWorkspaceDirectory";
 
 export type {
@@ -41,4 +37,3 @@ export type {
 } from "./addComment";
 export type { CommentCommands } from "./commentCommands";
 export type { SpecCommands } from "./specCommands";
-export type { UserReviewCommands } from "./userReviewCommands";
