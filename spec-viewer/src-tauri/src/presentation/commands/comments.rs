@@ -64,8 +64,7 @@ impl AddCommentCommandError {
             AppUseCaseError::SpecTreeScan { .. }
             | AppUseCaseError::SpecArchive { .. }
             | AppUseCaseError::MarkdownRead { .. }
-            | AppUseCaseError::InvalidSpec { .. }
-            | AppUseCaseError::ReviewRunExport { .. } => AddCommentCommandErrorCode::Unexpected,
+            | AppUseCaseError::InvalidSpec { .. } => AddCommentCommandErrorCode::Unexpected,
         };
 
         Self::new(code, error.to_string())
@@ -142,8 +141,7 @@ impl CommentCommandError {
             AppUseCaseError::CommentRepository { .. } => CommentCommandErrorCode::CommentRepository,
             AppUseCaseError::SpecTreeScan { .. }
             | AppUseCaseError::SpecArchive { .. }
-            | AppUseCaseError::InvalidSpec { .. }
-            | AppUseCaseError::ReviewRunExport { .. } => CommentCommandErrorCode::Unexpected,
+            | AppUseCaseError::InvalidSpec { .. } => CommentCommandErrorCode::Unexpected,
         };
 
         Self::new(code, error.to_string())

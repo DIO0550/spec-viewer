@@ -50,8 +50,7 @@ impl WorkspaceCommandError {
             | AppUseCaseError::MarkdownRead { .. }
             | AppUseCaseError::InvalidSpec { .. }
             | AppUseCaseError::InvalidComment { .. }
-            | AppUseCaseError::CommentRepository { .. }
-            | AppUseCaseError::ReviewRunExport { .. } => WorkspaceCommandErrorCode::Unexpected,
+            | AppUseCaseError::CommentRepository { .. } => WorkspaceCommandErrorCode::Unexpected,
         };
 
         Self::new(code, error.to_string())

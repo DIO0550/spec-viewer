@@ -7,14 +7,6 @@ import type {
   ArchiveSpecCommandResponse,
 } from "@/shared/api/tauri/archiveSpec";
 import type {
-  ArchiveUserReviewCommandRequest,
-  ArchiveUserReviewCommandResponse,
-} from "@/shared/api/tauri/archiveUserReview";
-import type {
-  CreateUserReviewCommandRequest,
-  CreateUserReviewCommandResponse,
-} from "@/shared/api/tauri/createUserReview";
-import type {
   DeleteCommentCommandRequest,
   DeleteCommentCommandResponse,
 } from "@/shared/api/tauri/deleteComment";
@@ -34,10 +26,6 @@ import type {
   ListSpecsCommandRequest,
   ListSpecsCommandResponse,
 } from "@/shared/api/tauri/listSpecs";
-import type {
-  ListUserReviewsCommandRequest,
-  ListUserReviewsCommandResponse,
-} from "@/shared/api/tauri/listUserReviews";
 import type {
   LoadWorkspaceCommandRequest,
   LoadWorkspaceCommandResponse,
@@ -85,7 +73,6 @@ export type CommandErrorCode =
   | "invalidSpec"
   | "invalidComment"
   | "commentRepository"
-  | "userReviewExport"
   | "fileWatch"
   | "unexpected";
 
@@ -165,18 +152,6 @@ export type CommandPayloads = Readonly<{
   generate_llm_prompt: Readonly<{
     request: GenerateLlmPromptCommandRequest;
     response: GenerateLlmPromptCommandResponse;
-  }>;
-  create_user_review: Readonly<{
-    request: CreateUserReviewCommandRequest;
-    response: CreateUserReviewCommandResponse;
-  }>;
-  list_user_reviews: Readonly<{
-    request: ListUserReviewsCommandRequest;
-    response: ListUserReviewsCommandResponse;
-  }>;
-  archive_user_review: Readonly<{
-    request: ArchiveUserReviewCommandRequest;
-    response: ArchiveUserReviewCommandResponse;
   }>;
 }>;
 

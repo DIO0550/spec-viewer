@@ -7,7 +7,6 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import type { ReactNode } from "react";
 import { useId, useState } from "react";
 import { CommentThread } from "@/features/comments/components/CommentThread";
 import type { CommentListState } from "@/features/comments/domain/commentListState";
@@ -67,7 +66,6 @@ type Props = Readonly<{
   onExportComments?: (scope: CommentExportScope) => void;
   onCopyLlmPrompt?: (scope: CommentExportScope) => void;
   onCopyMcpFeedback?: () => void;
-  userReviewPanel?: ReactNode;
 }>;
 
 type CommentGroups = Readonly<{
@@ -167,7 +165,6 @@ export function CommentSidebar({
   onExportComments,
   onCopyLlmPrompt,
   onCopyMcpFeedback,
-  userReviewPanel,
 }: Props) {
   const [activeFilter, setActiveFilter] =
     useState<CommentDisplayFilter>(defaultDisplayFilter);
@@ -270,7 +267,6 @@ export function CommentSidebar({
           onCopyMcpFeedback={onCopyMcpFeedback}
         />
         <CommentExportFeedback exportState={exportState} />
-        {userReviewPanel}
         <EmptyState
           title={uiText.sidebar.empty}
           description={`${uiText.sidebar.emptyDescription} ${uiText.sidebar.addHint}`}
@@ -320,7 +316,6 @@ export function CommentSidebar({
         onCopyMcpFeedback={onCopyMcpFeedback}
       />
       <CommentExportFeedback exportState={exportState} />
-      {userReviewPanel}
       <CommentSearchControl
         searchQuery={searchQuery}
         resultCount={searchedComments.length}

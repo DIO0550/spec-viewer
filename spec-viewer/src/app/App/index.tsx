@@ -364,7 +364,6 @@ function SpecViewAppContent(): ReactElement {
         <WorkspaceLayout.Comments>
           <SpecViewCommentSidebar
             comments={comments.comments}
-            correlationId={specState.documentState.correlationId ?? null}
             resetKeys={resetKeys}
             listState={comments.listState}
             operationState={comments.operationState}

@@ -1,7 +1,6 @@
 //! Use cases that coordinate domain logic and infrastructure.
 
 pub mod comments;
-pub mod review_runs;
 
 use std::path::Path;
 
@@ -38,12 +37,6 @@ pub use comments::{
     FilesystemCommentUseCases, GenerateCommentId, GetCurrentTime, ResolveCommentAnchorsResult,
     UtcCommentClock, UuidCommentIdGenerator,
 };
-pub use review_runs::{
-    ArchiveReviewRunInput, ArchiveReviewRunResult, CreateReviewRunInput, CreateReviewRunResult,
-    ListReviewRunsInput, ListReviewRunsResult, ListedReviewRun, ReviewRunExecutionMode,
-    ReviewRunListProblem, ReviewRunListProblemState,
-};
-
 pub type FilesystemAppUseCases = AppUseCases<
     FilesystemWorkspaceDetector,
     WorkspaceConfigLoader,
@@ -542,8 +535,6 @@ pub enum AppUseCaseError {
     InvalidComment { message: String },
     #[error("failed to persist comments: {message}")]
     CommentRepository { message: String },
-    #[error("failed to export review run: {message}")]
-    ReviewRunExport { message: String },
 }
 
 impl From<WorkspaceDetectionError> for AppUseCaseError {
