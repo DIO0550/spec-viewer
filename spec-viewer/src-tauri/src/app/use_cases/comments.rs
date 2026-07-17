@@ -1048,6 +1048,31 @@ mod tests {
     }
 
     #[test]
+    fn update_comment_rejects_system_clock_rollback_without_persistence() {
+        let repository = FakeCommentRepository::default();
+        let existing = comment(
+            "cmt_existing",
+            SpecFileKey::Impl,
+            "Current body",
+            CommentStatus::Open,
+            6,
+        );
+        repository.comments.borrow_mut().push(existing.clone());
+        let use_cases = use_cases(repository.clone());
+
+        let result =
+            use_cases.update_comment("auth-flow", SpecFileKey::Impl, "cmt_existing", "Stale body");
+
+        assert_eq!(
+            Err(AppUseCaseError::InvalidComment {
+                message: "comment updated timestamp 2026-05-05 12:00:05 UTC cannot be before current updated timestamp 2026-05-05 12:00:06 UTC".to_string(),
+            }),
+            result
+        );
+        assert_eq!(vec![existing], *repository.comments.borrow());
+    }
+
+    #[test]
     fn resolve_reopen_and_toggle_comment_status() {
         let repository = FakeCommentRepository::default();
         repository.comments.borrow_mut().push(comment(
