@@ -57,10 +57,8 @@ test("comment view modelは状態フィルターとorphan表示状態を共有�
   expectTypeOf<CommentStatusFilterType>().toEqualTypeOf<
     "all" | "open" | "resolved"
   >();
-  expectTypeOf<CommentStatusFilterType>().toMatchTypeOf<CommentDisplayFilter>();
-  expectTypeOf<CommentDisplayFilter>().toEqualTypeOf<
-    "all" | "open" | "resolved" | "moved" | "fuzzy" | "stale" | "orphaned"
-  >();
+  expectTypeOf<CommentDisplayFilter>().toEqualTypeOf<"open" | "resolved">();
+  expectTypeOf<CommentDisplayFilter>().toMatchTypeOf<CommentStatusFilterType>();
   expectTypeOf<CommentDisplayState>().toEqualTypeOf<
     "open" | "resolved" | "orphaned"
   >();

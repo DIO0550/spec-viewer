@@ -59,14 +59,6 @@ const fuzzyComment: Comment = {
   updatedAt: "2026-05-05T12:15:00Z",
 };
 
-const staleComment: Comment = {
-  ...openComment,
-  id: commentId("cmt_stale"),
-  body: "Original snippet changed after this comment was created.",
-  createdAt: "2026-05-05T13:00:00Z",
-  updatedAt: "2026-05-05T13:15:00Z",
-};
-
 const orphanedComment: Comment = {
   ...openComment,
   id: commentId("cmt_orphaned"),
@@ -393,18 +385,33 @@ test("CommentSidebarはopenとresolvedの件数とコメント本文を表示す
   expect(result.container.textContent).toContain(
     "Clarify what counts as an active comment highlight.",
   );
-  expect(result.container.textContent).toContain(
+  expect(result.container.textContent).not.toContain(
     "This acceptance item is covered.",
   );
   expect(
     result.container.querySelector('time[datetime="2026-05-05T10:15:00Z"]'),
   ).not.toBeNull();
+
+  const resolvedFilter = result.container.querySelector(
+    '[aria-label="解決済みコメントを表示"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    resolvedFilter.click();
+  });
+
+  expect(result.container.textContent).toContain(
+    "This acceptance item is covered.",
+  );
   result.unmount();
 });
 
 test("CommentSidebarは矢印キーで隣のcomment threadを選択する", () => {
   const onSelectComment = vi.fn();
-  const result = renderReadySidebar({ onSelectComment });
+  const result = renderReadySidebar({
+    comments: [openComment, fuzzyComment],
+    onSelectComment,
+  });
   const selectors = result.container.querySelectorAll(
     ".comment-thread__select",
   );
@@ -417,7 +424,7 @@ test("CommentSidebarは矢印キーで隣のcomment threadを選択する", () =
   });
 
   expect(document.activeElement).toBe(selectors[1]);
-  expect(onSelectComment).toHaveBeenCalledWith("cmt_resolved");
+  expect(onSelectComment).toHaveBeenCalledWith("cmt_fuzzy");
   result.unmount();
 });
 
@@ -553,13 +560,14 @@ test("CommentSidebarは選択中コメントをaria-currentで表現する", () 
 
 test("CommentSidebarはreconciliationのアンカー状態を表示する", () => {
   const result = renderReadySidebar({
+    comments: [openComment, fuzzyComment],
     anchorDisplayStates: [
       {
         commentId: commentId("cmt_open"),
         status: "moved",
       },
       {
-        commentId: commentId("cmt_resolved"),
+        commentId: commentId("cmt_fuzzy"),
         status: "orphaned",
       },
     ],
@@ -592,43 +600,53 @@ test("CommentSidebarは選択した状態フィルターのコメントだけを
   result.unmount();
 });
 
-test("CommentSidebarはアンカー状態フィルターの件数と空状態を表示する", () => {
+test("CommentSidebarは未解決と解決済み以外のフィルターを表示しない", () => {
   const result = renderReadySidebar({
-    comments: [openComment, fuzzyComment, staleComment, orphanedComment],
+    comments: [openComment, fuzzyComment],
     anchorDisplayStates: [
       {
         commentId: commentId("cmt_fuzzy"),
         status: "fuzzy",
       },
-      {
-        commentId: commentId("cmt_stale"),
-        status: "stale",
-      },
-      {
-        commentId: commentId("cmt_orphaned"),
-        status: "orphaned",
-      },
     ],
   });
-  const fuzzyFilter = result.container.querySelector(
-    '[aria-label="曖昧なアンカーのコメントを表示"]',
+
+  expect(
+    result.container.querySelector('[aria-label="すべてのコメントを表示"]'),
+  ).toBeNull();
+  expect(
+    result.container.querySelector(
+      '[aria-label="移動したアンカーのコメントを表示"]',
+    ),
+  ).toBeNull();
+  expect(
+    result.container.querySelector(
+      '[aria-label="曖昧なアンカーのコメントを表示"]',
+    ),
+  ).toBeNull();
+  expect(
+    result.container.querySelector(
+      '[aria-label="古いアンカーのコメントを表示"]',
+    ),
+  ).toBeNull();
+  expect(
+    result.container.querySelector(
+      '[aria-label="位置不明アンカーのコメントを表示"]',
+    ),
+  ).toBeNull();
+  expect(
+    result.container.querySelectorAll(".comment-sidebar__filter").length,
+  ).toBe(2);
+
+  const openFilter = result.container.querySelector(
+    '[aria-label="未解決コメントを表示"]',
   ) as HTMLButtonElement;
   const resolvedFilter = result.container.querySelector(
     '[aria-label="解決済みコメントを表示"]',
   ) as HTMLButtonElement;
 
-  expect(fuzzyFilter.textContent).toBe("曖昧1");
-
-  act(() => {
-    fuzzyFilter.click();
-  });
-
-  expect(result.container.textContent).toContain(
-    "Re-check this moved paragraph before final review.",
-  );
-  expect(result.container.textContent).not.toContain(
-    "Original snippet changed after this comment was created.",
-  );
+  expect(openFilter.getAttribute("aria-pressed")).toBe("true");
+  expect(openFilter.textContent).toBe("未解決2");
 
   act(() => {
     resolvedFilter.click();
@@ -778,6 +796,14 @@ test("CommentSidebarはコメント選択とresolve操作を発火する", () =>
 test("CommentSidebarはresolvedコメントのreopen操作を発火する", () => {
   const onReopenComment = vi.fn();
   const result = renderReadySidebar({ onReopenComment });
+  const resolvedFilter = result.container.querySelector(
+    '[aria-label="解決済みコメントを表示"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    resolvedFilter.click();
+  });
+
   const reopenButton = result.container.querySelector(
     '[aria-label="再オープン cmt_resolved"]',
   ) as HTMLButtonElement;
