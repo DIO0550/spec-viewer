@@ -1,12 +1,10 @@
-import { createRef, type ReactNode } from "react";
-import { act } from "react";
+import { act, createRef, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-
-import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
-import type { SpecDocument } from "@/features/specs/types/spec";
 import { MarkdownViewerPanel } from "@/features/specs/components/MarkdownViewer/MarkdownViewerPanel";
 import { MarkdownViewerStatusPanel } from "@/features/specs/components/MarkdownViewer/MarkdownViewerStatusPanel";
+import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
+import type { SpecDocument } from "@/features/specs/types/spec";
 
 const workspacePath = "/workspace/spec-reviewer";
 
@@ -174,9 +172,15 @@ test("MarkdownViewerStatusPanelはerror状態でretryをonReloadへ委譲する"
         fileKey: "tasks",
         document: null,
         error: {
+          feature: "specs",
           code: "markdownRead",
           message: "Markdown file could not be read.",
-          raw: "Markdown file could not be read.",
+          cause: {
+            command: "read_spec_file",
+            code: "markdownRead",
+            message: "Markdown file could not be read.",
+            raw: "Markdown file could not be read.",
+          },
         },
       }}
       selectedSpecLabel="Phase 1 Viewer"

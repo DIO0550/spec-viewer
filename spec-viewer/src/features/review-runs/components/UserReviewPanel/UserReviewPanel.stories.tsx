@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
 
-import { CommentId } from "@/features/comments/types/comment";
+import { CommentId } from "@/features/comments/domain/commentId";
 import { UserReviewPanel } from "@/features/review-runs/components/UserReviewPanel";
 
 const meta = {
@@ -105,9 +105,15 @@ export const Error: Story = {
       status: "error",
       payload: { commentIds: [], workspaceMode: "currentWorkspace" },
       error: {
+        feature: "userReviews",
         code: "userReviewExport",
         message: "source files have uncommitted changes",
-        raw: {},
+        cause: {
+          command: "create_user_review",
+          code: "userReviewExport",
+          message: "source files have uncommitted changes",
+          raw: {},
+        },
       },
     },
   },

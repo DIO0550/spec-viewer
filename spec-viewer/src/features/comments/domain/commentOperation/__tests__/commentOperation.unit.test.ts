@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
-
+import type { CommentFeatureError } from "@/features/comments/domain/commentError";
+import { CommentId } from "@/features/comments/domain/commentId";
 import * as commentOperationModule from "@/features/comments/domain/commentOperation";
 import {
   CommentOperationFailedState,
@@ -7,9 +8,7 @@ import {
   CommentOperationSavingState,
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
-import { CommentId } from "@/features/comments/types/comment";
 import { AddCommentCommandError } from "@/shared/api/tauri/addComment";
-import type { CommentFeatureError } from "@/features/comments/domain/commentError";
 
 const commentId = CommentId.fromString;
 
@@ -88,7 +87,7 @@ test("CommentOperationSavingState.isはsaving状態だけを判定する", () =>
 
 test("CommentOperationFailedState.isはerror状態だけを判定する", () => {
   const failedState: CommentOperationState = CommentOperationFailedState.create(
-    "toggle",
+    "reopen",
     commentId("cmt_target"),
     featureError,
   );

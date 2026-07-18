@@ -1,14 +1,13 @@
 import { expect, test, vi } from "vitest";
-
+import { CommentId } from "@/features/comments/domain/commentId";
 import {
   archiveUserReview,
   createListUserReviewsRequest,
   createUserReview,
   listUserReviews,
 } from "@/features/review-runs/infra/userReviewGateway";
-import type { UserReviewCommands } from "@/shared/api/tauri";
 import type { UserReviewDto } from "@/features/review-runs/types/userReviewIpc";
-import { CommentId } from "@/features/comments/types/comment";
+import type { UserReviewCommands } from "@/shared/api/tauri";
 
 const target = {
   scope: "file",

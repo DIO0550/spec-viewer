@@ -5,7 +5,6 @@ import type { GenerateLlmPromptCommandError } from "@/shared/api/tauri/generateL
 import type { ListCommentsCommandError } from "@/shared/api/tauri/listComments";
 import type { ReopenCommentCommandError } from "@/shared/api/tauri/reopenComment";
 import type { ResolveCommentCommandError } from "@/shared/api/tauri/resolveComment";
-import type { ToggleCommentResolvedCommandError } from "@/shared/api/tauri/toggleCommentResolved";
 import type { UpdateCommentCommandError } from "@/shared/api/tauri/updateComment";
 
 export type CommentCommandError =
@@ -16,7 +15,6 @@ export type CommentCommandError =
   | ListCommentsCommandError
   | ReopenCommentCommandError
   | ResolveCommentCommandError
-  | ToggleCommentResolvedCommandError
   | UpdateCommentCommandError;
 
 export type CommentFeatureErrorCode =
@@ -58,6 +56,3 @@ export const CommentFeatureError = {
     return "unknown";
   },
 } as const;
-
-/** @deprecated Use CommentFeatureError for comment feature state. */
-export type LegacyCommentOperationError = CommentFeatureError;

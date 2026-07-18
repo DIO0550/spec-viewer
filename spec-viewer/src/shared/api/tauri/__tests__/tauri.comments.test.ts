@@ -1,30 +1,29 @@
 import { invoke } from "@tauri-apps/api/core";
 import { expect, test, vi } from "vitest";
 
+import type { Comment } from "@/features/comments/domain/comment";
+import { CommentId } from "@/features/comments/domain/commentId";
 import type {
   AddCommentRequest,
-  Comment,
   DeleteCommentRequest,
   ListCommentsRequest,
   UpdateCommentRequest,
 } from "@/features/comments/types/comment";
-import { CommentId } from "@/features/comments/types/comment";
+import {
+  AddCommentCommandError,
+  addComment,
+  commentCommands,
+  deleteComment,
+  listComments,
+  updateComment,
+} from "@/shared/api/tauri";
 import { DeleteCommentCommandError } from "@/shared/api/tauri/deleteComment";
 import { ExportCommentsCommandError } from "@/shared/api/tauri/exportComments";
 import { GenerateLlmPromptCommandError } from "@/shared/api/tauri/generateLlmPrompt";
 import { ListCommentsCommandError } from "@/shared/api/tauri/listComments";
 import { ReopenCommentCommandError } from "@/shared/api/tauri/reopenComment";
 import { ResolveCommentCommandError } from "@/shared/api/tauri/resolveComment";
-import { ToggleCommentResolvedCommandError } from "@/shared/api/tauri/toggleCommentResolved";
 import { UpdateCommentCommandError } from "@/shared/api/tauri/updateComment";
-import {
-  addComment,
-  AddCommentCommandError,
-  commentCommands,
-  deleteComment,
-  listComments,
-  updateComment,
-} from "@/shared/api/tauri";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
@@ -48,7 +47,6 @@ const comment: Comment = {
   },
   body: "Clarify this task",
   status: "open",
-  resolved: false,
   createdAt: "2026-05-05T10:00:00Z",
   updatedAt: "2026-05-05T10:00:00Z",
 };
@@ -245,17 +243,6 @@ test("ReopenCommentCommandError.fromUnknownは正規化済みunknownエラーの
   );
 
   expect(ReopenCommentCommandError.fromUnknown(normalizedError)).toEqual(
-    normalizedError,
-  );
-});
-
-test("ToggleCommentResolvedCommandError.fromUnknownは正規化済みunknownエラーのmessageを保持する", () => {
-  const normalizedError = ToggleCommentResolvedCommandError.unknown(
-    "comment status could not be toggled",
-    { cause: "write failed" },
-  );
-
-  expect(ToggleCommentResolvedCommandError.fromUnknown(normalizedError)).toEqual(
     normalizedError,
   );
 });

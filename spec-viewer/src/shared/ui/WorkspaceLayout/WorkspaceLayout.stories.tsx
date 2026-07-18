@@ -6,9 +6,10 @@ import {
   CommentSidebar,
   createTextHash,
 } from "@/features/comments";
-import { CommentId } from "@/features/comments/types/comment";
+import { CommentId } from "@/features/comments/domain/commentId";
 import { ThemeProvider } from "@/features/preferences";
 import type {
+  MarkdownBlockMetadata,
   SpecDocument,
   SpecDocumentState,
   SpecFileKey,
@@ -57,9 +58,9 @@ const sampleSpec: SpecNode = {
       format: "html",
     },
     {
-      key: "design",
-      label: "Design",
-      fileName: "design.md",
+      key: "requirements",
+      label: "Requirements",
+      fileName: "requirements.html",
       status: "present",
     },
   ],
@@ -83,6 +84,70 @@ const sampleSpec: SpecNode = {
 const sampleTree: SpecTreeShape = {
   specs: [sampleSpec],
 };
+
+const sampleBlocks: readonly MarkdownBlockMetadata[] = [
+  {
+    blockType: "heading",
+    blockIndex: 0,
+    textHash: createTextHash("P1.14 Markdown Rendering"),
+    textSnippet: "P1.14 Markdown Rendering",
+    sourceRange: null,
+  },
+  {
+    blockType: "block_quote",
+    blockIndex: 1,
+    textHash: createTextHash(
+      "Render review planning documents with anchors ready for comments.",
+    ),
+    textSnippet:
+      "Render review planning documents with anchors ready for comments.",
+    sourceRange: null,
+  },
+  {
+    blockType: "heading",
+    blockIndex: 2,
+    textHash: createTextHash("Acceptance"),
+    textSnippet: "Acceptance",
+    sourceRange: null,
+  },
+  {
+    blockType: "list_item",
+    blockIndex: 3,
+    textHash: createTextHash("Headings and lists"),
+    textSnippet: "Headings and lists",
+    sourceRange: null,
+  },
+  {
+    blockType: "list_item",
+    blockIndex: 4,
+    textHash: createTextHash("Fenced code blocks"),
+    textSnippet: "Fenced code blocks",
+    sourceRange: null,
+  },
+  {
+    blockType: "list_item",
+    blockIndex: 5,
+    textHash: createTextHash("Comment behavior follows in P1.15"),
+    textSnippet: "Comment behavior follows in P1.15",
+    sourceRange: null,
+  },
+  {
+    blockType: "code_block",
+    blockIndex: 6,
+    textHash: createTextHash('const blockType = "heading";'),
+    textSnippet: 'const blockType = "heading";',
+    sourceRange: null,
+  },
+  {
+    blockType: "table",
+    blockIndex: 7,
+    textHash: createTextHash(
+      "Element Status GFM table Ready External link Docs",
+    ),
+    textSnippet: "Element Status GFM table Ready External link Docs",
+    sourceRange: null,
+  },
+];
 
 const sampleDocument: SpecDocument = {
   key: "tasks",
@@ -108,7 +173,7 @@ const sampleDocument: SpecDocument = {
     "| External link | [Docs](https://example.com/docs) |",
   ].join("\n"),
   missing: false,
-  blocks: [],
+  blocks: sampleBlocks,
 };
 
 const readyTreeState: SpecTreeState = {
@@ -143,7 +208,6 @@ const sampleComments: readonly Comment[] = [
     },
     body: "Check whether this note should move to Phase 2.",
     status: "open",
-    resolved: false,
     createdAt: "2026-05-05T10:00:00Z",
     updatedAt: "2026-05-05T10:15:00Z",
   },
@@ -162,7 +226,6 @@ const sampleComments: readonly Comment[] = [
     },
     body: "Rendering checklist is already reflected in the plan.",
     status: "resolved",
-    resolved: true,
     createdAt: "2026-05-05T11:00:00Z",
     updatedAt: "2026-05-05T11:30:00Z",
   },
@@ -371,9 +434,15 @@ export const Error: Story = {
       workspacePath,
       tree: null,
       error: {
+        feature: "specs",
         code: "specTreeScan",
         message: "Spec directory could not be scanned.",
-        raw: "Spec directory could not be scanned.",
+        cause: {
+          command: "list_specs",
+          code: "specTreeScan",
+          message: "Spec directory could not be scanned.",
+          raw: "Spec directory could not be scanned.",
+        },
       },
     },
     documentState: {
@@ -383,9 +452,15 @@ export const Error: Story = {
       fileKey: "tasks",
       document: null,
       error: {
+        feature: "specs",
         code: "markdownRead",
         message: "Markdown file could not be read.",
-        raw: "Markdown file could not be read.",
+        cause: {
+          command: "read_spec_file",
+          code: "markdownRead",
+          message: "Markdown file could not be read.",
+          raw: "Markdown file could not be read.",
+        },
       },
     },
     selectedSpec: sampleSpec,
@@ -459,19 +534,19 @@ function createShellArgs({
       <div className="left-navigation-panel">
         <WorkspaceSidebarSection
           currentWorkspacePath={workspaceStatusPath}
-          isOpen={false}
+          isOpen={true}
           isBusy={isWorkspaceLoading}
           recentWorkspaces={[
             {
               path: workspacePath,
-              displayName: "spec-reviewer",
+              displayName: "plugin-workspace",
               kind: "plugin-workspace",
               lastOpenedAt: "2026-05-06T00:00:00.000Z",
             },
             {
-              path: "/workspace/legacy-spec-skill",
-              displayName: "legacy-spec-skill",
-              kind: "spec-skill",
+              path: "/workspace/spec-reviewer-worktree",
+              displayName: "plugin-worktree",
+              kind: "plugin-worktree",
               lastOpenedAt: "2026-05-05T00:00:00.000Z",
             },
           ]}

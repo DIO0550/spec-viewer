@@ -1,5 +1,8 @@
 import { expect, test, vi } from "vitest";
-
+import type { Comment } from "@/features/comments/domain/comment";
+import type { CommentAnchor } from "@/features/comments/domain/commentAnchor";
+import type { CommentFeatureError } from "@/features/comments/domain/commentError";
+import { CommentId } from "@/features/comments/domain/commentId";
 import {
   CommentOperationFailedState,
   CommentOperationIdleState,
@@ -11,10 +14,7 @@ import type {
   CommentListState,
   UseCommentsResult,
 } from "@/features/comments/hooks/useComments";
-import type { Comment, CommentAnchor } from "@/features/comments/types/comment";
-import { CommentId } from "@/features/comments/types/comment";
 import { AddCommentCommandError } from "@/shared/api/tauri/addComment";
-import type { CommentFeatureError } from "@/features/comments/domain/commentError";
 
 const commentId = CommentId.fromString;
 
@@ -35,7 +35,6 @@ const comment: Comment = {
   anchor,
   body: "Clarify this task",
   status: "open",
-  resolved: false,
   createdAt: "2026-05-05T10:00:00Z",
   updatedAt: "2026-05-05T10:00:00Z",
 };
@@ -62,7 +61,6 @@ function createCommentOperations(
     deleteComment: vi.fn(),
     resolveComment: vi.fn(),
     reopenComment: vi.fn(),
-    toggleCommentResolved: vi.fn(),
   };
 }
 
@@ -100,7 +98,6 @@ test("buildCommentsResultはlistStateとコメント操作結果からhook公開
     deleteComment: commentOperations.deleteComment,
     resolveComment: commentOperations.resolveComment,
     reopenComment: commentOperations.reopenComment,
-    toggleCommentResolved: commentOperations.toggleCommentResolved,
   });
 });
 

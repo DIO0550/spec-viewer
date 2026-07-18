@@ -15,13 +15,10 @@ export type UserReviewFeatureErrorCode =
   | "unknown";
 
 export type UserReviewFeatureError = Readonly<{
-  /** @deprecated Optional only while legacy fixtures migrate to feature-level errors. */
-  feature?: "userReviews";
-  code: UserReviewFeatureErrorCode | string;
+  feature: "userReviews";
+  code: UserReviewFeatureErrorCode;
   message: string;
-  cause?: UserReviewCommandError;
-  /** @deprecated Compatibility field for legacy normalized command error fixtures. */
-  raw?: unknown;
+  cause: UserReviewCommandError;
 }>;
 
 export const UserReviewFeatureError = {

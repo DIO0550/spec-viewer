@@ -10,6 +10,8 @@ import {
 import type { ReactNode } from "react";
 import { useId, useState } from "react";
 import { CommentThread } from "@/features/comments/components/CommentThread";
+import type { Comment } from "@/features/comments/domain/comment";
+import type { CommentId } from "@/features/comments/domain/commentId";
 import type { CommentListState } from "@/features/comments/domain/commentListState";
 import {
   CommentOperationFailedState,
@@ -17,13 +19,11 @@ import {
 } from "@/features/comments/domain/commentOperation";
 import type {
   ApplyWithAiPlaceholderState,
-  Comment,
   CommentAnchorDisplayState,
   CommentAnchorDisplayStatus,
   CommentDisplayFilter,
   CommentExportOperation,
   CommentExportScope,
-  CommentId,
 } from "@/features/comments/types/comment";
 import { uiText } from "@/shared/lib/uiText";
 import { CommandErrorDisplay } from "@/shared/ui/CommandErrorDisplay";
@@ -909,7 +909,9 @@ function createCommentSearchFields(
     comment.body,
     comment.anchor.fileKey,
     comment.anchor.textSnippet,
-    comment.resolved ? uiText.sidebar.resolved : uiText.sidebar.openFilter,
+    comment.status === "resolved"
+      ? uiText.sidebar.resolved
+      : uiText.sidebar.openFilter,
     anchorStatusLabel ?? "",
   ];
 }
@@ -961,8 +963,10 @@ function formatSearchResultCount(resultCount: number): string {
  */
 function groupCommentsByStatus(comments: readonly Comment[]): CommentGroups {
   return {
-    openComments: comments.filter((comment) => !comment.resolved),
-    resolvedComments: comments.filter((comment) => comment.resolved),
+    openComments: comments.filter((comment) => comment.status !== "resolved"),
+    resolvedComments: comments.filter(
+      (comment) => comment.status === "resolved",
+    ),
   };
 }
 
@@ -1002,8 +1006,9 @@ function createCommentFilterCounts(
 
     return {
       all: counts.all + 1,
-      open: comment.resolved ? counts.open : counts.open + 1,
-      resolved: comment.resolved ? counts.resolved + 1 : counts.resolved,
+      open: comment.status === "resolved" ? counts.open : counts.open + 1,
+      resolved:
+        comment.status === "resolved" ? counts.resolved + 1 : counts.resolved,
       moved: anchorStatus === "moved" ? counts.moved + 1 : counts.moved,
       fuzzy: anchorStatus === "fuzzy" ? counts.fuzzy + 1 : counts.fuzzy,
       stale: anchorStatus === "stale" ? counts.stale + 1 : counts.stale,
@@ -1027,11 +1032,11 @@ function filterCommentsByDisplayFilter(
   }
 
   if (activeFilter === "open") {
-    return comments.filter((comment) => !comment.resolved);
+    return comments.filter((comment) => comment.status !== "resolved");
   }
 
   if (activeFilter === "resolved") {
-    return comments.filter((comment) => comment.resolved);
+    return comments.filter((comment) => comment.status === "resolved");
   }
 
   return comments.filter(

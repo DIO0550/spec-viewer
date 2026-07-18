@@ -1,12 +1,12 @@
 import { expect, test } from "vitest";
-
+import { UserReviewFeatureError } from "@/features/review-runs/domain/userReviewError";
+import type { CreateUserReviewPayload } from "@/features/review-runs/domain/userReviewOperation";
 import {
   UserReviewArchiveState,
   UserReviewCreateState,
 } from "@/features/review-runs/domain/userReviewOperation";
-import type { CreateUserReviewPayload } from "@/features/review-runs/domain/userReviewOperation";
 import type { UserReview } from "@/features/review-runs/types/userReviewIpc";
-import type { IpcCommandError } from "@/shared/types/ipc";
+import { CreateUserReviewCommandError } from "@/shared/api/tauri/createUserReview";
 
 const userReview = createUserReview();
 const createPayload: CreateUserReviewPayload = {
@@ -14,11 +14,14 @@ const createPayload: CreateUserReviewPayload = {
   workspaceMode: "currentWorkspace",
 };
 const archivePayload = { userReviewId: "run-1" };
-const error: IpcCommandError = {
-  message: "failed",
-  code: "unknown",
-  raw: "failed",
-};
+const error = UserReviewFeatureError.fromCommandError(
+  CreateUserReviewCommandError.fromUnknown({
+    command: "create_user_review",
+    code: "unknown",
+    message: "failed",
+    raw: "failed",
+  }),
+);
 
 test("UserReviewCreateStateはpayload付きcreate操作の状態を生成する", () => {
   expect(UserReviewCreateState.idle()).toEqual({ status: "idle" });

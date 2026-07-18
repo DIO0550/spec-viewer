@@ -2,7 +2,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
-import { CommentId } from "@/features/comments/types/comment";
+import { CommentId } from "@/features/comments/domain/commentId";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import { useCreateUserReview } from "@/features/review-runs/hooks/useCreateUserReview";
 import type { UserReview } from "@/features/review-runs/types/userReviewIpc";

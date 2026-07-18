@@ -24,11 +24,6 @@ import type {
 } from "./resolveComment";
 import { resolveComment } from "./resolveComment";
 import type {
-  ToggleCommentResolvedCommandRequest,
-  ToggleCommentResolvedCommandResponse,
-} from "./toggleCommentResolved";
-import { toggleCommentResolved } from "./toggleCommentResolved";
-import type {
   UpdateCommentCommandRequest,
   UpdateCommentCommandResponse,
 } from "./updateComment";
@@ -77,13 +72,6 @@ export type CommentCommands = Readonly<{
   reopenComment: (
     request: ReopenCommentCommandRequest,
   ) => Promise<ReopenCommentCommandResponse>;
-  /**
-   * Toggles a comment's resolved state.
-   * @param request - Toggle comment resolved command request.
-   */
-  toggleCommentResolved: (
-    request: ToggleCommentResolvedCommandRequest,
-  ) => Promise<ToggleCommentResolvedCommandResponse>;
 }>;
 
 export const commentCommands: CommentCommands = {
@@ -93,5 +81,4 @@ export const commentCommands: CommentCommands = {
   deleteComment,
   resolveComment,
   reopenComment,
-  toggleCommentResolved,
 };

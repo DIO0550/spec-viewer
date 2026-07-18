@@ -1,4 +1,4 @@
-import type { IsoDateTimeString } from "@/features/comments/types/comment";
+import type { IsoDateTimeString } from "@/features/comments/domain/comment";
 import type { UserReviewTarget } from "@/features/review-runs/domain/userReviewTarget";
 import type { SpecFileKey } from "@/features/specs/types/spec";
 
@@ -10,9 +10,7 @@ export type UserReviewStatus =
 
 export const UserReviewStatus = {
   /** @returns True when the status belongs to archived collection. */
-  isArchived(
-    status: UserReviewStatus,
-  ): status is ArchivedUserReview["status"] {
+  isArchived(status: UserReviewStatus): status is ArchivedUserReview["status"] {
     return status === "archived";
   },
 
@@ -107,9 +105,7 @@ export const UserReview = {
   },
 
   /** @returns True when the review belongs to active collection. */
-  isNonArchived(
-    userReview: UserReview,
-  ): userReview is NonArchivedUserReview {
+  isNonArchived(userReview: UserReview): userReview is NonArchivedUserReview {
     return UserReviewStatus.isNonArchived(userReview.status);
   },
 } as const;

@@ -46,9 +46,15 @@ const errorState: SpecDocumentState = {
   fileKey: "tasks",
   document: null,
   error: {
+    feature: "specs",
     code: "markdownRead",
     message: "Markdown file could not be read.",
-    raw: "Markdown file could not be read.",
+    cause: {
+      command: "read_spec_file",
+      code: "markdownRead",
+      message: "Markdown file could not be read.",
+      raw: "Markdown file could not be read.",
+    },
   },
 };
 

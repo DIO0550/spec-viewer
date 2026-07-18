@@ -5,7 +5,10 @@ export type CommentId = string & {
 };
 
 export const CommentId = {
-  /** @returns A branded comment id while preserving the runtime string value. */
+  /**
+   * @param value - Runtime string value to brand.
+   * @returns A branded comment id while preserving the runtime string value.
+   */
   fromString(value: string): CommentId {
     return value as CommentId;
   },

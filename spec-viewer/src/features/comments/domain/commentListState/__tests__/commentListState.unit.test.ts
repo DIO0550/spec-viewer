@@ -1,10 +1,10 @@
 import { expect, test } from "vitest";
-
-import { CommentListState } from "@/features/comments/domain/commentListState";
-import type { Comment, CommentAnchor } from "@/features/comments/types/comment";
-import { CommentId } from "@/features/comments/types/comment";
-import { AddCommentCommandError } from "@/shared/api/tauri/addComment";
+import type { Comment } from "@/features/comments/domain/comment";
+import type { CommentAnchor } from "@/features/comments/domain/commentAnchor";
 import type { CommentFeatureError } from "@/features/comments/domain/commentError";
+import { CommentId } from "@/features/comments/domain/commentId";
+import { CommentListState } from "@/features/comments/domain/commentListState";
+import { AddCommentCommandError } from "@/shared/api/tauri/addComment";
 
 const commentId = CommentId.fromString;
 
@@ -25,7 +25,6 @@ const comment: Comment = {
   anchor,
   body: "Clarify this task",
   status: "open",
-  resolved: false,
   createdAt: "2026-05-05T10:00:00Z",
   updatedAt: "2026-05-05T10:00:00Z",
 };

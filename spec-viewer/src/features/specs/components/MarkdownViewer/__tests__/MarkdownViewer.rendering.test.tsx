@@ -1,29 +1,30 @@
-import { act } from "react";
 import type { ReactNode } from "react";
+import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-
-import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
+import type { Comment } from "@/features/comments/domain/comment";
+import type {
+  CommentAnchorResolution,
+  CommentBlockType,
+} from "@/features/comments/domain/commentAnchor";
+import {
+  type CommentId,
+  CommentId as CommentIdValue,
+} from "@/features/comments/domain/commentId";
 import {
   CommentOperationFailedState,
   CommentOperationIdleState,
-  CommentOperationSavingState,
   type CommentOperationKind,
+  CommentOperationSavingState,
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
 import { createTextHash } from "@/features/comments/lib/comment-anchor-draft";
-import type {
-  Comment,
-  CommentAnchorResolution,
-  CommentBlockType,
-  CommentId,
-} from "@/features/comments/types/comment";
-import { CommentId as CommentIdValue } from "@/features/comments/types/comment";
+import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
+import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
 import type {
   MarkdownBlockMetadata,
   SpecDocument,
 } from "@/features/specs/types/spec";
-import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
 
 const commentId = CommentIdValue.fromString;
 
@@ -52,6 +53,95 @@ const richMarkdown = [
   "",
   "<script>alert('nope')</script>",
 ].join("\n");
+
+function createTestMarkdownBlocks(
+  contents: string | null,
+): readonly MarkdownBlockMetadata[] {
+  if (contents === null) {
+    return [];
+  }
+
+  const lines = contents.split("\n");
+  const blocks: MarkdownBlockMetadata[] = [];
+
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+    const line = lines[lineIndex] ?? "";
+    const trimmedLine = line.trim();
+
+    if (trimmedLine.length === 0) {
+      continue;
+    }
+
+    let blockType: MarkdownBlockMetadata["blockType"];
+    let text = trimmedLine;
+
+    if (trimmedLine.startsWith("\u0060\u0060\u0060")) {
+      blockType = "code_block";
+      const codeLines: string[] = [];
+      lineIndex += 1;
+      while (
+        lineIndex < lines.length &&
+        !(lines[lineIndex] ?? "").trim().startsWith("\u0060\u0060\u0060")
+      ) {
+        codeLines.push(lines[lineIndex] ?? "");
+        lineIndex += 1;
+      }
+      text = codeLines.join("\n");
+    } else if (/^#{1,6}\s/.test(trimmedLine)) {
+      blockType = "heading";
+      text = trimmedLine.replace(/^#{1,6}\s+/, "");
+    } else if (/^>\s?/.test(trimmedLine)) {
+      blockType = "block_quote";
+      text = trimmedLine.replace(/^>\s?/, "");
+    } else if (/^(?:[-*+]\s|\d+\.\s)/.test(trimmedLine)) {
+      blockType = "list_item";
+      text = trimmedLine
+        .replace(/^(?:[-*+]\s|\d+\.\s)/, "")
+        .replace(/^\[[ xX]\]\s*/, "");
+    } else if (
+      trimmedLine.startsWith("|") &&
+      /^\|?\s*:?-{3,}/.test((lines[lineIndex + 1] ?? "").trim())
+    ) {
+      blockType = "table";
+      const tableLines = [trimmedLine];
+      lineIndex += 1;
+      while (
+        lineIndex < lines.length &&
+        (lines[lineIndex] ?? "").trim().length > 0
+      ) {
+        tableLines.push((lines[lineIndex] ?? "").trim());
+        lineIndex += 1;
+      }
+      lineIndex -= 1;
+      text = tableLines.join("\n");
+    } else if (/^(?:---+|\*\*\*+|___+)$/.test(trimmedLine)) {
+      blockType = "thematic_break";
+    } else if (/^<[^>]+>/.test(trimmedLine)) {
+      blockType = "html";
+    } else {
+      blockType = "paragraph";
+      const paragraphLines = [trimmedLine];
+      while (
+        lineIndex + 1 < lines.length &&
+        (lines[lineIndex + 1] ?? "").trim().length > 0
+      ) {
+        lineIndex += 1;
+        paragraphLines.push((lines[lineIndex] ?? "").trim());
+      }
+      text = paragraphLines.join(" ");
+    }
+
+    blocks.push({
+      blockType,
+      blockIndex: blocks.length,
+      textHash: createTextHash(text),
+      textSnippet: text.slice(0, 160),
+      sourceRange: null,
+    });
+  }
+
+  return blocks;
+}
 
 type RenderResult = Readonly<{
   container: HTMLDivElement;
@@ -86,12 +176,11 @@ function renderComponent(component: ReactNode): RenderResult {
 
 function createReadyState(
   contents: string | null,
-  blocks: readonly MarkdownBlockMetadata[] = [],
+  blocks?: readonly MarkdownBlockMetadata[],
   format: SpecDocument["format"] = "markdown",
-  documentPath: string =
-    format === "html"
-      ? "/workspace/spec-reviewer/docs/plans/tasks.html"
-      : "/workspace/spec-reviewer/docs/plans/tasks.md",
+  documentPath: string = format === "html"
+    ? "/workspace/spec-reviewer/docs/plans/tasks.html"
+    : "/workspace/spec-reviewer/docs/plans/tasks.md",
 ): SpecDocumentState {
   const document: SpecDocument = {
     key: "tasks",
@@ -99,7 +188,7 @@ function createReadyState(
     path: documentPath,
     contents,
     missing: false,
-    blocks,
+    blocks: blocks ?? createTestMarkdownBlocks(contents),
   };
 
   return {
@@ -116,7 +205,7 @@ function createComment({
   id,
   blockIndex,
   text,
-  resolved,
+  status = "open",
   anchorResolution = null,
   charRange = {
     start: 0,
@@ -127,7 +216,7 @@ function createComment({
   id: string;
   blockIndex: number;
   text: string;
-  resolved: boolean;
+  status?: Comment["status"];
   anchorResolution?: CommentAnchorResolution | null;
   charRange?: Readonly<{
     start: number;
@@ -146,8 +235,7 @@ function createComment({
       charRange,
     },
     body: `${id} body`,
-    status: resolved ? "resolved" : "open",
-    resolved,
+    status,
     anchorResolution,
     createdAt: "2026-05-05T10:00:00Z",
     updatedAt: "2026-05-05T10:00:00Z",
@@ -524,6 +612,11 @@ test("MarkdownViewerはコメントアンカー用のブロックメタデータ
   result.unmount();
 });
 
+test("MarkdownViewerはbackend block metadata欠落をcontract violationとして扱う", () => {
+  expect(() =>
+    renderViewer(createReadyState("Metadata is required.", [])),
+  ).toThrow(/Markdown block metadata contract violation/);
+});
 test("MarkdownViewerはbackend block metadataをコメントアンカー用data属性に反映する", () => {
   const blocks: readonly MarkdownBlockMetadata[] = [
     {
@@ -564,13 +657,12 @@ test("MarkdownViewerはコメント付きブロックを状態別にハイライ
       id: "cmt_open",
       blockIndex: 1,
       text: "Open comments should remain prominent.",
-      resolved: false,
     }),
     createComment({
       id: "cmt_resolved",
+      status: "resolved",
       blockIndex: 2,
       text: "Resolved comments should stay quieter.",
-      resolved: true,
     }),
   ];
   const result = renderViewer(
@@ -698,13 +790,12 @@ test("MarkdownViewerは既存コメントを本文右側のカードから編集
       id: "cmt_open",
       blockIndex: 0,
       text: contents,
-      resolved: false,
     }),
     createComment({
       id: "cmt_resolved",
+      status: "resolved",
       blockIndex: 0,
       text: contents,
-      resolved: true,
     }),
   ];
   const result = renderViewer(
@@ -790,7 +881,6 @@ test("MarkdownViewerは編集ポップオーバーから未解決コメントを
       id: "cmt_open",
       blockIndex: 0,
       text: contents,
-      resolved: false,
     }),
   ];
   const result = renderViewer(
@@ -826,13 +916,12 @@ test("MarkdownViewerはコメント解決後に左ビューの表示から外す
     id: "cmt_open",
     blockIndex: 0,
     text: contents,
-    resolved: false,
   });
   const resolvedComment = createComment({
     id: "cmt_open",
+    status: "resolved",
     blockIndex: 0,
     text: contents,
-    resolved: true,
   });
   const renderMarkdownViewer = (comments: readonly Comment[]): ReactNode => (
     <MarkdownViewer
@@ -879,7 +968,6 @@ test("MarkdownViewerは親ビュー再描画後も編集中の本文を維持す
       id: "cmt_draft",
       blockIndex: 0,
       text: contents,
-      resolved: false,
     });
   const renderMarkdownViewer = (comments: readonly Comment[]): ReactNode => (
     <MarkdownViewer
@@ -918,9 +1006,9 @@ test("MarkdownViewerは初期表示の解決済みコメントを左ビューか
   const comments: readonly Comment[] = [
     createComment({
       id: "cmt_resolved",
+      status: "resolved",
       blockIndex: 0,
       text: contents,
-      resolved: true,
     }),
   ];
   const result = renderViewer(
@@ -952,7 +1040,6 @@ test("MarkdownViewerは編集ポップオーバーの削除初回クリックで
       id: "cmt_delete",
       blockIndex: 0,
       text: contents,
-      resolved: false,
     }),
   ];
   const result = renderViewer(
@@ -990,7 +1077,6 @@ test("MarkdownViewerは編集ポップオーバーの削除確認後にコメン
       id: "cmt_delete",
       blockIndex: 0,
       text: contents,
-      resolved: false,
     }),
   ];
   const result = renderViewer(
@@ -1034,7 +1120,6 @@ test("MarkdownViewerは対象コメントの操作中に編集ポップオーバ
       id: "cmt_busy",
       blockIndex: 0,
       text: contents,
-      resolved: false,
     }),
   ];
   const operationState = CommentOperationSavingState.create(
@@ -1083,7 +1168,6 @@ test("MarkdownViewerは対象コメントの操作エラーを編集ポップオ
       id: "cmt_error",
       blockIndex: 0,
       text: contents,
-      resolved: false,
     }),
   ];
   const operationState = createOperationErrorState(
@@ -1115,13 +1199,11 @@ test("MarkdownViewerはstaleとorphanedのコメントアンカー状態を通�
       id: "cmt_stale",
       blockIndex: 0,
       text: "The original anchor text.",
-      resolved: false,
     }),
     createComment({
       id: "cmt_orphaned",
       blockIndex: 4,
       text: "A missing anchor.",
-      resolved: false,
     }),
   ];
   const result = renderComponent(
@@ -1164,7 +1246,6 @@ test("MarkdownViewerはexact解決済みアンカーの選択範囲をハイラ�
       id: "cmt_exact",
       blockIndex: 0,
       text: contents,
-      resolved: false,
       charRange: {
         start: 2,
         end: 11,
@@ -1209,7 +1290,6 @@ test("MarkdownViewerはインラインコード内のコメント範囲に背景
       id: "cmt_inline_code",
       blockIndex: 0,
       text: contents,
-      resolved: false,
       charRange: {
         start: contents.indexOf("inlineCode"),
         end: contents.indexOf("inlineCode") + "inlineCode".length,
@@ -1254,7 +1334,6 @@ test("MarkdownViewerはコードブロックコメントを範囲色ではなく
       id: "cmt_code",
       blockIndex: 0,
       text: code,
-      resolved: false,
       blockType: "code_block",
       charRange: {
         start: code.indexOf("enabled"),
@@ -1290,7 +1369,6 @@ test("MarkdownViewerはmoved/fuzzy/orphaned解決結果をtarget blockへ反映�
       id: "cmt_moved",
       blockIndex: 0,
       text: "Original paragraph moved away.",
-      resolved: false,
       anchorResolution: {
         status: "moved",
         reason: "moved_by_hash",
@@ -1309,7 +1387,6 @@ test("MarkdownViewerはmoved/fuzzy/orphaned解決結果をtarget blockへ反映�
       id: "cmt_fuzzy",
       blockIndex: 0,
       text: "Original fuzzy paragraph.",
-      resolved: false,
       anchorResolution: {
         status: "fuzzy",
         reason: "fuzzy_match",
@@ -1328,7 +1405,6 @@ test("MarkdownViewerはmoved/fuzzy/orphaned解決結果をtarget blockへ反映�
       id: "cmt_orphaned",
       blockIndex: 9,
       text: "Deleted paragraph.",
-      resolved: false,
       anchorResolution: {
         status: "orphaned",
         reason: "deleted_text",
@@ -1578,7 +1654,6 @@ test("MarkdownViewerはハイライト内の部分選択をコメント選択ク
         id: "cmt_highlight",
         blockIndex: 0,
         text: contents,
-        resolved: false,
         charRange: {
           start: 2,
           end: 11,

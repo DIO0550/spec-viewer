@@ -90,7 +90,9 @@ export const GenerateLlmPromptCommandError = {
   },
 
   /** @returns True when the value is a generate_llm_prompt command error code. */
-  isCommandErrorCode(value: unknown): value is GenerateLlmPromptCommandErrorCode {
+  isCommandErrorCode(
+    value: unknown,
+  ): value is GenerateLlmPromptCommandErrorCode {
     return GenerateLlmPromptCommandError.isCode(value) || value === "unknown";
   },
 

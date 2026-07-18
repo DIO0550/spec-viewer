@@ -205,26 +205,21 @@ function parseRecentWorkspaces(
  * @returns A supported recent workspace object from unknown storage data.
  */
 function normalizeRecentWorkspace(value: unknown): RecentWorkspace | null {
-  if (typeof value === "string") {
-    const path = normalizeWorkspacePath(value);
-
-    if (path === null) {
-      return null;
-    }
-
-    return {
-      path,
-      displayName: createWorkspaceDisplayName(path),
-      kind: "plugin-workspace",
-      lastOpenedAt: "",
-    };
-  }
-
   if (typeof value !== "object" || value === null) {
     return null;
   }
 
-  if (!("path" in value) || typeof value.path !== "string") {
+  if (
+    !("path" in value) ||
+    typeof value.path !== "string" ||
+    !("displayName" in value) ||
+    typeof value.displayName !== "string" ||
+    value.displayName.trim().length === 0 ||
+    !("kind" in value) ||
+    !isWorkspaceKind(value.kind) ||
+    !("lastOpenedAt" in value) ||
+    typeof value.lastOpenedAt !== "string"
+  ) {
     return null;
   }
 
@@ -234,28 +229,13 @@ function normalizeRecentWorkspace(value: unknown): RecentWorkspace | null {
     return null;
   }
 
-  const displayName =
-    "displayName" in value &&
-    typeof value.displayName === "string" &&
-    value.displayName.trim().length > 0
-      ? value.displayName.trim()
-      : createWorkspaceDisplayName(path);
-  const kind =
-    "kind" in value && isWorkspaceKind(value.kind)
-      ? value.kind
-      : "plugin-workspace";
-  const legacyOpenedAt =
-    "openedAt" in value && typeof value.openedAt === "string"
-      ? value.openedAt
-      : "";
-  const lastOpenedAt =
-    "lastOpenedAt" in value && typeof value.lastOpenedAt === "string"
-      ? value.lastOpenedAt
-      : legacyOpenedAt;
-
-  return { path, displayName, kind, lastOpenedAt };
+  return {
+    path,
+    displayName: value.displayName.trim(),
+    kind: value.kind,
+    lastOpenedAt: value.lastOpenedAt,
+  };
 }
-
 /** @returns A deduplicated recent workspace list preserving first occurrence. */
 function dedupeRecentWorkspaces(
   workspaces: readonly RecentWorkspace[],
@@ -316,9 +296,5 @@ function createWorkspaceDisplayName(path: string): string {
  * @returns True when the stored value is a supported workspace kind.
  */
 function isWorkspaceKind(value: unknown): value is WorkspaceKind {
-  return (
-    value === "plugin-workspace" ||
-    value === "plugin-worktree" ||
-    value === "spec-skill"
-  );
+  return value === "plugin-workspace" || value === "plugin-worktree";
 }

@@ -39,7 +39,7 @@ export function mapListUserReviewsResponseToUserReviews(
   };
 }
 
-/** @returns Boundary-compatible error for archive state inconsistencies. */
+/** @returns Boundary error for archive state inconsistencies. */
 function toUserReviewArchiveStateError(
   error: UserReviewArchiveStateError,
 ): Error {

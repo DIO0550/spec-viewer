@@ -5,8 +5,7 @@ export type SpecFileKey =
   | "tasks"
   | "tech-reference"
   | "test-cases"
-  | "requirements"
-  | "design";
+  | "requirements";
 
 export type SpecFileStatus = "present" | "missing";
 export type SpecDocumentFormat = "markdown" | "html";

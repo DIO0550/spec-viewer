@@ -1,7 +1,5 @@
-import type {
-  CommentId,
-  IsoDateTimeString,
-} from "@/features/comments/types/comment";
+import type { IsoDateTimeString } from "@/features/comments/domain/comment";
+import type { CommentId } from "@/features/comments/domain/commentId";
 import type {
   ReviewSourceFile,
   UserReview,
@@ -46,11 +44,6 @@ export type UserReviewListProblem = Readonly<{
 }>;
 
 export type UserReviewDto = UserReview;
-export type UserReviewExecutionMode = UserReviewWorkspaceMode;
-export type UserReviewExecutionTarget = UserReviewWorkspace;
-export type UserReviewSourceFile = ReviewSourceFile;
-export type UserReviewManifest = ReviewBundleManifest;
-export type UserReviewStatusDocument = ReviewBundleStatusDocument;
 
 export type CreateUserReviewRequest = Readonly<{
   workspacePath: string;
@@ -83,19 +76,4 @@ export type ArchiveUserReviewRequest = Readonly<{
 
 export type ArchiveUserReviewResponse = Readonly<{
   userReview: UserReviewDto;
-}>;
-
-export type UserReviewCommandPayloads = Readonly<{
-  create_user_review: Readonly<{
-    request: CreateUserReviewRequest;
-    response: CreateUserReviewResponse;
-  }>;
-  list_user_reviews: Readonly<{
-    request: ListUserReviewsRequest;
-    response: ListUserReviewsResponse;
-  }>;
-  archive_user_review: Readonly<{
-    request: ArchiveUserReviewRequest;
-    response: ArchiveUserReviewResponse;
-  }>;
 }>;

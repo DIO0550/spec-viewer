@@ -35,6 +35,12 @@ import ReactMarkdown, { type Components } from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
 import { AddCommentPopover } from "@/features/comments/components/AddCommentPopover";
+import type { Comment } from "@/features/comments/domain/comment";
+import type {
+  CommentAnchor,
+  CommentBlockType,
+} from "@/features/comments/domain/commentAnchor";
+import type { CommentId } from "@/features/comments/domain/commentId";
 import {
   CommentOperationIdleState,
   type CommentOperationKind,
@@ -42,19 +48,12 @@ import {
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
 import { useMarkdownTextSelection } from "@/features/comments/hooks/useMarkdownTextSelection";
-import {
-  createCommentAnchorDraftFromBlock,
-  createTextHash,
-} from "@/features/comments/lib/comment-anchor-draft";
+import { createCommentAnchorDraftFromBlock } from "@/features/comments/lib/comment-anchor-draft";
 import type {
   AddCommentSubmitInput,
-  Comment,
-  CommentAnchor,
   CommentAnchorDisplayState,
   CommentAnchorDisplayStatus,
   CommentAnchorDraft,
-  CommentBlockType,
-  CommentId,
   CommentSelectionBounds,
 } from "@/features/comments/types/comment";
 import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
@@ -848,7 +847,6 @@ function createBlockIndexer({
   blocks: readonly MarkdownBlockMetadata[];
   highlights: CommentBlockHighlights;
 }>): BlockIndexer {
-  let fallbackBlockIndex = 0;
   let backendBlockCursor = 0;
 
   return {
@@ -858,8 +856,15 @@ function createBlockIndexer({
         blockType,
         startIndex: backendBlockCursor,
       });
-      const backendBlock = backendBlockMatch?.block ?? null;
-      const currentBlockIndex = backendBlock?.blockIndex ?? fallbackBlockIndex;
+      if (backendBlockMatch === null) {
+        throw new Error(
+          "Markdown block metadata contract violation: missing backend metadata for " +
+            blockType,
+        );
+      }
+
+      const backendBlock = backendBlockMatch.block;
+      const currentBlockIndex = backendBlock.blockIndex;
       const metadata: BlockMetadata = {
         "data-block-type": blockType,
         "data-block-index": currentBlockIndex,
@@ -868,11 +873,7 @@ function createBlockIndexer({
         createBlockKey(blockType, currentBlockIndex),
       );
 
-      fallbackBlockIndex += 1;
-
-      if (backendBlockMatch !== null) {
-        backendBlockCursor = backendBlockMatch.index + 1;
-      }
+      backendBlockCursor = backendBlockMatch.index + 1;
 
       return {
         metadata: createHighlightedBlockMetadata({
@@ -910,12 +911,8 @@ function findNextBackendBlockWithIndex({
 /** @returns Rendered block attributes enriched with backend anchor metadata. */
 function attachBackendBlockMetadata(
   metadata: BlockMetadata,
-  block: MarkdownBlockMetadata | null,
+  block: MarkdownBlockMetadata,
 ): BlockMetadata {
-  if (block === null) {
-    return metadata;
-  }
-
   const sourceRange = block.sourceRange;
   const backendMetadata: BlockMetadata = {
     ...metadata,
@@ -1020,7 +1017,7 @@ function createResolvedAnchorDisplayStatus({
 
 /**
  * @param block - The rendered block element to read the hash from.
- * @returns The backend text hash for a rendered block, or a legacy fallback hash.
+ * @returns The required backend text hash for a rendered block.
  */
 function readRenderedBlockTextHash(block: HTMLElement): string {
   const textHash = block.dataset.textHash;
@@ -1029,7 +1026,9 @@ function readRenderedBlockTextHash(block: HTMLElement): string {
     return textHash;
   }
 
-  return createTextHash(block.textContent ?? "");
+  throw new Error(
+    "Markdown block metadata contract violation: missing backend textHash",
+  );
 }
 
 /** Scrolls the active comment's Markdown block into view when it exists. */
@@ -1219,7 +1218,7 @@ function selectCommentIdForHighlight(
     return activeComment.id;
   }
 
-  const openComment = comments.find((comment) => !comment.resolved);
+  const openComment = comments.find((comment) => comment.status !== "resolved");
 
   return openComment?.id ?? comments[0].id;
 }
@@ -1269,7 +1268,9 @@ function selectCommentHighlightState({
     return "fuzzy";
   }
 
-  const hasOpenComment = comments.some((comment) => !comment.resolved);
+  const hasOpenComment = comments.some(
+    (comment) => comment.status !== "resolved",
+  );
 
   return hasOpenComment ? "open" : "resolved";
 }
@@ -1334,7 +1335,7 @@ function isReliableRangeHighlight({
  * @returns The subdued or prominent state for an exact range highlight.
  */
 function selectExactRangeState(comment: Comment): CommentHighlightState {
-  return comment.resolved ? "resolved" : "open";
+  return comment.status === "resolved" ? "resolved" : "open";
 }
 
 /** @returns Block metadata with highlight attributes and selection handlers. */
@@ -1444,6 +1445,7 @@ function mapCommentBlockTypeToBlockType(
   const blockTypeMap: Partial<Record<CommentBlockType, BlockType>> = {
     heading: "heading",
     paragraph: "paragraph",
+    block_quote: "paragraph",
     list_item: "list-item",
     table: "table",
     code_block: "code",
@@ -1459,6 +1461,7 @@ function mapMarkdownBlockTypeToBlockType(
   const blockTypeMap: Partial<Record<MarkdownBlockType, BlockType>> = {
     heading: "heading",
     paragraph: "paragraph",
+    block_quote: "paragraph",
     list_item: "list-item",
     table: "table",
     code_block: "code",
@@ -1840,7 +1843,7 @@ function CommentAnnotationCard({
       data-active={isActive ? "true" : "false"}
       data-anchor-display-status={anchorDisplayStatus}
       data-expanded={isExpanded ? "true" : "false"}
-      data-resolved={comment.resolved ? "true" : "false"}
+      data-resolved={comment.status === "resolved" ? "true" : "false"}
       aria-current={isActive ? "true" : undefined}
     >
       <div className="markdown-comment-annotation__header">
@@ -1859,14 +1862,14 @@ function CommentAnnotationCard({
         >
           {isExpanded ? (
             <ChevronDown aria-hidden="true" size={14} />
-          ) : comment.resolved ? (
+          ) : comment.status === "resolved" ? (
             <CheckCircle2 aria-hidden="true" size={14} />
           ) : (
             <MessageSquare aria-hidden="true" size={14} />
           )}
         </button>
         <span className="markdown-comment-annotation__status">
-          {comment.resolved ? (
+          {comment.status === "resolved" ? (
             <CheckCircle2 aria-hidden="true" size={13} />
           ) : (
             <MessageSquare aria-hidden="true" size={13} />
@@ -1915,7 +1918,9 @@ function formatCommentAnnotationStatus(
     return uiText.sidebar.orphaned;
   }
 
-  return comment.resolved ? uiText.sidebar.resolved : uiText.sidebar.openFilter;
+  return comment.status === "resolved"
+    ? uiText.sidebar.resolved
+    : uiText.sidebar.openFilter;
 }
 
 const COMMENT_PREVIEW_MAX_LENGTH = 84;
@@ -2342,7 +2347,7 @@ function createCommentAnchorDraftKey(draft: CommentAnchorDraft): string {
  * @returns Whether the comment should be rendered in the left Markdown viewer.
  */
 function isVisibleInMarkdownViewer(comment: Comment): boolean {
-  return !comment.resolved;
+  return comment.status !== "resolved";
 }
 
 /** @returns The latest editable draft for a still-visible comment. */
@@ -2540,11 +2545,12 @@ function CommentEditPopover({
     }
   };
 
-  const toggleResolved = async (): Promise<void> => {
+  const submitStatusChange = async (): Promise<void> => {
     setValidationMessage(null);
-    const wasChanged = draft.comment.resolved
-      ? await onReopenComment(draft.comment.id)
-      : await onResolveComment(draft.comment.id);
+    const wasChanged =
+      draft.comment.status === "resolved"
+        ? await onReopenComment(draft.comment.id)
+        : await onResolveComment(draft.comment.id);
 
     if (!wasChanged) {
       setValidationMessage(failedStatusActionMessage);
@@ -2603,9 +2609,10 @@ function CommentEditPopover({
     onCancel();
   };
 
-  const statusActionLabel = draft.comment.resolved
-    ? uiText.commentThread.reopen
-    : uiText.commentThread.resolve;
+  const statusActionLabel =
+    draft.comment.status === "resolved"
+      ? uiText.commentThread.reopen
+      : uiText.commentThread.resolve;
 
   return (
     <aside
@@ -2702,10 +2709,10 @@ function CommentEditPopover({
             type="button"
             disabled={isBusy}
             onClick={() => {
-              void toggleResolved();
+              void submitStatusChange();
             }}
           >
-            {draft.comment.resolved ? (
+            {draft.comment.status === "resolved" ? (
               <RotateCcw aria-hidden="true" size={15} />
             ) : (
               <CheckCircle2 aria-hidden="true" size={15} />

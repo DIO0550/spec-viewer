@@ -1,13 +1,13 @@
+import type { Comment } from "@/features/comments/domain/comment";
 import type { CommentFeatureError } from "@/features/comments/domain/commentError";
-import type { Comment, CommentId } from "@/features/comments/types/comment";
+import type { CommentId } from "@/features/comments/domain/commentId";
 
 export type CommentOperationKind =
   | "add"
   | "update"
   | "delete"
   | "resolve"
-  | "reopen"
-  | "toggle";
+  | "reopen";
 
 export type CommentOperationIdleState = Readonly<{
   status: "idle";

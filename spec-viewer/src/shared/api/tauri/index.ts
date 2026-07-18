@@ -1,3 +1,10 @@
+export type {
+  AddCommentCommandContract,
+  AddCommentCommandErrorCode,
+  AddCommentCommandName,
+  AddCommentCommandRequest,
+  AddCommentCommandResponse,
+} from "./addComment";
 export {
   ADD_COMMENT_COMMAND,
   AddCommentCommandError,
@@ -5,6 +12,7 @@ export {
 } from "./addComment";
 export { archiveSpec } from "./archiveSpec";
 export { archiveUserReview } from "./archiveUserReview";
+export type { CommentCommands } from "./commentCommands";
 export { commentCommands } from "./commentCommands";
 export { createUserReview } from "./createUserReview";
 export { deleteComment } from "./deleteComment";
@@ -19,6 +27,7 @@ export { reopenComment } from "./reopenComment";
 export { resolveComment } from "./resolveComment";
 export { selectCommentExportDestination } from "./selectCommentExportDestination";
 export { selectWorkspaceDirectory } from "./selectWorkspaceDirectory";
+export type { SpecCommands } from "./specCommands";
 export { specCommands } from "./specCommands";
 export { startSpecFileWatch } from "./startSpecFileWatch";
 export { stopSpecFileWatch } from "./stopSpecFileWatch";
@@ -26,19 +35,7 @@ export {
   subscribeWorkspaceDragDropEvents,
   type WorkspaceDragDropEvent,
 } from "./subscribeWorkspaceDragDropEvents";
-export { toIpcCommandError } from "./toIpcCommandError";
-export { toggleCommentResolved } from "./toggleCommentResolved";
 export { updateComment } from "./updateComment";
+export type { UserReviewCommands } from "./userReviewCommands";
 export { userReviewCommands } from "./userReviewCommands";
 export { validateWorkspaceDirectory } from "./validateWorkspaceDirectory";
-
-export type {
-  AddCommentCommandContract,
-  AddCommentCommandErrorCode,
-  AddCommentCommandName,
-  AddCommentCommandRequest,
-  AddCommentCommandResponse,
-} from "./addComment";
-export type { CommentCommands } from "./commentCommands";
-export type { SpecCommands } from "./specCommands";
-export type { UserReviewCommands } from "./userReviewCommands";

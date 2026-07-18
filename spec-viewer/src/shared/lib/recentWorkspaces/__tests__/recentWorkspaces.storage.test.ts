@@ -1,15 +1,15 @@
 import { expect, test } from "vitest";
 
 import {
+  type RecentWorkspace,
+  type RecentWorkspaceStorage,
+  readLastActiveWorkspacePath,
   readRecentWorkspaces,
   recentWorkspaceLimit,
-  readLastActiveWorkspacePath,
   recordRecentWorkspace,
   removeRecentWorkspace,
   writeLastActiveWorkspacePath,
   writeRecentWorkspaces,
-  type RecentWorkspace,
-  type RecentWorkspaceStorage,
 } from "@/shared/lib/recentWorkspaces";
 
 class MemoryStorage implements RecentWorkspaceStorage {
@@ -39,7 +39,7 @@ test("recordRecentWorkspaceは既存pathの位置を保ったまま内容を更�
     {
       path: "/workspace/beta",
       displayName: "beta",
-      kind: "spec-skill",
+      kind: "plugin-worktree",
       lastOpenedAt: "2026-05-02T00:00:00.000Z",
     },
   ];
@@ -132,21 +132,31 @@ test("readRecentWorkspacesは壊れたstorage値を空配列として扱う", ()
   expect(readRecentWorkspaces(storage)).toEqual([]);
 });
 
-test("readRecentWorkspacesは保存済み値を正規化して読み込む", () => {
+test("readRecentWorkspacesは全fieldが揃ったcurrent objectだけを読み込む", () => {
   const storage = new MemoryStorage();
 
   storage.setItem(
     "spec-reviewer.recent-workspaces",
     JSON.stringify([
       {
-        path: " /workspace/alpha ",
-        displayName: "Alpha Workspace",
+        path: " /workspace/alpha/ ",
+        displayName: " Alpha Workspace ",
+        kind: "plugin-worktree",
+        lastOpenedAt: "2026-05-01T00:00:00.000Z",
+      },
+      "/workspace/string-entry",
+      { path: "/workspace/opened-at", openedAt: "older" },
+      {
+        path: "/workspace/spec-skill",
+        displayName: "spec-skill",
         kind: "spec-skill",
         lastOpenedAt: "2026-05-01T00:00:00.000Z",
       },
-      "/workspace/beta",
-      { path: "/workspace/alpha", openedAt: "older" },
-      { path: "", openedAt: "ignored" },
+      {
+        path: "/workspace/missing-kind",
+        displayName: "missing-kind",
+        lastOpenedAt: "2026-05-01T00:00:00.000Z",
+      },
     ]),
   );
 
@@ -154,18 +164,11 @@ test("readRecentWorkspacesは保存済み値を正規化して読み込む", () 
     {
       path: "/workspace/alpha",
       displayName: "Alpha Workspace",
-      kind: "spec-skill",
+      kind: "plugin-worktree",
       lastOpenedAt: "2026-05-01T00:00:00.000Z",
-    },
-    {
-      path: "/workspace/beta",
-      displayName: "beta",
-      kind: "plugin-workspace",
-      lastOpenedAt: "",
     },
   ]);
 });
-
 test("writeRecentWorkspacesはJSONとして保存する", () => {
   const storage = new MemoryStorage();
   const workspaces: readonly RecentWorkspace[] = [
