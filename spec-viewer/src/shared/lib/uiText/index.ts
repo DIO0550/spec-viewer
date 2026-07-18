@@ -43,7 +43,6 @@ export const uiText = {
     fuzzy: "曖昧",
     stale: "古い",
     orphaned: "位置不明",
-    anchorsSuffix: "アンカー",
     noOpenComments: "未解決コメントはありません",
     noResolvedComments: "解決済みコメントはありません",
     saving: "保存中",
