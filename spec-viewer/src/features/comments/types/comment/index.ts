@@ -13,12 +13,7 @@ import type {
 } from "@/features/comments/domain/commentStatusFilter";
 import type { SpecFileKey } from "@/features/specs/domain/specFile";
 
-export type CommentDisplayFilter =
-  | CommentStatusFilter
-  | "moved"
-  | "fuzzy"
-  | "stale"
-  | "orphaned";
+export type CommentDisplayFilter = CommentStatusFilter;
 
 export type CommentDisplayState = CommentStatus | "orphaned";
 

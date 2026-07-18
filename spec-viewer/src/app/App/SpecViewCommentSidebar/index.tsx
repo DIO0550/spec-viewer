@@ -1,7 +1,6 @@
 import type { ReactElement } from "react";
 import type { SpecViewResetKeys } from "@/app/App/hooks/types";
 import { useCommentExport } from "@/app/App/hooks/useCommentExport";
-import { SpecViewUserReviewPanel } from "@/app/App/SpecViewUserReviewPanel";
 import {
   type Comment,
   type CommentAnchorDisplayState,
@@ -13,7 +12,6 @@ import type { CommentListState } from "@/features/comments/domain/commentListSta
 
 export type SpecViewCommentSidebarProps = Readonly<{
   comments: readonly Comment[];
-  correlationId: string | null;
   resetKeys: SpecViewResetKeys;
   listState: CommentListState;
   operationState: CommentOperationState;
@@ -34,7 +32,7 @@ export type SpecViewCommentSidebarProps = Readonly<{
 }>;
 
 /**
- * @param props - Shared comment state/handlers plus the export scope and correlation id.
+ * @param props - Shared comment state/handlers plus the export scope.
  * @returns Comment sidebar wrapper that owns export/LLM/MCP progress state locally.
  */
 export function SpecViewCommentSidebar(
@@ -61,13 +59,6 @@ export function SpecViewCommentSidebar(
       onExportComments={commentExport.exportCommentScope}
       onCopyLlmPrompt={commentExport.copyLlmPromptScope}
       onCopyMcpFeedback={commentExport.copyMcpFeedbackPayload}
-      userReviewPanel={
-        <SpecViewUserReviewPanel
-          comments={props.comments}
-          correlationId={props.correlationId}
-          resetKeys={props.resetKeys}
-        />
-      }
     />
   );
 }

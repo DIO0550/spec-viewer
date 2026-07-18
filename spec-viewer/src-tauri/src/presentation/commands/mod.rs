@@ -1,7 +1,6 @@
 //! Tauri command handlers and DTOs.
 
 pub mod comments;
-pub mod review_runs;
 pub mod specs;
 pub mod watch;
 pub mod workspace;

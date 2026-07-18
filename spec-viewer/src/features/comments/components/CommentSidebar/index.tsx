@@ -7,7 +7,6 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import type { ReactNode } from "react";
 import { useId, useState } from "react";
 import { CommentThread } from "@/features/comments/components/CommentThread";
 import type { Comment } from "@/features/comments/domain/comment";
@@ -67,7 +66,6 @@ type Props = Readonly<{
   onExportComments?: (scope: CommentExportScope) => void;
   onCopyLlmPrompt?: (scope: CommentExportScope) => void;
   onCopyMcpFeedback?: () => void;
-  userReviewPanel?: ReactNode;
 }>;
 
 type CommentGroups = Readonly<{
@@ -129,26 +127,6 @@ const commentFilterOptions: readonly CommentFilterOption[] = [
     label: uiText.sidebar.resolved,
     ariaLabel: "解決済みコメントを表示",
   },
-  {
-    filter: "moved",
-    label: uiText.sidebar.moved,
-    ariaLabel: "移動したアンカーのコメントを表示",
-  },
-  {
-    filter: "fuzzy",
-    label: uiText.sidebar.fuzzy,
-    ariaLabel: "曖昧なアンカーのコメントを表示",
-  },
-  {
-    filter: "stale",
-    label: uiText.sidebar.stale,
-    ariaLabel: "古いアンカーのコメントを表示",
-  },
-  {
-    filter: "orphaned",
-    label: uiText.sidebar.orphaned,
-    ariaLabel: "位置不明アンカーのコメントを表示",
-  },
 ];
 
 /** @returns The right-side comment review surface for the active spec file. */
@@ -167,7 +145,6 @@ export function CommentSidebar({
   onExportComments,
   onCopyLlmPrompt,
   onCopyMcpFeedback,
-  userReviewPanel,
 }: Props) {
   const [activeFilter, setActiveFilter] =
     useState<CommentDisplayFilter>(defaultDisplayFilter);
@@ -270,7 +247,6 @@ export function CommentSidebar({
           onCopyMcpFeedback={onCopyMcpFeedback}
         />
         <CommentExportFeedback exportState={exportState} />
-        {userReviewPanel}
         <EmptyState
           title={uiText.sidebar.empty}
           description={`${uiText.sidebar.emptyDescription} ${uiText.sidebar.addHint}`}
@@ -283,14 +259,10 @@ export function CommentSidebar({
   const groups = groupCommentsByStatus(listState.comments);
   const anchorDisplayStatusByCommentId =
     createAnchorDisplayStatusByCommentId(anchorDisplayStates);
-  const filterCounts = createCommentFilterCounts(
-    listState.comments,
-    anchorDisplayStatusByCommentId,
-  );
+  const filterCounts = createCommentFilterCounts(listState.comments);
   const filteredComments = filterCommentsByDisplayFilter(
     listState.comments,
     activeFilter,
-    anchorDisplayStatusByCommentId,
   );
   const normalizedSearchQuery = normalizeCommentSearchQuery(searchQuery);
   const searchedComments = filterCommentsBySearchQuery({
@@ -320,7 +292,6 @@ export function CommentSidebar({
         onCopyMcpFeedback={onCopyMcpFeedback}
       />
       <CommentExportFeedback exportState={exportState} />
-      {userReviewPanel}
       <CommentSearchControl
         searchQuery={searchQuery}
         resultCount={searchedComments.length}
@@ -985,47 +956,28 @@ function createEmptyFilterCounts(): CommentFilterCounts {
     all: 0,
     open: 0,
     resolved: 0,
-    moved: 0,
-    fuzzy: 0,
-    stale: 0,
-    orphaned: 0,
   };
 }
 
 /** @returns Count badges for each available comment filter. */
 function createCommentFilterCounts(
   comments: readonly Comment[],
-  anchorDisplayStatusByCommentId: ReadonlyMap<
-    CommentId,
-    CommentAnchorDisplayStatus
-  >,
 ): CommentFilterCounts {
-  return comments.reduce<CommentFilterCounts>((counts, comment) => {
-    const anchorStatus =
-      anchorDisplayStatusByCommentId.get(comment.id) ?? "exact";
-
-    return {
+  return comments.reduce<CommentFilterCounts>(
+    (counts, comment) => ({
       all: counts.all + 1,
       open: comment.status === "resolved" ? counts.open : counts.open + 1,
       resolved:
         comment.status === "resolved" ? counts.resolved + 1 : counts.resolved,
-      moved: anchorStatus === "moved" ? counts.moved + 1 : counts.moved,
-      fuzzy: anchorStatus === "fuzzy" ? counts.fuzzy + 1 : counts.fuzzy,
-      stale: anchorStatus === "stale" ? counts.stale + 1 : counts.stale,
-      orphaned:
-        anchorStatus === "orphaned" ? counts.orphaned + 1 : counts.orphaned,
-    };
-  }, createEmptyFilterCounts());
+    }),
+    createEmptyFilterCounts(),
+  );
 }
 
 /** @returns Comments visible for the selected display filter. */
 function filterCommentsByDisplayFilter(
   comments: readonly Comment[],
   activeFilter: CommentDisplayFilter,
-  anchorDisplayStatusByCommentId: ReadonlyMap<
-    CommentId,
-    CommentAnchorDisplayStatus
-  >,
 ): readonly Comment[] {
   if (activeFilter === "all") {
     return comments;
@@ -1035,15 +987,7 @@ function filterCommentsByDisplayFilter(
     return comments.filter((comment) => comment.status !== "resolved");
   }
 
-  if (activeFilter === "resolved") {
-    return comments.filter((comment) => comment.status === "resolved");
-  }
-
-  return comments.filter(
-    (comment) =>
-      (anchorDisplayStatusByCommentId.get(comment.id) ?? "exact") ===
-      activeFilter,
-  );
+  return comments.filter((comment) => comment.status === "resolved");
 }
 
 /** @returns Display sections for the filtered comment list. */
@@ -1073,9 +1017,12 @@ function createCommentSectionModels(
   return [
     {
       id: `comment-section-${activeFilter}`,
-      title: formatSectionTitle(activeFilter),
+      title: formatFilterLabel(activeFilter),
       comments: filteredComments,
-      emptyMessage: `${formatFilterLabel(activeFilter)}${uiText.sidebar.noFilterResults}`,
+      emptyMessage:
+        activeFilter === "open"
+          ? uiText.sidebar.noOpenComments
+          : uiText.sidebar.noResolvedComments,
     },
   ];
 }
@@ -1090,16 +1037,4 @@ function formatFilterLabel(filter: CommentDisplayFilter): string {
   );
 
   return option?.label ?? filter;
-}
-
-/**
- * @param filter - The display filter to build a section title for.
- * @returns Section title for a filtered comment list.
- */
-function formatSectionTitle(filter: CommentDisplayFilter): string {
-  if (filter === "open" || filter === "resolved") {
-    return formatFilterLabel(filter);
-  }
-
-  return `${formatFilterLabel(filter)}${uiText.sidebar.anchorsSuffix}`;
 }

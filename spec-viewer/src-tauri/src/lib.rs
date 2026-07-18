@@ -9,7 +9,6 @@ use presentation::commands::{
         add_comment, delete_comment, export_comments, generate_llm_prompt, list_comments,
         reopen_comment, resolve_comment, update_comment,
     },
-    review_runs::{archive_user_review, create_user_review, list_user_reviews},
     specs::{archive_spec, list_specs, read_spec_file},
     watch::{start_spec_file_watch, stop_spec_file_watch},
     workspace::{load_workspace, validate_workspace_directory},
@@ -40,10 +39,7 @@ pub fn run() {
             resolve_comment,
             reopen_comment,
             export_comments,
-            generate_llm_prompt,
-            create_user_review,
-            list_user_reviews,
-            archive_user_review
+            generate_llm_prompt
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

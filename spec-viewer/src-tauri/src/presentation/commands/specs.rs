@@ -78,9 +78,9 @@ impl SpecCommandError {
             AppUseCaseError::SpecArchive { .. } => SpecCommandErrorCode::SpecArchive,
             AppUseCaseError::MarkdownRead { .. } => SpecCommandErrorCode::MarkdownRead,
             AppUseCaseError::InvalidSpec { .. } => SpecCommandErrorCode::InvalidSpec,
-            AppUseCaseError::InvalidComment { .. }
-            | AppUseCaseError::CommentRepository { .. }
-            | AppUseCaseError::ReviewRunExport { .. } => SpecCommandErrorCode::Unexpected,
+            AppUseCaseError::InvalidComment { .. } | AppUseCaseError::CommentRepository { .. } => {
+                SpecCommandErrorCode::Unexpected
+            }
         };
 
         Self::new(code, error.to_string())

@@ -13,12 +13,6 @@ import type {
   SpecSkillMcpFeedbackPayload,
 } from "@/features/comments/types/comment";
 import type {
-  CreateUserReviewRequest,
-  ReviewBundleManifest,
-  ReviewBundleStatusDocument,
-  UserReview,
-} from "@/features/review-runs/types/userReviewIpc";
-import type {
   AddCommentCommandRequest,
   AddCommentCommandResponse,
 } from "@/shared/api/tauri/addComment";
@@ -40,9 +34,9 @@ test("comment view modelは状態フィルターとorphan表示状態を共有�
   expectTypeOf<CommentStatusFilterType>().toEqualTypeOf<
     "all" | "open" | "resolved"
   >();
-  expectTypeOf<CommentStatusFilterType>().toMatchTypeOf<CommentDisplayFilter>();
+  expectTypeOf<CommentDisplayFilter>().toEqualTypeOf<CommentStatusFilterType>();
   expectTypeOf<CommentDisplayFilter>().toEqualTypeOf<
-    "all" | "open" | "resolved" | "moved" | "fuzzy" | "stale" | "orphaned"
+    "all" | "open" | "resolved"
   >();
   expectTypeOf<CommentDisplayState>().toEqualTypeOf<
     "open" | "resolved" | "orphaned"
@@ -92,38 +86,5 @@ test("MCP feedback pathはdry-run payloadとmanual copy operationを表現する
       callProvider: false;
       writeMarkdown: false;
     };
-  }>();
-});
-
-test("review run payloadはfile/spec targetと実行先を表現する", () => {
-  expectTypeOf<UserReview>().toMatchTypeOf<{
-    status: "active" | "inProgress" | "completed" | "archived";
-    workspace:
-      | { mode: "currentWorkspace"; workspacePath: string }
-      | {
-          mode: "worktree";
-          repositoryPath: string;
-          worktreePath: string;
-          branchName: string;
-        };
-  }>();
-  expectTypeOf<CreateUserReviewRequest>().toMatchTypeOf<{
-    target:
-      | { scope: "file"; specId: string }
-      | { scope: "spec"; specId: string };
-    workspaceMode: "currentWorkspace" | "worktree";
-  }>();
-});
-
-test("review run manifestとstatus documentはbundle schemaを表現する", () => {
-  expectTypeOf<ReviewBundleManifest>().toMatchTypeOf<{
-    schemaVersion: "spec-reviewer.review-run.v1";
-    commentIds: readonly string[];
-    archivedAt: string | null;
-  }>();
-  expectTypeOf<ReviewBundleStatusDocument>().toMatchTypeOf<{
-    status: "active" | "inProgress" | "completed" | "archived";
-    summary: string | null;
-    warnings: readonly string[];
   }>();
 });
