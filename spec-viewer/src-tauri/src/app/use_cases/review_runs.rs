@@ -1483,7 +1483,6 @@ struct ReviewRunCommentDocument {
     anchor: ReviewRunCommentAnchorDocument,
     body: String,
     status: String,
-    resolved: bool,
     anchor_resolution: Option<ReviewRunAnchorResolutionDocument>,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
@@ -1502,7 +1501,6 @@ impl ReviewRunCommentDocument {
             anchor: ReviewRunCommentAnchorDocument::from_anchor(comment.anchor()),
             body: comment.body().as_str().to_string(),
             status: comment_status(comment.status()).to_string(),
-            resolved: comment.is_resolved(),
             anchor_resolution: Some(ReviewRunAnchorResolutionDocument::from_resolution(
                 resolution,
             )),
@@ -1796,7 +1794,7 @@ mod tests {
         fn write_comment_file(&self, comment_id: &str) {
             let contents = format!(
                 r#"{{
-  "version": 1,
+  "version": 2,
   "comments": [
     {{
       "id": "{comment_id}",
@@ -1808,7 +1806,7 @@ mod tests {
         "charOffset": [0, 22]
       }},
       "body": "ここを明確にしてください",
-      "resolved": false,
+      "status": "open",
       "createdAt": "2026-05-06T12:00:00Z",
       "updatedAt": "2026-05-06T12:00:00Z"
     }}
@@ -1827,7 +1825,7 @@ mod tests {
         fn write_impl_comment_file(&self, comment_id: &str) {
             let contents = format!(
                 r#"{{
-  "version": 1,
+  "version": 2,
   "comments": [
     {{
       "id": "{comment_id}",
@@ -1839,7 +1837,7 @@ mod tests {
         "charOffset": [0, 27]
       }},
       "body": "ここを明確にしてください",
-      "resolved": false,
+      "status": "open",
       "createdAt": "2026-05-06T12:00:00Z",
       "updatedAt": "2026-05-06T12:00:00Z"
     }}

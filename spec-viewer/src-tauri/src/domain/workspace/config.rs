@@ -113,7 +113,6 @@ impl WorkspaceConfig {
             WorkspaceKind::PluginWorkspace | WorkspaceKind::PluginWorktree => {
                 Self::plugin_workspace_default()
             }
-            WorkspaceKind::SpecSkill => Self::spec_skill_default(),
         }
     }
 
@@ -121,13 +120,6 @@ impl WorkspaceConfig {
         Self::from_default_keys(
             SpecFileKey::default_keys(),
             plugin_workspace_default_file_name,
-        )
-    }
-
-    pub fn spec_skill_default() -> Self {
-        Self::from_default_keys(
-            SpecFileKey::compatibility_keys(),
-            spec_skill_default_file_name,
         )
     }
 
@@ -243,7 +235,6 @@ fn plugin_workspace_default_file_name(key: SpecFileKey) -> &'static str {
         SpecFileKey::Requirements => "requirements.html",
         SpecFileKey::TechReference => "tech-reference.html",
         SpecFileKey::TestCases => "test-cases.html",
-        SpecFileKey::Design => "design.md",
     }
 }
 
@@ -270,19 +261,6 @@ fn validate_scan_excluded_directory_names(
     }
 
     Ok(normalized)
-}
-
-fn spec_skill_default_file_name(key: SpecFileKey) -> &'static str {
-    match key {
-        SpecFileKey::Requirements => "requirements.md",
-        SpecFileKey::Design => "design.md",
-        SpecFileKey::Tasks => "tasks.md",
-        SpecFileKey::TechReference => "tech-reference.html",
-        SpecFileKey::TestCases => "test-cases.html",
-        SpecFileKey::Exploration => "exploration-report.md",
-        SpecFileKey::Hearing => "hearing-notes.md",
-        SpecFileKey::Impl => "implementation-plan.md",
-    }
 }
 
 fn validate_safe_file_name(key: SpecFileKey, file_name: &str) -> Result<(), WorkspaceConfigError> {
@@ -349,26 +327,6 @@ mod tests {
     }
 
     #[test]
-    fn workspace_config_defaults_spec_skill_files_in_tab_order() {
-        let config = WorkspaceConfig::default_for(WorkspaceKind::SpecSkill);
-
-        let files: Vec<(SpecFileKey, &str)> = config
-            .files()
-            .iter()
-            .map(|file| (file.key(), file.file_name()))
-            .collect();
-
-        assert_eq!(
-            vec![
-                (SpecFileKey::Requirements, "requirements.md"),
-                (SpecFileKey::Design, "design.md"),
-                (SpecFileKey::Tasks, "tasks.md"),
-            ],
-            files
-        );
-    }
-
-    #[test]
     fn workspace_config_accepts_empty_scan_exclusions_to_restore_recursive_scan() {
         let config = WorkspaceConfig::with_scan_excluded_directory_names(
             vec![mapping(SpecFileKey::Tasks, "tasks.md").expect("mapping should be valid")],
@@ -394,11 +352,10 @@ mod tests {
     }
 
     #[test]
-    fn workspace_config_merge_overrides_default_file_names_and_appends_new_keys() {
+    fn workspace_config_merge_overrides_current_default_file_names() {
         let defaults = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
         let user_config = WorkspaceConfig::new(vec![
-            mapping(SpecFileKey::Hearing, "interview.md").expect("mapping should be valid"),
-            mapping(SpecFileKey::Design, "design.md").expect("mapping should be valid"),
+            mapping(SpecFileKey::Hearing, "interview.md").expect("mapping should be valid")
         ])
         .expect("config should be valid");
 
@@ -419,7 +376,6 @@ mod tests {
                 (SpecFileKey::TestCases, "test-cases.html"),
                 (SpecFileKey::Exploration, "exploration-report.md"),
                 (SpecFileKey::Hearing, "interview.md"),
-                (SpecFileKey::Design, "design.md"),
             ],
             files
         );

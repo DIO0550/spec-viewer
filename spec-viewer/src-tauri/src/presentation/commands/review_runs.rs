@@ -22,11 +22,13 @@ use crate::{
     },
 };
 
-use super::{CommandError, CommandResult, CommandState};
+use super::CommandState;
 
-pub type CreateUserReviewCommandResult<T> = Result<T, ReviewRunCommandError>;
-pub type ListUserReviewsCommandResult<T> = Result<T, ReviewRunCommandError>;
-pub type ArchiveUserReviewCommandResult<T> = Result<T, ReviewRunCommandError>;
+type ReviewRunCommandResult<T> = Result<T, ReviewRunCommandError>;
+
+pub type CreateUserReviewCommandResult<T> = ReviewRunCommandResult<T>;
+pub type ListUserReviewsCommandResult<T> = ReviewRunCommandResult<T>;
+pub type ArchiveUserReviewCommandResult<T> = ReviewRunCommandResult<T>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -56,6 +58,23 @@ impl ReviewRunCommandError {
         }
     }
 
+    fn invalid_request(message: impl Into<String>) -> Self {
+        Self::new(ReviewRunCommandErrorCode::InvalidRequest, message)
+    }
+
+    fn code(&self) -> &'static str {
+        match self.code {
+            ReviewRunCommandErrorCode::InvalidRequest => "invalidRequest",
+            ReviewRunCommandErrorCode::WorkspaceDetection => "workspaceDetection",
+            ReviewRunCommandErrorCode::ConfigLoad => "configLoad",
+            ReviewRunCommandErrorCode::InvalidSpec => "invalidSpec",
+            ReviewRunCommandErrorCode::InvalidComment => "invalidComment",
+            ReviewRunCommandErrorCode::CommentRepository => "commentRepository",
+            ReviewRunCommandErrorCode::UserReviewExport => "userReviewExport",
+            ReviewRunCommandErrorCode::Unexpected => "unexpected",
+        }
+    }
+
     fn from_app_error(error: AppUseCaseError) -> Self {
         let code = match error {
             AppUseCaseError::WorkspaceDetection { .. } => {
@@ -75,32 +94,11 @@ impl ReviewRunCommandError {
 
         Self::new(code, error.to_string())
     }
-
-    fn from_command_error(error: CommandError) -> Self {
-        let code = match error.code() {
-            "invalidRequest" => ReviewRunCommandErrorCode::InvalidRequest,
-            "workspaceDetection" => ReviewRunCommandErrorCode::WorkspaceDetection,
-            "configLoad" => ReviewRunCommandErrorCode::ConfigLoad,
-            "invalidSpec" => ReviewRunCommandErrorCode::InvalidSpec,
-            "invalidComment" => ReviewRunCommandErrorCode::InvalidComment,
-            "commentRepository" => ReviewRunCommandErrorCode::CommentRepository,
-            "userReviewExport" => ReviewRunCommandErrorCode::UserReviewExport,
-            _ => ReviewRunCommandErrorCode::Unexpected,
-        };
-
-        Self::new(code, error.message())
-    }
 }
 
 impl From<AppUseCaseError> for ReviewRunCommandError {
     fn from(error: AppUseCaseError) -> Self {
         Self::from_app_error(error)
-    }
-}
-
-impl From<CommandError> for ReviewRunCommandError {
-    fn from(error: CommandError) -> Self {
-        Self::from_command_error(error)
     }
 }
 
@@ -229,7 +227,7 @@ pub fn create_user_review(
     let workspace = state
         .use_cases()
         .load_workspace(&request.workspace_path)
-        .map_err(CommandError::from)?;
+        .map_err(ReviewRunCommandError::from)?;
     let input = CreateReviewRunInput::new(
         request.target.into_domain()?,
         parse_comment_ids(&request.comment_ids)?,
@@ -255,7 +253,7 @@ pub fn list_user_reviews(
     let workspace = state
         .use_cases()
         .load_workspace(&request.workspace_path)
-        .map_err(CommandError::from)?;
+        .map_err(ReviewRunCommandError::from)?;
     let performance_context = request
         .correlation_id
         .as_ref()
@@ -270,7 +268,7 @@ pub fn list_user_reviews(
             .use_cases()
             .list_review_runs(&workspace, ListReviewRunsInput::new(target))?;
 
-        Ok::<_, CommandError>(result)
+        Ok::<_, ReviewRunCommandError>(result)
     })();
     if let (Some(context), Some(end_span)) = (performance_context.as_ref(), end_span) {
         let mut metadata = std::collections::BTreeMap::new();
@@ -316,7 +314,7 @@ pub fn archive_user_review(
     let workspace = state
         .use_cases()
         .load_workspace(&request.workspace_path)
-        .map_err(CommandError::from)?;
+        .map_err(ReviewRunCommandError::from)?;
     let input = ArchiveReviewRunInput::new(
         request.target.into_domain()?,
         UserReviewRunId::new(request.user_review_id).map_err(invalid_review_run)?,
@@ -334,7 +332,7 @@ pub fn archive_user_review(
 }
 
 impl UserReviewTargetRequest {
-    fn into_domain(self) -> CommandResult<UserReviewRunTarget> {
+    fn into_domain(self) -> ReviewRunCommandResult<UserReviewRunTarget> {
         match self {
             Self::File { spec_id, file_key } => Ok(UserReviewRunTarget::file(
                 SpecId::new(spec_id).map_err(invalid_spec)?,
@@ -439,33 +437,35 @@ impl UserReviewListProblemResponse {
     }
 }
 
-fn parse_comment_ids(values: &[String]) -> CommandResult<Vec<CommentId>> {
+fn parse_comment_ids(values: &[String]) -> ReviewRunCommandResult<Vec<CommentId>> {
     values
         .iter()
         .map(|value| CommentId::new(value).map_err(invalid_comment))
         .collect()
 }
 
-fn parse_workspace_mode(value: &str) -> CommandResult<ReviewRunExecutionMode> {
+fn parse_workspace_mode(value: &str) -> ReviewRunCommandResult<ReviewRunExecutionMode> {
     match value {
         "currentWorkspace" => Ok(ReviewRunExecutionMode::CurrentWorkspace),
         "worktree" => Ok(ReviewRunExecutionMode::Worktree),
-        _ => Err(CommandError::invalid_request(format!(
+        _ => Err(ReviewRunCommandError::invalid_request(format!(
             "unsupported review run execution mode: {value}"
         ))),
     }
 }
 
-fn invalid_spec(error: crate::domain::spec::SpecDomainError) -> CommandError {
-    CommandError::from(AppUseCaseError::from(error))
+fn invalid_spec(error: crate::domain::spec::SpecDomainError) -> ReviewRunCommandError {
+    ReviewRunCommandError::from(AppUseCaseError::from(error))
 }
 
-fn invalid_comment(error: crate::domain::comment::CommentDomainError) -> CommandError {
-    CommandError::from(AppUseCaseError::from(error))
+fn invalid_comment(error: crate::domain::comment::CommentDomainError) -> ReviewRunCommandError {
+    ReviewRunCommandError::from(AppUseCaseError::from(error))
 }
 
-fn invalid_review_run(error: crate::domain::review_run::ReviewRunDomainError) -> CommandError {
-    CommandError::from(AppUseCaseError::from(error))
+fn invalid_review_run(
+    error: crate::domain::review_run::ReviewRunDomainError,
+) -> ReviewRunCommandError {
+    ReviewRunCommandError::from(AppUseCaseError::from(error))
 }
 
 fn format_problem_state(state: ReviewRunListProblemState) -> &'static str {

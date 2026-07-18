@@ -17,11 +17,13 @@ use crate::{
     },
 };
 
-use super::{CommandError, CommandResult, CommandState};
+use super::CommandState;
 
-pub type ListSpecsCommandResult<T> = Result<T, SpecCommandError>;
-pub type ReadSpecFileCommandResult<T> = Result<T, SpecCommandError>;
-pub type ArchiveSpecCommandResult<T> = Result<T, SpecCommandError>;
+type SpecCommandResult<T> = Result<T, SpecCommandError>;
+
+pub type ListSpecsCommandResult<T> = SpecCommandResult<T>;
+pub type ReadSpecFileCommandResult<T> = SpecCommandResult<T>;
+pub type ArchiveSpecCommandResult<T> = SpecCommandResult<T>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -51,6 +53,23 @@ impl SpecCommandError {
         }
     }
 
+    fn invalid_request(message: impl Into<String>) -> Self {
+        Self::new(SpecCommandErrorCode::InvalidRequest, message)
+    }
+
+    fn code(&self) -> &'static str {
+        match self.code {
+            SpecCommandErrorCode::InvalidRequest => "invalidRequest",
+            SpecCommandErrorCode::WorkspaceDetection => "workspaceDetection",
+            SpecCommandErrorCode::ConfigLoad => "configLoad",
+            SpecCommandErrorCode::SpecTreeScan => "specTreeScan",
+            SpecCommandErrorCode::SpecArchive => "specArchive",
+            SpecCommandErrorCode::MarkdownRead => "markdownRead",
+            SpecCommandErrorCode::InvalidSpec => "invalidSpec",
+            SpecCommandErrorCode::Unexpected => "unexpected",
+        }
+    }
+
     fn from_app_error(error: AppUseCaseError) -> Self {
         let code = match error {
             AppUseCaseError::WorkspaceDetection { .. } => SpecCommandErrorCode::WorkspaceDetection,
@@ -66,32 +85,11 @@ impl SpecCommandError {
 
         Self::new(code, error.to_string())
     }
-
-    fn from_command_error(error: CommandError) -> Self {
-        let code = match error.code() {
-            "invalidRequest" => SpecCommandErrorCode::InvalidRequest,
-            "workspaceDetection" => SpecCommandErrorCode::WorkspaceDetection,
-            "configLoad" => SpecCommandErrorCode::ConfigLoad,
-            "specTreeScan" => SpecCommandErrorCode::SpecTreeScan,
-            "specArchive" => SpecCommandErrorCode::SpecArchive,
-            "markdownRead" => SpecCommandErrorCode::MarkdownRead,
-            "invalidSpec" => SpecCommandErrorCode::InvalidSpec,
-            _ => SpecCommandErrorCode::Unexpected,
-        };
-
-        Self::new(code, error.message())
-    }
 }
 
 impl From<AppUseCaseError> for SpecCommandError {
     fn from(error: AppUseCaseError) -> Self {
         Self::from_app_error(error)
-    }
-}
-
-impl From<CommandError> for SpecCommandError {
-    fn from(error: CommandError) -> Self {
-        Self::from_command_error(error)
     }
 }
 
@@ -313,7 +311,7 @@ pub fn read_spec_file(
     request: ReadSpecFileRequest,
 ) -> ReadSpecFileCommandResult<ReadSpecFileResponse> {
     let key = SpecFileKey::from_str(&request.file_key).map_err(|_| {
-        CommandError::invalid_request(format!("unsupported file key: {}", request.file_key))
+        SpecCommandError::invalid_request(format!("unsupported file key: {}", request.file_key))
     })?;
     let workspace = load_workspace(state.use_cases(), &request.workspace_path)?;
     let performance_context = request
@@ -326,7 +324,7 @@ pub fn read_spec_file(
     let result = state
         .use_cases()
         .read_spec_file_cached(&workspace, &request.spec_id, key)
-        .map_err(CommandError::from);
+        .map_err(SpecCommandError::from);
 
     if let (Some(context), Some(end_span)) = (performance_context.as_ref(), end_span) {
         let mut metadata = std::collections::BTreeMap::new();
@@ -358,7 +356,7 @@ pub fn archive_spec(
 fn load_workspace(
     use_cases: &crate::app::use_cases::FilesystemAppUseCases,
     workspace_path: &str,
-) -> CommandResult<LoadWorkspaceResult> {
+) -> SpecCommandResult<LoadWorkspaceResult> {
     use_cases.load_workspace(workspace_path).map_err(Into::into)
 }
 
@@ -578,13 +576,16 @@ mod tests {
 
     #[test]
     fn read_spec_file_response_serializes_missing_document() {
-        let missing = AppMissingMarkdownFile::new(SpecFileKey::Design, "/workspace/auth/design.md");
+        let missing = AppMissingMarkdownFile::new(
+            SpecFileKey::Requirements,
+            "/workspace/auth/requirements.html",
+        );
 
         let response = ReadSpecFileResponse::from(ReadSpecFileResult::Missing(missing));
 
-        assert_eq!("design", response.key());
+        assert_eq!("requirements", response.key());
         assert_eq!("markdown", response.format());
-        assert_eq!("/workspace/auth/design.md", response.path());
+        assert_eq!("/workspace/auth/requirements.html", response.path());
         assert_eq!(None, response.contents());
         assert!(response.missing());
         assert!(response.blocks().is_empty());

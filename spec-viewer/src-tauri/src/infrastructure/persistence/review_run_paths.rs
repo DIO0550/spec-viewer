@@ -189,29 +189,6 @@ mod tests {
     }
 
     #[test]
-    fn resolves_archive_review_run_under_spec_skill_feature_folder() {
-        let workspace = TestWorkspace::new("/workspace/project");
-        let layout = workspace.layout(WorkspaceKind::SpecSkill);
-        let spec_id = SpecId::new("checkout-flow").expect("spec id should be valid");
-        let run_id =
-            UserReviewRunId::new("2026-05-06T120000Z-spec").expect("run id should be valid");
-
-        let path = ReviewRunPathResolver::new()
-            .resolve(&layout, &spec_id, &run_id, ReviewRunFolderState::Archive)
-            .expect("path should resolve");
-
-        assert_eq!(
-            workspace.root().join(
-                ".spec-skill/features/checkout-flow/user-review/archive/2026-05-06T120000Z-spec"
-            ),
-            path.run_directory()
-        );
-        assert!(path
-            .run_directory()
-            .starts_with(path.user_review_directory()));
-    }
-
-    #[test]
     fn rejects_spec_ids_that_escape_user_review_root() {
         let workspace = TestWorkspace::new("/workspace/project");
         let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
