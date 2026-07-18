@@ -109,9 +109,14 @@ type CommentSearchFilterParams = Readonly<{
   >;
 }>;
 
-const defaultDisplayFilter: CommentDisplayFilter = "open";
+const defaultDisplayFilter: CommentDisplayFilter = "all";
 
 const commentFilterOptions: readonly CommentFilterOption[] = [
+  {
+    filter: "all",
+    label: uiText.sidebar.all,
+    ariaLabel: "すべてのコメントを表示",
+  },
   {
     filter: "open",
     label: uiText.sidebar.openFilter,
@@ -944,6 +949,7 @@ function createAnchorDisplayStatusByCommentId(
 /** @returns An empty filter count record for non-ready sidebar states. */
 function createEmptyFilterCounts(): CommentFilterCounts {
   return {
+    all: 0,
     open: 0,
     resolved: 0,
   };
@@ -955,6 +961,7 @@ function createCommentFilterCounts(
 ): CommentFilterCounts {
   return comments.reduce<CommentFilterCounts>(
     (counts, comment) => ({
+      all: counts.all + 1,
       open: comment.resolved ? counts.open : counts.open + 1,
       resolved: comment.resolved ? counts.resolved + 1 : counts.resolved,
     }),
@@ -967,6 +974,10 @@ function filterCommentsByDisplayFilter(
   comments: readonly Comment[],
   activeFilter: CommentDisplayFilter,
 ): readonly Comment[] {
+  if (activeFilter === "all") {
+    return comments;
+  }
+
   if (activeFilter === "open") {
     return comments.filter((comment) => !comment.resolved);
   }
@@ -979,6 +990,25 @@ function createCommentSectionModels(
   activeFilter: CommentDisplayFilter,
   filteredComments: readonly Comment[],
 ): readonly CommentSectionModel[] {
+  if (activeFilter === "all") {
+    const groups = groupCommentsByStatus(filteredComments);
+
+    return [
+      {
+        id: "comment-section-open",
+        title: uiText.sidebar.openFilter,
+        comments: groups.openComments,
+        emptyMessage: uiText.sidebar.noOpenComments,
+      },
+      {
+        id: "comment-section-resolved",
+        title: uiText.sidebar.resolved,
+        comments: groups.resolvedComments,
+        emptyMessage: uiText.sidebar.noResolvedComments,
+      },
+    ];
+  }
+
   return [
     {
       id: `comment-section-${activeFilter}`,

@@ -38,6 +38,7 @@ export const uiText = {
     noFilterResults: "フィルターに一致するコメントはありません。",
     openFilter: "未解決",
     resolved: "解決済み",
+    all: "すべて",
     moved: "移動",
     fuzzy: "曖昧",
     stale: "古い",

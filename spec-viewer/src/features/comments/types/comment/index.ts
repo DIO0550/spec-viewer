@@ -27,7 +27,7 @@ export type CommentBlockType =
   | "html"
   | "other";
 
-export type CommentDisplayFilter = CommentStatus;
+export type CommentDisplayFilter = CommentStatusFilter;
 
 export type CommentDisplayState = CommentStatus | "orphaned";
 

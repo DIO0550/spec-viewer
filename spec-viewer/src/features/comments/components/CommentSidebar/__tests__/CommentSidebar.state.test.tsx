@@ -385,33 +385,18 @@ test("CommentSidebarはopenとresolvedの件数とコメント本文を表示す
   expect(result.container.textContent).toContain(
     "Clarify what counts as an active comment highlight.",
   );
-  expect(result.container.textContent).not.toContain(
+  expect(result.container.textContent).toContain(
     "This acceptance item is covered.",
   );
   expect(
     result.container.querySelector('time[datetime="2026-05-05T10:15:00Z"]'),
   ).not.toBeNull();
-
-  const resolvedFilter = result.container.querySelector(
-    '[aria-label="解決済みコメントを表示"]',
-  ) as HTMLButtonElement;
-
-  act(() => {
-    resolvedFilter.click();
-  });
-
-  expect(result.container.textContent).toContain(
-    "This acceptance item is covered.",
-  );
   result.unmount();
 });
 
 test("CommentSidebarは矢印キーで隣のcomment threadを選択する", () => {
   const onSelectComment = vi.fn();
-  const result = renderReadySidebar({
-    comments: [openComment, fuzzyComment],
-    onSelectComment,
-  });
+  const result = renderReadySidebar({ onSelectComment });
   const selectors = result.container.querySelectorAll(
     ".comment-thread__select",
   );
@@ -424,7 +409,7 @@ test("CommentSidebarは矢印キーで隣のcomment threadを選択する", () =
   });
 
   expect(document.activeElement).toBe(selectors[1]);
-  expect(onSelectComment).toHaveBeenCalledWith("cmt_fuzzy");
+  expect(onSelectComment).toHaveBeenCalledWith("cmt_resolved");
   result.unmount();
 });
 
@@ -560,14 +545,13 @@ test("CommentSidebarは選択中コメントをaria-currentで表現する", () 
 
 test("CommentSidebarはreconciliationのアンカー状態を表示する", () => {
   const result = renderReadySidebar({
-    comments: [openComment, fuzzyComment],
     anchorDisplayStates: [
       {
         commentId: commentId("cmt_open"),
         status: "moved",
       },
       {
-        commentId: commentId("cmt_fuzzy"),
+        commentId: commentId("cmt_resolved"),
         status: "orphaned",
       },
     ],
@@ -600,7 +584,7 @@ test("CommentSidebarは選択した状態フィルターのコメントだけを
   result.unmount();
 });
 
-test("CommentSidebarは未解決と解決済み以外のフィルターを表示しない", () => {
+test("CommentSidebarはアンカー状態フィルターを表示しない", () => {
   const result = renderReadySidebar({
     comments: [openComment, fuzzyComment],
     anchorDisplayStates: [
@@ -611,9 +595,6 @@ test("CommentSidebarは未解決と解決済み以外のフィルターを表示
     ],
   });
 
-  expect(
-    result.container.querySelector('[aria-label="すべてのコメントを表示"]'),
-  ).toBeNull();
   expect(
     result.container.querySelector(
       '[aria-label="移動したアンカーのコメントを表示"]',
@@ -636,8 +617,11 @@ test("CommentSidebarは未解決と解決済み以外のフィルターを表示
   ).toBeNull();
   expect(
     result.container.querySelectorAll(".comment-sidebar__filter").length,
-  ).toBe(2);
+  ).toBe(3);
 
+  const allFilter = result.container.querySelector(
+    '[aria-label="すべてのコメントを表示"]',
+  ) as HTMLButtonElement;
   const openFilter = result.container.querySelector(
     '[aria-label="未解決コメントを表示"]',
   ) as HTMLButtonElement;
@@ -645,7 +629,8 @@ test("CommentSidebarは未解決と解決済み以外のフィルターを表示
     '[aria-label="解決済みコメントを表示"]',
   ) as HTMLButtonElement;
 
-  expect(openFilter.getAttribute("aria-pressed")).toBe("true");
+  expect(allFilter.getAttribute("aria-pressed")).toBe("true");
+  expect(allFilter.textContent).toBe("すべて2");
   expect(openFilter.textContent).toBe("未解決2");
 
   act(() => {
@@ -796,14 +781,6 @@ test("CommentSidebarはコメント選択とresolve操作を発火する", () =>
 test("CommentSidebarはresolvedコメントのreopen操作を発火する", () => {
   const onReopenComment = vi.fn();
   const result = renderReadySidebar({ onReopenComment });
-  const resolvedFilter = result.container.querySelector(
-    '[aria-label="解決済みコメントを表示"]',
-  ) as HTMLButtonElement;
-
-  act(() => {
-    resolvedFilter.click();
-  });
-
   const reopenButton = result.container.querySelector(
     '[aria-label="再オープン cmt_resolved"]',
   ) as HTMLButtonElement;
