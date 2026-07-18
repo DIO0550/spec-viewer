@@ -31,7 +31,7 @@ Allow users to create, view, update, resolve, and delete comments without modify
 ## UI Behavior
 
 - [ ] Comments for the current feature and tab load when the tab changes.
-- [ ] Sidebar shows unresolved comments first.
+- [ ] Sidebar shows open comments first.
 - [ ] Resolved comments remain visible but visually subdued.
 - [ ] Clicking a comment attempts to scroll to its anchor.
 - [ ] Deleting a comment removes it from the JSON store, not from Markdown.
@@ -80,7 +80,7 @@ Allow users to create, view, update, resolve, and delete comments without modify
 
 - [ ] Define persistence DTOs for comment JSON.
 - [ ] Choose JSON array or wrapper object and document the choice.
-- [ ] Preserve stable field names: `id`, `anchor`, `body`, `resolved`, `createdAt`, `updatedAt`.
+- [ ] Preserve stable field names: `id`, `anchor`, `body`, `status`, `createdAt`, `updatedAt`.
 - [ ] Decide whether timestamps are generated in Rust only.
 - [ ] Add serde round-trip tests.
 - [ ] Add malformed JSON tests.
@@ -88,7 +88,6 @@ Allow users to create, view, update, resolve, and delete comments without modify
 ### P2.5 Comment Storage Paths
 
 - [ ] Resolve `.comments/<logical-file>.json` for `.plugin-workspace` specs.
-- [ ] Resolve `.comments/<logical-file>.json` for `.spec-skill` compatibility specs.
 - [ ] Ensure comment storage stays inside the selected spec folder.
 - [ ] Create `.comments/` on first write.
 - [ ] Read missing comment file as an empty list.
@@ -111,7 +110,7 @@ Allow users to create, view, update, resolve, and delete comments without modify
 - [ ] Add `add_comment` use case.
 - [ ] Add `update_comment` use case.
 - [ ] Add `delete_comment` use case.
-- [ ] Add `toggle_comment_resolved` helper if useful.
+- [ ] Add explicit `resolve_comment` and `reopen_comment` commands.
 - [ ] Generate IDs in the application layer.
 - [ ] Generate timestamps in the application layer.
 - [ ] Validate body is non-empty before persistence.
@@ -131,7 +130,7 @@ Allow users to create, view, update, resolve, and delete comments without modify
 
 - [ ] Add `src/types/comment.ts`.
 - [ ] Add `CommentAnchor` type.
-- [ ] Add resolved/status type.
+- [ ] Add a closed `open | resolved` status type.
 - [ ] Add command input/output types.
 - [ ] Add UI view model for resolved/orphaned display state.
 
@@ -151,14 +150,14 @@ Allow users to create, view, update, resolve, and delete comments without modify
 - [ ] Track loading state.
 - [ ] Track save/update/delete state.
 - [ ] Track command errors.
-- [ ] Add optimistic update for resolve toggle.
+- [ ] Add optimistic updates for explicit resolve and reopen operations.
 - [ ] Roll back optimistic update on failure.
 - [ ] Refetch after destructive operations if needed.
 
 ### P2.12 Sidebar UI
 
 - [ ] Add `CommentSidebar` component.
-- [ ] Add unresolved section.
+- [ ] Add open section.
 - [ ] Add resolved section.
 - [ ] Add empty state for no comments.
 - [ ] Add count badges.

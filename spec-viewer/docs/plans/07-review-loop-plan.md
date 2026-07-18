@@ -205,7 +205,7 @@ Review run folders should be created inside the selected spec folder so external
 ├── active/
 │   └── 2026-05-06T120000Z-file-requirements/
 └── archive/
-    └── 2026-05-06T113000Z-file-design/
+    └── 2026-05-06T113000Z-file-requirements/
 ```
 
 The default logical file mapping for spec-driven-dev workspaces should match the actual skill output:
@@ -218,52 +218,6 @@ The default logical file mapping for spec-driven-dev workspaces should match the
 | `tasks` | `tasks.md` |
 
 Do not assume `exploration.md`, `hearing.md`, or `impl.md` for `.plugin-workspace/.specs/` workspaces.
-
-For `.spec-skill` compatibility workspaces, use the corresponding feature folder:
-
-```text
-<workspace>/.spec-skill/features/{feature-name}/user-review/
-├── active/
-└── archive/
-```
-
-Workspace-wide review runs are out of scope for the first version because this workflow is intended to hand one spec-driven-dev feature folder to an implementation AI. File and spec scope are the initial targets.
-
-When worktree isolation is enabled, the review run should be created in a dedicated Git worktree instead of the currently opened workspace. The implemented default worktree root is a sibling of the selected workspace named `<workspace-name>.spec-reviewer-worktrees`:
-
-```text
-<workspace-parent>/<workspace-name>.spec-reviewer-worktrees/
-└── <review-run-id>/
-    └── .plugin-workspace/.specs/{nnn}-{feature-name}/user-review/
-        ├── active/
-        │   └── <review-run-id>/
-        └── archive/
-```
-
-The branch name should be deterministic and human-readable, for example:
-
-```text
-spec-reviewer/<review-run-id>
-```
-
-The app should record the worktree path and branch name, but it should not merge, rebase, delete, or prune worktrees in the first version. Cleanup and merge remain explicit user actions unless a later task adds guarded UI for them.
-
-Important distinction:
-
-- `.plugin-workspace/.specs/archive/{nnn}-{feature-name}/` is the spec-driven-dev archive for an entire completed spec.
-- `{spec-folder}/user-review/archive/<review-run-id>/` is only the archive for completed user review runs inside that spec.
-- Archiving a user review run must not move the whole spec folder into `.plugin-workspace/.specs/archive/`.
-
-Worktree mode should check for uncommitted changes in the target spec files before creating the review run. The first version should block worktree mode when target files are dirty, because the new worktree would be created from committed Git state and could omit the user's latest spec edits. Users can either commit/stash first or use current-workspace mode.
-
-This folder must not be confused with the AI-owned review folders used by spec-driven-dev variants:
-
-```text
-<workspace>/.plugin-workspace/.specs/{nnn}-{feature-name}/
-├── plan-review/   # another AI reviews the generated implementation plan
-├── code-review/   # another AI reviews implementation changes
-└── user-review/   # user comments exported by spec-reviewer for implementation work
-```
 
 ## Review Bundle Format
 
@@ -312,7 +266,7 @@ The human-readable entrypoint for AI agents. It should be Japanese because the t
 
 ### comments.json
 
-The machine-readable comment payload. It should reuse existing comment response shapes where possible and include open/resolved/orphaned state.
+The machine-readable comment payload. It uses the canonical status-only comment shape and includes anchor-resolution state separately.
 
 ### context/
 
