@@ -1,5 +1,0 @@
-import{n as e}from"./chunk-DnJy8xQt.js";import{t}from"./jsx-runtime-BpX3lQ6F.js";import{n,t as r}from"./WorkspaceDropOverlay-jyd1r_b5.js";var i,a,o,s,c;e((()=>{n(),i=t(),a={component:r,parameters:{layout:`fullscreen`},decorators:[e=>(0,i.jsxs)(`div`,{style:{minHeight:`70vh`,position:`relative`},children:[(0,i.jsx)(`p`,{style:{padding:24},children:`Drag a workspace folder over this surface.`}),(0,i.jsx)(e,{})]})],args:{isVisible:!0}},o={},s={args:{isVisible:!1}},o.parameters={...o.parameters,docs:{...o.parameters?.docs,source:{originalSource:`{}`,...o.parameters?.docs?.source}}},s.parameters={...s.parameters,docs:{...s.parameters?.docs,source:{originalSource:`{
-  args: {
-    isVisible: false
-  }
-}`,...s.parameters?.docs?.source}}},c=[`Default`,`EdgeCases`]}))();export{o as Default,s as EdgeCases,c as __namedExportsOrder,a as default};
