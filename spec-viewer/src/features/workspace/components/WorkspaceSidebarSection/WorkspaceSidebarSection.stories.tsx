@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
 
-import type { RecentWorkspace } from "@/shared/lib/recentWorkspaces";
+import type { RecentWorkspace } from "@/utils/recentWorkspaces";
 
 import { WorkspaceSidebarSection } from ".";
 

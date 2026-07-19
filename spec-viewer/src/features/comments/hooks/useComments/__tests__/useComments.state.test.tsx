@@ -10,8 +10,8 @@ import { useCommentOperations } from "@/features/comments/hooks/useCommentOperat
 import { useComments } from "@/features/comments/hooks/useComments";
 import { createCommentCommandTestDouble } from "@/features/comments/testing/comment-command-test-double";
 import type { ListCommentsResponse } from "@/features/comments/types/comment";
-import type { CommentCommands } from "@/shared/api/tauri";
-import { configurePerformanceLoggerForTest } from "@/shared/lib/performance";
+import type { CommentCommands } from "@/lib/api/tauri";
+import { configurePerformanceLoggerForTest } from "@/lib/performance";
 
 const commentId = CommentId.fromString;
 

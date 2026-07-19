@@ -8,7 +8,7 @@ import {
   type SpecViewSelectionContextValue,
 } from "@/app/context/specViewSelection";
 import type { SpecFileKey } from "@/features/specs/types/spec";
-import { WorkspacePath } from "@/shared/domain/workspacePath";
+import { WorkspacePath } from "@/domains/workspacePath";
 
 function createContainerRoot(): Readonly<{
   container: HTMLDivElement;

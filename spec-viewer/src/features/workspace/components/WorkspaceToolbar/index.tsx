@@ -2,7 +2,7 @@ import { FolderOpen, RefreshCw, RotateCcw, SunMoon } from "lucide-react";
 
 import { useTheme } from "@/features/preferences";
 import { ThemeMode } from "@/features/preferences/domain/theme";
-import { uiText } from "@/shared/lib/uiText";
+import { uiText } from "@/utils/uiText";
 
 type Props = Readonly<{
   workspacePath: string | null;

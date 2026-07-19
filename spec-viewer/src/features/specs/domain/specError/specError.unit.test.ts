@@ -6,7 +6,7 @@ import {
   type SpecFeatureError as SpecFeatureErrorType,
   type SpecFeatureErrorCode,
 } from "@/features/specs/domain/specError";
-import { ListSpecsCommandError } from "@/shared/api/tauri/listSpecs";
+import { ListSpecsCommandError } from "@/lib/api/tauri/listSpecs";
 
 test("SpecFeatureErrorはfeatureとcommand-local causeを必須にする", () => {
   expectTypeOf<SpecFeatureErrorType>().toEqualTypeOf<

@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 
-import { WorkspaceLayout, type WorkspaceLayoutRootProps } from "@/shared/ui";
+import { WorkspaceLayout, type WorkspaceLayoutRootProps } from "@/components";
 
 import { useResizableSidebar, useSidebarPreference } from "../../hooks";
 

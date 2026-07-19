@@ -16,7 +16,7 @@ import type {
   CommentAnchorDisplayState,
   CommentExportScope,
 } from "@/features/comments/types/comment";
-import { AddCommentCommandError } from "@/shared/api/tauri/addComment";
+import { AddCommentCommandError } from "@/lib/api/tauri/addComment";
 
 const commentId = CommentIdValue.fromString;
 

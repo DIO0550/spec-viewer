@@ -3,15 +3,17 @@ import type { Workspace } from "@/features/workspace/types/workspace";
 import {
   clearLastActiveWorkspacePath,
   clearStoredRecentWorkspaces,
-  type RecentWorkspace,
   type RecentWorkspaceStorage,
   readLastActiveWorkspacePath,
   readRecentWorkspaces,
-  recordRecentWorkspace,
-  removeRecentWorkspace,
   writeLastActiveWorkspacePath,
   writeRecentWorkspaces,
-} from "@/shared/lib/recentWorkspaces";
+} from "@/lib/recentWorkspaces";
+import {
+  recordRecentWorkspace,
+  removeRecentWorkspace,
+  type RecentWorkspace,
+} from "@/utils/recentWorkspaces";
 
 export type UseRecentWorkspacesOptions = Readonly<{
   storage?: RecentWorkspaceStorage | null;

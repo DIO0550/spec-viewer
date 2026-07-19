@@ -19,13 +19,13 @@ import {
 } from "@/features/comments/hooks/useCommentOperations";
 import { listComments as listCommentsViaGateway } from "@/features/comments/infra/commentGateway";
 
-import type { CommentCommands } from "@/shared/api/tauri";
-import { commentCommands as defaultCommentCommands } from "@/shared/api/tauri";
-import { ListCommentsCommandError } from "@/shared/api/tauri/listComments";
+import type { CommentCommands } from "@/lib/api/tauri";
+import { commentCommands as defaultCommentCommands } from "@/lib/api/tauri";
+import { ListCommentsCommandError } from "@/lib/api/tauri/listComments";
 import {
   resolvePerformanceCorrelationId,
   startPerformanceSpan,
-} from "@/shared/lib/performance";
+} from "@/lib/performance";
 
 export type { CommentListState } from "@/features/comments/domain/commentListState";
 export type {

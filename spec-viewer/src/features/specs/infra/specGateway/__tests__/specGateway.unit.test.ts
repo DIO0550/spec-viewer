@@ -1,7 +1,7 @@
 import { expect, test, vi } from "vitest";
 
 import { archiveSpec, createReadSpecFileRequest, listSpecs, readSpecFile } from "@/features/specs/infra/specGateway";
-import type { SpecCommands } from "@/shared/api/tauri";
+import type { SpecCommands } from "@/lib/api/tauri";
 import type { SpecDocument, SpecTree } from "@/features/specs/types/spec";
 
 const tree: SpecTree = {

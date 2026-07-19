@@ -3,7 +3,7 @@ import { fn } from "storybook/test";
 
 import { ThemeProvider } from "@/features/preferences";
 import { SidebarPreferenceProvider } from "@/features/sidebar/hooks/useSidebarPreference";
-import { WorkspaceLayout } from "@/shared/ui/WorkspaceLayout";
+import { WorkspaceLayout } from "@/components/WorkspaceLayout";
 
 import { SidebarLayout } from ".";
 

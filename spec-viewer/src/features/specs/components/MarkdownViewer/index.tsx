@@ -69,8 +69,8 @@ import {
   createHtmlSearchIndex,
   findHtmlSearchMatches,
 } from "@/lib/htmlDocumentSearch";
-import { recordPerformancePoint } from "@/shared/lib/performance";
-import { uiText } from "@/shared/lib/uiText";
+import { recordPerformancePoint } from "@/lib/performance";
+import { uiText } from "@/utils/uiText";
 import { HtmlDocument } from "./HtmlDocument";
 import {
   clampHtmlZoomPercent,

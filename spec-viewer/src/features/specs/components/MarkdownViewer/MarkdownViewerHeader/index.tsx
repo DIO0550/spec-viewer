@@ -1,7 +1,7 @@
 import { RefreshCcw } from "lucide-react";
 
 import type { SpecFileKey } from "@/features/specs/types/spec";
-import { uiText } from "@/shared/lib/uiText";
+import { uiText } from "@/utils/uiText";
 import {
   DocumentSearchControl,
   type DocumentSearchControlProps,

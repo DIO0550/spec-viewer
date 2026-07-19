@@ -24,7 +24,7 @@ import {
 } from "@/features/comments/domain/commentOperation";
 import type { CommentAnchorDisplayStatus } from "@/features/comments/types/comment";
 
-import { uiText } from "@/shared/lib/uiText";
+import { uiText } from "@/utils/uiText";
 
 const emptyBodyMessage = uiText.commentThread.emptyBody;
 

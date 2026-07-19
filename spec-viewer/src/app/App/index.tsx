@@ -51,9 +51,9 @@ import {
   WorkspaceSidebarSection,
   WorkspaceToolbar,
 } from "@/features/workspace";
-import { WorkspacePath } from "@/shared/domain/workspacePath";
-import { uiText } from "@/shared/lib/uiText";
-import { WorkspaceLayout } from "@/shared/ui";
+import { WorkspacePath } from "@/domains/workspacePath";
+import { uiText } from "@/utils/uiText";
+import { WorkspaceLayout } from "@/components";
 
 /**
  * Application root that wires the theme, workspace and selection providers.

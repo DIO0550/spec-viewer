@@ -17,7 +17,7 @@ import {
   SPEC_FILE_WATCH_ERROR_EVENT,
   type SpecFileWatchChangeKind,
 } from "@/features/specs/types/watch";
-import { getUnknownErrorMessage } from "@/shared/lib/errorMessage";
+import { getUnknownErrorMessage } from "@/utils/errorMessage";
 
 const selection: SpecViewResetKeys = {
   workspaceRoot: "/workspace",

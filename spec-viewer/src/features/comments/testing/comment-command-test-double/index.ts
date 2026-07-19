@@ -13,7 +13,7 @@ import type {
   UpdateCommentRequest,
 } from "@/features/comments/types/comment";
 
-import type { CommentCommands } from "@/shared/api/tauri";
+import type { CommentCommands } from "@/lib/api/tauri";
 
 const commentId: (value: string) => CommentId = CommentIdValue.fromString;
 
