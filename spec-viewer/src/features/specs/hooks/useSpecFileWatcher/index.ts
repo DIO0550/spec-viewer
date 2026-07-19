@@ -15,7 +15,7 @@ import {
 import {
   startSpecFileWatch as defaultStartSpecFileWatch,
   stopSpecFileWatch as defaultStopSpecFileWatch,
-} from "@/shared/api/tauri";
+} from "@/lib/api/tauri";
 
 export type StartSpecFileWatchCommand = (
   request: StartSpecFileWatchRequest,

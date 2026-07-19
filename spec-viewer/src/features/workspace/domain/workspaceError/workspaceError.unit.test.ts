@@ -7,7 +7,7 @@ import {
 import {
   LoadWorkspaceCommandError,
   type LoadWorkspaceCommandError as LoadWorkspaceCommandErrorType,
-} from "@/shared/api/tauri/loadWorkspace";
+} from "@/lib/api/tauri/loadWorkspace";
 
 test("WorkspaceErrorのcauseはload_workspace command-local errorだけを保持する", () => {
   expectTypeOf<

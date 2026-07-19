@@ -4,8 +4,8 @@ import type { SubscribeWorkspaceDragDropEvents } from "@/features/workspace/hook
 import type {
   selectWorkspaceDirectory as defaultSelectWorkspaceDirectory,
   validateWorkspaceDirectory as defaultValidateWorkspaceDirectory,
-} from "@/shared/api/tauri";
-import type { RecentWorkspaceStorage } from "@/shared/lib/recentWorkspaces";
+} from "@/lib/api/tauri";
+import type { RecentWorkspaceStorage } from "@/lib/recentWorkspaces";
 
 /** IPC コマンドの DI（useComments の `commands?` 規約に合わせた1オブジェクト）。 */
 export type WorkspaceLoaderCommands = Readonly<{

@@ -17,14 +17,14 @@ import type {
 } from "@/features/specs/hooks/useSpecs/types";
 import * as specGateway from "@/features/specs/infra/specGateway";
 import type { SpecFileKey } from "@/features/specs/types/spec";
-import { specCommands } from "@/shared/api/tauri";
-import { ArchiveSpecCommandError } from "@/shared/api/tauri/archiveSpec";
-import { ListSpecsCommandError } from "@/shared/api/tauri/listSpecs";
-import { ReadSpecFileCommandError } from "@/shared/api/tauri/readSpecFile";
+import { specCommands } from "@/lib/api/tauri";
+import { ArchiveSpecCommandError } from "@/lib/api/tauri/archiveSpec";
+import { ListSpecsCommandError } from "@/lib/api/tauri/listSpecs";
+import { ReadSpecFileCommandError } from "@/lib/api/tauri/readSpecFile";
 import {
   createPerformanceCorrelationId,
   startPerformanceSpan,
-} from "@/shared/lib/performance";
+} from "@/lib/performance";
 
 export type { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
 export type { SpecTreeState } from "@/features/specs/domain/specTreeState";

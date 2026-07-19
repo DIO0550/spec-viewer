@@ -3,7 +3,7 @@ import { SpecFeatureError } from "@/features/specs/domain/specError";
 import type { SpecFile } from "@/features/specs/domain/specFile";
 import type { SpecNode } from "@/features/specs/domain/specNode";
 import { SpecTreeState } from "@/features/specs/domain/specTreeState";
-import { ListSpecsCommandError } from "@/shared/api/tauri/listSpecs";
+import { ListSpecsCommandError } from "@/lib/api/tauri/listSpecs";
 
 const implFile: SpecFile = {
   key: "impl",

@@ -15,7 +15,7 @@ import type {
 import type {
   AddCommentCommandRequest,
   AddCommentCommandResponse,
-} from "@/shared/api/tauri/addComment";
+} from "@/lib/api/tauri/addComment";
 
 test("addCommentのper-command contractはcomment DTOと一致する", () => {
   expectTypeOf<AddCommentCommandRequest>().toEqualTypeOf<AddCommentRequest>();
@@ -24,9 +24,9 @@ test("addCommentのper-command contractはcomment DTOと一致する", () => {
 
 test("tauri barrelはaddComment error型を同名exportとして公開する", () => {
   expectTypeOf<
-    import("@/shared/api/tauri").AddCommentCommandError
+    import("@/lib/api/tauri").AddCommentCommandError
   >().toEqualTypeOf<
-    import("@/shared/api/tauri/addComment").AddCommentCommandError
+    import("@/lib/api/tauri/addComment").AddCommentCommandError
   >();
 });
 

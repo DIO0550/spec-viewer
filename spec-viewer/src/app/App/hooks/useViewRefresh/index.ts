@@ -6,7 +6,7 @@ import type {
   StartSpecFileWatchCommand,
   StopSpecFileWatchCommand,
 } from "@/features/specs/hooks/useSpecFileWatcher";
-import { getUnknownErrorMessage } from "@/shared/lib/errorMessage";
+import { getUnknownErrorMessage } from "@/utils/errorMessage";
 
 type RefreshCurrentViewOptions = Readonly<{
   failureMessage: string;

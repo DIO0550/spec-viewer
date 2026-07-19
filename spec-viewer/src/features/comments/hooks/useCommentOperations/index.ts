@@ -22,12 +22,12 @@ import {
   updateComment as updateCommentViaGateway,
 } from "@/features/comments/infra/commentGateway";
 
-import type { CommentCommands } from "@/shared/api/tauri";
-import { AddCommentCommandError } from "@/shared/api/tauri/addComment";
-import { DeleteCommentCommandError } from "@/shared/api/tauri/deleteComment";
-import { ReopenCommentCommandError } from "@/shared/api/tauri/reopenComment";
-import { ResolveCommentCommandError } from "@/shared/api/tauri/resolveComment";
-import { UpdateCommentCommandError } from "@/shared/api/tauri/updateComment";
+import type { CommentCommands } from "@/lib/api/tauri";
+import { AddCommentCommandError } from "@/lib/api/tauri/addComment";
+import { DeleteCommentCommandError } from "@/lib/api/tauri/deleteComment";
+import { ReopenCommentCommandError } from "@/lib/api/tauri/reopenComment";
+import { ResolveCommentCommandError } from "@/lib/api/tauri/resolveComment";
+import { UpdateCommentCommandError } from "@/lib/api/tauri/updateComment";
 
 export type AddCommentInput = Readonly<{
   anchor: CommentAnchor;

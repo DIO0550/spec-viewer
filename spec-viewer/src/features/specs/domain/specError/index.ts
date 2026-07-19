@@ -1,6 +1,6 @@
-import type { ArchiveSpecCommandError } from "@/shared/api/tauri/archiveSpec";
-import type { ListSpecsCommandError } from "@/shared/api/tauri/listSpecs";
-import type { ReadSpecFileCommandError } from "@/shared/api/tauri/readSpecFile";
+import type { ArchiveSpecCommandError } from "@/lib/api/tauri/archiveSpec";
+import type { ListSpecsCommandError } from "@/lib/api/tauri/listSpecs";
+import type { ReadSpecFileCommandError } from "@/lib/api/tauri/readSpecFile";
 
 export type SpecCommandError =
   | ArchiveSpecCommandError

@@ -3,7 +3,7 @@ import { expect, test } from "vitest";
 import { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
 import { SpecFeatureError } from "@/features/specs/domain/specError";
 import type { SpecDocument } from "@/features/specs/types/spec";
-import { ReadSpecFileCommandError } from "@/shared/api/tauri/readSpecFile";
+import { ReadSpecFileCommandError } from "@/lib/api/tauri/readSpecFile";
 
 const document: SpecDocument = {
   key: "impl",

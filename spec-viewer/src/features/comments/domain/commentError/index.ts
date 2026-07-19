@@ -1,11 +1,11 @@
-import type { AddCommentCommandError } from "@/shared/api/tauri/addComment";
-import type { DeleteCommentCommandError } from "@/shared/api/tauri/deleteComment";
-import type { ExportCommentsCommandError } from "@/shared/api/tauri/exportComments";
-import type { GenerateLlmPromptCommandError } from "@/shared/api/tauri/generateLlmPrompt";
-import type { ListCommentsCommandError } from "@/shared/api/tauri/listComments";
-import type { ReopenCommentCommandError } from "@/shared/api/tauri/reopenComment";
-import type { ResolveCommentCommandError } from "@/shared/api/tauri/resolveComment";
-import type { UpdateCommentCommandError } from "@/shared/api/tauri/updateComment";
+import type { AddCommentCommandError } from "@/lib/api/tauri/addComment";
+import type { DeleteCommentCommandError } from "@/lib/api/tauri/deleteComment";
+import type { ExportCommentsCommandError } from "@/lib/api/tauri/exportComments";
+import type { GenerateLlmPromptCommandError } from "@/lib/api/tauri/generateLlmPrompt";
+import type { ListCommentsCommandError } from "@/lib/api/tauri/listComments";
+import type { ReopenCommentCommandError } from "@/lib/api/tauri/reopenComment";
+import type { ResolveCommentCommandError } from "@/lib/api/tauri/resolveComment";
+import type { UpdateCommentCommandError } from "@/lib/api/tauri/updateComment";
 
 export type CommentCommandError =
   | AddCommentCommandError

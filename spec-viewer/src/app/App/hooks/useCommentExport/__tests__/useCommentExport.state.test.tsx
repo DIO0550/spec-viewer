@@ -17,9 +17,9 @@ import type {
   GenerateLlmPromptResponse,
 } from "@/features/comments/types/comment";
 
-import { ExportCommentsCommandError } from "@/shared/api/tauri/exportComments";
-import { GenerateLlmPromptCommandError } from "@/shared/api/tauri/generateLlmPrompt";
-import { getUnknownErrorMessage } from "@/shared/lib/errorMessage";
+import { ExportCommentsCommandError } from "@/lib/api/tauri/exportComments";
+import { GenerateLlmPromptCommandError } from "@/lib/api/tauri/generateLlmPrompt";
+import { getUnknownErrorMessage } from "@/utils/errorMessage";
 
 const commentId = CommentIdValue.fromString;
 

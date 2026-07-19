@@ -6,7 +6,7 @@ import {
   SidebarLayout,
   SidebarPreferenceProvider,
 } from "@/features/sidebar";
-import { WorkspaceLayout } from "@/shared/ui";
+import { WorkspaceLayout } from "@/components";
 
 type RenderResult = Readonly<{
   container: HTMLDivElement;

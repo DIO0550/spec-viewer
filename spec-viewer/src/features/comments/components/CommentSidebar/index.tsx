@@ -24,10 +24,10 @@ import type {
   CommentExportOperation,
   CommentExportScope,
 } from "@/features/comments/types/comment";
-import { uiText } from "@/shared/lib/uiText";
-import { CommandErrorDisplay } from "@/shared/ui/CommandErrorDisplay";
-import { EmptyState } from "@/shared/ui/EmptyState";
-import { LoadingSkeleton } from "@/shared/ui/LoadingSkeleton";
+import { uiText } from "@/utils/uiText";
+import { CommandErrorDisplay } from "@/components/CommandErrorDisplay";
+import { EmptyState } from "@/components/EmptyState";
+import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 
 type Props = Readonly<{
   listState: CommentListState;

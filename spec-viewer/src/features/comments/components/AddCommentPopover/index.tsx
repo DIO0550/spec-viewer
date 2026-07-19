@@ -18,7 +18,7 @@ import type {
   CommentAnchorDraft,
 } from "@/features/comments/types/comment";
 import { createShortcutKeyHandler } from "@/lib/createShortcutKeyHandler";
-import { uiText } from "@/shared/lib/uiText";
+import { uiText } from "@/utils/uiText";
 
 type Props = Readonly<{
   draft: CommentAnchorDraft;

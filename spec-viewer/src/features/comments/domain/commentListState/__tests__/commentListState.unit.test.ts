@@ -4,7 +4,7 @@ import type { CommentAnchor } from "@/features/comments/domain/commentAnchor";
 import type { CommentFeatureError } from "@/features/comments/domain/commentError";
 import { CommentId } from "@/features/comments/domain/commentId";
 import { CommentListState } from "@/features/comments/domain/commentListState";
-import { AddCommentCommandError } from "@/shared/api/tauri/addComment";
+import { AddCommentCommandError } from "@/lib/api/tauri/addComment";
 
 const commentId = CommentId.fromString;
 

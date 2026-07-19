@@ -13,7 +13,7 @@ import type {
   ListCommentsResponse,
 } from "@/features/comments/types/comment";
 
-import type { CommentCommands } from "@/shared/api/tauri";
+import type { CommentCommands } from "@/lib/api/tauri";
 
 export type AddCommentParam = Readonly<{
   anchor: CommentAnchor;

@@ -8,7 +8,7 @@ import {
   CommentOperationSavingState,
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
-import { AddCommentCommandError } from "@/shared/api/tauri/addComment";
+import { AddCommentCommandError } from "@/lib/api/tauri/addComment";
 
 const commentId = CommentId.fromString;
 

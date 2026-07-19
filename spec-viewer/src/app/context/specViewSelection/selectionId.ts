@@ -2,7 +2,7 @@ import type { SpecFileKey } from "@/features/specs/types/spec";
 import {
   WorkspacePath,
   type WorkspacePath as WorkspacePathType,
-} from "@/shared/domain/workspacePath";
+} from "@/domains/workspacePath";
 
 export type SpecViewTargetScope = "file" | "spec";
 

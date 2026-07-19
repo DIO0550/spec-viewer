@@ -9,10 +9,10 @@ import { type KeyboardEvent, useEffect, useState } from "react";
 
 import type { SpecTreeState } from "@/features/specs/hooks/useSpecs";
 import type { SpecNode } from "@/features/specs/types/spec";
-import { uiText } from "@/shared/lib/uiText";
-import { CommandErrorDisplay } from "@/shared/ui/CommandErrorDisplay";
-import { EmptyState } from "@/shared/ui/EmptyState";
-import { LoadingSkeleton } from "@/shared/ui/LoadingSkeleton";
+import { uiText } from "@/utils/uiText";
+import { CommandErrorDisplay } from "@/components/CommandErrorDisplay";
+import { EmptyState } from "@/components/EmptyState";
+import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 
 const BASE_TREE_ITEM_INDENT = 10;
 const TREE_ITEM_INDENT_STEP = 16;

@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { beforeEach, expect, test, vi } from "vitest";
 import { useSpecs } from "@/features/specs/hooks/useSpecs";
 import type { SpecDocument, SpecTree } from "@/features/specs/types/spec";
-import type { SpecCommands } from "@/shared/api/tauri";
+import type { SpecCommands } from "@/lib/api/tauri";
 
 const specCommandMocks = vi.hoisted(() => ({
   listSpecs: vi.fn<SpecCommands["listSpecs"]>(),
@@ -11,8 +11,8 @@ const specCommandMocks = vi.hoisted(() => ({
   archiveSpec: vi.fn<SpecCommands["archiveSpec"]>(),
 }));
 
-vi.mock("@/shared/api/tauri", async (importActual) => {
-  const actual = await importActual<typeof import("@/shared/api/tauri")>();
+vi.mock("@/lib/api/tauri", async (importActual) => {
+  const actual = await importActual<typeof import("@/lib/api/tauri")>();
 
   return {
     ...actual,
