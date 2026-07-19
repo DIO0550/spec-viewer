@@ -2,19 +2,20 @@ import type { ReactNode } from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-
-import type {
-  Comment,
-  CommentAnchor,
-  CommentAnchorDisplayState,
-  CommentExportScope,
-  CommentId,
-} from "@/features/comments/types/comment";
-import { CommentId as CommentIdValue } from "@/features/comments/types/comment";
 import {
   type CommentExportState,
   CommentSidebar,
 } from "@/features/comments/components/CommentSidebar";
+import type { Comment } from "@/features/comments/domain/comment";
+import type { CommentAnchor } from "@/features/comments/domain/commentAnchor";
+import {
+  type CommentId,
+  CommentId as CommentIdValue,
+} from "@/features/comments/domain/commentId";
+import type {
+  CommentAnchorDisplayState,
+  CommentExportScope,
+} from "@/features/comments/types/comment";
 import { AddCommentCommandError } from "@/shared/api/tauri/addComment";
 
 const commentId = CommentIdValue.fromString;
@@ -36,7 +37,6 @@ const openComment: Comment = {
   anchor,
   body: "Clarify what counts as an active comment highlight.",
   status: "open",
-  resolved: false,
   createdAt: "2026-05-05T10:00:00Z",
   updatedAt: "2026-05-05T10:15:00Z",
 };
@@ -46,7 +46,6 @@ const resolvedComment: Comment = {
   id: commentId("cmt_resolved"),
   body: "This acceptance item is covered.",
   status: "resolved",
-  resolved: true,
   createdAt: "2026-05-05T11:00:00Z",
   updatedAt: "2026-05-05T11:30:00Z",
 };
@@ -72,7 +71,7 @@ const overviewComment: Comment = {
   id: commentId("cmt_overview"),
   anchor: {
     ...anchor,
-    fileKey: "design",
+    fileKey: "requirements",
     textSnippet: "Searchable orphaned snippet for release notes",
   },
   body: "Summarize release risk for reviewers.",
@@ -695,7 +694,7 @@ test("CommentSidebarはfile keyとorphaned snippetと状態ラベルを検索対
   ) as HTMLInputElement;
 
   act(() => {
-    searchInput.value = "design";
+    searchInput.value = "requirements";
     searchInput.dispatchEvent(new Event("input", { bubbles: true }));
   });
 

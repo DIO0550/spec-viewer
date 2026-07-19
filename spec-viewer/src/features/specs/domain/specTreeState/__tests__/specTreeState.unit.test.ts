@@ -1,9 +1,9 @@
 import { expect, test } from "vitest";
-
+import { SpecFeatureError } from "@/features/specs/domain/specError";
 import type { SpecFile } from "@/features/specs/domain/specFile";
 import type { SpecNode } from "@/features/specs/domain/specNode";
 import { SpecTreeState } from "@/features/specs/domain/specTreeState";
-import type { IpcCommandError } from "@/shared/types/ipc";
+import { ListSpecsCommandError } from "@/shared/api/tauri/listSpecs";
 
 const implFile: SpecFile = {
   key: "impl",
@@ -19,11 +19,14 @@ const specNode: SpecNode = {
   children: [],
 };
 
-const error: IpcCommandError = {
-  code: "specTreeScan",
-  message: "scan failed",
-  raw: "scan failed",
-};
+const error = SpecFeatureError.fromCommandError(
+  ListSpecsCommandError.fromUnknown({
+    command: "list_specs",
+    code: "specTreeScan",
+    message: "scan failed",
+    raw: "scan failed",
+  }),
+);
 
 test("SpecTreeState.idleはworkspace未選択状態を生成する", () => {
   expect(SpecTreeState.idle()).toEqual({

@@ -45,7 +45,6 @@ pub enum SpecFileKey {
     TechReference,
     TestCases,
     Requirements,
-    Design,
 }
 
 impl SpecFileKey {
@@ -58,7 +57,6 @@ impl SpecFileKey {
         Self::Exploration,
         Self::Hearing,
     ];
-    pub const COMPATIBILITY_KEYS: [Self; 3] = [Self::Requirements, Self::Design, Self::Tasks];
 
     pub fn as_str(self) -> &'static str {
         match self {
@@ -69,7 +67,6 @@ impl SpecFileKey {
             Self::TechReference => "tech-reference",
             Self::TestCases => "test-cases",
             Self::Requirements => "requirements",
-            Self::Design => "design",
         }
     }
 
@@ -82,16 +79,11 @@ impl SpecFileKey {
             Self::TechReference => "Tech Reference",
             Self::TestCases => "Test Cases",
             Self::Requirements => "Requirements",
-            Self::Design => "Design",
         }
     }
 
     pub fn default_keys() -> &'static [Self] {
         &Self::DEFAULT_KEYS
-    }
-
-    pub fn compatibility_keys() -> &'static [Self] {
-        &Self::COMPATIBILITY_KEYS
     }
 }
 
@@ -113,7 +105,6 @@ impl FromStr for SpecFileKey {
             "tech-reference" => Ok(Self::TechReference),
             "test-cases" => Ok(Self::TestCases),
             "requirements" => Ok(Self::Requirements),
-            "design" => Ok(Self::Design),
             _ => Err(SpecDomainError::UnsupportedFileKey {
                 key: value.to_string(),
             }),
@@ -608,18 +599,6 @@ mod tests {
     }
 
     #[test]
-    fn spec_file_key_lists_compatibility_keys_in_tab_order() {
-        assert_eq!(
-            &[
-                SpecFileKey::Requirements,
-                SpecFileKey::Design,
-                SpecFileKey::Tasks,
-            ],
-            SpecFileKey::compatibility_keys()
-        );
-    }
-
-    #[test]
     fn spec_file_key_provides_stable_identifiers_and_labels() {
         assert_eq!("exploration", SpecFileKey::Exploration.as_str());
         assert_eq!("Exploration", SpecFileKey::Exploration.display_label());
@@ -637,7 +616,10 @@ mod tests {
             Ok(SpecFileKey::Requirements),
             SpecFileKey::from_str("requirements")
         );
-        assert_eq!(Ok(SpecFileKey::Design), SpecFileKey::from_str("design"));
+        assert!(matches!(
+            SpecFileKey::from_str("design"),
+            Err(SpecDomainError::UnsupportedFileKey { key }) if key == "design"
+        ));
         assert_eq!(
             Ok(SpecFileKey::TechReference),
             SpecFileKey::from_str("tech-reference")
@@ -684,11 +666,11 @@ mod tests {
 
     #[test]
     fn spec_file_rejects_empty_file_name() {
-        let result = SpecFile::present(SpecFileKey::Design, "   ");
+        let result = SpecFile::present(SpecFileKey::Requirements, "   ");
 
         assert_eq!(
             Err(SpecDomainError::MissingFileName {
-                key: SpecFileKey::Design
+                key: SpecFileKey::Requirements
             }),
             result
         );

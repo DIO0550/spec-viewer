@@ -20,11 +20,11 @@
 - [ ] User can switch saved workspaces from the toolbar without opening the folder picker.
 - [ ] Invalid workspace shows a helpful error.
 - [ ] Valid workspace with `.plugin-workspace/.specs/` loads successfully.
-- [ ] Valid workspace with `.spec-skill/` loads successfully in compatibility mode.
+- [ ] A `.spec-skill/` marker without a current workspace marker is rejected.
 - [ ] Spec tree displays directories under `.plugin-workspace/.specs/`.
 - [ ] Left spec navigation is closed by default and can be opened when needed.
 - [ ] Exploration/hearing/impl/tasks tabs resolve filenames from config/defaults.
-- [ ] Requirements/design/tasks tabs remain supported for `.spec-skill` compatibility.
+- [ ] The seven current logical keys remain available in their canonical order, including Requirements.
 - [ ] Missing Markdown files do not crash the app.
 - [ ] Markdown renders GFM tables, task lists, code blocks, and headings.
 - [ ] Rendered Markdown blocks include block type and block index attributes.
@@ -62,7 +62,7 @@
 
 - [ ] Open a workspace with one feature and all three Markdown files.
 - [ ] Open a workspace with multiple features.
-- [ ] Open a workspace with custom design/tasks filenames.
+- [ ] Open a workspace with custom requirements/tasks filenames.
 - [ ] Open a workspace with a missing config file.
 - [ ] Add comments, restart app, confirm comments persist.
 - [ ] Regenerate or edit Markdown, confirm comments degrade gracefully.

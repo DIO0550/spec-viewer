@@ -1,10 +1,9 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { beforeEach, expect, test, vi } from "vitest";
-
+import { useSpecs } from "@/features/specs/hooks/useSpecs";
 import type { SpecDocument, SpecTree } from "@/features/specs/types/spec";
 import type { SpecCommands } from "@/shared/api/tauri";
-import { useSpecs } from "@/features/specs/hooks/useSpecs";
 
 const specCommandMocks = vi.hoisted(() => ({
   listSpecs: vi.fn<SpecCommands["listSpecs"]>(),
@@ -59,9 +58,9 @@ const nestedTree: SpecTree = {
           label: "Phase Child",
           files: [
             {
-              key: "design",
-              label: "Design",
-              fileName: "design.md",
+              key: "requirements",
+              label: "Requirements",
+              fileName: "requirements.html",
               status: "present",
             },
           ],
@@ -84,9 +83,9 @@ const refreshedNestedTree: SpecTree = {
           label: "Phase Child",
           files: [
             {
-              key: "design",
-              label: "Design",
-              fileName: "design.md",
+              key: "requirements",
+              label: "Requirements",
+              fileName: "requirements.html",
               status: "present",
             },
             {
@@ -123,9 +122,9 @@ const tasksAndDesignTree: SpecTree = {
       label: "Phase Refresh",
       files: [
         {
-          key: "design",
-          label: "Design",
-          fileName: "design.md",
+          key: "requirements",
+          label: "Requirements",
+          fileName: "requirements.html",
           status: "present",
         },
         {
@@ -197,9 +196,9 @@ const renamedTasksTree: SpecTree = {
       label: "Phase Refresh",
       files: [
         {
-          key: "design",
-          label: "Design",
-          fileName: "design.md",
+          key: "requirements",
+          label: "Requirements",
+          fileName: "requirements.html",
           status: "present",
         },
       ],
@@ -251,9 +250,9 @@ const missingTasksDocument: SpecDocument = {
 };
 
 const designDocument: SpecDocument = {
-  key: "design",
-  path: "/workspace/spec-reviewer/.plugin-workspace/specs/phase-child/design.md",
-  contents: "# Design",
+  key: "requirements",
+  path: "/workspace/spec-reviewer/.plugin-workspace/specs/phase-child/requirements.html",
+  contents: "# Requirements",
   missing: false,
   blocks: [],
 };
@@ -458,7 +457,7 @@ test("useSpecsは子階層にある最初のfile付きspecを初期選択する"
   });
 
   expect(result.current.state.selection.specId).toBe("phase-child");
-  expect(result.current.state.selection.fileKey).toBe("design");
+  expect(result.current.state.selection.fileKey).toBe("requirements");
   expect(result.current.state.documentState.status).toBe("ready");
   result.unmount();
 });
@@ -550,13 +549,13 @@ test("useSpecsはspec選択時に最初のfileを選択してMarkdownを読み�
     await result.current.actions.selectSpec("phase-child");
   });
 
-  expect(result.current.state.selection.fileKey).toBe("design");
+  expect(result.current.state.selection.fileKey).toBe("requirements");
   expect(result.current.state.documentState).toEqual(
     expect.objectContaining({
       status: "ready",
       workspacePath: "/workspace/spec-reviewer",
       specId: "phase-child",
-      fileKey: "design",
+      fileKey: "requirements",
       document: designDocument,
       error: null,
     }),
@@ -668,13 +667,13 @@ test("useSpecsはspec tree再読み込み時に選択中のspecとfileを保持�
   });
 
   expect(result.current.state.selection.specId).toBe("phase-child");
-  expect(result.current.state.selection.fileKey).toBe("design");
+  expect(result.current.state.selection.fileKey).toBe("requirements");
   expect(result.current.state.documentState).toEqual(
     expect.objectContaining({
       status: "ready",
       workspacePath: "/workspace/spec-reviewer",
       specId: "phase-child",
-      fileKey: "design",
+      fileKey: "requirements",
       document: designDocument,
       error: null,
     }),
@@ -706,13 +705,13 @@ test("useSpecsはrefresh時に選択中fileが消えたら同じspecの先頭fil
   });
 
   expect(result.current.state.selection.specId).toBe("phase-refresh");
-  expect(result.current.state.selection.fileKey).toBe("design");
+  expect(result.current.state.selection.fileKey).toBe("requirements");
   expect(result.current.state.documentState).toEqual(
     expect.objectContaining({
       status: "ready",
       workspacePath: "/workspace/spec-reviewer",
       specId: "phase-refresh",
-      fileKey: "design",
+      fileKey: "requirements",
       document: designDocument,
       error: null,
     }),
@@ -1333,11 +1332,11 @@ test("useSpecsはarchive後に選択中specが消えたらdefault openable spec�
   });
 
   expect(result.current.state.selection.specId).toBe("phase-child");
-  expect(result.current.state.selection.fileKey).toBe("design");
+  expect(result.current.state.selection.fileKey).toBe("requirements");
   expect(onSelectionChange).toHaveBeenLastCalledWith({
     workspacePath: "/workspace/spec-reviewer",
     specId: "phase-child",
-    fileKey: "design",
+    fileKey: "requirements",
   });
   result.unmount();
 });

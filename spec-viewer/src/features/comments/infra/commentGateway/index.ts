@@ -1,17 +1,18 @@
+import type { Comment } from "@/features/comments/domain/comment";
+import type { CommentAnchor } from "@/features/comments/domain/commentAnchor";
+import type { CommentId } from "@/features/comments/domain/commentId";
+import type { CommentScope } from "@/features/comments/domain/commentScope";
 import {
   CommentStatusFilter,
   type CommentStatusFilter as CommentStatusFilterType,
 } from "@/features/comments/domain/commentStatusFilter";
-import type { CommentScope } from "@/features/comments/domain/commentScope";
 import type {
-  Comment,
-  CommentAnchor,
-  CommentId,
   CommentStatusRequest,
   DeleteCommentResponse,
   ListCommentsRequest,
   ListCommentsResponse,
 } from "@/features/comments/types/comment";
+
 import type { CommentCommands } from "@/shared/api/tauri";
 
 export type AddCommentParam = Readonly<{
@@ -118,20 +119,6 @@ export async function reopenComment(
   commentId: CommentId,
 ): Promise<Comment> {
   return commands.reopenComment(createStatusRequest(scope, commentId));
-}
-
-/**
- * @param commands - Comment command boundary
- * @param scope - Active comment scope
- * @param commentId - Comment id to toggle
- * @returns Toggled comment from the command boundary.
- */
-export async function toggleCommentResolved(
-  commands: CommentCommands,
-  scope: CommentScope,
-  commentId: CommentId,
-): Promise<Comment> {
-  return commands.toggleCommentResolved(createStatusRequest(scope, commentId));
 }
 
 /**

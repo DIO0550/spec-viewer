@@ -1,10 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
+import type { Comment } from "@/features/comments/domain/comment";
+import { CommentId } from "@/features/comments/domain/commentId";
 import { createTextHash } from "@/features/comments/lib/comment-anchor-draft";
-import type { Comment } from "@/features/comments/types/comment";
-import { CommentId } from "@/features/comments/types/comment";
+
 import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
 import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
+import type { MarkdownBlockMetadata } from "@/features/specs/types/spec";
 
 const commentId = CommentId.fromString;
 
@@ -22,6 +24,50 @@ const markdownContents = [
   "```",
 ].join("\n");
 
+const markdownBlocks: readonly MarkdownBlockMetadata[] = [
+  {
+    blockType: "heading",
+    blockIndex: 0,
+    textHash: createTextHash("Selection reliability"),
+    textSnippet: "Selection reliability",
+    sourceRange: null,
+  },
+  {
+    blockType: "paragraph",
+    blockIndex: 1,
+    textHash: createTextHash(
+      "Users can select only this paragraph fragment without activating the highlight.",
+    ),
+    textSnippet:
+      "Users can select only this paragraph fragment without activating the highlight.",
+    sourceRange: null,
+  },
+  {
+    blockType: "list_item",
+    blockIndex: 2,
+    textHash: createTextHash("Copy should keep the exact selected range."),
+    textSnippet: "Copy should keep the exact selected range.",
+    sourceRange: null,
+  },
+  {
+    blockType: "list_item",
+    blockIndex: 3,
+    textHash: createTextHash(
+      "Comment creation should still work from the selection button.",
+    ),
+    textSnippet:
+      "Comment creation should still work from the selection button.",
+    sourceRange: null,
+  },
+  {
+    blockType: "code_block",
+    blockIndex: 4,
+    textHash: createTextHash('const selectedText = "paragraph fragment";'),
+    textSnippet: 'const selectedText = "paragraph fragment";',
+    sourceRange: null,
+  },
+];
+
 const readyState: SpecDocumentState = {
   status: "ready",
   workspacePath,
@@ -32,7 +78,7 @@ const readyState: SpecDocumentState = {
     path: "/workspace/spec-reviewer/docs/plans/tasks/later-phases/p7-02-markdown-copy-selection-reliability.md",
     contents: markdownContents,
     missing: false,
-    blocks: [],
+    blocks: markdownBlocks,
   },
   error: null,
 };
@@ -124,7 +170,6 @@ const comments: readonly Comment[] = [
     },
     body: "Verify partial selection stays copyable inside this highlight.",
     status: "open",
-    resolved: false,
     anchorResolution: null,
     createdAt: "2026-05-07T00:00:00Z",
     updatedAt: "2026-05-07T00:00:00Z",
@@ -148,7 +193,6 @@ const commentCardComments: readonly Comment[] = [
     },
     body: "Resolved note stays visible without making the paragraph feel busy.",
     status: "resolved",
-    resolved: true,
     anchorResolution: null,
     createdAt: "2026-05-07T00:10:00Z",
     updatedAt: "2026-05-07T00:20:00Z",
@@ -168,7 +212,6 @@ const commentCardComments: readonly Comment[] = [
     },
     body: "Code block comments keep the gutter add button available.",
     status: "open",
-    resolved: false,
     anchorResolution: null,
     createdAt: "2026-05-07T00:30:00Z",
     updatedAt: "2026-05-07T00:30:00Z",

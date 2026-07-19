@@ -1,7 +1,4 @@
-export type WorkspaceKind =
-  | "plugin-workspace"
-  | "plugin-worktree"
-  | "spec-skill";
+export type WorkspaceKind = "plugin-workspace" | "plugin-worktree";
 export type WorkspaceConfigSource =
   | "default"
   | "workspaceConfig"

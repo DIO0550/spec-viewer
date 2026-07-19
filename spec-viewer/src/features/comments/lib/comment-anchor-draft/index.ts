@@ -1,6 +1,6 @@
+import type { CommentBlockType } from "@/features/comments/domain/commentAnchor";
 import type {
   CommentAnchorDraft,
-  CommentBlockType,
   CommentSelectionBounds,
 } from "@/features/comments/types/comment";
 import type { SpecFileKey } from "@/features/specs/types/spec";

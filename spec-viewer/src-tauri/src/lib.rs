@@ -7,7 +7,7 @@ pub mod presentation;
 use presentation::commands::{
     comments::{
         add_comment, delete_comment, export_comments, generate_llm_prompt, list_comments,
-        reopen_comment, resolve_comment, toggle_comment_resolved, update_comment,
+        reopen_comment, resolve_comment, update_comment,
     },
     specs::{archive_spec, list_specs, read_spec_file},
     watch::{start_spec_file_watch, stop_spec_file_watch},
@@ -38,7 +38,6 @@ pub fn run() {
             delete_comment,
             resolve_comment,
             reopen_comment,
-            toggle_comment_resolved,
             export_comments,
             generate_llm_prompt
         ])

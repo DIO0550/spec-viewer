@@ -13,17 +13,17 @@ import {
   useId,
   useState,
 } from "react";
-
+import type { Comment } from "@/features/comments/domain/comment";
+import {
+  type CommentId,
+  CommentId as CommentIdValue,
+} from "@/features/comments/domain/commentId";
 import {
   CommentOperationSavingState,
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
-import type {
-  Comment,
-  CommentAnchorDisplayStatus,
-  CommentId,
-} from "@/features/comments/types/comment";
-import { CommentId as CommentIdValue } from "@/features/comments/types/comment";
+import type { CommentAnchorDisplayStatus } from "@/features/comments/types/comment";
+
 import { uiText } from "@/shared/lib/uiText";
 
 const emptyBodyMessage = uiText.commentThread.emptyBody;
@@ -88,7 +88,7 @@ export function CommentThread({
     operationState,
     comment.id,
   );
-  const isResolved = comment.resolved;
+  const isResolved = comment.status === "resolved";
   const anchorStatusLabel = formatAnchorDisplayStatus(anchorDisplayStatus);
 
   const beginEdit = (): void => {
@@ -119,7 +119,7 @@ export function CommentThread({
     setIsEditing(false);
   };
 
-  const toggleResolved = (): void => {
+  const submitStatusChange = (): void => {
     if (isResolved) {
       onReopenComment(comment.id);
       return;
@@ -218,7 +218,7 @@ export function CommentThread({
                 : uiText.commentThread.resolve
             } ${comment.id}`}
             disabled={isOperatingComment}
-            onClick={toggleResolved}
+            onClick={submitStatusChange}
           >
             {isResolved ? (
               <RotateCcw aria-hidden="true" size={14} />

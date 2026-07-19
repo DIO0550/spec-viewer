@@ -21,7 +21,6 @@ use crate::domain::{
 
 const PLUGIN_WORKSPACE_CONFIG_FILE: &str = ".plugin-workspace/config.json";
 const PLUGIN_WORKTREE_CONFIG_FILE: &str = "config.json";
-const SPEC_SKILL_CONFIG_FILE: &str = ".spec-skill/config.json";
 const SPEC_OVERRIDE_CONFIG_FILE: &str = ".spec-reviewer/config.json";
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -86,7 +85,6 @@ fn config_file_name_for_kind(kind: WorkspaceKind) -> &'static str {
     match kind {
         WorkspaceKind::PluginWorkspace => PLUGIN_WORKSPACE_CONFIG_FILE,
         WorkspaceKind::PluginWorktree => PLUGIN_WORKTREE_CONFIG_FILE,
-        WorkspaceKind::SpecSkill => SPEC_SKILL_CONFIG_FILE,
     }
 }
 
@@ -273,17 +271,6 @@ mod tests {
     }
 
     #[test]
-    fn config_file_path_uses_spec_skill_location() {
-        let workspace = TestWorkspace::new("spec-skill-location");
-        let layout = workspace.layout(WorkspaceKind::SpecSkill);
-
-        assert_eq!(
-            workspace.root().join(SPEC_SKILL_CONFIG_FILE),
-            config_file_path(&layout)
-        );
-    }
-
-    #[test]
     fn spec_override_config_file_path_uses_hidden_spec_reviewer_location() {
         let workspace = TestWorkspace::new("override-location");
         let spec_directory = workspace.spec_directory(".plugin-workspace/.specs/auth");
@@ -351,44 +338,6 @@ mod tests {
             Some("interview.md"),
             config
                 .file_for_key(SpecFileKey::Hearing)
-                .map(WorkspaceFileMapping::file_name)
-        );
-        assert_eq!(
-            Some("todo.md"),
-            config
-                .file_for_key(SpecFileKey::Tasks)
-                .map(WorkspaceFileMapping::file_name)
-        );
-    }
-
-    #[test]
-    fn config_loader_merges_valid_spec_skill_config_over_defaults() {
-        let workspace = TestWorkspace::new("valid-spec-skill");
-        workspace.write_config(
-            SPEC_SKILL_CONFIG_FILE,
-            r#"{
-                "files": {
-                    "design": "implementation-plan.md",
-                    "tasks": "todo.md"
-                }
-            }"#,
-        );
-        let layout = workspace.layout(WorkspaceKind::SpecSkill);
-
-        let config = WorkspaceConfigLoader::new()
-            .load(&layout)
-            .expect("valid config should be loaded");
-
-        assert_eq!(
-            Some("requirements.md"),
-            config
-                .file_for_key(SpecFileKey::Requirements)
-                .map(WorkspaceFileMapping::file_name)
-        );
-        assert_eq!(
-            Some("implementation-plan.md"),
-            config
-                .file_for_key(SpecFileKey::Design)
                 .map(WorkspaceFileMapping::file_name)
         );
         assert_eq!(
@@ -496,7 +445,7 @@ mod tests {
             r#"{
                 "files": {
                     "tasks": "auth-tasks.md",
-                    "design": "auth-design.md"
+                    "requirements": "auth-requirements.html"
                 }
             }"#,
         );
@@ -525,9 +474,9 @@ mod tests {
                 .map(WorkspaceFileMapping::source)
         );
         assert_eq!(
-            Some("auth-design.md"),
+            Some("auth-requirements.html"),
             config
-                .file_for_key(SpecFileKey::Design)
+                .file_for_key(SpecFileKey::Requirements)
                 .map(WorkspaceFileMapping::file_name)
         );
     }
@@ -560,13 +509,13 @@ mod tests {
     }
 
     #[test]
-    fn config_loader_returns_typed_error_for_unsupported_file_key() {
+    fn config_loader_rejects_retired_design_file_key() {
         let workspace = TestWorkspace::new("unsupported-key");
         workspace.write_config(
             PLUGIN_WORKSPACE_CONFIG_FILE,
             r#"{
                 "files": {
-                    "unknown": "unknown.md"
+                    "design": "design.md"
                 }
             }"#,
         );
@@ -576,7 +525,7 @@ mod tests {
 
         assert!(matches!(
             result,
-            Err(ConfigLoadError::InvalidFileKey { key, .. }) if key == "unknown"
+            Err(ConfigLoadError::InvalidFileKey { key, .. }) if key == "design"
         ));
     }
 

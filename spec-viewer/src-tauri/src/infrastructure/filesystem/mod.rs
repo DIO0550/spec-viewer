@@ -23,7 +23,6 @@ const PLUGIN_WORKSPACE_DIRECTORY: &str = ".plugin-workspace";
 const PLUGIN_WORKTREE_DIRECTORY: &str = ".plugin-worktree";
 const PLUGIN_WORKTREE_SPECS_DIR: &str = ".specs";
 const CLAUDE_WORKTREES_DIR: &str = ".claude/worktrees";
-const SPEC_SKILL_FEATURES_DIR: &str = ".spec-skill/features";
 const SPEC_ARCHIVE_DIRECTORY: &str = ".archive";
 const CLAUDE_WORKTREE_SPEC_CONTAINERS: [&str; 2] =
     [PLUGIN_WORKTREE_DIRECTORY, PLUGIN_WORKSPACE_DIRECTORY];
@@ -63,13 +62,6 @@ impl FilesystemWorkspaceDetector {
 
             if let Some(workspace_root) = self.detect_claude_worktree_collection_root(directory)? {
                 return create_workspace_layout(&workspace_root, WorkspaceKind::PluginWorkspace);
-            }
-
-            if self
-                .path_checker
-                .directory_exists(directory.join(SPEC_SKILL_FEATURES_DIR))?
-            {
-                return create_workspace_layout(directory, WorkspaceKind::SpecSkill);
             }
 
             current_directory = directory.parent();
@@ -399,7 +391,6 @@ fn spec_root_directory_for_kind(kind: WorkspaceKind) -> &'static str {
     match kind {
         WorkspaceKind::PluginWorkspace => PLUGIN_WORKSPACE_SPECS_DIR,
         WorkspaceKind::PluginWorktree => PLUGIN_WORKTREE_SPECS_DIR,
-        WorkspaceKind::SpecSkill => SPEC_SKILL_FEATURES_DIR,
     }
 }
 
@@ -431,7 +422,7 @@ fn spec_scan_roots(layout: &WorkspaceLayout) -> Result<Vec<SpecScanRoot>, SpecTr
 fn primary_source_group_for_kind(kind: WorkspaceKind) -> Option<(&'static str, &'static str)> {
     match kind {
         WorkspaceKind::PluginWorkspace => Some((PLUGIN_WORKSPACE_SPECS_DIR, "ルート")),
-        WorkspaceKind::PluginWorktree | WorkspaceKind::SpecSkill => None,
+        WorkspaceKind::PluginWorktree => None,
     }
 }
 
@@ -1003,29 +994,17 @@ mod tests {
     }
 
     #[test]
-    fn detects_spec_skill_workspace_layout() {
-        let workspace = TestWorkspace::new("spec-skill");
-        workspace.create_dir(SPEC_SKILL_FEATURES_DIR);
+    fn rejects_spec_skill_marker_without_current_workspace_marker() {
+        let workspace = TestWorkspace::new("spec-skill-only");
+        workspace.create_dir(".spec-skill/features");
 
-        let layout = FilesystemWorkspaceDetector::new()
-            .detect(workspace.root())
-            .expect("spec-skill workspace should be detected");
+        let result = FilesystemWorkspaceDetector::new().detect(workspace.root());
 
-        assert_eq!(workspace.root().to_string_lossy(), layout.root().as_str());
-        assert_eq!(WorkspaceKind::SpecSkill, layout.kind());
-    }
-
-    #[test]
-    fn prefers_plugin_workspace_layout_when_both_markers_exist() {
-        let workspace = TestWorkspace::new("both");
-        workspace.create_dir(PLUGIN_WORKSPACE_SPECS_DIR);
-        workspace.create_dir(SPEC_SKILL_FEATURES_DIR);
-
-        let layout = FilesystemWorkspaceDetector::new()
-            .detect(workspace.root())
-            .expect("workspace should be detected");
-
-        assert_eq!(WorkspaceKind::PluginWorkspace, layout.kind());
+        assert!(matches!(
+            result,
+            Err(WorkspaceDetectionError::UnsupportedWorkspace { root })
+                if root == workspace.root().to_string_lossy()
+        ));
     }
 
     #[test]
@@ -1363,30 +1342,6 @@ mod tests {
             result,
             Err(SpecArchiveError::SourceGroupRoot { .. })
         ));
-    }
-
-    #[test]
-    fn spec_tree_scanner_scans_spec_skill_features_with_compatibility_files() {
-        let workspace = TestWorkspace::new("spec-skill-tree");
-        workspace.create_dir(SPEC_SKILL_FEATURES_DIR);
-        workspace.create_dir(".spec-skill/features/checkout");
-        workspace.write_file(".spec-skill/features/checkout/requirements.md", "");
-        let layout = workspace.layout(WorkspaceKind::SpecSkill);
-        let config = WorkspaceConfig::default_for(WorkspaceKind::SpecSkill);
-
-        let tree = FilesystemSpecTreeScanner::new()
-            .scan(&layout, &config)
-            .expect("spec tree should be scanned");
-
-        assert_eq!(vec!["checkout"], node_ids(&tree));
-        assert_eq!(
-            vec![
-                (SpecFileKey::Requirements, SpecFileStatus::Present),
-                (SpecFileKey::Design, SpecFileStatus::Missing),
-                (SpecFileKey::Tasks, SpecFileStatus::Missing),
-            ],
-            file_statuses(&tree[0])
-        );
     }
 
     #[test]

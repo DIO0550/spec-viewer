@@ -1,16 +1,16 @@
-import { act } from "react";
 import type { ReactElement, ReactNode } from "react";
+import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 import { ThemeProvider } from "@/features/preferences";
 import type {
-  SpecDocumentState,
-  SpecTreeState,
   SpecDocument,
+  SpecDocumentState,
   SpecFile,
   SpecNode,
   SpecTreeData as SpecTreeShape,
+  SpecTreeState,
 } from "@/features/specs";
 import { MarkdownViewer, SpecTabs, SpecTree } from "@/features/specs";
 import { WorkspaceToolbar } from "@/features/workspace";
@@ -122,7 +122,22 @@ const readyDocument: SpecDocument = {
   path: "/workspace/spec-reviewer/docs/plans/tasks.md",
   contents: "# Phase 1 Viewer\n\n- Layout components",
   missing: false,
-  blocks: [],
+  blocks: [
+    {
+      blockType: "heading",
+      blockIndex: 0,
+      textHash: "sha256:phase-heading",
+      textSnippet: "Phase 1 Viewer",
+      sourceRange: null,
+    },
+    {
+      blockType: "list_item",
+      blockIndex: 1,
+      textHash: "sha256:layout-item",
+      textSnippet: "Layout components",
+      sourceRange: null,
+    },
+  ],
 };
 
 const readyDocumentState: SpecDocumentState = {
@@ -779,9 +794,15 @@ test.each([
       workspacePath,
       tree: null,
       error: {
+        feature: "specs",
         code: "specTreeScan",
         message: "Spec directory could not be scanned.",
-        raw: "Spec directory could not be scanned.",
+        cause: {
+          command: "list_specs",
+          code: "specTreeScan",
+          message: "Spec directory could not be scanned.",
+          raw: "Spec directory could not be scanned.",
+        },
       },
     } satisfies SpecTreeState,
   ],
@@ -875,9 +896,15 @@ test.each([
       workspacePath,
       tree: null,
       error: {
+        feature: "specs",
         code: "specTreeScan",
         message: "Spec directory could not be scanned.",
-        raw: "Spec directory could not be scanned.",
+        cause: {
+          command: "list_specs",
+          code: "specTreeScan",
+          message: "Spec directory could not be scanned.",
+          raw: "Spec directory could not be scanned.",
+        },
       },
     } satisfies SpecTreeState,
   ],

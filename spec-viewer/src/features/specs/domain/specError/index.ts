@@ -16,13 +16,10 @@ export type SpecFeatureErrorCode =
   | "unknown";
 
 export type SpecFeatureError = Readonly<{
-  /** @deprecated Optional only while legacy fixtures migrate to feature-level errors. */
-  feature?: "specs";
-  code: SpecFeatureErrorCode | string;
+  feature: "specs";
+  code: SpecFeatureErrorCode;
   message: string;
-  cause?: SpecCommandError;
-  /** @deprecated Compatibility field for legacy normalized command error fixtures. */
-  raw?: unknown;
+  cause: SpecCommandError;
 }>;
 
 export const SpecFeatureError = {

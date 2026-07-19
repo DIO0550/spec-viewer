@@ -23,6 +23,7 @@ const failedState: WorkspaceState = {
     reason: "detectionFailed",
     message: "not a workspace",
     cause: {
+      command: "load_workspace",
       code: "workspaceDetection",
       message: "not a workspace",
       raw: "not a workspace",

@@ -162,7 +162,7 @@
 - [x] Update tests that still expect `exploration.md`, `hearing.md`, or `impl.md`.
 - [x] Confirm a workspace like `.plugin-workspace/.specs/021-issue-262/` loads all four tabs without config overrides.
 - [x] Confirm review-run manifests point at `implementation-plan.md` for logical key `impl`.
-- [x] Keep `.spec-skill` compatibility mappings as `requirements.md`, `design.md`, and `tasks.md`.
+- [x] Reject retired `.spec-skill` workspace markers and keep only current `.plugin-workspace` mappings.
 
 ### P4.13 Saved Workspace Switcher
 

@@ -1,16 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import { expect, test, vi } from "vitest";
 
-import type {
-  Comment,
-  CommentStatusRequest,
-} from "@/features/comments/types/comment";
-import { CommentId } from "@/features/comments/types/comment";
-import {
-  resolveComment,
-  reopenComment,
-  toggleCommentResolved,
-} from "@/shared/api/tauri";
+import type { Comment } from "@/features/comments/domain/comment";
+import { CommentId } from "@/features/comments/domain/commentId";
+import type { CommentStatusRequest } from "@/features/comments/types/comment";
+
+import { reopenComment, resolveComment } from "@/shared/api/tauri";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
@@ -34,7 +29,6 @@ const comment: Comment = {
   },
   body: "Clarify this task",
   status: "open",
-  resolved: false,
   createdAt: "2026-05-05T10:00:00Z",
   updatedAt: "2026-05-05T10:00:00Z",
 };
@@ -52,33 +46,22 @@ test.each([
     wrapper: resolveComment,
     commandName: "resolve_comment",
     status: "resolved",
-    resolved: true,
   },
   {
     label: "reopenComment",
     wrapper: reopenComment,
     commandName: "reopen_comment",
     status: "open",
-    resolved: false,
-  },
-  {
-    label: "toggleCommentResolved",
-    wrapper: toggleCommentResolved,
-    commandName: "toggle_comment_resolved",
-    status: "resolved",
-    resolved: true,
   },
 ] satisfies readonly {
   label: string;
   wrapper: (request: CommentStatusRequest) => Promise<Comment>;
   commandName: string;
   status: Comment["status"];
-  resolved: boolean;
 }[])("$labelは対応するstatus更新commandへrequestを渡す", async (testCase) => {
   const nextComment = {
     ...comment,
     status: testCase.status,
-    resolved: testCase.resolved,
   };
   invokeMock.mockReset();
   invokeMock.mockResolvedValue(nextComment);

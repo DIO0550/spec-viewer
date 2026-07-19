@@ -1,7 +1,5 @@
-import type {
-  Comment,
-  CommentStatusRequest,
-} from "@/features/comments/types/comment";
+import type { Comment } from "@/features/comments/domain/comment";
+import type { CommentStatusRequest } from "@/features/comments/types/comment";
 
 import { invokeTauriCommand } from "./invokeTauriCommand";
 import { isRecord } from "./isRecord";

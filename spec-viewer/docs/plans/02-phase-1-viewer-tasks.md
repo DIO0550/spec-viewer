@@ -8,21 +8,16 @@ Load a spec workspace and provide a usable Markdown viewer for configured Markdo
 
 - [ ] Add `config.rs`.
 - [ ] Define `SpecFileKey` for `exploration`, `hearing`, `impl`, and `tasks`.
-- [ ] Add compatibility aliases for `requirements`, `design`, and `tasks` if `.spec-skill/` mode is detected.
-- [ ] Define `WorkspaceConfig` matching `.spec-skill/config.json`.
-- [ ] Define workspace detection for `.plugin-workspace/.specs/` and `.spec-skill/`.
 - [ ] Implement config loading with sensible defaults when config is absent.
 - [ ] Validate that selected workspace contains a supported spec root.
 - [ ] Add `feature.rs`.
 - [ ] Scan `.plugin-workspace/.specs/` for spec directories.
 - [ ] Preserve tree shape for nested folders such as `code-review/`.
-- [ ] Keep `.spec-skill/features/` scanning as compatibility mode.
 - [ ] Resolve logical spec files to actual paths using config.
 - [ ] Return feature metadata including which files exist.
 - [ ] Add `commands.rs`.
 - [ ] Expose `load_workspace(path)`.
 - [ ] Expose `list_specs(workspace_path)`.
-- [ ] Keep or alias `list_features(workspace_path)` only if needed by compatibility UI.
 - [ ] Expose `read_spec_file(workspace_path, feature_id, file_key)`.
 
 ## TypeScript Tasks
@@ -84,7 +79,6 @@ Load a spec workspace and provide a usable Markdown viewer for configured Markdo
 
 - [ ] Add `SpecFileKey` value object or enum.
 - [ ] Add default keys for `exploration`, `hearing`, `impl`, and `tasks`.
-- [ ] Add compatibility keys for `requirements`, `design`, and `tasks`.
 - [ ] Add display labels for each logical key.
 - [ ] Add `SpecFile` domain type.
 - [ ] Add `SpecNode` domain type for tree-compatible spec folders.
@@ -93,7 +87,6 @@ Load a spec workspace and provide a usable Markdown viewer for configured Markdo
 
 - [ ] Add `WorkspaceConfig` domain type.
 - [ ] Add default config for `.plugin-workspace/.specs/`.
-- [ ] Add default config for `.spec-skill/features/`.
 - [ ] Add merge behavior for user config over defaults.
 - [ ] Add validation for duplicate logical file keys.
 - [ ] Add validation for unsafe file names or parent path traversal.
@@ -102,7 +95,6 @@ Load a spec workspace and provide a usable Markdown viewer for configured Markdo
 
 - [ ] Add filesystem adapter to check path existence.
 - [ ] Detect `.plugin-workspace/.specs/`.
-- [ ] Detect `.spec-skill/features/`.
 - [ ] Prefer `.plugin-workspace/.specs/` when both exist.
 - [ ] Return `WorkspaceLayout` from infrastructure.
 - [ ] Add tests for each detection branch.
@@ -121,7 +113,6 @@ Load a spec workspace and provide a usable Markdown viewer for configured Markdo
 - [ ] Scan `.plugin-workspace/.specs/` directories.
 - [ ] Preserve nested folders like `code-review/`.
 - [ ] Ignore hidden internal folders except required app-managed folders.
-- [ ] Scan `.spec-skill/features/` for compatibility mode.
 - [ ] Resolve configured Markdown files for each spec node.
 - [ ] Include missing-file status per logical file.
 - [ ] Sort folders and specs deterministically.

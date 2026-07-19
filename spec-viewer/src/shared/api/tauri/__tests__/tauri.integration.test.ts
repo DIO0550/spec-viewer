@@ -5,14 +5,13 @@ import {
   archiveSpec,
   listSpecs,
   loadWorkspace,
-  toIpcCommandError,
   readSpecFile,
   validateWorkspaceDirectory,
 } from "@/shared/api/tauri";
-import { LoadWorkspaceCommandError } from "@/shared/api/tauri/loadWorkspace";
 import { ArchiveSpecCommandError } from "@/shared/api/tauri/archiveSpec";
-import { ReadSpecFileCommandError } from "@/shared/api/tauri/readSpecFile";
 import { ListSpecsCommandError } from "@/shared/api/tauri/listSpecs";
+import { LoadWorkspaceCommandError } from "@/shared/api/tauri/loadWorkspace";
+import { ReadSpecFileCommandError } from "@/shared/api/tauri/readSpecFile";
 import { ValidateWorkspaceDirectoryCommandError } from "@/shared/api/tauri/validateWorkspaceDirectory";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -130,66 +129,6 @@ test("archiveSpecはarchive_specへworkspacePathとspecIdを渡す", async () =>
       workspacePath: "/workspace/spec-reviewer",
       specId: ".plugin-workspace/.specs/auth",
     },
-  });
-});
-
-test("toIpcCommandErrorはCommandError DTOを安定したエラーに変換する", () => {
-  const rawError = {
-    code: "configLoad",
-    message: "failed to load workspace config",
-  };
-
-  const result = toIpcCommandError(rawError);
-
-  expect(result).toEqual({
-    code: "configLoad",
-    message: "failed to load workspace config",
-    raw: rawError,
-  });
-});
-
-test("toIpcCommandErrorはspec archiveエラーを保持する", () => {
-  const rawError = {
-    code: "specArchive",
-    message: "failed to archive spec",
-  };
-
-  const result = toIpcCommandError(rawError);
-
-  expect(result).toEqual({
-    code: "specArchive",
-    message: "failed to archive spec",
-    raw: rawError,
-  });
-});
-
-test("toIpcCommandErrorはcomment系CommandError DTOも保持する", () => {
-  const rawError = {
-    code: "commentRepository",
-    message: "failed to update comment store",
-  };
-
-  const result = toIpcCommandError(rawError);
-
-  expect(result).toEqual({
-    code: "commentRepository",
-    message: "failed to update comment store",
-    raw: rawError,
-  });
-});
-
-test("toIpcCommandErrorはunexpected CommandError DTOも保持する", () => {
-  const rawError = {
-    code: "unexpected",
-    message: "unexpected command failure",
-  };
-
-  const result = toIpcCommandError(rawError);
-
-  expect(result).toEqual({
-    code: "unexpected",
-    message: "unexpected command failure",
-    raw: rawError,
   });
 });
 
