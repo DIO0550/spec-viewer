@@ -1,8 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
 
-import { SpecTreeState } from "@/features/specs/domain/specTreeState";
-import type { SpecTreeState as SpecTreeStateType } from "@/features/specs/domain/specTreeState";
+import {
+  SpecTreeState,
+  type SpecTreeState as SpecTreeStateType,
+} from "@/features/specs/domain/specTreeState";
 import type { SpecNode } from "@/features/specs/types/spec";
 
 import { SpecTree } from ".";
