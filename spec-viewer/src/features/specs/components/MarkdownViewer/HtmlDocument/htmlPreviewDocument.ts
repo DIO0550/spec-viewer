@@ -39,7 +39,7 @@ export function createHtmlPreviewSandbox(path: string): string {
  * @returns Whether the HTML preview path is a generated document that needs scripts.
  */
 export function isScriptEnabledHtmlPath(path: string): boolean {
-  const fileName = getPathFileName(path).toLocaleLowerCase();
+  const fileName = getPathFileName(path).toLowerCase();
 
   return SCRIPT_ENABLED_HTML_FILE_NAMES.includes(fileName);
 }
