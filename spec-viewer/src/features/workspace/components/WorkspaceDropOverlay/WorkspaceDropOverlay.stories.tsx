@@ -28,14 +28,8 @@ type Story = StoryObj<typeof WorkspaceDropOverlay>;
 
 export const Default: Story = {};
 
-export const Hidden: Story = {
-  args: {
-    isVisible: false,
-  },
-};
-
 export const EdgeCases: Story = {
   args: {
-    isVisible: true,
+    isVisible: false,
   },
 };
