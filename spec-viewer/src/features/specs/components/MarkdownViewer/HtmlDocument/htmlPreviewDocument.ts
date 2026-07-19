@@ -8,6 +8,8 @@ export const HTML_ZOOM_STEP_PERCENT = 10;
 const SCRIPT_ENABLED_HTML_FILE_NAMES: readonly string[] = [
   "requirements.html",
   "test-cases.html",
+  "understanding-quiz-plan.html",
+  "understanding-quiz-impl.html",
 ];
 const HTML_PREVIEW_DEFAULT_SANDBOX = "";
 const HTML_PREVIEW_SCRIPT_SANDBOX = "allow-scripts";

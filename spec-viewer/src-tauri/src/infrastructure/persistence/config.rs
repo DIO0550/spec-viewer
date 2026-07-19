@@ -305,6 +305,8 @@ mod tests {
                 (SpecFileKey::TestCases, "test-cases.html"),
                 (SpecFileKey::Exploration, "exploration-report.md"),
                 (SpecFileKey::Hearing, "hearing-notes.md"),
+                (SpecFileKey::QuizPlan, "understanding-quiz-plan.html"),
+                (SpecFileKey::QuizImpl, "understanding-quiz-impl.html"),
             ],
             files
         );

@@ -45,10 +45,12 @@ pub enum SpecFileKey {
     TechReference,
     TestCases,
     Requirements,
+    QuizPlan,
+    QuizImpl,
 }
 
 impl SpecFileKey {
-    pub const DEFAULT_KEYS: [Self; 7] = [
+    pub const DEFAULT_KEYS: [Self; 9] = [
         Self::Impl,
         Self::Tasks,
         Self::Requirements,
@@ -56,6 +58,8 @@ impl SpecFileKey {
         Self::TestCases,
         Self::Exploration,
         Self::Hearing,
+        Self::QuizPlan,
+        Self::QuizImpl,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -67,6 +71,8 @@ impl SpecFileKey {
             Self::TechReference => "tech-reference",
             Self::TestCases => "test-cases",
             Self::Requirements => "requirements",
+            Self::QuizPlan => "quiz-plan",
+            Self::QuizImpl => "quiz-impl",
         }
     }
 
@@ -79,6 +85,8 @@ impl SpecFileKey {
             Self::TechReference => "Tech Reference",
             Self::TestCases => "Test Cases",
             Self::Requirements => "Requirements",
+            Self::QuizPlan => "Understanding Quiz (Plan)",
+            Self::QuizImpl => "Understanding Quiz (Impl)",
         }
     }
 
@@ -105,6 +113,8 @@ impl FromStr for SpecFileKey {
             "tech-reference" => Ok(Self::TechReference),
             "test-cases" => Ok(Self::TestCases),
             "requirements" => Ok(Self::Requirements),
+            "quiz-plan" => Ok(Self::QuizPlan),
+            "quiz-impl" => Ok(Self::QuizImpl),
             _ => Err(SpecDomainError::UnsupportedFileKey {
                 key: value.to_string(),
             }),
@@ -593,6 +603,8 @@ mod tests {
                 SpecFileKey::TestCases,
                 SpecFileKey::Exploration,
                 SpecFileKey::Hearing,
+                SpecFileKey::QuizPlan,
+                SpecFileKey::QuizImpl,
             ],
             SpecFileKey::default_keys()
         );
@@ -607,6 +619,16 @@ mod tests {
         assert_eq!("tech-reference", SpecFileKey::TechReference.as_str());
         assert_eq!("Tech Reference", SpecFileKey::TechReference.display_label());
         assert_eq!("test-cases", SpecFileKey::TestCases.as_str());
+        assert_eq!("quiz-plan", SpecFileKey::QuizPlan.as_str());
+        assert_eq!(
+            "Understanding Quiz (Plan)",
+            SpecFileKey::QuizPlan.display_label()
+        );
+        assert_eq!("quiz-impl", SpecFileKey::QuizImpl.as_str());
+        assert_eq!(
+            "Understanding Quiz (Impl)",
+            SpecFileKey::QuizImpl.display_label()
+        );
         assert_eq!("Test Cases", SpecFileKey::TestCases.display_label());
     }
 
@@ -627,6 +649,14 @@ mod tests {
         assert_eq!(
             Ok(SpecFileKey::TestCases),
             SpecFileKey::from_str("test-cases")
+        );
+        assert_eq!(
+            Ok(SpecFileKey::QuizPlan),
+            SpecFileKey::from_str("quiz-plan")
+        );
+        assert_eq!(
+            Ok(SpecFileKey::QuizImpl),
+            SpecFileKey::from_str("quiz-impl")
         );
     }
 
