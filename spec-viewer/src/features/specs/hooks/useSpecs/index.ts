@@ -6,6 +6,7 @@ import { SpecNode as SpecNodeDomain } from "@/features/specs/domain/specNode";
 import { SpecTree as SpecTreeDomain } from "@/features/specs/domain/specTree";
 import type { SpecTreeState } from "@/features/specs/domain/specTreeState";
 import { SpecTreeState as SpecTreeStateFactory } from "@/features/specs/domain/specTreeState";
+import { readDocument } from "@/features/specs/hooks/useSpecs/readDocument";
 import {
   buildSpecsSelectors,
   type SpecsSelectors,
@@ -16,15 +17,11 @@ import type {
   UseSpecsResult,
 } from "@/features/specs/hooks/useSpecs/types";
 import * as specGateway from "@/features/specs/infra/specGateway";
-import type { SpecFileKey } from "@/features/specs/types/spec";
+import type { SpecFileKey, SpecFileScope } from "@/features/specs/types/spec";
 import { specCommands } from "@/lib/api/tauri";
 import { ArchiveSpecCommandError } from "@/lib/api/tauri/archiveSpec";
 import { ListSpecsCommandError } from "@/lib/api/tauri/listSpecs";
-import { ReadSpecFileCommandError } from "@/lib/api/tauri/readSpecFile";
-import {
-  createPerformanceCorrelationId,
-  startPerformanceSpan,
-} from "@/lib/performance";
+import { createPerformanceCorrelationId } from "@/lib/performance";
 
 export type { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
 export type { SpecTreeState } from "@/features/specs/domain/specTreeState";
@@ -53,6 +50,11 @@ type PreferredSelection = Readonly<{
 type ResolvedSelection = ReturnType<typeof SpecTreeDomain.resolveSelection>;
 
 type ShouldCommitState = () => boolean;
+
+type LoadDocumentContext = Readonly<{
+  operationId: string;
+  target: SpecFileScope;
+}>;
 
 const initialSpecsState: SpecsState = {
   specTreeState: initialSpecTreeState,
@@ -167,29 +169,8 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
   }, [onSelectionChange, workspacePath]);
 
   const loadDocument = useCallback(
-    async (
-      operationId: string,
-      specId: string,
-      fileKey: SpecFileKey,
-      activeWorkspacePath: string | null = workspacePath,
-      canCommit: ShouldCommitState = () => true,
-    ): Promise<boolean> => {
-      if (!canCommit()) {
-        return false;
-      }
-
-      if (activeWorkspacePath === null) {
-        commitLoadState(operationId, (currentState) => ({
-          ...currentState,
-          documentState: SpecDocumentStateFactory.idle(
-            activeWorkspacePath,
-            specId,
-            fileKey,
-          ),
-        }));
-        return true;
-      }
-
+    async ({ operationId, target }: LoadDocumentContext): Promise<boolean> => {
+      const { fileKey, specId, workspacePath: activeWorkspacePath } = target;
       const correlationId = createPerformanceCorrelationId("document-read");
       commitLoadState(operationId, (currentState) => ({
         ...currentState,
@@ -201,67 +182,35 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
         ),
       }));
 
-      const endSpan = startPerformanceSpan(correlationId, "document.read", {
-        specId,
-        fileKey,
-      });
+      const result = await readDocument({ target, correlationId });
 
-      try {
-        const document = await specGateway.readSpecFile(
-          specCommands,
-          specGateway.createReadSpecFileRequest({
-            workspacePath: activeWorkspacePath,
-            specId,
-            fileKey,
-            correlationId,
-          }),
-        );
-        endSpan({
-          bytes: document.contents?.length ?? 0,
-          blockCount: document.blocks.length,
-          missing: document.missing,
-        });
-
-        if (!canCommit()) {
-          return false;
-        }
-
+      if (result.status === "success") {
         commitLoadState(operationId, (currentState) => ({
           ...currentState,
           documentState: SpecDocumentStateFactory.loaded(
             activeWorkspacePath,
             specId,
             fileKey,
-            document,
+            result.document,
             correlationId,
           ),
         }));
         return true;
-      } catch (error) {
-        endSpan({
-          error: true,
-        });
-
-        if (!canCommit()) {
-          return false;
-        }
-
-        commitLoadState(operationId, (currentState) => ({
-          ...currentState,
-          documentState: SpecDocumentStateFactory.failed(
-            activeWorkspacePath,
-            specId,
-            fileKey,
-            SpecFeatureError.fromCommandError(
-              ReadSpecFileCommandError.fromUnknown(error),
-            ),
-            correlationId,
-          ),
-        }));
-        return false;
       }
+
+      commitLoadState(operationId, (currentState) => ({
+        ...currentState,
+        documentState: SpecDocumentStateFactory.failed(
+          activeWorkspacePath,
+          specId,
+          fileKey,
+          result.error,
+          correlationId,
+        ),
+      }));
+      return false;
     },
-    [commitLoadState, workspacePath],
+    [commitLoadState],
   );
 
   const loadResolvedSelection = useCallback(
@@ -296,13 +245,14 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
         return true;
       }
 
-      return await loadDocument(
+      return await loadDocument({
         operationId,
-        selection.spec.id,
-        selection.fileKey,
-        activeWorkspacePath,
-        canCommit,
-      );
+        target: {
+          workspacePath: activeWorkspacePath,
+          specId: selection.spec.id,
+          fileKey: selection.fileKey,
+        },
+      });
     },
     [commitLoadState, loadDocument, onSelectionChange],
   );
@@ -497,12 +447,26 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
           return true;
         }
 
-        return await loadDocument(
+        if (activeWorkspacePath === null) {
+          commitLoadState(operationId, (currentState) => ({
+            ...currentState,
+            documentState: SpecDocumentStateFactory.idle(
+              activeWorkspacePath,
+              specId,
+              defaultFileKey,
+            ),
+          }));
+          return true;
+        }
+
+        return await loadDocument({
           operationId,
-          specId,
-          defaultFileKey,
-          activeWorkspacePath,
-        );
+          target: {
+            workspacePath: activeWorkspacePath,
+            specId,
+            fileKey: defaultFileKey,
+          },
+        });
       });
     },
     [
@@ -537,12 +501,26 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
           fileKey,
         });
 
-        return await loadDocument(
+        if (activeWorkspacePath === null) {
+          commitLoadState(operationId, (currentState) => ({
+            ...currentState,
+            documentState: SpecDocumentStateFactory.idle(
+              activeWorkspacePath,
+              selectedSpecId,
+              fileKey,
+            ),
+          }));
+          return true;
+        }
+
+        return await loadDocument({
           operationId,
-          selectedSpecId,
-          fileKey,
-          activeWorkspacePath,
-        );
+          target: {
+            workspacePath: activeWorkspacePath,
+            specId: selectedSpecId,
+            fileKey,
+          },
+        });
       });
     },
     [
@@ -560,10 +538,30 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
       return true;
     }
 
-    return await runSpecLoad((operationId) =>
-      loadDocument(operationId, selectedSpecId, selectedFileKey, workspacePath),
-    );
+    return await runSpecLoad(async (operationId) => {
+      if (workspacePath === null) {
+        commitLoadState(operationId, (currentState) => ({
+          ...currentState,
+          documentState: SpecDocumentStateFactory.idle(
+            workspacePath,
+            selectedSpecId,
+            selectedFileKey,
+          ),
+        }));
+        return true;
+      }
+
+      return loadDocument({
+        operationId,
+        target: {
+          workspacePath,
+          specId: selectedSpecId,
+          fileKey: selectedFileKey,
+        },
+      });
+    });
   }, [
+    commitLoadState,
     loadDocument,
     runSpecLoad,
     selectedFileKey,

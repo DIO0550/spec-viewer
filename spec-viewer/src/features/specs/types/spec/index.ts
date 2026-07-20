@@ -1,4 +1,13 @@
-import type { SpecDocumentFormat, SpecFileKey } from "@/features/specs/domain/specFile";
+import type {
+  SpecDocumentFormat,
+  SpecFileKey,
+} from "@/features/specs/domain/specFile";
+
+export type SpecFileScope = Readonly<{
+  workspacePath: string;
+  specId: string;
+  fileKey: SpecFileKey;
+}>;
 
 export type {
   ConfigSource,

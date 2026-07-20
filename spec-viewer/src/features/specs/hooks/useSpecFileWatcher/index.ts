@@ -1,6 +1,6 @@
 import { listen, type Event as TauriEvent } from "@tauri-apps/api/event";
 import { useEffect } from "react";
-import type { SpecFileKey } from "@/features/specs/types/spec";
+import type { SpecFileKey, SpecFileScope } from "@/features/specs/types/spec";
 import type {
   SpecFileWatchChangedEvent,
   SpecFileWatchErrorEvent,
@@ -29,11 +29,7 @@ export type SpecFileWatchSubscriber = <Payload>(
   handler: (event: TauriEvent<Payload>) => void,
 ) => Promise<() => void>;
 
-export type SpecFileWatchScope = Readonly<{
-  workspacePath: string;
-  specId: string;
-  fileKey: SpecFileKey;
-}>;
+export type SpecFileWatchScope = SpecFileScope;
 
 export type UseSpecFileWatcherOptions = Readonly<{
   workspacePath: string | null;
