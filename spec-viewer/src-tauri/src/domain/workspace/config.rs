@@ -234,6 +234,8 @@ fn plugin_workspace_default_file_name(key: SpecFileKey) -> &'static str {
         SpecFileKey::Tasks => "tasks.md",
         SpecFileKey::Requirements => "requirements.html",
         SpecFileKey::TechReference => "tech-reference.html",
+        SpecFileKey::QuizPlan => "understanding-quiz-plan.html",
+        SpecFileKey::QuizImpl => "understanding-quiz-impl.html",
         SpecFileKey::TestCases => "test-cases.html",
     }
 }
@@ -317,6 +319,8 @@ mod tests {
                 (SpecFileKey::TestCases, "test-cases.html"),
                 (SpecFileKey::Exploration, "exploration-report.md"),
                 (SpecFileKey::Hearing, "hearing-notes.md"),
+                (SpecFileKey::QuizPlan, "understanding-quiz-plan.html"),
+                (SpecFileKey::QuizImpl, "understanding-quiz-impl.html"),
             ],
             files
         );
@@ -376,6 +380,8 @@ mod tests {
                 (SpecFileKey::TestCases, "test-cases.html"),
                 (SpecFileKey::Exploration, "exploration-report.md"),
                 (SpecFileKey::Hearing, "interview.md"),
+                (SpecFileKey::QuizPlan, "understanding-quiz-plan.html"),
+                (SpecFileKey::QuizImpl, "understanding-quiz-impl.html"),
             ],
             files
         );

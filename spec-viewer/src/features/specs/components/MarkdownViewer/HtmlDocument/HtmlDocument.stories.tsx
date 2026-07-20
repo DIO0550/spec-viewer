@@ -1,6 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 import { HtmlDocument } from ".";
+import {
+  understandingQuizImplFixture,
+  understandingQuizPlanFixture,
+} from "./fixtures/understandingQuizFixture";
 
 const htmlContents = `<!doctype html>
 <html>
@@ -59,5 +63,21 @@ export const EdgeCases: Story = {
     zoomPercent: 50,
     searchQuery: "missing phrase",
     activeSearchMatchIndex: -1,
+  },
+};
+
+export const UnderstandingQuizPlan: Story = {
+  args: {
+    contents: understandingQuizPlanFixture,
+    path: "/workspace/spec-reviewer/.plugin-workspace/.specs/reference/understanding-quiz-plan.html",
+    searchQuery: "Missing",
+    activeSearchMatchIndex: 0,
+  },
+};
+
+export const UnderstandingQuizImpl: Story = {
+  args: {
+    contents: understandingQuizImplFixture,
+    path: "/workspace/spec-reviewer/.plugin-workspace/.specs/reference/understanding-quiz-impl.html",
   },
 };

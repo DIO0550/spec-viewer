@@ -1388,6 +1388,8 @@ mod tests {
                 (SpecFileKey::TestCases, SpecFileStatus::Missing),
                 (SpecFileKey::Exploration, SpecFileStatus::Present),
                 (SpecFileKey::Hearing, SpecFileStatus::Present),
+                (SpecFileKey::QuizPlan, SpecFileStatus::Missing),
+                (SpecFileKey::QuizImpl, SpecFileStatus::Missing),
             ],
             file_statuses(issue)
         );
@@ -1439,6 +1441,8 @@ mod tests {
                 (SpecFileKey::TestCases, SpecFileStatus::Missing),
                 (SpecFileKey::Exploration, SpecFileStatus::Present),
                 (SpecFileKey::Hearing, SpecFileStatus::Present),
+                (SpecFileKey::QuizPlan, SpecFileStatus::Missing),
+                (SpecFileKey::QuizImpl, SpecFileStatus::Missing),
             ],
             file_statuses(&worktree.children()[0])
         );
@@ -1491,6 +1495,8 @@ mod tests {
                 (SpecFileKey::TestCases, SpecFileStatus::Missing),
                 (SpecFileKey::Exploration, SpecFileStatus::Present),
                 (SpecFileKey::Hearing, SpecFileStatus::Present),
+                (SpecFileKey::QuizPlan, SpecFileStatus::Missing),
+                (SpecFileKey::QuizImpl, SpecFileStatus::Missing),
             ],
             file_statuses(&worktree.children()[0])
         );

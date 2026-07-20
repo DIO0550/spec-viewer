@@ -566,6 +566,24 @@ test("MarkdownViewerはHTML文書の拡大率を変更できる", () => {
   result.unmount();
 });
 
+test("MarkdownViewerはUnderstanding Quiz HTMLをgenericなHTML文書として表示する", () => {
+  const result = renderViewer(
+    createReadyState(
+      '<main><button type="button">Check answer</button><script>window.quizReady = true;</script></main>',
+      [],
+      "html",
+      "/workspace/spec-reviewer/.plugin-workspace/.specs/reference/understanding-quiz-plan.html",
+    ),
+  );
+  const iframe = result.container.querySelector(
+    ".html-rendered",
+  ) as HTMLIFrameElement | null;
+
+  expect(iframe?.getAttribute("sandbox")).toBe("allow-scripts");
+  expect(iframe?.getAttribute("srcdoc")).toContain("window.quizReady = true;");
+  result.unmount();
+});
+
 test("MarkdownViewerは言語指定されたコードブロックにシンタックスハイライト用classを付与する", () => {
   const result = renderViewer(createReadyState(richMarkdown));
   const codeBlock = result.container.querySelector("pre code");
