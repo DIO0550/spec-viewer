@@ -3,7 +3,6 @@ import * as specGateway from "@/features/specs/infra/specGateway";
 import type { SpecDocument, SpecFileScope } from "@/features/specs/types/spec";
 import { specCommands } from "@/lib/api/tauri";
 import { ReadSpecFileCommandError } from "@/lib/api/tauri/readSpecFile";
-import { startPerformanceSpan } from "@/lib/performance";
 
 export type ReadDocumentInput = Readonly<{
   target: SpecFileScope;
@@ -32,11 +31,6 @@ export async function readDocument(
   input: ReadDocumentInput,
 ): Promise<ReadDocumentResult> {
   const { correlationId, target } = input;
-  const endSpan = startPerformanceSpan(correlationId, "document.read", {
-    specId: target.specId,
-    fileKey: target.fileKey,
-  });
-
   try {
     const document = await specGateway.readSpecFile(
       specCommands,
@@ -45,20 +39,12 @@ export async function readDocument(
         correlationId,
       }),
     );
-    endSpan({
-      bytes: document.contents?.length ?? 0,
-      blockCount: document.blocks.length,
-      missing: document.missing,
-    });
-
     return {
       status: "success",
       document,
       correlationId,
     };
   } catch (error) {
-    endSpan({ error: true });
-
     return {
       status: "error",
       error: SpecFeatureError.fromCommandError(

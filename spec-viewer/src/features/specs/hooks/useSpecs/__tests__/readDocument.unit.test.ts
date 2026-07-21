@@ -7,11 +7,6 @@ const specCommandMocks = vi.hoisted(() => ({
   readSpecFile: vi.fn<SpecCommands["readSpecFile"]>(),
 }));
 
-const performanceMocks = vi.hoisted(() => ({
-  startPerformanceSpan: vi.fn(),
-  endSpan: vi.fn(),
-}));
-
 vi.mock("@/lib/api/tauri", async (importActual) => {
   const actual = await importActual<typeof import("@/lib/api/tauri")>();
 
@@ -20,8 +15,6 @@ vi.mock("@/lib/api/tauri", async (importActual) => {
     specCommands: specCommandMocks,
   };
 });
-
-vi.mock("@/lib/performance", () => performanceMocks);
 
 void (specCommandMocks satisfies Pick<SpecCommands, "readSpecFile">);
 
@@ -41,11 +34,6 @@ const loadedDocument: SpecDocument = {
 
 beforeEach(() => {
   specCommandMocks.readSpecFile.mockReset();
-  performanceMocks.startPerformanceSpan.mockReset();
-  performanceMocks.endSpan.mockReset();
-  performanceMocks.startPerformanceSpan.mockReturnValue(
-    performanceMocks.endSpan,
-  );
 });
 
 test("readDocumentはscopeとcorrelationIdをread requestへ渡してdocumentを返す", async () => {
@@ -61,19 +49,6 @@ test("readDocumentはscopeとcorrelationIdをread requestへ渡してdocumentを
     specId: target.specId,
     fileKey: target.fileKey,
     correlationId: "document-read-success",
-  });
-  expect(performanceMocks.startPerformanceSpan).toHaveBeenCalledWith(
-    "document-read-success",
-    "document.read",
-    {
-      specId: target.specId,
-      fileKey: target.fileKey,
-    },
-  );
-  expect(performanceMocks.endSpan).toHaveBeenCalledWith({
-    bytes: loadedDocument.contents?.length ?? 0,
-    blockCount: loadedDocument.blocks.length,
-    missing: loadedDocument.missing,
   });
   expect(result).toEqual({
     status: "success",
@@ -116,9 +91,6 @@ test("readDocumentはread command errorをfeature errorへ正規化して返す"
     correlationId: "document-read-error",
   });
 
-  expect(performanceMocks.endSpan).toHaveBeenCalledWith({
-    error: true,
-  });
   expect(result).toEqual({
     status: "error",
     correlationId: "document-read-error",
