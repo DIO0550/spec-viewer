@@ -1,6 +1,10 @@
-import type { SpecFileKey, SpecFileScope } from "@/features/specs/types/spec";
+import type { SpecFileKey } from "@/features/specs/types/spec";
 
-export type CommentScope = SpecFileScope;
+export type CommentScope = Readonly<{
+  workspacePath: string;
+  specId: string;
+  fileKey: SpecFileKey;
+}>;
 
 export type CommentScopeInput = Readonly<{
   workspacePath: string | null;
