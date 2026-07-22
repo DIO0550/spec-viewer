@@ -5,9 +5,17 @@ import {
 } from "@/features/specs/domain/operationId";
 
 test("OperationId.createはspec load用の形式を持つIDを生成する", () => {
-  const operationId: OperationIdType = OperationId.create();
+  const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(1);
+  const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.1);
 
-  expect(operationId).toMatch(/^spec-load-[a-z0-9]+-[a-z0-9]+$/);
+  try {
+    const operationId: OperationIdType = OperationId.create();
+
+    expect(operationId).toMatch(/^spec-load-[a-z0-9]+-[a-z0-9]+$/);
+  } finally {
+    dateNowSpy.mockRestore();
+    randomSpy.mockRestore();
+  }
 });
 
 test("OperationId.createは生成ごとに異なるoperation identityを返す", () => {
