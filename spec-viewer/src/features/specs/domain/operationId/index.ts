@@ -1,4 +1,4 @@
-const operationIdBrand: unique symbol = Symbol("OperationId");
+declare const operationIdBrand: unique symbol;
 
 export type OperationId = string & {
   readonly [operationIdBrand]: "OperationId";
