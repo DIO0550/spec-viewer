@@ -17,11 +17,13 @@ test("OperationId.createは生成ごとに異なるoperation identityを返す",
     .mockReturnValueOnce(2);
   const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.1);
 
-  const firstOperationId = OperationId.create();
-  const secondOperationId = OperationId.create();
+  try {
+    const firstOperationId = OperationId.create();
+    const secondOperationId = OperationId.create();
 
-  dateNowSpy.mockRestore();
-  randomSpy.mockRestore();
-
-  expect(firstOperationId).not.toBe(secondOperationId);
+    expect(firstOperationId).not.toBe(secondOperationId);
+  } finally {
+    dateNowSpy.mockRestore();
+    randomSpy.mockRestore();
+  }
 });
