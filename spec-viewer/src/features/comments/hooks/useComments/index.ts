@@ -8,7 +8,7 @@ import {
   type CommentListState as CommentListStateType,
 } from "@/features/comments/domain/commentListState";
 import type { CommentOperationState } from "@/features/comments/domain/commentOperation";
-import type { CommentScope } from "@/features/comments/domain/commentScope";
+import { CommentScope } from "@/features/comments/domain/commentScope";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import { buildCommentsResult } from "@/features/comments/hooks/buildCommentsResult";
 import {
@@ -76,7 +76,7 @@ export function useComments({
   scope,
   statusFilter = defaultStatusFilter,
 }: UseCommentsOptions): UseCommentsResult {
-  const scopeKey = createScopeKey(scope, statusFilter);
+  const scopeKey = CommentScope.toKey(scope, statusFilter);
   const listRequestIdRef = useRef(0);
   const activeListScopeKeyRef = useRef(scopeKey);
   const [listState, setListState] = useState<CommentListStateType>(
@@ -204,16 +204,4 @@ export function useComments({
     },
     operations: commentOperations,
   });
-}
-
-/** @returns Scope identity for stale operation guards. */
-function createScopeKey(
-  scope: CommentScope | null,
-  statusFilter: CommentStatusFilter,
-): string {
-  if (scope === null) {
-    return `idle:${statusFilter}`;
-  }
-
-  return `${scope.workspacePath}:${scope.specId}:${scope.fileKey}:${statusFilter}`;
 }
