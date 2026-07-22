@@ -6,7 +6,6 @@ import { SpecNode as SpecNodeDomain } from "@/features/specs/domain/specNode";
 import { SpecTree as SpecTreeDomain } from "@/features/specs/domain/specTree";
 import type { SpecTreeState } from "@/features/specs/domain/specTreeState";
 import { SpecTreeState as SpecTreeStateFactory } from "@/features/specs/domain/specTreeState";
-import { readDocument } from "@/features/specs/hooks/useSpecs/readDocument";
 import {
   buildSpecsSelectors,
   type SpecsSelectors,
@@ -17,10 +16,15 @@ import type {
   UseSpecsResult,
 } from "@/features/specs/hooks/useSpecs/types";
 import * as specGateway from "@/features/specs/infra/specGateway";
-import type { SpecFileKey, SpecFileScope } from "@/features/specs/types/spec";
+import type {
+  SpecDocument,
+  SpecFileKey,
+  SpecFileScope,
+} from "@/features/specs/types/spec";
 import { specCommands } from "@/lib/api/tauri";
 import { ArchiveSpecCommandError } from "@/lib/api/tauri/archiveSpec";
 import { ListSpecsCommandError } from "@/lib/api/tauri/listSpecs";
+import { ReadSpecFileCommandError } from "@/lib/api/tauri/readSpecFile";
 import { createPerformanceCorrelationId } from "@/lib/performance";
 
 export type { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
@@ -55,6 +59,59 @@ type LoadDocumentContext = Readonly<{
   operationId: string;
   target: SpecFileScope;
 }>;
+
+type ReadDocumentInput = Readonly<{
+  target: SpecFileScope;
+  correlationId: string;
+}>;
+
+type ReadDocumentResult = Readonly<
+  | {
+      status: "success";
+      document: SpecDocument;
+      correlationId: string;
+    }
+  | {
+      status: "error";
+      error: SpecFeatureError;
+      correlationId: string;
+    }
+>;
+
+/**
+ * Reads one spec document and normalizes the command boundary result.
+ * @param input - Document scope and correlation id for the read operation.
+ * @returns A successful document result or a normalized feature error.
+ */
+async function readDocument(
+  input: ReadDocumentInput,
+): Promise<ReadDocumentResult> {
+  const { correlationId, target } = input;
+
+  try {
+    const document = await specGateway.readSpecFile(
+      specCommands,
+      specGateway.createReadSpecFileRequest({
+        ...target,
+        correlationId,
+      }),
+    );
+
+    return {
+      status: "success",
+      document,
+      correlationId,
+    };
+  } catch (error) {
+    return {
+      status: "error",
+      error: SpecFeatureError.fromCommandError(
+        ReadSpecFileCommandError.fromUnknown(error),
+      ),
+      correlationId,
+    };
+  }
+}
 
 const initialSpecsState: SpecsState = {
   specTreeState: initialSpecTreeState,
