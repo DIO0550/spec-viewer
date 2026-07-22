@@ -1,3 +1,4 @@
+import type { OperationId } from "@/features/specs/domain/operationId";
 import type { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
 import type { SpecFeatureError } from "@/features/specs/domain/specError";
 import type { SpecTreeState } from "@/features/specs/domain/specTreeState";
@@ -14,7 +15,7 @@ export type SpecsState = Readonly<{
   documentState: SpecDocumentState;
   selection: SpecSelectionState;
   isLoading: boolean;
-  activeOperationId: string | null;
+  activeOperationId: OperationId | null;
   archivingSpecId: string | null;
   archiveSpecError: SpecFeatureError | null;
 }>;

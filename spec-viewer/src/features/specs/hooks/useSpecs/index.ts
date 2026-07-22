@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
 import { SpecDocumentState as SpecDocumentStateFactory } from "@/features/specs/domain/specDocumentState";
+import { OperationId } from "@/features/specs/domain/operationId";
 import { SpecFeatureError } from "@/features/specs/domain/specError";
 import { SpecNode as SpecNodeDomain } from "@/features/specs/domain/specNode";
 import { SpecTree as SpecTreeDomain } from "@/features/specs/domain/specTree";
@@ -56,7 +57,7 @@ type ResolvedSelection = ReturnType<typeof SpecTreeDomain.resolveSelection>;
 type ShouldCommitState = () => boolean;
 
 type LoadDocumentContext = Readonly<{
-  operationId: string;
+  operationId: OperationId;
   target: SpecFileScope;
 }>;
 
@@ -126,13 +127,6 @@ const initialSpecsState: SpecsState = {
   archiveSpecError: null,
 };
 
-/** @returns A unique id for guarding one spec load operation. */
-function createSpecLoadOperationId(): string {
-  return `spec-load-${Date.now().toString(36)}-${Math.random()
-    .toString(36)
-    .slice(2)}`;
-}
-
 /**
  * @param options - Hook options including the workspace path and selection callback.
  * @returns Spec tree, selection, and Markdown loading state for a workspace.
@@ -146,7 +140,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
 
   const commitLoadState = useCallback(
     (
-      operationId: string,
+      operationId: OperationId,
       updateState: (currentState: SpecsState) => SpecsState,
     ): void => {
       setState((currentState) => {
@@ -160,7 +154,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
     [],
   );
 
-  const finishLoad = useCallback((operationId: string): void => {
+  const finishLoad = useCallback((operationId: OperationId): void => {
     setState((currentState) => {
       if (currentState.activeOperationId !== operationId) {
         return currentState;
@@ -178,14 +172,14 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
 
   const runSpecLoad = useCallback(
     async (
-      load: (operationId: string) => Promise<boolean>,
+      load: (operationId: OperationId) => Promise<boolean>,
     ): Promise<boolean> => {
       if (isLoadStarting || isLoading) {
         return false;
       }
 
       isLoadStarting = true;
-      const operationId = createSpecLoadOperationId();
+      const operationId = OperationId.create();
       setState((currentState) => {
         if (currentState.isLoading) {
           return currentState;
@@ -272,7 +266,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
 
   const loadResolvedSelection = useCallback(
     async (
-      operationId: string,
+      operationId: OperationId,
       activeWorkspacePath: string,
       selection: ResolvedSelection,
       canCommit: ShouldCommitState = () => true,
@@ -316,7 +310,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
 
   const loadSpecTree = useCallback(
     async (
-      operationId: string,
+      operationId: OperationId,
       preferredSelection: PreferredSelection,
       canCommit: ShouldCommitState = () => true,
     ): Promise<boolean> => {
@@ -415,7 +409,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
   );
 
   useEffect(() => {
-    const operationId = createSpecLoadOperationId();
+    const operationId = OperationId.create();
     let cancelled = false;
     /** @returns Whether this effect run is still active and may commit state. */
     const canCommit = (): boolean => !cancelled;
