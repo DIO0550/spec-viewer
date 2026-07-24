@@ -65,6 +65,7 @@ export const uiText = {
       "対象ファイルをクリックすると、差分プレビューの詳細ページへ遷移します。",
     applyAiDetails: "AI適用プレビュー詳細",
     backToApplyAiFiles: "ファイル一覧へ戻る",
+    backToReviewer: "レビュー画面へ戻る",
     previewOnly: "プレビューのみ",
     splitPreview: "Split比較",
     beforePreview: "古い内容",
