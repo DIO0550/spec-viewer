@@ -377,6 +377,55 @@ test("useCommentsはコメント追加中のsaving状態と追加後の一覧を
   result.unmount();
 });
 
+test("useCommentsはコメント追加失敗後の再試行でerrorからsavingを経てidleへ復旧する", async () => {
+  const retryDeferred = createDeferred<Comment>();
+  const addComment = vi
+    .fn()
+    .mockRejectedValueOnce("comment add failed")
+    .mockReturnValueOnce(retryDeferred.promise);
+  const result = renderUseComments({
+    scope: tasksScope,
+    commands: createCommands({ addComment }),
+  });
+
+  await flushAsyncEffects();
+  await act(async () => {
+    await expect(
+      result.current.addComment({
+        anchor: secondComment.anchor,
+        body: secondComment.body,
+      }),
+    ).resolves.toBeNull();
+  });
+
+  expect(result.current.operationState.status).toBe("error");
+  expect(result.current.isSaving).toBe(false);
+  expect(result.current.operationError).not.toBeNull();
+
+  let retryPromise: Promise<Comment | null> = Promise.resolve(null);
+  act(() => {
+    retryPromise = result.current.addComment({
+      anchor: secondComment.anchor,
+      body: secondComment.body,
+    });
+  });
+
+  expect(result.current.operationState.status).toBe("saving");
+  expect(result.current.isSaving).toBe(true);
+  expect(result.current.operationError).toBeNull();
+
+  await act(async () => {
+    retryDeferred.resolve(secondComment);
+    await expect(retryPromise).resolves.toEqual(secondComment);
+  });
+
+  expect(result.current.operationState.status).toBe("idle");
+  expect(result.current.isSaving).toBe(false);
+  expect(result.current.operationError).toBeNull();
+  expect(result.current.comments).toEqual([firstComment, secondComment]);
+  result.unmount();
+});
+
 test("useCommentsはloading中のコメント追加成功を古い一覧responseで上書きしない", async () => {
   const listDeferred = createDeferred<ListCommentsResponse>();
   const addDeferred = createDeferred<Comment>();
