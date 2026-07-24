@@ -282,11 +282,12 @@ const renderStory = (result, options = {}) => {
   const ratio = (result.diffRatio * 100).toFixed(4);
   const pathPrefix = options.pathPrefix ?? "";
   const titleHref = options.detailStory ? `${pathPrefix}index.html#${story}` : `${story}/`;
+  const storyLinkAttribute = options.detailStory ? "" : ` data-story-link="${story}"`;
   return `<article class="story story--${result.status}" id="${story}">
     <header class="story__header">
       <div>
         <p class="status">${result.status}</p>
-        <h2><a href="${titleHref}">${story}</a></h2>
+        <h2><a href="${titleHref}"${storyLinkAttribute}>${story}</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>${result.diffPixels}</dd></div>
@@ -302,6 +303,42 @@ const renderStory = (result, options = {}) => {
   </article>`;
 };
 
+const formatStatusLabel = (status) => {
+  if (status === "passed") {
+    return "Clear";
+  }
+  return status.charAt(0).toUpperCase() + status.slice(1);
+};
+
+const renderSidebar = (summary, options = {}) => {
+  if (options.detailStory) {
+    return "";
+  }
+  const groups = ["changed", "added", "removed", "passed"]
+    .map((status) => ({
+      status,
+      stories: summary.results.filter((result) => result.status === status),
+    }))
+    .filter((group) => group.stories.length > 0);
+
+  if (groups.length === 0) {
+    return "";
+  }
+
+  return `<aside class="story-nav" aria-label="Story result navigation">
+    <h2>Stories</h2>
+    ${groups.map((group) => `<section class="story-nav__group story-nav__group--${group.status}">
+      <h3>${formatStatusLabel(group.status)} <span>${group.stories.length}</span></h3>
+      <ol>
+        ${group.stories.map((result) => {
+          const story = escapeHtml(result.story);
+          return `<li><a href="#${story}">${story}</a></li>`;
+        }).join("")}
+      </ol>
+    </section>`).join("")}
+  </aside>`;
+};
+
 const renderHtml = (summary, options = {}) => `<!doctype html>
 <html lang="en">
 <head>
@@ -311,13 +348,25 @@ const renderHtml = (summary, options = {}) => `<!doctype html>
   <style>
     :root { color-scheme: light dark; --bg: #0f172a; --panel: #111827; --text: #e5e7eb; --muted: #9ca3af; --line: #374151; --accent: #38bdf8; --danger: #fb7185; --ok: #34d399; --warn: #fbbf24; }
     body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-    main { width: min(1440px, calc(100% - 48px)); margin: 0 auto; padding: 32px 0 56px; }
+    .layout { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: 24px; width: min(1680px, calc(100% - 48px)); margin: 0 auto; padding: 32px 0 56px; }
+    .layout--detail { display: block; width: min(1440px, calc(100% - 48px)); }
+    main { min-width: 0; }
     .hero { display: flex; justify-content: space-between; gap: 24px; align-items: flex-end; margin-bottom: 24px; }
     h1, h2, h3, p { margin: 0; }
     h1 { font-size: 32px; }
     a { color: inherit; }
     .summary { color: var(--muted); margin-top: 8px; }
     .badge { border: 1px solid var(--line); border-radius: 999px; padding: 8px 12px; background: rgb(255 255 255 / 6%); }
+    .story-nav { position: sticky; top: 24px; align-self: start; max-height: calc(100vh - 48px); overflow: auto; border: 1px solid var(--line); border-radius: 18px; padding: 16px; background: rgb(17 24 39 / 86%); box-shadow: 0 18px 50px rgb(0 0 0 / 18%); }
+    .story-nav h2 { font-size: 16px; margin: 0 0 14px; }
+    .story-nav__group { margin-top: 14px; }
+    .story-nav__group h3 { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .story-nav__group h3 span { border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; color: var(--text); background: rgb(255 255 255 / 6%); }
+    .story-nav__group--changed h3 { color: var(--danger); }
+    .story-nav__group--passed h3 { color: var(--ok); }
+    .story-nav ol { display: grid; gap: 4px; list-style: none; margin: 0; padding: 0; }
+    .story-nav a { display: block; overflow: hidden; border-radius: 8px; padding: 6px 8px; color: var(--text); text-overflow: ellipsis; white-space: nowrap; text-decoration: none; }
+    .story-nav a:hover { background: rgb(255 255 255 / 8%); color: var(--accent); }
     .story { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 20px; margin-top: 18px; box-shadow: 0 18px 50px rgb(0 0 0 / 24%); }
     .story--changed { border-color: rgb(251 113 133 / 70%); }
     .story--passed { border-color: rgb(52 211 153 / 45%); }
@@ -344,21 +393,35 @@ const renderHtml = (summary, options = {}) => `<!doctype html>
     .image-card img { display: block; width: 100%; height: auto; }
     .image-card--empty { display: grid; min-height: 180px; place-items: center; color: var(--muted); }
     .image-card--empty h3 { justify-self: stretch; width: 100%; box-sizing: border-box; }
-    @media (max-width: 900px) { main { width: min(100% - 24px, 1440px); } .hero, .story__header { display: block; } .metrics, .shots { grid-template-columns: 1fr; display: grid; } }
+    @media (max-width: 900px) { .layout, .layout--detail { display: block; width: min(100% - 24px, 1440px); padding-top: 18px; } .story-nav { position: static; max-height: none; margin-bottom: 18px; } .hero, .story__header { display: block; } .metrics, .shots { grid-template-columns: 1fr; display: grid; } }
   </style>
 </head>
 <body>
+  <div class="layout${options.detailStory ? " layout--detail" : ""}">
+  ${renderSidebar(summary, options)}
   <main>
     <section class="hero">
       <div>
         <h1>${options.detailStory ? escapeHtml(options.detailStory) : "Storybook Visual Regression Report"}</h1>
-        <p class="summary">${options.detailStory ? '<a href="../">← Back to all stories</a>' : "Move the slider to compare baseline and current screenshots. Click a story title to open that story on its own page."}</p>
+        <p class="summary">${options.detailStory ? '<a href="../" data-back-link>← Back to all stories</a>' : "Move the slider to compare baseline and current screenshots. Click a story title to open that story on its own page."}</p>
       </div>
       <div class="badge">Failed: <strong>${summary.failed}</strong> / Threshold: ${summary.maxDiffRatio}</div>
     </section>
     ${summary.results.map((result) => renderStory(result, options)).join("")}
   </main>
+  </div>
   <script>
+    const currentDirectory = () => window.location.pathname.endsWith("/") ? window.location.pathname : window.location.pathname + "/";
+    for (const link of document.querySelectorAll("[data-story-link]")) {
+      const story = link.getAttribute("data-story-link");
+      if (story) {
+        link.href = currentDirectory() + encodeURIComponent(story) + "/";
+      }
+    }
+    for (const link of document.querySelectorAll("[data-back-link]")) {
+      const path = window.location.pathname.endsWith("/") ? window.location.pathname.slice(0, -1) : window.location.pathname;
+      link.href = path.slice(0, path.lastIndexOf("/")) + "/";
+    }
     for (const root of document.querySelectorAll("[data-comparison]")) {
       const slider = root.querySelector("[data-slider]");
       const actual = root.querySelector("[data-actual]");
