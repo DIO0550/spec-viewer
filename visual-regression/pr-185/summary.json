@@ -41,8 +41,8 @@
     {
       "story": "app-app-specviewcommentsidebar--loading",
       "status": "changed",
-      "diffPixels": 5338,
-      "diffRatio": 0.005792100694444444,
+      "diffPixels": 19171,
+      "diffRatio": 0.020801866319444445,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -158,8 +158,8 @@
     {
       "story": "components-loadingskeleton--all-props",
       "status": "changed",
-      "diffPixels": 15327,
-      "diffRatio": 0.016630859375,
+      "diffPixels": 15580,
+      "diffRatio": 0.016905381944444443,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -167,8 +167,8 @@
     {
       "story": "components-loadingskeleton--default",
       "status": "changed",
-      "diffPixels": 13373,
-      "diffRatio": 0.014510633680555555,
+      "diffPixels": 13509,
+      "diffRatio": 0.014658203125,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -221,8 +221,8 @@
     {
       "story": "components-workspacelayout--loading",
       "status": "changed",
-      "diffPixels": 24967,
-      "diffRatio": 0.027090928819444443,
+      "diffPixels": 73678,
+      "diffRatio": 0.07994574652777778,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -320,8 +320,8 @@
     {
       "story": "features-comments-components-commentsidebar--loading",
       "status": "changed",
-      "diffPixels": 19580,
-      "diffRatio": 0.021245659722222223,
+      "diffPixels": 19746,
+      "diffRatio": 0.02142578125,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -608,8 +608,8 @@
     {
       "story": "features-specs-components-markdownviewer-markdownviewerstatuspanel--loading",
       "status": "changed",
-      "diffPixels": 45241,
-      "diffRatio": 0.049089626736111114,
+      "diffPixels": 45578,
+      "diffRatio": 0.04945529513888889,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -707,8 +707,8 @@
     {
       "story": "features-specs-components-spectree--loading",
       "status": "changed",
-      "diffPixels": 1880,
-      "diffRatio": 0.0020399305555555557,
+      "diffPixels": 13650,
+      "diffRatio": 0.014811197916666666,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
