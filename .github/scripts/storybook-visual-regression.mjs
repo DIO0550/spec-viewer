@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { createServer } from "node:http";
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { basename, extname, join } from "node:path";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -65,6 +66,14 @@ const requestJson = async (url, options) => {
   return response.json();
 };
 
+const requestOk = async (url, options) => {
+  const response = await fetch(url, options);
+  if (!response.ok) {
+    throw new Error(`${options?.method ?? "GET"} ${url} failed: ${response.status}`);
+  }
+  await response.arrayBuffer();
+};
+
 const findChrome = () => {
   const candidates = [process.env.CHROME_BIN, "google-chrome", "google-chrome-stable", "chromium", "chromium-browser"].filter(Boolean);
   const found = candidates.find((candidate) => spawnSync(candidate, ["--version"], { stdio: "ignore" }).status === 0);
@@ -116,7 +125,20 @@ const capture = async (options) => {
   mkdirSync(out, { recursive: true });
 
   const { server, origin } = await serveStatic(process.cwd() + `/${storybookDir}`);
-  const chrome = spawn(findChrome(), ["--headless=new", "--disable-gpu", "--no-sandbox", "--remote-debugging-port=9222", "about:blank"], { stdio: "ignore" });
+  // Chrome 136+ は remote debugging に非デフォルトの user-data-dir が必須。
+  const userDataDir = mkdtempSync(join(tmpdir(), "storybook-visual-chrome-"));
+  const chrome = spawn(
+    findChrome(),
+    [
+      "--headless=new",
+      "--disable-gpu",
+      "--no-sandbox",
+      "--remote-debugging-port=9222",
+      `--user-data-dir=${userDataDir}`,
+      "about:blank",
+    ],
+    { stdio: "ignore" },
+  );
   try {
     let version;
     for (let attempt = 0; attempt < 50; attempt += 1) {
@@ -142,12 +164,13 @@ const capture = async (options) => {
       const screenshot = await cdp.send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
       writeFileSync(join(out, `${story.id}.png`), Buffer.from(screenshot.data, "base64"));
       cdp.close();
-      await requestJson(`http://127.0.0.1:9222/json/close/${target.id}`);
+      await requestOk(`http://127.0.0.1:9222/json/close/${target.id}`);
       console.log(`captured ${story.id}`);
     }
   } finally {
     chrome.kill("SIGTERM");
     server.close();
+    rmSync(userDataDir, { recursive: true, force: true });
   }
 };
 
@@ -171,8 +194,8 @@ const compare = async (options) => {
   for (const dir of ["actual", "expected", "diff"]) {
     mkdirSync(join(out, dir), { recursive: true });
   }
-  const actualNames = listFiles(actual).filter((path) => extname(path) === ".png").map(basename);
-  const expectedNames = listFiles(expected).filter((path) => extname(path) === ".png").map(basename);
+  const actualNames = listFiles(actual).filter((path) => extname(path) === ".png").map((path) => basename(path));
+  const expectedNames = listFiles(expected).filter((path) => extname(path) === ".png").map((path) => basename(path));
   const names = [...new Set([...actualNames, ...expectedNames])].sort();
   const results = [];
   for (const name of names) {
