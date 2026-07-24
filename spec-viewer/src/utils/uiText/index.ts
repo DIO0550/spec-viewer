@@ -57,22 +57,7 @@ export const uiText = {
     prompt: "AI用プロンプト",
     mcpFeedback: "MCP Feedback",
     applyAi: "AI適用",
-    applyAiLabel: "AI適用の詳細を開く",
-    showApplyAiDetails: "AI適用の詳細",
-    hideApplyAiDetails: "詳細を閉じる",
-    applyAiGeneratedFiles: "生成予定ファイル",
-    applyAiFileListDescription:
-      "対象ファイルをクリックすると、差分プレビューの詳細ページへ遷移します。",
-    applyAiDetails: "AI適用プレビュー詳細",
-    backToApplyAiFiles: "ファイル一覧へ戻る",
-    backToReviewer: "レビュー画面へ戻る",
-    previewOnly: "プレビューのみ",
-    splitPreview: "Split比較",
-    beforePreview: "古い内容",
-    afterPreview: "新しい内容",
-    overlaySlider: "古い内容と新しい内容の表示領域",
-    applyAiDetailsDescription:
-      "provider連携後に生成される差分レビューの想定UIです。Splitで並べて確認し、重ね合わせではスライダーで古い内容と新しい内容の領域を調整できます。",
+    applyAiLabel: "コメントをAIで適用",
     applyAiPlaceholder:
       "AI用プロンプトのコピーは利用できます。AI適用はprovider連携で差分プレビューを生成できるようになってから有効になります。Markdownの書き込みには明示的な確認が必要です。",
   },

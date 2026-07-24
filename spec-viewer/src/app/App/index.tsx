@@ -18,9 +18,6 @@ import {
   SpecViewSelectionProvider,
   useSpecViewSelection,
 } from "@/app/context/specViewSelection";
-import { ApplyAiDiffPreviewPage } from "@/app/pages/ApplyAiDiffPreviewPage";
-import { WorkspaceLayout } from "@/components";
-import { WorkspacePath } from "@/domains/workspacePath";
 import {
   CommentOperationFailedState,
   CommentOperationSavingState,
@@ -54,7 +51,9 @@ import {
   WorkspaceSidebarSection,
   WorkspaceToolbar,
 } from "@/features/workspace";
+import { WorkspacePath } from "@/domains/workspacePath";
 import { uiText } from "@/utils/uiText";
+import { WorkspaceLayout } from "@/components";
 
 /**
  * Application root that wires the theme, workspace and selection providers.
@@ -67,53 +66,12 @@ function App(): ReactElement {
       <WorkspaceProvider>
         <SidebarPreferenceProvider>
           <SpecViewSelectionProvider>
-            <SpecViewAppRouter />
+            <SpecViewAppContent />
           </SpecViewSelectionProvider>
         </SidebarPreferenceProvider>
       </WorkspaceProvider>
     </ThemeProvider>
   );
-}
-
-/** @returns The current hash-routed page inside the single-page app shell. */
-function SpecViewAppRouter(): ReactElement {
-  const [hash, setHash] = useState(() => window.location.hash);
-
-  useEffect(() => {
-    const handleHashChange = (): void => {
-      setHash(window.location.hash);
-    };
-
-    window.addEventListener("hashchange", handleHashChange);
-
-    return () => {
-      window.removeEventListener("hashchange", handleHashChange);
-    };
-  }, []);
-
-  const applyAiPreviewRoute = parseApplyAiPreviewRoute(hash);
-
-  if (applyAiPreviewRoute !== null) {
-    return <ApplyAiDiffPreviewPage route={applyAiPreviewRoute} />;
-  }
-
-  return <SpecViewAppContent />;
-}
-
-/**
- * @param hash - The current location hash.
- * @returns The AI preview page route, or null when the reviewer shell should render.
- */
-function parseApplyAiPreviewRoute(
-  hash: string,
-): { readonly fileKey: string } | null {
-  const match = /^#\/apply-ai-diff-preview\/([^/?#]+)$/.exec(hash);
-
-  if (match === null) {
-    return null;
-  }
-
-  return { fileKey: decodeURIComponent(match[1] ?? "") };
 }
 
 /**

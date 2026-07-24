@@ -235,6 +235,11 @@ const compare = async (options) => {
   const summary = { maxDiffRatio, failed: failed.length, results };
   writeFileSync(join(out, "summary.json"), JSON.stringify(summary, null, 2));
   writeFileSync(join(out, "index.html"), renderHtml(summary));
+  for (const result of results) {
+    const storyDir = join(out, result.story);
+    mkdirSync(storyDir, { recursive: true });
+    writeFileSync(join(storyDir, "index.html"), renderHtml({ ...summary, results: [result] }, { detailStory: result.story, pathPrefix: "../" }));
+  }
   if (failed.length > 0) {
     process.exitCode = 1;
   }
@@ -253,16 +258,16 @@ const imagePanel = (label, path, enabled) => {
   return `<div class="image-card"><h3>${label}</h3><img src="${path}" alt="${label}"></div>`;
 };
 
-const comparisonPanel = (result) => {
+const comparisonPanel = (result, pathPrefix = "") => {
   if (!result.hasExpected || !result.hasActual) {
     return `<div class="comparison comparison--empty"><p>Slider comparison is unavailable because this story is ${result.status}.</p></div>`;
   }
   const story = escapeHtml(result.story);
   return `<div class="comparison" data-comparison>
     <div class="comparison__frame">
-      <img class="comparison__image" src="expected/${story}.png" alt="Expected ${story}">
+      <img class="comparison__image" src="${pathPrefix}expected/${story}.png" alt="Expected ${story}">
       <div class="comparison__actual" data-actual style="clip-path: inset(0 0 0 50%)">
-        <img class="comparison__image" src="actual/${story}.png" alt="Actual ${story}">
+        <img class="comparison__image" src="${pathPrefix}actual/${story}.png" alt="Actual ${story}">
       </div>
       <div class="comparison__handle" data-handle style="left: 50%"></div>
     </div>
@@ -272,35 +277,37 @@ const comparisonPanel = (result) => {
   </div>`;
 };
 
-const renderStory = (result) => {
+const renderStory = (result, options = {}) => {
   const story = escapeHtml(result.story);
   const ratio = (result.diffRatio * 100).toFixed(4);
+  const pathPrefix = options.pathPrefix ?? "";
+  const titleHref = options.detailStory ? `${pathPrefix}index.html#${story}` : `${story}/`;
   return `<article class="story story--${result.status}" id="${story}">
     <header class="story__header">
       <div>
         <p class="status">${result.status}</p>
-        <h2><a href="#${story}">${story}</a></h2>
+        <h2><a href="${titleHref}">${story}</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>${result.diffPixels}</dd></div>
         <div><dt>Diff ratio</dt><dd>${ratio}%</dd></div>
       </dl>
     </header>
-    ${comparisonPanel(result)}
+    ${comparisonPanel(result, pathPrefix)}
     <div class="shots">
-      ${imagePanel("Expected", `expected/${story}.png`, result.hasExpected)}
-      ${imagePanel("Actual", `actual/${story}.png`, result.hasActual)}
-      ${imagePanel("Diff", `diff/${story}.png`, result.hasDiff)}
+      ${imagePanel("Expected", `${pathPrefix}expected/${story}.png`, result.hasExpected)}
+      ${imagePanel("Actual", `${pathPrefix}actual/${story}.png`, result.hasActual)}
+      ${imagePanel("Diff", `${pathPrefix}diff/${story}.png`, result.hasDiff)}
     </div>
   </article>`;
 };
 
-const renderHtml = (summary) => `<!doctype html>
+const renderHtml = (summary, options = {}) => `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Storybook Visual Regression Report</title>
+  <title>${options.detailStory ? `${escapeHtml(options.detailStory)} - ` : ""}Storybook Visual Regression Report</title>
   <style>
     :root { color-scheme: light dark; --bg: #0f172a; --panel: #111827; --text: #e5e7eb; --muted: #9ca3af; --line: #374151; --accent: #38bdf8; --danger: #fb7185; --ok: #34d399; --warn: #fbbf24; }
     body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
@@ -344,12 +351,12 @@ const renderHtml = (summary) => `<!doctype html>
   <main>
     <section class="hero">
       <div>
-        <h1>Storybook Visual Regression Report</h1>
-        <p class="summary">Move the slider to compare baseline and current screenshots. Open the diff panel for highlighted pixel changes.</p>
+        <h1>${options.detailStory ? escapeHtml(options.detailStory) : "Storybook Visual Regression Report"}</h1>
+        <p class="summary">${options.detailStory ? '<a href="../">← Back to all stories</a>' : "Move the slider to compare baseline and current screenshots. Click a story title to open that story on its own page."}</p>
       </div>
       <div class="badge">Failed: <strong>${summary.failed}</strong> / Threshold: ${summary.maxDiffRatio}</div>
     </section>
-    ${summary.results.map(renderStory).join("")}
+    ${summary.results.map((result) => renderStory(result, options)).join("")}
   </main>
   <script>
     for (const root of document.querySelectorAll("[data-comparison]")) {

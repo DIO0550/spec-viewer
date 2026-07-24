@@ -491,7 +491,7 @@ test("CommentSidebarはMCP feedback dry-runコピー中状態を表示する", (
   result.unmount();
 });
 
-test("CommentSidebarはAI適用placeholderから指定ファイル詳細ページへのリンクを表示する", () => {
+test("CommentSidebarはAI適用placeholderをdisabledで表示する", () => {
   const result = renderReadySidebar({
     onCopyLlmPrompt: vi.fn(),
   });
@@ -499,29 +499,16 @@ test("CommentSidebarはAI適用placeholderから指定ファイル詳細ペー�
   openSecondaryActions(result);
 
   const applyWithAiButton = result.container.querySelector(
-    '[aria-label="AI適用の詳細を開く"]',
+    '[aria-label="コメントをAIで適用"]',
   ) as HTMLButtonElement;
 
-  expect(applyWithAiButton.disabled).toBe(false);
-  expect(applyWithAiButton.textContent).toContain("AI適用の詳細");
+  expect(applyWithAiButton.disabled).toBe(true);
+  expect(applyWithAiButton.textContent).toContain("AI適用");
   expect(result.container.textContent).toContain(
     "AI用プロンプトのコピーは利用できます。AI適用はprovider連携で差分プレビューを生成できるようになってから有効になります。",
   );
-
-  act(() => {
-    applyWithAiButton.click();
-  });
-
-  const tasksFileLink = Array.from(result.container.querySelectorAll("a")).find(
-    (link) => link.textContent?.includes("tasks.md") ?? false,
-  ) as HTMLAnchorElement;
-
-  expect(result.container.textContent).toContain("生成予定ファイル");
   expect(result.container.textContent).toContain(
-    "対象ファイルをクリックすると、差分プレビューの詳細ページへ遷移します。",
-  );
-  expect(tasksFileLink.getAttribute("href")).toBe(
-    "#/apply-ai-diff-preview/tasks",
+    "Markdownの書き込みには明示的な確認が必要です。",
   );
   result.unmount();
 });

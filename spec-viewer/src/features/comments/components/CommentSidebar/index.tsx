@@ -1,5 +1,4 @@
 import {
-  ChevronRight,
   Clipboard,
   Download,
   MoreHorizontal,
@@ -9,9 +8,6 @@ import {
   X,
 } from "lucide-react";
 import { useId, useState } from "react";
-import { CommandErrorDisplay } from "@/components/CommandErrorDisplay";
-import { EmptyState } from "@/components/EmptyState";
-import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { CommentThread } from "@/features/comments/components/CommentThread";
 import type { Comment } from "@/features/comments/domain/comment";
 import type { CommentId } from "@/features/comments/domain/commentId";
@@ -29,6 +25,9 @@ import type {
   CommentExportScope,
 } from "@/features/comments/types/comment";
 import { uiText } from "@/utils/uiText";
+import { CommandErrorDisplay } from "@/components/CommandErrorDisplay";
+import { EmptyState } from "@/components/EmptyState";
+import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 
 type Props = Readonly<{
   listState: CommentListState;
@@ -562,7 +561,6 @@ function CommentExportControls({
   onCopyMcpFeedback,
 }: CommentExportControlsProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isApplyAiDetailsOpen, setIsApplyAiDetailsOpen] = useState(false);
   const menuId = useId();
   const placeholderDescriptionId = useId();
   const isCopyingMcpFeedback =
@@ -663,19 +661,10 @@ function CommentExportControls({
             role="menuitem"
             aria-label={uiText.sidebar.applyAiLabel}
             aria-describedby={placeholderDescriptionId}
-            aria-expanded={isApplyAiDetailsOpen}
-            onClick={() => {
-              setIsApplyAiDetailsOpen(
-                (currentIsApplyAiDetailsOpen) => !currentIsApplyAiDetailsOpen,
-              );
-            }}
+            disabled={!applyWithAiPlaceholderState.enabled}
           >
             <Sparkles aria-hidden="true" size={14} />
-            <span>
-              {isApplyAiDetailsOpen
-                ? uiText.sidebar.hideApplyAiDetails
-                : uiText.sidebar.showApplyAiDetails}
-            </span>
+            <span>{uiText.sidebar.applyAi}</span>
           </button>
           <p
             id={placeholderDescriptionId}
@@ -683,64 +672,9 @@ function CommentExportControls({
           >
             {applyWithAiPlaceholderState.explanation}
           </p>
-          {isApplyAiDetailsOpen ? <ApplyAiDiffPreviewFileList /> : null}
         </div>
       ) : null}
     </div>
-  );
-}
-
-type ApplyAiDiffPreviewFile = Readonly<{
-  key: string;
-  label: string;
-  path: string;
-  changeSummary: string;
-}>;
-
-const applyAiPreviewFiles: readonly ApplyAiDiffPreviewFile[] = [
-  {
-    key: "tasks",
-    label: "tasks.md",
-    path: "docs/plans/tasks/later-phases/tasks.md",
-    changeSummary: "詳細ページ遷移と比較UIの受け入れ条件を追記",
-  },
-  {
-    key: "design",
-    label: "design.md",
-    path: "docs/design/apply-ai-diff-preview.md",
-    changeSummary: "差分レビュー画面の操作モデルを明文化",
-  },
-];
-
-/** @returns A generated file list that links to dedicated preview pages. */
-function ApplyAiDiffPreviewFileList() {
-  return (
-    <section
-      className="comment-sidebar__apply-ai-details"
-      aria-label={uiText.sidebar.applyAiGeneratedFiles}
-    >
-      <div className="comment-sidebar__apply-ai-details-header">
-        <h3>{uiText.sidebar.applyAiGeneratedFiles}</h3>
-        <span>{uiText.sidebar.previewOnly}</span>
-      </div>
-      <p>{uiText.sidebar.applyAiFileListDescription}</p>
-      <div className="comment-sidebar__apply-ai-file-list">
-        {applyAiPreviewFiles.map((file) => (
-          <a
-            key={file.key}
-            className="comment-sidebar__apply-ai-file"
-            href={`#/apply-ai-diff-preview/${encodeURIComponent(file.key)}`}
-          >
-            <span>
-              <strong>{file.label}</strong>
-              <small>{file.path}</small>
-              <em>{file.changeSummary}</em>
-            </span>
-            <ChevronRight aria-hidden="true" size={15} />
-          </a>
-        ))}
-      </div>
-    </section>
   );
 }
 
