@@ -169,8 +169,15 @@ const capture = async (options) => {
     }
   } finally {
     chrome.kill("SIGTERM");
+    await sleep(250);
+    try {
+      chrome.kill("SIGKILL");
+    } catch {
+      // already exited
+    }
     server.close();
-    rmSync(userDataDir, { recursive: true, force: true });
+    // Chrome 終了直後は user-data-dir がまだ書き込み中のことがあるためリトライする。
+    rmSync(userDataDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   }
 };
 
