@@ -1,6 +1,6 @@
 {
   "maxDiffRatio": 0.002,
-  "failed": 39,
+  "failed": 38,
   "results": [
     {
       "story": "app--default",
@@ -41,8 +41,8 @@
     {
       "story": "app-app-specviewcommentsidebar--loading",
       "status": "changed",
-      "diffPixels": 19171,
-      "diffRatio": 0.020801866319444445,
+      "diffPixels": 19362,
+      "diffRatio": 0.021009114583333332,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -158,17 +158,17 @@
     {
       "story": "components-loadingskeleton--all-props",
       "status": "changed",
-      "diffPixels": 15580,
-      "diffRatio": 0.016905381944444443,
+      "diffPixels": 15327,
+      "diffRatio": 0.016630859375,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
     },
     {
       "story": "components-loadingskeleton--default",
-      "status": "changed",
-      "diffPixels": 13509,
-      "diffRatio": 0.014658203125,
+      "status": "passed",
+      "diffPixels": 629,
+      "diffRatio": 0.0006825086805555556,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -221,8 +221,8 @@
     {
       "story": "components-workspacelayout--loading",
       "status": "changed",
-      "diffPixels": 73678,
-      "diffRatio": 0.07994574652777778,
+      "diffPixels": 73766,
+      "diffRatio": 0.08004123263888889,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -320,8 +320,8 @@
     {
       "story": "features-comments-components-commentsidebar--loading",
       "status": "changed",
-      "diffPixels": 19746,
-      "diffRatio": 0.02142578125,
+      "diffPixels": 19548,
+      "diffRatio": 0.0212109375,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -608,8 +608,8 @@
     {
       "story": "features-specs-components-markdownviewer-markdownviewerstatuspanel--loading",
       "status": "changed",
-      "diffPixels": 45578,
-      "diffRatio": 0.04945529513888889,
+      "diffPixels": 45241,
+      "diffRatio": 0.049089626736111114,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -707,8 +707,8 @@
     {
       "story": "features-specs-components-spectree--loading",
       "status": "changed",
-      "diffPixels": 13650,
-      "diffRatio": 0.014811197916666666,
+      "diffPixels": 13637,
+      "diffRatio": 0.01479709201388889,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
