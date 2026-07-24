@@ -46,12 +46,15 @@ export type UseCommentsOptions = Readonly<{
 
 export type UseCommentsResult = Readonly<{
   listState: CommentListStateType;
+  /** Canonical lifecycle state for the latest comment operation. */
   operationState: CommentOperationState;
   comments: readonly Comment[];
   isLoading: boolean;
+  /** Compatibility projection derived from operationState. */
   isSaving: boolean;
   isEmpty: boolean;
   error: CommentFeatureErrorType | null;
+  /** Compatibility projection of the error held by operationState. */
   operationError: CommentFeatureErrorType | null;
   /** Reloads comments for the active scope. */
   reloadComments: () => Promise<boolean>;
