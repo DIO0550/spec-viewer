@@ -177,7 +177,12 @@ const capture = async (options) => {
     }
     server.close();
     // Chrome 終了直後は user-data-dir がまだ書き込み中のことがあるためリトライする。
-    rmSync(userDataDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+    // それでも残った場合はキャプチャ自体は成功しているので握りつぶす。
+    try {
+      rmSync(userDataDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+    } catch (error) {
+      console.warn(`failed to remove chrome user data dir: ${userDataDir}`, error);
+    }
   }
 };
 
