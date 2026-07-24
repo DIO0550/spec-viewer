@@ -8,6 +8,9 @@ import {
   X,
 } from "lucide-react";
 import { useId, useState } from "react";
+import { CommandErrorDisplay } from "@/components/CommandErrorDisplay";
+import { EmptyState } from "@/components/EmptyState";
+import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { CommentThread } from "@/features/comments/components/CommentThread";
 import type { Comment } from "@/features/comments/domain/comment";
 import type { CommentId } from "@/features/comments/domain/commentId";
@@ -25,9 +28,6 @@ import type {
   CommentExportScope,
 } from "@/features/comments/types/comment";
 import { uiText } from "@/utils/uiText";
-import { CommandErrorDisplay } from "@/components/CommandErrorDisplay";
-import { EmptyState } from "@/components/EmptyState";
-import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 
 type Props = Readonly<{
   listState: CommentListState;
@@ -561,6 +561,8 @@ function CommentExportControls({
   onCopyMcpFeedback,
 }: CommentExportControlsProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isApplyAiDetailsOpen, setIsApplyAiDetailsOpen] = useState(false);
+  const [diffPreviewPosition, setDiffPreviewPosition] = useState(50);
   const menuId = useId();
   const placeholderDescriptionId = useId();
   const isCopyingMcpFeedback =
@@ -661,10 +663,19 @@ function CommentExportControls({
             role="menuitem"
             aria-label={uiText.sidebar.applyAiLabel}
             aria-describedby={placeholderDescriptionId}
-            disabled={!applyWithAiPlaceholderState.enabled}
+            aria-expanded={isApplyAiDetailsOpen}
+            onClick={() => {
+              setIsApplyAiDetailsOpen(
+                (currentIsApplyAiDetailsOpen) => !currentIsApplyAiDetailsOpen,
+              );
+            }}
           >
             <Sparkles aria-hidden="true" size={14} />
-            <span>{uiText.sidebar.applyAi}</span>
+            <span>
+              {isApplyAiDetailsOpen
+                ? uiText.sidebar.hideApplyAiDetails
+                : uiText.sidebar.showApplyAiDetails}
+            </span>
           </button>
           <p
             id={placeholderDescriptionId}
@@ -672,9 +683,113 @@ function CommentExportControls({
           >
             {applyWithAiPlaceholderState.explanation}
           </p>
+          {isApplyAiDetailsOpen ? (
+            <ApplyAiDiffPreviewDetails
+              diffPreviewPosition={diffPreviewPosition}
+              onDiffPreviewPositionChange={setDiffPreviewPosition}
+            />
+          ) : null}
         </div>
       ) : null}
     </div>
+  );
+}
+
+type ApplyAiDiffPreviewDetailsProps = Readonly<{
+  diffPreviewPosition: number;
+  /**
+   * Updates the before/after overlay split position.
+   * @param position - The new split position percentage.
+   */
+  onDiffPreviewPositionChange: (position: number) => void;
+}>;
+
+const applyAiPreviewBefore = `## 要件
+
+- レビューコメントを一覧で確認する。
+- AI適用は後続実装で接続する。`;
+
+const applyAiPreviewAfter = `## 要件
+
+- レビューコメントを一覧で確認し、クリックで詳細を開く。
+- 差分詳細ではSplit表示、重ね合わせ表示、スライダー比較を選べる。
+- AI適用は後続実装で接続する。`;
+
+/** @returns A static detail preview for the future AI apply diff review flow. */
+function ApplyAiDiffPreviewDetails({
+  diffPreviewPosition,
+  onDiffPreviewPositionChange,
+}: ApplyAiDiffPreviewDetailsProps) {
+  return (
+    <section
+      className="comment-sidebar__apply-ai-details"
+      aria-label={uiText.sidebar.applyAiDetails}
+    >
+      <div className="comment-sidebar__apply-ai-details-header">
+        <h3>{uiText.sidebar.applyAiDetails}</h3>
+        <span>{uiText.sidebar.previewOnly}</span>
+      </div>
+      <p>{uiText.sidebar.applyAiDetailsDescription}</p>
+      <section
+        className="comment-sidebar__diff-split"
+        aria-label={uiText.sidebar.splitPreview}
+      >
+        <DiffPreviewPane
+          label={uiText.sidebar.beforePreview}
+          content={applyAiPreviewBefore}
+        />
+        <DiffPreviewPane
+          label={uiText.sidebar.afterPreview}
+          content={applyAiPreviewAfter}
+        />
+      </section>
+      <div className="comment-sidebar__diff-overlay">
+        <div className="comment-sidebar__diff-overlay-frame">
+          <pre className="comment-sidebar__diff-layer">
+            {applyAiPreviewAfter}
+          </pre>
+          <pre
+            className="comment-sidebar__diff-layer comment-sidebar__diff-layer--before"
+            style={{ clipPath: `inset(0 ${100 - diffPreviewPosition}% 0 0)` }}
+          >
+            {applyAiPreviewBefore}
+          </pre>
+          <span
+            className="comment-sidebar__diff-divider"
+            style={{ left: `${diffPreviewPosition}%` }}
+            aria-hidden="true"
+          />
+        </div>
+        <label className="comment-sidebar__diff-slider">
+          <span>{uiText.sidebar.overlaySlider}</span>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={diffPreviewPosition}
+            aria-label={uiText.sidebar.overlaySlider}
+            onInput={(event) => {
+              onDiffPreviewPositionChange(event.currentTarget.valueAsNumber);
+            }}
+          />
+        </label>
+      </div>
+    </section>
+  );
+}
+
+type DiffPreviewPaneProps = Readonly<{
+  label: string;
+  content: string;
+}>;
+
+/** @returns One before/after Markdown preview pane. */
+function DiffPreviewPane({ label, content }: DiffPreviewPaneProps) {
+  return (
+    <article className="comment-sidebar__diff-pane">
+      <h4>{label}</h4>
+      <pre>{content}</pre>
+    </article>
   );
 }
 

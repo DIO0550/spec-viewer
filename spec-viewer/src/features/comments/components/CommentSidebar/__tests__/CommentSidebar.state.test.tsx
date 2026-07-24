@@ -491,7 +491,7 @@ test("CommentSidebarはMCP feedback dry-runコピー中状態を表示する", (
   result.unmount();
 });
 
-test("CommentSidebarはAI適用placeholderをdisabledで表示する", () => {
+test("CommentSidebarはAI適用placeholderから詳細と比較スライダーを開ける", () => {
   const result = renderReadySidebar({
     onCopyLlmPrompt: vi.fn(),
   });
@@ -499,17 +499,35 @@ test("CommentSidebarはAI適用placeholderをdisabledで表示する", () => {
   openSecondaryActions(result);
 
   const applyWithAiButton = result.container.querySelector(
-    '[aria-label="コメントをAIで適用"]',
+    '[aria-label="AI適用の詳細を開く"]',
   ) as HTMLButtonElement;
 
-  expect(applyWithAiButton.disabled).toBe(true);
-  expect(applyWithAiButton.textContent).toContain("AI適用");
+  expect(applyWithAiButton.disabled).toBe(false);
+  expect(applyWithAiButton.textContent).toContain("AI適用の詳細");
   expect(result.container.textContent).toContain(
     "AI用プロンプトのコピーは利用できます。AI適用はprovider連携で差分プレビューを生成できるようになってから有効になります。",
   );
-  expect(result.container.textContent).toContain(
-    "Markdownの書き込みには明示的な確認が必要です。",
-  );
+
+  act(() => {
+    applyWithAiButton.click();
+  });
+
+  const slider = result.container.querySelector(
+    '[aria-label="古い内容と新しい内容の表示領域"]',
+  ) as HTMLInputElement;
+
+  expect(result.container.textContent).toContain("AI適用プレビュー詳細");
+  expect(result.container.textContent).toContain("Splitで並べて確認");
+  expect(result.container.textContent).toContain("古い内容");
+  expect(result.container.textContent).toContain("新しい内容");
+  expect(slider.value).toBe("50");
+
+  act(() => {
+    slider.value = "35";
+    slider.dispatchEvent(new InputEvent("input", { bubbles: true }));
+  });
+
+  expect(slider.value).toBe("35");
   result.unmount();
 });
 
