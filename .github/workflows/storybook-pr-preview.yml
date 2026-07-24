@@ -146,21 +146,52 @@ jobs:
             echo "📖 Storybook preview: ${URL}"
           } > "$BODY_FILE"
 
-          # 既存のプレビューコメントがあれば編集、なければ新規作成
-          COMMENT_ID="$(
-            gh api --paginate "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" \
-              --jq ".[] | select(.body | contains(\"${COMMENT_MARKER}\")) | .id" \
-              | head -n 1
-          )"
+          # 既存のプレビューコメントがあれば編集、なければ新規作成。
+          # gh api は一時的な 5xx を返すことがあるためリトライする。
+          # パイプ経由で head に渡すと gh 自体の終了コードが握りつぶされ、
+          # 失敗時のエラー本文がそのまま ID として後続 URL に混入するため、
+          # 変数代入の戻り値で直接 gh の終了コードを判定する
+          list_ok=false
+          for attempt in 1 2 3; do
+            if list_output="$(
+              gh api --paginate "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" \
+                --jq ".[] | select(.body | contains(\"${COMMENT_MARKER}\")) | .id"
+            )"; then
+              list_ok=true
+              break
+            fi
+            echo "list comments failed (attempt $attempt), retrying..."
+            echo "$list_output"
+            sleep $((attempt * 2))
+          done
+          [ "$list_ok" = "true" ]
 
-          if [ -n "$COMMENT_ID" ]; then
-            gh api \
-              --method PATCH \
-              "repos/${GITHUB_REPOSITORY}/issues/comments/${COMMENT_ID}" \
-              --field body=@"$BODY_FILE"
-          else
-            gh api \
-              --method POST \
-              "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" \
-              --field body=@"$BODY_FILE"
+          COMMENT_ID="$(printf '%s\n' "$list_output" | head -n 1)"
+          if [ -n "$COMMENT_ID" ] && ! [[ "$COMMENT_ID" =~ ^[0-9]+$ ]]; then
+            echo "unexpected comment id from gh api: $COMMENT_ID"
+            exit 1
           fi
+
+          publish_ok=false
+          for attempt in 1 2 3; do
+            if [ -n "$COMMENT_ID" ]; then
+              if gh api \
+                --method PATCH \
+                "repos/${GITHUB_REPOSITORY}/issues/comments/${COMMENT_ID}" \
+                --field body=@"$BODY_FILE"; then
+                publish_ok=true
+                break
+              fi
+            else
+              if gh api \
+                --method POST \
+                "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" \
+                --field body=@"$BODY_FILE"; then
+                publish_ok=true
+                break
+              fi
+            fi
+            echo "publish preview comment failed (attempt $attempt), retrying..."
+            sleep $((attempt * 2))
+          done
+          [ "$publish_ok" = "true" ]

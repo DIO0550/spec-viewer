@@ -29,6 +29,8 @@
     "release:check": "pnpm check && pnpm test:run && cargo test --manifest-path src-tauri/Cargo.toml && pnpm build && pnpm package:debug:linux",
     "storybook": "storybook dev -p 6006 --no-open",
     "build-storybook": "storybook build",
+    "visual:capture": "node ../.github/scripts/storybook-visual-regression.mjs capture",
+    "visual:compare": "node ../.github/scripts/storybook-visual-regression.mjs compare",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "format": "biome format --write .",
