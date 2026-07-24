@@ -1,4 +1,6 @@
 import {
+  ArrowLeft,
+  ChevronRight,
   Clipboard,
   Download,
   MoreHorizontal,
@@ -562,6 +564,8 @@ function CommentExportControls({
 }: CommentExportControlsProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isApplyAiDetailsOpen, setIsApplyAiDetailsOpen] = useState(false);
+  const [selectedApplyAiPreviewFileKey, setSelectedApplyAiPreviewFileKey] =
+    useState<string | null>(null);
   const [diffPreviewPosition, setDiffPreviewPosition] = useState(50);
   const menuId = useId();
   const placeholderDescriptionId = useId();
@@ -668,6 +672,7 @@ function CommentExportControls({
               setIsApplyAiDetailsOpen(
                 (currentIsApplyAiDetailsOpen) => !currentIsApplyAiDetailsOpen,
               );
+              setSelectedApplyAiPreviewFileKey(null);
             }}
           >
             <Sparkles aria-hidden="true" size={14} />
@@ -684,10 +689,20 @@ function CommentExportControls({
             {applyWithAiPlaceholderState.explanation}
           </p>
           {isApplyAiDetailsOpen ? (
-            <ApplyAiDiffPreviewDetails
-              diffPreviewPosition={diffPreviewPosition}
-              onDiffPreviewPositionChange={setDiffPreviewPosition}
-            />
+            selectedApplyAiPreviewFileKey === null ? (
+              <ApplyAiDiffPreviewFileList
+                onSelectFile={setSelectedApplyAiPreviewFileKey}
+              />
+            ) : (
+              <ApplyAiDiffPreviewDetails
+                fileKey={selectedApplyAiPreviewFileKey}
+                diffPreviewPosition={diffPreviewPosition}
+                onBack={() => {
+                  setSelectedApplyAiPreviewFileKey(null);
+                }}
+                onDiffPreviewPositionChange={setDiffPreviewPosition}
+              />
+            )
           ) : null}
         </div>
       ) : null}
@@ -695,8 +710,28 @@ function CommentExportControls({
   );
 }
 
+type ApplyAiDiffPreviewFile = Readonly<{
+  key: string;
+  label: string;
+  path: string;
+  changeSummary: string;
+  before: string;
+  after: string;
+}>;
+
+type ApplyAiDiffPreviewFileListProps = Readonly<{
+  /**
+   * Navigates to the selected preview file detail page.
+   * @param fileKey - The selected preview file key.
+   */
+  onSelectFile: (fileKey: string) => void;
+}>;
+
 type ApplyAiDiffPreviewDetailsProps = Readonly<{
+  fileKey: string;
   diffPreviewPosition: number;
+  /** Returns to the generated file list page. */
+  onBack: () => void;
   /**
    * Updates the before/after overlay split position.
    * @param position - The new split position percentage.
@@ -704,29 +739,103 @@ type ApplyAiDiffPreviewDetailsProps = Readonly<{
   onDiffPreviewPositionChange: (position: number) => void;
 }>;
 
-const applyAiPreviewBefore = `## 要件
+const applyAiPreviewFiles: readonly ApplyAiDiffPreviewFile[] = [
+  {
+    key: "tasks",
+    label: "tasks.md",
+    path: "docs/plans/tasks/later-phases/tasks.md",
+    changeSummary: "詳細ページ遷移と比較UIの受け入れ条件を追記",
+    before: `## 要件
 
 - レビューコメントを一覧で確認する。
-- AI適用は後続実装で接続する。`;
+- AI適用は後続実装で接続する。`,
+    after: `## 要件
 
-const applyAiPreviewAfter = `## 要件
-
-- レビューコメントを一覧で確認し、クリックで詳細を開く。
+- レビューコメントを一覧で確認し、対象ファイルをクリックして詳細ページへ遷移する。
 - 差分詳細ではSplit表示、重ね合わせ表示、スライダー比較を選べる。
-- AI適用は後続実装で接続する。`;
+- AI適用は後続実装で接続する。`,
+  },
+  {
+    key: "design",
+    label: "design.md",
+    path: "docs/design/apply-ai-diff-preview.md",
+    changeSummary: "差分レビュー画面の操作モデルを明文化",
+    before: `## 画面
+
+AI適用前に差分を確認する。`,
+    after: `## 画面
+
+AI適用前に差分を確認する。
+
+1. 変更ファイル一覧から対象を選ぶ。
+2. 詳細ページでSplitまたは重ね合わせを確認する。
+3. スライダーで古い内容と新しい内容の領域を調整する。`,
+  },
+];
+
+/** @returns A generated file list that navigates to each preview detail page. */
+function ApplyAiDiffPreviewFileList({
+  onSelectFile,
+}: ApplyAiDiffPreviewFileListProps) {
+  return (
+    <section
+      className="comment-sidebar__apply-ai-details"
+      aria-label={uiText.sidebar.applyAiGeneratedFiles}
+    >
+      <div className="comment-sidebar__apply-ai-details-header">
+        <h3>{uiText.sidebar.applyAiGeneratedFiles}</h3>
+        <span>{uiText.sidebar.previewOnly}</span>
+      </div>
+      <p>{uiText.sidebar.applyAiFileListDescription}</p>
+      <div className="comment-sidebar__apply-ai-file-list">
+        {applyAiPreviewFiles.map((file) => (
+          <button
+            key={file.key}
+            className="comment-sidebar__apply-ai-file"
+            type="button"
+            onClick={() => {
+              onSelectFile(file.key);
+            }}
+          >
+            <span>
+              <strong>{file.label}</strong>
+              <small>{file.path}</small>
+              <em>{file.changeSummary}</em>
+            </span>
+            <ChevronRight aria-hidden="true" size={15} />
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 /** @returns A static detail preview for the future AI apply diff review flow. */
 function ApplyAiDiffPreviewDetails({
+  fileKey,
   diffPreviewPosition,
+  onBack,
   onDiffPreviewPositionChange,
 }: ApplyAiDiffPreviewDetailsProps) {
+  const previewFile =
+    applyAiPreviewFiles.find((file) => file.key === fileKey) ??
+    applyAiPreviewFiles[0];
+
   return (
     <section
       className="comment-sidebar__apply-ai-details"
       aria-label={uiText.sidebar.applyAiDetails}
     >
+      <button
+        className="comment-sidebar__apply-ai-back"
+        type="button"
+        onClick={onBack}
+      >
+        <ArrowLeft aria-hidden="true" size={14} />
+        <span>{uiText.sidebar.backToApplyAiFiles}</span>
+      </button>
       <div className="comment-sidebar__apply-ai-details-header">
-        <h3>{uiText.sidebar.applyAiDetails}</h3>
+        <h3>{previewFile.label}</h3>
         <span>{uiText.sidebar.previewOnly}</span>
       </div>
       <p>{uiText.sidebar.applyAiDetailsDescription}</p>
@@ -736,23 +845,21 @@ function ApplyAiDiffPreviewDetails({
       >
         <DiffPreviewPane
           label={uiText.sidebar.beforePreview}
-          content={applyAiPreviewBefore}
+          content={previewFile.before}
         />
         <DiffPreviewPane
           label={uiText.sidebar.afterPreview}
-          content={applyAiPreviewAfter}
+          content={previewFile.after}
         />
       </section>
       <div className="comment-sidebar__diff-overlay">
         <div className="comment-sidebar__diff-overlay-frame">
-          <pre className="comment-sidebar__diff-layer">
-            {applyAiPreviewAfter}
-          </pre>
+          <pre className="comment-sidebar__diff-layer">{previewFile.after}</pre>
           <pre
             className="comment-sidebar__diff-layer comment-sidebar__diff-layer--before"
             style={{ clipPath: `inset(0 ${100 - diffPreviewPosition}% 0 0)` }}
           >
-            {applyAiPreviewBefore}
+            {previewFile.before}
           </pre>
           <span
             className="comment-sidebar__diff-divider"

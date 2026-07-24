@@ -60,7 +60,11 @@ export const uiText = {
     applyAiLabel: "AI適用の詳細を開く",
     showApplyAiDetails: "AI適用の詳細",
     hideApplyAiDetails: "詳細を閉じる",
+    applyAiGeneratedFiles: "生成予定ファイル",
+    applyAiFileListDescription:
+      "対象ファイルをクリックすると、差分プレビューの詳細ページへ遷移します。",
     applyAiDetails: "AI適用プレビュー詳細",
+    backToApplyAiFiles: "ファイル一覧へ戻る",
     previewOnly: "プレビューのみ",
     splitPreview: "Split比較",
     beforePreview: "古い内容",

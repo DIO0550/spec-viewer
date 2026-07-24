@@ -491,7 +491,7 @@ test("CommentSidebarはMCP feedback dry-runコピー中状態を表示する", (
   result.unmount();
 });
 
-test("CommentSidebarはAI適用placeholderから詳細と比較スライダーを開ける", () => {
+test("CommentSidebarはAI適用placeholderから指定ファイル詳細ページへ遷移できる", () => {
   const result = renderReadySidebar({
     onCopyLlmPrompt: vi.fn(),
   });
@@ -512,11 +512,26 @@ test("CommentSidebarはAI適用placeholderから詳細と比較スライダー�
     applyWithAiButton.click();
   });
 
+  const tasksFileButton = Array.from(
+    result.container.querySelectorAll("button"),
+  ).find(
+    (button) => button.textContent?.includes("tasks.md") ?? false,
+  ) as HTMLButtonElement;
+
+  expect(result.container.textContent).toContain("生成予定ファイル");
+  expect(result.container.textContent).toContain(
+    "対象ファイルをクリックすると、差分プレビューの詳細ページへ遷移します。",
+  );
+
+  act(() => {
+    tasksFileButton.click();
+  });
+
   const slider = result.container.querySelector(
     '[aria-label="古い内容と新しい内容の表示領域"]',
   ) as HTMLInputElement;
 
-  expect(result.container.textContent).toContain("AI適用プレビュー詳細");
+  expect(result.container.textContent).toContain("tasks.md");
   expect(result.container.textContent).toContain("Splitで並べて確認");
   expect(result.container.textContent).toContain("古い内容");
   expect(result.container.textContent).toContain("新しい内容");
@@ -528,6 +543,18 @@ test("CommentSidebarはAI適用placeholderから詳細と比較スライダー�
   });
 
   expect(slider.value).toBe("35");
+
+  const backButton = Array.from(
+    result.container.querySelectorAll("button"),
+  ).find(
+    (button) => button.textContent?.includes("ファイル一覧へ戻る") ?? false,
+  ) as HTMLButtonElement;
+
+  act(() => {
+    backButton.click();
+  });
+
+  expect(result.container.textContent).toContain("生成予定ファイル");
   result.unmount();
 });
 
