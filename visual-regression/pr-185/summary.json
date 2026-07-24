@@ -1,0 +1,816 @@
+{
+  "maxDiffRatio": 0.002,
+  "failed": 39,
+  "results": [
+    {
+      "story": "app--default",
+      "status": "changed",
+      "diffPixels": 33697,
+      "diffRatio": 0.036563585069444446,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "app-app-specviewcommentsidebar--default",
+      "status": "changed",
+      "diffPixels": 14450,
+      "diffRatio": 0.015679253472222224,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "app-app-specviewcommentsidebar--edge-cases",
+      "status": "changed",
+      "diffPixels": 6311,
+      "diffRatio": 0.006847873263888889,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "app-app-specviewcommentsidebar--empty",
+      "status": "changed",
+      "diffPixels": 14335,
+      "diffRatio": 0.01555447048611111,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "app-app-specviewcommentsidebar--loading",
+      "status": "changed",
+      "diffPixels": 5338,
+      "diffRatio": 0.005792100694444444,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "components-commanderrordisplay--all-props",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "components-commanderrordisplay--default",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "components-commanderrordisplay--edge-cases",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "components-emptystate--all-props",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "components-emptystate--default",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "components-emptystate--edge-cases",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "components-errorboundary--default",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "components-errorboundary--edge-cases",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "components-errorboundary--error",
+      "status": "changed",
+      "diffPixels": 9634,
+      "diffRatio": 0.010453559027777778,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "components-errorstate--all-props",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "components-errorstate--default",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "components-errorstate--edge-cases",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "components-loadingskeleton--all-props",
+      "status": "changed",
+      "diffPixels": 15327,
+      "diffRatio": 0.016630859375,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "components-loadingskeleton--default",
+      "status": "changed",
+      "diffPixels": 13373,
+      "diffRatio": 0.014510633680555555,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "components-loadingskeleton--edge-cases",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "components-workspacelayout--archiving",
+      "status": "changed",
+      "diffPixels": 9344,
+      "diffRatio": 0.010138888888888888,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "components-workspacelayout--default",
+      "status": "changed",
+      "diffPixels": 9344,
+      "diffRatio": 0.010138888888888888,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "components-workspacelayout--empty",
+      "status": "changed",
+      "diffPixels": 34296,
+      "diffRatio": 0.03721354166666667,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "components-workspacelayout--error",
+      "status": "changed",
+      "diffPixels": 23854,
+      "diffRatio": 0.02588324652777778,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "components-workspacelayout--loading",
+      "status": "changed",
+      "diffPixels": 24967,
+      "diffRatio": 0.027090928819444443,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-comments-components-addcommentpopover--default",
+      "status": "changed",
+      "diffPixels": 4641,
+      "diffRatio": 0.005035807291666666,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-comments-components-addcommentpopover--small-viewport-long-excerpt",
+      "status": "changed",
+      "diffPixels": 4705,
+      "diffRatio": 0.005105251736111111,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-comments-components-commentpopover--all-props",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-comments-components-commentpopover--default",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-comments-components-commentpopover--edge-cases",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-comments-components-commentsidebar--all-props",
+      "status": "changed",
+      "diffPixels": 14434,
+      "diffRatio": 0.01566189236111111,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-comments-components-commentsidebar--default",
+      "status": "changed",
+      "diffPixels": 18343,
+      "diffRatio": 0.019903428819444444,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-comments-components-commentsidebar--edge-cases",
+      "status": "changed",
+      "diffPixels": 13108,
+      "diffRatio": 0.014223090277777777,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-comments-components-commentsidebar--empty",
+      "status": "changed",
+      "diffPixels": 14288,
+      "diffRatio": 0.015503472222222222,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-comments-components-commentsidebar--error",
+      "status": "changed",
+      "diffPixels": 6298,
+      "diffRatio": 0.006833767361111111,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-comments-components-commentsidebar--loading",
+      "status": "changed",
+      "diffPixels": 19580,
+      "diffRatio": 0.021245659722222223,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-comments-components-commentthread--all-props",
+      "status": "changed",
+      "diffPixels": 5250,
+      "diffRatio": 0.005696614583333333,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-comments-components-commentthread--default",
+      "status": "changed",
+      "diffPixels": 4437,
+      "diffRatio": 0.004814453125,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-comments-components-commentthread--edge-cases",
+      "status": "changed",
+      "diffPixels": 5057,
+      "diffRatio": 0.0054871961805555555,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-sidebar-components-sidebarlayout--all-props",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-sidebar-components-sidebarlayout--default",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-sidebar-components-sidebarlayout--edge-cases",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-markdownviewer--existing-comment-cards",
+      "status": "passed",
+      "diffPixels": 890,
+      "diffRatio": 0.0009657118055555556,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-markdownviewer--highlighted-selection-surface",
+      "status": "passed",
+      "diffPixels": 890,
+      "diffRatio": 0.0009657118055555556,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-markdownviewer--tech-reference-html-preview",
+      "status": "passed",
+      "diffPixels": 890,
+      "diffRatio": 0.0009657118055555556,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-markdownviewer--test-cases-html",
+      "status": "passed",
+      "diffPixels": 890,
+      "diffRatio": 0.0009657118055555556,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-markdownviewer-htmldocument--all-props",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-markdownviewer-htmldocument--default",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-markdownviewer-htmldocument--edge-cases",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-markdownviewer-markdownviewerheader--default",
+      "status": "passed",
+      "diffPixels": 890,
+      "diffRatio": 0.0009657118055555556,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-markdownviewer-markdownviewerheader--edge-cases",
+      "status": "passed",
+      "diffPixels": 176,
+      "diffRatio": 0.00019097222222222223,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default",
+      "status": "passed",
+      "diffPixels": 893,
+      "diffRatio": 0.0009689670138888889,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases",
+      "status": "passed",
+      "diffPixels": 170,
+      "diffRatio": 0.00018446180555555555,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-markdownviewer-markdownviewerpanel--all-props",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-markdownviewer-markdownviewerpanel--default",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-markdownviewer-markdownviewerpanel--edge-cases",
+      "status": "changed",
+      "diffPixels": 5632,
+      "diffRatio": 0.006111111111111111,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-markdownviewer-markdownviewerstatuspanel--default",
+      "status": "changed",
+      "diffPixels": 5506,
+      "diffRatio": 0.005974392361111111,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases",
+      "status": "changed",
+      "diffPixels": 5632,
+      "diffRatio": 0.006111111111111111,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-markdownviewer-markdownviewerstatuspanel--empty",
+      "status": "passed",
+      "diffPixels": 957,
+      "diffRatio": 0.0010384114583333332,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-markdownviewer-markdownviewerstatuspanel--error",
+      "status": "passed",
+      "diffPixels": 1624,
+      "diffRatio": 0.0017621527777777778,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-markdownviewer-markdownviewerstatuspanel--loading",
+      "status": "changed",
+      "diffPixels": 45241,
+      "diffRatio": 0.049089626736111114,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-markdownviewer-markdownviewerstatuspanel--missing",
+      "status": "changed",
+      "diffPixels": 7323,
+      "diffRatio": 0.007945963541666667,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-spectabs--all-props",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-spectabs--default",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-spectabs--edge-cases",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-spectabs--empty",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-spectree--all-props",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-spectree--default",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-spectree--edge-cases",
+      "status": "changed",
+      "diffPixels": 5534,
+      "diffRatio": 0.006004774305555556,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-spectree--empty",
+      "status": "changed",
+      "diffPixels": 5701,
+      "diffRatio": 0.006185980902777778,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-spectree--error",
+      "status": "passed",
+      "diffPixels": 1620,
+      "diffRatio": 0.0017578125,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-specs-components-spectree--loading",
+      "status": "changed",
+      "diffPixels": 1880,
+      "diffRatio": 0.0020399305555555557,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-workspace-components-openworkspaceemptystate--all-props",
+      "status": "changed",
+      "diffPixels": 11367,
+      "diffRatio": 0.012333984375,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-workspace-components-openworkspaceemptystate--default",
+      "status": "changed",
+      "diffPixels": 10703,
+      "diffRatio": 0.011613498263888888,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-workspace-components-openworkspaceemptystate--edge-cases",
+      "status": "changed",
+      "diffPixels": 10501,
+      "diffRatio": 0.01139431423611111,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-workspace-components-workspacedropoverlay--default",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-workspace-components-workspacedropoverlay--edge-cases",
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-workspace-components-workspacesidebarsection--all-props",
+      "status": "passed",
+      "diffPixels": 1238,
+      "diffRatio": 0.0013433159722222223,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-workspace-components-workspacesidebarsection--default",
+      "status": "passed",
+      "diffPixels": 1238,
+      "diffRatio": 0.0013433159722222223,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-workspace-components-workspacesidebarsection--edge-cases",
+      "status": "changed",
+      "diffPixels": 3125,
+      "diffRatio": 0.003390842013888889,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-workspace-components-workspacetoolbar--all-props",
+      "status": "changed",
+      "diffPixels": 7261,
+      "diffRatio": 0.007878689236111111,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-workspace-components-workspacetoolbar--default",
+      "status": "changed",
+      "diffPixels": 5780,
+      "diffRatio": 0.006271701388888889,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    },
+    {
+      "story": "features-workspace-components-workspacetoolbar--edge-cases",
+      "status": "changed",
+      "diffPixels": 5783,
+      "diffRatio": 0.006274956597222222,
+      "hasExpected": true,
+      "hasActual": true,
+      "hasDiff": true
+    }
+  ]
+}
