@@ -28,6 +28,15 @@ pnpm check
 pnpm build
 ```
 
+## Storybook / Visual Regression
+
+```bash
+pnpm storybook
+pnpm build-storybook
+```
+
+Storybook は GitHub Pages (`https://dio0550.github.io/spec-viewer/`) にデプロイされる。PR ごとの preview と visual regression の詳細は [docs/visual-regression.md](./docs/visual-regression.md) を参照。
+
 ## Packaging
 
 Release preparation is documented in [docs/plans/release-packaging.md](./docs/plans/release-packaging.md).
