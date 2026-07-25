@@ -29,153 +29,193 @@ import {
 } from "@/features/workspace";
 import { WorkspaceLayout } from "@/components/WorkspaceLayout";
 
-const workspacePath = "/workspace/spec-reviewer";
+const workspacePath = "/Users/dio/work/pdfmod";
 const commentId = CommentId.fromString;
 
 const sampleSpec: SpecNode = {
-  id: "phase-1-viewer",
-  label: "Phase 1 Viewer",
+  id: "041-preview-task",
+  label: "041-preview-task",
   files: [
     {
+      key: "exploration",
+      label: "exploration.md",
+      fileName: "exploration.md",
+      status: "present",
+    },
+    {
+      key: "hearing",
+      label: "hearing.md",
+      fileName: "hearing.md",
+      status: "present",
+    },
+    {
       key: "impl",
-      label: "Implementation",
-      fileName: "implementation-plan.md",
-      status: "missing",
+      label: "impl.md",
+      fileName: "impl.md",
+      status: "present",
     },
     {
       key: "tasks",
-      label: "Tasks",
+      label: "tasks.md",
       fileName: "tasks.md",
-      status: "present",
-    },
-    {
-      key: "tech-reference",
-      label: "Tech Reference",
-      fileName: "tech-reference.html",
       status: "missing",
-      format: "html",
-    },
-    {
-      key: "test-cases",
-      label: "Test Cases",
-      fileName: "test-cases.html",
-      status: "missing",
-      format: "html",
-    },
-    {
-      key: "requirements",
-      label: "Requirements",
-      fileName: "requirements.html",
-      status: "present",
     },
   ],
-  children: [
-    {
-      id: "phase-1-comments",
-      label: "Phase 1 Comments",
-      files: [
-        {
-          key: "requirements",
-          label: "Requirements",
-          fileName: "requirements.md",
-          status: "present",
-        },
-      ],
-      children: [],
-    },
-  ],
+  children: [],
 };
 
 const sampleTree: SpecTreeShape = {
-  specs: [sampleSpec],
+  specs: [
+    {
+      id: "040-delete-task-flow",
+      label: "040-delete-task-flow",
+      files: sampleSpec.files,
+      children: [],
+    },
+    sampleSpec,
+    {
+      id: "042-cache-invalidation",
+      label: "042-cache-invalidation",
+      files: sampleSpec.files.slice(0, 3),
+      children: [],
+    },
+    {
+      id: "archive",
+      label: "archive",
+      files: [],
+      children: [
+        {
+          id: "archive/039-legacy-preview",
+          label: "039-legacy-preview",
+          files: sampleSpec.files,
+          children: [],
+        },
+      ],
+    },
+  ],
 };
 
+const implementationHeading = "Implementation";
 const sampleBlocks: readonly MarkdownBlockMetadata[] = [
   {
     blockType: "heading",
     blockIndex: 0,
-    textHash: createTextHash("P1.14 Markdown Rendering"),
-    textSnippet: "P1.14 Markdown Rendering",
+    textHash: createTextHash("Implementation"),
+    textSnippet: "Implementation",
     sourceRange: null,
   },
   {
-    blockType: "block_quote",
+    blockType: "paragraph",
     blockIndex: 1,
+    textHash: createTextHash("041-preview-task · impl"),
+    textSnippet: "041-preview-task · impl",
+    sourceRange: null,
+  },
+  {
+    blockType: "paragraph",
+    blockIndex: 2,
     textHash: createTextHash(
-      "Render review planning documents with anchors ready for comments.",
+      "タスクプレビューの実装方針を、既存の QuickView 相当機能との統合方針を含めて決める。認証と描画性能の 2 軸で判断する。",
     ),
     textSnippet:
-      "Render review planning documents with anchors ready for comments.",
+      "タスクプレビューの実装方針を、既存の QuickView 相当機能との統合方針を含めて決める。認証と描画性能の 2 軸で判断する。",
     sourceRange: null,
   },
   {
     blockType: "heading",
-    blockIndex: 2,
-    textHash: createTextHash("Acceptance"),
-    textSnippet: "Acceptance",
-    sourceRange: null,
-  },
-  {
-    blockType: "list_item",
     blockIndex: 3,
-    textHash: createTextHash("Headings and lists"),
-    textSnippet: "Headings and lists",
+    textHash: createTextHash("現状の課題"),
+    textSnippet: "現状の課題",
     sourceRange: null,
   },
   {
     blockType: "list_item",
     blockIndex: 4,
-    textHash: createTextHash("Fenced code blocks"),
-    textSnippet: "Fenced code blocks",
+    textHash: createTextHash("プレビュー起動フローが複数入口に散らばっている"),
+    textSnippet: "プレビュー起動フローが複数入口に散らばっている",
     sourceRange: null,
   },
   {
     blockType: "list_item",
     blockIndex: 5,
-    textHash: createTextHash("Comment behavior follows in P1.15"),
-    textSnippet: "Comment behavior follows in P1.15",
+    textHash: createTextHash(
+      "大きなタスクを開いたときの描画コストが線形に増える",
+    ),
+    textSnippet: "大きなタスクを開いたときの描画コストが線形に増える",
     sourceRange: null,
   },
   {
-    blockType: "code_block",
+    blockType: "list_item",
     blockIndex: 6,
-    textHash: createTextHash('const blockType = "heading";'),
-    textSnippet: 'const blockType = "heading";',
+    textHash: createTextHash(
+      "権限のないタスクを掴んだときのエラーハンドリングが弱い",
+    ),
+    textSnippet: "権限のないタスクを掴んだときのエラーハンドリングが弱い",
+    sourceRange: null,
+  },
+  {
+    blockType: "heading",
+    blockIndex: 7,
+    textHash: createTextHash("検討した選択肢"),
+    textSnippet: "検討した選択肢",
     sourceRange: null,
   },
   {
     blockType: "table",
-    blockIndex: 7,
+    blockIndex: 8,
     textHash: createTextHash(
-      "Element Status GFM table Ready External link Docs",
+      "OPTION VERDICT A 既存 QuickView をそのままタスクにも流用 rejected B QuickView をラップした TaskPreview を新規に薄く作る accepted C プレビュー基盤ごと書き直す deferred",
     ),
-    textSnippet: "Element Status GFM table Ready External link Docs",
+    textSnippet:
+      "OPTION VERDICT A 既存 QuickView をそのままタスクにも流用 rejected B QuickView をラップした TaskPreview を新規に薄く作る accepted C プレビュー基盤ごと書き直す deferred",
+    sourceRange: null,
+  },
+  {
+    blockType: "heading",
+    blockIndex: 9,
+    textHash: createTextHash("決定事項"),
+    textSnippet: "決定事項",
+    sourceRange: null,
+  },
+  {
+    blockType: "paragraph",
+    blockIndex: 10,
+    textHash: createTextHash(
+      "選択肢 B を採用する。既存の QuickView をラップした TaskPreview を薄く作り、タスク固有の権限チェックと空状態のみを新規実装する。描画は既存パスに委譲。",
+    ),
+    textSnippet:
+      "選択肢 B を採用する。既存の QuickView をラップした TaskPreview を薄く作り、タスク固有の権限チェックと空状態のみを新規実装する。描画は既存パスに委譲。",
     sourceRange: null,
   },
 ];
 
 const sampleDocument: SpecDocument = {
-  key: "tasks",
-  path: "/workspace/spec-reviewer/docs/plans/tasks/phase-1-viewer/p1-13-layout-components.md",
+  key: "impl",
+  path: `${workspacePath}/.plugin-workspace/.specs/041-preview-task/impl.md`,
   contents: [
-    "# P1.14 Markdown Rendering",
+    "# Implementation",
     "",
-    "> Render review planning documents with anchors ready for comments.",
+    "`041-preview-task · impl`",
     "",
-    "## Acceptance",
+    "タスクプレビューの実装方針を、既存の `QuickView` 相当機能との統合方針を含めて決める。認証と描画性能の 2 軸で判断する。",
     "",
-    "- [x] Headings and lists",
-    "- [x] Fenced code blocks",
-    "- [ ] Comment behavior follows in P1.15",
+    "## 現状の課題",
     "",
-    "```ts",
-    'const blockType = "heading";',
-    "```",
+    "- プレビュー起動フローが複数入口に散らばっている",
+    "- 大きなタスクを開いたときの描画コストが線形に増える",
+    "- 権限のないタスクを掴んだときのエラーハンドリングが弱い",
     "",
-    "| Element | Status |",
-    "| --- | --- |",
-    "| GFM table | Ready |",
-    "| External link | [Docs](https://example.com/docs) |",
+    "## 検討した選択肢",
+    "",
+    "| OPTION | | VERDICT |",
+    "| --- | --- | --- |",
+    "| A | 既存 QuickView をそのままタスクにも流用 | rejected |",
+    "| B | **QuickView をラップした TaskPreview を新規に薄く作る** | accepted |",
+    "| C | プレビュー基盤ごと書き直す | deferred |",
+    "",
+    "## 決定事項",
+    "",
+    "選択肢 B を採用する。既存の QuickView をラップした `TaskPreview` を薄く作り、タスク固有の権限チェックと空状態のみを新規実装する。描画は既存パスに委譲。",
   ].join("\n"),
   missing: false,
   blocks: sampleBlocks,
@@ -192,47 +232,71 @@ const readyDocumentState: SpecDocumentState = {
   status: "ready",
   workspacePath,
   specId: sampleSpec.id,
-  fileKey: "tasks",
+  fileKey: "impl",
   document: sampleDocument,
   error: null,
 };
 
 const sampleComments: readonly Comment[] = [
   {
-    id: commentId("cmt_story_open"),
+    id: commentId("cmt_story_open_1"),
     anchor: {
-      fileKey: "tasks",
-      blockType: "list_item",
-      blockIndex: 5,
-      textHash: createTextHash("Comment behavior follows in P1.15"),
-      textSnippet: "Comment behavior follows in P1.15",
-      charRange: {
-        start: 0,
-        end: 34,
-      },
+      fileKey: "impl",
+      blockType: "heading",
+      blockIndex: 0,
+      textHash: createTextHash(implementationHeading),
+      textSnippet: "scorer.ts L16 · calcFu",
+      charRange: { start: 0, end: 14 },
     },
-    body: "Check whether this note should move to Phase 2.",
+    body: "ctx が undefined のとき落ちる。null チェックいる?",
     status: "open",
-    createdAt: "2026-05-05T10:00:00Z",
-    updatedAt: "2026-05-05T10:15:00Z",
+    createdAt: "2026-07-25T12:00:00Z",
+    updatedAt: "2026-07-25T12:00:00Z",
+  },
+  {
+    id: commentId("cmt_story_open_2"),
+    anchor: {
+      fileKey: "impl",
+      blockType: "heading",
+      blockIndex: 0,
+      textHash: createTextHash(implementationHeading),
+      textSnippet: "pinfu.ts L10 · checkAllRuns",
+      charRange: { start: 0, end: 14 },
+    },
+    body: "agent-a5b8a0d3 は shapes を Map で持ってた。どっちが速いか計測したい",
+    status: "open",
+    createdAt: "2026-07-25T10:00:00Z",
+    updatedAt: "2026-07-25T10:00:00Z",
+  },
+  {
+    id: commentId("cmt_story_open_3"),
+    anchor: {
+      fileKey: "impl",
+      blockType: "heading",
+      blockIndex: 0,
+      textHash: createTextHash(implementationHeading),
+      textSnippet: "scorer.ts L14 · score()",
+      charRange: { start: 0, end: 14 },
+    },
+    body: "戻り値の Result 型、hands/*.ts と重複してるフィールドあり",
+    status: "open",
+    createdAt: "2026-07-25T08:00:00Z",
+    updatedAt: "2026-07-25T08:00:00Z",
   },
   {
     id: commentId("cmt_story_resolved"),
     anchor: {
-      fileKey: "tasks",
+      fileKey: "impl",
       blockType: "heading",
       blockIndex: 0,
-      textHash: createTextHash("P1.14 Markdown Rendering"),
-      textSnippet: "P1.14 Markdown Rendering",
-      charRange: {
-        start: 0,
-        end: 25,
-      },
+      textHash: createTextHash(implementationHeading),
+      textSnippet: "implementation decision",
+      charRange: { start: 0, end: 14 },
     },
-    body: "Rendering checklist is already reflected in the plan.",
+    body: "描画経路の統合方針を反映済み。",
     status: "resolved",
-    createdAt: "2026-05-05T11:00:00Z",
-    updatedAt: "2026-05-05T11:30:00Z",
+    createdAt: "2026-07-24T08:00:00Z",
+    updatedAt: "2026-07-24T09:00:00Z",
   },
 ];
 
@@ -334,11 +398,11 @@ function WorkspaceLayoutStory(props: WorkspaceLayoutStoryProps) {
         },
       }}
     >
+      <WorkspaceLayout.Pathbar>{toolbar}</WorkspaceLayout.Pathbar>
       <WorkspaceLayout.LeftNavigation header={leftHeader}>
         {sidebar}
       </WorkspaceLayout.LeftNavigation>
       <WorkspaceLayout.Main>
-        <WorkspaceLayout.Toolbar>{toolbar}</WorkspaceLayout.Toolbar>
         <WorkspaceLayout.Tabs>{tabs}</WorkspaceLayout.Tabs>
         <WorkspaceLayout.Viewer>{viewer}</WorkspaceLayout.Viewer>
       </WorkspaceLayout.Main>
@@ -376,7 +440,7 @@ const readySpecsArgs = createShellArgs({
   treeState: readyTreeState,
   documentState: readyDocumentState,
   selectedSpec: sampleSpec,
-  selectedFileKey: "tasks",
+  selectedFileKey: "impl",
   workspaceInput: workspacePath,
   workspaceStatusPath: workspacePath,
 });
@@ -407,7 +471,7 @@ export const Diff: Story = {
     treeState: readyTreeState,
     documentState: readyDocumentState,
     selectedSpec: sampleSpec,
-    selectedFileKey: "tasks",
+    selectedFileKey: "impl",
     workspaceInput: workspacePath,
     workspaceStatusPath: workspacePath,
     reviewMode: "diff",
@@ -419,7 +483,7 @@ export const Archiving: Story = {
     treeState: readyTreeState,
     documentState: readyDocumentState,
     selectedSpec: sampleSpec,
-    selectedFileKey: "tasks",
+    selectedFileKey: "impl",
     workspaceInput: workspacePath,
     workspaceStatusPath: workspacePath,
     archivingSpecId: sampleSpec.id,
@@ -438,12 +502,12 @@ export const Loading: Story = {
       status: "loading",
       workspacePath,
       specId: sampleSpec.id,
-      fileKey: "tasks",
+      fileKey: "impl",
       document: null,
       error: null,
     },
     selectedSpec: sampleSpec,
-    selectedFileKey: "tasks",
+    selectedFileKey: "impl",
     workspaceInput: workspacePath,
     workspaceStatusPath: workspacePath,
     isWorkspaceLoading: true,
@@ -495,7 +559,7 @@ export const Error: Story = {
       status: "error",
       workspacePath,
       specId: sampleSpec.id,
-      fileKey: "tasks",
+      fileKey: "impl",
       document: null,
       error: {
         feature: "specs",
@@ -510,7 +574,7 @@ export const Error: Story = {
       },
     },
     selectedSpec: sampleSpec,
-    selectedFileKey: "tasks",
+    selectedFileKey: "impl",
     workspaceInput: workspacePath,
     workspaceStatusPath: workspacePath,
     workspaceErrorMessage: "Workspace loaded with file warnings.",
@@ -578,7 +642,7 @@ function createShellArgs({
               selectedSpecLabel={selectedSpec?.label ?? null}
               selectedFileLabel={selectedFile?.label ?? null}
               comments={sampleComments}
-              activeCommentId={commentId("cmt_story_open")}
+              activeCommentId={commentId("cmt_story_open_1")}
               onReload={fn()}
               onSelectComment={fn()}
             />
@@ -590,19 +654,7 @@ function createShellArgs({
 
   return {
     leftOpen: true,
-    leftHeader: (
-      <div className="left-navigation-brand">
-        <span className="left-navigation-brand__mark" aria-hidden="true">
-          S
-        </span>
-        <span className="left-navigation-brand__copy">
-          <strong>Spec Reviewer</strong>
-          <span title={workspaceStatusPath ?? "ワークスペース未選択"}>
-            {workspaceStatusPath ?? "ワークスペース未選択"}
-          </span>
-        </span>
-      </div>
-    ),
+    leftHeader: null,
     toolbar: (
       <ThemeProvider>
         <WorkspaceToolbar
@@ -628,14 +680,20 @@ function createShellArgs({
           isBusy={isWorkspaceLoading}
           recentWorkspaces={[
             {
+              path: "/Users/dio/work/spec-board",
+              displayName: "spec-board",
+              kind: "plugin-workspace",
+              lastOpenedAt: "2026-05-07T00:00:00.000Z",
+            },
+            {
               path: workspacePath,
-              displayName: "plugin-workspace",
+              displayName: "pdfmod",
               kind: "plugin-workspace",
               lastOpenedAt: "2026-05-06T00:00:00.000Z",
             },
             {
-              path: "/workspace/spec-reviewer-worktree",
-              displayName: "plugin-worktree",
+              path: "/Users/dio/work/plugin-manager",
+              displayName: "plugin-manager",
               kind: "plugin-worktree",
               lastOpenedAt: "2026-05-05T00:00:00.000Z",
             },
@@ -645,12 +703,50 @@ function createShellArgs({
           onOpenWorkspace={fn()}
           onRemoveWorkspace={fn()}
         />
+        <div className="story-worktree-tree" aria-label="Worktrees">
+          <input
+            aria-label="Filter worktrees"
+            placeholder="Filter worktrees..."
+          />
+          <div className="story-worktree-tree__header">
+            <span>ROOT / WORKTREES 8</span>
+            <span aria-hidden="true">↻</span>
+          </div>
+          <div className="story-worktree-tree__row">
+            ⌂ root <span>0</span>
+          </div>
+          <div className="story-worktree-tree__row">
+            ▣ 549 <span>2</span>
+          </div>
+          <div className="story-worktree-tree__row story-worktree-tree__row--active">
+            ⑂ agent-a1b3ff42 <span>4</span>
+          </div>
+          <div className="story-worktree-tree__row">
+            ⑂ agent-a049b1c8 <span>0</span>
+          </div>
+          <div className="story-worktree-tree__row">
+            ⑂ agent-a395fbe1 <span>1</span>
+          </div>
+          <div className="story-worktree-tree__row">
+            ⑂ agent-a5b8a0d3 <span>2</span>
+          </div>
+          <div className="story-worktree-tree__row">
+            ⑂ agent-a65ad1a4 <span>7</span>
+          </div>
+          <div className="story-worktree-tree__row story-worktree-tree__row--muted">
+            ▱ archive <span>12</span>
+          </div>
+        </div>
       </div>
     ),
     tabs: (
       <ReviewModeToolbar
         mode={reviewMode}
-        fileLabel={selectedFile?.label ?? "ファイル未選択"}
+        fileLabel={
+          selectedSpec !== null && selectedFile !== null
+            ? `${selectedSpec.label} / ${selectedFile.fileName}`
+            : "ファイル未選択"
+        }
         onModeChange={fn()}
       />
     ),
@@ -668,7 +764,7 @@ function createShellArgs({
           commentId: null,
           error: null,
         }}
-        activeCommentId={commentId("cmt_story_open")}
+        activeCommentId={commentId("cmt_story_open_1")}
         onSelectComment={fn()}
         onResolveComment={fn()}
         onReopenComment={fn()}
