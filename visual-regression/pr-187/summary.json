@@ -158,8 +158,8 @@
     {
       "story": "components-loadingskeleton--all-props",
       "status": "changed",
-      "diffPixels": 918784,
-      "diffRatio": 0.9969444444444444,
+      "diffPixels": 920695,
+      "diffRatio": 0.9990180121527777,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -167,8 +167,8 @@
     {
       "story": "components-loadingskeleton--default",
       "status": "changed",
-      "diffPixels": 920909,
-      "diffRatio": 0.9992502170138889,
+      "diffPixels": 920915,
+      "diffRatio": 0.9992567274305556,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -248,8 +248,8 @@
     {
       "story": "components-workspacelayout--loading",
       "status": "changed",
-      "diffPixels": 718724,
-      "diffRatio": 0.7798654513888889,
+      "diffPixels": 718736,
+      "diffRatio": 0.7798784722222222,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -347,8 +347,8 @@
     {
       "story": "features-comments-components-commentsidebar--loading",
       "status": "changed",
-      "diffPixels": 920324,
-      "diffRatio": 0.9986154513888889,
+      "diffPixels": 920326,
+      "diffRatio": 0.9986176215277778,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -671,8 +671,8 @@
     {
       "story": "features-specs-components-markdownviewer-markdownviewerstatuspanel--loading",
       "status": "changed",
-      "diffPixels": 920543,
-      "diffRatio": 0.9988530815972222,
+      "diffPixels": 899645,
+      "diffRatio": 0.9761773003472223,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
