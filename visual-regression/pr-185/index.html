@@ -34,7 +34,7 @@
     .story-nav__scroll { min-height: 0; overflow: auto; scrollbar-gutter: stable; padding: 10px 16px 20px; }
     .story-nav__group { margin: 6px 0 14px; }
     .story-nav__group > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 4px; color: var(--muted); cursor: pointer; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
-    .story-nav__group--changed > summary { color: var(--danger); }
+    .story-nav__group--changed > summary, .story-nav__group--layout-diff > summary, .story-nav__group--file-not-exists > summary { color: var(--danger); }
     .story-nav__group--passed > summary { color: var(--ok); }
     .story-nav ul { list-style: none; margin: 0; padding: 0; }
     .story-nav__tree ul { margin-left: 10px; padding-left: 10px; border-left: 1px solid #3a4654; }
@@ -56,10 +56,12 @@
     .story-nav__empty { padding: 24px 8px; color: var(--muted); font-size: 13px; text-align: center; }
     .story { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 20px; margin-top: 18px; box-shadow: 0 18px 50px rgb(0 0 0 / 24%); }
     .story--changed { border-color: rgb(251 113 133 / 70%); }
+    .story--layout-diff, .story--file-not-exists { border-color: rgb(251 113 133 / 70%); }
     .story--passed { border-color: rgb(52 211 153 / 45%); }
     .story__header { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 18px; }
     .status { display: inline-block; color: var(--bg); background: var(--warn); border-radius: 999px; padding: 3px 9px; font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
     .story--changed .status { background: var(--danger); }
+    .story--layout-diff .status, .story--file-not-exists .status { background: var(--danger); }
     .story--passed .status { background: var(--ok); }
     .metrics { display: flex; gap: 12px; margin: 0; }
     .metrics div { min-width: 110px; border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
@@ -102,8 +104,8 @@
       <label class="story-nav__filter"><span class="tree-icon tree-icon--search" aria-hidden="true"></span><input type="search" placeholder="Filter stories..." data-story-filter aria-label="Filter stories"></label>
     </header>
     <div class="story-nav__scroll" data-story-tree>
-      <details class="story-nav__group story-nav__group--changed" open data-status-group>
-        <summary><span>Changed</span><span class="story-nav__count">39</span></summary>
+      <details class="story-nav__group story-nav__group--passed" open data-status-group>
+        <summary><span>Clear</span><span class="story-nav__count">90</span></summary>
         <ul class="story-nav__tree"><li data-tree-node>
     <details open>
       <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>App</span></summary>
@@ -129,13 +131,28 @@
       <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>components</span></summary>
       <ul><li data-tree-node>
     <details open>
+      <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>CommandErrorDisplay</span></summary>
+      <ul><li class="story-nav__story" data-tree-leaf data-search-text="components/commanderrordisplay all props components-commanderrordisplay--all-props"><a href="#components-commanderrordisplay--all-props" title="components-commanderrordisplay--all-props"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>All Props</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="components/commanderrordisplay default components-commanderrordisplay--default"><a href="#components-commanderrordisplay--default" title="components-commanderrordisplay--default"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Default</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="components/commanderrordisplay edge cases components-commanderrordisplay--edge-cases"><a href="#components-commanderrordisplay--edge-cases" title="components-commanderrordisplay--edge-cases"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Edge Cases</span></a></li></ul>
+    </details>
+  </li><li data-tree-node>
+    <details open>
+      <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>EmptyState</span></summary>
+      <ul><li class="story-nav__story" data-tree-leaf data-search-text="components/emptystate all props components-emptystate--all-props"><a href="#components-emptystate--all-props" title="components-emptystate--all-props"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>All Props</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="components/emptystate default components-emptystate--default"><a href="#components-emptystate--default" title="components-emptystate--default"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Default</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="components/emptystate edge cases components-emptystate--edge-cases"><a href="#components-emptystate--edge-cases" title="components-emptystate--edge-cases"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Edge Cases</span></a></li></ul>
+    </details>
+  </li><li data-tree-node>
+    <details open>
       <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>ErrorBoundary</span></summary>
-      <ul><li class="story-nav__story" data-tree-leaf data-search-text="components/errorboundary error components-errorboundary--error"><a href="#components-errorboundary--error" title="components-errorboundary--error"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Error</span></a></li></ul>
+      <ul><li class="story-nav__story" data-tree-leaf data-search-text="components/errorboundary default components-errorboundary--default"><a href="#components-errorboundary--default" title="components-errorboundary--default"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Default</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="components/errorboundary edge cases components-errorboundary--edge-cases"><a href="#components-errorboundary--edge-cases" title="components-errorboundary--edge-cases"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Edge Cases</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="components/errorboundary error components-errorboundary--error"><a href="#components-errorboundary--error" title="components-errorboundary--error"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Error</span></a></li></ul>
+    </details>
+  </li><li data-tree-node>
+    <details open>
+      <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>ErrorState</span></summary>
+      <ul><li class="story-nav__story" data-tree-leaf data-search-text="components/errorstate all props components-errorstate--all-props"><a href="#components-errorstate--all-props" title="components-errorstate--all-props"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>All Props</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="components/errorstate default components-errorstate--default"><a href="#components-errorstate--default" title="components-errorstate--default"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Default</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="components/errorstate edge cases components-errorstate--edge-cases"><a href="#components-errorstate--edge-cases" title="components-errorstate--edge-cases"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Edge Cases</span></a></li></ul>
     </details>
   </li><li data-tree-node>
     <details open>
       <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>LoadingSkeleton</span></summary>
-      <ul><li class="story-nav__story" data-tree-leaf data-search-text="components/loadingskeleton all props components-loadingskeleton--all-props"><a href="#components-loadingskeleton--all-props" title="components-loadingskeleton--all-props"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>All Props</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="components/loadingskeleton default components-loadingskeleton--default"><a href="#components-loadingskeleton--default" title="components-loadingskeleton--default"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Default</span></a></li></ul>
+      <ul><li class="story-nav__story" data-tree-leaf data-search-text="components/loadingskeleton all props components-loadingskeleton--all-props"><a href="#components-loadingskeleton--all-props" title="components-loadingskeleton--all-props"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>All Props</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="components/loadingskeleton default components-loadingskeleton--default"><a href="#components-loadingskeleton--default" title="components-loadingskeleton--default"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Default</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="components/loadingskeleton edge cases components-loadingskeleton--edge-cases"><a href="#components-loadingskeleton--edge-cases" title="components-loadingskeleton--edge-cases"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Edge Cases</span></a></li></ul>
     </details>
   </li><li data-tree-node>
     <details open>
@@ -160,6 +177,11 @@
     </details>
   </li><li data-tree-node>
     <details open>
+      <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>CommentPopover</span></summary>
+      <ul><li class="story-nav__story" data-tree-leaf data-search-text="features/comments/components/commentpopover all props features-comments-components-commentpopover--all-props"><a href="#features-comments-components-commentpopover--all-props" title="features-comments-components-commentpopover--all-props"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>All Props</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/comments/components/commentpopover default features-comments-components-commentpopover--default"><a href="#features-comments-components-commentpopover--default" title="features-comments-components-commentpopover--default"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Default</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/comments/components/commentpopover edge cases features-comments-components-commentpopover--edge-cases"><a href="#features-comments-components-commentpopover--edge-cases" title="features-comments-components-commentpopover--edge-cases"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Edge Cases</span></a></li></ul>
+    </details>
+  </li><li data-tree-node>
+    <details open>
       <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>CommentSidebar</span></summary>
       <ul><li class="story-nav__story" data-tree-leaf data-search-text="features/comments/components/commentsidebar all props features-comments-components-commentsidebar--all-props"><a href="#features-comments-components-commentsidebar--all-props" title="features-comments-components-commentsidebar--all-props"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>All Props</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/comments/components/commentsidebar default features-comments-components-commentsidebar--default"><a href="#features-comments-components-commentsidebar--default" title="features-comments-components-commentsidebar--default"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Default</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/comments/components/commentsidebar edge cases features-comments-components-commentsidebar--edge-cases"><a href="#features-comments-components-commentsidebar--edge-cases" title="features-comments-components-commentsidebar--edge-cases"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Edge Cases</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/comments/components/commentsidebar empty features-comments-components-commentsidebar--empty"><a href="#features-comments-components-commentsidebar--empty" title="features-comments-components-commentsidebar--empty"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Empty</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/comments/components/commentsidebar error features-comments-components-commentsidebar--error"><a href="#features-comments-components-commentsidebar--error" title="features-comments-components-commentsidebar--error"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Error</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/comments/components/commentsidebar loading features-comments-components-commentsidebar--loading"><a href="#features-comments-components-commentsidebar--loading" title="features-comments-components-commentsidebar--loading"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Loading</span></a></li></ul>
     </details>
@@ -167,114 +189,6 @@
     <details open>
       <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>CommentThread</span></summary>
       <ul><li class="story-nav__story" data-tree-leaf data-search-text="features/comments/components/commentthread all props features-comments-components-commentthread--all-props"><a href="#features-comments-components-commentthread--all-props" title="features-comments-components-commentthread--all-props"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>All Props</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/comments/components/commentthread default features-comments-components-commentthread--default"><a href="#features-comments-components-commentthread--default" title="features-comments-components-commentthread--default"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Default</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/comments/components/commentthread edge cases features-comments-components-commentthread--edge-cases"><a href="#features-comments-components-commentthread--edge-cases" title="features-comments-components-commentthread--edge-cases"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Edge Cases</span></a></li></ul>
-    </details>
-  </li></ul>
-    </details>
-  </li></ul>
-    </details>
-  </li><li data-tree-node>
-    <details open>
-      <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>specs</span></summary>
-      <ul><li data-tree-node>
-    <details open>
-      <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>components</span></summary>
-      <ul><li data-tree-node>
-    <details open>
-      <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>MarkdownViewer</span></summary>
-      <ul><li data-tree-node>
-    <details open>
-      <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>MarkdownViewerPanel</span></summary>
-      <ul><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/markdownviewer/markdownviewerpanel edge cases features-specs-components-markdownviewer-markdownviewerpanel--edge-cases"><a href="#features-specs-components-markdownviewer-markdownviewerpanel--edge-cases" title="features-specs-components-markdownviewer-markdownviewerpanel--edge-cases"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Edge Cases</span></a></li></ul>
-    </details>
-  </li><li data-tree-node>
-    <details open>
-      <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>MarkdownViewerStatusPanel</span></summary>
-      <ul><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/markdownviewer/markdownviewerstatuspanel default features-specs-components-markdownviewer-markdownviewerstatuspanel--default"><a href="#features-specs-components-markdownviewer-markdownviewerstatuspanel--default" title="features-specs-components-markdownviewer-markdownviewerstatuspanel--default"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Default</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/markdownviewer/markdownviewerstatuspanel edge cases features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases"><a href="#features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases" title="features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Edge Cases</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/markdownviewer/markdownviewerstatuspanel loading features-specs-components-markdownviewer-markdownviewerstatuspanel--loading"><a href="#features-specs-components-markdownviewer-markdownviewerstatuspanel--loading" title="features-specs-components-markdownviewer-markdownviewerstatuspanel--loading"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Loading</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/markdownviewer/markdownviewerstatuspanel missing features-specs-components-markdownviewer-markdownviewerstatuspanel--missing"><a href="#features-specs-components-markdownviewer-markdownviewerstatuspanel--missing" title="features-specs-components-markdownviewer-markdownviewerstatuspanel--missing"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Missing</span></a></li></ul>
-    </details>
-  </li></ul>
-    </details>
-  </li><li data-tree-node>
-    <details open>
-      <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>SpecTree</span></summary>
-      <ul><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/spectree edge cases features-specs-components-spectree--edge-cases"><a href="#features-specs-components-spectree--edge-cases" title="features-specs-components-spectree--edge-cases"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Edge Cases</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/spectree empty features-specs-components-spectree--empty"><a href="#features-specs-components-spectree--empty" title="features-specs-components-spectree--empty"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Empty</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/spectree loading features-specs-components-spectree--loading"><a href="#features-specs-components-spectree--loading" title="features-specs-components-spectree--loading"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Loading</span></a></li></ul>
-    </details>
-  </li></ul>
-    </details>
-  </li></ul>
-    </details>
-  </li><li data-tree-node>
-    <details open>
-      <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>workspace</span></summary>
-      <ul><li data-tree-node>
-    <details open>
-      <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>components</span></summary>
-      <ul><li data-tree-node>
-    <details open>
-      <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>OpenWorkspaceEmptyState</span></summary>
-      <ul><li class="story-nav__story" data-tree-leaf data-search-text="features/workspace/components/openworkspaceemptystate all props features-workspace-components-openworkspaceemptystate--all-props"><a href="#features-workspace-components-openworkspaceemptystate--all-props" title="features-workspace-components-openworkspaceemptystate--all-props"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>All Props</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/workspace/components/openworkspaceemptystate default features-workspace-components-openworkspaceemptystate--default"><a href="#features-workspace-components-openworkspaceemptystate--default" title="features-workspace-components-openworkspaceemptystate--default"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Default</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/workspace/components/openworkspaceemptystate edge cases features-workspace-components-openworkspaceemptystate--edge-cases"><a href="#features-workspace-components-openworkspaceemptystate--edge-cases" title="features-workspace-components-openworkspaceemptystate--edge-cases"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Edge Cases</span></a></li></ul>
-    </details>
-  </li><li data-tree-node>
-    <details open>
-      <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>WorkspaceSidebarSection</span></summary>
-      <ul><li class="story-nav__story" data-tree-leaf data-search-text="features/workspace/components/workspacesidebarsection edge cases features-workspace-components-workspacesidebarsection--edge-cases"><a href="#features-workspace-components-workspacesidebarsection--edge-cases" title="features-workspace-components-workspacesidebarsection--edge-cases"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Edge Cases</span></a></li></ul>
-    </details>
-  </li><li data-tree-node>
-    <details open>
-      <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>WorkspaceToolbar</span></summary>
-      <ul><li class="story-nav__story" data-tree-leaf data-search-text="features/workspace/components/workspacetoolbar all props features-workspace-components-workspacetoolbar--all-props"><a href="#features-workspace-components-workspacetoolbar--all-props" title="features-workspace-components-workspacetoolbar--all-props"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>All Props</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/workspace/components/workspacetoolbar default features-workspace-components-workspacetoolbar--default"><a href="#features-workspace-components-workspacetoolbar--default" title="features-workspace-components-workspacetoolbar--default"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Default</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/workspace/components/workspacetoolbar edge cases features-workspace-components-workspacetoolbar--edge-cases"><a href="#features-workspace-components-workspacetoolbar--edge-cases" title="features-workspace-components-workspacetoolbar--edge-cases"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Edge Cases</span></a></li></ul>
-    </details>
-  </li></ul>
-    </details>
-  </li></ul>
-    </details>
-  </li></ul>
-    </details>
-  </li></ul>
-      </details><details class="story-nav__group story-nav__group--passed" open data-status-group>
-        <summary><span>Clear</span><span class="story-nav__count">51</span></summary>
-        <ul class="story-nav__tree"><li data-tree-node>
-    <details open>
-      <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>components</span></summary>
-      <ul><li data-tree-node>
-    <details open>
-      <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>CommandErrorDisplay</span></summary>
-      <ul><li class="story-nav__story" data-tree-leaf data-search-text="components/commanderrordisplay all props components-commanderrordisplay--all-props"><a href="#components-commanderrordisplay--all-props" title="components-commanderrordisplay--all-props"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>All Props</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="components/commanderrordisplay default components-commanderrordisplay--default"><a href="#components-commanderrordisplay--default" title="components-commanderrordisplay--default"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Default</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="components/commanderrordisplay edge cases components-commanderrordisplay--edge-cases"><a href="#components-commanderrordisplay--edge-cases" title="components-commanderrordisplay--edge-cases"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Edge Cases</span></a></li></ul>
-    </details>
-  </li><li data-tree-node>
-    <details open>
-      <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>EmptyState</span></summary>
-      <ul><li class="story-nav__story" data-tree-leaf data-search-text="components/emptystate all props components-emptystate--all-props"><a href="#components-emptystate--all-props" title="components-emptystate--all-props"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>All Props</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="components/emptystate default components-emptystate--default"><a href="#components-emptystate--default" title="components-emptystate--default"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Default</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="components/emptystate edge cases components-emptystate--edge-cases"><a href="#components-emptystate--edge-cases" title="components-emptystate--edge-cases"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Edge Cases</span></a></li></ul>
-    </details>
-  </li><li data-tree-node>
-    <details open>
-      <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>ErrorBoundary</span></summary>
-      <ul><li class="story-nav__story" data-tree-leaf data-search-text="components/errorboundary default components-errorboundary--default"><a href="#components-errorboundary--default" title="components-errorboundary--default"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Default</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="components/errorboundary edge cases components-errorboundary--edge-cases"><a href="#components-errorboundary--edge-cases" title="components-errorboundary--edge-cases"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Edge Cases</span></a></li></ul>
-    </details>
-  </li><li data-tree-node>
-    <details open>
-      <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>ErrorState</span></summary>
-      <ul><li class="story-nav__story" data-tree-leaf data-search-text="components/errorstate all props components-errorstate--all-props"><a href="#components-errorstate--all-props" title="components-errorstate--all-props"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>All Props</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="components/errorstate default components-errorstate--default"><a href="#components-errorstate--default" title="components-errorstate--default"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Default</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="components/errorstate edge cases components-errorstate--edge-cases"><a href="#components-errorstate--edge-cases" title="components-errorstate--edge-cases"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Edge Cases</span></a></li></ul>
-    </details>
-  </li><li data-tree-node>
-    <details open>
-      <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>LoadingSkeleton</span></summary>
-      <ul><li class="story-nav__story" data-tree-leaf data-search-text="components/loadingskeleton edge cases components-loadingskeleton--edge-cases"><a href="#components-loadingskeleton--edge-cases" title="components-loadingskeleton--edge-cases"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Edge Cases</span></a></li></ul>
-    </details>
-  </li></ul>
-    </details>
-  </li><li data-tree-node>
-    <details open>
-      <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>features</span></summary>
-      <ul><li data-tree-node>
-    <details open>
-      <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>comments</span></summary>
-      <ul><li data-tree-node>
-    <details open>
-      <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>components</span></summary>
-      <ul><li data-tree-node>
-    <details open>
-      <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>CommentPopover</span></summary>
-      <ul><li class="story-nav__story" data-tree-leaf data-search-text="features/comments/components/commentpopover all props features-comments-components-commentpopover--all-props"><a href="#features-comments-components-commentpopover--all-props" title="features-comments-components-commentpopover--all-props"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>All Props</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/comments/components/commentpopover default features-comments-components-commentpopover--default"><a href="#features-comments-components-commentpopover--default" title="features-comments-components-commentpopover--default"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Default</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/comments/components/commentpopover edge cases features-comments-components-commentpopover--edge-cases"><a href="#features-comments-components-commentpopover--edge-cases" title="features-comments-components-commentpopover--edge-cases"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Edge Cases</span></a></li></ul>
     </details>
   </li></ul>
     </details>
@@ -327,12 +241,12 @@
   </li><li data-tree-node>
     <details open>
       <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>MarkdownViewerPanel</span></summary>
-      <ul><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/markdownviewer/markdownviewerpanel all props features-specs-components-markdownviewer-markdownviewerpanel--all-props"><a href="#features-specs-components-markdownviewer-markdownviewerpanel--all-props" title="features-specs-components-markdownviewer-markdownviewerpanel--all-props"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>All Props</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/markdownviewer/markdownviewerpanel default features-specs-components-markdownviewer-markdownviewerpanel--default"><a href="#features-specs-components-markdownviewer-markdownviewerpanel--default" title="features-specs-components-markdownviewer-markdownviewerpanel--default"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Default</span></a></li></ul>
+      <ul><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/markdownviewer/markdownviewerpanel all props features-specs-components-markdownviewer-markdownviewerpanel--all-props"><a href="#features-specs-components-markdownviewer-markdownviewerpanel--all-props" title="features-specs-components-markdownviewer-markdownviewerpanel--all-props"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>All Props</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/markdownviewer/markdownviewerpanel default features-specs-components-markdownviewer-markdownviewerpanel--default"><a href="#features-specs-components-markdownviewer-markdownviewerpanel--default" title="features-specs-components-markdownviewer-markdownviewerpanel--default"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Default</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/markdownviewer/markdownviewerpanel edge cases features-specs-components-markdownviewer-markdownviewerpanel--edge-cases"><a href="#features-specs-components-markdownviewer-markdownviewerpanel--edge-cases" title="features-specs-components-markdownviewer-markdownviewerpanel--edge-cases"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Edge Cases</span></a></li></ul>
     </details>
   </li><li data-tree-node>
     <details open>
       <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>MarkdownViewerStatusPanel</span></summary>
-      <ul><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/markdownviewer/markdownviewerstatuspanel empty features-specs-components-markdownviewer-markdownviewerstatuspanel--empty"><a href="#features-specs-components-markdownviewer-markdownviewerstatuspanel--empty" title="features-specs-components-markdownviewer-markdownviewerstatuspanel--empty"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Empty</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/markdownviewer/markdownviewerstatuspanel error features-specs-components-markdownviewer-markdownviewerstatuspanel--error"><a href="#features-specs-components-markdownviewer-markdownviewerstatuspanel--error" title="features-specs-components-markdownviewer-markdownviewerstatuspanel--error"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Error</span></a></li></ul>
+      <ul><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/markdownviewer/markdownviewerstatuspanel default features-specs-components-markdownviewer-markdownviewerstatuspanel--default"><a href="#features-specs-components-markdownviewer-markdownviewerstatuspanel--default" title="features-specs-components-markdownviewer-markdownviewerstatuspanel--default"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Default</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/markdownviewer/markdownviewerstatuspanel edge cases features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases"><a href="#features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases" title="features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Edge Cases</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/markdownviewer/markdownviewerstatuspanel empty features-specs-components-markdownviewer-markdownviewerstatuspanel--empty"><a href="#features-specs-components-markdownviewer-markdownviewerstatuspanel--empty" title="features-specs-components-markdownviewer-markdownviewerstatuspanel--empty"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Empty</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/markdownviewer/markdownviewerstatuspanel error features-specs-components-markdownviewer-markdownviewerstatuspanel--error"><a href="#features-specs-components-markdownviewer-markdownviewerstatuspanel--error" title="features-specs-components-markdownviewer-markdownviewerstatuspanel--error"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Error</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/markdownviewer/markdownviewerstatuspanel loading features-specs-components-markdownviewer-markdownviewerstatuspanel--loading"><a href="#features-specs-components-markdownviewer-markdownviewerstatuspanel--loading" title="features-specs-components-markdownviewer-markdownviewerstatuspanel--loading"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Loading</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/markdownviewer/markdownviewerstatuspanel missing features-specs-components-markdownviewer-markdownviewerstatuspanel--missing"><a href="#features-specs-components-markdownviewer-markdownviewerstatuspanel--missing" title="features-specs-components-markdownviewer-markdownviewerstatuspanel--missing"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Missing</span></a></li></ul>
     </details>
   </li><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/markdownviewer existing comment cards features-specs-components-markdownviewer--existing-comment-cards"><a href="#features-specs-components-markdownviewer--existing-comment-cards" title="features-specs-components-markdownviewer--existing-comment-cards"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Existing Comment Cards</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/markdownviewer highlighted selection surface features-specs-components-markdownviewer--highlighted-selection-surface"><a href="#features-specs-components-markdownviewer--highlighted-selection-surface" title="features-specs-components-markdownviewer--highlighted-selection-surface"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Highlighted Selection Surface</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/markdownviewer tech reference html preview features-specs-components-markdownviewer--tech-reference-html-preview"><a href="#features-specs-components-markdownviewer--tech-reference-html-preview" title="features-specs-components-markdownviewer--tech-reference-html-preview"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Tech Reference Html Preview</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/markdownviewer test cases html features-specs-components-markdownviewer--test-cases-html"><a href="#features-specs-components-markdownviewer--test-cases-html" title="features-specs-components-markdownviewer--test-cases-html"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Test Cases Html</span></a></li></ul>
     </details>
@@ -344,7 +258,7 @@
   </li><li data-tree-node>
     <details open>
       <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>SpecTree</span></summary>
-      <ul><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/spectree all props features-specs-components-spectree--all-props"><a href="#features-specs-components-spectree--all-props" title="features-specs-components-spectree--all-props"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>All Props</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/spectree default features-specs-components-spectree--default"><a href="#features-specs-components-spectree--default" title="features-specs-components-spectree--default"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Default</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/spectree error features-specs-components-spectree--error"><a href="#features-specs-components-spectree--error" title="features-specs-components-spectree--error"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Error</span></a></li></ul>
+      <ul><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/spectree all props features-specs-components-spectree--all-props"><a href="#features-specs-components-spectree--all-props" title="features-specs-components-spectree--all-props"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>All Props</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/spectree default features-specs-components-spectree--default"><a href="#features-specs-components-spectree--default" title="features-specs-components-spectree--default"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Default</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/spectree edge cases features-specs-components-spectree--edge-cases"><a href="#features-specs-components-spectree--edge-cases" title="features-specs-components-spectree--edge-cases"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Edge Cases</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/spectree empty features-specs-components-spectree--empty"><a href="#features-specs-components-spectree--empty" title="features-specs-components-spectree--empty"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Empty</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/spectree error features-specs-components-spectree--error"><a href="#features-specs-components-spectree--error" title="features-specs-components-spectree--error"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Error</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/specs/components/spectree loading features-specs-components-spectree--loading"><a href="#features-specs-components-spectree--loading" title="features-specs-components-spectree--loading"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Loading</span></a></li></ul>
     </details>
   </li></ul>
     </details>
@@ -358,13 +272,23 @@
       <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>components</span></summary>
       <ul><li data-tree-node>
     <details open>
+      <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>OpenWorkspaceEmptyState</span></summary>
+      <ul><li class="story-nav__story" data-tree-leaf data-search-text="features/workspace/components/openworkspaceemptystate all props features-workspace-components-openworkspaceemptystate--all-props"><a href="#features-workspace-components-openworkspaceemptystate--all-props" title="features-workspace-components-openworkspaceemptystate--all-props"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>All Props</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/workspace/components/openworkspaceemptystate default features-workspace-components-openworkspaceemptystate--default"><a href="#features-workspace-components-openworkspaceemptystate--default" title="features-workspace-components-openworkspaceemptystate--default"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Default</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/workspace/components/openworkspaceemptystate edge cases features-workspace-components-openworkspaceemptystate--edge-cases"><a href="#features-workspace-components-openworkspaceemptystate--edge-cases" title="features-workspace-components-openworkspaceemptystate--edge-cases"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Edge Cases</span></a></li></ul>
+    </details>
+  </li><li data-tree-node>
+    <details open>
       <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>WorkspaceDropOverlay</span></summary>
       <ul><li class="story-nav__story" data-tree-leaf data-search-text="features/workspace/components/workspacedropoverlay default features-workspace-components-workspacedropoverlay--default"><a href="#features-workspace-components-workspacedropoverlay--default" title="features-workspace-components-workspacedropoverlay--default"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Default</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/workspace/components/workspacedropoverlay edge cases features-workspace-components-workspacedropoverlay--edge-cases"><a href="#features-workspace-components-workspacedropoverlay--edge-cases" title="features-workspace-components-workspacedropoverlay--edge-cases"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Edge Cases</span></a></li></ul>
     </details>
   </li><li data-tree-node>
     <details open>
       <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>WorkspaceSidebarSection</span></summary>
-      <ul><li class="story-nav__story" data-tree-leaf data-search-text="features/workspace/components/workspacesidebarsection all props features-workspace-components-workspacesidebarsection--all-props"><a href="#features-workspace-components-workspacesidebarsection--all-props" title="features-workspace-components-workspacesidebarsection--all-props"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>All Props</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/workspace/components/workspacesidebarsection default features-workspace-components-workspacesidebarsection--default"><a href="#features-workspace-components-workspacesidebarsection--default" title="features-workspace-components-workspacesidebarsection--default"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Default</span></a></li></ul>
+      <ul><li class="story-nav__story" data-tree-leaf data-search-text="features/workspace/components/workspacesidebarsection all props features-workspace-components-workspacesidebarsection--all-props"><a href="#features-workspace-components-workspacesidebarsection--all-props" title="features-workspace-components-workspacesidebarsection--all-props"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>All Props</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/workspace/components/workspacesidebarsection default features-workspace-components-workspacesidebarsection--default"><a href="#features-workspace-components-workspacesidebarsection--default" title="features-workspace-components-workspacesidebarsection--default"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Default</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/workspace/components/workspacesidebarsection edge cases features-workspace-components-workspacesidebarsection--edge-cases"><a href="#features-workspace-components-workspacesidebarsection--edge-cases" title="features-workspace-components-workspacesidebarsection--edge-cases"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Edge Cases</span></a></li></ul>
+    </details>
+  </li><li data-tree-node>
+    <details open>
+      <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>WorkspaceToolbar</span></summary>
+      <ul><li class="story-nav__story" data-tree-leaf data-search-text="features/workspace/components/workspacetoolbar all props features-workspace-components-workspacetoolbar--all-props"><a href="#features-workspace-components-workspacetoolbar--all-props" title="features-workspace-components-workspacetoolbar--all-props"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>All Props</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/workspace/components/workspacetoolbar default features-workspace-components-workspacetoolbar--default"><a href="#features-workspace-components-workspacetoolbar--default" title="features-workspace-components-workspacetoolbar--default"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Default</span></a></li><li class="story-nav__story" data-tree-leaf data-search-text="features/workspace/components/workspacetoolbar edge cases features-workspace-components-workspacetoolbar--edge-cases"><a href="#features-workspace-components-workspacetoolbar--edge-cases" title="features-workspace-components-workspacetoolbar--edge-cases"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Edge Cases</span></a></li></ul>
     </details>
   </li></ul>
     </details>
@@ -385,7 +309,7 @@
         <p class="summary">Switch between Overlay, Split + Diff, and Slider to inspect changes. Click a story title to open its detail page.</p>
       </div>
       <div class="hero__actions">
-        <div class="badge">Failed: <strong>39</strong> / Threshold: 0.002</div>
+        <div class="badge">Failed: <strong>0</strong> / Threshold: 0.002</div>
       </div>
     </section>
     <nav class="inspector-tabs" aria-label="Diff inspector view">
@@ -395,17 +319,17 @@
     <button type="button" role="tab" data-global-view-mode="split" aria-selected="false">Split + Diff</button>
     <button type="button" role="tab" data-global-view-mode="slider" aria-selected="false">Slider</button>
   </div>
-  <span class="inspector-tabs__hint">Visual report UI v4 · 35092d7</span>
+  <span class="inspector-tabs__hint">Visual report UI v4 · 5d992af</span>
 </nav>
-    <article class="story story--changed" id="app--default">
+    <article class="story story--passed" id="app--default">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="app--default/" data-story-link="app--default">app--default</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>33697</dd></div>
-        <div><dt>Diff ratio</dt><dd>3.6564%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -422,7 +346,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/app--default.png" alt="Baseline app--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/app--default.png" alt="Current app--default"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/app--default.png" alt="Diff app--default"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -436,15 +360,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="app-app-specviewcommentsidebar--default">
+  </article><article class="story story--passed" id="app-app-specviewcommentsidebar--default">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="app-app-specviewcommentsidebar--default/" data-story-link="app-app-specviewcommentsidebar--default">app-app-specviewcommentsidebar--default</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>14450</dd></div>
-        <div><dt>Diff ratio</dt><dd>1.5679%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -461,7 +385,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/app-app-specviewcommentsidebar--default.png" alt="Baseline app-app-specviewcommentsidebar--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/app-app-specviewcommentsidebar--default.png" alt="Current app-app-specviewcommentsidebar--default"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/app-app-specviewcommentsidebar--default.png" alt="Diff app-app-specviewcommentsidebar--default"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -475,15 +399,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="app-app-specviewcommentsidebar--edge-cases">
+  </article><article class="story story--passed" id="app-app-specviewcommentsidebar--edge-cases">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="app-app-specviewcommentsidebar--edge-cases/" data-story-link="app-app-specviewcommentsidebar--edge-cases">app-app-specviewcommentsidebar--edge-cases</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>6311</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.6848%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -500,7 +424,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/app-app-specviewcommentsidebar--edge-cases.png" alt="Baseline app-app-specviewcommentsidebar--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/app-app-specviewcommentsidebar--edge-cases.png" alt="Current app-app-specviewcommentsidebar--edge-cases"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/app-app-specviewcommentsidebar--edge-cases.png" alt="Diff app-app-specviewcommentsidebar--edge-cases"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -514,15 +438,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="app-app-specviewcommentsidebar--empty">
+  </article><article class="story story--passed" id="app-app-specviewcommentsidebar--empty">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="app-app-specviewcommentsidebar--empty/" data-story-link="app-app-specviewcommentsidebar--empty">app-app-specviewcommentsidebar--empty</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>14335</dd></div>
-        <div><dt>Diff ratio</dt><dd>1.5554%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -539,7 +463,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/app-app-specviewcommentsidebar--empty.png" alt="Baseline app-app-specviewcommentsidebar--empty"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/app-app-specviewcommentsidebar--empty.png" alt="Current app-app-specviewcommentsidebar--empty"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/app-app-specviewcommentsidebar--empty.png" alt="Diff app-app-specviewcommentsidebar--empty"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -553,15 +477,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="app-app-specviewcommentsidebar--loading">
+  </article><article class="story story--passed" id="app-app-specviewcommentsidebar--loading">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="app-app-specviewcommentsidebar--loading/" data-story-link="app-app-specviewcommentsidebar--loading">app-app-specviewcommentsidebar--loading</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>19128</dd></div>
-        <div><dt>Diff ratio</dt><dd>2.0755%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -578,7 +502,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/app-app-specviewcommentsidebar--loading.png" alt="Baseline app-app-specviewcommentsidebar--loading"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/app-app-specviewcommentsidebar--loading.png" alt="Current app-app-specviewcommentsidebar--loading"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/app-app-specviewcommentsidebar--loading.png" alt="Diff app-app-specviewcommentsidebar--loading"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -617,7 +541,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-commanderrordisplay--all-props.png" alt="Baseline components-commanderrordisplay--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-commanderrordisplay--all-props.png" alt="Current components-commanderrordisplay--all-props"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/components-commanderrordisplay--all-props.png" alt="Diff components-commanderrordisplay--all-props"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -656,7 +580,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-commanderrordisplay--default.png" alt="Baseline components-commanderrordisplay--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-commanderrordisplay--default.png" alt="Current components-commanderrordisplay--default"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/components-commanderrordisplay--default.png" alt="Diff components-commanderrordisplay--default"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -695,7 +619,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-commanderrordisplay--edge-cases.png" alt="Baseline components-commanderrordisplay--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-commanderrordisplay--edge-cases.png" alt="Current components-commanderrordisplay--edge-cases"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/components-commanderrordisplay--edge-cases.png" alt="Diff components-commanderrordisplay--edge-cases"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -734,7 +658,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-emptystate--all-props.png" alt="Baseline components-emptystate--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-emptystate--all-props.png" alt="Current components-emptystate--all-props"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/components-emptystate--all-props.png" alt="Diff components-emptystate--all-props"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -773,7 +697,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-emptystate--default.png" alt="Baseline components-emptystate--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-emptystate--default.png" alt="Current components-emptystate--default"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/components-emptystate--default.png" alt="Diff components-emptystate--default"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -812,7 +736,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-emptystate--edge-cases.png" alt="Baseline components-emptystate--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-emptystate--edge-cases.png" alt="Current components-emptystate--edge-cases"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/components-emptystate--edge-cases.png" alt="Diff components-emptystate--edge-cases"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -851,7 +775,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-errorboundary--default.png" alt="Baseline components-errorboundary--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-errorboundary--default.png" alt="Current components-errorboundary--default"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/components-errorboundary--default.png" alt="Diff components-errorboundary--default"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -890,7 +814,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-errorboundary--edge-cases.png" alt="Baseline components-errorboundary--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-errorboundary--edge-cases.png" alt="Current components-errorboundary--edge-cases"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/components-errorboundary--edge-cases.png" alt="Diff components-errorboundary--edge-cases"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -904,15 +828,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="components-errorboundary--error">
+  </article><article class="story story--passed" id="components-errorboundary--error">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="components-errorboundary--error/" data-story-link="components-errorboundary--error">components-errorboundary--error</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>9634</dd></div>
-        <div><dt>Diff ratio</dt><dd>1.0454%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -929,7 +853,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-errorboundary--error.png" alt="Baseline components-errorboundary--error"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-errorboundary--error.png" alt="Current components-errorboundary--error"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/components-errorboundary--error.png" alt="Diff components-errorboundary--error"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -968,7 +892,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-errorstate--all-props.png" alt="Baseline components-errorstate--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-errorstate--all-props.png" alt="Current components-errorstate--all-props"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/components-errorstate--all-props.png" alt="Diff components-errorstate--all-props"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -1007,7 +931,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-errorstate--default.png" alt="Baseline components-errorstate--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-errorstate--default.png" alt="Current components-errorstate--default"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/components-errorstate--default.png" alt="Diff components-errorstate--default"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -1046,7 +970,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-errorstate--edge-cases.png" alt="Baseline components-errorstate--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-errorstate--edge-cases.png" alt="Current components-errorstate--edge-cases"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/components-errorstate--edge-cases.png" alt="Diff components-errorstate--edge-cases"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -1060,15 +984,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="components-loadingskeleton--all-props">
+  </article><article class="story story--passed" id="components-loadingskeleton--all-props">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="components-loadingskeleton--all-props/" data-story-link="components-loadingskeleton--all-props">components-loadingskeleton--all-props</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>15540</dd></div>
-        <div><dt>Diff ratio</dt><dd>1.6862%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -1085,7 +1009,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-loadingskeleton--all-props.png" alt="Baseline components-loadingskeleton--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-loadingskeleton--all-props.png" alt="Current components-loadingskeleton--all-props"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/components-loadingskeleton--all-props.png" alt="Diff components-loadingskeleton--all-props"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -1099,15 +1023,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="components-loadingskeleton--default">
+  </article><article class="story story--passed" id="components-loadingskeleton--default">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="components-loadingskeleton--default/" data-story-link="components-loadingskeleton--default">components-loadingskeleton--default</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>13334</dd></div>
-        <div><dt>Diff ratio</dt><dd>1.4468%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -1124,7 +1048,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-loadingskeleton--default.png" alt="Baseline components-loadingskeleton--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-loadingskeleton--default.png" alt="Current components-loadingskeleton--default"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/components-loadingskeleton--default.png" alt="Diff components-loadingskeleton--default"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -1163,7 +1087,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-loadingskeleton--edge-cases.png" alt="Baseline components-loadingskeleton--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-loadingskeleton--edge-cases.png" alt="Current components-loadingskeleton--edge-cases"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/components-loadingskeleton--edge-cases.png" alt="Diff components-loadingskeleton--edge-cases"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -1177,15 +1101,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="components-workspacelayout--archiving">
+  </article><article class="story story--passed" id="components-workspacelayout--archiving">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="components-workspacelayout--archiving/" data-story-link="components-workspacelayout--archiving">components-workspacelayout--archiving</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>9344</dd></div>
-        <div><dt>Diff ratio</dt><dd>1.0139%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -1202,7 +1126,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-workspacelayout--archiving.png" alt="Baseline components-workspacelayout--archiving"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-workspacelayout--archiving.png" alt="Current components-workspacelayout--archiving"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/components-workspacelayout--archiving.png" alt="Diff components-workspacelayout--archiving"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -1216,15 +1140,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="components-workspacelayout--default">
+  </article><article class="story story--passed" id="components-workspacelayout--default">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="components-workspacelayout--default/" data-story-link="components-workspacelayout--default">components-workspacelayout--default</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>9367</dd></div>
-        <div><dt>Diff ratio</dt><dd>1.0164%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -1241,7 +1165,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-workspacelayout--default.png" alt="Baseline components-workspacelayout--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-workspacelayout--default.png" alt="Current components-workspacelayout--default"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/components-workspacelayout--default.png" alt="Diff components-workspacelayout--default"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -1255,15 +1179,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="components-workspacelayout--empty">
+  </article><article class="story story--passed" id="components-workspacelayout--empty">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="components-workspacelayout--empty/" data-story-link="components-workspacelayout--empty">components-workspacelayout--empty</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>34296</dd></div>
-        <div><dt>Diff ratio</dt><dd>3.7214%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -1280,7 +1204,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-workspacelayout--empty.png" alt="Baseline components-workspacelayout--empty"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-workspacelayout--empty.png" alt="Current components-workspacelayout--empty"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/components-workspacelayout--empty.png" alt="Diff components-workspacelayout--empty"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -1294,15 +1218,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="components-workspacelayout--error">
+  </article><article class="story story--passed" id="components-workspacelayout--error">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="components-workspacelayout--error/" data-story-link="components-workspacelayout--error">components-workspacelayout--error</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>23854</dd></div>
-        <div><dt>Diff ratio</dt><dd>2.5883%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -1319,7 +1243,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-workspacelayout--error.png" alt="Baseline components-workspacelayout--error"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-workspacelayout--error.png" alt="Current components-workspacelayout--error"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/components-workspacelayout--error.png" alt="Diff components-workspacelayout--error"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -1333,15 +1257,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="components-workspacelayout--loading">
+  </article><article class="story story--passed" id="components-workspacelayout--loading">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="components-workspacelayout--loading/" data-story-link="components-workspacelayout--loading">components-workspacelayout--loading</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>74471</dd></div>
-        <div><dt>Diff ratio</dt><dd>8.0806%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -1358,7 +1282,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-workspacelayout--loading.png" alt="Baseline components-workspacelayout--loading"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-workspacelayout--loading.png" alt="Current components-workspacelayout--loading"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/components-workspacelayout--loading.png" alt="Diff components-workspacelayout--loading"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -1372,15 +1296,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="features-comments-components-addcommentpopover--default">
+  </article><article class="story story--passed" id="features-comments-components-addcommentpopover--default">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="features-comments-components-addcommentpopover--default/" data-story-link="features-comments-components-addcommentpopover--default">features-comments-components-addcommentpopover--default</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>4641</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.5036%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -1397,7 +1321,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-addcommentpopover--default.png" alt="Baseline features-comments-components-addcommentpopover--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-addcommentpopover--default.png" alt="Current features-comments-components-addcommentpopover--default"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-comments-components-addcommentpopover--default.png" alt="Diff features-comments-components-addcommentpopover--default"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -1411,15 +1335,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="features-comments-components-addcommentpopover--small-viewport-long-excerpt">
+  </article><article class="story story--passed" id="features-comments-components-addcommentpopover--small-viewport-long-excerpt">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="features-comments-components-addcommentpopover--small-viewport-long-excerpt/" data-story-link="features-comments-components-addcommentpopover--small-viewport-long-excerpt">features-comments-components-addcommentpopover--small-viewport-long-excerpt</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>4705</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.5105%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -1436,7 +1360,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-addcommentpopover--small-viewport-long-excerpt.png" alt="Baseline features-comments-components-addcommentpopover--small-viewport-long-excerpt"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-addcommentpopover--small-viewport-long-excerpt.png" alt="Current features-comments-components-addcommentpopover--small-viewport-long-excerpt"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-comments-components-addcommentpopover--small-viewport-long-excerpt.png" alt="Diff features-comments-components-addcommentpopover--small-viewport-long-excerpt"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -1475,7 +1399,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentpopover--all-props.png" alt="Baseline features-comments-components-commentpopover--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentpopover--all-props.png" alt="Current features-comments-components-commentpopover--all-props"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-comments-components-commentpopover--all-props.png" alt="Diff features-comments-components-commentpopover--all-props"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -1514,7 +1438,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentpopover--default.png" alt="Baseline features-comments-components-commentpopover--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentpopover--default.png" alt="Current features-comments-components-commentpopover--default"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-comments-components-commentpopover--default.png" alt="Diff features-comments-components-commentpopover--default"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -1553,7 +1477,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentpopover--edge-cases.png" alt="Baseline features-comments-components-commentpopover--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentpopover--edge-cases.png" alt="Current features-comments-components-commentpopover--edge-cases"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-comments-components-commentpopover--edge-cases.png" alt="Diff features-comments-components-commentpopover--edge-cases"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -1567,15 +1491,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="features-comments-components-commentsidebar--all-props">
+  </article><article class="story story--passed" id="features-comments-components-commentsidebar--all-props">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="features-comments-components-commentsidebar--all-props/" data-story-link="features-comments-components-commentsidebar--all-props">features-comments-components-commentsidebar--all-props</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>14434</dd></div>
-        <div><dt>Diff ratio</dt><dd>1.5662%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -1592,7 +1516,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentsidebar--all-props.png" alt="Baseline features-comments-components-commentsidebar--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentsidebar--all-props.png" alt="Current features-comments-components-commentsidebar--all-props"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-comments-components-commentsidebar--all-props.png" alt="Diff features-comments-components-commentsidebar--all-props"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -1606,15 +1530,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="features-comments-components-commentsidebar--default">
+  </article><article class="story story--passed" id="features-comments-components-commentsidebar--default">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="features-comments-components-commentsidebar--default/" data-story-link="features-comments-components-commentsidebar--default">features-comments-components-commentsidebar--default</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>18343</dd></div>
-        <div><dt>Diff ratio</dt><dd>1.9903%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -1631,7 +1555,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentsidebar--default.png" alt="Baseline features-comments-components-commentsidebar--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentsidebar--default.png" alt="Current features-comments-components-commentsidebar--default"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-comments-components-commentsidebar--default.png" alt="Diff features-comments-components-commentsidebar--default"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -1645,15 +1569,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="features-comments-components-commentsidebar--edge-cases">
+  </article><article class="story story--passed" id="features-comments-components-commentsidebar--edge-cases">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="features-comments-components-commentsidebar--edge-cases/" data-story-link="features-comments-components-commentsidebar--edge-cases">features-comments-components-commentsidebar--edge-cases</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>13108</dd></div>
-        <div><dt>Diff ratio</dt><dd>1.4223%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -1670,7 +1594,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentsidebar--edge-cases.png" alt="Baseline features-comments-components-commentsidebar--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentsidebar--edge-cases.png" alt="Current features-comments-components-commentsidebar--edge-cases"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-comments-components-commentsidebar--edge-cases.png" alt="Diff features-comments-components-commentsidebar--edge-cases"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -1684,15 +1608,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="features-comments-components-commentsidebar--empty">
+  </article><article class="story story--passed" id="features-comments-components-commentsidebar--empty">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="features-comments-components-commentsidebar--empty/" data-story-link="features-comments-components-commentsidebar--empty">features-comments-components-commentsidebar--empty</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>14288</dd></div>
-        <div><dt>Diff ratio</dt><dd>1.5503%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -1709,7 +1633,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentsidebar--empty.png" alt="Baseline features-comments-components-commentsidebar--empty"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentsidebar--empty.png" alt="Current features-comments-components-commentsidebar--empty"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-comments-components-commentsidebar--empty.png" alt="Diff features-comments-components-commentsidebar--empty"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -1723,15 +1647,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="features-comments-components-commentsidebar--error">
+  </article><article class="story story--passed" id="features-comments-components-commentsidebar--error">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="features-comments-components-commentsidebar--error/" data-story-link="features-comments-components-commentsidebar--error">features-comments-components-commentsidebar--error</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>6298</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.6834%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -1748,7 +1672,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentsidebar--error.png" alt="Baseline features-comments-components-commentsidebar--error"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentsidebar--error.png" alt="Current features-comments-components-commentsidebar--error"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-comments-components-commentsidebar--error.png" alt="Diff features-comments-components-commentsidebar--error"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -1762,15 +1686,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="features-comments-components-commentsidebar--loading">
+  </article><article class="story story--passed" id="features-comments-components-commentsidebar--loading">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="features-comments-components-commentsidebar--loading/" data-story-link="features-comments-components-commentsidebar--loading">features-comments-components-commentsidebar--loading</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>19757</dd></div>
-        <div><dt>Diff ratio</dt><dd>2.1438%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -1787,7 +1711,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentsidebar--loading.png" alt="Baseline features-comments-components-commentsidebar--loading"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentsidebar--loading.png" alt="Current features-comments-components-commentsidebar--loading"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-comments-components-commentsidebar--loading.png" alt="Diff features-comments-components-commentsidebar--loading"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -1801,15 +1725,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="features-comments-components-commentthread--all-props">
+  </article><article class="story story--passed" id="features-comments-components-commentthread--all-props">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="features-comments-components-commentthread--all-props/" data-story-link="features-comments-components-commentthread--all-props">features-comments-components-commentthread--all-props</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>5250</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.5697%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -1826,7 +1750,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentthread--all-props.png" alt="Baseline features-comments-components-commentthread--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentthread--all-props.png" alt="Current features-comments-components-commentthread--all-props"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-comments-components-commentthread--all-props.png" alt="Diff features-comments-components-commentthread--all-props"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -1840,15 +1764,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="features-comments-components-commentthread--default">
+  </article><article class="story story--passed" id="features-comments-components-commentthread--default">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="features-comments-components-commentthread--default/" data-story-link="features-comments-components-commentthread--default">features-comments-components-commentthread--default</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>4437</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.4814%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -1865,7 +1789,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentthread--default.png" alt="Baseline features-comments-components-commentthread--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentthread--default.png" alt="Current features-comments-components-commentthread--default"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-comments-components-commentthread--default.png" alt="Diff features-comments-components-commentthread--default"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -1879,15 +1803,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="features-comments-components-commentthread--edge-cases">
+  </article><article class="story story--passed" id="features-comments-components-commentthread--edge-cases">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="features-comments-components-commentthread--edge-cases/" data-story-link="features-comments-components-commentthread--edge-cases">features-comments-components-commentthread--edge-cases</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>5057</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.5487%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -1904,7 +1828,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentthread--edge-cases.png" alt="Baseline features-comments-components-commentthread--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentthread--edge-cases.png" alt="Current features-comments-components-commentthread--edge-cases"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-comments-components-commentthread--edge-cases.png" alt="Diff features-comments-components-commentthread--edge-cases"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -1943,7 +1867,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-sidebar-components-sidebarlayout--all-props.png" alt="Baseline features-sidebar-components-sidebarlayout--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-sidebar-components-sidebarlayout--all-props.png" alt="Current features-sidebar-components-sidebarlayout--all-props"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-sidebar-components-sidebarlayout--all-props.png" alt="Diff features-sidebar-components-sidebarlayout--all-props"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -1982,7 +1906,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-sidebar-components-sidebarlayout--default.png" alt="Baseline features-sidebar-components-sidebarlayout--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-sidebar-components-sidebarlayout--default.png" alt="Current features-sidebar-components-sidebarlayout--default"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-sidebar-components-sidebarlayout--default.png" alt="Diff features-sidebar-components-sidebarlayout--default"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -2021,7 +1945,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-sidebar-components-sidebarlayout--edge-cases.png" alt="Baseline features-sidebar-components-sidebarlayout--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-sidebar-components-sidebarlayout--edge-cases.png" alt="Current features-sidebar-components-sidebarlayout--edge-cases"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-sidebar-components-sidebarlayout--edge-cases.png" alt="Diff features-sidebar-components-sidebarlayout--edge-cases"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -2042,8 +1966,8 @@
         <h2><a href="features-specs-components-markdownviewer--existing-comment-cards/" data-story-link="features-specs-components-markdownviewer--existing-comment-cards">features-specs-components-markdownviewer--existing-comment-cards</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>890</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.0966%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -2060,7 +1984,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer--existing-comment-cards.png" alt="Baseline features-specs-components-markdownviewer--existing-comment-cards"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer--existing-comment-cards.png" alt="Current features-specs-components-markdownviewer--existing-comment-cards"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-markdownviewer--existing-comment-cards.png" alt="Diff features-specs-components-markdownviewer--existing-comment-cards"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -2081,8 +2005,8 @@
         <h2><a href="features-specs-components-markdownviewer--highlighted-selection-surface/" data-story-link="features-specs-components-markdownviewer--highlighted-selection-surface">features-specs-components-markdownviewer--highlighted-selection-surface</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>890</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.0966%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -2099,7 +2023,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer--highlighted-selection-surface.png" alt="Baseline features-specs-components-markdownviewer--highlighted-selection-surface"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer--highlighted-selection-surface.png" alt="Current features-specs-components-markdownviewer--highlighted-selection-surface"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-markdownviewer--highlighted-selection-surface.png" alt="Diff features-specs-components-markdownviewer--highlighted-selection-surface"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -2120,8 +2044,8 @@
         <h2><a href="features-specs-components-markdownviewer--tech-reference-html-preview/" data-story-link="features-specs-components-markdownviewer--tech-reference-html-preview">features-specs-components-markdownviewer--tech-reference-html-preview</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>890</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.0966%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -2138,7 +2062,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer--tech-reference-html-preview.png" alt="Baseline features-specs-components-markdownviewer--tech-reference-html-preview"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer--tech-reference-html-preview.png" alt="Current features-specs-components-markdownviewer--tech-reference-html-preview"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-markdownviewer--tech-reference-html-preview.png" alt="Diff features-specs-components-markdownviewer--tech-reference-html-preview"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -2159,8 +2083,8 @@
         <h2><a href="features-specs-components-markdownviewer--test-cases-html/" data-story-link="features-specs-components-markdownviewer--test-cases-html">features-specs-components-markdownviewer--test-cases-html</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>890</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.0966%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -2177,7 +2101,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer--test-cases-html.png" alt="Baseline features-specs-components-markdownviewer--test-cases-html"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer--test-cases-html.png" alt="Current features-specs-components-markdownviewer--test-cases-html"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-markdownviewer--test-cases-html.png" alt="Diff features-specs-components-markdownviewer--test-cases-html"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -2216,7 +2140,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-htmldocument--all-props.png" alt="Baseline features-specs-components-markdownviewer-htmldocument--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-htmldocument--all-props.png" alt="Current features-specs-components-markdownviewer-htmldocument--all-props"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-markdownviewer-htmldocument--all-props.png" alt="Diff features-specs-components-markdownviewer-htmldocument--all-props"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -2255,7 +2179,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-htmldocument--default.png" alt="Baseline features-specs-components-markdownviewer-htmldocument--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-htmldocument--default.png" alt="Current features-specs-components-markdownviewer-htmldocument--default"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-markdownviewer-htmldocument--default.png" alt="Diff features-specs-components-markdownviewer-htmldocument--default"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -2294,7 +2218,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-htmldocument--edge-cases.png" alt="Baseline features-specs-components-markdownviewer-htmldocument--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-htmldocument--edge-cases.png" alt="Current features-specs-components-markdownviewer-htmldocument--edge-cases"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-markdownviewer-htmldocument--edge-cases.png" alt="Diff features-specs-components-markdownviewer-htmldocument--edge-cases"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -2333,7 +2257,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl.png" alt="Baseline features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl.png" alt="Current features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl.png" alt="Diff features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -2372,7 +2296,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan.png" alt="Baseline features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan.png" alt="Current features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan.png" alt="Diff features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -2393,8 +2317,8 @@
         <h2><a href="features-specs-components-markdownviewer-markdownviewerheader--default/" data-story-link="features-specs-components-markdownviewer-markdownviewerheader--default">features-specs-components-markdownviewer-markdownviewerheader--default</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>890</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.0966%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -2411,7 +2335,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader--default.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerheader--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader--default"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-markdownviewer-markdownviewerheader--default.png" alt="Diff features-specs-components-markdownviewer-markdownviewerheader--default"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -2432,8 +2356,8 @@
         <h2><a href="features-specs-components-markdownviewer-markdownviewerheader--edge-cases/" data-story-link="features-specs-components-markdownviewer-markdownviewerheader--edge-cases">features-specs-components-markdownviewer-markdownviewerheader--edge-cases</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>176</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.0191%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -2450,7 +2374,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader--edge-cases.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerheader--edge-cases.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader--edge-cases"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-markdownviewer-markdownviewerheader--edge-cases.png" alt="Diff features-specs-components-markdownviewer-markdownviewerheader--edge-cases"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -2489,7 +2413,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls.png" alt="Diff features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -2528,7 +2452,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props.png" alt="Diff features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -2549,8 +2473,8 @@
         <h2><a href="features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default/" data-story-link="features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default">features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>893</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.0969%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -2567,7 +2491,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default.png" alt="Diff features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -2588,8 +2512,8 @@
         <h2><a href="features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases/" data-story-link="features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases">features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>170</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.0184%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -2606,7 +2530,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases.png" alt="Diff features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -2645,7 +2569,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props.png" alt="Diff features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -2684,7 +2608,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default.png" alt="Diff features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -2723,7 +2647,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases.png" alt="Diff features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -2762,7 +2686,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerpanel--all-props.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerpanel--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerpanel--all-props.png" alt="Current features-specs-components-markdownviewer-markdownviewerpanel--all-props"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-markdownviewer-markdownviewerpanel--all-props.png" alt="Diff features-specs-components-markdownviewer-markdownviewerpanel--all-props"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -2801,7 +2725,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerpanel--default.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerpanel--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerpanel--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerpanel--default"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-markdownviewer-markdownviewerpanel--default.png" alt="Diff features-specs-components-markdownviewer-markdownviewerpanel--default"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -2815,15 +2739,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="features-specs-components-markdownviewer-markdownviewerpanel--edge-cases">
+  </article><article class="story story--passed" id="features-specs-components-markdownviewer-markdownviewerpanel--edge-cases">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="features-specs-components-markdownviewer-markdownviewerpanel--edge-cases/" data-story-link="features-specs-components-markdownviewer-markdownviewerpanel--edge-cases">features-specs-components-markdownviewer-markdownviewerpanel--edge-cases</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>5632</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.6111%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -2840,7 +2764,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerpanel--edge-cases.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerpanel--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerpanel--edge-cases.png" alt="Current features-specs-components-markdownviewer-markdownviewerpanel--edge-cases"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-markdownviewer-markdownviewerpanel--edge-cases.png" alt="Diff features-specs-components-markdownviewer-markdownviewerpanel--edge-cases"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -2854,15 +2778,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="features-specs-components-markdownviewer-markdownviewerstatuspanel--default">
+  </article><article class="story story--passed" id="features-specs-components-markdownviewer-markdownviewerstatuspanel--default">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="features-specs-components-markdownviewer-markdownviewerstatuspanel--default/" data-story-link="features-specs-components-markdownviewer-markdownviewerstatuspanel--default">features-specs-components-markdownviewer-markdownviewerstatuspanel--default</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>5506</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.5974%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -2879,7 +2803,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerstatuspanel--default.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerstatuspanel--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--default"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-markdownviewer-markdownviewerstatuspanel--default.png" alt="Diff features-specs-components-markdownviewer-markdownviewerstatuspanel--default"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -2893,15 +2817,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases">
+  </article><article class="story story--passed" id="features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases/" data-story-link="features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases">features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>5632</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.6111%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -2918,7 +2842,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases.png" alt="Diff features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -2939,8 +2863,8 @@
         <h2><a href="features-specs-components-markdownviewer-markdownviewerstatuspanel--empty/" data-story-link="features-specs-components-markdownviewer-markdownviewerstatuspanel--empty">features-specs-components-markdownviewer-markdownviewerstatuspanel--empty</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>957</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.1038%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -2957,7 +2881,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerstatuspanel--empty.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerstatuspanel--empty"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--empty.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--empty"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-markdownviewer-markdownviewerstatuspanel--empty.png" alt="Diff features-specs-components-markdownviewer-markdownviewerstatuspanel--empty"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -2978,8 +2902,8 @@
         <h2><a href="features-specs-components-markdownviewer-markdownviewerstatuspanel--error/" data-story-link="features-specs-components-markdownviewer-markdownviewerstatuspanel--error">features-specs-components-markdownviewer-markdownviewerstatuspanel--error</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>1624</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.1762%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -2996,7 +2920,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerstatuspanel--error.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerstatuspanel--error"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--error.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--error"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-markdownviewer-markdownviewerstatuspanel--error.png" alt="Diff features-specs-components-markdownviewer-markdownviewerstatuspanel--error"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -3010,15 +2934,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="features-specs-components-markdownviewer-markdownviewerstatuspanel--loading">
+  </article><article class="story story--passed" id="features-specs-components-markdownviewer-markdownviewerstatuspanel--loading">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="features-specs-components-markdownviewer-markdownviewerstatuspanel--loading/" data-story-link="features-specs-components-markdownviewer-markdownviewerstatuspanel--loading">features-specs-components-markdownviewer-markdownviewerstatuspanel--loading</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>45441</dd></div>
-        <div><dt>Diff ratio</dt><dd>4.9307%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -3035,7 +2959,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerstatuspanel--loading.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerstatuspanel--loading"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--loading.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--loading"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-markdownviewer-markdownviewerstatuspanel--loading.png" alt="Diff features-specs-components-markdownviewer-markdownviewerstatuspanel--loading"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -3049,15 +2973,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="features-specs-components-markdownviewer-markdownviewerstatuspanel--missing">
+  </article><article class="story story--passed" id="features-specs-components-markdownviewer-markdownviewerstatuspanel--missing">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="features-specs-components-markdownviewer-markdownviewerstatuspanel--missing/" data-story-link="features-specs-components-markdownviewer-markdownviewerstatuspanel--missing">features-specs-components-markdownviewer-markdownviewerstatuspanel--missing</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>7323</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.7946%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -3074,7 +2998,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerstatuspanel--missing.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerstatuspanel--missing"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--missing.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--missing"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-markdownviewer-markdownviewerstatuspanel--missing.png" alt="Diff features-specs-components-markdownviewer-markdownviewerstatuspanel--missing"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -3113,7 +3037,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-spectabs--all-props.png" alt="Baseline features-specs-components-spectabs--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-spectabs--all-props.png" alt="Current features-specs-components-spectabs--all-props"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-spectabs--all-props.png" alt="Diff features-specs-components-spectabs--all-props"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -3152,7 +3076,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-spectabs--default.png" alt="Baseline features-specs-components-spectabs--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-spectabs--default.png" alt="Current features-specs-components-spectabs--default"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-spectabs--default.png" alt="Diff features-specs-components-spectabs--default"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -3191,7 +3115,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-spectabs--edge-cases.png" alt="Baseline features-specs-components-spectabs--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-spectabs--edge-cases.png" alt="Current features-specs-components-spectabs--edge-cases"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-spectabs--edge-cases.png" alt="Diff features-specs-components-spectabs--edge-cases"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -3230,7 +3154,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-spectabs--empty.png" alt="Baseline features-specs-components-spectabs--empty"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-spectabs--empty.png" alt="Current features-specs-components-spectabs--empty"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-spectabs--empty.png" alt="Diff features-specs-components-spectabs--empty"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -3269,7 +3193,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-spectree--all-props.png" alt="Baseline features-specs-components-spectree--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-spectree--all-props.png" alt="Current features-specs-components-spectree--all-props"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-spectree--all-props.png" alt="Diff features-specs-components-spectree--all-props"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -3308,7 +3232,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-spectree--default.png" alt="Baseline features-specs-components-spectree--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-spectree--default.png" alt="Current features-specs-components-spectree--default"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-spectree--default.png" alt="Diff features-specs-components-spectree--default"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -3322,15 +3246,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="features-specs-components-spectree--edge-cases">
+  </article><article class="story story--passed" id="features-specs-components-spectree--edge-cases">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="features-specs-components-spectree--edge-cases/" data-story-link="features-specs-components-spectree--edge-cases">features-specs-components-spectree--edge-cases</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>5534</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.6005%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -3347,7 +3271,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-spectree--edge-cases.png" alt="Baseline features-specs-components-spectree--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-spectree--edge-cases.png" alt="Current features-specs-components-spectree--edge-cases"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-spectree--edge-cases.png" alt="Diff features-specs-components-spectree--edge-cases"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -3361,15 +3285,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="features-specs-components-spectree--empty">
+  </article><article class="story story--passed" id="features-specs-components-spectree--empty">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="features-specs-components-spectree--empty/" data-story-link="features-specs-components-spectree--empty">features-specs-components-spectree--empty</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>5701</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.6186%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -3386,7 +3310,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-spectree--empty.png" alt="Baseline features-specs-components-spectree--empty"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-spectree--empty.png" alt="Current features-specs-components-spectree--empty"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-spectree--empty.png" alt="Diff features-specs-components-spectree--empty"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -3407,8 +3331,8 @@
         <h2><a href="features-specs-components-spectree--error/" data-story-link="features-specs-components-spectree--error">features-specs-components-spectree--error</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>1620</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.1758%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -3425,7 +3349,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-spectree--error.png" alt="Baseline features-specs-components-spectree--error"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-spectree--error.png" alt="Current features-specs-components-spectree--error"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-spectree--error.png" alt="Diff features-specs-components-spectree--error"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -3439,15 +3363,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="features-specs-components-spectree--loading">
+  </article><article class="story story--passed" id="features-specs-components-spectree--loading">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="features-specs-components-spectree--loading/" data-story-link="features-specs-components-spectree--loading">features-specs-components-spectree--loading</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>13650</dd></div>
-        <div><dt>Diff ratio</dt><dd>1.4811%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -3464,7 +3388,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-spectree--loading.png" alt="Baseline features-specs-components-spectree--loading"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-spectree--loading.png" alt="Current features-specs-components-spectree--loading"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-specs-components-spectree--loading.png" alt="Diff features-specs-components-spectree--loading"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -3478,15 +3402,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="features-workspace-components-openworkspaceemptystate--all-props">
+  </article><article class="story story--passed" id="features-workspace-components-openworkspaceemptystate--all-props">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="features-workspace-components-openworkspaceemptystate--all-props/" data-story-link="features-workspace-components-openworkspaceemptystate--all-props">features-workspace-components-openworkspaceemptystate--all-props</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>11367</dd></div>
-        <div><dt>Diff ratio</dt><dd>1.2334%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -3503,7 +3427,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-openworkspaceemptystate--all-props.png" alt="Baseline features-workspace-components-openworkspaceemptystate--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-openworkspaceemptystate--all-props.png" alt="Current features-workspace-components-openworkspaceemptystate--all-props"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-workspace-components-openworkspaceemptystate--all-props.png" alt="Diff features-workspace-components-openworkspaceemptystate--all-props"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -3517,15 +3441,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="features-workspace-components-openworkspaceemptystate--default">
+  </article><article class="story story--passed" id="features-workspace-components-openworkspaceemptystate--default">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="features-workspace-components-openworkspaceemptystate--default/" data-story-link="features-workspace-components-openworkspaceemptystate--default">features-workspace-components-openworkspaceemptystate--default</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>10703</dd></div>
-        <div><dt>Diff ratio</dt><dd>1.1613%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -3542,7 +3466,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-openworkspaceemptystate--default.png" alt="Baseline features-workspace-components-openworkspaceemptystate--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-openworkspaceemptystate--default.png" alt="Current features-workspace-components-openworkspaceemptystate--default"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-workspace-components-openworkspaceemptystate--default.png" alt="Diff features-workspace-components-openworkspaceemptystate--default"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -3556,15 +3480,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="features-workspace-components-openworkspaceemptystate--edge-cases">
+  </article><article class="story story--passed" id="features-workspace-components-openworkspaceemptystate--edge-cases">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="features-workspace-components-openworkspaceemptystate--edge-cases/" data-story-link="features-workspace-components-openworkspaceemptystate--edge-cases">features-workspace-components-openworkspaceemptystate--edge-cases</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>10501</dd></div>
-        <div><dt>Diff ratio</dt><dd>1.1394%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -3581,7 +3505,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-openworkspaceemptystate--edge-cases.png" alt="Baseline features-workspace-components-openworkspaceemptystate--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-openworkspaceemptystate--edge-cases.png" alt="Current features-workspace-components-openworkspaceemptystate--edge-cases"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-workspace-components-openworkspaceemptystate--edge-cases.png" alt="Diff features-workspace-components-openworkspaceemptystate--edge-cases"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -3620,7 +3544,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-workspacedropoverlay--default.png" alt="Baseline features-workspace-components-workspacedropoverlay--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-workspacedropoverlay--default.png" alt="Current features-workspace-components-workspacedropoverlay--default"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-workspace-components-workspacedropoverlay--default.png" alt="Diff features-workspace-components-workspacedropoverlay--default"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -3659,7 +3583,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-workspacedropoverlay--edge-cases.png" alt="Baseline features-workspace-components-workspacedropoverlay--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-workspacedropoverlay--edge-cases.png" alt="Current features-workspace-components-workspacedropoverlay--edge-cases"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-workspace-components-workspacedropoverlay--edge-cases.png" alt="Diff features-workspace-components-workspacedropoverlay--edge-cases"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -3680,8 +3604,8 @@
         <h2><a href="features-workspace-components-workspacesidebarsection--all-props/" data-story-link="features-workspace-components-workspacesidebarsection--all-props">features-workspace-components-workspacesidebarsection--all-props</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>1238</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.1343%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -3698,7 +3622,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-workspacesidebarsection--all-props.png" alt="Baseline features-workspace-components-workspacesidebarsection--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-workspacesidebarsection--all-props.png" alt="Current features-workspace-components-workspacesidebarsection--all-props"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-workspace-components-workspacesidebarsection--all-props.png" alt="Diff features-workspace-components-workspacesidebarsection--all-props"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -3719,8 +3643,8 @@
         <h2><a href="features-workspace-components-workspacesidebarsection--default/" data-story-link="features-workspace-components-workspacesidebarsection--default">features-workspace-components-workspacesidebarsection--default</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>1238</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.1343%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -3737,7 +3661,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-workspacesidebarsection--default.png" alt="Baseline features-workspace-components-workspacesidebarsection--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-workspacesidebarsection--default.png" alt="Current features-workspace-components-workspacesidebarsection--default"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-workspace-components-workspacesidebarsection--default.png" alt="Diff features-workspace-components-workspacesidebarsection--default"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -3751,15 +3675,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="features-workspace-components-workspacesidebarsection--edge-cases">
+  </article><article class="story story--passed" id="features-workspace-components-workspacesidebarsection--edge-cases">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="features-workspace-components-workspacesidebarsection--edge-cases/" data-story-link="features-workspace-components-workspacesidebarsection--edge-cases">features-workspace-components-workspacesidebarsection--edge-cases</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>3125</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.3391%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -3776,7 +3700,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-workspacesidebarsection--edge-cases.png" alt="Baseline features-workspace-components-workspacesidebarsection--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-workspacesidebarsection--edge-cases.png" alt="Current features-workspace-components-workspacesidebarsection--edge-cases"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-workspace-components-workspacesidebarsection--edge-cases.png" alt="Diff features-workspace-components-workspacesidebarsection--edge-cases"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -3790,15 +3714,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="features-workspace-components-workspacetoolbar--all-props">
+  </article><article class="story story--passed" id="features-workspace-components-workspacetoolbar--all-props">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="features-workspace-components-workspacetoolbar--all-props/" data-story-link="features-workspace-components-workspacetoolbar--all-props">features-workspace-components-workspacetoolbar--all-props</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>7261</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.7879%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -3815,7 +3739,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-workspacetoolbar--all-props.png" alt="Baseline features-workspace-components-workspacetoolbar--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-workspacetoolbar--all-props.png" alt="Current features-workspace-components-workspacetoolbar--all-props"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-workspace-components-workspacetoolbar--all-props.png" alt="Diff features-workspace-components-workspacetoolbar--all-props"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -3829,15 +3753,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="features-workspace-components-workspacetoolbar--default">
+  </article><article class="story story--passed" id="features-workspace-components-workspacetoolbar--default">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="features-workspace-components-workspacetoolbar--default/" data-story-link="features-workspace-components-workspacetoolbar--default">features-workspace-components-workspacetoolbar--default</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>5780</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.6272%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -3854,7 +3778,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-workspacetoolbar--default.png" alt="Baseline features-workspace-components-workspacetoolbar--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-workspacetoolbar--default.png" alt="Current features-workspace-components-workspacetoolbar--default"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-workspace-components-workspacetoolbar--default.png" alt="Diff features-workspace-components-workspacetoolbar--default"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -3868,15 +3792,15 @@
       
     </div>
   </div>
-  </article><article class="story story--changed" id="features-workspace-components-workspacetoolbar--edge-cases">
+  </article><article class="story story--passed" id="features-workspace-components-workspacetoolbar--edge-cases">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="features-workspace-components-workspacetoolbar--edge-cases/" data-story-link="features-workspace-components-workspacetoolbar--edge-cases">features-workspace-components-workspacetoolbar--edge-cases</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>5783</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.6275%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -3893,7 +3817,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-workspacetoolbar--edge-cases.png" alt="Baseline features-workspace-components-workspacetoolbar--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-workspacetoolbar--edge-cases.png" alt="Current features-workspace-components-workspacetoolbar--edge-cases"></figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/features-workspace-components-workspacetoolbar--edge-cases.png" alt="Diff features-workspace-components-workspacetoolbar--edge-cases"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>

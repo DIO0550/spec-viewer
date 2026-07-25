@@ -1,67 +1,67 @@
 {
-  "reportVersion": "35092d7f2c367edc5f33042e14ef2c8fb044b353",
+  "reportVersion": "5d992af7225c79ee09c2259d2a858cd716408f8a",
   "maxDiffRatio": 0.002,
-  "failed": 39,
+  "failed": 0,
   "results": [
     {
       "story": "app--default",
       "id": "app--default",
       "title": "App",
       "name": "Default",
-      "status": "changed",
-      "diffPixels": 33697,
-      "diffRatio": 0.036563585069444446,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "app-app-specviewcommentsidebar--default",
       "id": "app-app-specviewcommentsidebar--default",
       "title": "app/App/SpecViewCommentSidebar",
       "name": "Default",
-      "status": "changed",
-      "diffPixels": 14450,
-      "diffRatio": 0.015679253472222224,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "app-app-specviewcommentsidebar--edge-cases",
       "id": "app-app-specviewcommentsidebar--edge-cases",
       "title": "app/App/SpecViewCommentSidebar",
       "name": "Edge Cases",
-      "status": "changed",
-      "diffPixels": 6311,
-      "diffRatio": 0.006847873263888889,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "app-app-specviewcommentsidebar--empty",
       "id": "app-app-specviewcommentsidebar--empty",
       "title": "app/App/SpecViewCommentSidebar",
       "name": "Empty",
-      "status": "changed",
-      "diffPixels": 14335,
-      "diffRatio": 0.01555447048611111,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "app-app-specviewcommentsidebar--loading",
       "id": "app-app-specviewcommentsidebar--loading",
       "title": "app/App/SpecViewCommentSidebar",
       "name": "Loading",
-      "status": "changed",
-      "diffPixels": 19128,
-      "diffRatio": 0.020755208333333334,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "components-commanderrordisplay--all-props",
@@ -73,7 +73,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "components-commanderrordisplay--default",
@@ -85,7 +85,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "components-commanderrordisplay--edge-cases",
@@ -97,7 +97,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "components-emptystate--all-props",
@@ -109,7 +109,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "components-emptystate--default",
@@ -121,7 +121,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "components-emptystate--edge-cases",
@@ -133,7 +133,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "components-errorboundary--default",
@@ -145,7 +145,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "components-errorboundary--edge-cases",
@@ -157,19 +157,19 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "components-errorboundary--error",
       "id": "components-errorboundary--error",
       "title": "components/ErrorBoundary",
       "name": "Error",
-      "status": "changed",
-      "diffPixels": 9634,
-      "diffRatio": 0.010453559027777778,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "components-errorstate--all-props",
@@ -181,7 +181,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "components-errorstate--default",
@@ -193,7 +193,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "components-errorstate--edge-cases",
@@ -205,31 +205,31 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "components-loadingskeleton--all-props",
       "id": "components-loadingskeleton--all-props",
       "title": "components/LoadingSkeleton",
       "name": "All Props",
-      "status": "changed",
-      "diffPixels": 15540,
-      "diffRatio": 0.016861979166666666,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "components-loadingskeleton--default",
       "id": "components-loadingskeleton--default",
       "title": "components/LoadingSkeleton",
       "name": "Default",
-      "status": "changed",
-      "diffPixels": 13334,
-      "diffRatio": 0.014468315972222222,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "components-loadingskeleton--edge-cases",
@@ -241,91 +241,91 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "components-workspacelayout--archiving",
       "id": "components-workspacelayout--archiving",
       "title": "components/WorkspaceLayout",
       "name": "Archiving",
-      "status": "changed",
-      "diffPixels": 9344,
-      "diffRatio": 0.010138888888888888,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "components-workspacelayout--default",
       "id": "components-workspacelayout--default",
       "title": "components/WorkspaceLayout",
       "name": "Default",
-      "status": "changed",
-      "diffPixels": 9367,
-      "diffRatio": 0.010163845486111111,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "components-workspacelayout--empty",
       "id": "components-workspacelayout--empty",
       "title": "components/WorkspaceLayout",
       "name": "Empty",
-      "status": "changed",
-      "diffPixels": 34296,
-      "diffRatio": 0.03721354166666667,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "components-workspacelayout--error",
       "id": "components-workspacelayout--error",
       "title": "components/WorkspaceLayout",
       "name": "Error",
-      "status": "changed",
-      "diffPixels": 23854,
-      "diffRatio": 0.02588324652777778,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "components-workspacelayout--loading",
       "id": "components-workspacelayout--loading",
       "title": "components/WorkspaceLayout",
       "name": "Loading",
-      "status": "changed",
-      "diffPixels": 74471,
-      "diffRatio": 0.08080620659722222,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-comments-components-addcommentpopover--default",
       "id": "features-comments-components-addcommentpopover--default",
       "title": "features/comments/components/AddCommentPopover",
       "name": "Default",
-      "status": "changed",
-      "diffPixels": 4641,
-      "diffRatio": 0.005035807291666666,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-comments-components-addcommentpopover--small-viewport-long-excerpt",
       "id": "features-comments-components-addcommentpopover--small-viewport-long-excerpt",
       "title": "features/comments/components/AddCommentPopover",
       "name": "Small Viewport Long Excerpt",
-      "status": "changed",
-      "diffPixels": 4705,
-      "diffRatio": 0.005105251736111111,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-comments-components-commentpopover--all-props",
@@ -337,7 +337,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-comments-components-commentpopover--default",
@@ -349,7 +349,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-comments-components-commentpopover--edge-cases",
@@ -361,115 +361,115 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-comments-components-commentsidebar--all-props",
       "id": "features-comments-components-commentsidebar--all-props",
       "title": "features/comments/components/CommentSidebar",
       "name": "All Props",
-      "status": "changed",
-      "diffPixels": 14434,
-      "diffRatio": 0.01566189236111111,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-comments-components-commentsidebar--default",
       "id": "features-comments-components-commentsidebar--default",
       "title": "features/comments/components/CommentSidebar",
       "name": "Default",
-      "status": "changed",
-      "diffPixels": 18343,
-      "diffRatio": 0.019903428819444444,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-comments-components-commentsidebar--edge-cases",
       "id": "features-comments-components-commentsidebar--edge-cases",
       "title": "features/comments/components/CommentSidebar",
       "name": "Edge Cases",
-      "status": "changed",
-      "diffPixels": 13108,
-      "diffRatio": 0.014223090277777777,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-comments-components-commentsidebar--empty",
       "id": "features-comments-components-commentsidebar--empty",
       "title": "features/comments/components/CommentSidebar",
       "name": "Empty",
-      "status": "changed",
-      "diffPixels": 14288,
-      "diffRatio": 0.015503472222222222,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-comments-components-commentsidebar--error",
       "id": "features-comments-components-commentsidebar--error",
       "title": "features/comments/components/CommentSidebar",
       "name": "Error",
-      "status": "changed",
-      "diffPixels": 6298,
-      "diffRatio": 0.006833767361111111,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-comments-components-commentsidebar--loading",
       "id": "features-comments-components-commentsidebar--loading",
       "title": "features/comments/components/CommentSidebar",
       "name": "Loading",
-      "status": "changed",
-      "diffPixels": 19757,
-      "diffRatio": 0.02143771701388889,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-comments-components-commentthread--all-props",
       "id": "features-comments-components-commentthread--all-props",
       "title": "features/comments/components/CommentThread",
       "name": "All Props",
-      "status": "changed",
-      "diffPixels": 5250,
-      "diffRatio": 0.005696614583333333,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-comments-components-commentthread--default",
       "id": "features-comments-components-commentthread--default",
       "title": "features/comments/components/CommentThread",
       "name": "Default",
-      "status": "changed",
-      "diffPixels": 4437,
-      "diffRatio": 0.004814453125,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-comments-components-commentthread--edge-cases",
       "id": "features-comments-components-commentthread--edge-cases",
       "title": "features/comments/components/CommentThread",
       "name": "Edge Cases",
-      "status": "changed",
-      "diffPixels": 5057,
-      "diffRatio": 0.0054871961805555555,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-sidebar-components-sidebarlayout--all-props",
@@ -481,7 +481,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-sidebar-components-sidebarlayout--default",
@@ -493,7 +493,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-sidebar-components-sidebarlayout--edge-cases",
@@ -505,7 +505,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-markdownviewer--existing-comment-cards",
@@ -513,11 +513,11 @@
       "title": "features/specs/components/MarkdownViewer",
       "name": "Existing Comment Cards",
       "status": "passed",
-      "diffPixels": 890,
-      "diffRatio": 0.0009657118055555556,
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-markdownviewer--highlighted-selection-surface",
@@ -525,11 +525,11 @@
       "title": "features/specs/components/MarkdownViewer",
       "name": "Highlighted Selection Surface",
       "status": "passed",
-      "diffPixels": 890,
-      "diffRatio": 0.0009657118055555556,
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-markdownviewer--tech-reference-html-preview",
@@ -537,11 +537,11 @@
       "title": "features/specs/components/MarkdownViewer",
       "name": "Tech Reference Html Preview",
       "status": "passed",
-      "diffPixels": 890,
-      "diffRatio": 0.0009657118055555556,
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-markdownviewer--test-cases-html",
@@ -549,11 +549,11 @@
       "title": "features/specs/components/MarkdownViewer",
       "name": "Test Cases Html",
       "status": "passed",
-      "diffPixels": 890,
-      "diffRatio": 0.0009657118055555556,
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-markdownviewer-htmldocument--all-props",
@@ -565,7 +565,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-markdownviewer-htmldocument--default",
@@ -577,7 +577,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-markdownviewer-htmldocument--edge-cases",
@@ -589,7 +589,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl",
@@ -601,7 +601,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan",
@@ -613,7 +613,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-markdownviewer-markdownviewerheader--default",
@@ -621,11 +621,11 @@
       "title": "features/specs/components/MarkdownViewer/MarkdownViewerHeader",
       "name": "Default",
       "status": "passed",
-      "diffPixels": 890,
-      "diffRatio": 0.0009657118055555556,
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-markdownviewer-markdownviewerheader--edge-cases",
@@ -633,11 +633,11 @@
       "title": "features/specs/components/MarkdownViewer/MarkdownViewerHeader",
       "name": "Edge Cases",
       "status": "passed",
-      "diffPixels": 176,
-      "diffRatio": 0.00019097222222222223,
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls",
@@ -649,7 +649,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props",
@@ -661,7 +661,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default",
@@ -669,11 +669,11 @@
       "title": "features/specs/components/MarkdownViewer/MarkdownViewerHeader/DocumentSearchControl",
       "name": "Default",
       "status": "passed",
-      "diffPixels": 893,
-      "diffRatio": 0.0009689670138888889,
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases",
@@ -681,11 +681,11 @@
       "title": "features/specs/components/MarkdownViewer/MarkdownViewerHeader/DocumentSearchControl",
       "name": "Edge Cases",
       "status": "passed",
-      "diffPixels": 170,
-      "diffRatio": 0.00018446180555555555,
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props",
@@ -697,7 +697,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default",
@@ -709,7 +709,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases",
@@ -721,7 +721,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-markdownviewer-markdownviewerpanel--all-props",
@@ -733,7 +733,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-markdownviewer-markdownviewerpanel--default",
@@ -745,43 +745,43 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-markdownviewer-markdownviewerpanel--edge-cases",
       "id": "features-specs-components-markdownviewer-markdownviewerpanel--edge-cases",
       "title": "features/specs/components/MarkdownViewer/MarkdownViewerPanel",
       "name": "Edge Cases",
-      "status": "changed",
-      "diffPixels": 5632,
-      "diffRatio": 0.006111111111111111,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-markdownviewer-markdownviewerstatuspanel--default",
       "id": "features-specs-components-markdownviewer-markdownviewerstatuspanel--default",
       "title": "features/specs/components/MarkdownViewer/MarkdownViewerStatusPanel",
       "name": "Default",
-      "status": "changed",
-      "diffPixels": 5506,
-      "diffRatio": 0.005974392361111111,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases",
       "id": "features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases",
       "title": "features/specs/components/MarkdownViewer/MarkdownViewerStatusPanel",
       "name": "Edge Cases",
-      "status": "changed",
-      "diffPixels": 5632,
-      "diffRatio": 0.006111111111111111,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-markdownviewer-markdownviewerstatuspanel--empty",
@@ -789,11 +789,11 @@
       "title": "features/specs/components/MarkdownViewer/MarkdownViewerStatusPanel",
       "name": "Empty",
       "status": "passed",
-      "diffPixels": 957,
-      "diffRatio": 0.0010384114583333332,
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-markdownviewer-markdownviewerstatuspanel--error",
@@ -801,35 +801,35 @@
       "title": "features/specs/components/MarkdownViewer/MarkdownViewerStatusPanel",
       "name": "Error",
       "status": "passed",
-      "diffPixels": 1624,
-      "diffRatio": 0.0017621527777777778,
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-markdownviewer-markdownviewerstatuspanel--loading",
       "id": "features-specs-components-markdownviewer-markdownviewerstatuspanel--loading",
       "title": "features/specs/components/MarkdownViewer/MarkdownViewerStatusPanel",
       "name": "Loading",
-      "status": "changed",
-      "diffPixels": 45441,
-      "diffRatio": 0.049306640625,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-markdownviewer-markdownviewerstatuspanel--missing",
       "id": "features-specs-components-markdownviewer-markdownviewerstatuspanel--missing",
       "title": "features/specs/components/MarkdownViewer/MarkdownViewerStatusPanel",
       "name": "Missing",
-      "status": "changed",
-      "diffPixels": 7323,
-      "diffRatio": 0.007945963541666667,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-spectabs--all-props",
@@ -841,7 +841,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-spectabs--default",
@@ -853,7 +853,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-spectabs--edge-cases",
@@ -865,7 +865,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-spectabs--empty",
@@ -877,7 +877,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-spectree--all-props",
@@ -889,7 +889,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-spectree--default",
@@ -901,31 +901,31 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-spectree--edge-cases",
       "id": "features-specs-components-spectree--edge-cases",
       "title": "features/specs/components/SpecTree",
       "name": "Edge Cases",
-      "status": "changed",
-      "diffPixels": 5534,
-      "diffRatio": 0.006004774305555556,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-spectree--empty",
       "id": "features-specs-components-spectree--empty",
       "title": "features/specs/components/SpecTree",
       "name": "Empty",
-      "status": "changed",
-      "diffPixels": 5701,
-      "diffRatio": 0.006185980902777778,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-spectree--error",
@@ -933,59 +933,59 @@
       "title": "features/specs/components/SpecTree",
       "name": "Error",
       "status": "passed",
-      "diffPixels": 1620,
-      "diffRatio": 0.0017578125,
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-specs-components-spectree--loading",
       "id": "features-specs-components-spectree--loading",
       "title": "features/specs/components/SpecTree",
       "name": "Loading",
-      "status": "changed",
-      "diffPixels": 13650,
-      "diffRatio": 0.014811197916666666,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-workspace-components-openworkspaceemptystate--all-props",
       "id": "features-workspace-components-openworkspaceemptystate--all-props",
       "title": "features/workspace/components/OpenWorkspaceEmptyState",
       "name": "All Props",
-      "status": "changed",
-      "diffPixels": 11367,
-      "diffRatio": 0.012333984375,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-workspace-components-openworkspaceemptystate--default",
       "id": "features-workspace-components-openworkspaceemptystate--default",
       "title": "features/workspace/components/OpenWorkspaceEmptyState",
       "name": "Default",
-      "status": "changed",
-      "diffPixels": 10703,
-      "diffRatio": 0.011613498263888888,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-workspace-components-openworkspaceemptystate--edge-cases",
       "id": "features-workspace-components-openworkspaceemptystate--edge-cases",
       "title": "features/workspace/components/OpenWorkspaceEmptyState",
       "name": "Edge Cases",
-      "status": "changed",
-      "diffPixels": 10501,
-      "diffRatio": 0.01139431423611111,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-workspace-components-workspacedropoverlay--default",
@@ -997,7 +997,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-workspace-components-workspacedropoverlay--edge-cases",
@@ -1009,7 +1009,7 @@
       "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-workspace-components-workspacesidebarsection--all-props",
@@ -1017,11 +1017,11 @@
       "title": "features/workspace/components/WorkspaceSidebarSection",
       "name": "All Props",
       "status": "passed",
-      "diffPixels": 1238,
-      "diffRatio": 0.0013433159722222223,
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-workspace-components-workspacesidebarsection--default",
@@ -1029,59 +1029,59 @@
       "title": "features/workspace/components/WorkspaceSidebarSection",
       "name": "Default",
       "status": "passed",
-      "diffPixels": 1238,
-      "diffRatio": 0.0013433159722222223,
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-workspace-components-workspacesidebarsection--edge-cases",
       "id": "features-workspace-components-workspacesidebarsection--edge-cases",
       "title": "features/workspace/components/WorkspaceSidebarSection",
       "name": "Edge Cases",
-      "status": "changed",
-      "diffPixels": 3125,
-      "diffRatio": 0.003390842013888889,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-workspace-components-workspacetoolbar--all-props",
       "id": "features-workspace-components-workspacetoolbar--all-props",
       "title": "features/workspace/components/WorkspaceToolbar",
       "name": "All Props",
-      "status": "changed",
-      "diffPixels": 7261,
-      "diffRatio": 0.007878689236111111,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-workspace-components-workspacetoolbar--default",
       "id": "features-workspace-components-workspacetoolbar--default",
       "title": "features/workspace/components/WorkspaceToolbar",
       "name": "Default",
-      "status": "changed",
-      "diffPixels": 5780,
-      "diffRatio": 0.006271701388888889,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     },
     {
       "story": "features-workspace-components-workspacetoolbar--edge-cases",
       "id": "features-workspace-components-workspacetoolbar--edge-cases",
       "title": "features/workspace/components/WorkspaceToolbar",
       "name": "Edge Cases",
-      "status": "changed",
-      "diffPixels": 5783,
-      "diffRatio": 0.006274956597222222,
+      "status": "passed",
+      "diffPixels": 0,
+      "diffRatio": 0,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": true
+      "hasDiff": false
     }
   ]
 }
