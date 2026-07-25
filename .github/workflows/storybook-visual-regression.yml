@@ -72,9 +72,13 @@ jobs:
           --actual ../visual-actual
           --out ../visual-report
           --max-diff-ratio 0.002
+          --report-version ${{ github.event.pull_request.head.sha }}
 
       - name: Verify visual report UI
+        id: verify-report
         if: always() && github.event.action != 'closed'
+        env:
+          REPORT_VERSION: ${{ github.event.pull_request.head.sha }}
         run: |
           test -f visual-report/index.html
           grep -Fq 'id="story-navigation"' visual-report/index.html
@@ -83,6 +87,7 @@ jobs:
           grep -Fq 'data-global-view-mode="one-up"' visual-report/index.html
           grep -Fq 'data-global-view-mode="two-up"' visual-report/index.html
           grep -Fq 'Visual report UI v3' visual-report/index.html
+          node -e 'const summary = require("./visual-report/summary.json"); if (summary.reportVersion !== process.env.REPORT_VERSION) process.exit(1)'
           find visual-report -mindepth 2 -maxdepth 2 -name index.html -print -quit | grep -q .
 
       - name: Upload visual report
@@ -95,11 +100,13 @@ jobs:
           retention-days: 7
 
       - name: Publish visual report to gh-pages
+        if: github.event.action == 'closed' || steps.verify-report.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
           CLOSED: ${{ github.event.action == 'closed' }}
           VISUAL_REPORT_DIR: visual-report
+          REPORT_VERSION: ${{ github.event.pull_request.head.sha }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -126,6 +133,7 @@ jobs:
             if [ "$CLOSED" != "true" ]; then
               mkdir -p "visual-regression/pr-$PR"
               cp -r "$GITHUB_WORKSPACE/$VISUAL_REPORT_DIR/." "visual-regression/pr-$PR/"
+              node -e 'const summary = require(`./visual-regression/pr-${process.env.PR}/summary.json`); if (summary.reportVersion !== process.env.REPORT_VERSION) process.exit(1)'
             fi
             touch .nojekyll
 
@@ -164,6 +172,23 @@ jobs:
               sleep $((attempt * 2))
             done
             [ "$build_ok" = "true" ]
+
+            if [ "$CLOSED" != "true" ]; then
+              OWNER="${GITHUB_REPOSITORY%%/*}"
+              REPO_NAME="${GITHUB_REPOSITORY#*/}"
+              PUBLIC_SUMMARY="https://${OWNER}.github.io/${REPO_NAME}/visual-regression/pr-${PR}/summary.json?revision=${REPORT_VERSION}"
+              published=false
+              for attempt in $(seq 1 60); do
+                if curl --fail --silent --show-error "$PUBLIC_SUMMARY" -o /tmp/published-visual-summary.json \
+                  && node -e 'const summary = require("/tmp/published-visual-summary.json"); if (summary.reportVersion !== process.env.REPORT_VERSION) process.exit(1)'; then
+                  published=true
+                  break
+                fi
+                echo "Waiting for Pages report revision $REPORT_VERSION (attempt $attempt)..."
+                sleep 5
+              done
+              [ "$published" = "true" ]
+            fi
           fi
 
       - name: Comment visual report
@@ -178,7 +203,7 @@ jobs:
           REPO_NAME="${GITHUB_REPOSITORY#*/}"
           OWNER="${GITHUB_REPOSITORY%%/*}"
           PREVIEW_URL="https://${OWNER}.github.io/${REPO_NAME}/pr-preview/pr-${PR_NUMBER}/"
-          REPORT_URL="https://${OWNER}.github.io/${REPO_NAME}/visual-regression/pr-${PR_NUMBER}/"
+          REPORT_URL="https://${OWNER}.github.io/${REPO_NAME}/visual-regression/pr-${PR_NUMBER}/?revision=${{ github.event.pull_request.head.sha }}"
           SUMMARY="visual-report/summary.json"
 
           if [ -f "$SUMMARY" ]; then

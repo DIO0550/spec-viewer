@@ -211,6 +211,7 @@ const compare = async (options) => {
   const width = Number(options.width ?? 1280);
   const height = Number(options.height ?? 720);
   const maxDiffRatio = Number(options["max-diff-ratio"] ?? 0.002);
+  const reportVersion = options["report-version"] ?? "local";
   rmSync(out, { recursive: true, force: true });
   for (const dir of ["actual", "expected", "diff"]) {
     mkdirSync(join(out, dir), { recursive: true });
@@ -245,7 +246,7 @@ const compare = async (options) => {
     results.push({ story, ...storyMetadata.get(story), status: diffRatio > maxDiffRatio ? "changed" : "passed", diffPixels, diffRatio, hasExpected: true, hasActual: true, hasDiff: true });
   }
   const failed = results.filter((result) => result.status === "changed");
-  const summary = { maxDiffRatio, failed: failed.length, results };
+  const summary = { reportVersion, maxDiffRatio, failed: failed.length, results };
   writeFileSync(join(out, "summary.json"), JSON.stringify(summary, null, 2));
   writeFileSync(join(out, "index.html"), renderHtml(summary));
   for (const result of results) {
@@ -405,7 +406,7 @@ const renderSidebar = (summary, options = {}) => {
   </aside>`;
 };
 
-const renderInspectorTabs = () => `<nav class="inspector-tabs" aria-label="Diff inspector view">
+const renderInspectorTabs = (reportVersion) => `<nav class="inspector-tabs" aria-label="Diff inspector view">
   <span class="inspector-tabs__label">View</span>
   <div class="inspector-tabs__list" role="tablist">
     <button type="button" class="is-active" role="tab" data-global-view-mode="one-up" aria-selected="true">1-Up</button>
@@ -413,7 +414,7 @@ const renderInspectorTabs = () => `<nav class="inspector-tabs" aria-label="Diff 
     <button type="button" role="tab" data-global-view-mode="slider" aria-selected="false">Slider</button>
     <button type="button" role="tab" data-global-view-mode="diff" aria-selected="false">Diff</button>
   </div>
-  <span class="inspector-tabs__hint">Visual report UI v3</span>
+  <span class="inspector-tabs__hint">Visual report UI v3 · ${escapeHtml(reportVersion.slice(0, 7))}</span>
 </nav>`;
 
 const renderHtml = (summary, options = {}) => `<!doctype html>
@@ -525,7 +526,7 @@ const renderHtml = (summary, options = {}) => `<!doctype html>
         <div class="badge">Failed: <strong>${summary.failed}</strong> / Threshold: ${summary.maxDiffRatio}</div>
       </div>
     </section>
-    ${renderInspectorTabs()}
+    ${renderInspectorTabs(summary.reportVersion ?? "local")}
     ${summary.results.map((result) => renderStory(result, options)).join("")}
   </main>
   </div>
