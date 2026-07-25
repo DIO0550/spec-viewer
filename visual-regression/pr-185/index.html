@@ -7,13 +7,25 @@
   <style>
     :root { color-scheme: light dark; --bg: #0f172a; --panel: #111827; --text: #e5e7eb; --muted: #9ca3af; --line: #374151; --accent: #38bdf8; --danger: #fb7185; --ok: #34d399; --warn: #fbbf24; }
     body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-    main { width: min(1440px, calc(100% - 48px)); margin: 0 auto; padding: 32px 0 56px; }
+    .layout { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: 24px; width: min(1680px, calc(100% - 48px)); margin: 0 auto; padding: 32px 0 56px; }
+    .layout--detail { display: block; width: min(1440px, calc(100% - 48px)); }
+    main { min-width: 0; }
     .hero { display: flex; justify-content: space-between; gap: 24px; align-items: flex-end; margin-bottom: 24px; }
     h1, h2, h3, p { margin: 0; }
     h1 { font-size: 32px; }
     a { color: inherit; }
     .summary { color: var(--muted); margin-top: 8px; }
     .badge { border: 1px solid var(--line); border-radius: 999px; padding: 8px 12px; background: rgb(255 255 255 / 6%); }
+    .story-nav { position: sticky; top: 24px; align-self: start; max-height: calc(100vh - 48px); overflow: auto; border: 1px solid var(--line); border-radius: 18px; padding: 16px; background: rgb(17 24 39 / 86%); box-shadow: 0 18px 50px rgb(0 0 0 / 18%); }
+    .story-nav h2 { font-size: 16px; margin: 0 0 14px; }
+    .story-nav__group { margin-top: 14px; }
+    .story-nav__group h3 { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .story-nav__group h3 span { border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; color: var(--text); background: rgb(255 255 255 / 6%); }
+    .story-nav__group--changed h3 { color: var(--danger); }
+    .story-nav__group--passed h3 { color: var(--ok); }
+    .story-nav ol { display: grid; gap: 4px; list-style: none; margin: 0; padding: 0; }
+    .story-nav a { display: block; overflow: hidden; border-radius: 8px; padding: 6px 8px; color: var(--text); text-overflow: ellipsis; white-space: nowrap; text-decoration: none; }
+    .story-nav a:hover { background: rgb(255 255 255 / 8%); color: var(--accent); }
     .story { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 20px; margin-top: 18px; box-shadow: 0 18px 50px rgb(0 0 0 / 24%); }
     .story--changed { border-color: rgb(251 113 133 / 70%); }
     .story--passed { border-color: rgb(52 211 153 / 45%); }
@@ -40,23 +52,39 @@
     .image-card img { display: block; width: 100%; height: auto; }
     .image-card--empty { display: grid; min-height: 180px; place-items: center; color: var(--muted); }
     .image-card--empty h3 { justify-self: stretch; width: 100%; box-sizing: border-box; }
-    @media (max-width: 900px) { main { width: min(100% - 24px, 1440px); } .hero, .story__header { display: block; } .metrics, .shots { grid-template-columns: 1fr; display: grid; } }
+    @media (max-width: 900px) { .hero, .story__header { display: block; } .metrics, .shots { grid-template-columns: 1fr; display: grid; } }
+    @media (max-width: 640px) { .layout, .layout--detail { display: block; width: min(100% - 24px, 1440px); padding-top: 18px; } .story-nav { position: static; max-height: none; margin-bottom: 18px; } }
   </style>
 </head>
 <body>
+  <div class="layout">
+  <aside class="story-nav" aria-label="Story result navigation">
+    <h2>Stories</h2>
+    <section class="story-nav__group story-nav__group--changed">
+      <h3>Changed <span>37</span></h3>
+      <ol>
+        <li><a href="#app--default">app--default</a></li><li><a href="#app-app-specviewcommentsidebar--default">app-app-specviewcommentsidebar--default</a></li><li><a href="#app-app-specviewcommentsidebar--edge-cases">app-app-specviewcommentsidebar--edge-cases</a></li><li><a href="#app-app-specviewcommentsidebar--empty">app-app-specviewcommentsidebar--empty</a></li><li><a href="#app-app-specviewcommentsidebar--loading">app-app-specviewcommentsidebar--loading</a></li><li><a href="#components-errorboundary--error">components-errorboundary--error</a></li><li><a href="#components-workspacelayout--archiving">components-workspacelayout--archiving</a></li><li><a href="#components-workspacelayout--default">components-workspacelayout--default</a></li><li><a href="#components-workspacelayout--empty">components-workspacelayout--empty</a></li><li><a href="#components-workspacelayout--error">components-workspacelayout--error</a></li><li><a href="#components-workspacelayout--loading">components-workspacelayout--loading</a></li><li><a href="#features-comments-components-addcommentpopover--default">features-comments-components-addcommentpopover--default</a></li><li><a href="#features-comments-components-addcommentpopover--small-viewport-long-excerpt">features-comments-components-addcommentpopover--small-viewport-long-excerpt</a></li><li><a href="#features-comments-components-commentsidebar--all-props">features-comments-components-commentsidebar--all-props</a></li><li><a href="#features-comments-components-commentsidebar--default">features-comments-components-commentsidebar--default</a></li><li><a href="#features-comments-components-commentsidebar--edge-cases">features-comments-components-commentsidebar--edge-cases</a></li><li><a href="#features-comments-components-commentsidebar--empty">features-comments-components-commentsidebar--empty</a></li><li><a href="#features-comments-components-commentsidebar--error">features-comments-components-commentsidebar--error</a></li><li><a href="#features-comments-components-commentsidebar--loading">features-comments-components-commentsidebar--loading</a></li><li><a href="#features-comments-components-commentthread--all-props">features-comments-components-commentthread--all-props</a></li><li><a href="#features-comments-components-commentthread--default">features-comments-components-commentthread--default</a></li><li><a href="#features-comments-components-commentthread--edge-cases">features-comments-components-commentthread--edge-cases</a></li><li><a href="#features-specs-components-markdownviewer-markdownviewerpanel--edge-cases">features-specs-components-markdownviewer-markdownviewerpanel--edge-cases</a></li><li><a href="#features-specs-components-markdownviewer-markdownviewerstatuspanel--default">features-specs-components-markdownviewer-markdownviewerstatuspanel--default</a></li><li><a href="#features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases">features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases</a></li><li><a href="#features-specs-components-markdownviewer-markdownviewerstatuspanel--loading">features-specs-components-markdownviewer-markdownviewerstatuspanel--loading</a></li><li><a href="#features-specs-components-markdownviewer-markdownviewerstatuspanel--missing">features-specs-components-markdownviewer-markdownviewerstatuspanel--missing</a></li><li><a href="#features-specs-components-spectree--edge-cases">features-specs-components-spectree--edge-cases</a></li><li><a href="#features-specs-components-spectree--empty">features-specs-components-spectree--empty</a></li><li><a href="#features-specs-components-spectree--loading">features-specs-components-spectree--loading</a></li><li><a href="#features-workspace-components-openworkspaceemptystate--all-props">features-workspace-components-openworkspaceemptystate--all-props</a></li><li><a href="#features-workspace-components-openworkspaceemptystate--default">features-workspace-components-openworkspaceemptystate--default</a></li><li><a href="#features-workspace-components-openworkspaceemptystate--edge-cases">features-workspace-components-openworkspaceemptystate--edge-cases</a></li><li><a href="#features-workspace-components-workspacesidebarsection--edge-cases">features-workspace-components-workspacesidebarsection--edge-cases</a></li><li><a href="#features-workspace-components-workspacetoolbar--all-props">features-workspace-components-workspacetoolbar--all-props</a></li><li><a href="#features-workspace-components-workspacetoolbar--default">features-workspace-components-workspacetoolbar--default</a></li><li><a href="#features-workspace-components-workspacetoolbar--edge-cases">features-workspace-components-workspacetoolbar--edge-cases</a></li>
+      </ol>
+    </section><section class="story-nav__group story-nav__group--passed">
+      <h3>Clear <span>53</span></h3>
+      <ol>
+        <li><a href="#components-commanderrordisplay--all-props">components-commanderrordisplay--all-props</a></li><li><a href="#components-commanderrordisplay--default">components-commanderrordisplay--default</a></li><li><a href="#components-commanderrordisplay--edge-cases">components-commanderrordisplay--edge-cases</a></li><li><a href="#components-emptystate--all-props">components-emptystate--all-props</a></li><li><a href="#components-emptystate--default">components-emptystate--default</a></li><li><a href="#components-emptystate--edge-cases">components-emptystate--edge-cases</a></li><li><a href="#components-errorboundary--default">components-errorboundary--default</a></li><li><a href="#components-errorboundary--edge-cases">components-errorboundary--edge-cases</a></li><li><a href="#components-errorstate--all-props">components-errorstate--all-props</a></li><li><a href="#components-errorstate--default">components-errorstate--default</a></li><li><a href="#components-errorstate--edge-cases">components-errorstate--edge-cases</a></li><li><a href="#components-loadingskeleton--all-props">components-loadingskeleton--all-props</a></li><li><a href="#components-loadingskeleton--default">components-loadingskeleton--default</a></li><li><a href="#components-loadingskeleton--edge-cases">components-loadingskeleton--edge-cases</a></li><li><a href="#features-comments-components-commentpopover--all-props">features-comments-components-commentpopover--all-props</a></li><li><a href="#features-comments-components-commentpopover--default">features-comments-components-commentpopover--default</a></li><li><a href="#features-comments-components-commentpopover--edge-cases">features-comments-components-commentpopover--edge-cases</a></li><li><a href="#features-sidebar-components-sidebarlayout--all-props">features-sidebar-components-sidebarlayout--all-props</a></li><li><a href="#features-sidebar-components-sidebarlayout--default">features-sidebar-components-sidebarlayout--default</a></li><li><a href="#features-sidebar-components-sidebarlayout--edge-cases">features-sidebar-components-sidebarlayout--edge-cases</a></li><li><a href="#features-specs-components-markdownviewer--existing-comment-cards">features-specs-components-markdownviewer--existing-comment-cards</a></li><li><a href="#features-specs-components-markdownviewer--highlighted-selection-surface">features-specs-components-markdownviewer--highlighted-selection-surface</a></li><li><a href="#features-specs-components-markdownviewer--tech-reference-html-preview">features-specs-components-markdownviewer--tech-reference-html-preview</a></li><li><a href="#features-specs-components-markdownviewer--test-cases-html">features-specs-components-markdownviewer--test-cases-html</a></li><li><a href="#features-specs-components-markdownviewer-htmldocument--all-props">features-specs-components-markdownviewer-htmldocument--all-props</a></li><li><a href="#features-specs-components-markdownviewer-htmldocument--default">features-specs-components-markdownviewer-htmldocument--default</a></li><li><a href="#features-specs-components-markdownviewer-htmldocument--edge-cases">features-specs-components-markdownviewer-htmldocument--edge-cases</a></li><li><a href="#features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl">features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl</a></li><li><a href="#features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan">features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan</a></li><li><a href="#features-specs-components-markdownviewer-markdownviewerheader--default">features-specs-components-markdownviewer-markdownviewerheader--default</a></li><li><a href="#features-specs-components-markdownviewer-markdownviewerheader--edge-cases">features-specs-components-markdownviewer-markdownviewerheader--edge-cases</a></li><li><a href="#features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls">features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls</a></li><li><a href="#features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props">features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props</a></li><li><a href="#features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default">features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default</a></li><li><a href="#features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases">features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases</a></li><li><a href="#features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props">features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props</a></li><li><a href="#features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default">features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default</a></li><li><a href="#features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases">features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases</a></li><li><a href="#features-specs-components-markdownviewer-markdownviewerpanel--all-props">features-specs-components-markdownviewer-markdownviewerpanel--all-props</a></li><li><a href="#features-specs-components-markdownviewer-markdownviewerpanel--default">features-specs-components-markdownviewer-markdownviewerpanel--default</a></li><li><a href="#features-specs-components-markdownviewer-markdownviewerstatuspanel--empty">features-specs-components-markdownviewer-markdownviewerstatuspanel--empty</a></li><li><a href="#features-specs-components-markdownviewer-markdownviewerstatuspanel--error">features-specs-components-markdownviewer-markdownviewerstatuspanel--error</a></li><li><a href="#features-specs-components-spectabs--all-props">features-specs-components-spectabs--all-props</a></li><li><a href="#features-specs-components-spectabs--default">features-specs-components-spectabs--default</a></li><li><a href="#features-specs-components-spectabs--edge-cases">features-specs-components-spectabs--edge-cases</a></li><li><a href="#features-specs-components-spectabs--empty">features-specs-components-spectabs--empty</a></li><li><a href="#features-specs-components-spectree--all-props">features-specs-components-spectree--all-props</a></li><li><a href="#features-specs-components-spectree--default">features-specs-components-spectree--default</a></li><li><a href="#features-specs-components-spectree--error">features-specs-components-spectree--error</a></li><li><a href="#features-workspace-components-workspacedropoverlay--default">features-workspace-components-workspacedropoverlay--default</a></li><li><a href="#features-workspace-components-workspacedropoverlay--edge-cases">features-workspace-components-workspacedropoverlay--edge-cases</a></li><li><a href="#features-workspace-components-workspacesidebarsection--all-props">features-workspace-components-workspacesidebarsection--all-props</a></li><li><a href="#features-workspace-components-workspacesidebarsection--default">features-workspace-components-workspacesidebarsection--default</a></li>
+      </ol>
+    </section>
+  </aside>
   <main>
     <section class="hero">
       <div>
         <h1>Storybook Visual Regression Report</h1>
         <p class="summary">Move the slider to compare baseline and current screenshots. Click a story title to open that story on its own page.</p>
       </div>
-      <div class="badge">Failed: <strong>38</strong> / Threshold: 0.002</div>
+      <div class="badge">Failed: <strong>37</strong> / Threshold: 0.002</div>
     </section>
     <article class="story story--changed" id="app--default">
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="app--default/">app--default</a></h2>
+        <h2><a href="app--default/" data-story-link="app--default">app--default</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>33697</dd></div>
@@ -84,7 +112,7 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="app-app-specviewcommentsidebar--default/">app-app-specviewcommentsidebar--default</a></h2>
+        <h2><a href="app-app-specviewcommentsidebar--default/" data-story-link="app-app-specviewcommentsidebar--default">app-app-specviewcommentsidebar--default</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>14450</dd></div>
@@ -112,7 +140,7 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="app-app-specviewcommentsidebar--edge-cases/">app-app-specviewcommentsidebar--edge-cases</a></h2>
+        <h2><a href="app-app-specviewcommentsidebar--edge-cases/" data-story-link="app-app-specviewcommentsidebar--edge-cases">app-app-specviewcommentsidebar--edge-cases</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>6311</dd></div>
@@ -140,7 +168,7 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="app-app-specviewcommentsidebar--empty/">app-app-specviewcommentsidebar--empty</a></h2>
+        <h2><a href="app-app-specviewcommentsidebar--empty/" data-story-link="app-app-specviewcommentsidebar--empty">app-app-specviewcommentsidebar--empty</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>14335</dd></div>
@@ -168,11 +196,11 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="app-app-specviewcommentsidebar--loading/">app-app-specviewcommentsidebar--loading</a></h2>
+        <h2><a href="app-app-specviewcommentsidebar--loading/" data-story-link="app-app-specviewcommentsidebar--loading">app-app-specviewcommentsidebar--loading</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>19362</dd></div>
-        <div><dt>Diff ratio</dt><dd>2.1009%</dd></div>
+        <div><dt>Diff pixels</dt><dd>5338</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.5792%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -196,7 +224,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="components-commanderrordisplay--all-props/">components-commanderrordisplay--all-props</a></h2>
+        <h2><a href="components-commanderrordisplay--all-props/" data-story-link="components-commanderrordisplay--all-props">components-commanderrordisplay--all-props</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -224,7 +252,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="components-commanderrordisplay--default/">components-commanderrordisplay--default</a></h2>
+        <h2><a href="components-commanderrordisplay--default/" data-story-link="components-commanderrordisplay--default">components-commanderrordisplay--default</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -252,7 +280,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="components-commanderrordisplay--edge-cases/">components-commanderrordisplay--edge-cases</a></h2>
+        <h2><a href="components-commanderrordisplay--edge-cases/" data-story-link="components-commanderrordisplay--edge-cases">components-commanderrordisplay--edge-cases</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -280,7 +308,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="components-emptystate--all-props/">components-emptystate--all-props</a></h2>
+        <h2><a href="components-emptystate--all-props/" data-story-link="components-emptystate--all-props">components-emptystate--all-props</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -308,7 +336,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="components-emptystate--default/">components-emptystate--default</a></h2>
+        <h2><a href="components-emptystate--default/" data-story-link="components-emptystate--default">components-emptystate--default</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -336,7 +364,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="components-emptystate--edge-cases/">components-emptystate--edge-cases</a></h2>
+        <h2><a href="components-emptystate--edge-cases/" data-story-link="components-emptystate--edge-cases">components-emptystate--edge-cases</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -364,7 +392,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="components-errorboundary--default/">components-errorboundary--default</a></h2>
+        <h2><a href="components-errorboundary--default/" data-story-link="components-errorboundary--default">components-errorboundary--default</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -392,7 +420,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="components-errorboundary--edge-cases/">components-errorboundary--edge-cases</a></h2>
+        <h2><a href="components-errorboundary--edge-cases/" data-story-link="components-errorboundary--edge-cases">components-errorboundary--edge-cases</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -420,7 +448,7 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="components-errorboundary--error/">components-errorboundary--error</a></h2>
+        <h2><a href="components-errorboundary--error/" data-story-link="components-errorboundary--error">components-errorboundary--error</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>9634</dd></div>
@@ -448,7 +476,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="components-errorstate--all-props/">components-errorstate--all-props</a></h2>
+        <h2><a href="components-errorstate--all-props/" data-story-link="components-errorstate--all-props">components-errorstate--all-props</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -476,7 +504,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="components-errorstate--default/">components-errorstate--default</a></h2>
+        <h2><a href="components-errorstate--default/" data-story-link="components-errorstate--default">components-errorstate--default</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -504,7 +532,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="components-errorstate--edge-cases/">components-errorstate--edge-cases</a></h2>
+        <h2><a href="components-errorstate--edge-cases/" data-story-link="components-errorstate--edge-cases">components-errorstate--edge-cases</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -528,15 +556,15 @@
       <div class="image-card"><h3>Actual</h3><img src="actual/components-errorstate--edge-cases.png" alt="Actual"></div>
       <div class="image-card"><h3>Diff</h3><img src="diff/components-errorstate--edge-cases.png" alt="Diff"></div>
     </div>
-  </article><article class="story story--changed" id="components-loadingskeleton--all-props">
+  </article><article class="story story--passed" id="components-loadingskeleton--all-props">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
-        <h2><a href="components-loadingskeleton--all-props/">components-loadingskeleton--all-props</a></h2>
+        <p class="status">passed</p>
+        <h2><a href="components-loadingskeleton--all-props/" data-story-link="components-loadingskeleton--all-props">components-loadingskeleton--all-props</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>15327</dd></div>
-        <div><dt>Diff ratio</dt><dd>1.6631%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -560,11 +588,11 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="components-loadingskeleton--default/">components-loadingskeleton--default</a></h2>
+        <h2><a href="components-loadingskeleton--default/" data-story-link="components-loadingskeleton--default">components-loadingskeleton--default</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>629</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.0683%</dd></div>
+        <div><dt>Diff pixels</dt><dd>1117</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.1212%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -588,7 +616,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="components-loadingskeleton--edge-cases/">components-loadingskeleton--edge-cases</a></h2>
+        <h2><a href="components-loadingskeleton--edge-cases/" data-story-link="components-loadingskeleton--edge-cases">components-loadingskeleton--edge-cases</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -616,7 +644,7 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="components-workspacelayout--archiving/">components-workspacelayout--archiving</a></h2>
+        <h2><a href="components-workspacelayout--archiving/" data-story-link="components-workspacelayout--archiving">components-workspacelayout--archiving</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>9344</dd></div>
@@ -644,11 +672,11 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="components-workspacelayout--default/">components-workspacelayout--default</a></h2>
+        <h2><a href="components-workspacelayout--default/" data-story-link="components-workspacelayout--default">components-workspacelayout--default</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>9344</dd></div>
-        <div><dt>Diff ratio</dt><dd>1.0139%</dd></div>
+        <div><dt>Diff pixels</dt><dd>9367</dd></div>
+        <div><dt>Diff ratio</dt><dd>1.0164%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -672,7 +700,7 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="components-workspacelayout--empty/">components-workspacelayout--empty</a></h2>
+        <h2><a href="components-workspacelayout--empty/" data-story-link="components-workspacelayout--empty">components-workspacelayout--empty</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>34296</dd></div>
@@ -700,7 +728,7 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="components-workspacelayout--error/">components-workspacelayout--error</a></h2>
+        <h2><a href="components-workspacelayout--error/" data-story-link="components-workspacelayout--error">components-workspacelayout--error</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>23854</dd></div>
@@ -728,11 +756,11 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="components-workspacelayout--loading/">components-workspacelayout--loading</a></h2>
+        <h2><a href="components-workspacelayout--loading/" data-story-link="components-workspacelayout--loading">components-workspacelayout--loading</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>73766</dd></div>
-        <div><dt>Diff ratio</dt><dd>8.0041%</dd></div>
+        <div><dt>Diff pixels</dt><dd>73692</dd></div>
+        <div><dt>Diff ratio</dt><dd>7.9961%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -756,7 +784,7 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="features-comments-components-addcommentpopover--default/">features-comments-components-addcommentpopover--default</a></h2>
+        <h2><a href="features-comments-components-addcommentpopover--default/" data-story-link="features-comments-components-addcommentpopover--default">features-comments-components-addcommentpopover--default</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>4641</dd></div>
@@ -784,7 +812,7 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="features-comments-components-addcommentpopover--small-viewport-long-excerpt/">features-comments-components-addcommentpopover--small-viewport-long-excerpt</a></h2>
+        <h2><a href="features-comments-components-addcommentpopover--small-viewport-long-excerpt/" data-story-link="features-comments-components-addcommentpopover--small-viewport-long-excerpt">features-comments-components-addcommentpopover--small-viewport-long-excerpt</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>4705</dd></div>
@@ -812,7 +840,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-comments-components-commentpopover--all-props/">features-comments-components-commentpopover--all-props</a></h2>
+        <h2><a href="features-comments-components-commentpopover--all-props/" data-story-link="features-comments-components-commentpopover--all-props">features-comments-components-commentpopover--all-props</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -840,7 +868,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-comments-components-commentpopover--default/">features-comments-components-commentpopover--default</a></h2>
+        <h2><a href="features-comments-components-commentpopover--default/" data-story-link="features-comments-components-commentpopover--default">features-comments-components-commentpopover--default</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -868,7 +896,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-comments-components-commentpopover--edge-cases/">features-comments-components-commentpopover--edge-cases</a></h2>
+        <h2><a href="features-comments-components-commentpopover--edge-cases/" data-story-link="features-comments-components-commentpopover--edge-cases">features-comments-components-commentpopover--edge-cases</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -896,7 +924,7 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="features-comments-components-commentsidebar--all-props/">features-comments-components-commentsidebar--all-props</a></h2>
+        <h2><a href="features-comments-components-commentsidebar--all-props/" data-story-link="features-comments-components-commentsidebar--all-props">features-comments-components-commentsidebar--all-props</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>14434</dd></div>
@@ -924,7 +952,7 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="features-comments-components-commentsidebar--default/">features-comments-components-commentsidebar--default</a></h2>
+        <h2><a href="features-comments-components-commentsidebar--default/" data-story-link="features-comments-components-commentsidebar--default">features-comments-components-commentsidebar--default</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>18343</dd></div>
@@ -952,7 +980,7 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="features-comments-components-commentsidebar--edge-cases/">features-comments-components-commentsidebar--edge-cases</a></h2>
+        <h2><a href="features-comments-components-commentsidebar--edge-cases/" data-story-link="features-comments-components-commentsidebar--edge-cases">features-comments-components-commentsidebar--edge-cases</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>13108</dd></div>
@@ -980,7 +1008,7 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="features-comments-components-commentsidebar--empty/">features-comments-components-commentsidebar--empty</a></h2>
+        <h2><a href="features-comments-components-commentsidebar--empty/" data-story-link="features-comments-components-commentsidebar--empty">features-comments-components-commentsidebar--empty</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>14288</dd></div>
@@ -1008,7 +1036,7 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="features-comments-components-commentsidebar--error/">features-comments-components-commentsidebar--error</a></h2>
+        <h2><a href="features-comments-components-commentsidebar--error/" data-story-link="features-comments-components-commentsidebar--error">features-comments-components-commentsidebar--error</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>6298</dd></div>
@@ -1036,11 +1064,11 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="features-comments-components-commentsidebar--loading/">features-comments-components-commentsidebar--loading</a></h2>
+        <h2><a href="features-comments-components-commentsidebar--loading/" data-story-link="features-comments-components-commentsidebar--loading">features-comments-components-commentsidebar--loading</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>19548</dd></div>
-        <div><dt>Diff ratio</dt><dd>2.1211%</dd></div>
+        <div><dt>Diff pixels</dt><dd>19749</dd></div>
+        <div><dt>Diff ratio</dt><dd>2.1429%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -1064,7 +1092,7 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="features-comments-components-commentthread--all-props/">features-comments-components-commentthread--all-props</a></h2>
+        <h2><a href="features-comments-components-commentthread--all-props/" data-story-link="features-comments-components-commentthread--all-props">features-comments-components-commentthread--all-props</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>5250</dd></div>
@@ -1092,7 +1120,7 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="features-comments-components-commentthread--default/">features-comments-components-commentthread--default</a></h2>
+        <h2><a href="features-comments-components-commentthread--default/" data-story-link="features-comments-components-commentthread--default">features-comments-components-commentthread--default</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>4437</dd></div>
@@ -1120,7 +1148,7 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="features-comments-components-commentthread--edge-cases/">features-comments-components-commentthread--edge-cases</a></h2>
+        <h2><a href="features-comments-components-commentthread--edge-cases/" data-story-link="features-comments-components-commentthread--edge-cases">features-comments-components-commentthread--edge-cases</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>5057</dd></div>
@@ -1148,7 +1176,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-sidebar-components-sidebarlayout--all-props/">features-sidebar-components-sidebarlayout--all-props</a></h2>
+        <h2><a href="features-sidebar-components-sidebarlayout--all-props/" data-story-link="features-sidebar-components-sidebarlayout--all-props">features-sidebar-components-sidebarlayout--all-props</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -1176,7 +1204,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-sidebar-components-sidebarlayout--default/">features-sidebar-components-sidebarlayout--default</a></h2>
+        <h2><a href="features-sidebar-components-sidebarlayout--default/" data-story-link="features-sidebar-components-sidebarlayout--default">features-sidebar-components-sidebarlayout--default</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -1204,7 +1232,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-sidebar-components-sidebarlayout--edge-cases/">features-sidebar-components-sidebarlayout--edge-cases</a></h2>
+        <h2><a href="features-sidebar-components-sidebarlayout--edge-cases/" data-story-link="features-sidebar-components-sidebarlayout--edge-cases">features-sidebar-components-sidebarlayout--edge-cases</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -1232,7 +1260,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-specs-components-markdownviewer--existing-comment-cards/">features-specs-components-markdownviewer--existing-comment-cards</a></h2>
+        <h2><a href="features-specs-components-markdownviewer--existing-comment-cards/" data-story-link="features-specs-components-markdownviewer--existing-comment-cards">features-specs-components-markdownviewer--existing-comment-cards</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>890</dd></div>
@@ -1260,7 +1288,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-specs-components-markdownviewer--highlighted-selection-surface/">features-specs-components-markdownviewer--highlighted-selection-surface</a></h2>
+        <h2><a href="features-specs-components-markdownviewer--highlighted-selection-surface/" data-story-link="features-specs-components-markdownviewer--highlighted-selection-surface">features-specs-components-markdownviewer--highlighted-selection-surface</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>890</dd></div>
@@ -1288,7 +1316,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-specs-components-markdownviewer--tech-reference-html-preview/">features-specs-components-markdownviewer--tech-reference-html-preview</a></h2>
+        <h2><a href="features-specs-components-markdownviewer--tech-reference-html-preview/" data-story-link="features-specs-components-markdownviewer--tech-reference-html-preview">features-specs-components-markdownviewer--tech-reference-html-preview</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>890</dd></div>
@@ -1316,7 +1344,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-specs-components-markdownviewer--test-cases-html/">features-specs-components-markdownviewer--test-cases-html</a></h2>
+        <h2><a href="features-specs-components-markdownviewer--test-cases-html/" data-story-link="features-specs-components-markdownviewer--test-cases-html">features-specs-components-markdownviewer--test-cases-html</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>890</dd></div>
@@ -1344,7 +1372,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-specs-components-markdownviewer-htmldocument--all-props/">features-specs-components-markdownviewer-htmldocument--all-props</a></h2>
+        <h2><a href="features-specs-components-markdownviewer-htmldocument--all-props/" data-story-link="features-specs-components-markdownviewer-htmldocument--all-props">features-specs-components-markdownviewer-htmldocument--all-props</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -1372,7 +1400,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-specs-components-markdownviewer-htmldocument--default/">features-specs-components-markdownviewer-htmldocument--default</a></h2>
+        <h2><a href="features-specs-components-markdownviewer-htmldocument--default/" data-story-link="features-specs-components-markdownviewer-htmldocument--default">features-specs-components-markdownviewer-htmldocument--default</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -1400,7 +1428,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-specs-components-markdownviewer-htmldocument--edge-cases/">features-specs-components-markdownviewer-htmldocument--edge-cases</a></h2>
+        <h2><a href="features-specs-components-markdownviewer-htmldocument--edge-cases/" data-story-link="features-specs-components-markdownviewer-htmldocument--edge-cases">features-specs-components-markdownviewer-htmldocument--edge-cases</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -1428,7 +1456,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl/">features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl</a></h2>
+        <h2><a href="features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl/" data-story-link="features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl">features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -1456,7 +1484,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan/">features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan</a></h2>
+        <h2><a href="features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan/" data-story-link="features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan">features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -1484,7 +1512,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-specs-components-markdownviewer-markdownviewerheader--default/">features-specs-components-markdownviewer-markdownviewerheader--default</a></h2>
+        <h2><a href="features-specs-components-markdownviewer-markdownviewerheader--default/" data-story-link="features-specs-components-markdownviewer-markdownviewerheader--default">features-specs-components-markdownviewer-markdownviewerheader--default</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>890</dd></div>
@@ -1512,7 +1540,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-specs-components-markdownviewer-markdownviewerheader--edge-cases/">features-specs-components-markdownviewer-markdownviewerheader--edge-cases</a></h2>
+        <h2><a href="features-specs-components-markdownviewer-markdownviewerheader--edge-cases/" data-story-link="features-specs-components-markdownviewer-markdownviewerheader--edge-cases">features-specs-components-markdownviewer-markdownviewerheader--edge-cases</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>176</dd></div>
@@ -1540,7 +1568,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls/">features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls</a></h2>
+        <h2><a href="features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls/" data-story-link="features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls">features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -1568,7 +1596,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props/">features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props</a></h2>
+        <h2><a href="features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props/" data-story-link="features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props">features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -1596,7 +1624,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default/">features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default</a></h2>
+        <h2><a href="features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default/" data-story-link="features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default">features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>893</dd></div>
@@ -1624,7 +1652,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases/">features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases</a></h2>
+        <h2><a href="features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases/" data-story-link="features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases">features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>170</dd></div>
@@ -1652,7 +1680,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props/">features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props</a></h2>
+        <h2><a href="features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props/" data-story-link="features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props">features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -1680,7 +1708,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default/">features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default</a></h2>
+        <h2><a href="features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default/" data-story-link="features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default">features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -1708,7 +1736,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases/">features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases</a></h2>
+        <h2><a href="features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases/" data-story-link="features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases">features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -1736,7 +1764,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-specs-components-markdownviewer-markdownviewerpanel--all-props/">features-specs-components-markdownviewer-markdownviewerpanel--all-props</a></h2>
+        <h2><a href="features-specs-components-markdownviewer-markdownviewerpanel--all-props/" data-story-link="features-specs-components-markdownviewer-markdownviewerpanel--all-props">features-specs-components-markdownviewer-markdownviewerpanel--all-props</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -1764,7 +1792,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-specs-components-markdownviewer-markdownviewerpanel--default/">features-specs-components-markdownviewer-markdownviewerpanel--default</a></h2>
+        <h2><a href="features-specs-components-markdownviewer-markdownviewerpanel--default/" data-story-link="features-specs-components-markdownviewer-markdownviewerpanel--default">features-specs-components-markdownviewer-markdownviewerpanel--default</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -1792,7 +1820,7 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="features-specs-components-markdownviewer-markdownviewerpanel--edge-cases/">features-specs-components-markdownviewer-markdownviewerpanel--edge-cases</a></h2>
+        <h2><a href="features-specs-components-markdownviewer-markdownviewerpanel--edge-cases/" data-story-link="features-specs-components-markdownviewer-markdownviewerpanel--edge-cases">features-specs-components-markdownviewer-markdownviewerpanel--edge-cases</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>5632</dd></div>
@@ -1820,7 +1848,7 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="features-specs-components-markdownviewer-markdownviewerstatuspanel--default/">features-specs-components-markdownviewer-markdownviewerstatuspanel--default</a></h2>
+        <h2><a href="features-specs-components-markdownviewer-markdownviewerstatuspanel--default/" data-story-link="features-specs-components-markdownviewer-markdownviewerstatuspanel--default">features-specs-components-markdownviewer-markdownviewerstatuspanel--default</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>5506</dd></div>
@@ -1848,7 +1876,7 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases/">features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases</a></h2>
+        <h2><a href="features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases/" data-story-link="features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases">features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>5632</dd></div>
@@ -1876,7 +1904,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-specs-components-markdownviewer-markdownviewerstatuspanel--empty/">features-specs-components-markdownviewer-markdownviewerstatuspanel--empty</a></h2>
+        <h2><a href="features-specs-components-markdownviewer-markdownviewerstatuspanel--empty/" data-story-link="features-specs-components-markdownviewer-markdownviewerstatuspanel--empty">features-specs-components-markdownviewer-markdownviewerstatuspanel--empty</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>957</dd></div>
@@ -1904,7 +1932,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-specs-components-markdownviewer-markdownviewerstatuspanel--error/">features-specs-components-markdownviewer-markdownviewerstatuspanel--error</a></h2>
+        <h2><a href="features-specs-components-markdownviewer-markdownviewerstatuspanel--error/" data-story-link="features-specs-components-markdownviewer-markdownviewerstatuspanel--error">features-specs-components-markdownviewer-markdownviewerstatuspanel--error</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>1624</dd></div>
@@ -1932,11 +1960,11 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="features-specs-components-markdownviewer-markdownviewerstatuspanel--loading/">features-specs-components-markdownviewer-markdownviewerstatuspanel--loading</a></h2>
+        <h2><a href="features-specs-components-markdownviewer-markdownviewerstatuspanel--loading/" data-story-link="features-specs-components-markdownviewer-markdownviewerstatuspanel--loading">features-specs-components-markdownviewer-markdownviewerstatuspanel--loading</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>45241</dd></div>
-        <div><dt>Diff ratio</dt><dd>4.9090%</dd></div>
+        <div><dt>Diff pixels</dt><dd>4909</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.5327%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -1960,7 +1988,7 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="features-specs-components-markdownviewer-markdownviewerstatuspanel--missing/">features-specs-components-markdownviewer-markdownviewerstatuspanel--missing</a></h2>
+        <h2><a href="features-specs-components-markdownviewer-markdownviewerstatuspanel--missing/" data-story-link="features-specs-components-markdownviewer-markdownviewerstatuspanel--missing">features-specs-components-markdownviewer-markdownviewerstatuspanel--missing</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>7323</dd></div>
@@ -1988,7 +2016,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-specs-components-spectabs--all-props/">features-specs-components-spectabs--all-props</a></h2>
+        <h2><a href="features-specs-components-spectabs--all-props/" data-story-link="features-specs-components-spectabs--all-props">features-specs-components-spectabs--all-props</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -2016,7 +2044,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-specs-components-spectabs--default/">features-specs-components-spectabs--default</a></h2>
+        <h2><a href="features-specs-components-spectabs--default/" data-story-link="features-specs-components-spectabs--default">features-specs-components-spectabs--default</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -2044,7 +2072,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-specs-components-spectabs--edge-cases/">features-specs-components-spectabs--edge-cases</a></h2>
+        <h2><a href="features-specs-components-spectabs--edge-cases/" data-story-link="features-specs-components-spectabs--edge-cases">features-specs-components-spectabs--edge-cases</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -2072,7 +2100,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-specs-components-spectabs--empty/">features-specs-components-spectabs--empty</a></h2>
+        <h2><a href="features-specs-components-spectabs--empty/" data-story-link="features-specs-components-spectabs--empty">features-specs-components-spectabs--empty</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -2100,7 +2128,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-specs-components-spectree--all-props/">features-specs-components-spectree--all-props</a></h2>
+        <h2><a href="features-specs-components-spectree--all-props/" data-story-link="features-specs-components-spectree--all-props">features-specs-components-spectree--all-props</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -2128,7 +2156,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-specs-components-spectree--default/">features-specs-components-spectree--default</a></h2>
+        <h2><a href="features-specs-components-spectree--default/" data-story-link="features-specs-components-spectree--default">features-specs-components-spectree--default</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -2156,7 +2184,7 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="features-specs-components-spectree--edge-cases/">features-specs-components-spectree--edge-cases</a></h2>
+        <h2><a href="features-specs-components-spectree--edge-cases/" data-story-link="features-specs-components-spectree--edge-cases">features-specs-components-spectree--edge-cases</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>5534</dd></div>
@@ -2184,7 +2212,7 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="features-specs-components-spectree--empty/">features-specs-components-spectree--empty</a></h2>
+        <h2><a href="features-specs-components-spectree--empty/" data-story-link="features-specs-components-spectree--empty">features-specs-components-spectree--empty</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>5701</dd></div>
@@ -2212,7 +2240,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-specs-components-spectree--error/">features-specs-components-spectree--error</a></h2>
+        <h2><a href="features-specs-components-spectree--error/" data-story-link="features-specs-components-spectree--error">features-specs-components-spectree--error</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>1620</dd></div>
@@ -2240,11 +2268,11 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="features-specs-components-spectree--loading/">features-specs-components-spectree--loading</a></h2>
+        <h2><a href="features-specs-components-spectree--loading/" data-story-link="features-specs-components-spectree--loading">features-specs-components-spectree--loading</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>13637</dd></div>
-        <div><dt>Diff ratio</dt><dd>1.4797%</dd></div>
+        <div><dt>Diff pixels</dt><dd>13623</dd></div>
+        <div><dt>Diff ratio</dt><dd>1.4782%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -2268,7 +2296,7 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="features-workspace-components-openworkspaceemptystate--all-props/">features-workspace-components-openworkspaceemptystate--all-props</a></h2>
+        <h2><a href="features-workspace-components-openworkspaceemptystate--all-props/" data-story-link="features-workspace-components-openworkspaceemptystate--all-props">features-workspace-components-openworkspaceemptystate--all-props</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>11367</dd></div>
@@ -2296,7 +2324,7 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="features-workspace-components-openworkspaceemptystate--default/">features-workspace-components-openworkspaceemptystate--default</a></h2>
+        <h2><a href="features-workspace-components-openworkspaceemptystate--default/" data-story-link="features-workspace-components-openworkspaceemptystate--default">features-workspace-components-openworkspaceemptystate--default</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>10703</dd></div>
@@ -2324,7 +2352,7 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="features-workspace-components-openworkspaceemptystate--edge-cases/">features-workspace-components-openworkspaceemptystate--edge-cases</a></h2>
+        <h2><a href="features-workspace-components-openworkspaceemptystate--edge-cases/" data-story-link="features-workspace-components-openworkspaceemptystate--edge-cases">features-workspace-components-openworkspaceemptystate--edge-cases</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>10501</dd></div>
@@ -2352,7 +2380,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-workspace-components-workspacedropoverlay--default/">features-workspace-components-workspacedropoverlay--default</a></h2>
+        <h2><a href="features-workspace-components-workspacedropoverlay--default/" data-story-link="features-workspace-components-workspacedropoverlay--default">features-workspace-components-workspacedropoverlay--default</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -2380,7 +2408,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-workspace-components-workspacedropoverlay--edge-cases/">features-workspace-components-workspacedropoverlay--edge-cases</a></h2>
+        <h2><a href="features-workspace-components-workspacedropoverlay--edge-cases/" data-story-link="features-workspace-components-workspacedropoverlay--edge-cases">features-workspace-components-workspacedropoverlay--edge-cases</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>0</dd></div>
@@ -2408,7 +2436,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-workspace-components-workspacesidebarsection--all-props/">features-workspace-components-workspacesidebarsection--all-props</a></h2>
+        <h2><a href="features-workspace-components-workspacesidebarsection--all-props/" data-story-link="features-workspace-components-workspacesidebarsection--all-props">features-workspace-components-workspacesidebarsection--all-props</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>1238</dd></div>
@@ -2436,7 +2464,7 @@
     <header class="story__header">
       <div>
         <p class="status">passed</p>
-        <h2><a href="features-workspace-components-workspacesidebarsection--default/">features-workspace-components-workspacesidebarsection--default</a></h2>
+        <h2><a href="features-workspace-components-workspacesidebarsection--default/" data-story-link="features-workspace-components-workspacesidebarsection--default">features-workspace-components-workspacesidebarsection--default</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>1238</dd></div>
@@ -2464,7 +2492,7 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="features-workspace-components-workspacesidebarsection--edge-cases/">features-workspace-components-workspacesidebarsection--edge-cases</a></h2>
+        <h2><a href="features-workspace-components-workspacesidebarsection--edge-cases/" data-story-link="features-workspace-components-workspacesidebarsection--edge-cases">features-workspace-components-workspacesidebarsection--edge-cases</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>3125</dd></div>
@@ -2492,7 +2520,7 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="features-workspace-components-workspacetoolbar--all-props/">features-workspace-components-workspacetoolbar--all-props</a></h2>
+        <h2><a href="features-workspace-components-workspacetoolbar--all-props/" data-story-link="features-workspace-components-workspacetoolbar--all-props">features-workspace-components-workspacetoolbar--all-props</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>7261</dd></div>
@@ -2520,7 +2548,7 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="features-workspace-components-workspacetoolbar--default/">features-workspace-components-workspacetoolbar--default</a></h2>
+        <h2><a href="features-workspace-components-workspacetoolbar--default/" data-story-link="features-workspace-components-workspacetoolbar--default">features-workspace-components-workspacetoolbar--default</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>5780</dd></div>
@@ -2548,7 +2576,7 @@
     <header class="story__header">
       <div>
         <p class="status">changed</p>
-        <h2><a href="features-workspace-components-workspacetoolbar--edge-cases/">features-workspace-components-workspacetoolbar--edge-cases</a></h2>
+        <h2><a href="features-workspace-components-workspacetoolbar--edge-cases/" data-story-link="features-workspace-components-workspacetoolbar--edge-cases">features-workspace-components-workspacetoolbar--edge-cases</a></h2>
       </div>
       <dl class="metrics">
         <div><dt>Diff pixels</dt><dd>5783</dd></div>
@@ -2574,7 +2602,19 @@
     </div>
   </article>
   </main>
+  </div>
   <script>
+    const currentDirectory = () => window.location.pathname.endsWith("/") ? window.location.pathname : window.location.pathname + "/";
+    for (const link of document.querySelectorAll("[data-story-link]")) {
+      const story = link.getAttribute("data-story-link");
+      if (story) {
+        link.href = currentDirectory() + encodeURIComponent(story) + "/";
+      }
+    }
+    for (const link of document.querySelectorAll("[data-back-link]")) {
+      const path = window.location.pathname.endsWith("/") ? window.location.pathname.slice(0, -1) : window.location.pathname;
+      link.href = path.slice(0, path.lastIndexOf("/")) + "/";
+    }
     for (const root of document.querySelectorAll("[data-comparison]")) {
       const slider = root.querySelector("[data-slider]");
       const actual = root.querySelector("[data-actual]");
