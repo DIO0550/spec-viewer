@@ -7,6 +7,11 @@ import {
   createTextHash,
 } from "@/features/comments";
 import { CommentId } from "@/features/comments/domain/commentId";
+import {
+  DiffWorkspace,
+  type ReviewMode,
+  ReviewModeToolbar,
+} from "@/features/diff";
 import { ThemeProvider } from "@/features/preferences";
 import type {
   MarkdownBlockMetadata,
@@ -282,12 +287,12 @@ function WorkspaceLayoutStory(props: WorkspaceLayoutStoryProps) {
     onCommentsWidthChange,
   } = props;
   const [storyLeftOpen, setStoryLeftOpen] = useState(leftOpen ?? true);
-  const [storyLeftWidth, setStoryLeftWidth] = useState(leftWidth ?? 268);
+  const [storyLeftWidth, setStoryLeftWidth] = useState(leftWidth ?? 240);
   const [storyCommentsOpen, setStoryCommentsOpen] = useState(
     commentsOpen ?? true,
   );
   const [storyCommentsWidth, setStoryCommentsWidth] = useState(
-    commentsWidth ?? 360,
+    commentsWidth ?? 300,
   );
 
   return (
@@ -344,6 +349,16 @@ function WorkspaceLayoutStory(props: WorkspaceLayoutStoryProps) {
 
 const meta = {
   component: WorkspaceLayoutStory,
+  parameters: {
+    layout: "fullscreen",
+  },
+  decorators: [
+    (Story) => (
+      <div style={{ height: "100vh" }}>
+        <Story />
+      </div>
+    ),
+  ],
   argTypes: {
     toolbar: { control: false },
     sidebar: { control: false },
@@ -357,7 +372,37 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
+const readySpecsArgs = createShellArgs({
+  treeState: readyTreeState,
+  documentState: readyDocumentState,
+  selectedSpec: sampleSpec,
+  selectedFileKey: "tasks",
+  workspaceInput: workspacePath,
+  workspaceStatusPath: workspacePath,
+});
+
 export const Default: Story = {
+  name: "Specs",
+  args: readySpecsArgs,
+};
+
+export const AllProps: Story = {
+  args: {
+    ...readySpecsArgs,
+    leftWidth: 420,
+    commentsWidth: 560,
+  },
+};
+
+export const EdgeCases: Story = {
+  args: {
+    ...readySpecsArgs,
+    leftOpen: false,
+    commentsOpen: false,
+  },
+};
+
+export const Diff: Story = {
   args: createShellArgs({
     treeState: readyTreeState,
     documentState: readyDocumentState,
@@ -365,6 +410,7 @@ export const Default: Story = {
     selectedFileKey: "tasks",
     workspaceInput: workspacePath,
     workspaceStatusPath: workspacePath,
+    reviewMode: "diff",
   }),
 };
 
@@ -481,6 +527,7 @@ type ShellArgsOptions = Readonly<{
   workspaceErrorMessage?: string;
   isWorkspaceLoading?: boolean;
   archivingSpecId?: string | null;
+  reviewMode?: ReviewMode;
 }>;
 
 /** @returns WorkspaceLayout story args for a representative viewer state. */
@@ -494,9 +541,52 @@ function createShellArgs({
   workspaceErrorMessage = undefined,
   isWorkspaceLoading = false,
   archivingSpecId = null,
+  reviewMode = "specs",
 }: ShellArgsOptions): ComponentProps<typeof WorkspaceLayoutStory> {
   const selectedFile =
     selectedSpec?.files.find((file) => file.key === selectedFileKey) ?? null;
+  let viewer: ReactNode;
+
+  if (reviewMode === "diff") {
+    viewer = <DiffWorkspace />;
+  } else {
+    viewer = (
+      <div className="specs-workspace">
+        <aside className="specs-workspace__navigation" aria-label="Specs">
+          <SpecTree
+            state={treeState}
+            selectedSpecId={selectedSpec?.id ?? null}
+            archivingSpecId={archivingSpecId}
+            isLoading={archivingSpecId !== null}
+            onSelectSpec={fn()}
+            onArchiveSpec={fn()}
+            onReload={fn()}
+          />
+        </aside>
+        <section
+          className="specs-workspace__document"
+          aria-label="Spec document"
+        >
+          <SpecTabs
+            spec={selectedSpec}
+            selectedFileKey={selectedFileKey}
+            onSelectFile={fn()}
+          />
+          <div className="specs-workspace__viewer">
+            <MarkdownViewer
+              state={documentState}
+              selectedSpecLabel={selectedSpec?.label ?? null}
+              selectedFileLabel={selectedFile?.label ?? null}
+              comments={sampleComments}
+              activeCommentId={commentId("cmt_story_open")}
+              onReload={fn()}
+              onSelectComment={fn()}
+            />
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   return {
     leftOpen: true,
@@ -555,35 +645,16 @@ function createShellArgs({
           onOpenWorkspace={fn()}
           onRemoveWorkspace={fn()}
         />
-        <SpecTree
-          state={treeState}
-          selectedSpecId={selectedSpec?.id ?? null}
-          archivingSpecId={archivingSpecId}
-          isLoading={archivingSpecId !== null}
-          onSelectSpec={fn()}
-          onArchiveSpec={fn()}
-          onReload={fn()}
-        />
       </div>
     ),
     tabs: (
-      <SpecTabs
-        spec={selectedSpec}
-        selectedFileKey={selectedFileKey}
-        onSelectFile={fn()}
+      <ReviewModeToolbar
+        mode={reviewMode}
+        fileLabel={selectedFile?.label ?? "ファイル未選択"}
+        onModeChange={fn()}
       />
     ),
-    viewer: (
-      <MarkdownViewer
-        state={documentState}
-        selectedSpecLabel={selectedSpec?.label ?? null}
-        selectedFileLabel={selectedFile?.label ?? null}
-        comments={sampleComments}
-        activeCommentId={commentId("cmt_story_open")}
-        onReload={fn()}
-        onSelectComment={fn()}
-      />
-    ),
+    viewer,
     comments: (
       <CommentSidebar
         listState={{
