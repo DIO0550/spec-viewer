@@ -195,6 +195,15 @@ const run = (cmd, args) => new Promise((resolve) => {
 
 const copy = (from, to) => writeFileSync(to, readFileSync(from));
 
+const readStoryMetadata = (dir) => {
+  const path = join(dir, "stories.json");
+  if (!existsSync(path)) {
+    return new Map();
+  }
+  const stories = JSON.parse(readFileSync(path, "utf8"));
+  return new Map(stories.map((story) => [story.id, story]));
+};
+
 const compare = async (options) => {
   const expected = options.expected ?? "visual-baseline";
   const actual = options.actual ?? "visual-actual";
@@ -208,6 +217,7 @@ const compare = async (options) => {
   }
   const actualNames = listFiles(actual).filter((path) => extname(path) === ".png").map((path) => basename(path));
   const expectedNames = listFiles(expected).filter((path) => extname(path) === ".png").map((path) => basename(path));
+  const storyMetadata = new Map([...readStoryMetadata(expected), ...readStoryMetadata(actual)]);
   const names = [...new Set([...actualNames, ...expectedNames])].sort();
   const results = [];
   for (const name of names) {
@@ -216,12 +226,14 @@ const compare = async (options) => {
     const diffPath = join(out, "diff", name);
     if (!existsSync(expectedPath)) {
       copy(actualPath, join(out, "actual", name));
-      results.push({ story: name.replace(/\.png$/, ""), status: "added", diffPixels: 0, diffRatio: 0, hasExpected: false, hasActual: true, hasDiff: false });
+      const story = name.replace(/\.png$/, "");
+      results.push({ story, ...storyMetadata.get(story), status: "added", diffPixels: 0, diffRatio: 0, hasExpected: false, hasActual: true, hasDiff: false });
       continue;
     }
     if (!existsSync(actualPath)) {
       copy(expectedPath, join(out, "expected", name));
-      results.push({ story: name.replace(/\.png$/, ""), status: "removed", diffPixels: 0, diffRatio: 0, hasExpected: true, hasActual: false, hasDiff: false });
+      const story = name.replace(/\.png$/, "");
+      results.push({ story, ...storyMetadata.get(story), status: "removed", diffPixels: 0, diffRatio: 0, hasExpected: true, hasActual: false, hasDiff: false });
       continue;
     }
     copy(actualPath, join(out, "actual", name));
@@ -229,7 +241,8 @@ const compare = async (options) => {
     const result = await run("compare", ["-metric", "AE", "-highlight-color", "#ff00aa", "-lowlight-color", "#202124", expectedPath, actualPath, diffPath]);
     const diffPixels = Number.parseInt(result.stderr.trim(), 10) || 0;
     const diffRatio = diffPixels / (width * height);
-    results.push({ story: name.replace(/\.png$/, ""), status: diffRatio > maxDiffRatio ? "changed" : "passed", diffPixels, diffRatio, hasExpected: true, hasActual: true, hasDiff: true });
+    const story = name.replace(/\.png$/, "");
+    results.push({ story, ...storyMetadata.get(story), status: diffRatio > maxDiffRatio ? "changed" : "passed", diffPixels, diffRatio, hasExpected: true, hasActual: true, hasDiff: true });
   }
   const failed = results.filter((result) => result.status === "changed");
   const summary = { maxDiffRatio, failed: failed.length, results };
@@ -310,6 +323,34 @@ const formatStatusLabel = (status) => {
   return status.charAt(0).toUpperCase() + status.slice(1);
 };
 
+const renderStoryTree = (stories) => {
+  const root = { children: new Map(), stories: [] };
+  for (const result of stories) {
+    const titleParts = (result.title ?? "Other").split("/").filter(Boolean);
+    let node = root;
+    for (const part of titleParts) {
+      if (!node.children.has(part)) {
+        node.children.set(part, { children: new Map(), stories: [] });
+      }
+      node = node.children.get(part);
+    }
+    node.stories.push(result);
+  }
+
+  const renderNode = (node) => `${[...node.children.entries()].map(([label, child]) => `<li>
+    <details open>
+      <summary>${escapeHtml(label)}</summary>
+      <ul>${renderNode(child)}</ul>
+    </details>
+  </li>`).join("")}${node.stories.map((result) => {
+    const story = escapeHtml(result.story);
+    const label = escapeHtml(result.name ?? result.story.split("--").at(-1) ?? result.story);
+    return `<li class="story-nav__story"><a href="#${story}" title="${story}">${label}</a></li>`;
+  }).join("")}`;
+
+  return `<ul class="story-nav__tree">${renderNode(root)}</ul>`;
+};
+
 const renderSidebar = (summary, options = {}) => {
   if (options.detailStory) {
     return "";
@@ -325,16 +366,11 @@ const renderSidebar = (summary, options = {}) => {
     return "";
   }
 
-  return `<aside class="story-nav" aria-label="Story result navigation">
+  return `<aside class="story-nav" id="story-navigation" aria-label="Story result navigation">
     <h2>Stories</h2>
     ${groups.map((group) => `<section class="story-nav__group story-nav__group--${group.status}">
       <h3>${formatStatusLabel(group.status)} <span>${group.stories.length}</span></h3>
-      <ol>
-        ${group.stories.map((result) => {
-          const story = escapeHtml(result.story);
-          return `<li><a href="#${story}">${story}</a></li>`;
-        }).join("")}
-      </ol>
+      ${renderStoryTree(group.stories)}
     </section>`).join("")}
   </aside>`;
 };
@@ -348,7 +384,9 @@ const renderHtml = (summary, options = {}) => `<!doctype html>
   <style>
     :root { color-scheme: light dark; --bg: #0f172a; --panel: #111827; --text: #e5e7eb; --muted: #9ca3af; --line: #374151; --accent: #38bdf8; --danger: #fb7185; --ok: #34d399; --warn: #fbbf24; }
     body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-    .layout { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: 24px; width: min(1680px, calc(100% - 48px)); margin: 0 auto; padding: 32px 0 56px; }
+    .layout { display: grid; grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); gap: 24px; width: min(1680px, calc(100% - 48px)); margin: 0 auto; padding: 32px 0 56px; transition: grid-template-columns 160ms ease; }
+    .layout--nav-hidden { grid-template-columns: 0 minmax(0, 1fr); }
+    .layout--nav-hidden .story-nav { visibility: hidden; opacity: 0; pointer-events: none; }
     .layout--detail { display: block; width: min(1440px, calc(100% - 48px)); }
     main { min-width: 0; }
     .hero { display: flex; justify-content: space-between; gap: 24px; align-items: flex-end; margin-bottom: 24px; }
@@ -356,15 +394,22 @@ const renderHtml = (summary, options = {}) => `<!doctype html>
     h1 { font-size: 32px; }
     a { color: inherit; }
     .summary { color: var(--muted); margin-top: 8px; }
-    .badge { border: 1px solid var(--line); border-radius: 999px; padding: 8px 12px; background: rgb(255 255 255 / 6%); }
-    .story-nav { position: sticky; top: 24px; align-self: start; max-height: calc(100vh - 48px); overflow: auto; border: 1px solid var(--line); border-radius: 18px; padding: 16px; background: rgb(17 24 39 / 86%); box-shadow: 0 18px 50px rgb(0 0 0 / 18%); }
+    .hero__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+    .badge, .nav-toggle { border: 1px solid var(--line); border-radius: 999px; padding: 8px 12px; background: rgb(255 255 255 / 6%); color: var(--text); font: inherit; }
+    .nav-toggle { cursor: pointer; }
+    .nav-toggle:hover { border-color: var(--accent); color: var(--accent); }
+    .story-nav { position: sticky; top: 24px; align-self: start; box-sizing: border-box; max-height: calc(100vh - 48px); overflow: auto; scrollbar-gutter: stable; border: 1px solid var(--line); border-radius: 18px; padding: 16px 20px 16px 16px; background: rgb(17 24 39 / 86%); box-shadow: 0 18px 50px rgb(0 0 0 / 18%); transition: opacity 160ms ease; }
     .story-nav h2 { font-size: 16px; margin: 0 0 14px; }
     .story-nav__group { margin-top: 14px; }
     .story-nav__group h3 { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
     .story-nav__group h3 span { border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; color: var(--text); background: rgb(255 255 255 / 6%); }
     .story-nav__group--changed h3 { color: var(--danger); }
     .story-nav__group--passed h3 { color: var(--ok); }
-    .story-nav ol { display: grid; gap: 4px; list-style: none; margin: 0; padding: 0; }
+    .story-nav ul { list-style: none; margin: 0; padding: 0; }
+    .story-nav__tree ul { margin-left: 9px; padding-left: 10px; border-left: 1px solid var(--line); }
+    .story-nav details > summary { overflow: hidden; padding: 5px 4px; cursor: pointer; color: var(--muted); font-size: 13px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+    .story-nav details > summary:hover { color: var(--accent); }
+    .story-nav__story { margin: 2px 0; }
     .story-nav a { display: block; overflow: hidden; border-radius: 8px; padding: 6px 8px; color: var(--text); text-overflow: ellipsis; white-space: nowrap; text-decoration: none; }
     .story-nav a:hover { background: rgb(255 255 255 / 8%); color: var(--accent); }
     .story { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 20px; margin-top: 18px; box-shadow: 0 18px 50px rgb(0 0 0 / 24%); }
@@ -393,12 +438,12 @@ const renderHtml = (summary, options = {}) => `<!doctype html>
     .image-card img { display: block; width: 100%; height: auto; }
     .image-card--empty { display: grid; min-height: 180px; place-items: center; color: var(--muted); }
     .image-card--empty h3 { justify-self: stretch; width: 100%; box-sizing: border-box; }
-    @media (max-width: 900px) { .hero, .story__header { display: block; } .metrics, .shots { grid-template-columns: 1fr; display: grid; } }
-    @media (max-width: 640px) { .layout, .layout--detail { display: block; width: min(100% - 24px, 1440px); padding-top: 18px; } .story-nav { position: static; max-height: none; margin-bottom: 18px; } }
+    @media (max-width: 900px) { .hero, .story__header { display: block; } .hero__actions { justify-content: flex-start; margin-top: 12px; } .metrics, .shots { grid-template-columns: 1fr; display: grid; } }
+    @media (max-width: 640px) { .layout, .layout--detail, .layout--nav-hidden { display: block; width: min(100% - 24px, 1440px); padding-top: 18px; } .story-nav { position: static; max-height: 60vh; margin-bottom: 18px; } .layout--nav-hidden .story-nav { display: none; } }
   </style>
 </head>
 <body>
-  <div class="layout${options.detailStory ? " layout--detail" : ""}">
+  <div class="layout${options.detailStory ? " layout--detail" : ""}" data-layout>
   ${renderSidebar(summary, options)}
   <main>
     <section class="hero">
@@ -406,12 +451,24 @@ const renderHtml = (summary, options = {}) => `<!doctype html>
         <h1>${options.detailStory ? escapeHtml(options.detailStory) : "Storybook Visual Regression Report"}</h1>
         <p class="summary">${options.detailStory ? '<a href="../" data-back-link>← Back to all stories</a>' : "Move the slider to compare baseline and current screenshots. Click a story title to open that story on its own page."}</p>
       </div>
-      <div class="badge">Failed: <strong>${summary.failed}</strong> / Threshold: ${summary.maxDiffRatio}</div>
+      <div class="hero__actions">
+        ${options.detailStory ? "" : '<button class="nav-toggle" type="button" data-nav-toggle aria-controls="story-navigation" aria-expanded="true">Hide stories</button>'}
+        <div class="badge">Failed: <strong>${summary.failed}</strong> / Threshold: ${summary.maxDiffRatio}</div>
+      </div>
     </section>
     ${summary.results.map((result) => renderStory(result, options)).join("")}
   </main>
   </div>
   <script>
+    const layout = document.querySelector("[data-layout]");
+    const navToggle = document.querySelector("[data-nav-toggle]");
+    if (layout && navToggle) {
+      navToggle.addEventListener("click", () => {
+        const hidden = layout.classList.toggle("layout--nav-hidden");
+        navToggle.setAttribute("aria-expanded", String(!hidden));
+        navToggle.textContent = hidden ? "Show stories" : "Hide stories";
+      });
+    }
     const currentDirectory = () => window.location.pathname.endsWith("/") ? window.location.pathname : window.location.pathname + "/";
     for (const link of document.querySelectorAll("[data-story-link]")) {
       const story = link.getAttribute("data-story-link");
