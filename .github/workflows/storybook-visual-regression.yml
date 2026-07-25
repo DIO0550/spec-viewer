@@ -34,10 +34,6 @@ jobs:
         with:
           node-version: 24
 
-      - name: Install ImageMagick
-        if: github.event.action != 'closed'
-        run: sudo apt-get update && sudo apt-get install -y imagemagick
-
       - name: Install dependencies
         if: github.event.action != 'closed'
         working-directory: spec-viewer

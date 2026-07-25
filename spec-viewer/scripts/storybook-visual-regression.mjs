@@ -4,6 +4,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, extname, join } from "node:path";
+import { ODiffServer } from "odiff-bin";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -186,13 +187,6 @@ const capture = async (options) => {
   }
 };
 
-const run = (cmd, args) => new Promise((resolve) => {
-  const child = spawn(cmd, args, { stdio: ["ignore", "pipe", "pipe"] });
-  let stderr = "";
-  child.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
-  child.on("close", (code) => resolve({ code, stderr }));
-});
-
 const copy = (from, to) => writeFileSync(to, readFileSync(from));
 
 const readStoryMetadata = (dir) => {
@@ -208,9 +202,8 @@ const compare = async (options) => {
   const expected = options.expected ?? "visual-baseline";
   const actual = options.actual ?? "visual-actual";
   const out = options.out ?? "visual-report";
-  const width = Number(options.width ?? 1280);
-  const height = Number(options.height ?? 720);
   const maxDiffRatio = Number(options["max-diff-ratio"] ?? 0.002);
+  const threshold = Number(options.threshold ?? 0.1);
   const reportVersion = options["report-version"] ?? "local";
   rmSync(out, { recursive: true, force: true });
   for (const dir of ["actual", "expected", "diff"]) {
@@ -220,32 +213,59 @@ const compare = async (options) => {
   const expectedNames = listFiles(expected).filter((path) => extname(path) === ".png").map((path) => basename(path));
   const storyMetadata = new Map([...readStoryMetadata(expected), ...readStoryMetadata(actual)]);
   const names = [...new Set([...actualNames, ...expectedNames])].sort();
+  const server = new ODiffServer();
   const results = [];
-  for (const name of names) {
-    const actualPath = join(actual, name);
-    const expectedPath = join(expected, name);
-    const diffPath = join(out, "diff", name);
-    if (!existsSync(expectedPath)) {
+  try {
+    for (const name of names) {
+      const story = name.replace(/\.png$/, "");
+      const metadata = storyMetadata.get(story);
+      const actualPath = join(actual, name);
+      const expectedPath = join(expected, name);
+      const diffPath = join(out, "diff", name);
+      if (!existsSync(expectedPath)) {
+        copy(actualPath, join(out, "actual", name));
+        results.push({ story, ...metadata, status: "added", diffPixels: 0, diffRatio: 0, hasExpected: false, hasActual: true, hasDiff: false });
+        continue;
+      }
+      if (!existsSync(actualPath)) {
+        copy(expectedPath, join(out, "expected", name));
+        results.push({ story, ...metadata, status: "removed", diffPixels: 0, diffRatio: 0, hasExpected: true, hasActual: false, hasDiff: false });
+        continue;
+      }
       copy(actualPath, join(out, "actual", name));
-      const story = name.replace(/\.png$/, "");
-      results.push({ story, ...storyMetadata.get(story), status: "added", diffPixels: 0, diffRatio: 0, hasExpected: false, hasActual: true, hasDiff: false });
-      continue;
-    }
-    if (!existsSync(actualPath)) {
       copy(expectedPath, join(out, "expected", name));
-      const story = name.replace(/\.png$/, "");
-      results.push({ story, ...storyMetadata.get(story), status: "removed", diffPixels: 0, diffRatio: 0, hasExpected: true, hasActual: false, hasDiff: false });
-      continue;
+      const result = await server.compare(expectedPath, actualPath, diffPath, {
+        threshold,
+        antialiasing: true,
+        diffColor: "#ff00aa",
+        failOnLayoutDiff: true,
+        timeout: 30_000,
+      });
+      if (result.match) {
+        results.push({ story, ...metadata, status: "passed", diffPixels: 0, diffRatio: 0, hasExpected: true, hasActual: true, hasDiff: false });
+        continue;
+      }
+      if (result.reason !== "pixel-diff") {
+        results.push({ story, ...metadata, status: result.reason, diffPixels: 0, diffRatio: 1, hasExpected: true, hasActual: true, hasDiff: false });
+        continue;
+      }
+      const diffRatio = result.diffPercentage / 100;
+      results.push({
+        story,
+        ...metadata,
+        status: diffRatio > maxDiffRatio ? "changed" : "passed",
+        diffPixels: result.diffCount,
+        diffRatio,
+        hasExpected: true,
+        hasActual: true,
+        hasDiff: existsSync(diffPath),
+      });
     }
-    copy(actualPath, join(out, "actual", name));
-    copy(expectedPath, join(out, "expected", name));
-    const result = await run("compare", ["-metric", "AE", "-highlight-color", "#ff00aa", "-lowlight-color", "#202124", expectedPath, actualPath, diffPath]);
-    const diffPixels = Number.parseInt(result.stderr.trim(), 10) || 0;
-    const diffRatio = diffPixels / (width * height);
-    const story = name.replace(/\.png$/, "");
-    results.push({ story, ...storyMetadata.get(story), status: diffRatio > maxDiffRatio ? "changed" : "passed", diffPixels, diffRatio, hasExpected: true, hasActual: true, hasDiff: true });
+  } finally {
+    server.stop();
   }
-  const failed = results.filter((result) => result.status === "changed");
+  const failedStatuses = new Set(["changed", "layout-diff", "file-not-exists"]);
+  const failed = results.filter((result) => failedStatuses.has(result.status));
   const summary = { reportVersion, maxDiffRatio, failed: failed.length, results };
   writeFileSync(join(out, "summary.json"), JSON.stringify(summary, null, 2));
   writeFileSync(join(out, "index.html"), renderHtml(summary));
@@ -270,12 +290,13 @@ const comparisonPanel = (result, pathPrefix = "") => {
   const expectedPath = `${pathPrefix}expected/${story}.png`;
   const actualPath = `${pathPrefix}actual/${story}.png`;
   const diffPath = `${pathPrefix}diff/${story}.png`;
+  const canCompare = result.hasExpected && result.hasActual && result.status !== "layout-diff";
   const imageOrEmpty = (label, path, enabled) => enabled
     ? `<figure class="comparison__pane"><figcaption>${label}</figcaption><img class="comparison__image" src="${path}" alt="${label} ${story}"></figure>`
     : `<div class="comparison__pane comparison__pane--empty"><strong>${label}</strong><span>Not available</span></div>`;
   return `<div class="comparison" data-comparison>
     <div class="comparison__view" data-view="overlay">
-      ${result.hasExpected && result.hasActual ? `
+      ${canCompare ? `
       <div class="comparison__frame">
         <img class="comparison__image" src="${expectedPath}" alt="Baseline ${story}">
         <img class="comparison__image comparison__overlay" src="${actualPath}" alt="Current ${story}" data-overlay-image style="opacity: 0.5">
@@ -291,7 +312,7 @@ const comparisonPanel = (result, pathPrefix = "") => {
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
-      ${result.hasExpected && result.hasActual ? `
+      ${canCompare ? `
       <div class="comparison__frame">
         <img class="comparison__image" src="${expectedPath}" alt="Baseline ${story}">
         <div class="comparison__actual" data-actual style="clip-path: inset(0 0 0 50%)"><img class="comparison__image" src="${actualPath}" alt="Current ${story}"></div>
@@ -376,7 +397,7 @@ const renderSidebar = (summary, options = {}) => {
   if (options.detailStory) {
     return "";
   }
-  const groups = ["changed", "added", "removed", "passed"]
+  const groups = ["changed", "layout-diff", "file-not-exists", "added", "removed", "passed"]
     .map((status) => ({
       status,
       stories: summary.results.filter((result) => result.status === status),
@@ -449,7 +470,7 @@ const renderHtml = (summary, options = {}) => `<!doctype html>
     .story-nav__scroll { min-height: 0; overflow: auto; scrollbar-gutter: stable; padding: 10px 16px 20px; }
     .story-nav__group { margin: 6px 0 14px; }
     .story-nav__group > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 4px; color: var(--muted); cursor: pointer; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
-    .story-nav__group--changed > summary { color: var(--danger); }
+    .story-nav__group--changed > summary, .story-nav__group--layout-diff > summary, .story-nav__group--file-not-exists > summary { color: var(--danger); }
     .story-nav__group--passed > summary { color: var(--ok); }
     .story-nav ul { list-style: none; margin: 0; padding: 0; }
     .story-nav__tree ul { margin-left: 10px; padding-left: 10px; border-left: 1px solid #3a4654; }
@@ -471,10 +492,12 @@ const renderHtml = (summary, options = {}) => `<!doctype html>
     .story-nav__empty { padding: 24px 8px; color: var(--muted); font-size: 13px; text-align: center; }
     .story { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 20px; margin-top: 18px; box-shadow: 0 18px 50px rgb(0 0 0 / 24%); }
     .story--changed { border-color: rgb(251 113 133 / 70%); }
+    .story--layout-diff, .story--file-not-exists { border-color: rgb(251 113 133 / 70%); }
     .story--passed { border-color: rgb(52 211 153 / 45%); }
     .story__header { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 18px; }
     .status { display: inline-block; color: var(--bg); background: var(--warn); border-radius: 999px; padding: 3px 9px; font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
     .story--changed .status { background: var(--danger); }
+    .story--layout-diff .status, .story--file-not-exists .status { background: var(--danger); }
     .story--passed .status { background: var(--ok); }
     .metrics { display: flex; gap: 12px; margin: 0; }
     .metrics div { min-width: 110px; border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
