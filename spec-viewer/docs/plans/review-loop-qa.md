@@ -1,5 +1,11 @@
 # Review loop QA guide
 
+> **Historical QA:** These checks describe the legacy folder-bundle workflow.
+> New user-review work follows
+> [ADR 001](../design/adr-001-user-review-single-json.md) and the
+> [single-JSON acceptance matrix](./09-user-review-json-plan.md#acceptance-matrix).
+> Keep these cases only as legacy fixture and regression references.
+
 This guide closes the first review-loop implementation pass. The workflow is provider-independent and filesystem-based: `spec-reviewer` writes ordinary `user-review/` folders, and any external AI agent or editor can read those files and edit the source Markdown files.
 
 User-facing terminology should stay Japanese-first. Use `ユーザーレビュー`, `レビュー作成`, `現在のワークスペース`, `新しいworktree`, `対応中レビュー`, `完了レビュー`, and `アーカイブ済み` in UI-facing docs and screenshots.
