@@ -337,15 +337,16 @@ const renderStoryTree = (stories) => {
     node.stories.push(result);
   }
 
-  const renderNode = (node) => `${[...node.children.entries()].map(([label, child]) => `<li>
+  const renderNode = (node) => `${[...node.children.entries()].map(([label, child]) => `<li data-tree-node>
     <details open>
-      <summary>${escapeHtml(label)}</summary>
+      <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>${escapeHtml(label)}</span></summary>
       <ul>${renderNode(child)}</ul>
     </details>
   </li>`).join("")}${node.stories.map((result) => {
     const story = escapeHtml(result.story);
     const label = escapeHtml(result.name ?? result.story.split("--").at(-1) ?? result.story);
-    return `<li class="story-nav__story"><a href="#${story}" title="${story}">${label}</a></li>`;
+    const searchText = escapeHtml(`${result.title ?? ""} ${result.name ?? ""} ${result.story}`.toLowerCase());
+    return `<li class="story-nav__story" data-tree-leaf data-search-text="${searchText}"><a href="#${story}" title="${story}"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>${label}</span></a></li>`;
   }).join("")}`;
 
   return `<ul class="story-nav__tree">${renderNode(root)}</ul>`;
@@ -367,11 +368,18 @@ const renderSidebar = (summary, options = {}) => {
   }
 
   return `<aside class="story-nav" id="story-navigation" aria-label="Story result navigation">
-    <h2>Stories</h2>
-    ${groups.map((group) => `<section class="story-nav__group story-nav__group--${group.status}">
-      <h3>${formatStatusLabel(group.status)} <span>${group.stories.length}</span></h3>
-      ${renderStoryTree(group.stories)}
-    </section>`).join("")}
+    <header class="story-nav__header">
+      <div class="story-nav__title"><h2>Story files</h2><span>${summary.results.length}</span></div>
+      <button class="story-nav__close" type="button" data-nav-toggle aria-label="Hide story files" aria-controls="story-navigation" aria-expanded="true">‹</button>
+      <label class="story-nav__filter"><span class="tree-icon tree-icon--search" aria-hidden="true"></span><input type="search" placeholder="Filter stories..." data-story-filter aria-label="Filter stories"></label>
+    </header>
+    <div class="story-nav__scroll" data-story-tree>
+      ${groups.map((group) => `<details class="story-nav__group story-nav__group--${group.status}" open data-status-group>
+        <summary><span>${formatStatusLabel(group.status)}</span><span class="story-nav__count">${group.stories.length}</span></summary>
+        ${renderStoryTree(group.stories)}
+      </details>`).join("")}
+      <p class="story-nav__empty" data-filter-empty hidden>No matching stories</p>
+    </div>
   </aside>`;
 };
 
@@ -384,7 +392,7 @@ const renderHtml = (summary, options = {}) => `<!doctype html>
   <style>
     :root { color-scheme: light dark; --bg: #0f172a; --panel: #111827; --text: #e5e7eb; --muted: #9ca3af; --line: #374151; --accent: #38bdf8; --danger: #fb7185; --ok: #34d399; --warn: #fbbf24; }
     body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-    .layout { display: grid; grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); gap: 24px; width: min(1680px, calc(100% - 48px)); margin: 0 auto; padding: 32px 0 56px; transition: grid-template-columns 160ms ease; }
+    .layout { position: relative; display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 24px; width: min(1760px, calc(100% - 32px)); margin: 0 auto; padding: 16px 0 56px; transition: grid-template-columns 160ms ease; }
     .layout--nav-hidden { grid-template-columns: 0 minmax(0, 1fr); }
     .layout--nav-hidden .story-nav { visibility: hidden; opacity: 0; pointer-events: none; }
     .layout--detail { display: block; width: min(1440px, calc(100% - 48px)); }
@@ -395,23 +403,42 @@ const renderHtml = (summary, options = {}) => `<!doctype html>
     a { color: inherit; }
     .summary { color: var(--muted); margin-top: 8px; }
     .hero__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
-    .badge, .nav-toggle { border: 1px solid var(--line); border-radius: 999px; padding: 8px 12px; background: rgb(255 255 255 / 6%); color: var(--text); font: inherit; }
-    .nav-toggle { cursor: pointer; }
-    .nav-toggle:hover { border-color: var(--accent); color: var(--accent); }
-    .story-nav { position: sticky; top: 24px; align-self: start; box-sizing: border-box; max-height: calc(100vh - 48px); overflow: auto; scrollbar-gutter: stable; border: 1px solid var(--line); border-radius: 18px; padding: 16px 20px 16px 16px; background: rgb(17 24 39 / 86%); box-shadow: 0 18px 50px rgb(0 0 0 / 18%); transition: opacity 160ms ease; }
-    .story-nav h2 { font-size: 16px; margin: 0 0 14px; }
-    .story-nav__group { margin-top: 14px; }
-    .story-nav__group h3 { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
-    .story-nav__group h3 span { border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; color: var(--text); background: rgb(255 255 255 / 6%); }
-    .story-nav__group--changed h3 { color: var(--danger); }
-    .story-nav__group--passed h3 { color: var(--ok); }
+    .badge { border: 1px solid var(--line); border-radius: 999px; padding: 8px 12px; background: rgb(255 255 255 / 6%); }
+    .nav-reveal { display: none; position: sticky; top: 16px; z-index: 3; align-self: start; width: 34px; height: 42px; margin-left: -16px; border: 1px solid var(--line); border-left: 0; border-radius: 0 10px 10px 0; background: #1f2937; color: var(--text); cursor: pointer; }
+    .layout--nav-hidden .nav-reveal { display: block; position: absolute; left: 0; }
+    .story-nav { position: sticky; top: 16px; align-self: start; display: grid; grid-template-rows: auto minmax(0, 1fr); box-sizing: border-box; height: calc(100vh - 32px); overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #18212c; box-shadow: 0 18px 50px rgb(0 0 0 / 18%); transition: opacity 160ms ease; }
+    .story-nav__header { display: grid; grid-template-columns: 1fr auto; gap: 14px 8px; padding: 16px; border-bottom: 1px solid var(--line); }
+    .story-nav__title { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .story-nav__title h2 { overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+    .story-nav__title > span, .story-nav__count { min-width: 20px; border-radius: 999px; padding: 2px 6px; background: rgb(148 163 184 / 15%); color: var(--muted); font-size: 11px; text-align: center; }
+    .story-nav__close { width: 28px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-size: 24px; line-height: 1; cursor: pointer; }
+    .story-nav__close:hover { background: rgb(255 255 255 / 8%); color: var(--text); }
+    .story-nav__filter { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; min-width: 0; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; background: rgb(15 23 42 / 45%); }
+    .story-nav__filter:focus-within { border-color: var(--accent); }
+    .story-nav__filter input { min-width: 0; width: 100%; border: 0; outline: 0; background: transparent; color: var(--text); font: inherit; }
+    .story-nav__scroll { min-height: 0; overflow: auto; scrollbar-gutter: stable; padding: 10px 16px 20px; }
+    .story-nav__group { margin: 6px 0 14px; }
+    .story-nav__group > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 4px; color: var(--muted); cursor: pointer; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+    .story-nav__group--changed > summary { color: var(--danger); }
+    .story-nav__group--passed > summary { color: var(--ok); }
     .story-nav ul { list-style: none; margin: 0; padding: 0; }
-    .story-nav__tree ul { margin-left: 9px; padding-left: 10px; border-left: 1px solid var(--line); }
-    .story-nav details > summary { overflow: hidden; padding: 5px 4px; cursor: pointer; color: var(--muted); font-size: 13px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-    .story-nav details > summary:hover { color: var(--accent); }
+    .story-nav__tree ul { margin-left: 10px; padding-left: 10px; border-left: 1px solid #3a4654; }
+    .story-nav__tree details > summary { display: flex; align-items: center; gap: 7px; overflow: hidden; padding: 6px 4px; cursor: pointer; color: var(--text); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+    .story-nav__tree details > summary span:last-child { overflow: hidden; text-overflow: ellipsis; }
+    .story-nav__tree details > summary:hover { background: rgb(255 255 255 / 5%); }
     .story-nav__story { margin: 2px 0; }
-    .story-nav a { display: block; overflow: hidden; border-radius: 8px; padding: 6px 8px; color: var(--text); text-overflow: ellipsis; white-space: nowrap; text-decoration: none; }
+    .story-nav a { display: flex; align-items: center; gap: 8px; overflow: hidden; border-radius: 6px; padding: 6px 5px; color: var(--text); white-space: nowrap; text-decoration: none; }
+    .story-nav a span:last-child { overflow: hidden; text-overflow: ellipsis; }
     .story-nav a:hover { background: rgb(255 255 255 / 8%); color: var(--accent); }
+    .tree-icon { position: relative; display: inline-block; flex: 0 0 auto; width: 14px; height: 14px; color: #94a3b8; }
+    .tree-icon--folder { height: 10px; border-radius: 2px; background: currentColor; }
+    .tree-icon--folder::before { content: ""; position: absolute; top: -3px; left: 1px; width: 6px; height: 4px; border-radius: 2px 2px 0 0; background: currentColor; }
+    .tree-icon--file { box-sizing: border-box; border: 1.5px solid currentColor; border-radius: 2px; }
+    .tree-icon--file::before, .tree-icon--file::after { content: ""; position: absolute; left: 3px; right: 3px; height: 1px; background: currentColor; }
+    .tree-icon--file::before { top: 4px; } .tree-icon--file::after { top: 8px; }
+    .tree-icon--search { width: 12px; height: 12px; border: 2px solid currentColor; border-radius: 50%; }
+    .tree-icon--search::after { content: ""; position: absolute; right: -5px; bottom: -3px; width: 6px; height: 2px; background: currentColor; transform: rotate(45deg); }
+    .story-nav__empty { padding: 24px 8px; color: var(--muted); font-size: 13px; text-align: center; }
     .story { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 20px; margin-top: 18px; box-shadow: 0 18px 50px rgb(0 0 0 / 24%); }
     .story--changed { border-color: rgb(251 113 133 / 70%); }
     .story--passed { border-color: rgb(52 211 153 / 45%); }
@@ -439,12 +466,13 @@ const renderHtml = (summary, options = {}) => `<!doctype html>
     .image-card--empty { display: grid; min-height: 180px; place-items: center; color: var(--muted); }
     .image-card--empty h3 { justify-self: stretch; width: 100%; box-sizing: border-box; }
     @media (max-width: 900px) { .hero, .story__header { display: block; } .hero__actions { justify-content: flex-start; margin-top: 12px; } .metrics, .shots { grid-template-columns: 1fr; display: grid; } }
-    @media (max-width: 640px) { .layout, .layout--detail, .layout--nav-hidden { display: block; width: min(100% - 24px, 1440px); padding-top: 18px; } .story-nav { position: static; max-height: 60vh; margin-bottom: 18px; } .layout--nav-hidden .story-nav { display: none; } }
+    @media (max-width: 640px) { .layout, .layout--detail, .layout--nav-hidden { display: block; width: min(100% - 24px, 1440px); padding-top: 12px; } .story-nav { position: static; height: min(70vh, 620px); margin-bottom: 18px; } .layout--nav-hidden .story-nav { display: none; } .layout--nav-hidden .nav-reveal { position: fixed; top: 12px; } }
   </style>
 </head>
 <body>
   <div class="layout${options.detailStory ? " layout--detail" : ""}" data-layout>
   ${renderSidebar(summary, options)}
+  ${options.detailStory ? "" : '<button class="nav-reveal" type="button" data-nav-toggle aria-label="Show story files" aria-controls="story-navigation" aria-expanded="false">›</button>'}
   <main>
     <section class="hero">
       <div>
@@ -452,7 +480,6 @@ const renderHtml = (summary, options = {}) => `<!doctype html>
         <p class="summary">${options.detailStory ? '<a href="../" data-back-link>← Back to all stories</a>' : "Move the slider to compare baseline and current screenshots. Click a story title to open that story on its own page."}</p>
       </div>
       <div class="hero__actions">
-        ${options.detailStory ? "" : '<button class="nav-toggle" type="button" data-nav-toggle aria-controls="story-navigation" aria-expanded="true">Hide stories</button>'}
         <div class="badge">Failed: <strong>${summary.failed}</strong> / Threshold: ${summary.maxDiffRatio}</div>
       </div>
     </section>
@@ -461,12 +488,28 @@ const renderHtml = (summary, options = {}) => `<!doctype html>
   </div>
   <script>
     const layout = document.querySelector("[data-layout]");
-    const navToggle = document.querySelector("[data-nav-toggle]");
-    if (layout && navToggle) {
-      navToggle.addEventListener("click", () => {
+    const navToggles = document.querySelectorAll("[data-nav-toggle]");
+    if (layout) {
+      for (const navToggle of navToggles) navToggle.addEventListener("click", () => {
         const hidden = layout.classList.toggle("layout--nav-hidden");
-        navToggle.setAttribute("aria-expanded", String(!hidden));
-        navToggle.textContent = hidden ? "Show stories" : "Hide stories";
+        for (const toggle of navToggles) toggle.setAttribute("aria-expanded", String(!hidden));
+      });
+    }
+    const storyFilter = document.querySelector("[data-story-filter]");
+    if (storyFilter) {
+      storyFilter.addEventListener("input", () => {
+        const query = storyFilter.value.trim().toLowerCase();
+        const leaves = [...document.querySelectorAll("[data-tree-leaf]")];
+        for (const leaf of leaves) leaf.hidden = !leaf.dataset.searchText.includes(query);
+        for (const node of [...document.querySelectorAll("[data-tree-node]")].reverse()) {
+          node.hidden = !node.querySelector("[data-tree-leaf]:not([hidden])");
+          if (query && !node.hidden) node.querySelector(":scope > details").open = true;
+        }
+        for (const group of document.querySelectorAll("[data-status-group]")) {
+          group.hidden = !group.querySelector("[data-tree-leaf]:not([hidden])");
+          if (query && !group.hidden) group.open = true;
+        }
+        document.querySelector("[data-filter-empty]").hidden = leaves.some((leaf) => !leaf.hidden);
       });
     }
     const currentDirectory = () => window.location.pathname.endsWith("/") ? window.location.pathname : window.location.pathname + "/";
