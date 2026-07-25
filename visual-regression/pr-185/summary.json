@@ -1,6 +1,7 @@
 {
+  "reportVersion": "35092d7f2c367edc5f33042e14ef2c8fb044b353",
   "maxDiffRatio": 0.002,
-  "failed": 36,
+  "failed": 39,
   "results": [
     {
       "story": "app--default",
@@ -56,8 +57,8 @@
       "title": "app/App/SpecViewCommentSidebar",
       "name": "Loading",
       "status": "changed",
-      "diffPixels": 19362,
-      "diffRatio": 0.021009114583333332,
+      "diffPixels": 19128,
+      "diffRatio": 0.020755208333333334,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -211,9 +212,9 @@
       "id": "components-loadingskeleton--all-props",
       "title": "components/LoadingSkeleton",
       "name": "All Props",
-      "status": "passed",
-      "diffPixels": 976,
-      "diffRatio": 0.0010590277777777779,
+      "status": "changed",
+      "diffPixels": 15540,
+      "diffRatio": 0.016861979166666666,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -223,9 +224,9 @@
       "id": "components-loadingskeleton--default",
       "title": "components/LoadingSkeleton",
       "name": "Default",
-      "status": "passed",
-      "diffPixels": 205,
-      "diffRatio": 0.0002224392361111111,
+      "status": "changed",
+      "diffPixels": 13334,
+      "diffRatio": 0.014468315972222222,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -260,8 +261,8 @@
       "title": "components/WorkspaceLayout",
       "name": "Default",
       "status": "changed",
-      "diffPixels": 9344,
-      "diffRatio": 0.010138888888888888,
+      "diffPixels": 9367,
+      "diffRatio": 0.010163845486111111,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -296,8 +297,8 @@
       "title": "components/WorkspaceLayout",
       "name": "Loading",
       "status": "changed",
-      "diffPixels": 73766,
-      "diffRatio": 0.08004123263888889,
+      "diffPixels": 74471,
+      "diffRatio": 0.08080620659722222,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -428,8 +429,8 @@
       "title": "features/comments/components/CommentSidebar",
       "name": "Loading",
       "status": "changed",
-      "diffPixels": 19580,
-      "diffRatio": 0.021245659722222223,
+      "diffPixels": 19757,
+      "diffRatio": 0.02143771701388889,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -812,8 +813,8 @@
       "title": "features/specs/components/MarkdownViewer/MarkdownViewerStatusPanel",
       "name": "Loading",
       "status": "changed",
-      "diffPixels": 4909,
-      "diffRatio": 0.005326605902777778,
+      "diffPixels": 45441,
+      "diffRatio": 0.049306640625,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -943,9 +944,9 @@
       "id": "features-specs-components-spectree--loading",
       "title": "features/specs/components/SpecTree",
       "name": "Loading",
-      "status": "passed",
-      "diffPixels": 985,
-      "diffRatio": 0.0010687934027777779,
+      "status": "changed",
+      "diffPixels": 13650,
+      "diffRatio": 0.014811197916666666,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true

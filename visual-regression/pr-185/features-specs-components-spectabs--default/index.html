@@ -65,23 +65,32 @@
     .metrics div { min-width: 110px; border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
     dt { color: var(--muted); font-size: 12px; }
     dd { margin: 4px 0 0; font-weight: 700; }
+    .inspector-tabs { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 12px; margin: -8px -24px 20px; padding: 10px 24px; border-block: 1px solid var(--line); background: rgb(15 23 42 / 94%); box-shadow: 0 8px 24px rgb(0 0 0 / 18%); backdrop-filter: blur(12px); }
+    .inspector-tabs__label, .inspector-tabs__hint { color: var(--muted); font-size: 12px; font-weight: 700; }
+    .inspector-tabs__hint { margin-left: auto; font-weight: 500; }
+    .inspector-tabs__list { display: inline-flex; padding: 3px; border: 1px solid var(--line); border-radius: 9px; background: #0b1220; }
+    .inspector-tabs button { border: 0; border-radius: 6px; padding: 8px 18px; background: transparent; color: var(--muted); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .inspector-tabs button:hover { color: var(--text); }
+    .inspector-tabs button.is-active { background: #334155; color: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / 35%); }
     .comparison { margin-bottom: 18px; }
     .comparison__frame { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: #020617; }
     .comparison__image { display: block; width: 100%; height: auto; user-select: none; }
+    .comparison__overlay { position: absolute; inset: 0; }
+    .comparison__split { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
+    .comparison__pane { min-width: 0; margin: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #020617; }
+    .comparison__pane figcaption, .comparison__pane--empty strong { display: block; padding: 8px 12px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px; font-weight: 700; }
+    .comparison__pane--empty { display: grid; min-height: 240px; align-content: start; color: var(--muted); }
+    .comparison__pane--empty span { place-self: center; margin-top: 80px; }
+    .comparison__unavailable { display: grid; min-height: 420px; place-items: center; border: 1px dashed var(--line); border-radius: 14px; color: var(--muted); background: #020617; }
     .comparison__actual { position: absolute; inset: 0; overflow: hidden; }
     .comparison__handle { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--accent); box-shadow: 0 0 0 9999px rgb(56 189 248 / 0%); }
     .comparison__handle::after { content: ""; position: absolute; top: 50%; left: 50%; width: 28px; height: 28px; border: 2px solid var(--accent); border-radius: 999px; background: var(--panel); transform: translate(-50%, -50%); box-shadow: 0 4px 16px rgb(0 0 0 / 35%); }
     .comparison__control { display: grid; gap: 8px; margin-top: 10px; color: var(--muted); font-size: 13px; }
     input[type="range"] { width: 100%; accent-color: var(--accent); }
-    .comparison--empty { border: 1px dashed var(--line); border-radius: 14px; padding: 24px; color: var(--muted); }
-    .shots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-    .image-card { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: #020617; }
-    .image-card h3 { padding: 10px 12px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--line); }
-    .image-card img { display: block; width: 100%; height: auto; }
-    .image-card--empty { display: grid; min-height: 180px; place-items: center; color: var(--muted); }
-    .image-card--empty h3 { justify-self: stretch; width: 100%; box-sizing: border-box; }
-    @media (max-width: 900px) { .hero, .story__header { display: block; } .hero__actions { justify-content: flex-start; margin-top: 12px; } .metrics, .shots { grid-template-columns: 1fr; display: grid; } }
-    @media (max-width: 640px) { .layout, .layout--detail, .layout--nav-hidden { display: block; width: 100%; } main { padding: 12px; } .story-nav { position: static; height: min(70vh, 620px); } .layout--nav-hidden .story-nav { display: none; } .layout--nav-hidden .nav-reveal { position: fixed; top: 0; } }
+    @media (max-width: 900px) { .hero, .story__header { display: block; } .hero__actions { justify-content: flex-start; margin-top: 12px; } .metrics { display: grid; grid-template-columns: 1fr; } }
+    @media (max-width: 1100px) { .comparison__split { grid-template-columns: repeat(2, minmax(0, 1fr)); } .comparison__split > :last-child { grid-column: 1 / -1; } }
+    @media (max-width: 720px) { .comparison__split { grid-template-columns: 1fr; } .comparison__split > :last-child { grid-column: auto; } }
+    @media (max-width: 640px) { .layout, .layout--detail, .layout--nav-hidden { display: block; width: 100%; } main { padding: 12px; } .story-nav { position: static; height: min(70vh, 620px); } .layout--nav-hidden .story-nav { display: none; } .layout--nav-hidden .nav-reveal { position: fixed; top: 0; } .inspector-tabs { overflow-x: auto; margin-inline: -12px; padding-inline: 12px; } .inspector-tabs__label, .inspector-tabs__hint { display: none; } }
   </style>
 </head>
 <body>
@@ -95,9 +104,18 @@
         <p class="summary"><a href="../" data-back-link>← Back to all stories</a></p>
       </div>
       <div class="hero__actions">
-        <div class="badge">Failed: <strong>36</strong> / Threshold: 0.002</div>
+        <div class="badge">Failed: <strong>39</strong> / Threshold: 0.002</div>
       </div>
     </section>
+    <nav class="inspector-tabs" aria-label="Diff inspector view">
+  <span class="inspector-tabs__label">View</span>
+  <div class="inspector-tabs__list" role="tablist">
+    <button type="button" class="is-active" role="tab" data-global-view-mode="overlay" aria-selected="true">Overlay</button>
+    <button type="button" role="tab" data-global-view-mode="split" aria-selected="false">Split + Diff</button>
+    <button type="button" role="tab" data-global-view-mode="slider" aria-selected="false">Slider</button>
+  </div>
+  <span class="inspector-tabs__hint">Visual report UI v4 · 35092d7</span>
+</nav>
     <article class="story story--passed" id="features-specs-components-spectabs--default">
     <header class="story__header">
       <div>
@@ -110,22 +128,33 @@
       </dl>
     </header>
     <div class="comparison" data-comparison>
-    <div class="comparison__frame">
-      <img class="comparison__image" src="../expected/features-specs-components-spectabs--default.png" alt="Expected features-specs-components-spectabs--default">
-      <div class="comparison__actual" data-actual style="clip-path: inset(0 0 0 50%)">
-        <img class="comparison__image" src="../actual/features-specs-components-spectabs--default.png" alt="Actual features-specs-components-spectabs--default">
+    <div class="comparison__view" data-view="overlay">
+      
+      <div class="comparison__frame">
+        <img class="comparison__image" src="../expected/features-specs-components-spectabs--default.png" alt="Baseline features-specs-components-spectabs--default">
+        <img class="comparison__image comparison__overlay" src="../actual/features-specs-components-spectabs--default.png" alt="Current features-specs-components-spectabs--default" data-overlay-image style="opacity: 0.5">
       </div>
-      <div class="comparison__handle" data-handle style="left: 50%"></div>
+      <label class="comparison__control">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-spectabs--default"></label>
+      
     </div>
-    <label class="comparison__control">Before / After
-      <input data-slider type="range" min="0" max="100" value="50" aria-label="Before after slider for features-specs-components-spectabs--default">
-    </label>
+    <div class="comparison__view" data-view="split" hidden>
+      <div class="comparison__split">
+        <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="../expected/features-specs-components-spectabs--default.png" alt="Baseline features-specs-components-spectabs--default"></figure>
+        <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="../actual/features-specs-components-spectabs--default.png" alt="Current features-specs-components-spectabs--default"></figure>
+        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="../diff/features-specs-components-spectabs--default.png" alt="Diff features-specs-components-spectabs--default"></figure>
+      </div>
+    </div>
+    <div class="comparison__view" data-view="slider" hidden>
+      
+      <div class="comparison__frame">
+        <img class="comparison__image" src="../expected/features-specs-components-spectabs--default.png" alt="Baseline features-specs-components-spectabs--default">
+        <div class="comparison__actual" data-actual style="clip-path: inset(0 0 0 50%)"><img class="comparison__image" src="../actual/features-specs-components-spectabs--default.png" alt="Current features-specs-components-spectabs--default"></div>
+        <div class="comparison__handle" data-handle style="left: 50%"></div>
+      </div>
+      <label class="comparison__control">Baseline / Current<input data-slider type="range" min="0" max="100" value="50" aria-label="Baseline current slider for features-specs-components-spectabs--default"></label>
+      
+    </div>
   </div>
-    <div class="shots">
-      <div class="image-card"><h3>Expected</h3><img src="../expected/features-specs-components-spectabs--default.png" alt="Expected"></div>
-      <div class="image-card"><h3>Actual</h3><img src="../actual/features-specs-components-spectabs--default.png" alt="Actual"></div>
-      <div class="image-card"><h3>Diff</h3><img src="../diff/features-specs-components-spectabs--default.png" alt="Diff"></div>
-    </div>
   </article>
   </main>
   </div>
@@ -166,17 +195,36 @@
       const path = window.location.pathname.endsWith("/") ? window.location.pathname.slice(0, -1) : window.location.pathname;
       link.href = path.slice(0, path.lastIndexOf("/")) + "/";
     }
+    const inspectorTabs = document.querySelectorAll("[data-global-view-mode]");
+    const setViewMode = (mode) => {
+      for (const tab of inspectorTabs) {
+        const active = tab.dataset.globalViewMode === mode;
+        tab.classList.toggle("is-active", active);
+        tab.setAttribute("aria-selected", String(active));
+      }
+      for (const root of document.querySelectorAll("[data-comparison]")) {
+        for (const view of root.querySelectorAll("[data-view]")) view.hidden = view.dataset.view !== mode;
+      }
+    };
+    for (const tab of inspectorTabs) tab.addEventListener("click", () => setViewMode(tab.dataset.globalViewMode));
     for (const root of document.querySelectorAll("[data-comparison]")) {
+      const overlaySlider = root.querySelector("[data-overlay-slider]");
+      const overlayImage = root.querySelector("[data-overlay-image]");
+      if (overlaySlider && overlayImage) overlaySlider.addEventListener("input", () => {
+        overlayImage.style.opacity = String(Number(overlaySlider.value) / 100);
+      });
       const slider = root.querySelector("[data-slider]");
       const actual = root.querySelector("[data-actual]");
       const handle = root.querySelector("[data-handle]");
-      const update = () => {
-        const value = slider.value;
-        actual.style.clipPath = "inset(0 0 0 " + value + "%)";
-        handle.style.left = value + "%";
-      };
-      slider.addEventListener("input", update);
-      update();
+      if (slider && actual && handle) {
+        const update = () => {
+          const value = slider.value;
+          actual.style.clipPath = "inset(0 0 0 " + value + "%)";
+          handle.style.left = value + "%";
+        };
+        slider.addEventListener("input", update);
+        update();
+      }
     }
   </script>
 </body>
