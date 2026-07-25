@@ -270,26 +270,24 @@ const comparisonPanel = (result, pathPrefix = "") => {
   const expectedPath = `${pathPrefix}expected/${story}.png`;
   const actualPath = `${pathPrefix}actual/${story}.png`;
   const diffPath = `${pathPrefix}diff/${story}.png`;
-  const oneUpImage = result.hasActual
-    ? `<img class="comparison__image" src="${actualPath}" alt="Current ${story}" data-one-up-image data-current-src="${actualPath}" data-baseline-src="${result.hasExpected ? expectedPath : ""}">`
-    : `<img class="comparison__image" src="${expectedPath}" alt="Baseline ${story}" data-one-up-image data-current-src="" data-baseline-src="${expectedPath}">`;
   const imageOrEmpty = (label, path, enabled) => enabled
     ? `<figure class="comparison__pane"><figcaption>${label}</figcaption><img class="comparison__image" src="${path}" alt="${label} ${story}"></figure>`
     : `<div class="comparison__pane comparison__pane--empty"><strong>${label}</strong><span>Not available</span></div>`;
   return `<div class="comparison" data-comparison>
-    <div class="comparison__toolbar" aria-label="Comparison layout">
-      <div class="comparison__versions" role="group" aria-label="1-Up snapshot" data-one-up-controls>
-        <button type="button"${result.hasActual ? "" : ' class="is-active"'} data-one-up-version="baseline" aria-pressed="${result.hasActual ? "false" : "true"}"${result.hasExpected ? "" : " disabled"}>Baseline</button>
-        <button type="button"${result.hasActual ? ' class="is-active"' : ""} data-one-up-version="current" aria-pressed="${result.hasActual ? "true" : "false"}"${result.hasActual ? "" : " disabled"}>Current</button>
+    <div class="comparison__view" data-view="overlay">
+      ${result.hasExpected && result.hasActual ? `
+      <div class="comparison__frame">
+        <img class="comparison__image" src="${expectedPath}" alt="Baseline ${story}">
+        <img class="comparison__image comparison__overlay" src="${actualPath}" alt="Current ${story}" data-overlay-image style="opacity: 0.5">
       </div>
+      <label class="comparison__control">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for ${story}"></label>
+      ` : '<div class="comparison__unavailable">Overlay is unavailable because this story only has one snapshot.</div>'}
     </div>
-    <div class="comparison__view" data-view="one-up">
-      <div class="comparison__frame">${oneUpImage}</div>
-    </div>
-    <div class="comparison__view" data-view="two-up" hidden>
-      <div class="comparison__two-up">
+    <div class="comparison__view" data-view="split" hidden>
+      <div class="comparison__split">
         ${imageOrEmpty("Baseline", expectedPath, result.hasExpected)}
         ${imageOrEmpty("Current", actualPath, result.hasActual)}
+        ${imageOrEmpty("Diff", diffPath, result.hasDiff)}
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -302,7 +300,6 @@ const comparisonPanel = (result, pathPrefix = "") => {
       <label class="comparison__control">Baseline / Current<input data-slider type="range" min="0" max="100" value="50" aria-label="Baseline current slider for ${story}"></label>
       ` : '<div class="comparison__unavailable">Slider is unavailable for this story.</div>'}
     </div>
-    <div class="comparison__view" data-view="diff" hidden>${result.hasDiff ? imageOrEmpty("Pixel diff", diffPath, true) : '<div class="comparison__unavailable">Pixel diff is unavailable for this story.</div>'}</div>
   </div>`;
 };
 
@@ -409,12 +406,11 @@ const renderSidebar = (summary, options = {}) => {
 const renderInspectorTabs = (reportVersion) => `<nav class="inspector-tabs" aria-label="Diff inspector view">
   <span class="inspector-tabs__label">View</span>
   <div class="inspector-tabs__list" role="tablist">
-    <button type="button" class="is-active" role="tab" data-global-view-mode="one-up" aria-selected="true">1-Up</button>
-    <button type="button" role="tab" data-global-view-mode="two-up" aria-selected="false">2-Up</button>
+    <button type="button" class="is-active" role="tab" data-global-view-mode="overlay" aria-selected="true">Overlay</button>
+    <button type="button" role="tab" data-global-view-mode="split" aria-selected="false">Split + Diff</button>
     <button type="button" role="tab" data-global-view-mode="slider" aria-selected="false">Slider</button>
-    <button type="button" role="tab" data-global-view-mode="diff" aria-selected="false">Diff</button>
   </div>
-  <span class="inspector-tabs__hint">Visual report UI v3 · ${escapeHtml(reportVersion.slice(0, 7))}</span>
+  <span class="inspector-tabs__hint">Visual report UI v4 · ${escapeHtml(reportVersion.slice(0, 7))}</span>
 </nav>`;
 
 const renderHtml = (summary, options = {}) => `<!doctype html>
@@ -487,16 +483,15 @@ const renderHtml = (summary, options = {}) => `<!doctype html>
     .inspector-tabs { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 12px; margin: -8px -24px 20px; padding: 10px 24px; border-block: 1px solid var(--line); background: rgb(15 23 42 / 94%); box-shadow: 0 8px 24px rgb(0 0 0 / 18%); backdrop-filter: blur(12px); }
     .inspector-tabs__label, .inspector-tabs__hint { color: var(--muted); font-size: 12px; font-weight: 700; }
     .inspector-tabs__hint { margin-left: auto; font-weight: 500; }
-    .inspector-tabs__list, .comparison__versions { display: inline-flex; padding: 3px; border: 1px solid var(--line); border-radius: 9px; background: #0b1220; }
-    .inspector-tabs button, .comparison__toolbar button { border: 0; border-radius: 6px; padding: 7px 14px; background: transparent; color: var(--muted); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
-    .inspector-tabs button:hover, .comparison__toolbar button:hover:not(:disabled) { color: var(--text); }
-    .inspector-tabs button.is-active, .comparison__toolbar button.is-active { background: #334155; color: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / 35%); }
-    .comparison__toolbar button:disabled { cursor: not-allowed; opacity: 0.35; }
+    .inspector-tabs__list { display: inline-flex; padding: 3px; border: 1px solid var(--line); border-radius: 9px; background: #0b1220; }
+    .inspector-tabs button { border: 0; border-radius: 6px; padding: 8px 18px; background: transparent; color: var(--muted); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .inspector-tabs button:hover { color: var(--text); }
+    .inspector-tabs button.is-active { background: #334155; color: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / 35%); }
     .comparison { margin-bottom: 18px; }
-    .comparison__toolbar { display: flex; justify-content: flex-end; margin-bottom: 12px; }
     .comparison__frame { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: #020617; }
     .comparison__image { display: block; width: 100%; height: auto; user-select: none; }
-    .comparison__two-up { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+    .comparison__overlay { position: absolute; inset: 0; }
+    .comparison__split { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
     .comparison__pane { min-width: 0; margin: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #020617; }
     .comparison__pane figcaption, .comparison__pane--empty strong { display: block; padding: 8px 12px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px; font-weight: 700; }
     .comparison__pane--empty { display: grid; min-height: 240px; align-content: start; color: var(--muted); }
@@ -508,7 +503,8 @@ const renderHtml = (summary, options = {}) => `<!doctype html>
     .comparison__control { display: grid; gap: 8px; margin-top: 10px; color: var(--muted); font-size: 13px; }
     input[type="range"] { width: 100%; accent-color: var(--accent); }
     @media (max-width: 900px) { .hero, .story__header { display: block; } .hero__actions { justify-content: flex-start; margin-top: 12px; } .metrics { display: grid; grid-template-columns: 1fr; } }
-    @media (max-width: 720px) { .comparison__two-up { grid-template-columns: 1fr; } }
+    @media (max-width: 1100px) { .comparison__split { grid-template-columns: repeat(2, minmax(0, 1fr)); } .comparison__split > :last-child { grid-column: 1 / -1; } }
+    @media (max-width: 720px) { .comparison__split { grid-template-columns: 1fr; } .comparison__split > :last-child { grid-column: auto; } }
     @media (max-width: 640px) { .layout, .layout--detail, .layout--nav-hidden { display: block; width: 100%; } main { padding: 12px; } .story-nav { position: static; height: min(70vh, 620px); } .layout--nav-hidden .story-nav { display: none; } .layout--nav-hidden .nav-reveal { position: fixed; top: 0; } .inspector-tabs { overflow-x: auto; margin-inline: -12px; padding-inline: 12px; } .inspector-tabs__label, .inspector-tabs__hint { display: none; } }
   </style>
 </head>
@@ -520,7 +516,7 @@ const renderHtml = (summary, options = {}) => `<!doctype html>
     <section class="hero">
       <div>
         <h1>${options.detailStory ? escapeHtml(options.detailStory) : "Storybook Visual Regression Report"}</h1>
-        <p class="summary">${options.detailStory ? '<a href="../" data-back-link>← Back to all stories</a>' : "Use 1-Up, 2-Up, Slider, or Diff to inspect changes. Click a story title to open its detail page."}</p>
+        <p class="summary">${options.detailStory ? '<a href="../" data-back-link>← Back to all stories</a>' : "Switch between Overlay, Split + Diff, and Slider to inspect changes. Click a story title to open its detail page."}</p>
       </div>
       <div class="hero__actions">
         <div class="badge">Failed: <strong>${summary.failed}</strong> / Threshold: ${summary.maxDiffRatio}</div>
@@ -576,24 +572,14 @@ const renderHtml = (summary, options = {}) => `<!doctype html>
       }
       for (const root of document.querySelectorAll("[data-comparison]")) {
         for (const view of root.querySelectorAll("[data-view]")) view.hidden = view.dataset.view !== mode;
-        const oneUpControls = root.querySelector("[data-one-up-controls]");
-        if (oneUpControls) oneUpControls.hidden = mode !== "one-up";
       }
     };
     for (const tab of inspectorTabs) tab.addEventListener("click", () => setViewMode(tab.dataset.globalViewMode));
     for (const root of document.querySelectorAll("[data-comparison]")) {
-      const oneUpImage = root.querySelector("[data-one-up-image]");
-      const versionButtons = root.querySelectorAll("[data-one-up-version]");
-      for (const button of versionButtons) button.addEventListener("click", () => {
-        const version = button.dataset.oneUpVersion;
-        const source = version === "baseline" ? oneUpImage.dataset.baselineSrc : oneUpImage.dataset.currentSrc;
-        if (!source) return;
-        oneUpImage.src = source;
-        for (const candidate of versionButtons) {
-          const active = candidate === button;
-          candidate.classList.toggle("is-active", active);
-          candidate.setAttribute("aria-pressed", String(active));
-        }
+      const overlaySlider = root.querySelector("[data-overlay-slider]");
+      const overlayImage = root.querySelector("[data-overlay-image]");
+      if (overlaySlider && overlayImage) overlaySlider.addEventListener("input", () => {
+        overlayImage.style.opacity = String(Number(overlaySlider.value) / 100);
       });
       const slider = root.querySelector("[data-slider]");
       const actual = root.querySelector("[data-actual]");
