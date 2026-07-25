@@ -7,25 +7,53 @@
   <style>
     :root { color-scheme: light dark; --bg: #0f172a; --panel: #111827; --text: #e5e7eb; --muted: #9ca3af; --line: #374151; --accent: #38bdf8; --danger: #fb7185; --ok: #34d399; --warn: #fbbf24; }
     body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-    .layout { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: 24px; width: min(1680px, calc(100% - 48px)); margin: 0 auto; padding: 32px 0 56px; }
-    .layout--detail { display: block; width: min(1440px, calc(100% - 48px)); }
-    main { min-width: 0; }
+    .layout { position: relative; display: grid; grid-template-columns: 320px minmax(0, 1fr); width: 100%; min-height: 100vh; transition: grid-template-columns 160ms ease; }
+    .layout--nav-hidden { grid-template-columns: 0 minmax(0, 1fr); }
+    .layout--nav-hidden .story-nav { visibility: hidden; opacity: 0; pointer-events: none; }
+    .layout--detail { display: block; width: 100%; }
+    main { min-width: 0; padding: 24px; }
     .hero { display: flex; justify-content: space-between; gap: 24px; align-items: flex-end; margin-bottom: 24px; }
     h1, h2, h3, p { margin: 0; }
     h1 { font-size: 32px; }
     a { color: inherit; }
     .summary { color: var(--muted); margin-top: 8px; }
+    .hero__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
     .badge { border: 1px solid var(--line); border-radius: 999px; padding: 8px 12px; background: rgb(255 255 255 / 6%); }
-    .story-nav { position: sticky; top: 24px; align-self: start; max-height: calc(100vh - 48px); overflow: auto; border: 1px solid var(--line); border-radius: 18px; padding: 16px; background: rgb(17 24 39 / 86%); box-shadow: 0 18px 50px rgb(0 0 0 / 18%); }
-    .story-nav h2 { font-size: 16px; margin: 0 0 14px; }
-    .story-nav__group { margin-top: 14px; }
-    .story-nav__group h3 { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
-    .story-nav__group h3 span { border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; color: var(--text); background: rgb(255 255 255 / 6%); }
-    .story-nav__group--changed h3 { color: var(--danger); }
-    .story-nav__group--passed h3 { color: var(--ok); }
-    .story-nav ol { display: grid; gap: 4px; list-style: none; margin: 0; padding: 0; }
-    .story-nav a { display: block; overflow: hidden; border-radius: 8px; padding: 6px 8px; color: var(--text); text-overflow: ellipsis; white-space: nowrap; text-decoration: none; }
+    .nav-reveal { display: none; position: sticky; top: 0; z-index: 3; align-self: start; width: 34px; height: 42px; border: 1px solid var(--line); border-left: 0; border-radius: 0 10px 10px 0; background: #1f2937; color: var(--text); cursor: pointer; }
+    .layout--nav-hidden .nav-reveal { display: block; position: absolute; left: 0; }
+    .story-nav { position: sticky; top: 0; align-self: start; display: grid; grid-template-rows: auto minmax(0, 1fr); box-sizing: border-box; height: 100vh; overflow: hidden; border-right: 1px solid var(--line); background: #18212c; transition: opacity 160ms ease; }
+    .story-nav__header { display: grid; grid-template-columns: 1fr auto; gap: 14px 8px; padding: 16px; border-bottom: 1px solid var(--line); }
+    .story-nav__title { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .story-nav__title h2 { overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+    .story-nav__title > span, .story-nav__count { min-width: 20px; border-radius: 999px; padding: 2px 6px; background: rgb(148 163 184 / 15%); color: var(--muted); font-size: 11px; text-align: center; }
+    .story-nav__close { width: 28px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-size: 24px; line-height: 1; cursor: pointer; }
+    .story-nav__close:hover { background: rgb(255 255 255 / 8%); color: var(--text); }
+    .story-nav__filter { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; min-width: 0; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; background: rgb(15 23 42 / 45%); }
+    .story-nav__filter:focus-within { border-color: var(--accent); }
+    .story-nav__filter input { min-width: 0; width: 100%; border: 0; outline: 0; background: transparent; color: var(--text); font: inherit; }
+    .story-nav__scroll { min-height: 0; overflow: auto; scrollbar-gutter: stable; padding: 10px 16px 20px; }
+    .story-nav__group { margin: 6px 0 14px; }
+    .story-nav__group > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 4px; color: var(--muted); cursor: pointer; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+    .story-nav__group--changed > summary { color: var(--danger); }
+    .story-nav__group--passed > summary { color: var(--ok); }
+    .story-nav ul { list-style: none; margin: 0; padding: 0; }
+    .story-nav__tree ul { margin-left: 10px; padding-left: 10px; border-left: 1px solid #3a4654; }
+    .story-nav__tree details > summary { display: flex; align-items: center; gap: 7px; overflow: hidden; padding: 6px 4px; cursor: pointer; color: var(--text); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+    .story-nav__tree details > summary span:last-child { overflow: hidden; text-overflow: ellipsis; }
+    .story-nav__tree details > summary:hover { background: rgb(255 255 255 / 5%); }
+    .story-nav__story { margin: 2px 0; }
+    .story-nav a { display: flex; align-items: center; gap: 8px; overflow: hidden; border-radius: 6px; padding: 6px 5px; color: var(--text); white-space: nowrap; text-decoration: none; }
+    .story-nav a span:last-child { overflow: hidden; text-overflow: ellipsis; }
     .story-nav a:hover { background: rgb(255 255 255 / 8%); color: var(--accent); }
+    .tree-icon { position: relative; display: inline-block; flex: 0 0 auto; width: 14px; height: 14px; color: #94a3b8; }
+    .tree-icon--folder { height: 10px; border-radius: 2px; background: currentColor; }
+    .tree-icon--folder::before { content: ""; position: absolute; top: -3px; left: 1px; width: 6px; height: 4px; border-radius: 2px 2px 0 0; background: currentColor; }
+    .tree-icon--file { box-sizing: border-box; border: 1.5px solid currentColor; border-radius: 2px; }
+    .tree-icon--file::before, .tree-icon--file::after { content: ""; position: absolute; left: 3px; right: 3px; height: 1px; background: currentColor; }
+    .tree-icon--file::before { top: 4px; } .tree-icon--file::after { top: 8px; }
+    .tree-icon--search { width: 12px; height: 12px; border: 2px solid currentColor; border-radius: 50%; }
+    .tree-icon--search::after { content: ""; position: absolute; right: -5px; bottom: -3px; width: 6px; height: 2px; background: currentColor; transform: rotate(45deg); }
+    .story-nav__empty { padding: 24px 8px; color: var(--muted); font-size: 13px; text-align: center; }
     .story { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 20px; margin-top: 18px; box-shadow: 0 18px 50px rgb(0 0 0 / 24%); }
     .story--changed { border-color: rgb(251 113 133 / 70%); }
     .story--passed { border-color: rgb(52 211 153 / 45%); }
@@ -52,12 +80,13 @@
     .image-card img { display: block; width: 100%; height: auto; }
     .image-card--empty { display: grid; min-height: 180px; place-items: center; color: var(--muted); }
     .image-card--empty h3 { justify-self: stretch; width: 100%; box-sizing: border-box; }
-    @media (max-width: 900px) { .hero, .story__header { display: block; } .metrics, .shots { grid-template-columns: 1fr; display: grid; } }
-    @media (max-width: 640px) { .layout, .layout--detail { display: block; width: min(100% - 24px, 1440px); padding-top: 18px; } .story-nav { position: static; max-height: none; margin-bottom: 18px; } }
+    @media (max-width: 900px) { .hero, .story__header { display: block; } .hero__actions { justify-content: flex-start; margin-top: 12px; } .metrics, .shots { grid-template-columns: 1fr; display: grid; } }
+    @media (max-width: 640px) { .layout, .layout--detail, .layout--nav-hidden { display: block; width: 100%; } main { padding: 12px; } .story-nav { position: static; height: min(70vh, 620px); } .layout--nav-hidden .story-nav { display: none; } .layout--nav-hidden .nav-reveal { position: fixed; top: 0; } }
   </style>
 </head>
 <body>
-  <div class="layout layout--detail">
+  <div class="layout layout--detail" data-layout>
+  
   
   <main>
     <section class="hero">
@@ -65,7 +94,9 @@
         <h1>components-workspacelayout--error</h1>
         <p class="summary"><a href="../" data-back-link>← Back to all stories</a></p>
       </div>
-      <div class="badge">Failed: <strong>37</strong> / Threshold: 0.002</div>
+      <div class="hero__actions">
+        <div class="badge">Failed: <strong>36</strong> / Threshold: 0.002</div>
+      </div>
     </section>
     <article class="story story--changed" id="components-workspacelayout--error">
     <header class="story__header">
@@ -99,6 +130,31 @@
   </main>
   </div>
   <script>
+    const layout = document.querySelector("[data-layout]");
+    const navToggles = document.querySelectorAll("[data-nav-toggle]");
+    if (layout) {
+      for (const navToggle of navToggles) navToggle.addEventListener("click", () => {
+        const hidden = layout.classList.toggle("layout--nav-hidden");
+        for (const toggle of navToggles) toggle.setAttribute("aria-expanded", String(!hidden));
+      });
+    }
+    const storyFilter = document.querySelector("[data-story-filter]");
+    if (storyFilter) {
+      storyFilter.addEventListener("input", () => {
+        const query = storyFilter.value.trim().toLowerCase();
+        const leaves = [...document.querySelectorAll("[data-tree-leaf]")];
+        for (const leaf of leaves) leaf.hidden = !leaf.dataset.searchText.includes(query);
+        for (const node of [...document.querySelectorAll("[data-tree-node]")].reverse()) {
+          node.hidden = !node.querySelector("[data-tree-leaf]:not([hidden])");
+          if (query && !node.hidden) node.querySelector(":scope > details").open = true;
+        }
+        for (const group of document.querySelectorAll("[data-status-group]")) {
+          group.hidden = !group.querySelector("[data-tree-leaf]:not([hidden])");
+          if (query && !group.hidden) group.open = true;
+        }
+        document.querySelector("[data-filter-empty]").hidden = leaves.some((leaf) => !leaf.hidden);
+      });
+    }
     const currentDirectory = () => window.location.pathname.endsWith("/") ? window.location.pathname : window.location.pathname + "/";
     for (const link of document.querySelectorAll("[data-story-link]")) {
       const story = link.getAttribute("data-story-link");
