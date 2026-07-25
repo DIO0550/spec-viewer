@@ -11,8 +11,12 @@ const cssFilePath = resolve(
 /** @returns The declaration body for one CSS selector in App.css. */
 function readCssRule(selector: string): string {
   const css = readFileSync(cssFilePath, "utf8");
-  const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = css.match(new RegExp(`${escapedSelector}\\s*{(?<body>[^}]*)}`));
+  const selectorPattern = selector
+    .trim()
+    .split(/\s+/)
+    .map((selectorPart) => selectorPart.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("\\s+");
+  const match = css.match(new RegExp(`${selectorPattern}\\s*{(?<body>[^}]*)}`));
 
   return match?.groups?.body ?? "";
 }
