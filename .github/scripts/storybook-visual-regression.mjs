@@ -264,29 +264,48 @@ const escapeHtml = (value) => String(value)
   .replaceAll(">", "&gt;")
   .replaceAll('"', "&quot;");
 
-const imagePanel = (label, path, enabled) => {
-  if (!enabled) {
-    return `<div class="image-card image-card--empty"><h3>${label}</h3><p>No image</p></div>`;
-  }
-  return `<div class="image-card"><h3>${label}</h3><img src="${path}" alt="${label}"></div>`;
-};
-
 const comparisonPanel = (result, pathPrefix = "") => {
-  if (!result.hasExpected || !result.hasActual) {
-    return `<div class="comparison comparison--empty"><p>Slider comparison is unavailable because this story is ${result.status}.</p></div>`;
-  }
   const story = escapeHtml(result.story);
+  const expectedPath = `${pathPrefix}expected/${story}.png`;
+  const actualPath = `${pathPrefix}actual/${story}.png`;
+  const diffPath = `${pathPrefix}diff/${story}.png`;
+  const oneUpImage = result.hasActual
+    ? `<img class="comparison__image" src="${actualPath}" alt="Current ${story}" data-one-up-image data-current-src="${actualPath}" data-baseline-src="${result.hasExpected ? expectedPath : ""}">`
+    : `<img class="comparison__image" src="${expectedPath}" alt="Baseline ${story}" data-one-up-image data-current-src="" data-baseline-src="${expectedPath}">`;
+  const imageOrEmpty = (label, path, enabled) => enabled
+    ? `<figure class="comparison__pane"><figcaption>${label}</figcaption><img class="comparison__image" src="${path}" alt="${label} ${story}"></figure>`
+    : `<div class="comparison__pane comparison__pane--empty"><strong>${label}</strong><span>Not available</span></div>`;
   return `<div class="comparison" data-comparison>
-    <div class="comparison__frame">
-      <img class="comparison__image" src="${pathPrefix}expected/${story}.png" alt="Expected ${story}">
-      <div class="comparison__actual" data-actual style="clip-path: inset(0 0 0 50%)">
-        <img class="comparison__image" src="${pathPrefix}actual/${story}.png" alt="Actual ${story}">
+    <div class="comparison__toolbar" aria-label="Comparison layout">
+      <div class="comparison__modes" role="group" aria-label="View mode">
+        <button type="button" class="is-active" data-view-mode="one-up" aria-pressed="true">1-Up</button>
+        <button type="button" data-view-mode="two-up" aria-pressed="false">2-Up</button>
+        ${result.hasExpected && result.hasActual ? '<button type="button" data-view-mode="slider" aria-pressed="false">Slider</button>' : ""}
+        ${result.hasDiff ? '<button type="button" data-view-mode="diff" aria-pressed="false">Diff</button>' : ""}
       </div>
-      <div class="comparison__handle" data-handle style="left: 50%"></div>
+      <div class="comparison__versions" role="group" aria-label="1-Up snapshot" data-one-up-controls>
+        <button type="button"${result.hasActual ? "" : ' class="is-active"'} data-one-up-version="baseline" aria-pressed="${result.hasActual ? "false" : "true"}"${result.hasExpected ? "" : " disabled"}>Baseline</button>
+        <button type="button"${result.hasActual ? ' class="is-active"' : ""} data-one-up-version="current" aria-pressed="${result.hasActual ? "true" : "false"}"${result.hasActual ? "" : " disabled"}>Current</button>
+      </div>
     </div>
-    <label class="comparison__control">Before / After
-      <input data-slider type="range" min="0" max="100" value="50" aria-label="Before after slider for ${story}">
-    </label>
+    <div class="comparison__view" data-view="one-up">
+      <div class="comparison__frame">${oneUpImage}</div>
+    </div>
+    <div class="comparison__view" data-view="two-up" hidden>
+      <div class="comparison__two-up">
+        ${imageOrEmpty("Baseline", expectedPath, result.hasExpected)}
+        ${imageOrEmpty("Current", actualPath, result.hasActual)}
+      </div>
+    </div>
+    ${result.hasExpected && result.hasActual ? `<div class="comparison__view" data-view="slider" hidden>
+      <div class="comparison__frame">
+        <img class="comparison__image" src="${expectedPath}" alt="Baseline ${story}">
+        <div class="comparison__actual" data-actual style="clip-path: inset(0 0 0 50%)"><img class="comparison__image" src="${actualPath}" alt="Current ${story}"></div>
+        <div class="comparison__handle" data-handle style="left: 50%"></div>
+      </div>
+      <label class="comparison__control">Baseline / Current<input data-slider type="range" min="0" max="100" value="50" aria-label="Baseline current slider for ${story}"></label>
+    </div>` : ""}
+    ${result.hasDiff ? `<div class="comparison__view" data-view="diff" hidden>${imageOrEmpty("Pixel diff", diffPath, true)}</div>` : ""}
   </div>`;
 };
 
@@ -308,11 +327,6 @@ const renderStory = (result, options = {}) => {
       </dl>
     </header>
     ${comparisonPanel(result, pathPrefix)}
-    <div class="shots">
-      ${imagePanel("Expected", `${pathPrefix}expected/${story}.png`, result.hasExpected)}
-      ${imagePanel("Actual", `${pathPrefix}actual/${story}.png`, result.hasActual)}
-      ${imagePanel("Diff", `${pathPrefix}diff/${story}.png`, result.hasDiff)}
-    </div>
   </article>`;
 };
 
@@ -463,21 +477,26 @@ const renderHtml = (summary, options = {}) => `<!doctype html>
     dt { color: var(--muted); font-size: 12px; }
     dd { margin: 4px 0 0; font-weight: 700; }
     .comparison { margin-bottom: 18px; }
+    .comparison__toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .comparison__modes, .comparison__versions { display: inline-flex; padding: 3px; border: 1px solid var(--line); border-radius: 9px; background: #0b1220; }
+    .comparison__toolbar button { border: 0; border-radius: 6px; padding: 6px 11px; background: transparent; color: var(--muted); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .comparison__toolbar button:hover:not(:disabled) { color: var(--text); }
+    .comparison__toolbar button.is-active { background: #334155; color: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / 35%); }
+    .comparison__toolbar button:disabled { cursor: not-allowed; opacity: 0.35; }
     .comparison__frame { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: #020617; }
     .comparison__image { display: block; width: 100%; height: auto; user-select: none; }
+    .comparison__two-up { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+    .comparison__pane { min-width: 0; margin: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #020617; }
+    .comparison__pane figcaption, .comparison__pane--empty strong { display: block; padding: 8px 12px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px; font-weight: 700; }
+    .comparison__pane--empty { display: grid; min-height: 240px; align-content: start; color: var(--muted); }
+    .comparison__pane--empty span { place-self: center; margin-top: 80px; }
     .comparison__actual { position: absolute; inset: 0; overflow: hidden; }
     .comparison__handle { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--accent); box-shadow: 0 0 0 9999px rgb(56 189 248 / 0%); }
     .comparison__handle::after { content: ""; position: absolute; top: 50%; left: 50%; width: 28px; height: 28px; border: 2px solid var(--accent); border-radius: 999px; background: var(--panel); transform: translate(-50%, -50%); box-shadow: 0 4px 16px rgb(0 0 0 / 35%); }
     .comparison__control { display: grid; gap: 8px; margin-top: 10px; color: var(--muted); font-size: 13px; }
     input[type="range"] { width: 100%; accent-color: var(--accent); }
-    .comparison--empty { border: 1px dashed var(--line); border-radius: 14px; padding: 24px; color: var(--muted); }
-    .shots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-    .image-card { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: #020617; }
-    .image-card h3 { padding: 10px 12px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--line); }
-    .image-card img { display: block; width: 100%; height: auto; }
-    .image-card--empty { display: grid; min-height: 180px; place-items: center; color: var(--muted); }
-    .image-card--empty h3 { justify-self: stretch; width: 100%; box-sizing: border-box; }
-    @media (max-width: 900px) { .hero, .story__header { display: block; } .hero__actions { justify-content: flex-start; margin-top: 12px; } .metrics, .shots { grid-template-columns: 1fr; display: grid; } }
+    @media (max-width: 900px) { .hero, .story__header { display: block; } .hero__actions { justify-content: flex-start; margin-top: 12px; } .metrics { display: grid; grid-template-columns: 1fr; } .comparison__toolbar { align-items: flex-start; flex-direction: column; } }
+    @media (max-width: 720px) { .comparison__two-up { grid-template-columns: 1fr; } }
     @media (max-width: 640px) { .layout, .layout--detail, .layout--nav-hidden { display: block; width: 100%; } main { padding: 12px; } .story-nav { position: static; height: min(70vh, 620px); } .layout--nav-hidden .story-nav { display: none; } .layout--nav-hidden .nav-reveal { position: fixed; top: 0; } }
   </style>
 </head>
@@ -489,7 +508,7 @@ const renderHtml = (summary, options = {}) => `<!doctype html>
     <section class="hero">
       <div>
         <h1>${options.detailStory ? escapeHtml(options.detailStory) : "Storybook Visual Regression Report"}</h1>
-        <p class="summary">${options.detailStory ? '<a href="../" data-back-link>← Back to all stories</a>' : "Move the slider to compare baseline and current screenshots. Click a story title to open that story on its own page."}</p>
+        <p class="summary">${options.detailStory ? '<a href="../" data-back-link>← Back to all stories</a>' : "Use 1-Up, 2-Up, Slider, or Diff to inspect changes. Click a story title to open its detail page."}</p>
       </div>
       <div class="hero__actions">
         <div class="badge">Failed: <strong>${summary.failed}</strong> / Threshold: ${summary.maxDiffRatio}</div>
@@ -536,16 +555,44 @@ const renderHtml = (summary, options = {}) => `<!doctype html>
       link.href = path.slice(0, path.lastIndexOf("/")) + "/";
     }
     for (const root of document.querySelectorAll("[data-comparison]")) {
+      const modeButtons = root.querySelectorAll("[data-view-mode]");
+      const views = root.querySelectorAll("[data-view]");
+      const oneUpControls = root.querySelector("[data-one-up-controls]");
+      for (const button of modeButtons) button.addEventListener("click", () => {
+        const mode = button.dataset.viewMode;
+        for (const candidate of modeButtons) {
+          const active = candidate === button;
+          candidate.classList.toggle("is-active", active);
+          candidate.setAttribute("aria-pressed", String(active));
+        }
+        for (const view of views) view.hidden = view.dataset.view !== mode;
+        if (oneUpControls) oneUpControls.hidden = mode !== "one-up";
+      });
+      const oneUpImage = root.querySelector("[data-one-up-image]");
+      const versionButtons = root.querySelectorAll("[data-one-up-version]");
+      for (const button of versionButtons) button.addEventListener("click", () => {
+        const version = button.dataset.oneUpVersion;
+        const source = version === "baseline" ? oneUpImage.dataset.baselineSrc : oneUpImage.dataset.currentSrc;
+        if (!source) return;
+        oneUpImage.src = source;
+        for (const candidate of versionButtons) {
+          const active = candidate === button;
+          candidate.classList.toggle("is-active", active);
+          candidate.setAttribute("aria-pressed", String(active));
+        }
+      });
       const slider = root.querySelector("[data-slider]");
       const actual = root.querySelector("[data-actual]");
       const handle = root.querySelector("[data-handle]");
-      const update = () => {
-        const value = slider.value;
-        actual.style.clipPath = "inset(0 0 0 " + value + "%)";
-        handle.style.left = value + "%";
-      };
-      slider.addEventListener("input", update);
-      update();
+      if (slider && actual && handle) {
+        const update = () => {
+          const value = slider.value;
+          actual.style.clipPath = "inset(0 0 0 " + value + "%)";
+          handle.style.left = value + "%";
+        };
+        slider.addEventListener("input", update);
+        update();
+      }
     }
   </script>
 </body>
