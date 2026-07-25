@@ -393,7 +393,8 @@ const renderHtml = (summary, options = {}) => `<!doctype html>
     .image-card img { display: block; width: 100%; height: auto; }
     .image-card--empty { display: grid; min-height: 180px; place-items: center; color: var(--muted); }
     .image-card--empty h3 { justify-self: stretch; width: 100%; box-sizing: border-box; }
-    @media (max-width: 900px) { .layout, .layout--detail { display: block; width: min(100% - 24px, 1440px); padding-top: 18px; } .story-nav { position: static; max-height: none; margin-bottom: 18px; } .hero, .story__header { display: block; } .metrics, .shots { grid-template-columns: 1fr; display: grid; } }
+    @media (max-width: 900px) { .hero, .story__header { display: block; } .metrics, .shots { grid-template-columns: 1fr; display: grid; } }
+    @media (max-width: 640px) { .layout, .layout--detail { display: block; width: min(100% - 24px, 1440px); padding-top: 18px; } .story-nav { position: static; max-height: none; margin-bottom: 18px; } }
   </style>
 </head>
 <body>
