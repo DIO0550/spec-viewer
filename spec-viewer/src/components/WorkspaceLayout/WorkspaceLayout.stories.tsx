@@ -29,7 +29,7 @@ import {
 } from "@/features/workspace";
 import { WorkspaceLayout } from "@/components/WorkspaceLayout";
 
-const workspacePath = "/Users/dio/work/pdfmod";
+const workspacePath = "/workspace/pdfmod";
 const commentId = CommentId.fromString;
 
 const sampleSpec: SpecNode = {
@@ -680,7 +680,7 @@ function createShellArgs({
           isBusy={isWorkspaceLoading}
           recentWorkspaces={[
             {
-              path: "/Users/dio/work/spec-board",
+              path: "/workspace/spec-board",
               displayName: "spec-board",
               kind: "plugin-workspace",
               lastOpenedAt: "2026-05-07T00:00:00.000Z",
@@ -692,7 +692,7 @@ function createShellArgs({
               lastOpenedAt: "2026-05-06T00:00:00.000Z",
             },
             {
-              path: "/Users/dio/work/plugin-manager",
+              path: "/workspace/plugin-manager",
               displayName: "plugin-manager",
               kind: "plugin-worktree",
               lastOpenedAt: "2026-05-05T00:00:00.000Z",

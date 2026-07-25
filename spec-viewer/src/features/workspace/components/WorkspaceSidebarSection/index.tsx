@@ -59,7 +59,9 @@ export function WorkspaceSidebarSection({
               <ChevronRight aria-hidden="true" size={16} />
             )}
           </button>
-          <h2>WORKSPACES {recentWorkspaces.length}</h2>
+          <h2>
+            {uiText.workspace.workspaceListHeading} {recentWorkspaces.length}
+          </h2>
         </div>
         <button
           className="icon-button"

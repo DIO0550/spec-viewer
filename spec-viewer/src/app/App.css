@@ -3178,7 +3178,7 @@ textarea:disabled {
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-  min-height: 48px;
+  min-height: 42px;
   padding: 8px 12px;
   color: var(--color-text);
   background: var(--color-surface);
@@ -3188,21 +3188,27 @@ textarea:disabled {
   display: inline-flex;
   align-items: center;
   width: max-content;
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
-  padding: 2px;
-  background: var(--color-panel);
+  padding: 0;
+  background: var(--color-raised);
+  overflow: hidden;
 }
 
 .segmented-control button {
-  min-height: 26px;
+  min-height: 24px;
   border: 0;
-  border-radius: 4px;
-  padding: 3px 11px;
-  color: var(--color-text-muted);
+  border-radius: 0;
+  padding: 4px 14px;
+  color: var(--color-text-body);
   background: transparent;
-  font-size: 0.75rem;
+  font-size: 12px;
+  font-weight: 400;
   line-height: 1;
+}
+
+.segmented-control button + button {
+  border-left: 1px solid var(--color-border);
 }
 
 .segmented-control button:hover {
@@ -3212,10 +3218,10 @@ textarea:disabled {
 
 .segmented-control button[aria-selected="true"],
 .segmented-control button[aria-pressed="true"] {
-  color: var(--color-text);
-  background: var(--color-raised);
-  box-shadow: 0 1px 2px rgba(28, 25, 23, 0.12);
-  font-weight: 700;
+  color: var(--color-accent-hover);
+  background: var(--color-accent-softer);
+  box-shadow: none;
+  font-weight: 500;
 }
 
 .review-mode-toolbar__file {
@@ -3226,7 +3232,7 @@ textarea:disabled {
   min-width: 0;
   color: var(--color-text);
   font-family: var(--font-mono);
-  font-size: 0.74rem;
+  font-size: 12px;
 }
 
 .review-mode-toolbar__file > span:first-child {
@@ -3946,44 +3952,6 @@ textarea:disabled {
   min-height: 42px;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
-}
-
-.review-mode-toolbar {
-  min-height: 42px;
-  padding: 8px 12px;
-  background: var(--color-surface);
-}
-
-.segmented-control {
-  border-color: var(--color-border);
-  padding: 0;
-  background: var(--color-raised);
-  overflow: hidden;
-}
-
-.segmented-control button {
-  min-height: 24px;
-  border-radius: 0;
-  padding: 4px 14px;
-  color: var(--color-text-body);
-  font-size: 12px;
-  font-weight: 400;
-}
-
-.segmented-control button + button {
-  border-left: 1px solid var(--color-border);
-}
-
-.segmented-control button[aria-selected="true"],
-.segmented-control button[aria-pressed="true"] {
-  color: var(--color-accent-hover);
-  background: var(--color-accent-softer);
-  box-shadow: none;
-  font-weight: 500;
-}
-
-.review-mode-toolbar__file {
-  font-size: 12px;
 }
 
 .app-shell__viewer {
