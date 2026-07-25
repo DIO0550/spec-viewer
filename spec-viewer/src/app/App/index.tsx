@@ -26,6 +26,11 @@ import {
 import { CommentScope } from "@/features/comments/domain/commentScope";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import {
+  DiffWorkspace,
+  type ReviewMode,
+  ReviewModeToolbar,
+} from "@/features/diff";
+import {
   ThemeProvider,
   useLeftNavigationPreference,
   useResizableLeftNavigation,
@@ -84,6 +89,7 @@ function SpecViewAppContent(): ReactElement {
   const [dialogErrorMessage, setDialogErrorMessage] = useState<string | null>(
     null,
   );
+  const [reviewMode, setReviewMode] = useState<ReviewMode>("specs");
   // workspace を開く知識は feature に集約済み — App は onError を渡して呼ぶだけ。
   const workspaceLoader = useWorkspaceLoader({
     onError: setDialogErrorMessage,
@@ -310,54 +316,75 @@ function SpecViewAppContent(): ReactElement {
             />
           </WorkspaceLayout.Toolbar>
           <WorkspaceLayout.Tabs>
-            <SpecTabs
-              spec={specSelectors.selectedSpec}
-              selectedFileKey={specState.selection.fileKey}
-              isSelectionDisabled={isCurrentViewLoading}
-              onSelectFile={guardedSpecActions.selectFileFromTabs}
+            <ReviewModeToolbar
+              mode={reviewMode}
+              filePath={specSelectors.selectedFile?.label ?? "ファイル未選択"}
+              onModeChange={setReviewMode}
             />
           </WorkspaceLayout.Tabs>
           <WorkspaceLayout.Viewer>
-            {shouldShowOpenWorkspacePrompt ? (
-              <OpenWorkspaceEmptyState
-                isOpening={workspaceLoader.state.isBrowsingWorkspace}
-                recentWorkspaces={
-                  workspaceLoader.recentWorkspaces.recentWorkspaces
-                }
-                onOpenWorkspace={() => {
-                  void workspaceLoader.actions.browseWorkspace();
-                }}
-                onOpenRecentWorkspace={(path) => {
-                  void workspaceLoader.actions.openRecentWorkspacePath(path);
-                }}
-                onRemoveRecentWorkspace={
-                  workspaceLoader.recentWorkspaces.removeWorkspace
-                }
-              />
+            {reviewMode === "diff" ? (
+              <DiffWorkspace />
             ) : (
-              <MarkdownViewer
-                state={specState.documentState}
-                selectedSpecLabel={specSelectors.selectedSpec?.label ?? null}
-                selectedFileLabel={specSelectors.selectedFile?.label ?? null}
-                comments={comments.comments}
-                activeCommentId={commentSelection.activeCommentId}
-                isAddingComment={isAddingComment}
-                addCommentErrorMessage={addCommentErrorMessage}
-                isUpdatingComment={isUpdatingComment}
-                operationState={comments.operationState}
-                isCommentScopeReady={isCommentScopeReady}
-                onReload={guardedSpecActions.reloadDocumentFromViewer}
-                onAddComment={commentSelection.addComment}
-                onUpdateComment={commentSelection.updateComment}
-                onResolveComment={commentSelection.resolveInlineComment}
-                onReopenComment={commentSelection.reopenInlineComment}
-                onDeleteComment={commentSelection.deleteInlineComment}
-                onSelectComment={commentSelection.selectComment}
-                onAnchorDisplayStatesChange={
-                  commentSelection.updateCommentAnchorDisplayStates
-                }
-                onFirstReadable={documentReadiness.markCurrentDocumentReadable}
-              />
+              <div className="specs-workspace">
+                <SpecTabs
+                  spec={specSelectors.selectedSpec}
+                  selectedFileKey={specState.selection.fileKey}
+                  isSelectionDisabled={isCurrentViewLoading}
+                  onSelectFile={guardedSpecActions.selectFileFromTabs}
+                />
+                <div className="specs-workspace__viewer">
+                  {shouldShowOpenWorkspacePrompt ? (
+                    <OpenWorkspaceEmptyState
+                      isOpening={workspaceLoader.state.isBrowsingWorkspace}
+                      recentWorkspaces={
+                        workspaceLoader.recentWorkspaces.recentWorkspaces
+                      }
+                      onOpenWorkspace={() => {
+                        void workspaceLoader.actions.browseWorkspace();
+                      }}
+                      onOpenRecentWorkspace={(path) => {
+                        void workspaceLoader.actions.openRecentWorkspacePath(
+                          path,
+                        );
+                      }}
+                      onRemoveRecentWorkspace={
+                        workspaceLoader.recentWorkspaces.removeWorkspace
+                      }
+                    />
+                  ) : (
+                    <MarkdownViewer
+                      state={specState.documentState}
+                      selectedSpecLabel={
+                        specSelectors.selectedSpec?.label ?? null
+                      }
+                      selectedFileLabel={
+                        specSelectors.selectedFile?.label ?? null
+                      }
+                      comments={comments.comments}
+                      activeCommentId={commentSelection.activeCommentId}
+                      isAddingComment={isAddingComment}
+                      addCommentErrorMessage={addCommentErrorMessage}
+                      isUpdatingComment={isUpdatingComment}
+                      operationState={comments.operationState}
+                      isCommentScopeReady={isCommentScopeReady}
+                      onReload={guardedSpecActions.reloadDocumentFromViewer}
+                      onAddComment={commentSelection.addComment}
+                      onUpdateComment={commentSelection.updateComment}
+                      onResolveComment={commentSelection.resolveInlineComment}
+                      onReopenComment={commentSelection.reopenInlineComment}
+                      onDeleteComment={commentSelection.deleteInlineComment}
+                      onSelectComment={commentSelection.selectComment}
+                      onAnchorDisplayStatesChange={
+                        commentSelection.updateCommentAnchorDisplayStates
+                      }
+                      onFirstReadable={
+                        documentReadiness.markCurrentDocumentReadable
+                      }
+                    />
+                  )}
+                </div>
+              </div>
             )}
           </WorkspaceLayout.Viewer>
         </WorkspaceLayout.Main>
