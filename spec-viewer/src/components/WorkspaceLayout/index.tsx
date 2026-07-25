@@ -90,6 +90,7 @@ const WorkspaceLayoutContext =
 /** @returns Compound workspace layout components. */
 export const WorkspaceLayout = {
   Root: WorkspaceLayoutRoot,
+  Pathbar: WorkspaceLayoutToolbar,
   Toolbar: WorkspaceLayoutToolbar,
   LeftNavigation: WorkspaceLayoutLeftNavigation,
   Main: WorkspaceLayoutMain,
@@ -114,13 +115,13 @@ function WorkspaceLayoutRoot(props: WorkspaceLayoutRootProps): ReactElement {
   const isResizingCommentsSidebarRef = useRef(false);
   const resolvedLeftNavigation = resolvePanelControl(leftNavigation, {
     isOpen: false,
-    width: 268,
+    width: 240,
     minWidth: 216,
     maxWidth: 420,
   });
   const resolvedCommentsSidebar = resolvePanelControl(commentsSidebar, {
     isOpen: true,
-    width: 360,
+    width: 300,
     minWidth: 280,
     maxWidth: 560,
   });
@@ -253,7 +254,7 @@ function WorkspaceLayoutMain(props: WorkspaceLayoutMainProps): ReactElement {
 
 /**
  * @param props - Toolbar content.
- * @returns Toolbar row with left navigation reopen control.
+ * @returns Full-width pathbar row with left navigation reopen control.
  */
 function WorkspaceLayoutToolbar(
   props: WorkspaceLayoutToolbarProps,
@@ -263,7 +264,7 @@ function WorkspaceLayoutToolbar(
 
   return (
     <header
-      className="app-shell__toolbar"
+      className="app-shell__pathbar app-shell__toolbar"
       data-left-navigation={layout.leftNavigation.isOpen ? "open" : "collapsed"}
     >
       {!layout.leftNavigation.isOpen ? (
@@ -293,17 +294,20 @@ function WorkspaceLayoutLeftNavigation(
 ): ReactElement {
   const { children, header } = props;
   const layout = useWorkspaceLayoutContext();
-  const headerContent = header ?? (
-    <div className="left-navigation-brand">
-      <span className="left-navigation-brand__mark" aria-hidden="true">
-        S
-      </span>
-      <span className="left-navigation-brand__copy">
-        <strong>Spec Reviewer</strong>
-        <span>Spec workspace</span>
-      </span>
-    </div>
-  );
+  const headerContent =
+    header === undefined ? (
+      <div className="left-navigation-brand">
+        <span className="left-navigation-brand__mark" aria-hidden="true">
+          S
+        </span>
+        <span className="left-navigation-brand__copy">
+          <strong>Spec Reviewer</strong>
+          <span>Spec workspace</span>
+        </span>
+      </div>
+    ) : (
+      header
+    );
 
   /**
    * Resizes the left navigation to match a pointer x coordinate.
@@ -410,19 +414,21 @@ function WorkspaceLayoutLeftNavigation(
       aria-hidden={!layout.leftNavigation.isOpen}
       aria-label={uiText.leftNavigation.list}
     >
-      <div className="app-shell__sidebar-masthead">
-        <div className="app-shell__sidebar-brand">{headerContent}</div>
-        <button
-          ref={layout.closeLeftNavigationButtonRef}
-          className="icon-button app-shell__left-close"
-          type="button"
-          aria-label={uiText.leftNavigation.close}
-          title={uiText.leftNavigation.close}
-          onClick={layout.closeLeftNavigation}
-        >
-          <PanelLeftClose aria-hidden="true" size={16} />
-        </button>
-      </div>
+      {headerContent === null ? null : (
+        <div className="app-shell__sidebar-masthead">
+          <div className="app-shell__sidebar-brand">{headerContent}</div>
+          <button
+            ref={layout.closeLeftNavigationButtonRef}
+            className="icon-button app-shell__left-close"
+            type="button"
+            aria-label={uiText.leftNavigation.close}
+            title={uiText.leftNavigation.close}
+            onClick={layout.closeLeftNavigation}
+          >
+            <PanelLeftClose aria-hidden="true" size={16} />
+          </button>
+        </div>
+      )}
       <button
         className="app-shell__left-resize"
         type="button"

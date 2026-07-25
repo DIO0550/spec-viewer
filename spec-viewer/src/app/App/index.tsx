@@ -57,7 +57,6 @@ import {
   WorkspaceToolbar,
 } from "@/features/workspace";
 import { WorkspacePath } from "@/domains/workspacePath";
-import { uiText } from "@/utils/uiText";
 import { WorkspaceLayout } from "@/components";
 
 /**
@@ -228,8 +227,6 @@ function SpecViewAppContent(): ReactElement {
     documentReadiness.isDocumentReadable;
   const canRefresh =
     activeWorkspaceRoot !== null && specSelectors.canReloadDocument;
-  const leftNavigationSubtitle =
-    activeWorkspaceRoot ?? uiText.workspace.noWorkspace;
 
   return (
     <div className="app-drop-root">
@@ -244,21 +241,26 @@ function SpecViewAppContent(): ReactElement {
           onWidthChange: resizableLeftNavigation.resizeLeftNavigationTo,
         }}
       >
-        <WorkspaceLayout.LeftNavigation
-          header={
-            <div className="left-navigation-brand">
-              <span className="left-navigation-brand__mark" aria-hidden="true">
-                S
-              </span>
-              <span className="left-navigation-brand__copy">
-                <strong>Spec Reviewer</strong>
-                <span title={leftNavigationSubtitle}>
-                  {leftNavigationSubtitle}
-                </span>
-              </span>
-            </div>
-          }
-        >
+        <WorkspaceLayout.Pathbar>
+          <WorkspaceToolbar
+            workspacePath={activeWorkspaceRoot}
+            inputValue={workspaceLoader.state.workspaceInput}
+            isLoading={isWorkspaceOpening}
+            isBrowsing={workspaceLoader.state.isBrowsingWorkspace}
+            errorMessage={toolbarErrorMessage}
+            canRefresh={canRefresh}
+            onInputChange={workspaceLoader.actions.setWorkspaceInput}
+            onBrowse={() => {
+              void workspaceLoader.actions.browseWorkspace();
+            }}
+            onLoad={workspaceLoader.actions.loadWorkspace}
+            onRefresh={() => {
+              void viewRefresh.refreshCurrentViewManually();
+            }}
+            onReset={resetWorkspace}
+          />
+        </WorkspaceLayout.Pathbar>
+        <WorkspaceLayout.LeftNavigation header={null}>
           <div className="left-navigation-panel">
             <WorkspaceSidebarSection
               currentWorkspacePath={activeWorkspaceRoot}
@@ -287,29 +289,15 @@ function SpecViewAppContent(): ReactElement {
           </div>
         </WorkspaceLayout.LeftNavigation>
         <WorkspaceLayout.Main>
-          <WorkspaceLayout.Toolbar>
-            <WorkspaceToolbar
-              workspacePath={activeWorkspaceRoot}
-              inputValue={workspaceLoader.state.workspaceInput}
-              isLoading={isWorkspaceOpening}
-              isBrowsing={workspaceLoader.state.isBrowsingWorkspace}
-              errorMessage={toolbarErrorMessage}
-              canRefresh={canRefresh}
-              onInputChange={workspaceLoader.actions.setWorkspaceInput}
-              onBrowse={() => {
-                void workspaceLoader.actions.browseWorkspace();
-              }}
-              onLoad={workspaceLoader.actions.loadWorkspace}
-              onRefresh={() => {
-                void viewRefresh.refreshCurrentViewManually();
-              }}
-              onReset={resetWorkspace}
-            />
-          </WorkspaceLayout.Toolbar>
           <WorkspaceLayout.Tabs>
             <ReviewModeToolbar
               mode={reviewMode}
-              fileLabel={specSelectors.selectedFile?.label ?? "ファイル未選択"}
+              fileLabel={
+                specSelectors.selectedSpec !== null &&
+                specSelectors.selectedFile !== null
+                  ? `${specSelectors.selectedSpec.label} / ${specSelectors.selectedFile.fileName}`
+                  : "ファイル未選択"
+              }
               onModeChange={setReviewMode}
             />
           </WorkspaceLayout.Tabs>
