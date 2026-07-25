@@ -37,9 +37,7 @@ jobs:
       - name: Install dependencies
         if: github.event.action != 'closed'
         working-directory: spec-viewer
-        run: |
-          pnpm install --no-frozen-lockfile
-          pnpm install --offline --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Verify odiff binary
         if: github.event.action != 'closed'
