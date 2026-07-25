@@ -323,10 +323,22 @@ const formatStatusLabel = (status) => {
   return status.charAt(0).toUpperCase() + status.slice(1);
 };
 
+const storyTreePath = (result) => {
+  if (result.title) {
+    return result.title.split("/").filter(Boolean);
+  }
+  const componentId = result.story.split("--")[0];
+  const [root, ...rest] = componentId.split("-").filter(Boolean);
+  if (!root) {
+    return ["Other"];
+  }
+  return rest.length > 0 ? [root, rest.join("-")] : [root];
+};
+
 const renderStoryTree = (stories) => {
   const root = { children: new Map(), stories: [] };
   for (const result of stories) {
-    const titleParts = (result.title ?? "Other").split("/").filter(Boolean);
+    const titleParts = storyTreePath(result);
     let node = root;
     for (const part of titleParts) {
       if (!node.children.has(part)) {
@@ -392,11 +404,11 @@ const renderHtml = (summary, options = {}) => `<!doctype html>
   <style>
     :root { color-scheme: light dark; --bg: #0f172a; --panel: #111827; --text: #e5e7eb; --muted: #9ca3af; --line: #374151; --accent: #38bdf8; --danger: #fb7185; --ok: #34d399; --warn: #fbbf24; }
     body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-    .layout { position: relative; display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 24px; width: min(1760px, calc(100% - 32px)); margin: 0 auto; padding: 16px 0 56px; transition: grid-template-columns 160ms ease; }
+    .layout { position: relative; display: grid; grid-template-columns: 320px minmax(0, 1fr); width: 100%; min-height: 100vh; transition: grid-template-columns 160ms ease; }
     .layout--nav-hidden { grid-template-columns: 0 minmax(0, 1fr); }
     .layout--nav-hidden .story-nav { visibility: hidden; opacity: 0; pointer-events: none; }
-    .layout--detail { display: block; width: min(1440px, calc(100% - 48px)); }
-    main { min-width: 0; }
+    .layout--detail { display: block; width: 100%; }
+    main { min-width: 0; padding: 24px; }
     .hero { display: flex; justify-content: space-between; gap: 24px; align-items: flex-end; margin-bottom: 24px; }
     h1, h2, h3, p { margin: 0; }
     h1 { font-size: 32px; }
@@ -404,9 +416,9 @@ const renderHtml = (summary, options = {}) => `<!doctype html>
     .summary { color: var(--muted); margin-top: 8px; }
     .hero__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
     .badge { border: 1px solid var(--line); border-radius: 999px; padding: 8px 12px; background: rgb(255 255 255 / 6%); }
-    .nav-reveal { display: none; position: sticky; top: 16px; z-index: 3; align-self: start; width: 34px; height: 42px; margin-left: -16px; border: 1px solid var(--line); border-left: 0; border-radius: 0 10px 10px 0; background: #1f2937; color: var(--text); cursor: pointer; }
+    .nav-reveal { display: none; position: sticky; top: 0; z-index: 3; align-self: start; width: 34px; height: 42px; border: 1px solid var(--line); border-left: 0; border-radius: 0 10px 10px 0; background: #1f2937; color: var(--text); cursor: pointer; }
     .layout--nav-hidden .nav-reveal { display: block; position: absolute; left: 0; }
-    .story-nav { position: sticky; top: 16px; align-self: start; display: grid; grid-template-rows: auto minmax(0, 1fr); box-sizing: border-box; height: calc(100vh - 32px); overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #18212c; box-shadow: 0 18px 50px rgb(0 0 0 / 18%); transition: opacity 160ms ease; }
+    .story-nav { position: sticky; top: 0; align-self: start; display: grid; grid-template-rows: auto minmax(0, 1fr); box-sizing: border-box; height: 100vh; overflow: hidden; border-right: 1px solid var(--line); background: #18212c; transition: opacity 160ms ease; }
     .story-nav__header { display: grid; grid-template-columns: 1fr auto; gap: 14px 8px; padding: 16px; border-bottom: 1px solid var(--line); }
     .story-nav__title { display: flex; align-items: center; gap: 8px; min-width: 0; }
     .story-nav__title h2 { overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
@@ -466,7 +478,7 @@ const renderHtml = (summary, options = {}) => `<!doctype html>
     .image-card--empty { display: grid; min-height: 180px; place-items: center; color: var(--muted); }
     .image-card--empty h3 { justify-self: stretch; width: 100%; box-sizing: border-box; }
     @media (max-width: 900px) { .hero, .story__header { display: block; } .hero__actions { justify-content: flex-start; margin-top: 12px; } .metrics, .shots { grid-template-columns: 1fr; display: grid; } }
-    @media (max-width: 640px) { .layout, .layout--detail, .layout--nav-hidden { display: block; width: min(100% - 24px, 1440px); padding-top: 12px; } .story-nav { position: static; height: min(70vh, 620px); margin-bottom: 18px; } .layout--nav-hidden .story-nav { display: none; } .layout--nav-hidden .nav-reveal { position: fixed; top: 12px; } }
+    @media (max-width: 640px) { .layout, .layout--detail, .layout--nav-hidden { display: block; width: 100%; } main { padding: 12px; } .story-nav { position: static; height: min(70vh, 620px); } .layout--nav-hidden .story-nav { display: none; } .layout--nav-hidden .nav-reveal { position: fixed; top: 0; } }
   </style>
 </head>
 <body>

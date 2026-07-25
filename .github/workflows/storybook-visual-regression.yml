@@ -73,6 +73,15 @@ jobs:
           --out ../visual-report
           --max-diff-ratio 0.002
 
+      - name: Verify visual report UI
+        if: always() && github.event.action != 'closed'
+        run: |
+          test -f visual-report/index.html
+          grep -Fq 'id="story-navigation"' visual-report/index.html
+          grep -Fq 'placeholder="Filter stories..."' visual-report/index.html
+          grep -Fq 'class="nav-reveal"' visual-report/index.html
+          find visual-report -mindepth 2 -maxdepth 2 -name index.html -print -quit | grep -q .
+
       - name: Upload visual report
         if: always() && github.event.action != 'closed'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
