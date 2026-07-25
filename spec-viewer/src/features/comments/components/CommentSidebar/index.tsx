@@ -109,14 +109,9 @@ type CommentSearchFilterParams = Readonly<{
   >;
 }>;
 
-const defaultDisplayFilter: CommentDisplayFilter = "all";
+const defaultDisplayFilter: CommentDisplayFilter = "open";
 
 const commentFilterOptions: readonly CommentFilterOption[] = [
-  {
-    filter: "all",
-    label: uiText.sidebar.all,
-    ariaLabel: "すべてのコメントを表示",
-  },
   {
     filter: "open",
     label: uiText.sidebar.openFilter,
@@ -126,6 +121,11 @@ const commentFilterOptions: readonly CommentFilterOption[] = [
     filter: "resolved",
     label: uiText.sidebar.resolved,
     ariaLabel: "解決済みコメントを表示",
+  },
+  {
+    filter: "all",
+    label: uiText.sidebar.all,
+    ariaLabel: "すべてのコメントを表示",
   },
 ];
 
