@@ -101,6 +101,7 @@ jobs:
           retention-days: 7
 
       - name: Publish visual report to gh-pages
+        id: publish-report
         if: github.event.action == 'closed' || steps.verify-report.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -164,8 +165,8 @@ jobs:
                 break
               fi
               echo "$out"
-              if echo "$out" | grep -q "HTTP 404"; then
-                echo "Pages 未設定のためビルドリクエストをスキップ (Settings → Pages を確認)"
+              if echo "$out" | grep -Eq "HTTP (404|409)"; then
+                echo "Pages build request is unavailable or already in progress; waiting for the public revision instead"
                 build_ok=true
                 break
               fi
@@ -199,6 +200,8 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           COMPARE_OUTCOME: ${{ steps.compare.outcome }}
+          VERIFY_OUTCOME: ${{ steps.verify-report.outcome }}
+          PUBLISH_OUTCOME: ${{ steps.publish-report.outcome }}
         run: |
           MARKER="<!-- sticky-comment: storybook-visual-regression -->"
           REPO_NAME="${GITHUB_REPOSITORY#*/}"
@@ -207,7 +210,11 @@ jobs:
           REPORT_URL="https://${OWNER}.github.io/${REPO_NAME}/visual-regression/pr-${PR_NUMBER}/?revision=${{ github.event.pull_request.head.sha }}"
           SUMMARY="visual-report/summary.json"
 
-          if [ -f "$SUMMARY" ]; then
+          if [ "$PUBLISH_OUTCOME" != "success" ]; then
+            FAILED="unknown"
+            TOTAL="unknown"
+            STATUS="❌ report publish failed"
+          elif [ -f "$SUMMARY" ]; then
             FAILED=$(node -e 'console.log(JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).failed)' "$SUMMARY")
             TOTAL=$(node -e 'console.log(JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).results.length)' "$SUMMARY")
             STATUS=$([ "$COMPARE_OUTCOME" = "success" ] && echo "✅ pass" || echo "❌ diff detected")
@@ -225,7 +232,11 @@ jobs:
             echo "Status: ${STATUS}"
             echo ""
             echo "- Changed stories over threshold: ${FAILED} / ${TOTAL}"
-            echo "- Rich visual diff report: ${REPORT_URL}"
+            if [ "$PUBLISH_OUTCOME" = "success" ]; then
+              echo "- Rich visual diff report: ${REPORT_URL}"
+            else
+              echo "- Rich visual diff report: not updated (verify: ${VERIFY_OUTCOME}, publish: ${PUBLISH_OUTCOME})"
+            fi
             echo "- Report artifact: ${RUN_URL}"
             echo "- Storybook preview: ${PREVIEW_URL}"
           } > "$BODY_FILE"
