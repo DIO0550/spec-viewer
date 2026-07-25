@@ -284,15 +284,6 @@ function SpecViewAppContent(): ReactElement {
                 workspaceLoader.recentWorkspaces.removeWorkspace
               }
             />
-            <SpecTree
-              state={specState.specTreeState}
-              selectedSpecId={specState.selection.specId}
-              archivingSpecId={specState.archivingSpecId}
-              isLoading={isCurrentViewLoading}
-              onSelectSpec={guardedSpecActions.selectSpecFromTree}
-              onArchiveSpec={guardedSpecActions.archiveSpecFromTree}
-              onReload={guardedSpecActions.reloadSpecsFromTree}
-            />
           </div>
         </WorkspaceLayout.LeftNavigation>
         <WorkspaceLayout.Main>
@@ -318,7 +309,7 @@ function SpecViewAppContent(): ReactElement {
           <WorkspaceLayout.Tabs>
             <ReviewModeToolbar
               mode={reviewMode}
-              filePath={specSelectors.selectedFile?.label ?? "ファイル未選択"}
+              fileLabel={specSelectors.selectedFile?.label ?? "ファイル未選択"}
               onModeChange={setReviewMode}
             />
           </WorkspaceLayout.Tabs>
@@ -327,63 +318,82 @@ function SpecViewAppContent(): ReactElement {
               <DiffWorkspace />
             ) : (
               <div className="specs-workspace">
-                <SpecTabs
-                  spec={specSelectors.selectedSpec}
-                  selectedFileKey={specState.selection.fileKey}
-                  isSelectionDisabled={isCurrentViewLoading}
-                  onSelectFile={guardedSpecActions.selectFileFromTabs}
-                />
-                <div className="specs-workspace__viewer">
-                  {shouldShowOpenWorkspacePrompt ? (
-                    <OpenWorkspaceEmptyState
-                      isOpening={workspaceLoader.state.isBrowsingWorkspace}
-                      recentWorkspaces={
-                        workspaceLoader.recentWorkspaces.recentWorkspaces
-                      }
-                      onOpenWorkspace={() => {
-                        void workspaceLoader.actions.browseWorkspace();
-                      }}
-                      onOpenRecentWorkspace={(path) => {
-                        void workspaceLoader.actions.openRecentWorkspacePath(
-                          path,
-                        );
-                      }}
-                      onRemoveRecentWorkspace={
-                        workspaceLoader.recentWorkspaces.removeWorkspace
-                      }
-                    />
-                  ) : (
-                    <MarkdownViewer
-                      state={specState.documentState}
-                      selectedSpecLabel={
-                        specSelectors.selectedSpec?.label ?? null
-                      }
-                      selectedFileLabel={
-                        specSelectors.selectedFile?.label ?? null
-                      }
-                      comments={comments.comments}
-                      activeCommentId={commentSelection.activeCommentId}
-                      isAddingComment={isAddingComment}
-                      addCommentErrorMessage={addCommentErrorMessage}
-                      isUpdatingComment={isUpdatingComment}
-                      operationState={comments.operationState}
-                      isCommentScopeReady={isCommentScopeReady}
-                      onReload={guardedSpecActions.reloadDocumentFromViewer}
-                      onAddComment={commentSelection.addComment}
-                      onUpdateComment={commentSelection.updateComment}
-                      onResolveComment={commentSelection.resolveInlineComment}
-                      onReopenComment={commentSelection.reopenInlineComment}
-                      onDeleteComment={commentSelection.deleteInlineComment}
-                      onSelectComment={commentSelection.selectComment}
-                      onAnchorDisplayStatesChange={
-                        commentSelection.updateCommentAnchorDisplayStates
-                      }
-                      onFirstReadable={
-                        documentReadiness.markCurrentDocumentReadable
-                      }
-                    />
-                  )}
-                </div>
+                <aside
+                  className="specs-workspace__navigation"
+                  aria-label="Specs"
+                >
+                  <SpecTree
+                    state={specState.specTreeState}
+                    selectedSpecId={specState.selection.specId}
+                    archivingSpecId={specState.archivingSpecId}
+                    isLoading={isCurrentViewLoading}
+                    onSelectSpec={guardedSpecActions.selectSpecFromTree}
+                    onArchiveSpec={guardedSpecActions.archiveSpecFromTree}
+                    onReload={guardedSpecActions.reloadSpecsFromTree}
+                  />
+                </aside>
+                <section
+                  className="specs-workspace__document"
+                  aria-label="Spec document"
+                >
+                  <SpecTabs
+                    spec={specSelectors.selectedSpec}
+                    selectedFileKey={specState.selection.fileKey}
+                    isSelectionDisabled={isCurrentViewLoading}
+                    onSelectFile={guardedSpecActions.selectFileFromTabs}
+                  />
+                  <div className="specs-workspace__viewer">
+                    {shouldShowOpenWorkspacePrompt ? (
+                      <OpenWorkspaceEmptyState
+                        isOpening={workspaceLoader.state.isBrowsingWorkspace}
+                        recentWorkspaces={
+                          workspaceLoader.recentWorkspaces.recentWorkspaces
+                        }
+                        onOpenWorkspace={() => {
+                          void workspaceLoader.actions.browseWorkspace();
+                        }}
+                        onOpenRecentWorkspace={(path) => {
+                          void workspaceLoader.actions.openRecentWorkspacePath(
+                            path,
+                          );
+                        }}
+                        onRemoveRecentWorkspace={
+                          workspaceLoader.recentWorkspaces.removeWorkspace
+                        }
+                      />
+                    ) : (
+                      <MarkdownViewer
+                        state={specState.documentState}
+                        selectedSpecLabel={
+                          specSelectors.selectedSpec?.label ?? null
+                        }
+                        selectedFileLabel={
+                          specSelectors.selectedFile?.label ?? null
+                        }
+                        comments={comments.comments}
+                        activeCommentId={commentSelection.activeCommentId}
+                        isAddingComment={isAddingComment}
+                        addCommentErrorMessage={addCommentErrorMessage}
+                        isUpdatingComment={isUpdatingComment}
+                        operationState={comments.operationState}
+                        isCommentScopeReady={isCommentScopeReady}
+                        onReload={guardedSpecActions.reloadDocumentFromViewer}
+                        onAddComment={commentSelection.addComment}
+                        onUpdateComment={commentSelection.updateComment}
+                        onResolveComment={commentSelection.resolveInlineComment}
+                        onReopenComment={commentSelection.reopenInlineComment}
+                        onDeleteComment={commentSelection.deleteInlineComment}
+                        onSelectComment={commentSelection.selectComment}
+                        onAnchorDisplayStatesChange={
+                          commentSelection.updateCommentAnchorDisplayStates
+                        }
+                        onFirstReadable={
+                          documentReadiness.markCurrentDocumentReadable
+                        }
+                      />
+                    )}
+                  </div>
+                </section>
               </div>
             )}
           </WorkspaceLayout.Viewer>

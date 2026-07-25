@@ -14,7 +14,7 @@ test("ReviewModeToolbarは選択中のモードを示しDiffへの切替を通�
     root.render(
       <ReviewModeToolbar
         mode="specs"
-        filePath="implementation-plan.md"
+        fileLabel="implementation-plan.md"
         onModeChange={onModeChange}
       />,
     );
@@ -28,6 +28,8 @@ test("ReviewModeToolbarは選択中のモードを示しDiffへの切替を通�
   );
 
   expect(specsButton?.textContent).toBe("Specs");
+  expect(specsButton?.getAttribute("tabindex")).toBe("0");
+  expect(diffButton?.getAttribute("tabindex")).toBe("-1");
 
   act(() => {
     diffButton?.click();

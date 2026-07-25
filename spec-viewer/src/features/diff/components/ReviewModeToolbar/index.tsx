@@ -4,7 +4,7 @@ export type ReviewMode = "specs" | "diff";
 
 type Props = Readonly<{
   mode: ReviewMode;
-  filePath: string;
+  fileLabel: string;
   onModeChange: (mode: ReviewMode) => void;
 }>;
 
@@ -16,7 +16,7 @@ type Props = Readonly<{
  */
 export function ReviewModeToolbar({
   mode,
-  filePath,
+  fileLabel,
   onModeChange,
 }: Props): ReactElement {
   const isDiffMode = mode === "diff";
@@ -28,6 +28,7 @@ export function ReviewModeToolbar({
           type="button"
           role="tab"
           aria-selected={!isDiffMode}
+          tabIndex={isDiffMode ? -1 : 0}
           onClick={() => {
             onModeChange("specs");
           }}
@@ -38,6 +39,7 @@ export function ReviewModeToolbar({
           type="button"
           role="tab"
           aria-selected={isDiffMode}
+          tabIndex={isDiffMode ? 0 : -1}
           onClick={() => {
             onModeChange("diff");
           }}
@@ -46,7 +48,7 @@ export function ReviewModeToolbar({
         </button>
       </div>
       <div className="review-mode-toolbar__file">
-        <span>{isDiffMode ? "src/scorer.ts" : filePath}</span>
+        <span>{isDiffMode ? "src/scorer.ts" : fileLabel}</span>
         {isDiffMode ? (
           <span
             className="diff-stat-group"

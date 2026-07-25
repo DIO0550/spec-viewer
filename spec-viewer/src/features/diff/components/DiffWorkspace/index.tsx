@@ -207,9 +207,8 @@ function ChangeFile({
   isActive?: boolean;
 }>): ReactElement {
   return (
-    <button
+    <div
       className="changes-tree__file"
-      type="button"
       aria-current={isActive ? "page" : undefined}
     >
       <span className={`changes-tree__status changes-tree__status--${status}`}>
@@ -223,7 +222,7 @@ function ChangeFile({
           <span className="diff-stat--removed">−{removed}</span>
         )}
       </span>
-    </button>
+    </div>
   );
 }
 
@@ -241,17 +240,12 @@ function DiffTab({
   isActive?: boolean;
 }>): ReactElement {
   return (
-    <button
-      className="diff-tabs__tab"
-      type="button"
-      role="tab"
-      aria-selected={isActive}
-    >
+    <div className="diff-tabs__tab" data-active={isActive}>
       <span className="diff-tabs__dot" aria-hidden="true" />
       <span>{label}</span>
       <small>{stats}</small>
       <X aria-hidden="true" size={12} />
-    </button>
+    </div>
   );
 }
 
@@ -264,9 +258,9 @@ function DiffCodeLine({ line }: Readonly<{ line: DiffLine }>): ReactElement {
 
   return (
     <div className="diff-code-line" data-kind={line.kind}>
-      <button type="button" aria-label="この行にコメントを追加">
+      <span className="diff-code-line__comment-indicator" aria-hidden="true">
         +
-      </button>
+      </span>
       <span className="diff-code-line__number">{line.oldNumber}</span>
       <span className="diff-code-line__number">{line.newNumber}</span>
       <span className="diff-code-line__sign">{sign}</span>
