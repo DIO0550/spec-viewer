@@ -37,7 +37,36 @@ jobs:
       - name: Install dependencies
         if: github.event.action != 'closed'
         working-directory: spec-viewer
-        run: pnpm install --frozen-lockfile
+        run: |
+          pnpm install --no-frozen-lockfile
+          pnpm install --offline --frozen-lockfile
+
+      - name: Verify odiff binary
+        if: github.event.action != 'closed'
+        working-directory: spec-viewer
+        run: |
+          node --input-type=module <<'NODE'
+          import { writeFileSync, rmSync } from "node:fs";
+          import { tmpdir } from "node:os";
+          import { join } from "node:path";
+          import { ODiffServer } from "odiff-bin";
+
+          const fixture = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64");
+          const root = join(tmpdir(), `odiff-smoke-${process.pid}`);
+          const expected = `${root}-expected.png`;
+          const actual = `${root}-actual.png`;
+          const diff = `${root}-diff.png`;
+          writeFileSync(expected, fixture);
+          writeFileSync(actual, fixture);
+          const server = new ODiffServer();
+          try {
+            const result = await server.compare(expected, actual, diff, { timeout: 30_000 });
+            if (!result.match) throw new Error(`odiff smoke comparison failed: ${JSON.stringify(result)}`);
+          } finally {
+            server.stop();
+            for (const path of [expected, actual, diff]) rmSync(path, { force: true });
+          }
+          NODE
 
       - name: Build Storybook
         if: github.event.action != 'closed'

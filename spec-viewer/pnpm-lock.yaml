@@ -78,9 +78,6 @@ importers:
       happy-dom:
         specifier: ^20.9.0
         version: 20.9.0
-      odiff-bin:
-        specifier: 4.5.0
-        version: 4.5.0
       oxlint:
         specifier: ^1.62.0
         version: 1.62.0(oxlint-tsgolint@0.22.1)
@@ -1856,10 +1853,6 @@ packages:
 
   obug@2.1.1:
     resolution: {integrity: sha512-uTqF9MuPraAQ+IsnPf366RG4cP9RtUi7MLO1N3KEc+wb0a6yKpeL0lmk2IB1jY5KHPAlTc6T/JRdC/YqxHNwkQ==}
-
-  odiff-bin@4.5.0:
-    resolution: {tarball: https://registry.npmjs.org/odiff-bin/-/odiff-bin-4.5.0.tgz}
-    hasBin: true
 
   open@10.2.0:
     resolution: {integrity: sha512-YgBpdJHPyQ2UE5x+hlSXcnejzAvD0b22U2OuAP+8OnlJT+PjWPxtgmGqKKc+RgTM63U9gN0YzrYc71R2WT/hTA==}
@@ -3915,8 +3908,6 @@ snapshots:
   node-releases@2.0.38: {}
 
   obug@2.1.1: {}
-
-  odiff-bin@4.5.0: {}
 
   open@10.2.0:
     dependencies:
