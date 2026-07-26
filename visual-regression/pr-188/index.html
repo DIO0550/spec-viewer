@@ -80,7 +80,9 @@
     .comparison__overlay { position: absolute; inset: 0; }
     .comparison__split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
     .comparison__frame--pane { border: 0; border-radius: 0; }
-    .comparison__control--pane { margin-top: 8px; padding: 0 12px 12px; }
+    /* isolation で difference 合成をこのフレーム内に閉じ込める。 */
+    .comparison__frame--difference { isolation: isolate; background: #000; }
+    .comparison__frame--difference .comparison__overlay { mix-blend-mode: difference; }
     .comparison__pane { min-width: 0; margin: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #020617; }
     .comparison__pane figcaption, .comparison__pane--empty strong { display: block; padding: 8px 12px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px; font-weight: 700; }
     .comparison__pane--empty { display: grid; min-height: 240px; align-content: start; color: var(--muted); }
@@ -105,14 +107,17 @@
       <label class="story-nav__filter"><span class="tree-icon tree-icon--search" aria-hidden="true"></span><input type="search" placeholder="Filter stories..." data-story-filter aria-label="Filter stories"></label>
     </header>
     <div class="story-nav__scroll" data-story-tree>
-      <details class="story-nav__group story-nav__group--passed" open data-status-group>
-        <summary><span>Clear</span><span class="story-nav__count">90</span></summary>
+      <details class="story-nav__group story-nav__group--changed" open data-status-group>
+        <summary><span>Changed</span><span class="story-nav__count">1</span></summary>
         <ul class="story-nav__tree"><li data-tree-node>
     <details open>
       <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>App</span></summary>
       <ul><li class="story-nav__story" data-tree-leaf data-search-text="app default app--default"><a href="#app--default" title="app--default"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Default</span></a></li></ul>
     </details>
-  </li><li data-tree-node>
+  </li></ul>
+      </details><details class="story-nav__group story-nav__group--passed" open data-status-group>
+        <summary><span>Clear</span><span class="story-nav__count">89</span></summary>
+        <ul class="story-nav__tree"><li data-tree-node>
     <details open>
       <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>app</span></summary>
       <ul><li data-tree-node>
@@ -310,7 +315,7 @@
         <p class="summary">Switch between Overlay, Split + Diff, and Slider to inspect changes. Click a story title to open its detail page.</p>
       </div>
       <div class="hero__actions">
-        <div class="badge">Failed: <strong>0</strong> / Threshold: 0.002</div>
+        <div class="badge">Failed: <strong>1</strong> / Threshold: 0.002</div>
       </div>
     </section>
     <nav class="inspector-tabs" aria-label="Diff inspector view">
@@ -320,17 +325,17 @@
     <button type="button" role="tab" data-global-view-mode="split" aria-selected="false">Split + Diff</button>
     <button type="button" role="tab" data-global-view-mode="slider" aria-selected="false">Slider</button>
   </div>
-  <span class="inspector-tabs__hint">Visual report UI v5 · a665619</span>
+  <span class="inspector-tabs__hint">Visual report UI v6 · 844d003</span>
 </nav>
-    <article class="story story--passed" id="app--default">
+    <article class="story story--changed" id="app--default">
     <header class="story__header">
       <div>
-        <p class="status">passed</p>
+        <p class="status">changed</p>
         <h2><a href="app--default/" data-story-link="app--default">app--default</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>0</dd></div>
-        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
+        <div><dt>Diff pixels</dt><dd>24950</dd></div>
+        <div><dt>Diff ratio</dt><dd>2.7100%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -349,15 +354,14 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/app--default.png" alt="Baseline app--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/app--default.png" alt="Current app--default"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/app--default.png" alt="Baseline app--default">
-          <img class="comparison__image comparison__overlay" src="actual/app--default.png" alt="Current app--default" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/app--default.png" alt="Current app--default">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for app--default in split view"></label>
       </figure>
-        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
+        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/app--default.png" alt="Diff app--default"></figure>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
@@ -398,13 +402,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/app-app-specviewcommentsidebar--default.png" alt="Baseline app-app-specviewcommentsidebar--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/app-app-specviewcommentsidebar--default.png" alt="Current app-app-specviewcommentsidebar--default"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/app-app-specviewcommentsidebar--default.png" alt="Baseline app-app-specviewcommentsidebar--default">
-          <img class="comparison__image comparison__overlay" src="actual/app-app-specviewcommentsidebar--default.png" alt="Current app-app-specviewcommentsidebar--default" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/app-app-specviewcommentsidebar--default.png" alt="Current app-app-specviewcommentsidebar--default">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for app-app-specviewcommentsidebar--default in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -447,13 +450,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/app-app-specviewcommentsidebar--edge-cases.png" alt="Baseline app-app-specviewcommentsidebar--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/app-app-specviewcommentsidebar--edge-cases.png" alt="Current app-app-specviewcommentsidebar--edge-cases"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/app-app-specviewcommentsidebar--edge-cases.png" alt="Baseline app-app-specviewcommentsidebar--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/app-app-specviewcommentsidebar--edge-cases.png" alt="Current app-app-specviewcommentsidebar--edge-cases" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/app-app-specviewcommentsidebar--edge-cases.png" alt="Current app-app-specviewcommentsidebar--edge-cases">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for app-app-specviewcommentsidebar--edge-cases in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -496,13 +498,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/app-app-specviewcommentsidebar--empty.png" alt="Baseline app-app-specviewcommentsidebar--empty"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/app-app-specviewcommentsidebar--empty.png" alt="Current app-app-specviewcommentsidebar--empty"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/app-app-specviewcommentsidebar--empty.png" alt="Baseline app-app-specviewcommentsidebar--empty">
-          <img class="comparison__image comparison__overlay" src="actual/app-app-specviewcommentsidebar--empty.png" alt="Current app-app-specviewcommentsidebar--empty" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/app-app-specviewcommentsidebar--empty.png" alt="Current app-app-specviewcommentsidebar--empty">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for app-app-specviewcommentsidebar--empty in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -545,13 +546,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/app-app-specviewcommentsidebar--loading.png" alt="Baseline app-app-specviewcommentsidebar--loading"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/app-app-specviewcommentsidebar--loading.png" alt="Current app-app-specviewcommentsidebar--loading"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/app-app-specviewcommentsidebar--loading.png" alt="Baseline app-app-specviewcommentsidebar--loading">
-          <img class="comparison__image comparison__overlay" src="actual/app-app-specviewcommentsidebar--loading.png" alt="Current app-app-specviewcommentsidebar--loading" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/app-app-specviewcommentsidebar--loading.png" alt="Current app-app-specviewcommentsidebar--loading">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for app-app-specviewcommentsidebar--loading in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -594,13 +594,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-commanderrordisplay--all-props.png" alt="Baseline components-commanderrordisplay--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-commanderrordisplay--all-props.png" alt="Current components-commanderrordisplay--all-props"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/components-commanderrordisplay--all-props.png" alt="Baseline components-commanderrordisplay--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/components-commanderrordisplay--all-props.png" alt="Current components-commanderrordisplay--all-props" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/components-commanderrordisplay--all-props.png" alt="Current components-commanderrordisplay--all-props">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for components-commanderrordisplay--all-props in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -643,13 +642,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-commanderrordisplay--default.png" alt="Baseline components-commanderrordisplay--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-commanderrordisplay--default.png" alt="Current components-commanderrordisplay--default"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/components-commanderrordisplay--default.png" alt="Baseline components-commanderrordisplay--default">
-          <img class="comparison__image comparison__overlay" src="actual/components-commanderrordisplay--default.png" alt="Current components-commanderrordisplay--default" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/components-commanderrordisplay--default.png" alt="Current components-commanderrordisplay--default">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for components-commanderrordisplay--default in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -692,13 +690,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-commanderrordisplay--edge-cases.png" alt="Baseline components-commanderrordisplay--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-commanderrordisplay--edge-cases.png" alt="Current components-commanderrordisplay--edge-cases"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/components-commanderrordisplay--edge-cases.png" alt="Baseline components-commanderrordisplay--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/components-commanderrordisplay--edge-cases.png" alt="Current components-commanderrordisplay--edge-cases" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/components-commanderrordisplay--edge-cases.png" alt="Current components-commanderrordisplay--edge-cases">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for components-commanderrordisplay--edge-cases in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -741,13 +738,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-emptystate--all-props.png" alt="Baseline components-emptystate--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-emptystate--all-props.png" alt="Current components-emptystate--all-props"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/components-emptystate--all-props.png" alt="Baseline components-emptystate--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/components-emptystate--all-props.png" alt="Current components-emptystate--all-props" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/components-emptystate--all-props.png" alt="Current components-emptystate--all-props">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for components-emptystate--all-props in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -790,13 +786,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-emptystate--default.png" alt="Baseline components-emptystate--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-emptystate--default.png" alt="Current components-emptystate--default"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/components-emptystate--default.png" alt="Baseline components-emptystate--default">
-          <img class="comparison__image comparison__overlay" src="actual/components-emptystate--default.png" alt="Current components-emptystate--default" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/components-emptystate--default.png" alt="Current components-emptystate--default">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for components-emptystate--default in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -839,13 +834,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-emptystate--edge-cases.png" alt="Baseline components-emptystate--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-emptystate--edge-cases.png" alt="Current components-emptystate--edge-cases"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/components-emptystate--edge-cases.png" alt="Baseline components-emptystate--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/components-emptystate--edge-cases.png" alt="Current components-emptystate--edge-cases" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/components-emptystate--edge-cases.png" alt="Current components-emptystate--edge-cases">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for components-emptystate--edge-cases in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -888,13 +882,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-errorboundary--default.png" alt="Baseline components-errorboundary--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-errorboundary--default.png" alt="Current components-errorboundary--default"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/components-errorboundary--default.png" alt="Baseline components-errorboundary--default">
-          <img class="comparison__image comparison__overlay" src="actual/components-errorboundary--default.png" alt="Current components-errorboundary--default" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/components-errorboundary--default.png" alt="Current components-errorboundary--default">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for components-errorboundary--default in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -937,13 +930,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-errorboundary--edge-cases.png" alt="Baseline components-errorboundary--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-errorboundary--edge-cases.png" alt="Current components-errorboundary--edge-cases"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/components-errorboundary--edge-cases.png" alt="Baseline components-errorboundary--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/components-errorboundary--edge-cases.png" alt="Current components-errorboundary--edge-cases" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/components-errorboundary--edge-cases.png" alt="Current components-errorboundary--edge-cases">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for components-errorboundary--edge-cases in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -986,13 +978,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-errorboundary--error.png" alt="Baseline components-errorboundary--error"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-errorboundary--error.png" alt="Current components-errorboundary--error"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/components-errorboundary--error.png" alt="Baseline components-errorboundary--error">
-          <img class="comparison__image comparison__overlay" src="actual/components-errorboundary--error.png" alt="Current components-errorboundary--error" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/components-errorboundary--error.png" alt="Current components-errorboundary--error">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for components-errorboundary--error in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -1035,13 +1026,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-errorstate--all-props.png" alt="Baseline components-errorstate--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-errorstate--all-props.png" alt="Current components-errorstate--all-props"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/components-errorstate--all-props.png" alt="Baseline components-errorstate--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/components-errorstate--all-props.png" alt="Current components-errorstate--all-props" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/components-errorstate--all-props.png" alt="Current components-errorstate--all-props">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for components-errorstate--all-props in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -1084,13 +1074,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-errorstate--default.png" alt="Baseline components-errorstate--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-errorstate--default.png" alt="Current components-errorstate--default"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/components-errorstate--default.png" alt="Baseline components-errorstate--default">
-          <img class="comparison__image comparison__overlay" src="actual/components-errorstate--default.png" alt="Current components-errorstate--default" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/components-errorstate--default.png" alt="Current components-errorstate--default">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for components-errorstate--default in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -1133,13 +1122,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-errorstate--edge-cases.png" alt="Baseline components-errorstate--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-errorstate--edge-cases.png" alt="Current components-errorstate--edge-cases"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/components-errorstate--edge-cases.png" alt="Baseline components-errorstate--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/components-errorstate--edge-cases.png" alt="Current components-errorstate--edge-cases" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/components-errorstate--edge-cases.png" alt="Current components-errorstate--edge-cases">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for components-errorstate--edge-cases in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -1182,13 +1170,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-loadingskeleton--all-props.png" alt="Baseline components-loadingskeleton--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-loadingskeleton--all-props.png" alt="Current components-loadingskeleton--all-props"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/components-loadingskeleton--all-props.png" alt="Baseline components-loadingskeleton--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/components-loadingskeleton--all-props.png" alt="Current components-loadingskeleton--all-props" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/components-loadingskeleton--all-props.png" alt="Current components-loadingskeleton--all-props">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for components-loadingskeleton--all-props in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -1231,13 +1218,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-loadingskeleton--default.png" alt="Baseline components-loadingskeleton--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-loadingskeleton--default.png" alt="Current components-loadingskeleton--default"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/components-loadingskeleton--default.png" alt="Baseline components-loadingskeleton--default">
-          <img class="comparison__image comparison__overlay" src="actual/components-loadingskeleton--default.png" alt="Current components-loadingskeleton--default" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/components-loadingskeleton--default.png" alt="Current components-loadingskeleton--default">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for components-loadingskeleton--default in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -1280,13 +1266,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-loadingskeleton--edge-cases.png" alt="Baseline components-loadingskeleton--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-loadingskeleton--edge-cases.png" alt="Current components-loadingskeleton--edge-cases"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/components-loadingskeleton--edge-cases.png" alt="Baseline components-loadingskeleton--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/components-loadingskeleton--edge-cases.png" alt="Current components-loadingskeleton--edge-cases" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/components-loadingskeleton--edge-cases.png" alt="Current components-loadingskeleton--edge-cases">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for components-loadingskeleton--edge-cases in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -1329,13 +1314,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-workspacelayout--archiving.png" alt="Baseline components-workspacelayout--archiving"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-workspacelayout--archiving.png" alt="Current components-workspacelayout--archiving"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/components-workspacelayout--archiving.png" alt="Baseline components-workspacelayout--archiving">
-          <img class="comparison__image comparison__overlay" src="actual/components-workspacelayout--archiving.png" alt="Current components-workspacelayout--archiving" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/components-workspacelayout--archiving.png" alt="Current components-workspacelayout--archiving">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for components-workspacelayout--archiving in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -1378,13 +1362,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-workspacelayout--default.png" alt="Baseline components-workspacelayout--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-workspacelayout--default.png" alt="Current components-workspacelayout--default"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/components-workspacelayout--default.png" alt="Baseline components-workspacelayout--default">
-          <img class="comparison__image comparison__overlay" src="actual/components-workspacelayout--default.png" alt="Current components-workspacelayout--default" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/components-workspacelayout--default.png" alt="Current components-workspacelayout--default">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for components-workspacelayout--default in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -1427,13 +1410,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-workspacelayout--empty.png" alt="Baseline components-workspacelayout--empty"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-workspacelayout--empty.png" alt="Current components-workspacelayout--empty"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/components-workspacelayout--empty.png" alt="Baseline components-workspacelayout--empty">
-          <img class="comparison__image comparison__overlay" src="actual/components-workspacelayout--empty.png" alt="Current components-workspacelayout--empty" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/components-workspacelayout--empty.png" alt="Current components-workspacelayout--empty">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for components-workspacelayout--empty in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -1476,13 +1458,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-workspacelayout--error.png" alt="Baseline components-workspacelayout--error"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-workspacelayout--error.png" alt="Current components-workspacelayout--error"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/components-workspacelayout--error.png" alt="Baseline components-workspacelayout--error">
-          <img class="comparison__image comparison__overlay" src="actual/components-workspacelayout--error.png" alt="Current components-workspacelayout--error" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/components-workspacelayout--error.png" alt="Current components-workspacelayout--error">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for components-workspacelayout--error in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -1525,13 +1506,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-workspacelayout--loading.png" alt="Baseline components-workspacelayout--loading"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-workspacelayout--loading.png" alt="Current components-workspacelayout--loading"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/components-workspacelayout--loading.png" alt="Baseline components-workspacelayout--loading">
-          <img class="comparison__image comparison__overlay" src="actual/components-workspacelayout--loading.png" alt="Current components-workspacelayout--loading" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/components-workspacelayout--loading.png" alt="Current components-workspacelayout--loading">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for components-workspacelayout--loading in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -1574,13 +1554,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-addcommentpopover--default.png" alt="Baseline features-comments-components-addcommentpopover--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-addcommentpopover--default.png" alt="Current features-comments-components-addcommentpopover--default"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-comments-components-addcommentpopover--default.png" alt="Baseline features-comments-components-addcommentpopover--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-addcommentpopover--default.png" alt="Current features-comments-components-addcommentpopover--default" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-addcommentpopover--default.png" alt="Current features-comments-components-addcommentpopover--default">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-comments-components-addcommentpopover--default in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -1623,13 +1602,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-addcommentpopover--small-viewport-long-excerpt.png" alt="Baseline features-comments-components-addcommentpopover--small-viewport-long-excerpt"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-addcommentpopover--small-viewport-long-excerpt.png" alt="Current features-comments-components-addcommentpopover--small-viewport-long-excerpt"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-comments-components-addcommentpopover--small-viewport-long-excerpt.png" alt="Baseline features-comments-components-addcommentpopover--small-viewport-long-excerpt">
-          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-addcommentpopover--small-viewport-long-excerpt.png" alt="Current features-comments-components-addcommentpopover--small-viewport-long-excerpt" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-addcommentpopover--small-viewport-long-excerpt.png" alt="Current features-comments-components-addcommentpopover--small-viewport-long-excerpt">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-comments-components-addcommentpopover--small-viewport-long-excerpt in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -1672,13 +1650,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentpopover--all-props.png" alt="Baseline features-comments-components-commentpopover--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentpopover--all-props.png" alt="Current features-comments-components-commentpopover--all-props"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-comments-components-commentpopover--all-props.png" alt="Baseline features-comments-components-commentpopover--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentpopover--all-props.png" alt="Current features-comments-components-commentpopover--all-props" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentpopover--all-props.png" alt="Current features-comments-components-commentpopover--all-props">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-comments-components-commentpopover--all-props in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -1721,13 +1698,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentpopover--default.png" alt="Baseline features-comments-components-commentpopover--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentpopover--default.png" alt="Current features-comments-components-commentpopover--default"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-comments-components-commentpopover--default.png" alt="Baseline features-comments-components-commentpopover--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentpopover--default.png" alt="Current features-comments-components-commentpopover--default" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentpopover--default.png" alt="Current features-comments-components-commentpopover--default">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-comments-components-commentpopover--default in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -1770,13 +1746,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentpopover--edge-cases.png" alt="Baseline features-comments-components-commentpopover--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentpopover--edge-cases.png" alt="Current features-comments-components-commentpopover--edge-cases"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-comments-components-commentpopover--edge-cases.png" alt="Baseline features-comments-components-commentpopover--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentpopover--edge-cases.png" alt="Current features-comments-components-commentpopover--edge-cases" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentpopover--edge-cases.png" alt="Current features-comments-components-commentpopover--edge-cases">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-comments-components-commentpopover--edge-cases in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -1819,13 +1794,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentsidebar--all-props.png" alt="Baseline features-comments-components-commentsidebar--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentsidebar--all-props.png" alt="Current features-comments-components-commentsidebar--all-props"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-comments-components-commentsidebar--all-props.png" alt="Baseline features-comments-components-commentsidebar--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentsidebar--all-props.png" alt="Current features-comments-components-commentsidebar--all-props" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentsidebar--all-props.png" alt="Current features-comments-components-commentsidebar--all-props">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-comments-components-commentsidebar--all-props in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -1868,13 +1842,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentsidebar--default.png" alt="Baseline features-comments-components-commentsidebar--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentsidebar--default.png" alt="Current features-comments-components-commentsidebar--default"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-comments-components-commentsidebar--default.png" alt="Baseline features-comments-components-commentsidebar--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentsidebar--default.png" alt="Current features-comments-components-commentsidebar--default" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentsidebar--default.png" alt="Current features-comments-components-commentsidebar--default">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-comments-components-commentsidebar--default in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -1917,13 +1890,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentsidebar--edge-cases.png" alt="Baseline features-comments-components-commentsidebar--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentsidebar--edge-cases.png" alt="Current features-comments-components-commentsidebar--edge-cases"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-comments-components-commentsidebar--edge-cases.png" alt="Baseline features-comments-components-commentsidebar--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentsidebar--edge-cases.png" alt="Current features-comments-components-commentsidebar--edge-cases" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentsidebar--edge-cases.png" alt="Current features-comments-components-commentsidebar--edge-cases">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-comments-components-commentsidebar--edge-cases in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -1966,13 +1938,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentsidebar--empty.png" alt="Baseline features-comments-components-commentsidebar--empty"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentsidebar--empty.png" alt="Current features-comments-components-commentsidebar--empty"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-comments-components-commentsidebar--empty.png" alt="Baseline features-comments-components-commentsidebar--empty">
-          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentsidebar--empty.png" alt="Current features-comments-components-commentsidebar--empty" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentsidebar--empty.png" alt="Current features-comments-components-commentsidebar--empty">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-comments-components-commentsidebar--empty in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -2015,13 +1986,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentsidebar--error.png" alt="Baseline features-comments-components-commentsidebar--error"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentsidebar--error.png" alt="Current features-comments-components-commentsidebar--error"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-comments-components-commentsidebar--error.png" alt="Baseline features-comments-components-commentsidebar--error">
-          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentsidebar--error.png" alt="Current features-comments-components-commentsidebar--error" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentsidebar--error.png" alt="Current features-comments-components-commentsidebar--error">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-comments-components-commentsidebar--error in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -2064,13 +2034,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentsidebar--loading.png" alt="Baseline features-comments-components-commentsidebar--loading"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentsidebar--loading.png" alt="Current features-comments-components-commentsidebar--loading"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-comments-components-commentsidebar--loading.png" alt="Baseline features-comments-components-commentsidebar--loading">
-          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentsidebar--loading.png" alt="Current features-comments-components-commentsidebar--loading" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentsidebar--loading.png" alt="Current features-comments-components-commentsidebar--loading">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-comments-components-commentsidebar--loading in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -2113,13 +2082,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentthread--all-props.png" alt="Baseline features-comments-components-commentthread--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentthread--all-props.png" alt="Current features-comments-components-commentthread--all-props"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-comments-components-commentthread--all-props.png" alt="Baseline features-comments-components-commentthread--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentthread--all-props.png" alt="Current features-comments-components-commentthread--all-props" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentthread--all-props.png" alt="Current features-comments-components-commentthread--all-props">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-comments-components-commentthread--all-props in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -2162,13 +2130,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentthread--default.png" alt="Baseline features-comments-components-commentthread--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentthread--default.png" alt="Current features-comments-components-commentthread--default"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-comments-components-commentthread--default.png" alt="Baseline features-comments-components-commentthread--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentthread--default.png" alt="Current features-comments-components-commentthread--default" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentthread--default.png" alt="Current features-comments-components-commentthread--default">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-comments-components-commentthread--default in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -2211,13 +2178,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentthread--edge-cases.png" alt="Baseline features-comments-components-commentthread--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentthread--edge-cases.png" alt="Current features-comments-components-commentthread--edge-cases"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-comments-components-commentthread--edge-cases.png" alt="Baseline features-comments-components-commentthread--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentthread--edge-cases.png" alt="Current features-comments-components-commentthread--edge-cases" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentthread--edge-cases.png" alt="Current features-comments-components-commentthread--edge-cases">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-comments-components-commentthread--edge-cases in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -2260,13 +2226,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-sidebar-components-sidebarlayout--all-props.png" alt="Baseline features-sidebar-components-sidebarlayout--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-sidebar-components-sidebarlayout--all-props.png" alt="Current features-sidebar-components-sidebarlayout--all-props"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-sidebar-components-sidebarlayout--all-props.png" alt="Baseline features-sidebar-components-sidebarlayout--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/features-sidebar-components-sidebarlayout--all-props.png" alt="Current features-sidebar-components-sidebarlayout--all-props" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-sidebar-components-sidebarlayout--all-props.png" alt="Current features-sidebar-components-sidebarlayout--all-props">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-sidebar-components-sidebarlayout--all-props in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -2309,13 +2274,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-sidebar-components-sidebarlayout--default.png" alt="Baseline features-sidebar-components-sidebarlayout--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-sidebar-components-sidebarlayout--default.png" alt="Current features-sidebar-components-sidebarlayout--default"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-sidebar-components-sidebarlayout--default.png" alt="Baseline features-sidebar-components-sidebarlayout--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-sidebar-components-sidebarlayout--default.png" alt="Current features-sidebar-components-sidebarlayout--default" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-sidebar-components-sidebarlayout--default.png" alt="Current features-sidebar-components-sidebarlayout--default">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-sidebar-components-sidebarlayout--default in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -2358,13 +2322,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-sidebar-components-sidebarlayout--edge-cases.png" alt="Baseline features-sidebar-components-sidebarlayout--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-sidebar-components-sidebarlayout--edge-cases.png" alt="Current features-sidebar-components-sidebarlayout--edge-cases"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-sidebar-components-sidebarlayout--edge-cases.png" alt="Baseline features-sidebar-components-sidebarlayout--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-sidebar-components-sidebarlayout--edge-cases.png" alt="Current features-sidebar-components-sidebarlayout--edge-cases" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-sidebar-components-sidebarlayout--edge-cases.png" alt="Current features-sidebar-components-sidebarlayout--edge-cases">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-sidebar-components-sidebarlayout--edge-cases in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -2407,13 +2370,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer--existing-comment-cards.png" alt="Baseline features-specs-components-markdownviewer--existing-comment-cards"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer--existing-comment-cards.png" alt="Current features-specs-components-markdownviewer--existing-comment-cards"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-markdownviewer--existing-comment-cards.png" alt="Baseline features-specs-components-markdownviewer--existing-comment-cards">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer--existing-comment-cards.png" alt="Current features-specs-components-markdownviewer--existing-comment-cards" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer--existing-comment-cards.png" alt="Current features-specs-components-markdownviewer--existing-comment-cards">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-markdownviewer--existing-comment-cards in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -2456,13 +2418,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer--highlighted-selection-surface.png" alt="Baseline features-specs-components-markdownviewer--highlighted-selection-surface"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer--highlighted-selection-surface.png" alt="Current features-specs-components-markdownviewer--highlighted-selection-surface"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-markdownviewer--highlighted-selection-surface.png" alt="Baseline features-specs-components-markdownviewer--highlighted-selection-surface">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer--highlighted-selection-surface.png" alt="Current features-specs-components-markdownviewer--highlighted-selection-surface" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer--highlighted-selection-surface.png" alt="Current features-specs-components-markdownviewer--highlighted-selection-surface">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-markdownviewer--highlighted-selection-surface in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -2505,13 +2466,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer--tech-reference-html-preview.png" alt="Baseline features-specs-components-markdownviewer--tech-reference-html-preview"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer--tech-reference-html-preview.png" alt="Current features-specs-components-markdownviewer--tech-reference-html-preview"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-markdownviewer--tech-reference-html-preview.png" alt="Baseline features-specs-components-markdownviewer--tech-reference-html-preview">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer--tech-reference-html-preview.png" alt="Current features-specs-components-markdownviewer--tech-reference-html-preview" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer--tech-reference-html-preview.png" alt="Current features-specs-components-markdownviewer--tech-reference-html-preview">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-markdownviewer--tech-reference-html-preview in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -2554,13 +2514,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer--test-cases-html.png" alt="Baseline features-specs-components-markdownviewer--test-cases-html"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer--test-cases-html.png" alt="Current features-specs-components-markdownviewer--test-cases-html"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-markdownviewer--test-cases-html.png" alt="Baseline features-specs-components-markdownviewer--test-cases-html">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer--test-cases-html.png" alt="Current features-specs-components-markdownviewer--test-cases-html" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer--test-cases-html.png" alt="Current features-specs-components-markdownviewer--test-cases-html">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-markdownviewer--test-cases-html in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -2603,13 +2562,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-htmldocument--all-props.png" alt="Baseline features-specs-components-markdownviewer-htmldocument--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-htmldocument--all-props.png" alt="Current features-specs-components-markdownviewer-htmldocument--all-props"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-markdownviewer-htmldocument--all-props.png" alt="Baseline features-specs-components-markdownviewer-htmldocument--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-htmldocument--all-props.png" alt="Current features-specs-components-markdownviewer-htmldocument--all-props" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-htmldocument--all-props.png" alt="Current features-specs-components-markdownviewer-htmldocument--all-props">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-markdownviewer-htmldocument--all-props in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -2652,13 +2610,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-htmldocument--default.png" alt="Baseline features-specs-components-markdownviewer-htmldocument--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-htmldocument--default.png" alt="Current features-specs-components-markdownviewer-htmldocument--default"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-markdownviewer-htmldocument--default.png" alt="Baseline features-specs-components-markdownviewer-htmldocument--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-htmldocument--default.png" alt="Current features-specs-components-markdownviewer-htmldocument--default" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-htmldocument--default.png" alt="Current features-specs-components-markdownviewer-htmldocument--default">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-markdownviewer-htmldocument--default in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -2701,13 +2658,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-htmldocument--edge-cases.png" alt="Baseline features-specs-components-markdownviewer-htmldocument--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-htmldocument--edge-cases.png" alt="Current features-specs-components-markdownviewer-htmldocument--edge-cases"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-markdownviewer-htmldocument--edge-cases.png" alt="Baseline features-specs-components-markdownviewer-htmldocument--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-htmldocument--edge-cases.png" alt="Current features-specs-components-markdownviewer-htmldocument--edge-cases" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-htmldocument--edge-cases.png" alt="Current features-specs-components-markdownviewer-htmldocument--edge-cases">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-markdownviewer-htmldocument--edge-cases in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -2750,13 +2706,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl.png" alt="Baseline features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl.png" alt="Current features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl.png" alt="Baseline features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl.png" alt="Current features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl.png" alt="Current features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -2799,13 +2754,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan.png" alt="Baseline features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan.png" alt="Current features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan.png" alt="Baseline features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan.png" alt="Current features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan.png" alt="Current features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -2848,13 +2802,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader--default.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerheader--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader--default"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader--default.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerheader--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader--default" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerheader--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader--default">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-markdownviewer-markdownviewerheader--default in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -2897,13 +2850,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader--edge-cases.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerheader--edge-cases.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader--edge-cases"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader--edge-cases.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerheader--edge-cases.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader--edge-cases" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerheader--edge-cases.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader--edge-cases">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-markdownviewer-markdownviewerheader--edge-cases in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -2946,13 +2898,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -2995,13 +2946,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -3044,13 +2994,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -3093,13 +3042,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -3142,13 +3090,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -3191,13 +3138,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -3240,13 +3186,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -3289,13 +3234,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerpanel--all-props.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerpanel--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerpanel--all-props.png" alt="Current features-specs-components-markdownviewer-markdownviewerpanel--all-props"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerpanel--all-props.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerpanel--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerpanel--all-props.png" alt="Current features-specs-components-markdownviewer-markdownviewerpanel--all-props" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerpanel--all-props.png" alt="Current features-specs-components-markdownviewer-markdownviewerpanel--all-props">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-markdownviewer-markdownviewerpanel--all-props in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -3338,13 +3282,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerpanel--default.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerpanel--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerpanel--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerpanel--default"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerpanel--default.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerpanel--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerpanel--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerpanel--default" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerpanel--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerpanel--default">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-markdownviewer-markdownviewerpanel--default in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -3387,13 +3330,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerpanel--edge-cases.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerpanel--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerpanel--edge-cases.png" alt="Current features-specs-components-markdownviewer-markdownviewerpanel--edge-cases"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerpanel--edge-cases.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerpanel--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerpanel--edge-cases.png" alt="Current features-specs-components-markdownviewer-markdownviewerpanel--edge-cases" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerpanel--edge-cases.png" alt="Current features-specs-components-markdownviewer-markdownviewerpanel--edge-cases">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-markdownviewer-markdownviewerpanel--edge-cases in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -3436,13 +3378,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerstatuspanel--default.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerstatuspanel--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--default"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerstatuspanel--default.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerstatuspanel--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--default" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--default">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-markdownviewer-markdownviewerstatuspanel--default in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -3485,13 +3426,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -3534,13 +3474,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerstatuspanel--empty.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerstatuspanel--empty"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--empty.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--empty"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerstatuspanel--empty.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerstatuspanel--empty">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--empty.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--empty" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--empty.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--empty">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-markdownviewer-markdownviewerstatuspanel--empty in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -3583,13 +3522,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerstatuspanel--error.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerstatuspanel--error"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--error.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--error"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerstatuspanel--error.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerstatuspanel--error">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--error.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--error" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--error.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--error">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-markdownviewer-markdownviewerstatuspanel--error in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -3632,13 +3570,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerstatuspanel--loading.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerstatuspanel--loading"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--loading.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--loading"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerstatuspanel--loading.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerstatuspanel--loading">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--loading.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--loading" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--loading.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--loading">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-markdownviewer-markdownviewerstatuspanel--loading in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -3681,13 +3618,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerstatuspanel--missing.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerstatuspanel--missing"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--missing.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--missing"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerstatuspanel--missing.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerstatuspanel--missing">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--missing.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--missing" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--missing.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--missing">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-markdownviewer-markdownviewerstatuspanel--missing in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -3730,13 +3666,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-spectabs--all-props.png" alt="Baseline features-specs-components-spectabs--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-spectabs--all-props.png" alt="Current features-specs-components-spectabs--all-props"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-spectabs--all-props.png" alt="Baseline features-specs-components-spectabs--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-spectabs--all-props.png" alt="Current features-specs-components-spectabs--all-props" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-spectabs--all-props.png" alt="Current features-specs-components-spectabs--all-props">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-spectabs--all-props in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -3779,13 +3714,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-spectabs--default.png" alt="Baseline features-specs-components-spectabs--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-spectabs--default.png" alt="Current features-specs-components-spectabs--default"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-spectabs--default.png" alt="Baseline features-specs-components-spectabs--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-spectabs--default.png" alt="Current features-specs-components-spectabs--default" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-spectabs--default.png" alt="Current features-specs-components-spectabs--default">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-spectabs--default in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -3828,13 +3762,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-spectabs--edge-cases.png" alt="Baseline features-specs-components-spectabs--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-spectabs--edge-cases.png" alt="Current features-specs-components-spectabs--edge-cases"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-spectabs--edge-cases.png" alt="Baseline features-specs-components-spectabs--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-spectabs--edge-cases.png" alt="Current features-specs-components-spectabs--edge-cases" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-spectabs--edge-cases.png" alt="Current features-specs-components-spectabs--edge-cases">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-spectabs--edge-cases in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -3877,13 +3810,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-spectabs--empty.png" alt="Baseline features-specs-components-spectabs--empty"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-spectabs--empty.png" alt="Current features-specs-components-spectabs--empty"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-spectabs--empty.png" alt="Baseline features-specs-components-spectabs--empty">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-spectabs--empty.png" alt="Current features-specs-components-spectabs--empty" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-spectabs--empty.png" alt="Current features-specs-components-spectabs--empty">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-spectabs--empty in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -3926,13 +3858,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-spectree--all-props.png" alt="Baseline features-specs-components-spectree--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-spectree--all-props.png" alt="Current features-specs-components-spectree--all-props"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-spectree--all-props.png" alt="Baseline features-specs-components-spectree--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-spectree--all-props.png" alt="Current features-specs-components-spectree--all-props" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-spectree--all-props.png" alt="Current features-specs-components-spectree--all-props">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-spectree--all-props in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -3975,13 +3906,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-spectree--default.png" alt="Baseline features-specs-components-spectree--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-spectree--default.png" alt="Current features-specs-components-spectree--default"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-spectree--default.png" alt="Baseline features-specs-components-spectree--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-spectree--default.png" alt="Current features-specs-components-spectree--default" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-spectree--default.png" alt="Current features-specs-components-spectree--default">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-spectree--default in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -4024,13 +3954,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-spectree--edge-cases.png" alt="Baseline features-specs-components-spectree--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-spectree--edge-cases.png" alt="Current features-specs-components-spectree--edge-cases"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-spectree--edge-cases.png" alt="Baseline features-specs-components-spectree--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-spectree--edge-cases.png" alt="Current features-specs-components-spectree--edge-cases" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-spectree--edge-cases.png" alt="Current features-specs-components-spectree--edge-cases">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-spectree--edge-cases in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -4073,13 +4002,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-spectree--empty.png" alt="Baseline features-specs-components-spectree--empty"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-spectree--empty.png" alt="Current features-specs-components-spectree--empty"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-spectree--empty.png" alt="Baseline features-specs-components-spectree--empty">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-spectree--empty.png" alt="Current features-specs-components-spectree--empty" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-spectree--empty.png" alt="Current features-specs-components-spectree--empty">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-spectree--empty in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -4122,13 +4050,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-spectree--error.png" alt="Baseline features-specs-components-spectree--error"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-spectree--error.png" alt="Current features-specs-components-spectree--error"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-spectree--error.png" alt="Baseline features-specs-components-spectree--error">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-spectree--error.png" alt="Current features-specs-components-spectree--error" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-spectree--error.png" alt="Current features-specs-components-spectree--error">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-spectree--error in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -4171,13 +4098,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-spectree--loading.png" alt="Baseline features-specs-components-spectree--loading"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-spectree--loading.png" alt="Current features-specs-components-spectree--loading"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-specs-components-spectree--loading.png" alt="Baseline features-specs-components-spectree--loading">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-spectree--loading.png" alt="Current features-specs-components-spectree--loading" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-spectree--loading.png" alt="Current features-specs-components-spectree--loading">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-spectree--loading in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -4220,13 +4146,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-openworkspaceemptystate--all-props.png" alt="Baseline features-workspace-components-openworkspaceemptystate--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-openworkspaceemptystate--all-props.png" alt="Current features-workspace-components-openworkspaceemptystate--all-props"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-workspace-components-openworkspaceemptystate--all-props.png" alt="Baseline features-workspace-components-openworkspaceemptystate--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-openworkspaceemptystate--all-props.png" alt="Current features-workspace-components-openworkspaceemptystate--all-props" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-openworkspaceemptystate--all-props.png" alt="Current features-workspace-components-openworkspaceemptystate--all-props">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-workspace-components-openworkspaceemptystate--all-props in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -4269,13 +4194,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-openworkspaceemptystate--default.png" alt="Baseline features-workspace-components-openworkspaceemptystate--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-openworkspaceemptystate--default.png" alt="Current features-workspace-components-openworkspaceemptystate--default"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-workspace-components-openworkspaceemptystate--default.png" alt="Baseline features-workspace-components-openworkspaceemptystate--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-openworkspaceemptystate--default.png" alt="Current features-workspace-components-openworkspaceemptystate--default" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-openworkspaceemptystate--default.png" alt="Current features-workspace-components-openworkspaceemptystate--default">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-workspace-components-openworkspaceemptystate--default in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -4318,13 +4242,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-openworkspaceemptystate--edge-cases.png" alt="Baseline features-workspace-components-openworkspaceemptystate--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-openworkspaceemptystate--edge-cases.png" alt="Current features-workspace-components-openworkspaceemptystate--edge-cases"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-workspace-components-openworkspaceemptystate--edge-cases.png" alt="Baseline features-workspace-components-openworkspaceemptystate--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-openworkspaceemptystate--edge-cases.png" alt="Current features-workspace-components-openworkspaceemptystate--edge-cases" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-openworkspaceemptystate--edge-cases.png" alt="Current features-workspace-components-openworkspaceemptystate--edge-cases">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-workspace-components-openworkspaceemptystate--edge-cases in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -4367,13 +4290,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-workspacedropoverlay--default.png" alt="Baseline features-workspace-components-workspacedropoverlay--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-workspacedropoverlay--default.png" alt="Current features-workspace-components-workspacedropoverlay--default"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-workspace-components-workspacedropoverlay--default.png" alt="Baseline features-workspace-components-workspacedropoverlay--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-workspacedropoverlay--default.png" alt="Current features-workspace-components-workspacedropoverlay--default" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-workspacedropoverlay--default.png" alt="Current features-workspace-components-workspacedropoverlay--default">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-workspace-components-workspacedropoverlay--default in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -4416,13 +4338,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-workspacedropoverlay--edge-cases.png" alt="Baseline features-workspace-components-workspacedropoverlay--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-workspacedropoverlay--edge-cases.png" alt="Current features-workspace-components-workspacedropoverlay--edge-cases"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-workspace-components-workspacedropoverlay--edge-cases.png" alt="Baseline features-workspace-components-workspacedropoverlay--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-workspacedropoverlay--edge-cases.png" alt="Current features-workspace-components-workspacedropoverlay--edge-cases" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-workspacedropoverlay--edge-cases.png" alt="Current features-workspace-components-workspacedropoverlay--edge-cases">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-workspace-components-workspacedropoverlay--edge-cases in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -4465,13 +4386,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-workspacesidebarsection--all-props.png" alt="Baseline features-workspace-components-workspacesidebarsection--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-workspacesidebarsection--all-props.png" alt="Current features-workspace-components-workspacesidebarsection--all-props"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-workspace-components-workspacesidebarsection--all-props.png" alt="Baseline features-workspace-components-workspacesidebarsection--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-workspacesidebarsection--all-props.png" alt="Current features-workspace-components-workspacesidebarsection--all-props" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-workspacesidebarsection--all-props.png" alt="Current features-workspace-components-workspacesidebarsection--all-props">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-workspace-components-workspacesidebarsection--all-props in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -4514,13 +4434,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-workspacesidebarsection--default.png" alt="Baseline features-workspace-components-workspacesidebarsection--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-workspacesidebarsection--default.png" alt="Current features-workspace-components-workspacesidebarsection--default"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-workspace-components-workspacesidebarsection--default.png" alt="Baseline features-workspace-components-workspacesidebarsection--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-workspacesidebarsection--default.png" alt="Current features-workspace-components-workspacesidebarsection--default" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-workspacesidebarsection--default.png" alt="Current features-workspace-components-workspacesidebarsection--default">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-workspace-components-workspacesidebarsection--default in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -4563,13 +4482,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-workspacesidebarsection--edge-cases.png" alt="Baseline features-workspace-components-workspacesidebarsection--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-workspacesidebarsection--edge-cases.png" alt="Current features-workspace-components-workspacesidebarsection--edge-cases"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-workspace-components-workspacesidebarsection--edge-cases.png" alt="Baseline features-workspace-components-workspacesidebarsection--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-workspacesidebarsection--edge-cases.png" alt="Current features-workspace-components-workspacesidebarsection--edge-cases" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-workspacesidebarsection--edge-cases.png" alt="Current features-workspace-components-workspacesidebarsection--edge-cases">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-workspace-components-workspacesidebarsection--edge-cases in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -4612,13 +4530,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-workspacetoolbar--all-props.png" alt="Baseline features-workspace-components-workspacetoolbar--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-workspacetoolbar--all-props.png" alt="Current features-workspace-components-workspacetoolbar--all-props"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-workspace-components-workspacetoolbar--all-props.png" alt="Baseline features-workspace-components-workspacetoolbar--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-workspacetoolbar--all-props.png" alt="Current features-workspace-components-workspacetoolbar--all-props" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-workspacetoolbar--all-props.png" alt="Current features-workspace-components-workspacetoolbar--all-props">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-workspace-components-workspacetoolbar--all-props in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -4661,13 +4578,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-workspacetoolbar--default.png" alt="Baseline features-workspace-components-workspacetoolbar--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-workspacetoolbar--default.png" alt="Current features-workspace-components-workspacetoolbar--default"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-workspace-components-workspacetoolbar--default.png" alt="Baseline features-workspace-components-workspacetoolbar--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-workspacetoolbar--default.png" alt="Current features-workspace-components-workspacetoolbar--default" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-workspacetoolbar--default.png" alt="Current features-workspace-components-workspacetoolbar--default">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-workspace-components-workspacetoolbar--default in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
@@ -4710,13 +4626,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-workspacetoolbar--edge-cases.png" alt="Baseline features-workspace-components-workspacetoolbar--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-workspacetoolbar--edge-cases.png" alt="Current features-workspace-components-workspacetoolbar--edge-cases"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="expected/features-workspace-components-workspacetoolbar--edge-cases.png" alt="Baseline features-workspace-components-workspacetoolbar--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-workspacetoolbar--edge-cases.png" alt="Current features-workspace-components-workspacetoolbar--edge-cases" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-workspacetoolbar--edge-cases.png" alt="Current features-workspace-components-workspacetoolbar--edge-cases">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-workspace-components-workspacetoolbar--edge-cases in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>

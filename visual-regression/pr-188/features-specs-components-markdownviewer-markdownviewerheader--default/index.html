@@ -80,7 +80,9 @@
     .comparison__overlay { position: absolute; inset: 0; }
     .comparison__split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
     .comparison__frame--pane { border: 0; border-radius: 0; }
-    .comparison__control--pane { margin-top: 8px; padding: 0 12px 12px; }
+    /* isolation で difference 合成をこのフレーム内に閉じ込める。 */
+    .comparison__frame--difference { isolation: isolate; background: #000; }
+    .comparison__frame--difference .comparison__overlay { mix-blend-mode: difference; }
     .comparison__pane { min-width: 0; margin: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #020617; }
     .comparison__pane figcaption, .comparison__pane--empty strong { display: block; padding: 8px 12px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px; font-weight: 700; }
     .comparison__pane--empty { display: grid; min-height: 240px; align-content: start; color: var(--muted); }
@@ -107,7 +109,7 @@
         <p class="summary"><a href="../" data-back-link>← Back to all stories</a></p>
       </div>
       <div class="hero__actions">
-        <div class="badge">Failed: <strong>0</strong> / Threshold: 0.002</div>
+        <div class="badge">Failed: <strong>1</strong> / Threshold: 0.002</div>
       </div>
     </section>
     <nav class="inspector-tabs" aria-label="Diff inspector view">
@@ -117,7 +119,7 @@
     <button type="button" role="tab" data-global-view-mode="split" aria-selected="false">Split + Diff</button>
     <button type="button" role="tab" data-global-view-mode="slider" aria-selected="false">Slider</button>
   </div>
-  <span class="inspector-tabs__hint">Visual report UI v5 · a665619</span>
+  <span class="inspector-tabs__hint">Visual report UI v6 · 844d003</span>
 </nav>
     <article class="story story--passed" id="features-specs-components-markdownviewer-markdownviewerheader--default">
     <header class="story__header">
@@ -146,13 +148,12 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="../expected/features-specs-components-markdownviewer-markdownviewerheader--default.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="../actual/features-specs-components-markdownviewer-markdownviewerheader--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader--default"></figure>
-        <figure class="comparison__pane" data-overlay>
+        <figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="../expected/features-specs-components-markdownviewer-markdownviewerheader--default.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader--default">
-          <img class="comparison__image comparison__overlay" src="../actual/features-specs-components-markdownviewer-markdownviewerheader--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader--default" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="../actual/features-specs-components-markdownviewer-markdownviewerheader--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader--default">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for features-specs-components-markdownviewer-markdownviewerheader--default in split view"></label>
       </figure>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>

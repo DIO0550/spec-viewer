@@ -1,19 +1,19 @@
 {
-  "reportVersion": "a6656199422c5307b3c8d95f5734cf8e438064d6",
+  "reportVersion": "844d003bca347d6cd6ed786e3042d815910fc7cb",
   "maxDiffRatio": 0.002,
-  "failed": 0,
+  "failed": 1,
   "results": [
     {
       "story": "app--default",
       "id": "app--default",
       "title": "App",
       "name": "Default",
-      "status": "passed",
-      "diffPixels": 0,
-      "diffRatio": 0,
+      "status": "changed",
+      "diffPixels": 24950,
+      "diffRatio": 0.0271,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": false
+      "hasDiff": true
     },
     {
       "story": "app-app-specviewcommentsidebar--default",
