@@ -41,8 +41,8 @@
     {
       "story": "app-app-specviewcommentsidebar--loading",
       "status": "changed",
-      "diffPixels": 921131,
-      "diffRatio": 0.9994911024305555,
+      "diffPixels": 921236,
+      "diffRatio": 0.9996050347222222,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -158,8 +158,8 @@
     {
       "story": "components-loadingskeleton--all-props",
       "status": "changed",
-      "diffPixels": 920691,
-      "diffRatio": 0.999013671875,
+      "diffPixels": 921133,
+      "diffRatio": 0.9994932725694444,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -167,8 +167,8 @@
     {
       "story": "components-loadingskeleton--default",
       "status": "changed",
-      "diffPixels": 920957,
-      "diffRatio": 0.9993023003472222,
+      "diffPixels": 921231,
+      "diffRatio": 0.999599609375,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -248,8 +248,8 @@
     {
       "story": "components-workspacelayout--loading",
       "status": "changed",
-      "diffPixels": 718535,
-      "diffRatio": 0.7796603732638889,
+      "diffPixels": 718844,
+      "diffRatio": 0.7799956597222222,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -365,8 +365,8 @@
     {
       "story": "features-comments-components-commentsidebar--loading",
       "status": "changed",
-      "diffPixels": 920336,
-      "diffRatio": 0.9986284722222222,
+      "diffPixels": 921096,
+      "diffRatio": 0.999453125,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -689,8 +689,8 @@
     {
       "story": "features-specs-components-markdownviewer-markdownviewerstatuspanel--loading",
       "status": "changed",
-      "diffPixels": 920286,
-      "diffRatio": 0.99857421875,
+      "diffPixels": 920357,
+      "diffRatio": 0.9986512586805556,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -788,8 +788,8 @@
     {
       "story": "features-specs-components-spectree--loading",
       "status": "changed",
-      "diffPixels": 920484,
-      "diffRatio": 0.9987890625,
+      "diffPixels": 921146,
+      "diffRatio": 0.9995073784722223,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
