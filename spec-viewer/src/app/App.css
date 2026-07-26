@@ -3984,6 +3984,7 @@ textarea:disabled {
 }
 
 .specs-workspace__navigation .spec-tree__list {
+  overflow-x: hidden;
   padding: 6px 0;
 }
 
@@ -4012,6 +4013,18 @@ textarea:disabled {
 .specs-workspace__navigation .spec-tree__archive-spacer {
   height: 26px;
   min-height: 26px;
+}
+
+.specs-workspace__navigation .spec-tree__expand,
+.specs-workspace__navigation .spec-tree__expand-spacer {
+  width: 18px;
+  min-width: 18px;
+}
+
+.specs-workspace__navigation .spec-tree__archive,
+.specs-workspace__navigation .spec-tree__archive-spacer {
+  width: 22px;
+  min-width: 22px;
 }
 
 .specs-workspace__navigation .spec-tree__file-count {
