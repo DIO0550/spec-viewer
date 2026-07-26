@@ -122,6 +122,8 @@ const capture = async (options) => {
   const width = Number(options.width ?? 1280);
   const height = Number(options.height ?? 720);
   const settleMs = Number(options["settle-ms"] ?? 750);
+  const stablePollMs = Number(options["stable-poll-ms"] ?? 250);
+  const stableTimeoutMs = Number(options["stable-timeout-ms"] ?? 8000);
   rmSync(out, { recursive: true, force: true });
   mkdirSync(out, { recursive: true });
 
@@ -176,17 +178,42 @@ const capture = async (options) => {
     const index = await requestJson(`${origin}/index.json`);
     const stories = Object.values(index.entries ?? {}).filter((entry) => entry.type === "story").sort((a, b) => a.id.localeCompare(b.id));
     writeFileSync(join(out, "stories.json"), JSON.stringify(stories.map(({ id, title, name }) => ({ id, title, name })), null, 2));
+    const unstable = [];
     for (const story of stories) {
       const target = await requestJson(`http://127.0.0.1:9222/json/new?${encodeURIComponent(`${origin}/iframe.html?id=${story.id}`)}`, { method: "PUT" });
       const cdp = await openCdp(target.webSocketDebuggerUrl);
       await cdp.send("Page.enable");
       await cdp.send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false });
       await sleep(settleMs);
-      const screenshot = await cdp.send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
+      // 固定待ちのままだと非同期描画が終わる前に撮れてしまい、loading 表示が
+      // baseline に焼き付く。同じフレームが 2 回続くまで待ってから採用する。
+      const settledShot = await cdp.send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
+      let screenshot = settledShot;
+      let stable = false;
+      const deadline = Date.now() + stableTimeoutMs;
+      while (Date.now() < deadline) {
+        await sleep(stablePollMs);
+        const next = await cdp.send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
+        if (next.data === screenshot.data) {
+          stable = true;
+          break;
+        }
+        screenshot = next;
+      }
+      if (!stable) {
+        // spinner 等は永久に安定しない。待ち続けた末の任意フレームより、
+        // 従来どおり settle-ms 時点の再現性あるフレームを採用する。
+        screenshot = settledShot;
+        unstable.push(story.id);
+      }
       writeFileSync(join(out, `${story.id}.png`), Buffer.from(screenshot.data, "base64"));
       cdp.close();
       await requestOk(`http://127.0.0.1:9222/json/close/${target.id}`);
-      console.log(`captured ${story.id}`);
+      console.log(`captured ${story.id}${stable ? "" : " (never stabilized)"}`);
+    }
+    if (unstable.length > 0) {
+      // 撮影は続けるが、アニメーション等で揺れ続けるストーリーは差分の温床なので明示する。
+      console.warn(`warning: ${unstable.length} story(ies) never stabilized within ${stableTimeoutMs}ms: ${unstable.join(", ")}`);
     }
   } finally {
     chrome.kill("SIGTERM");
