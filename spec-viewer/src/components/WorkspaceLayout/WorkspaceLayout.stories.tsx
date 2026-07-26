@@ -496,6 +496,27 @@ async function verifyWorktreeOpenStory(
   ).toHaveAttribute("aria-current", "location");
 }
 
+/**
+ * Verifies that the Specs list only scrolls vertically.
+ *
+ * @param canvasElement - Rendered Story canvas.
+ */
+async function verifySpecsListHasNoHorizontalOverflow(
+  canvasElement: HTMLElement,
+): Promise<void> {
+  const specsList = canvasElement.querySelector<HTMLElement>(
+    ".specs-workspace__navigation .spec-tree__list",
+  );
+
+  await expect(specsList).toBeInstanceOf(HTMLElement);
+
+  const renderedSpecsList = specsList as HTMLElement;
+
+  await expect(renderedSpecsList.scrollWidth).toBeLessThanOrEqual(
+    renderedSpecsList.clientWidth,
+  );
+}
+
 const readySpecsArgs = createShellArgs({
   treeState: readyTreeState,
   documentState: readyDocumentState,
@@ -508,6 +529,9 @@ const readySpecsArgs = createShellArgs({
 export const Default: Story = {
   name: "Specs",
   args: readySpecsArgs,
+  play: async ({ canvasElement }) => {
+    await verifySpecsListHasNoHorizontalOverflow(canvasElement);
+  },
 };
 
 export const AllProps: Story = {
