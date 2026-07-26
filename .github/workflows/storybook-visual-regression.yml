@@ -37,9 +37,7 @@ jobs:
       - name: Install dependencies
         if: github.event.action != 'closed'
         working-directory: spec-viewer
-        run: |
-          pnpm install --no-frozen-lockfile
-          pnpm install --offline --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Verify odiff binary
         if: github.event.action != 'closed'
@@ -112,7 +110,9 @@ jobs:
           grep -Fq 'data-global-view-mode="overlay"' visual-report/index.html
           grep -Fq 'data-global-view-mode="split"' visual-report/index.html
           grep -Fq 'data-global-view-mode="slider"' visual-report/index.html
-          grep -Fq 'Visual report UI v4' visual-report/index.html
+          grep -Fq 'Visual report UI v7' visual-report/index.html
+          grep -Fq 'grid-template-columns: repeat(2, minmax(0, 1fr))' visual-report/index.html
+          grep -Fq 'mix-blend-mode: difference' visual-report/index.html
           node -e 'const summary = require("./visual-report/summary.json"); if (summary.reportVersion !== process.env.REPORT_VERSION) process.exit(1)'
           find visual-report -mindepth 2 -maxdepth 2 -name index.html -print -quit | grep -q .
 

@@ -122,6 +122,8 @@ const capture = async (options) => {
   const width = Number(options.width ?? 1280);
   const height = Number(options.height ?? 720);
   const settleMs = Number(options["settle-ms"] ?? 750);
+  const stablePollMs = Number(options["stable-poll-ms"] ?? 250);
+  const stableTimeoutMs = Number(options["stable-timeout-ms"] ?? 8000);
   rmSync(out, { recursive: true, force: true });
   mkdirSync(out, { recursive: true });
 
@@ -138,35 +140,80 @@ const capture = async (options) => {
       `--user-data-dir=${userDataDir}`,
       "about:blank",
     ],
-    { stdio: "ignore" },
+    // 起動失敗の原因を診断できるよう stderr だけ受け取る。
+    { stdio: ["ignore", "ignore", "pipe"] },
   );
+  // stderr は dbus 警告などで際限なく増えるため末尾だけ保持する。
+  let chromeStderr = "";
+  chrome.stderr.setEncoding("utf8");
+  chrome.stderr.on("data", (chunk) => {
+    chromeStderr = (chromeStderr + chunk).slice(-4000);
+  });
+  let chromeExit = null;
+  chrome.on("exit", (code, signal) => {
+    chromeExit = { code, signal };
+  });
+  const describeChromeFailure = () => {
+    const exit = chromeExit ? `exited with code=${chromeExit.code} signal=${chromeExit.signal}` : "still running";
+    const stderr = chromeStderr.trim() || "(no stderr output)";
+    return `Chrome DevTools endpoint did not start (${exit})\n--- chrome stderr ---\n${stderr}`;
+  };
   try {
     let version;
-    for (let attempt = 0; attempt < 50; attempt += 1) {
+    // 遅いランナーでも待てるよう 30 秒まで許容し、早期終了時は即座に諦める。
+    for (let attempt = 0; attempt < 300; attempt += 1) {
       try {
         version = await requestJson("http://127.0.0.1:9222/json/version");
         break;
       } catch {
+        if (chromeExit) {
+          break;
+        }
         await sleep(100);
       }
     }
     if (!version) {
-      throw new Error("Chrome DevTools endpoint did not start");
+      throw new Error(describeChromeFailure());
     }
     const index = await requestJson(`${origin}/index.json`);
     const stories = Object.values(index.entries ?? {}).filter((entry) => entry.type === "story").sort((a, b) => a.id.localeCompare(b.id));
     writeFileSync(join(out, "stories.json"), JSON.stringify(stories.map(({ id, title, name }) => ({ id, title, name })), null, 2));
+    const unstable = [];
     for (const story of stories) {
       const target = await requestJson(`http://127.0.0.1:9222/json/new?${encodeURIComponent(`${origin}/iframe.html?id=${story.id}`)}`, { method: "PUT" });
       const cdp = await openCdp(target.webSocketDebuggerUrl);
       await cdp.send("Page.enable");
       await cdp.send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false });
       await sleep(settleMs);
-      const screenshot = await cdp.send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
+      // 固定待ちのままだと非同期描画が終わる前に撮れてしまい、loading 表示が
+      // baseline に焼き付く。同じフレームが 2 回続くまで待ってから採用する。
+      const settledShot = await cdp.send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
+      let screenshot = settledShot;
+      let stable = false;
+      const deadline = Date.now() + stableTimeoutMs;
+      while (Date.now() < deadline) {
+        await sleep(stablePollMs);
+        const next = await cdp.send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
+        if (next.data === screenshot.data) {
+          stable = true;
+          break;
+        }
+        screenshot = next;
+      }
+      if (!stable) {
+        // spinner 等は永久に安定しない。待ち続けた末の任意フレームより、
+        // 従来どおり settle-ms 時点の再現性あるフレームを採用する。
+        screenshot = settledShot;
+        unstable.push(story.id);
+      }
       writeFileSync(join(out, `${story.id}.png`), Buffer.from(screenshot.data, "base64"));
       cdp.close();
       await requestOk(`http://127.0.0.1:9222/json/close/${target.id}`);
-      console.log(`captured ${story.id}`);
+      console.log(`captured ${story.id}${stable ? "" : " (never stabilized)"}`);
+    }
+    if (unstable.length > 0) {
+      // 撮影は続けるが、アニメーション等で揺れ続けるストーリーは差分の温床なので明示する。
+      console.warn(`warning: ${unstable.length} story(ies) never stabilized within ${stableTimeoutMs}ms: ${unstable.join(", ")}`);
     }
   } finally {
     chrome.kill("SIGTERM");
@@ -294,20 +341,36 @@ const comparisonPanel = (result, pathPrefix = "") => {
   const imageOrEmpty = (label, path, enabled) => enabled
     ? `<figure class="comparison__pane"><figcaption>${label}</figcaption><img class="comparison__image" src="${path}" alt="${label} ${story}"></figure>`
     : `<div class="comparison__pane comparison__pane--empty"><strong>${label}</strong><span>Not available</span></div>`;
+  // Baseline と Current を difference 合成で重ねる。一致部分は黒に沈み、差分だけが発色する。
+  // 差分ゼロだと全面が黒くなり情報量がないため、その場合は合成せず明示する。
+  const overlayPane = !canCompare
+    ? '<div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>Not available</span></div>'
+    : result.diffPixels > 0
+      ? `<figure class="comparison__pane">
+        <figcaption>Overlay</figcaption>
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
+          <img class="comparison__image" src="${expectedPath}" alt="Baseline ${story}">
+          <img class="comparison__image comparison__overlay" src="${actualPath}" alt="Current ${story}">
+        </div>
+      </figure>`
+      : '<div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>';
   return `<div class="comparison" data-comparison>
     <div class="comparison__view" data-view="overlay">
       ${canCompare ? `
-      <div class="comparison__frame">
-        <img class="comparison__image" src="${expectedPath}" alt="Baseline ${story}">
-        <img class="comparison__image comparison__overlay" src="${actualPath}" alt="Current ${story}" data-overlay-image style="opacity: 0.5">
+      <div data-overlay>
+        <div class="comparison__frame">
+          <img class="comparison__image" src="${expectedPath}" alt="Baseline ${story}">
+          <img class="comparison__image comparison__overlay" src="${actualPath}" alt="Current ${story}" data-overlay-image style="opacity: 0.5">
+        </div>
+        <label class="comparison__control">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for ${story}"></label>
       </div>
-      <label class="comparison__control">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for ${story}"></label>
       ` : '<div class="comparison__unavailable">Overlay is unavailable because this story only has one snapshot.</div>'}
     </div>
     <div class="comparison__view" data-view="split" hidden>
       <div class="comparison__split">
         ${imageOrEmpty("Baseline", expectedPath, result.hasExpected)}
         ${imageOrEmpty("Current", actualPath, result.hasActual)}
+        ${overlayPane}
         ${imageOrEmpty("Diff", diffPath, result.hasDiff)}
       </div>
     </div>
@@ -431,7 +494,7 @@ const renderInspectorTabs = (reportVersion) => `<nav class="inspector-tabs" aria
     <button type="button" role="tab" data-global-view-mode="split" aria-selected="false">Split + Diff</button>
     <button type="button" role="tab" data-global-view-mode="slider" aria-selected="false">Slider</button>
   </div>
-  <span class="inspector-tabs__hint">Visual report UI v4 · ${escapeHtml(reportVersion.slice(0, 7))}</span>
+  <span class="inspector-tabs__hint">Visual report UI v7 · ${escapeHtml(reportVersion.slice(0, 7))}</span>
 </nav>`;
 
 const renderHtml = (summary, options = {}) => `<!doctype html>
@@ -514,7 +577,11 @@ const renderHtml = (summary, options = {}) => `<!doctype html>
     .comparison__frame { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: #020617; }
     .comparison__image { display: block; width: 100%; height: auto; user-select: none; }
     .comparison__overlay { position: absolute; inset: 0; }
-    .comparison__split { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
+    .comparison__split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
+    .comparison__frame--pane { border: 0; border-radius: 0; }
+    /* isolation で difference 合成をこのフレーム内に閉じ込め、brightness で微小差分を持ち上げる。 */
+    .comparison__frame--difference { isolation: isolate; background: #000; filter: brightness(3); }
+    .comparison__frame--difference .comparison__overlay { mix-blend-mode: difference; }
     .comparison__pane { min-width: 0; margin: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #020617; }
     .comparison__pane figcaption, .comparison__pane--empty strong { display: block; padding: 8px 12px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px; font-weight: 700; }
     .comparison__pane--empty { display: grid; min-height: 240px; align-content: start; color: var(--muted); }
@@ -526,8 +593,7 @@ const renderHtml = (summary, options = {}) => `<!doctype html>
     .comparison__control { display: grid; gap: 8px; margin-top: 10px; color: var(--muted); font-size: 13px; }
     input[type="range"] { width: 100%; accent-color: var(--accent); }
     @media (max-width: 900px) { .hero, .story__header { display: block; } .hero__actions { justify-content: flex-start; margin-top: 12px; } .metrics { display: grid; grid-template-columns: 1fr; } }
-    @media (max-width: 1100px) { .comparison__split { grid-template-columns: repeat(2, minmax(0, 1fr)); } .comparison__split > :last-child { grid-column: 1 / -1; } }
-    @media (max-width: 720px) { .comparison__split { grid-template-columns: 1fr; } .comparison__split > :last-child { grid-column: auto; } }
+    @media (max-width: 720px) { .comparison__split { grid-template-columns: 1fr; } }
     @media (max-width: 640px) { .layout, .layout--detail, .layout--nav-hidden { display: block; width: 100%; } main { padding: 12px; } .story-nav { position: static; height: min(70vh, 620px); } .layout--nav-hidden .story-nav { display: none; } .layout--nav-hidden .nav-reveal { position: fixed; top: 0; } .inspector-tabs { overflow-x: auto; margin-inline: -12px; padding-inline: 12px; } .inspector-tabs__label, .inspector-tabs__hint { display: none; } }
   </style>
 </head>
@@ -599,11 +665,13 @@ const renderHtml = (summary, options = {}) => `<!doctype html>
     };
     for (const tab of inspectorTabs) tab.addEventListener("click", () => setViewMode(tab.dataset.globalViewMode));
     for (const root of document.querySelectorAll("[data-comparison]")) {
-      const overlaySlider = root.querySelector("[data-overlay-slider]");
-      const overlayImage = root.querySelector("[data-overlay-image]");
-      if (overlaySlider && overlayImage) overlaySlider.addEventListener("input", () => {
-        overlayImage.style.opacity = String(Number(overlaySlider.value) / 100);
-      });
+      for (const overlay of root.querySelectorAll("[data-overlay]")) {
+        const overlaySlider = overlay.querySelector("[data-overlay-slider]");
+        const overlayImage = overlay.querySelector("[data-overlay-image]");
+        if (overlaySlider && overlayImage) overlaySlider.addEventListener("input", () => {
+          overlayImage.style.opacity = String(Number(overlaySlider.value) / 100);
+        });
+      }
       const slider = root.querySelector("[data-slider]");
       const actual = root.querySelector("[data-actual]");
       const handle = root.querySelector("[data-handle]");
