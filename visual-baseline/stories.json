@@ -100,6 +100,11 @@
     "name": "Edge Cases"
   },
   {
+    "id": "components-workspacelayout--all-props",
+    "title": "components/WorkspaceLayout",
+    "name": "All Props"
+  },
+  {
     "id": "components-workspacelayout--archiving",
     "title": "components/WorkspaceLayout",
     "name": "Archiving"
@@ -107,7 +112,17 @@
   {
     "id": "components-workspacelayout--default",
     "title": "components/WorkspaceLayout",
-    "name": "Default"
+    "name": "Specs"
+  },
+  {
+    "id": "components-workspacelayout--diff",
+    "title": "components/WorkspaceLayout",
+    "name": "Diff"
+  },
+  {
+    "id": "components-workspacelayout--edge-cases",
+    "title": "components/WorkspaceLayout",
+    "name": "Edge Cases"
   },
   {
     "id": "components-workspacelayout--empty",
@@ -123,6 +138,16 @@
     "id": "components-workspacelayout--loading",
     "title": "components/WorkspaceLayout",
     "name": "Loading"
+  },
+  {
+    "id": "components-workspacelayout--worktree-diff",
+    "title": "components/WorkspaceLayout",
+    "name": "Worktree Diff"
+  },
+  {
+    "id": "components-workspacelayout--worktree-open",
+    "title": "components/WorkspaceLayout",
+    "name": "Worktree Open"
   },
   {
     "id": "features-comments-components-addcommentpopover--default",
@@ -193,6 +218,26 @@
     "id": "features-comments-components-commentthread--edge-cases",
     "title": "features/comments/components/CommentThread",
     "name": "Edge Cases"
+  },
+  {
+    "id": "features-diff-components-reviewmodetoolbar--all-props",
+    "title": "features/diff/components/ReviewModeToolbar",
+    "name": "All Props"
+  },
+  {
+    "id": "features-diff-components-reviewmodetoolbar--default",
+    "title": "features/diff/components/ReviewModeToolbar",
+    "name": "Default"
+  },
+  {
+    "id": "features-diff-components-reviewmodetoolbar--edge-cases",
+    "title": "features/diff/components/ReviewModeToolbar",
+    "name": "Edge Cases"
+  },
+  {
+    "id": "features-diff-diffworkspace--default",
+    "title": "Features/Diff/DiffWorkspace",
+    "name": "Default"
   },
   {
     "id": "features-sidebar-components-sidebarlayout--all-props",
