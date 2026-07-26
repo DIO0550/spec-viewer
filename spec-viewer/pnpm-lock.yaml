@@ -78,6 +78,9 @@ importers:
       happy-dom:
         specifier: ^20.9.0
         version: 20.9.0
+      odiff-bin:
+        specifier: 4.5.0
+        version: 4.5.0
       oxlint:
         specifier: ^1.62.0
         version: 1.62.0(oxlint-tsgolint@0.22.1)
@@ -429,6 +432,41 @@ packages:
     peerDependencies:
       '@emnapi/core': ^1.7.1
       '@emnapi/runtime': ^1.7.1
+
+  '@odiff/darwin-arm64@4.5.0':
+    resolution: {integrity: sha512-fztpr/73BNwJqua2xSjGaxkZr9xMVDqYFIKFnZS/MAW1MzHg6lN9r0kno2aY9FSIbCyE6c6/0MqbHs/+AkDhXw==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@odiff/darwin-x64@4.5.0':
+    resolution: {integrity: sha512-UXm/Ak+arL5tP8fwUNKR8vuuUGtm9aYOPS2oLzhkoV5/GfK5vY09nusW6Z5c5ka9VYQQyDHRKOUieXTIZKNdxg==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@odiff/linux-arm64@4.5.0':
+    resolution: {integrity: sha512-tAuSZSW4H6D6rscqpTtZ68dzK+FxbeSSzJHfJqcAmn9k7WWzXIseNRH6XLgFQE8t3bY1u6DqtOxQbE7nQV3ciw==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@odiff/linux-riscv64@4.5.0':
+    resolution: {integrity: sha512-LZ42duK8HpPWNTJplqPufQWD9d5ce26imO1DOHWJoq6sGrYaNaihHJNXOX6EV363lmSEeEZNXZr+xOMgOGJoVg==}
+    cpu: [riscv64]
+    os: [linux]
+
+  '@odiff/linux-x64@4.5.0':
+    resolution: {integrity: sha512-9Png/tO5M70Btcsv68wvIGk2GXIbc2CAw71rbeSOyUm7acFK/rOOCt5m4aJR4ZPC+bqEpB5RBp0kccNv9/Ji3A==}
+    cpu: [x64]
+    os: [linux]
+
+  '@odiff/win32-arm64@4.5.0':
+    resolution: {integrity: sha512-Icz19TRoJXU6hEHppbEd8p4bGhDkE/aeECC/lnQuMMrUE14Meqmj+8Dwr+9/KWifIqDhgebwtH8wnNwH98x5/A==}
+    cpu: [arm64]
+    os: [win32]
+
+  '@odiff/win32-x64@4.5.0':
+    resolution: {integrity: sha512-KSwUwFSmIbLxM+aJPrQggqLhMD+AUJMtsxX531Oiskp1n3z3o2V/6meIBdY6w7ZXb6ZvU/M1WjojPViCqiQFLw==}
+    cpu: [x64]
+    os: [win32]
 
   '@oxc-project/types@0.127.0':
     resolution: {integrity: sha512-aIYXQBo4lCbO4z0R3FHeucQHpF46l2LbMdxRvqvuRuW2OxdnSkcng5B8+K12spgLDj93rtN3+J2Vac/TIO+ciQ==}
@@ -1854,6 +1892,10 @@ packages:
   obug@2.1.1:
     resolution: {integrity: sha512-uTqF9MuPraAQ+IsnPf366RG4cP9RtUi7MLO1N3KEc+wb0a6yKpeL0lmk2IB1jY5KHPAlTc6T/JRdC/YqxHNwkQ==}
 
+  odiff-bin@4.5.0:
+    resolution: {integrity: sha512-FaXidbI0XDLCjLAet5n5OvRDfr6Fwt/C5SyWPfwgSUvYhCej1rjZjDXb/xdk+N6yTOCeAFaJ5mwTmU4ZthvPaA==}
+    hasBin: true
+
   open@10.2.0:
     resolution: {integrity: sha512-YgBpdJHPyQ2UE5x+hlSXcnejzAvD0b22U2OuAP+8OnlJT+PjWPxtgmGqKKc+RgTM63U9gN0YzrYc71R2WT/hTA==}
     engines: {node: '>=18'}
@@ -2536,6 +2578,27 @@ snapshots:
       '@emnapi/core': 1.10.0
       '@emnapi/runtime': 1.10.0
       '@tybys/wasm-util': 0.10.1
+    optional: true
+
+  '@odiff/darwin-arm64@4.5.0':
+    optional: true
+
+  '@odiff/darwin-x64@4.5.0':
+    optional: true
+
+  '@odiff/linux-arm64@4.5.0':
+    optional: true
+
+  '@odiff/linux-riscv64@4.5.0':
+    optional: true
+
+  '@odiff/linux-x64@4.5.0':
+    optional: true
+
+  '@odiff/win32-arm64@4.5.0':
+    optional: true
+
+  '@odiff/win32-x64@4.5.0':
     optional: true
 
   '@oxc-project/types@0.127.0': {}
@@ -3908,6 +3971,16 @@ snapshots:
   node-releases@2.0.38: {}
 
   obug@2.1.1: {}
+
+  odiff-bin@4.5.0:
+    optionalDependencies:
+      '@odiff/darwin-arm64': 4.5.0
+      '@odiff/darwin-x64': 4.5.0
+      '@odiff/linux-arm64': 4.5.0
+      '@odiff/linux-riscv64': 4.5.0
+      '@odiff/linux-x64': 4.5.0
+      '@odiff/win32-arm64': 4.5.0
+      '@odiff/win32-x64': 4.5.0
 
   open@10.2.0:
     dependencies:
