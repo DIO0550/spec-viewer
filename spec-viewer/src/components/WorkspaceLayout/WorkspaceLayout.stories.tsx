@@ -1,6 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { type ComponentProps, type ReactNode, useState } from "react";
-import { fn } from "storybook/test";
+import {
+  type ComponentProps,
+  type ReactElement,
+  type ReactNode,
+  useState,
+} from "react";
+import { expect, fn, within } from "storybook/test";
 import {
   type Comment,
   CommentSidebar,
@@ -30,7 +35,27 @@ import {
 import { WorkspaceLayout } from "@/components/WorkspaceLayout";
 
 const workspacePath = "/workspace/pdfmod";
+const worktreeName = "agent-a1b3ff42";
+const worktreeWorkspacePath = `/workspace/pdfmod/.worktrees/${worktreeName}`;
 const commentId = CommentId.fromString;
+
+type StoryWorktree = Readonly<{
+  name: string;
+  icon: string;
+  changeCount: number;
+  isMuted?: boolean;
+}>;
+
+const storyWorktrees: readonly StoryWorktree[] = [
+  { name: "root", icon: "⌂", changeCount: 0 },
+  { name: "549", icon: "▣", changeCount: 2 },
+  { name: worktreeName, icon: "⑂", changeCount: 4 },
+  { name: "agent-a049b1c8", icon: "⑂", changeCount: 0 },
+  { name: "agent-a395fbe1", icon: "⑂", changeCount: 1 },
+  { name: "agent-a5b8a0d3", icon: "⑂", changeCount: 2 },
+  { name: "agent-a65ad1a4", icon: "⑂", changeCount: 7 },
+  { name: "archive", icon: "▱", changeCount: 12, isMuted: true },
+];
 
 const sampleSpec: SpecNode = {
   id: "041-preview-task",
@@ -237,6 +262,20 @@ const readyDocumentState: SpecDocumentState = {
   error: null,
 };
 
+const readyWorktreeTreeState: SpecTreeState = {
+  ...readyTreeState,
+  workspacePath: worktreeWorkspacePath,
+};
+
+const readyWorktreeDocumentState: SpecDocumentState = {
+  ...readyDocumentState,
+  workspacePath: worktreeWorkspacePath,
+  document: {
+    ...sampleDocument,
+    path: `${worktreeWorkspacePath}/.plugin-workspace/.specs/041-preview-task/impl.md`,
+  },
+};
+
 const sampleComments: readonly Comment[] = [
   {
     id: commentId("cmt_story_open_1"),
@@ -436,6 +475,27 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
+/**
+ * Verifies that a worktree Story keeps its path and selected tree row aligned.
+ *
+ * @param canvasElement - Rendered Story canvas.
+ */
+async function verifyWorktreeOpenStory(
+  canvasElement: HTMLElement,
+): Promise<void> {
+  const canvas = within(canvasElement);
+
+  await expect(canvas.getByRole("textbox", { name: "PATH" })).toHaveValue(
+    worktreeWorkspacePath,
+  );
+  await expect(
+    canvas.getByRole("treeitem", { name: new RegExp(worktreeName) }),
+  ).toHaveAttribute("aria-current", "location");
+  await expect(
+    canvas.getByRole("button", { name: `${worktreeName}を開く` }),
+  ).toHaveAttribute("aria-current", "location");
+}
+
 const readySpecsArgs = createShellArgs({
   treeState: readyTreeState,
   documentState: readyDocumentState,
@@ -476,6 +536,37 @@ export const Diff: Story = {
     workspaceStatusPath: workspacePath,
     reviewMode: "diff",
   }),
+};
+
+export const WorktreeOpen: Story = {
+  args: createShellArgs({
+    treeState: readyWorktreeTreeState,
+    documentState: readyWorktreeDocumentState,
+    selectedSpec: sampleSpec,
+    selectedFileKey: "impl",
+    workspaceInput: worktreeWorkspacePath,
+    workspaceStatusPath: worktreeWorkspacePath,
+    activeWorktreeName: worktreeName,
+  }),
+  play: async ({ canvasElement }) => {
+    await verifyWorktreeOpenStory(canvasElement);
+  },
+};
+
+export const WorktreeDiff: Story = {
+  args: createShellArgs({
+    treeState: readyWorktreeTreeState,
+    documentState: readyWorktreeDocumentState,
+    selectedSpec: sampleSpec,
+    selectedFileKey: "impl",
+    workspaceInput: worktreeWorkspacePath,
+    workspaceStatusPath: worktreeWorkspacePath,
+    activeWorktreeName: worktreeName,
+    reviewMode: "diff",
+  }),
+  play: async ({ canvasElement }) => {
+    await verifyWorktreeOpenStory(canvasElement);
+  },
 };
 
 export const Archiving: Story = {
@@ -592,6 +683,7 @@ type ShellArgsOptions = Readonly<{
   isWorkspaceLoading?: boolean;
   archivingSpecId?: string | null;
   reviewMode?: ReviewMode;
+  activeWorktreeName?: string | null;
 }>;
 
 /** @returns WorkspaceLayout story args for a representative viewer state. */
@@ -606,6 +698,7 @@ function createShellArgs({
   isWorkspaceLoading = false,
   archivingSpecId = null,
   reviewMode = "specs",
+  activeWorktreeName = null,
 }: ShellArgsOptions): ComponentProps<typeof WorkspaceLayoutStory> {
   const selectedFile =
     selectedSpec?.files.find((file) => file.key === selectedFileKey) ?? null;
@@ -652,6 +745,21 @@ function createShellArgs({
     );
   }
 
+  const contextualRecentWorkspace =
+    activeWorktreeName === null
+      ? {
+          path: "/workspace/plugin-manager",
+          displayName: "plugin-manager",
+          kind: "plugin-worktree" as const,
+          lastOpenedAt: "2026-05-05T00:00:00.000Z",
+        }
+      : {
+          path: workspaceStatusPath ?? worktreeWorkspacePath,
+          displayName: activeWorktreeName,
+          kind: "plugin-worktree" as const,
+          lastOpenedAt: "2026-05-05T00:00:00.000Z",
+        };
+
   return {
     leftOpen: true,
     leftHeader: null,
@@ -691,52 +799,14 @@ function createShellArgs({
               kind: "plugin-workspace",
               lastOpenedAt: "2026-05-06T00:00:00.000Z",
             },
-            {
-              path: "/workspace/plugin-manager",
-              displayName: "plugin-manager",
-              kind: "plugin-worktree",
-              lastOpenedAt: "2026-05-05T00:00:00.000Z",
-            },
+            contextualRecentWorkspace,
           ]}
           onBrowse={fn()}
           onToggleOpen={fn()}
           onOpenWorkspace={fn()}
           onRemoveWorkspace={fn()}
         />
-        <div className="story-worktree-tree" aria-label="Worktrees">
-          <input
-            aria-label="Filter worktrees"
-            placeholder="Filter worktrees..."
-          />
-          <div className="story-worktree-tree__header">
-            <span>ROOT / WORKTREES 8</span>
-            <span aria-hidden="true">↻</span>
-          </div>
-          <div className="story-worktree-tree__row">
-            ⌂ root <span>0</span>
-          </div>
-          <div className="story-worktree-tree__row">
-            ▣ 549 <span>2</span>
-          </div>
-          <div className="story-worktree-tree__row story-worktree-tree__row--active">
-            ⑂ agent-a1b3ff42 <span>4</span>
-          </div>
-          <div className="story-worktree-tree__row">
-            ⑂ agent-a049b1c8 <span>0</span>
-          </div>
-          <div className="story-worktree-tree__row">
-            ⑂ agent-a395fbe1 <span>1</span>
-          </div>
-          <div className="story-worktree-tree__row">
-            ⑂ agent-a5b8a0d3 <span>2</span>
-          </div>
-          <div className="story-worktree-tree__row">
-            ⑂ agent-a65ad1a4 <span>7</span>
-          </div>
-          <div className="story-worktree-tree__row story-worktree-tree__row--muted">
-            ▱ archive <span>12</span>
-          </div>
-        </div>
+        <StoryWorktreeTree activeWorktreeName={activeWorktreeName} />
       </div>
     ),
     tabs: (
@@ -774,4 +844,50 @@ function createShellArgs({
       />
     ),
   };
+}
+
+/**
+ * Displays representative worktree rows for full-shell Story states.
+ *
+ * @param props - Name of the worktree currently opened by the Story.
+ * @returns Accessible static worktree tree with one current row.
+ */
+function StoryWorktreeTree({
+  activeWorktreeName,
+}: Readonly<{ activeWorktreeName: string | null }>): ReactElement {
+  const selectedWorktreeName = activeWorktreeName ?? "root";
+
+  return (
+    <section className="story-worktree-tree" aria-label="Worktrees">
+      <input aria-label="Filter worktrees" placeholder="Filter worktrees..." />
+      <div className="story-worktree-tree__header">
+        <span>ROOT / WORKTREES {storyWorktrees.length}</span>
+        <span aria-hidden="true">↻</span>
+      </div>
+      <div role="tree" aria-label="Workspace worktrees">
+        {storyWorktrees.map((worktree) => {
+          const isActive = worktree.name === selectedWorktreeName;
+          const className = [
+            "story-worktree-tree__row",
+            isActive ? "story-worktree-tree__row--active" : "",
+            worktree.isMuted ? "story-worktree-tree__row--muted" : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
+
+          return (
+            <div
+              className={className}
+              role="treeitem"
+              aria-current={isActive ? "location" : undefined}
+              key={worktree.name}
+            >
+              {worktree.icon} {worktree.name}
+              <span>{worktree.changeCount}</span>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
 }
