@@ -80,8 +80,8 @@
     .comparison__overlay { position: absolute; inset: 0; }
     .comparison__split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
     .comparison__frame--pane { border: 0; border-radius: 0; }
-    /* isolation で difference 合成をこのフレーム内に閉じ込める。 */
-    .comparison__frame--difference { isolation: isolate; background: #000; }
+    /* isolation で difference 合成をこのフレーム内に閉じ込め、brightness で微小差分を持ち上げる。 */
+    .comparison__frame--difference { isolation: isolate; background: #000; filter: brightness(3); }
     .comparison__frame--difference .comparison__overlay { mix-blend-mode: difference; }
     .comparison__pane { min-width: 0; margin: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #020617; }
     .comparison__pane figcaption, .comparison__pane--empty strong { display: block; padding: 8px 12px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px; font-weight: 700; }
@@ -322,7 +322,7 @@
     <button type="button" role="tab" data-global-view-mode="split" aria-selected="false">Split + Diff</button>
     <button type="button" role="tab" data-global-view-mode="slider" aria-selected="false">Slider</button>
   </div>
-  <span class="inspector-tabs__hint">Visual report UI v6 · c6ced53</span>
+  <span class="inspector-tabs__hint">Visual report UI v7 · 9e68c81</span>
 </nav>
     <article class="story story--passed" id="app--default">
     <header class="story__header">
@@ -351,13 +351,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/app--default.png" alt="Baseline app--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/app--default.png" alt="Current app--default"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/app--default.png" alt="Baseline app--default">
-          <img class="comparison__image comparison__overlay" src="actual/app--default.png" alt="Current app--default">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -399,13 +393,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/app-app-specviewcommentsidebar--default.png" alt="Baseline app-app-specviewcommentsidebar--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/app-app-specviewcommentsidebar--default.png" alt="Current app-app-specviewcommentsidebar--default"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/app-app-specviewcommentsidebar--default.png" alt="Baseline app-app-specviewcommentsidebar--default">
-          <img class="comparison__image comparison__overlay" src="actual/app-app-specviewcommentsidebar--default.png" alt="Current app-app-specviewcommentsidebar--default">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -447,13 +435,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/app-app-specviewcommentsidebar--edge-cases.png" alt="Baseline app-app-specviewcommentsidebar--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/app-app-specviewcommentsidebar--edge-cases.png" alt="Current app-app-specviewcommentsidebar--edge-cases"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/app-app-specviewcommentsidebar--edge-cases.png" alt="Baseline app-app-specviewcommentsidebar--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/app-app-specviewcommentsidebar--edge-cases.png" alt="Current app-app-specviewcommentsidebar--edge-cases">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -495,13 +477,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/app-app-specviewcommentsidebar--empty.png" alt="Baseline app-app-specviewcommentsidebar--empty"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/app-app-specviewcommentsidebar--empty.png" alt="Current app-app-specviewcommentsidebar--empty"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/app-app-specviewcommentsidebar--empty.png" alt="Baseline app-app-specviewcommentsidebar--empty">
-          <img class="comparison__image comparison__overlay" src="actual/app-app-specviewcommentsidebar--empty.png" alt="Current app-app-specviewcommentsidebar--empty">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -543,13 +519,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/app-app-specviewcommentsidebar--loading.png" alt="Baseline app-app-specviewcommentsidebar--loading"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/app-app-specviewcommentsidebar--loading.png" alt="Current app-app-specviewcommentsidebar--loading"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/app-app-specviewcommentsidebar--loading.png" alt="Baseline app-app-specviewcommentsidebar--loading">
-          <img class="comparison__image comparison__overlay" src="actual/app-app-specviewcommentsidebar--loading.png" alt="Current app-app-specviewcommentsidebar--loading">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -591,13 +561,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-commanderrordisplay--all-props.png" alt="Baseline components-commanderrordisplay--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-commanderrordisplay--all-props.png" alt="Current components-commanderrordisplay--all-props"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/components-commanderrordisplay--all-props.png" alt="Baseline components-commanderrordisplay--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/components-commanderrordisplay--all-props.png" alt="Current components-commanderrordisplay--all-props">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -639,13 +603,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-commanderrordisplay--default.png" alt="Baseline components-commanderrordisplay--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-commanderrordisplay--default.png" alt="Current components-commanderrordisplay--default"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/components-commanderrordisplay--default.png" alt="Baseline components-commanderrordisplay--default">
-          <img class="comparison__image comparison__overlay" src="actual/components-commanderrordisplay--default.png" alt="Current components-commanderrordisplay--default">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -687,13 +645,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-commanderrordisplay--edge-cases.png" alt="Baseline components-commanderrordisplay--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-commanderrordisplay--edge-cases.png" alt="Current components-commanderrordisplay--edge-cases"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/components-commanderrordisplay--edge-cases.png" alt="Baseline components-commanderrordisplay--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/components-commanderrordisplay--edge-cases.png" alt="Current components-commanderrordisplay--edge-cases">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -735,13 +687,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-emptystate--all-props.png" alt="Baseline components-emptystate--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-emptystate--all-props.png" alt="Current components-emptystate--all-props"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/components-emptystate--all-props.png" alt="Baseline components-emptystate--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/components-emptystate--all-props.png" alt="Current components-emptystate--all-props">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -783,13 +729,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-emptystate--default.png" alt="Baseline components-emptystate--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-emptystate--default.png" alt="Current components-emptystate--default"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/components-emptystate--default.png" alt="Baseline components-emptystate--default">
-          <img class="comparison__image comparison__overlay" src="actual/components-emptystate--default.png" alt="Current components-emptystate--default">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -831,13 +771,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-emptystate--edge-cases.png" alt="Baseline components-emptystate--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-emptystate--edge-cases.png" alt="Current components-emptystate--edge-cases"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/components-emptystate--edge-cases.png" alt="Baseline components-emptystate--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/components-emptystate--edge-cases.png" alt="Current components-emptystate--edge-cases">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -879,13 +813,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-errorboundary--default.png" alt="Baseline components-errorboundary--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-errorboundary--default.png" alt="Current components-errorboundary--default"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/components-errorboundary--default.png" alt="Baseline components-errorboundary--default">
-          <img class="comparison__image comparison__overlay" src="actual/components-errorboundary--default.png" alt="Current components-errorboundary--default">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -927,13 +855,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-errorboundary--edge-cases.png" alt="Baseline components-errorboundary--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-errorboundary--edge-cases.png" alt="Current components-errorboundary--edge-cases"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/components-errorboundary--edge-cases.png" alt="Baseline components-errorboundary--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/components-errorboundary--edge-cases.png" alt="Current components-errorboundary--edge-cases">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -975,13 +897,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-errorboundary--error.png" alt="Baseline components-errorboundary--error"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-errorboundary--error.png" alt="Current components-errorboundary--error"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/components-errorboundary--error.png" alt="Baseline components-errorboundary--error">
-          <img class="comparison__image comparison__overlay" src="actual/components-errorboundary--error.png" alt="Current components-errorboundary--error">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -1023,13 +939,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-errorstate--all-props.png" alt="Baseline components-errorstate--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-errorstate--all-props.png" alt="Current components-errorstate--all-props"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/components-errorstate--all-props.png" alt="Baseline components-errorstate--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/components-errorstate--all-props.png" alt="Current components-errorstate--all-props">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -1071,13 +981,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-errorstate--default.png" alt="Baseline components-errorstate--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-errorstate--default.png" alt="Current components-errorstate--default"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/components-errorstate--default.png" alt="Baseline components-errorstate--default">
-          <img class="comparison__image comparison__overlay" src="actual/components-errorstate--default.png" alt="Current components-errorstate--default">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -1119,13 +1023,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-errorstate--edge-cases.png" alt="Baseline components-errorstate--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-errorstate--edge-cases.png" alt="Current components-errorstate--edge-cases"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/components-errorstate--edge-cases.png" alt="Baseline components-errorstate--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/components-errorstate--edge-cases.png" alt="Current components-errorstate--edge-cases">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -1167,13 +1065,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-loadingskeleton--all-props.png" alt="Baseline components-loadingskeleton--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-loadingskeleton--all-props.png" alt="Current components-loadingskeleton--all-props"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/components-loadingskeleton--all-props.png" alt="Baseline components-loadingskeleton--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/components-loadingskeleton--all-props.png" alt="Current components-loadingskeleton--all-props">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -1215,13 +1107,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-loadingskeleton--default.png" alt="Baseline components-loadingskeleton--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-loadingskeleton--default.png" alt="Current components-loadingskeleton--default"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/components-loadingskeleton--default.png" alt="Baseline components-loadingskeleton--default">
-          <img class="comparison__image comparison__overlay" src="actual/components-loadingskeleton--default.png" alt="Current components-loadingskeleton--default">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -1263,13 +1149,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-loadingskeleton--edge-cases.png" alt="Baseline components-loadingskeleton--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-loadingskeleton--edge-cases.png" alt="Current components-loadingskeleton--edge-cases"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/components-loadingskeleton--edge-cases.png" alt="Baseline components-loadingskeleton--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/components-loadingskeleton--edge-cases.png" alt="Current components-loadingskeleton--edge-cases">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -1311,13 +1191,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-workspacelayout--archiving.png" alt="Baseline components-workspacelayout--archiving"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-workspacelayout--archiving.png" alt="Current components-workspacelayout--archiving"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/components-workspacelayout--archiving.png" alt="Baseline components-workspacelayout--archiving">
-          <img class="comparison__image comparison__overlay" src="actual/components-workspacelayout--archiving.png" alt="Current components-workspacelayout--archiving">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -1359,13 +1233,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-workspacelayout--default.png" alt="Baseline components-workspacelayout--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-workspacelayout--default.png" alt="Current components-workspacelayout--default"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/components-workspacelayout--default.png" alt="Baseline components-workspacelayout--default">
-          <img class="comparison__image comparison__overlay" src="actual/components-workspacelayout--default.png" alt="Current components-workspacelayout--default">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -1407,13 +1275,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-workspacelayout--empty.png" alt="Baseline components-workspacelayout--empty"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-workspacelayout--empty.png" alt="Current components-workspacelayout--empty"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/components-workspacelayout--empty.png" alt="Baseline components-workspacelayout--empty">
-          <img class="comparison__image comparison__overlay" src="actual/components-workspacelayout--empty.png" alt="Current components-workspacelayout--empty">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -1455,13 +1317,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-workspacelayout--error.png" alt="Baseline components-workspacelayout--error"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-workspacelayout--error.png" alt="Current components-workspacelayout--error"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/components-workspacelayout--error.png" alt="Baseline components-workspacelayout--error">
-          <img class="comparison__image comparison__overlay" src="actual/components-workspacelayout--error.png" alt="Current components-workspacelayout--error">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -1503,13 +1359,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/components-workspacelayout--loading.png" alt="Baseline components-workspacelayout--loading"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/components-workspacelayout--loading.png" alt="Current components-workspacelayout--loading"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/components-workspacelayout--loading.png" alt="Baseline components-workspacelayout--loading">
-          <img class="comparison__image comparison__overlay" src="actual/components-workspacelayout--loading.png" alt="Current components-workspacelayout--loading">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -1551,13 +1401,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-addcommentpopover--default.png" alt="Baseline features-comments-components-addcommentpopover--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-addcommentpopover--default.png" alt="Current features-comments-components-addcommentpopover--default"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-comments-components-addcommentpopover--default.png" alt="Baseline features-comments-components-addcommentpopover--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-addcommentpopover--default.png" alt="Current features-comments-components-addcommentpopover--default">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -1599,13 +1443,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-addcommentpopover--small-viewport-long-excerpt.png" alt="Baseline features-comments-components-addcommentpopover--small-viewport-long-excerpt"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-addcommentpopover--small-viewport-long-excerpt.png" alt="Current features-comments-components-addcommentpopover--small-viewport-long-excerpt"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-comments-components-addcommentpopover--small-viewport-long-excerpt.png" alt="Baseline features-comments-components-addcommentpopover--small-viewport-long-excerpt">
-          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-addcommentpopover--small-viewport-long-excerpt.png" alt="Current features-comments-components-addcommentpopover--small-viewport-long-excerpt">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -1647,13 +1485,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentpopover--all-props.png" alt="Baseline features-comments-components-commentpopover--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentpopover--all-props.png" alt="Current features-comments-components-commentpopover--all-props"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-comments-components-commentpopover--all-props.png" alt="Baseline features-comments-components-commentpopover--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentpopover--all-props.png" alt="Current features-comments-components-commentpopover--all-props">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -1695,13 +1527,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentpopover--default.png" alt="Baseline features-comments-components-commentpopover--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentpopover--default.png" alt="Current features-comments-components-commentpopover--default"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-comments-components-commentpopover--default.png" alt="Baseline features-comments-components-commentpopover--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentpopover--default.png" alt="Current features-comments-components-commentpopover--default">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -1743,13 +1569,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentpopover--edge-cases.png" alt="Baseline features-comments-components-commentpopover--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentpopover--edge-cases.png" alt="Current features-comments-components-commentpopover--edge-cases"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-comments-components-commentpopover--edge-cases.png" alt="Baseline features-comments-components-commentpopover--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentpopover--edge-cases.png" alt="Current features-comments-components-commentpopover--edge-cases">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -1791,13 +1611,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentsidebar--all-props.png" alt="Baseline features-comments-components-commentsidebar--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentsidebar--all-props.png" alt="Current features-comments-components-commentsidebar--all-props"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-comments-components-commentsidebar--all-props.png" alt="Baseline features-comments-components-commentsidebar--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentsidebar--all-props.png" alt="Current features-comments-components-commentsidebar--all-props">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -1839,13 +1653,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentsidebar--default.png" alt="Baseline features-comments-components-commentsidebar--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentsidebar--default.png" alt="Current features-comments-components-commentsidebar--default"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-comments-components-commentsidebar--default.png" alt="Baseline features-comments-components-commentsidebar--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentsidebar--default.png" alt="Current features-comments-components-commentsidebar--default">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -1887,13 +1695,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentsidebar--edge-cases.png" alt="Baseline features-comments-components-commentsidebar--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentsidebar--edge-cases.png" alt="Current features-comments-components-commentsidebar--edge-cases"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-comments-components-commentsidebar--edge-cases.png" alt="Baseline features-comments-components-commentsidebar--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentsidebar--edge-cases.png" alt="Current features-comments-components-commentsidebar--edge-cases">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -1935,13 +1737,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentsidebar--empty.png" alt="Baseline features-comments-components-commentsidebar--empty"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentsidebar--empty.png" alt="Current features-comments-components-commentsidebar--empty"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-comments-components-commentsidebar--empty.png" alt="Baseline features-comments-components-commentsidebar--empty">
-          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentsidebar--empty.png" alt="Current features-comments-components-commentsidebar--empty">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -1983,13 +1779,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentsidebar--error.png" alt="Baseline features-comments-components-commentsidebar--error"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentsidebar--error.png" alt="Current features-comments-components-commentsidebar--error"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-comments-components-commentsidebar--error.png" alt="Baseline features-comments-components-commentsidebar--error">
-          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentsidebar--error.png" alt="Current features-comments-components-commentsidebar--error">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -2031,13 +1821,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentsidebar--loading.png" alt="Baseline features-comments-components-commentsidebar--loading"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentsidebar--loading.png" alt="Current features-comments-components-commentsidebar--loading"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-comments-components-commentsidebar--loading.png" alt="Baseline features-comments-components-commentsidebar--loading">
-          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentsidebar--loading.png" alt="Current features-comments-components-commentsidebar--loading">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -2079,13 +1863,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentthread--all-props.png" alt="Baseline features-comments-components-commentthread--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentthread--all-props.png" alt="Current features-comments-components-commentthread--all-props"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-comments-components-commentthread--all-props.png" alt="Baseline features-comments-components-commentthread--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentthread--all-props.png" alt="Current features-comments-components-commentthread--all-props">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -2127,13 +1905,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentthread--default.png" alt="Baseline features-comments-components-commentthread--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentthread--default.png" alt="Current features-comments-components-commentthread--default"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-comments-components-commentthread--default.png" alt="Baseline features-comments-components-commentthread--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentthread--default.png" alt="Current features-comments-components-commentthread--default">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -2175,13 +1947,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-comments-components-commentthread--edge-cases.png" alt="Baseline features-comments-components-commentthread--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-comments-components-commentthread--edge-cases.png" alt="Current features-comments-components-commentthread--edge-cases"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-comments-components-commentthread--edge-cases.png" alt="Baseline features-comments-components-commentthread--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-comments-components-commentthread--edge-cases.png" alt="Current features-comments-components-commentthread--edge-cases">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -2223,13 +1989,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-sidebar-components-sidebarlayout--all-props.png" alt="Baseline features-sidebar-components-sidebarlayout--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-sidebar-components-sidebarlayout--all-props.png" alt="Current features-sidebar-components-sidebarlayout--all-props"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-sidebar-components-sidebarlayout--all-props.png" alt="Baseline features-sidebar-components-sidebarlayout--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/features-sidebar-components-sidebarlayout--all-props.png" alt="Current features-sidebar-components-sidebarlayout--all-props">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -2271,13 +2031,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-sidebar-components-sidebarlayout--default.png" alt="Baseline features-sidebar-components-sidebarlayout--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-sidebar-components-sidebarlayout--default.png" alt="Current features-sidebar-components-sidebarlayout--default"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-sidebar-components-sidebarlayout--default.png" alt="Baseline features-sidebar-components-sidebarlayout--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-sidebar-components-sidebarlayout--default.png" alt="Current features-sidebar-components-sidebarlayout--default">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -2319,13 +2073,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-sidebar-components-sidebarlayout--edge-cases.png" alt="Baseline features-sidebar-components-sidebarlayout--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-sidebar-components-sidebarlayout--edge-cases.png" alt="Current features-sidebar-components-sidebarlayout--edge-cases"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-sidebar-components-sidebarlayout--edge-cases.png" alt="Baseline features-sidebar-components-sidebarlayout--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-sidebar-components-sidebarlayout--edge-cases.png" alt="Current features-sidebar-components-sidebarlayout--edge-cases">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -2367,13 +2115,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer--existing-comment-cards.png" alt="Baseline features-specs-components-markdownviewer--existing-comment-cards"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer--existing-comment-cards.png" alt="Current features-specs-components-markdownviewer--existing-comment-cards"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-markdownviewer--existing-comment-cards.png" alt="Baseline features-specs-components-markdownviewer--existing-comment-cards">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer--existing-comment-cards.png" alt="Current features-specs-components-markdownviewer--existing-comment-cards">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -2415,13 +2157,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer--highlighted-selection-surface.png" alt="Baseline features-specs-components-markdownviewer--highlighted-selection-surface"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer--highlighted-selection-surface.png" alt="Current features-specs-components-markdownviewer--highlighted-selection-surface"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-markdownviewer--highlighted-selection-surface.png" alt="Baseline features-specs-components-markdownviewer--highlighted-selection-surface">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer--highlighted-selection-surface.png" alt="Current features-specs-components-markdownviewer--highlighted-selection-surface">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -2463,13 +2199,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer--tech-reference-html-preview.png" alt="Baseline features-specs-components-markdownviewer--tech-reference-html-preview"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer--tech-reference-html-preview.png" alt="Current features-specs-components-markdownviewer--tech-reference-html-preview"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-markdownviewer--tech-reference-html-preview.png" alt="Baseline features-specs-components-markdownviewer--tech-reference-html-preview">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer--tech-reference-html-preview.png" alt="Current features-specs-components-markdownviewer--tech-reference-html-preview">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -2511,13 +2241,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer--test-cases-html.png" alt="Baseline features-specs-components-markdownviewer--test-cases-html"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer--test-cases-html.png" alt="Current features-specs-components-markdownviewer--test-cases-html"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-markdownviewer--test-cases-html.png" alt="Baseline features-specs-components-markdownviewer--test-cases-html">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer--test-cases-html.png" alt="Current features-specs-components-markdownviewer--test-cases-html">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -2559,13 +2283,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-htmldocument--all-props.png" alt="Baseline features-specs-components-markdownviewer-htmldocument--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-htmldocument--all-props.png" alt="Current features-specs-components-markdownviewer-htmldocument--all-props"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-markdownviewer-htmldocument--all-props.png" alt="Baseline features-specs-components-markdownviewer-htmldocument--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-htmldocument--all-props.png" alt="Current features-specs-components-markdownviewer-htmldocument--all-props">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -2607,13 +2325,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-htmldocument--default.png" alt="Baseline features-specs-components-markdownviewer-htmldocument--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-htmldocument--default.png" alt="Current features-specs-components-markdownviewer-htmldocument--default"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-markdownviewer-htmldocument--default.png" alt="Baseline features-specs-components-markdownviewer-htmldocument--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-htmldocument--default.png" alt="Current features-specs-components-markdownviewer-htmldocument--default">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -2655,13 +2367,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-htmldocument--edge-cases.png" alt="Baseline features-specs-components-markdownviewer-htmldocument--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-htmldocument--edge-cases.png" alt="Current features-specs-components-markdownviewer-htmldocument--edge-cases"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-markdownviewer-htmldocument--edge-cases.png" alt="Baseline features-specs-components-markdownviewer-htmldocument--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-htmldocument--edge-cases.png" alt="Current features-specs-components-markdownviewer-htmldocument--edge-cases">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -2703,13 +2409,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl.png" alt="Baseline features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl.png" alt="Current features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl.png" alt="Baseline features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl.png" alt="Current features-specs-components-markdownviewer-htmldocument--understanding-quiz-impl">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -2751,13 +2451,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan.png" alt="Baseline features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan.png" alt="Current features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan.png" alt="Baseline features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan.png" alt="Current features-specs-components-markdownviewer-htmldocument--understanding-quiz-plan">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -2799,13 +2493,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader--default.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerheader--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader--default"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader--default.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerheader--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader--default">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -2847,13 +2535,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader--edge-cases.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerheader--edge-cases.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader--edge-cases"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader--edge-cases.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerheader--edge-cases.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader--edge-cases">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -2895,13 +2577,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader--html-preview-controls">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -2943,13 +2619,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--all-props">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -2991,13 +2661,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--default">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -3039,13 +2703,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-documentsearchcontrol--edge-cases">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -3087,13 +2745,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--all-props">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -3135,13 +2787,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--default">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -3183,13 +2829,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases.png" alt="Current features-specs-components-markdownviewer-markdownviewerheader-htmlzoomcontrol--edge-cases">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -3231,13 +2871,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerpanel--all-props.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerpanel--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerpanel--all-props.png" alt="Current features-specs-components-markdownviewer-markdownviewerpanel--all-props"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerpanel--all-props.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerpanel--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerpanel--all-props.png" alt="Current features-specs-components-markdownviewer-markdownviewerpanel--all-props">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -3279,13 +2913,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerpanel--default.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerpanel--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerpanel--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerpanel--default"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerpanel--default.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerpanel--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerpanel--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerpanel--default">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -3327,13 +2955,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerpanel--edge-cases.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerpanel--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerpanel--edge-cases.png" alt="Current features-specs-components-markdownviewer-markdownviewerpanel--edge-cases"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerpanel--edge-cases.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerpanel--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerpanel--edge-cases.png" alt="Current features-specs-components-markdownviewer-markdownviewerpanel--edge-cases">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -3375,13 +2997,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerstatuspanel--default.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerstatuspanel--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--default"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerstatuspanel--default.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerstatuspanel--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--default.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--default">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -3423,13 +3039,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--edge-cases">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -3471,13 +3081,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerstatuspanel--empty.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerstatuspanel--empty"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--empty.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--empty"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerstatuspanel--empty.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerstatuspanel--empty">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--empty.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--empty">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -3519,13 +3123,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerstatuspanel--error.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerstatuspanel--error"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--error.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--error"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerstatuspanel--error.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerstatuspanel--error">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--error.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--error">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -3567,13 +3165,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerstatuspanel--loading.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerstatuspanel--loading"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--loading.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--loading"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerstatuspanel--loading.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerstatuspanel--loading">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--loading.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--loading">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -3615,13 +3207,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerstatuspanel--missing.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerstatuspanel--missing"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--missing.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--missing"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-markdownviewer-markdownviewerstatuspanel--missing.png" alt="Baseline features-specs-components-markdownviewer-markdownviewerstatuspanel--missing">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-markdownviewer-markdownviewerstatuspanel--missing.png" alt="Current features-specs-components-markdownviewer-markdownviewerstatuspanel--missing">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -3663,13 +3249,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-spectabs--all-props.png" alt="Baseline features-specs-components-spectabs--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-spectabs--all-props.png" alt="Current features-specs-components-spectabs--all-props"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-spectabs--all-props.png" alt="Baseline features-specs-components-spectabs--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-spectabs--all-props.png" alt="Current features-specs-components-spectabs--all-props">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -3711,13 +3291,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-spectabs--default.png" alt="Baseline features-specs-components-spectabs--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-spectabs--default.png" alt="Current features-specs-components-spectabs--default"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-spectabs--default.png" alt="Baseline features-specs-components-spectabs--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-spectabs--default.png" alt="Current features-specs-components-spectabs--default">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -3759,13 +3333,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-spectabs--edge-cases.png" alt="Baseline features-specs-components-spectabs--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-spectabs--edge-cases.png" alt="Current features-specs-components-spectabs--edge-cases"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-spectabs--edge-cases.png" alt="Baseline features-specs-components-spectabs--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-spectabs--edge-cases.png" alt="Current features-specs-components-spectabs--edge-cases">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -3807,13 +3375,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-spectabs--empty.png" alt="Baseline features-specs-components-spectabs--empty"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-spectabs--empty.png" alt="Current features-specs-components-spectabs--empty"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-spectabs--empty.png" alt="Baseline features-specs-components-spectabs--empty">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-spectabs--empty.png" alt="Current features-specs-components-spectabs--empty">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -3855,13 +3417,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-spectree--all-props.png" alt="Baseline features-specs-components-spectree--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-spectree--all-props.png" alt="Current features-specs-components-spectree--all-props"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-spectree--all-props.png" alt="Baseline features-specs-components-spectree--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-spectree--all-props.png" alt="Current features-specs-components-spectree--all-props">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -3903,13 +3459,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-spectree--default.png" alt="Baseline features-specs-components-spectree--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-spectree--default.png" alt="Current features-specs-components-spectree--default"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-spectree--default.png" alt="Baseline features-specs-components-spectree--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-spectree--default.png" alt="Current features-specs-components-spectree--default">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -3951,13 +3501,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-spectree--edge-cases.png" alt="Baseline features-specs-components-spectree--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-spectree--edge-cases.png" alt="Current features-specs-components-spectree--edge-cases"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-spectree--edge-cases.png" alt="Baseline features-specs-components-spectree--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-spectree--edge-cases.png" alt="Current features-specs-components-spectree--edge-cases">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -3999,13 +3543,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-spectree--empty.png" alt="Baseline features-specs-components-spectree--empty"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-spectree--empty.png" alt="Current features-specs-components-spectree--empty"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-spectree--empty.png" alt="Baseline features-specs-components-spectree--empty">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-spectree--empty.png" alt="Current features-specs-components-spectree--empty">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -4047,13 +3585,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-spectree--error.png" alt="Baseline features-specs-components-spectree--error"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-spectree--error.png" alt="Current features-specs-components-spectree--error"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-spectree--error.png" alt="Baseline features-specs-components-spectree--error">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-spectree--error.png" alt="Current features-specs-components-spectree--error">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -4095,13 +3627,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-specs-components-spectree--loading.png" alt="Baseline features-specs-components-spectree--loading"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-specs-components-spectree--loading.png" alt="Current features-specs-components-spectree--loading"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-specs-components-spectree--loading.png" alt="Baseline features-specs-components-spectree--loading">
-          <img class="comparison__image comparison__overlay" src="actual/features-specs-components-spectree--loading.png" alt="Current features-specs-components-spectree--loading">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -4143,13 +3669,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-openworkspaceemptystate--all-props.png" alt="Baseline features-workspace-components-openworkspaceemptystate--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-openworkspaceemptystate--all-props.png" alt="Current features-workspace-components-openworkspaceemptystate--all-props"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-workspace-components-openworkspaceemptystate--all-props.png" alt="Baseline features-workspace-components-openworkspaceemptystate--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-openworkspaceemptystate--all-props.png" alt="Current features-workspace-components-openworkspaceemptystate--all-props">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -4191,13 +3711,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-openworkspaceemptystate--default.png" alt="Baseline features-workspace-components-openworkspaceemptystate--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-openworkspaceemptystate--default.png" alt="Current features-workspace-components-openworkspaceemptystate--default"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-workspace-components-openworkspaceemptystate--default.png" alt="Baseline features-workspace-components-openworkspaceemptystate--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-openworkspaceemptystate--default.png" alt="Current features-workspace-components-openworkspaceemptystate--default">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -4239,13 +3753,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-openworkspaceemptystate--edge-cases.png" alt="Baseline features-workspace-components-openworkspaceemptystate--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-openworkspaceemptystate--edge-cases.png" alt="Current features-workspace-components-openworkspaceemptystate--edge-cases"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-workspace-components-openworkspaceemptystate--edge-cases.png" alt="Baseline features-workspace-components-openworkspaceemptystate--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-openworkspaceemptystate--edge-cases.png" alt="Current features-workspace-components-openworkspaceemptystate--edge-cases">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -4287,13 +3795,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-workspacedropoverlay--default.png" alt="Baseline features-workspace-components-workspacedropoverlay--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-workspacedropoverlay--default.png" alt="Current features-workspace-components-workspacedropoverlay--default"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-workspace-components-workspacedropoverlay--default.png" alt="Baseline features-workspace-components-workspacedropoverlay--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-workspacedropoverlay--default.png" alt="Current features-workspace-components-workspacedropoverlay--default">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -4335,13 +3837,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-workspacedropoverlay--edge-cases.png" alt="Baseline features-workspace-components-workspacedropoverlay--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-workspacedropoverlay--edge-cases.png" alt="Current features-workspace-components-workspacedropoverlay--edge-cases"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-workspace-components-workspacedropoverlay--edge-cases.png" alt="Baseline features-workspace-components-workspacedropoverlay--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-workspacedropoverlay--edge-cases.png" alt="Current features-workspace-components-workspacedropoverlay--edge-cases">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -4383,13 +3879,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-workspacesidebarsection--all-props.png" alt="Baseline features-workspace-components-workspacesidebarsection--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-workspacesidebarsection--all-props.png" alt="Current features-workspace-components-workspacesidebarsection--all-props"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-workspace-components-workspacesidebarsection--all-props.png" alt="Baseline features-workspace-components-workspacesidebarsection--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-workspacesidebarsection--all-props.png" alt="Current features-workspace-components-workspacesidebarsection--all-props">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -4431,13 +3921,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-workspacesidebarsection--default.png" alt="Baseline features-workspace-components-workspacesidebarsection--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-workspacesidebarsection--default.png" alt="Current features-workspace-components-workspacesidebarsection--default"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-workspace-components-workspacesidebarsection--default.png" alt="Baseline features-workspace-components-workspacesidebarsection--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-workspacesidebarsection--default.png" alt="Current features-workspace-components-workspacesidebarsection--default">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -4479,13 +3963,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-workspacesidebarsection--edge-cases.png" alt="Baseline features-workspace-components-workspacesidebarsection--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-workspacesidebarsection--edge-cases.png" alt="Current features-workspace-components-workspacesidebarsection--edge-cases"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-workspace-components-workspacesidebarsection--edge-cases.png" alt="Baseline features-workspace-components-workspacesidebarsection--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-workspacesidebarsection--edge-cases.png" alt="Current features-workspace-components-workspacesidebarsection--edge-cases">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -4527,13 +4005,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-workspacetoolbar--all-props.png" alt="Baseline features-workspace-components-workspacetoolbar--all-props"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-workspacetoolbar--all-props.png" alt="Current features-workspace-components-workspacetoolbar--all-props"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-workspace-components-workspacetoolbar--all-props.png" alt="Baseline features-workspace-components-workspacetoolbar--all-props">
-          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-workspacetoolbar--all-props.png" alt="Current features-workspace-components-workspacetoolbar--all-props">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -4575,13 +4047,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-workspacetoolbar--default.png" alt="Baseline features-workspace-components-workspacetoolbar--default"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-workspacetoolbar--default.png" alt="Current features-workspace-components-workspacetoolbar--default"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-workspace-components-workspacetoolbar--default.png" alt="Baseline features-workspace-components-workspacetoolbar--default">
-          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-workspacetoolbar--default.png" alt="Current features-workspace-components-workspacetoolbar--default">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
@@ -4623,13 +4089,7 @@
       <div class="comparison__split">
         <figure class="comparison__pane"><figcaption>Baseline</figcaption><img class="comparison__image" src="expected/features-workspace-components-workspacetoolbar--edge-cases.png" alt="Baseline features-workspace-components-workspacetoolbar--edge-cases"></figure>
         <figure class="comparison__pane"><figcaption>Current</figcaption><img class="comparison__image" src="actual/features-workspace-components-workspacetoolbar--edge-cases.png" alt="Current features-workspace-components-workspacetoolbar--edge-cases"></figure>
-        <figure class="comparison__pane">
-        <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
-          <img class="comparison__image" src="expected/features-workspace-components-workspacetoolbar--edge-cases.png" alt="Baseline features-workspace-components-workspacetoolbar--edge-cases">
-          <img class="comparison__image comparison__overlay" src="actual/features-workspace-components-workspacetoolbar--edge-cases.png" alt="Current features-workspace-components-workspacetoolbar--edge-cases">
-        </div>
-      </figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>
         <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
