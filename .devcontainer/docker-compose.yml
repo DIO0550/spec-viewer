@@ -1,5 +1,6 @@
 services:
   app:
+    container_name: spec-viewer
     build:
       context: ./node
       dockerfile: Dockerfile
