@@ -342,15 +342,18 @@ const comparisonPanel = (result, pathPrefix = "") => {
     ? `<figure class="comparison__pane"><figcaption>${label}</figcaption><img class="comparison__image" src="${path}" alt="${label} ${story}"></figure>`
     : `<div class="comparison__pane comparison__pane--empty"><strong>${label}</strong><span>Not available</span></div>`;
   // Baseline と Current を difference 合成で重ねる。一致部分は黒に沈み、差分だけが発色する。
-  const overlayPane = canCompare
-    ? `<figure class="comparison__pane">
+  // 差分ゼロだと全面が黒くなり情報量がないため、その場合は合成せず明示する。
+  const overlayPane = !canCompare
+    ? '<div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>Not available</span></div>'
+    : result.diffPixels > 0
+      ? `<figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
         <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="${expectedPath}" alt="Baseline ${story}">
           <img class="comparison__image comparison__overlay" src="${actualPath}" alt="Current ${story}">
         </div>
       </figure>`
-    : '<div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>Not available</span></div>';
+      : '<div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>No visual difference</span></div>';
   return `<div class="comparison" data-comparison>
     <div class="comparison__view" data-view="overlay">
       ${canCompare ? `
@@ -491,7 +494,7 @@ const renderInspectorTabs = (reportVersion) => `<nav class="inspector-tabs" aria
     <button type="button" role="tab" data-global-view-mode="split" aria-selected="false">Split + Diff</button>
     <button type="button" role="tab" data-global-view-mode="slider" aria-selected="false">Slider</button>
   </div>
-  <span class="inspector-tabs__hint">Visual report UI v6 · ${escapeHtml(reportVersion.slice(0, 7))}</span>
+  <span class="inspector-tabs__hint">Visual report UI v7 · ${escapeHtml(reportVersion.slice(0, 7))}</span>
 </nav>`;
 
 const renderHtml = (summary, options = {}) => `<!doctype html>
@@ -576,8 +579,8 @@ const renderHtml = (summary, options = {}) => `<!doctype html>
     .comparison__overlay { position: absolute; inset: 0; }
     .comparison__split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
     .comparison__frame--pane { border: 0; border-radius: 0; }
-    /* isolation で difference 合成をこのフレーム内に閉じ込める。 */
-    .comparison__frame--difference { isolation: isolate; background: #000; }
+    /* isolation で difference 合成をこのフレーム内に閉じ込め、brightness で微小差分を持ち上げる。 */
+    .comparison__frame--difference { isolation: isolate; background: #000; filter: brightness(3); }
     .comparison__frame--difference .comparison__overlay { mix-blend-mode: difference; }
     .comparison__pane { min-width: 0; margin: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #020617; }
     .comparison__pane figcaption, .comparison__pane--empty strong { display: block; padding: 8px 12px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px; font-weight: 700; }
