@@ -378,6 +378,13 @@ test("CommentSidebarは空状態でexport操作を常設表示しない", () => 
 
 test("CommentSidebarはopenとresolvedの件数とコメント本文を表示する", () => {
   const result = renderReadySidebar();
+  const allFilter = result.container.querySelector(
+    '[aria-label="すべてのコメントを表示"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    allFilter.click();
+  });
 
   expect(result.container.textContent).toContain("未解決1");
   expect(result.container.textContent).toContain("解決済み1");
@@ -396,6 +403,14 @@ test("CommentSidebarはopenとresolvedの件数とコメント本文を表示す
 test("CommentSidebarは矢印キーで隣のcomment threadを選択する", () => {
   const onSelectComment = vi.fn();
   const result = renderReadySidebar({ onSelectComment });
+  const allFilter = result.container.querySelector(
+    '[aria-label="すべてのコメントを表示"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    allFilter.click();
+  });
+
   const selectors = result.container.querySelectorAll(
     ".comment-thread__select",
   );
@@ -555,9 +570,41 @@ test("CommentSidebarはreconciliationのアンカー状態を表示する", () =
       },
     ],
   });
+  const allFilter = result.container.querySelector(
+    '[aria-label="すべてのコメントを表示"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    allFilter.click();
+  });
 
   expect(result.container.textContent).toContain("アンカー移動");
   expect(result.container.textContent).toContain("位置不明アンカー");
+  result.unmount();
+});
+
+test("CommentSidebarは未解決filterを初期選択する", () => {
+  const result = renderReadySidebar({
+    comments: [openComment, resolvedComment],
+  });
+  const filterButtons = Array.from(
+    result.container.querySelectorAll<HTMLButtonElement>(
+      ".comment-sidebar__filter",
+    ),
+  );
+
+  expect(filterButtons.map((button) => button.textContent)).toEqual([
+    "未解決1",
+    "解決済み1",
+    "すべて2",
+  ]);
+  expect(filterButtons[0]?.getAttribute("aria-pressed")).toBe("true");
+  expect(result.container.textContent).toContain(
+    "Clarify what counts as an active comment highlight.",
+  );
+  expect(result.container.textContent).not.toContain(
+    "This acceptance item is covered.",
+  );
   result.unmount();
 });
 
@@ -628,7 +675,8 @@ test("CommentSidebarはアンカー状態フィルターを表示しない", () 
     '[aria-label="解決済みコメントを表示"]',
   ) as HTMLButtonElement;
 
-  expect(allFilter.getAttribute("aria-pressed")).toBe("true");
+  expect(openFilter.getAttribute("aria-pressed")).toBe("true");
+  expect(allFilter.getAttribute("aria-pressed")).toBe("false");
   expect(allFilter.textContent).toBe("すべて2");
   expect(openFilter.textContent).toBe("未解決2");
 
@@ -780,6 +828,14 @@ test("CommentSidebarはコメント選択とresolve操作を発火する", () =>
 test("CommentSidebarはresolvedコメントのreopen操作を発火する", () => {
   const onReopenComment = vi.fn();
   const result = renderReadySidebar({ onReopenComment });
+  const resolvedFilter = result.container.querySelector(
+    '[aria-label="解決済みコメントを表示"]',
+  ) as HTMLButtonElement;
+
+  act(() => {
+    resolvedFilter.click();
+  });
+
   const reopenButton = result.container.querySelector(
     '[aria-label="再オープン cmt_resolved"]',
   ) as HTMLButtonElement;

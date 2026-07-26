@@ -9,9 +9,9 @@ import { SidebarLayout } from ".";
 
 const layoutContent = (
   <>
-    <WorkspaceLayout.Toolbar>
+    <WorkspaceLayout.Pathbar>
       <div style={{ padding: 12 }}>Toolbar content</div>
-    </WorkspaceLayout.Toolbar>
+    </WorkspaceLayout.Pathbar>
     <WorkspaceLayout.LeftNavigation>
       <nav aria-label="Example navigation" style={{ padding: 12 }}>
         <p>Workspace</p>

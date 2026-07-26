@@ -2,10 +2,7 @@ import { act, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test } from "vitest";
 
-import {
-  SidebarLayout,
-  SidebarPreferenceProvider,
-} from "@/features/sidebar";
+import { SidebarLayout, SidebarPreferenceProvider } from "@/features/sidebar";
 import { WorkspaceLayout } from "@/components";
 
 type RenderResult = Readonly<{
@@ -41,9 +38,9 @@ function renderSidebarLayout(): RenderResult {
   return renderComponent(
     <SidebarPreferenceProvider>
       <SidebarLayout leftNavigation={{ isOpen: true }}>
+        <WorkspaceLayout.Pathbar>Toolbar</WorkspaceLayout.Pathbar>
         <WorkspaceLayout.LeftNavigation>Left</WorkspaceLayout.LeftNavigation>
         <WorkspaceLayout.Main>
-          <WorkspaceLayout.Toolbar>Toolbar</WorkspaceLayout.Toolbar>
           <WorkspaceLayout.Tabs>Tabs</WorkspaceLayout.Tabs>
           <WorkspaceLayout.Viewer>Viewer</WorkspaceLayout.Viewer>
         </WorkspaceLayout.Main>
@@ -72,9 +69,9 @@ test("SidebarLayoutはContextの閉じた状態をright panel controlへ注入�
   });
 
   expect(body?.getAttribute("data-comments-sidebar")).toBe("open");
-  expect(window.localStorage.getItem("spec-reviewer.comment-sidebar-open")).toBe(
-    "true",
-  );
+  expect(
+    window.localStorage.getItem("spec-reviewer.comment-sidebar-open"),
+  ).toBe("true");
   result.unmount();
 });
 
@@ -82,7 +79,9 @@ test("SidebarLayoutは保存済み幅をright panel controlへ注入する", () 
   window.innerWidth = 1440;
   window.localStorage.setItem("spec-reviewer.comment-sidebar-width", "420");
   const result = renderSidebarLayout();
-  const body = result.container.querySelector(".app-shell__body") as HTMLElement;
+  const body = result.container.querySelector(
+    ".app-shell__body",
+  ) as HTMLElement;
   const resizeHandle = result.container.querySelector(
     '[aria-label="サイドバー幅を変更"]',
   );

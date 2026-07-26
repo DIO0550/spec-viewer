@@ -243,11 +243,11 @@ function TestWorkspaceLayout(props: TestWorkspaceLayoutProps): ReactElement {
         onWidthChange: onCommentsWidthChange,
       }}
     >
+      <WorkspaceLayout.Pathbar>{toolbar}</WorkspaceLayout.Pathbar>
       <WorkspaceLayout.LeftNavigation header={leftHeader}>
         {sidebar}
       </WorkspaceLayout.LeftNavigation>
       <WorkspaceLayout.Main>
-        <WorkspaceLayout.Toolbar>{toolbar}</WorkspaceLayout.Toolbar>
         <WorkspaceLayout.Tabs>{tabs}</WorkspaceLayout.Tabs>
         <WorkspaceLayout.Viewer>{viewer}</WorkspaceLayout.Viewer>
       </WorkspaceLayout.Main>
@@ -301,9 +301,15 @@ test("WorkspaceLayoutはtoolbar、tree、tabs、viewer、comment sidebarを表�
     />,
   );
 
+  const layoutBody = result.container.querySelector(".app-shell__body");
+  const pathbar = result.container.querySelector(".app-shell__toolbar");
+  const main = result.container.querySelector(".app-shell__main");
+
   expect(
     result.container.querySelector('[aria-label="ワークスペース操作"]'),
   ).not.toBeNull();
+  expect(pathbar?.parentElement).toBe(layoutBody);
+  expect(main?.contains(pathbar)).toBe(false);
   expect(
     result.container.querySelector('[aria-label="Specツリー"]'),
   ).not.toBeNull();
@@ -1061,8 +1067,11 @@ test("SpecTabsは選択中tabとfile選択イベントを表現する", () => {
   );
   const tabs = result.container.querySelectorAll('[role="tab"]');
 
+  const missingStatus = tabs[1]?.querySelector(".file-status--missing");
+
   expect(tabs[0]?.getAttribute("aria-selected")).toBe("true");
-  expect(tabs[1]?.textContent).toContain("missing");
+  expect(missingStatus?.textContent).toBe("");
+  expect(missingStatus?.getAttribute("aria-hidden")).toBe("true");
 
   act(() => {
     (tabs[1] as HTMLButtonElement).click();

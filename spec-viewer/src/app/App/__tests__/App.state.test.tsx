@@ -14,6 +14,12 @@ test("Appはworkspace未選択の初期状態を表示する", () => {
 
   expect(container.textContent).toContain("Spec Reviewer");
   expect(container.textContent).toContain("ワークスペースが選択されていません");
+  expect(container.querySelector('aside[aria-label="Specs"]')).not.toBeNull();
+  expect(
+    container
+      .querySelector('[aria-label="仕様一覧"]')
+      ?.querySelector('aside[aria-label="Specs"]'),
+  ).toBeNull();
 
   act(() => {
     root.unmount();

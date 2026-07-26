@@ -11,7 +11,7 @@ export const uiText = {
     currentSpec: "現在の仕様",
   },
   sidebar: {
-    comments: "コメント",
+    comments: "Review",
     close: "サイドバーを閉じる",
     reopen: "サイドバーを開く",
     resize: "サイドバー幅を変更",
@@ -88,7 +88,7 @@ export const uiText = {
   },
   workspace: {
     controls: "ワークスペース操作",
-    path: "ワークスペースパス",
+    path: "PATH",
     theme: "テーマ",
     themeMode: "テーマモード",
     system: "システム",
@@ -99,6 +99,7 @@ export const uiText = {
     loading: "読み込み中",
     opening: "開いています",
     switcher: "ワークスペース",
+    workspaceListHeading: "WORKSPACES",
     collapseSwitcher: "ワークスペースセクションを折りたたむ",
     expandSwitcher: "ワークスペースセクションを展開",
     sidebarList: "ワークスペース一覧",
