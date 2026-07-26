@@ -107,17 +107,14 @@
       <label class="story-nav__filter"><span class="tree-icon tree-icon--search" aria-hidden="true"></span><input type="search" placeholder="Filter stories..." data-story-filter aria-label="Filter stories"></label>
     </header>
     <div class="story-nav__scroll" data-story-tree>
-      <details class="story-nav__group story-nav__group--changed" open data-status-group>
-        <summary><span>Changed</span><span class="story-nav__count">1</span></summary>
+      <details class="story-nav__group story-nav__group--passed" open data-status-group>
+        <summary><span>Clear</span><span class="story-nav__count">90</span></summary>
         <ul class="story-nav__tree"><li data-tree-node>
     <details open>
       <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>App</span></summary>
       <ul><li class="story-nav__story" data-tree-leaf data-search-text="app default app--default"><a href="#app--default" title="app--default"><span class="tree-icon tree-icon--file" aria-hidden="true"></span><span>Default</span></a></li></ul>
     </details>
-  </li></ul>
-      </details><details class="story-nav__group story-nav__group--passed" open data-status-group>
-        <summary><span>Clear</span><span class="story-nav__count">89</span></summary>
-        <ul class="story-nav__tree"><li data-tree-node>
+  </li><li data-tree-node>
     <details open>
       <summary><span class="tree-icon tree-icon--folder" aria-hidden="true"></span><span>app</span></summary>
       <ul><li data-tree-node>
@@ -315,7 +312,7 @@
         <p class="summary">Switch between Overlay, Split + Diff, and Slider to inspect changes. Click a story title to open its detail page.</p>
       </div>
       <div class="hero__actions">
-        <div class="badge">Failed: <strong>1</strong> / Threshold: 0.002</div>
+        <div class="badge">Failed: <strong>0</strong> / Threshold: 0.002</div>
       </div>
     </section>
     <nav class="inspector-tabs" aria-label="Diff inspector view">
@@ -325,17 +322,17 @@
     <button type="button" role="tab" data-global-view-mode="split" aria-selected="false">Split + Diff</button>
     <button type="button" role="tab" data-global-view-mode="slider" aria-selected="false">Slider</button>
   </div>
-  <span class="inspector-tabs__hint">Visual report UI v6 · 844d003</span>
+  <span class="inspector-tabs__hint">Visual report UI v6 · c6ced53</span>
 </nav>
-    <article class="story story--changed" id="app--default">
+    <article class="story story--passed" id="app--default">
     <header class="story__header">
       <div>
-        <p class="status">changed</p>
+        <p class="status">passed</p>
         <h2><a href="app--default/" data-story-link="app--default">app--default</a></h2>
       </div>
       <dl class="metrics">
-        <div><dt>Diff pixels</dt><dd>24950</dd></div>
-        <div><dt>Diff ratio</dt><dd>2.7100%</dd></div>
+        <div><dt>Diff pixels</dt><dd>0</dd></div>
+        <div><dt>Diff ratio</dt><dd>0.0000%</dd></div>
       </dl>
     </header>
     <div class="comparison" data-comparison>
@@ -361,7 +358,7 @@
           <img class="comparison__image comparison__overlay" src="actual/app--default.png" alt="Current app--default">
         </div>
       </figure>
-        <figure class="comparison__pane"><figcaption>Diff</figcaption><img class="comparison__image" src="diff/app--default.png" alt="Diff app--default"></figure>
+        <div class="comparison__pane comparison__pane--empty"><strong>Diff</strong><span>Not available</span></div>
       </div>
     </div>
     <div class="comparison__view" data-view="slider" hidden>
