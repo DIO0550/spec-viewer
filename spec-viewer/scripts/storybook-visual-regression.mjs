@@ -314,15 +314,14 @@ const comparisonPanel = (result, pathPrefix = "") => {
   const imageOrEmpty = (label, path, enabled) => enabled
     ? `<figure class="comparison__pane"><figcaption>${label}</figcaption><img class="comparison__image" src="${path}" alt="${label} ${story}"></figure>`
     : `<div class="comparison__pane comparison__pane--empty"><strong>${label}</strong><span>Not available</span></div>`;
-  // Baseline と Current を重ねた 1 枚。opacity slider は data-overlay 単位で JS が紐付ける。
+  // Baseline と Current を difference 合成で重ねる。一致部分は黒に沈み、差分だけが発色する。
   const overlayPane = canCompare
-    ? `<figure class="comparison__pane" data-overlay>
+    ? `<figure class="comparison__pane">
         <figcaption>Overlay</figcaption>
-        <div class="comparison__frame comparison__frame--pane">
+        <div class="comparison__frame comparison__frame--pane comparison__frame--difference">
           <img class="comparison__image" src="${expectedPath}" alt="Baseline ${story}">
-          <img class="comparison__image comparison__overlay" src="${actualPath}" alt="Current ${story}" data-overlay-image style="opacity: 0.5">
+          <img class="comparison__image comparison__overlay" src="${actualPath}" alt="Current ${story}">
         </div>
-        <label class="comparison__control comparison__control--pane">Current opacity<input data-overlay-slider type="range" min="0" max="100" value="50" aria-label="Current opacity for ${story} in split view"></label>
       </figure>`
     : '<div class="comparison__pane comparison__pane--empty"><strong>Overlay</strong><span>Not available</span></div>';
   return `<div class="comparison" data-comparison>
@@ -465,7 +464,7 @@ const renderInspectorTabs = (reportVersion) => `<nav class="inspector-tabs" aria
     <button type="button" role="tab" data-global-view-mode="split" aria-selected="false">Split + Diff</button>
     <button type="button" role="tab" data-global-view-mode="slider" aria-selected="false">Slider</button>
   </div>
-  <span class="inspector-tabs__hint">Visual report UI v5 · ${escapeHtml(reportVersion.slice(0, 7))}</span>
+  <span class="inspector-tabs__hint">Visual report UI v6 · ${escapeHtml(reportVersion.slice(0, 7))}</span>
 </nav>`;
 
 const renderHtml = (summary, options = {}) => `<!doctype html>
@@ -550,7 +549,9 @@ const renderHtml = (summary, options = {}) => `<!doctype html>
     .comparison__overlay { position: absolute; inset: 0; }
     .comparison__split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
     .comparison__frame--pane { border: 0; border-radius: 0; }
-    .comparison__control--pane { margin-top: 8px; padding: 0 12px 12px; }
+    /* isolation で difference 合成をこのフレーム内に閉じ込める。 */
+    .comparison__frame--difference { isolation: isolate; background: #000; }
+    .comparison__frame--difference .comparison__overlay { mix-blend-mode: difference; }
     .comparison__pane { min-width: 0; margin: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #020617; }
     .comparison__pane figcaption, .comparison__pane--empty strong { display: block; padding: 8px 12px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px; font-weight: 700; }
     .comparison__pane--empty { display: grid; min-height: 240px; align-content: start; color: var(--muted); }

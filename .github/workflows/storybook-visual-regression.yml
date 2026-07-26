@@ -110,8 +110,9 @@ jobs:
           grep -Fq 'data-global-view-mode="overlay"' visual-report/index.html
           grep -Fq 'data-global-view-mode="split"' visual-report/index.html
           grep -Fq 'data-global-view-mode="slider"' visual-report/index.html
-          grep -Fq 'Visual report UI v5' visual-report/index.html
+          grep -Fq 'Visual report UI v6' visual-report/index.html
           grep -Fq '<figcaption>Overlay</figcaption>' visual-report/index.html
+          grep -Fq 'comparison__frame--difference' visual-report/index.html
           node -e 'const summary = require("./visual-report/summary.json"); if (summary.reportVersion !== process.env.REPORT_VERSION) process.exit(1)'
           find visual-report -mindepth 2 -maxdepth 2 -name index.html -print -quit | grep -q .
 
