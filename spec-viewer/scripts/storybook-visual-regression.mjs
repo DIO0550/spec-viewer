@@ -138,20 +138,40 @@ const capture = async (options) => {
       `--user-data-dir=${userDataDir}`,
       "about:blank",
     ],
-    { stdio: "ignore" },
+    // 起動失敗の原因を診断できるよう stderr だけ受け取る。
+    { stdio: ["ignore", "ignore", "pipe"] },
   );
+  // stderr は dbus 警告などで際限なく増えるため末尾だけ保持する。
+  let chromeStderr = "";
+  chrome.stderr.setEncoding("utf8");
+  chrome.stderr.on("data", (chunk) => {
+    chromeStderr = (chromeStderr + chunk).slice(-4000);
+  });
+  let chromeExit = null;
+  chrome.on("exit", (code, signal) => {
+    chromeExit = { code, signal };
+  });
+  const describeChromeFailure = () => {
+    const exit = chromeExit ? `exited with code=${chromeExit.code} signal=${chromeExit.signal}` : "still running";
+    const stderr = chromeStderr.trim() || "(no stderr output)";
+    return `Chrome DevTools endpoint did not start (${exit})\n--- chrome stderr ---\n${stderr}`;
+  };
   try {
     let version;
-    for (let attempt = 0; attempt < 50; attempt += 1) {
+    // 遅いランナーでも待てるよう 30 秒まで許容し、早期終了時は即座に諦める。
+    for (let attempt = 0; attempt < 300; attempt += 1) {
       try {
         version = await requestJson("http://127.0.0.1:9222/json/version");
         break;
       } catch {
+        if (chromeExit) {
+          break;
+        }
         await sleep(100);
       }
     }
     if (!version) {
-      throw new Error("Chrome DevTools endpoint did not start");
+      throw new Error(describeChromeFailure());
     }
     const index = await requestJson(`${origin}/index.json`);
     const stories = Object.values(index.entries ?? {}).filter((entry) => entry.type === "story").sort((a, b) => a.id.localeCompare(b.id));
