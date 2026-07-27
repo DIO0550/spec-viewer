@@ -4,7 +4,7 @@ import { WorkspaceLayout, type WorkspaceLayoutRootProps } from "@/components";
 
 import { useResizableSidebar, useSidebarPreference } from "../../hooks";
 
-type SidebarLayoutProps = Omit<WorkspaceLayoutRootProps, "commentsSidebar">;
+type SidebarLayoutProps = Omit<WorkspaceLayoutRootProps, "comments">;
 
 /**
  * @param props - Workspace layout props except right comments sidebar control.
@@ -17,7 +17,7 @@ export function SidebarLayout(props: SidebarLayoutProps): ReactElement {
   return (
     <WorkspaceLayout.Root
       {...props}
-      commentsSidebar={{
+      comments={{
         isOpen: sidebarPreference.isSidebarOpen,
         width: resizableSidebar.sidebarWidth,
         minWidth: resizableSidebar.minSidebarWidth,
