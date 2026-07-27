@@ -224,7 +224,7 @@ function TestWorkspaceLayout(props: TestWorkspaceLayoutProps): ReactElement {
 
   return (
     <WorkspaceLayout.Root
-      leftNavigation={{
+      worktrees={{
         isOpen: leftOpen,
         width: leftWidth,
         minWidth: leftMinWidth,
@@ -233,7 +233,7 @@ function TestWorkspaceLayout(props: TestWorkspaceLayoutProps): ReactElement {
         onClose: onCloseLeft,
         onWidthChange: onLeftWidthChange,
       }}
-      commentsSidebar={{
+      comments={{
         isOpen: commentsOpen,
         width: commentsWidth,
         minWidth: commentsMinWidth,
@@ -243,14 +243,12 @@ function TestWorkspaceLayout(props: TestWorkspaceLayoutProps): ReactElement {
         onWidthChange: onCommentsWidthChange,
       }}
     >
-      <WorkspaceLayout.Pathbar>{toolbar}</WorkspaceLayout.Pathbar>
-      <WorkspaceLayout.LeftNavigation header={leftHeader}>
+      <WorkspaceLayout.Toolbar>{toolbar}</WorkspaceLayout.Toolbar>
+      <WorkspaceLayout.Worktrees header={leftHeader}>
         {sidebar}
-      </WorkspaceLayout.LeftNavigation>
-      <WorkspaceLayout.Main>
-        <WorkspaceLayout.Tabs>{tabs}</WorkspaceLayout.Tabs>
-        <WorkspaceLayout.Viewer>{viewer}</WorkspaceLayout.Viewer>
-      </WorkspaceLayout.Main>
+      </WorkspaceLayout.Worktrees>
+      <WorkspaceLayout.ModeNavigation>{tabs}</WorkspaceLayout.ModeNavigation>
+      <WorkspaceLayout.Content>{viewer}</WorkspaceLayout.Content>
       <WorkspaceLayout.Comments>{comments}</WorkspaceLayout.Comments>
     </WorkspaceLayout.Root>
   );
@@ -303,7 +301,7 @@ test("WorkspaceLayoutはtoolbar、tree、tabs、viewer、comment sidebarを表�
 
   const layoutBody = result.container.querySelector(".app-shell__body");
   const pathbar = result.container.querySelector(".app-shell__toolbar");
-  const main = result.container.querySelector(".app-shell__main");
+  const main = result.container.querySelector(".app-shell__content");
 
   expect(
     result.container.querySelector('[aria-label="ワークスペース操作"]'),
@@ -372,7 +370,7 @@ test("WorkspaceLayoutはコメントサイドバーを閉じると再オープ�
     />,
   );
   const body = result.container.querySelector(".app-shell__body");
-  const commentsSidebar = result.container.querySelector(
+  const comments = result.container.querySelector(
     '[aria-label="コメントサイドバー"]',
   );
   const reopenButton = result.container.querySelector(
@@ -383,8 +381,8 @@ test("WorkspaceLayoutはコメントサイドバーを閉じると再オープ�
     reopenButton.click();
   });
 
-  expect(body?.getAttribute("data-comments-sidebar")).toBe("collapsed");
-  expect(commentsSidebar?.getAttribute("aria-hidden")).toBe("true");
+  expect(body?.getAttribute("data-comments")).toBe("collapsed");
+  expect(comments?.getAttribute("aria-hidden")).toBe("true");
   expect(onOpenComments).toHaveBeenCalledOnce();
   result.unmount();
 });
@@ -403,9 +401,7 @@ test("WorkspaceLayoutは左ナビゲーションを閉じた状態で表示領�
     />,
   );
   const body = result.container.querySelector(".app-shell__body");
-  const leftNavigation = result.container.querySelector(
-    '[aria-label="仕様一覧"]',
-  );
+  const worktrees = result.container.querySelector('[aria-label="仕様一覧"]');
   const openButton = result.container.querySelector(
     '[aria-label="仕様一覧を開く"]',
   ) as HTMLButtonElement;
@@ -414,8 +410,8 @@ test("WorkspaceLayoutは左ナビゲーションを閉じた状態で表示領�
     openButton.click();
   });
 
-  expect(body?.getAttribute("data-left-navigation")).toBe("collapsed");
-  expect(leftNavigation?.getAttribute("aria-hidden")).toBe("true");
+  expect(body?.getAttribute("data-worktrees")).toBe("collapsed");
+  expect(worktrees?.getAttribute("aria-hidden")).toBe("true");
   expect(onOpenLeftNavigation).toHaveBeenCalledOnce();
   result.unmount();
 });
@@ -458,12 +454,12 @@ test("WorkspaceLayoutはEscapeで開いている左ナビゲーションを閉�
       onCloseLeft={onCloseLeftNavigation}
     />,
   );
-  const leftNavigation = result.container.querySelector(
+  const worktrees = result.container.querySelector(
     '[aria-label="仕様一覧"]',
   ) as HTMLElement;
 
   act(() => {
-    leftNavigation.dispatchEvent(
+    worktrees.dispatchEvent(
       new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
     );
   });
