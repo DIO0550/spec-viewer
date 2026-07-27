@@ -1,5 +1,5 @@
 {
-  "reportVersion": "b40a889ab3a9153e7affb16391c259677bf05917",
+  "reportVersion": "7592e07146d79ed1ac2d0373b61ea43917e9e29c",
   "maxDiffRatio": 0.002,
   "failed": 14,
   "results": [
@@ -273,8 +273,8 @@
       "title": "components/WorkspaceLayout",
       "name": "Specs",
       "status": "changed",
-      "diffPixels": 65912,
-      "diffRatio": 0.07150000000000001,
+      "diffPixels": 66597,
+      "diffRatio": 0.0723,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
