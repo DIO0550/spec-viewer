@@ -42,6 +42,10 @@ test("WorktreeTreeは2種類のcountとARIA treeを表示する", () => {
     result.container.querySelector('[role="treeitem"][aria-expanded="true"]'),
   ).not.toBeNull();
   expect(result.container.querySelector('[role="group"]')).not.toBeNull();
+  const items =
+    result.container.querySelectorAll<HTMLButtonElement>('[role="treeitem"]');
+  expect(items[0]?.style.paddingInlineStart).toBe("10px");
+  expect(items[1]?.style.paddingInlineStart).toBe("26px");
   result.unmount();
 });
 

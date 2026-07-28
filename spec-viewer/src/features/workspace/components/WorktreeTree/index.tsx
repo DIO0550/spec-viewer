@@ -13,6 +13,9 @@ import type {
   WorktreeTreeNode,
 } from "@/features/workspace/types/worktreeTreeNode";
 
+const BaseTreeItemIndent = 10;
+const TreeItemIndentStep = 16;
+
 export type WorktreeTreeProps = Readonly<{
   nodes: readonly WorktreeTreeNode[];
   selectedWorktreeId: WorktreeId | null;
@@ -200,6 +203,7 @@ function TreeLevel(props: TreeLevelProps): ReactElement {
         const isExpanded = isCategory && expandedIds.has(node.id);
         const isSelected =
           node.kind === "worktree" && node.id === selectedWorktreeId;
+        const indentation = BaseTreeItemIndent + depth * TreeItemIndentStep;
 
         return (
           <div className="worktree-tree__node" key={node.id}>
@@ -212,7 +216,7 @@ function TreeLevel(props: TreeLevelProps): ReactElement {
                 }
               }}
               className="worktree-tree__item"
-              style={{ paddingInlineStart: `px` }}
+              style={{ paddingInlineStart: indentation }}
               type="button"
               role="treeitem"
               aria-level={depth + 1}
