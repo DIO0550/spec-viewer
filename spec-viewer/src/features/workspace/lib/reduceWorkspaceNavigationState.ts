@@ -97,7 +97,7 @@ function reduceSourceChanged(
 
 function activateWorktree(
   state: WorkspaceNavigationState,
-  worktreeId: string,
+  worktreeId: NonNullable<WorkspaceNavigationState["activeWorktreeId"]>,
 ): WorkspaceNavigationState {
   if (state.workspaceId === null) {
     return state;
