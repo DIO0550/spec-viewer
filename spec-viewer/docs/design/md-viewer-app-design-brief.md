@@ -52,7 +52,7 @@ Use `01 Standard` as the initial implementation target because it best matches a
 
 Issue #191 is the contract source for this shell. View mode is session-global with an initial value of Specs, while selected items are remembered by `(workspaceId, worktreeId, mode)`. Worktree row counts remain typed by mode: Specs shows the number of non-archived specs and Diff shows the number of logical changed-file entries. Spec-row file counts remain a separate configured-mapping contract.
 
-The desktop shell has four explicit regions: Worktrees, mode navigation (Specs or Changes), central content, and Comments. The toolbar spans only mode navigation and central content and contains a workspace row of at least 50px plus a view-mode row of at least 58px.
+The desktop shell has four explicit regions: Worktrees, mode navigation (Specs or Changes), central content, and Comments. A workspace pathbar of at least 52px spans the full shell width. Below it, the view-mode toolbar spans only mode navigation and central content and is at least 58px high.
 
 Responsive reduction is fixed at these boundaries:
 
