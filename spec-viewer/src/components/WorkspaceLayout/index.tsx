@@ -58,6 +58,7 @@ type LayoutContextValue = Readonly<{
   worktreesOpenRef: RefObject<HTMLButtonElement | null>;
   worktreesCloseRef: RefObject<HTMLButtonElement | null>;
   commentsOpenRef: RefObject<HTMLButtonElement | null>;
+  commentsCloseRef: RefObject<HTMLButtonElement | null>;
   closeWorktrees: () => void;
   openWorktrees: () => void;
   closeComments: () => void;
@@ -68,6 +69,7 @@ const LayoutContext = createContext<LayoutContextValue | null>(null);
 
 export const WorkspaceLayout = {
   Root: WorkspaceLayoutRoot,
+  Pathbar: WorkspaceLayoutPathbar,
   Worktrees: WorkspaceLayoutWorktrees,
   ModeNavigation: WorkspaceLayoutModeNavigation,
   Toolbar: WorkspaceLayoutToolbar,
@@ -87,6 +89,7 @@ function WorkspaceLayoutRoot(props: WorkspaceLayoutRootProps): ReactElement {
   const worktreesOpenRef = useRef<HTMLButtonElement>(null);
   const worktreesCloseRef = useRef<HTMLButtonElement>(null);
   const commentsOpenRef = useRef<HTMLButtonElement>(null);
+  const commentsCloseRef = useRef<HTMLButtonElement>(null);
   const worktrees = resolvePanelControl(props.worktrees, {
     isOpen: true,
     width: 240,
@@ -132,9 +135,7 @@ function WorkspaceLayoutRoot(props: WorkspaceLayoutRootProps): ReactElement {
   const openComments = (): void => {
     comments.onOpen?.();
     requestAnimationFrame(() => {
-      commentsRef.current
-        ?.querySelector<HTMLElement>("button, input, textarea, [tabindex]")
-        ?.focus();
+      commentsCloseRef.current?.focus();
     });
   };
 
@@ -171,6 +172,7 @@ function WorkspaceLayoutRoot(props: WorkspaceLayoutRootProps): ReactElement {
         worktreesOpenRef,
         worktreesCloseRef,
         commentsOpenRef,
+        commentsCloseRef,
         closeWorktrees,
         openWorktrees,
         closeComments,
@@ -191,6 +193,16 @@ function WorkspaceLayoutRoot(props: WorkspaceLayoutRootProps): ReactElement {
       </div>
     </LayoutContext>
   );
+}
+
+/**
+ * @param props - Workspace path controls.
+ * @returns The full-width pathbar above the shared four-column shell.
+ */
+function WorkspaceLayoutPathbar(
+  props: Readonly<{ children: ReactNode }>,
+): ReactElement {
+  return <header className="app-shell__pathbar">{props.children}</header>;
 }
 
 /**
@@ -327,6 +339,7 @@ function WorkspaceLayoutComments(
         direction="from-right"
       />
       <button
+        ref={layout.commentsCloseRef}
         className="icon-button app-shell__comments-close"
         type="button"
         aria-label={uiText.sidebar.close}

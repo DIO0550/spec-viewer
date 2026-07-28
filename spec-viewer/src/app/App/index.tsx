@@ -249,7 +249,7 @@ function SpecViewAppContent(): ReactElement {
           onWidthChange: resizableLeftNavigation.resizeLeftNavigationTo,
         }}
       >
-        <WorkspaceLayout.Toolbar>
+        <WorkspaceLayout.Pathbar>
           <WorkspaceToolbar
             workspacePath={activeWorkspaceRoot}
             inputValue={workspaceLoader.state.workspaceInput}
@@ -267,6 +267,8 @@ function SpecViewAppContent(): ReactElement {
             }}
             onReset={resetWorkspace}
           />
+        </WorkspaceLayout.Pathbar>
+        <WorkspaceLayout.Toolbar>
           <ViewModeToolbar
             mode={workspaceNavigation.state.mode}
             activeItemLabel={
