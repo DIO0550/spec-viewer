@@ -45,6 +45,32 @@ test("WorkspaceLayoutは6 slotと3つのresize separatorを描画する", () => 
   });
 });
 
+test("headerがnullでも既定ラベルを抑止して閉じるボタンを保持する", () => {
+  const container = document.createElement("div");
+  const root = createRoot(container);
+
+  act(() => {
+    root.render(
+      <WorkspaceLayout.Root>
+        <WorkspaceLayout.Worktrees header={null}>
+          Tree
+        </WorkspaceLayout.Worktrees>
+      </WorkspaceLayout.Root>,
+    );
+  });
+
+  expect(
+    container.querySelector(".app-shell__worktrees-header strong"),
+  ).toBeNull();
+  expect(
+    container.querySelector('[aria-label="仕様一覧を閉じる"]'),
+  ).not.toBeNull();
+
+  act(() => {
+    root.unmount();
+  });
+});
+
 test("ModeNavigation separatorはArrowとHome/Endでcontrolled幅を通知する", () => {
   const container = document.createElement("div");
   const root = createRoot(container);

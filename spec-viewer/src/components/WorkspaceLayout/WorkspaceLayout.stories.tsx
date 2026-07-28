@@ -5,7 +5,7 @@ import {
   type ReactNode,
   useState,
 } from "react";
-import { expect, fn, userEvent, within } from "storybook/test";
+import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import {
   type Comment,
   CommentSidebar,
@@ -524,7 +524,22 @@ async function verifyShellAccessibility(
   const specsTab = canvas.getByRole("tab", { name: "Specs" });
   const diffTab = canvas.getByRole("tab", { name: "Diff" });
   const separators = canvas.getAllByRole("separator");
+  const toolbar = canvasElement.querySelector<HTMLElement>(
+    ".app-shell__toolbar",
+  );
+  const toolbarContent = canvasElement.querySelector<HTMLElement>(
+    ".app-shell__toolbar-content",
+  );
 
+  await expect(getComputedStyle(toolbar as HTMLElement).overflowX).toBe(
+    "hidden",
+  );
+  await expect(
+    getComputedStyle(toolbarContent as HTMLElement).gridColumnStart,
+  ).toBe("2");
+  await expect((toolbarContent as HTMLElement).clientWidth).toBe(
+    (toolbar as HTMLElement).clientWidth,
+  );
   await expect(selectedWorktree).toHaveAttribute("aria-current", "page");
   await expect(specsTab).toHaveAttribute("aria-selected", "true");
   await expect(separators).toHaveLength(3);
@@ -542,11 +557,15 @@ async function verifyShellAccessibility(
   const reopenWorktrees = canvas.getByRole("button", {
     name: "仕様一覧を開く",
   });
-  await expect(reopenWorktrees).toHaveFocus();
+  await waitFor(async () => {
+    await expect(reopenWorktrees).toHaveFocus();
+  });
   await userEvent.click(reopenWorktrees);
-  await expect(
-    canvas.getByRole("button", { name: "仕様一覧を閉じる" }),
-  ).toHaveFocus();
+  await waitFor(async () => {
+    await expect(
+      canvas.getByRole("button", { name: "仕様一覧を閉じる" }),
+    ).toHaveFocus();
+  });
 
   const closeComments = canvasElement.querySelector<HTMLButtonElement>(
     ".app-shell__comments-close",
@@ -556,9 +575,13 @@ async function verifyShellAccessibility(
   const reopenComments = canvas.getByRole("button", {
     name: "サイドバーを開く",
   });
-  await expect(reopenComments).toHaveFocus();
+  await waitFor(async () => {
+    await expect(reopenComments).toHaveFocus();
+  });
   await userEvent.click(reopenComments);
-  await expect(closeComments).toHaveFocus();
+  await waitFor(async () => {
+    await expect(closeComments).toHaveFocus();
+  });
 }
 
 /**
