@@ -1,5 +1,5 @@
 {
-  "reportVersion": "788184490be2b7573964f9b2f2bc377dbbdf746f",
+  "reportVersion": "8451b9fc0e7108554f61504cb6ef120b11faa3e4",
   "maxDiffRatio": 0.002,
   "failed": 14,
   "results": [
@@ -9,8 +9,8 @@
       "title": "App",
       "name": "Default",
       "status": "changed",
-      "diffPixels": 29963,
-      "diffRatio": 0.0325,
+      "diffPixels": 29229,
+      "diffRatio": 0.0317,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -249,8 +249,8 @@
       "title": "components/WorkspaceLayout",
       "name": "All Props",
       "status": "changed",
-      "diffPixels": 26363,
-      "diffRatio": 0.0286,
+      "diffPixels": 26255,
+      "diffRatio": 0.0285,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -261,8 +261,8 @@
       "title": "components/WorkspaceLayout",
       "name": "Archiving",
       "status": "changed",
-      "diffPixels": 43079,
-      "diffRatio": 0.0467,
+      "diffPixels": 43739,
+      "diffRatio": 0.0475,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -273,8 +273,8 @@
       "title": "components/WorkspaceLayout",
       "name": "Specs",
       "status": "changed",
-      "diffPixels": 43158,
-      "diffRatio": 0.046799999999999994,
+      "diffPixels": 43854,
+      "diffRatio": 0.047599999999999996,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -285,8 +285,8 @@
       "title": "components/WorkspaceLayout",
       "name": "Diff",
       "status": "changed",
-      "diffPixels": 36398,
-      "diffRatio": 0.0395,
+      "diffPixels": 35073,
+      "diffRatio": 0.0381,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -297,8 +297,8 @@
       "title": "components/WorkspaceLayout",
       "name": "Edge Cases",
       "status": "changed",
-      "diffPixels": 24339,
-      "diffRatio": 0.0264,
+      "diffPixels": 24534,
+      "diffRatio": 0.026600000000000002,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -309,8 +309,8 @@
       "title": "components/WorkspaceLayout",
       "name": "Empty",
       "status": "changed",
-      "diffPixels": 25466,
-      "diffRatio": 0.0276,
+      "diffPixels": 25015,
+      "diffRatio": 0.0271,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -321,8 +321,8 @@
       "title": "components/WorkspaceLayout",
       "name": "Error",
       "status": "changed",
-      "diffPixels": 32270,
-      "diffRatio": 0.035,
+      "diffPixels": 31403,
+      "diffRatio": 0.0341,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -333,8 +333,8 @@
       "title": "components/WorkspaceLayout",
       "name": "Loading",
       "status": "changed",
-      "diffPixels": 26444,
-      "diffRatio": 0.0287,
+      "diffPixels": 25971,
+      "diffRatio": 0.0282,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -417,8 +417,8 @@
       "title": "components/WorkspaceLayout",
       "name": "Worktree Diff",
       "status": "changed",
-      "diffPixels": 36567,
-      "diffRatio": 0.0397,
+      "diffPixels": 35207,
+      "diffRatio": 0.0382,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -429,8 +429,8 @@
       "title": "components/WorkspaceLayout",
       "name": "Worktree Open",
       "status": "changed",
-      "diffPixels": 43079,
-      "diffRatio": 0.0467,
+      "diffPixels": 43740,
+      "diffRatio": 0.0475,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -705,8 +705,8 @@
       "title": "features/sidebar/components/SidebarLayout",
       "name": "Default",
       "status": "changed",
-      "diffPixels": 10645,
-      "diffRatio": 0.0116,
+      "diffPixels": 10539,
+      "diffRatio": 0.011399999999999999,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
