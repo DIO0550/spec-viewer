@@ -4,7 +4,7 @@ import { expect, test, vi } from "vitest";
 
 import { WorkspaceLayout } from "@/components/WorkspaceLayout";
 
-test("WorkspaceLayoutは5 slotと3つのresize separatorを描画する", () => {
+test("WorkspaceLayoutは6 slotと3つのresize separatorを描画する", () => {
   const container = document.createElement("div");
   const root = createRoot(container);
 
@@ -15,9 +15,9 @@ test("WorkspaceLayoutは5 slotと3つのresize separatorを描画する", () => 
         modeNavigation={{ width: 220, onWidthChange: vi.fn() }}
         comments={{ width: 300, onWidthChange: vi.fn() }}
       >
+        <WorkspaceLayout.Pathbar>Workspace pathbar</WorkspaceLayout.Pathbar>
         <WorkspaceLayout.Worktrees>Worktrees</WorkspaceLayout.Worktrees>
         <WorkspaceLayout.Toolbar>
-          <div>Workspace toolbar</div>
           <div>View mode toolbar</div>
         </WorkspaceLayout.Toolbar>
         <WorkspaceLayout.ModeNavigation>Specs</WorkspaceLayout.ModeNavigation>
@@ -32,6 +32,9 @@ test("WorkspaceLayoutは5 slotと3つのresize separatorを描画する", () => 
   expect(body?.style.getPropertyValue("--mode-navigation-width")).toBe("220px");
   expect(body?.style.getPropertyValue("--comments-width")).toBe("300px");
   expect(container.querySelectorAll('[role="separator"]')).toHaveLength(3);
+  expect(container.querySelector(".app-shell__pathbar")?.textContent).toBe(
+    "Workspace pathbar",
+  );
   expect(container.querySelector(".app-shell__worktrees")).not.toBeNull();
   expect(container.querySelector(".app-shell__mode-navigation")).not.toBeNull();
   expect(container.querySelector(".app-shell__content")).not.toBeNull();

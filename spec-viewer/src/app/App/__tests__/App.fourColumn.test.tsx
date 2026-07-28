@@ -4,6 +4,27 @@ import { expect, test } from "vitest";
 
 import App from "@/app/App";
 
+test("Workspace pathbarは4カラム共通shellの全幅領域としてmode toolbarから分離される", () => {
+  const container = document.createElement("div");
+  const root = createRoot(container);
+
+  act(() => {
+    root.render(<App />);
+  });
+
+  const pathbar = container.querySelector(".app-shell__pathbar");
+  const modeToolbar = container.querySelector(".app-shell__toolbar");
+
+  expect(pathbar?.querySelector(".workspace-toolbar")).not.toBeNull();
+  expect(pathbar?.textContent).toContain("リセット");
+  expect(modeToolbar?.querySelector(".workspace-toolbar")).toBeNull();
+  expect(modeToolbar?.querySelector(".view-mode-toolbar")).not.toBeNull();
+
+  act(() => {
+    root.unmount();
+  });
+});
+
 test("mode切替は外側WorktreesとCommentsを保持して中央2 slotだけを差し替える", () => {
   const container = document.createElement("div");
   const root = createRoot(container);

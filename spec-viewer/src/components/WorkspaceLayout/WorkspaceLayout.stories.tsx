@@ -342,6 +342,7 @@ const sampleComments: readonly Comment[] = [
 ];
 
 type WorkspaceLayoutStoryProps = Readonly<{
+  pathbar: ReactNode;
   toolbar: ReactNode;
   leftHeader?: ReactNode;
   sidebar: ReactNode;
@@ -370,6 +371,7 @@ type WorkspaceLayoutStoryProps = Readonly<{
  */
 function WorkspaceLayoutStory(props: WorkspaceLayoutStoryProps) {
   const {
+    pathbar,
     toolbar,
     leftHeader,
     sidebar,
@@ -439,6 +441,7 @@ function WorkspaceLayoutStory(props: WorkspaceLayoutStoryProps) {
         },
       }}
     >
+      <WorkspaceLayout.Pathbar>{pathbar}</WorkspaceLayout.Pathbar>
       <WorkspaceLayout.Toolbar>{toolbar}</WorkspaceLayout.Toolbar>
       <WorkspaceLayout.Worktrees header={leftHeader}>
         {sidebar}
@@ -474,6 +477,7 @@ const meta = {
     ),
   ],
   argTypes: {
+    pathbar: { control: false },
     toolbar: { control: false },
     sidebar: { control: false },
     tabs: { control: false },
@@ -547,13 +551,14 @@ async function verifyShellAccessibility(
   const closeComments = canvasElement.querySelector<HTMLButtonElement>(
     ".app-shell__comments-close",
   );
-  await expect(closeComments).toBeInstanceOf(HTMLButtonElement);
+  await expect(closeComments).toBeVisible();
   await userEvent.click(closeComments as HTMLButtonElement);
   const reopenComments = canvas.getByRole("button", {
     name: "サイドバーを開く",
   });
   await expect(reopenComments).toHaveFocus();
   await userEvent.click(reopenComments);
+  await expect(closeComments).toHaveFocus();
 }
 
 /**
@@ -642,7 +647,7 @@ export const Viewport760: Story = {
     const closeComments = canvasElement.querySelector<HTMLButtonElement>(
       ".app-shell__comments-close",
     );
-    await expect(closeComments).toBeInstanceOf(HTMLButtonElement);
+    await expect(closeComments).toBeVisible();
     await userEvent.click(closeComments as HTMLButtonElement);
     await userEvent.click(canvas.getByRole("tab", { name: "Specs" }));
     await userEvent.click(
@@ -881,33 +886,33 @@ function createShellArgs({
   return {
     leftOpen: true,
     leftHeader: null,
-    toolbar: (
-      <>
-        <ThemeProvider>
-          <WorkspaceToolbar
-            workspacePath={workspaceStatusPath}
-            inputValue={workspaceInput}
-            isLoading={isWorkspaceLoading}
-            isBrowsing={false}
-            errorMessage={workspaceErrorMessage ?? null}
-            canRefresh={selectedSpec !== null && selectedFileKey !== null}
-            onInputChange={fn()}
-            onBrowse={fn()}
-            onLoad={fn()}
-            onRefresh={fn()}
-            onReset={fn()}
-          />
-        </ThemeProvider>
-        <ViewModeToolbar
-          mode={viewMode}
-          activeItemLabel={
-            selectedSpec !== null && selectedFile !== null
-              ? selectedSpec.label + " / " + selectedFile.fileName
-              : "ファイル未選択"
-          }
-          onModeChange={fn()}
+    pathbar: (
+      <ThemeProvider>
+        <WorkspaceToolbar
+          workspacePath={workspaceStatusPath}
+          inputValue={workspaceInput}
+          isLoading={isWorkspaceLoading}
+          isBrowsing={false}
+          errorMessage={workspaceErrorMessage ?? null}
+          canRefresh={selectedSpec !== null && selectedFileKey !== null}
+          onInputChange={fn()}
+          onBrowse={fn()}
+          onLoad={fn()}
+          onRefresh={fn()}
+          onReset={fn()}
         />
-      </>
+      </ThemeProvider>
+    ),
+    toolbar: (
+      <ViewModeToolbar
+        mode={viewMode}
+        activeItemLabel={
+          selectedSpec !== null && selectedFile !== null
+            ? selectedSpec.label + " / " + selectedFile.fileName
+            : "ファイル未選択"
+        }
+        onModeChange={fn()}
+      />
     ),
     sidebar: (
       <div className="left-navigation-panel">
