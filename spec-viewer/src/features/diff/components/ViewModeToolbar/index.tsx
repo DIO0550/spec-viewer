@@ -72,7 +72,6 @@ export function ViewModeToolbar(props: ViewModeToolbarProps): ReactElement {
             type="button"
             role="tab"
             id={`view-mode-${candidate}`}
-            aria-controls={`view-panel-${candidate}`}
             aria-selected={mode === candidate}
             tabIndex={mode === candidate ? 0 : -1}
             onClick={() => {

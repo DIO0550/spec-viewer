@@ -14,6 +14,8 @@ test("ViewModeToolbarは選択中のモードを示しDiffへの切替を通知�
   expect(specsButton?.textContent).toBe("Specs");
   expect(specsButton?.getAttribute("tabindex")).toBe("0");
   expect(diffButton?.getAttribute("tabindex")).toBe("-1");
+  expect(specsButton?.getAttribute("aria-controls")).toBeNull();
+  expect(diffButton?.getAttribute("aria-controls")).toBeNull();
 
   act(() => {
     diffButton?.click();
