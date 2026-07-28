@@ -319,6 +319,9 @@ textarea:disabled {
 
 .app-shell__toolbar-content {
   min-width: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
 .app-shell__body[data-left-navigation="collapsed"] {
@@ -4478,17 +4481,34 @@ textarea:disabled {
   grid-area: 2 / 2 / 3 / 4;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0;
+  height: 58px;
   min-height: 58px;
+  padding: 0;
+  overflow: hidden;
 }
 
 .app-shell__toolbar-content {
   display: grid;
+  grid-column: 2;
   grid-template-rows: minmax(58px, auto);
   min-width: 0;
 }
 
+.app-shell__worktrees-open {
+  grid-column: 1;
+}
+
 .app-shell__toolbar-content > .view-mode-toolbar {
   grid-row: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.app-shell__comments-open {
+  grid-column: 3;
 }
 
 .app-shell__worktrees {
@@ -4503,11 +4523,22 @@ textarea:disabled {
 
 .app-shell__worktrees-header {
   display: flex;
+  position: sticky;
+  z-index: 5;
+  top: 0;
   min-height: 50px;
   align-items: center;
   justify-content: space-between;
   padding: 8px 10px;
   border-bottom: 1px solid var(--color-border);
+  background: var(--color-panel);
+}
+
+.app-shell__worktrees-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  flex: 0 0 auto;
 }
 
 .app-shell__mode-navigation {
