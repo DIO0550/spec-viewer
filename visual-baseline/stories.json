@@ -140,6 +140,36 @@
     "name": "Loading"
   },
   {
+    "id": "components-workspacelayout--viewport-1199",
+    "title": "components/WorkspaceLayout",
+    "name": "Viewport 1199"
+  },
+  {
+    "id": "components-workspacelayout--viewport-1200",
+    "title": "components/WorkspaceLayout",
+    "name": "Viewport 1200"
+  },
+  {
+    "id": "components-workspacelayout--viewport-760",
+    "title": "components/WorkspaceLayout",
+    "name": "Viewport 760"
+  },
+  {
+    "id": "components-workspacelayout--viewport-761",
+    "title": "components/WorkspaceLayout",
+    "name": "Viewport 761"
+  },
+  {
+    "id": "components-workspacelayout--viewport-899",
+    "title": "components/WorkspaceLayout",
+    "name": "Viewport 899"
+  },
+  {
+    "id": "components-workspacelayout--viewport-900",
+    "title": "components/WorkspaceLayout",
+    "name": "Viewport 900"
+  },
+  {
     "id": "components-workspacelayout--worktree-diff",
     "title": "components/WorkspaceLayout",
     "name": "Worktree Diff"
@@ -220,18 +250,18 @@
     "name": "Edge Cases"
   },
   {
-    "id": "features-diff-components-reviewmodetoolbar--all-props",
-    "title": "features/diff/components/ReviewModeToolbar",
+    "id": "features-diff-components-viewmodetoolbar--all-props",
+    "title": "features/diff/components/ViewModeToolbar",
     "name": "All Props"
   },
   {
-    "id": "features-diff-components-reviewmodetoolbar--default",
-    "title": "features/diff/components/ReviewModeToolbar",
+    "id": "features-diff-components-viewmodetoolbar--default",
+    "title": "features/diff/components/ViewModeToolbar",
     "name": "Default"
   },
   {
-    "id": "features-diff-components-reviewmodetoolbar--edge-cases",
-    "title": "features/diff/components/ReviewModeToolbar",
+    "id": "features-diff-components-viewmodetoolbar--edge-cases",
+    "title": "features/diff/components/ViewModeToolbar",
     "name": "Edge Cases"
   },
   {
@@ -493,5 +523,25 @@
     "id": "features-workspace-components-workspacetoolbar--edge-cases",
     "title": "features/workspace/components/WorkspaceToolbar",
     "name": "Edge Cases"
+  },
+  {
+    "id": "features-workspace-worktreetree--diff-flat",
+    "title": "Features/Workspace/WorktreeTree",
+    "name": "Diff Flat"
+  },
+  {
+    "id": "features-workspace-worktreetree--empty",
+    "title": "Features/Workspace/WorktreeTree",
+    "name": "Empty"
+  },
+  {
+    "id": "features-workspace-worktreetree--long-and-many",
+    "title": "Features/Workspace/WorktreeTree",
+    "name": "Long And Many"
+  },
+  {
+    "id": "features-workspace-worktreetree--specs-hierarchy",
+    "title": "Features/Workspace/WorktreeTree",
+    "name": "Specs Hierarchy"
   }
 ]
