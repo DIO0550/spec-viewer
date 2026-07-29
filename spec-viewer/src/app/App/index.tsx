@@ -26,9 +26,9 @@ import {
 import { CommentScope } from "@/features/comments/domain/commentScope";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import {
+  ChangesNavigation,
   DiffWorkspace,
-  type ReviewMode,
-  ReviewModeToolbar,
+  ViewModeToolbar,
 } from "@/features/diff";
 import {
   ThemeProvider,
@@ -49,6 +49,9 @@ import {
 } from "@/features/specs";
 import {
   OpenWorkspaceEmptyState,
+  type WorkspaceWorktreesLoadState,
+  WorktreeTree,
+  useWorkspaceNavigationState,
   useWorkspaceLoader,
   useWorkspaceSidebarSectionPreference,
   WorkspaceDropOverlay,
@@ -58,6 +61,11 @@ import {
 } from "@/features/workspace";
 import { WorkspacePath } from "@/domains/workspacePath";
 import { WorkspaceLayout } from "@/components";
+
+const WorktreesLoadState: WorkspaceWorktreesLoadState = {
+  status: "unavailable",
+  reason: "data-source-not-connected",
+};
 
 /**
  * Application root that wires the theme, workspace and selection providers.
@@ -88,7 +96,7 @@ function SpecViewAppContent(): ReactElement {
   const [dialogErrorMessage, setDialogErrorMessage] = useState<string | null>(
     null,
   );
-  const [reviewMode, setReviewMode] = useState<ReviewMode>("specs");
+  const workspaceNavigation = useWorkspaceNavigationState(WorktreesLoadState);
   // workspace を開く知識は feature に集約済み — App は onError を渡して呼ぶだけ。
   const workspaceLoader = useWorkspaceLoader({
     onError: setDialogErrorMessage,
@@ -231,7 +239,7 @@ function SpecViewAppContent(): ReactElement {
   return (
     <div className="app-drop-root">
       <SidebarLayout
-        leftNavigation={{
+        worktrees={{
           isOpen: leftNavigationPreference.isLeftNavigationOpen,
           width: resizableLeftNavigation.leftNavigationWidth,
           minWidth: resizableLeftNavigation.minLeftNavigationWidth,
@@ -260,8 +268,28 @@ function SpecViewAppContent(): ReactElement {
             onReset={resetWorkspace}
           />
         </WorkspaceLayout.Pathbar>
-        <WorkspaceLayout.LeftNavigation header={null}>
+        <WorkspaceLayout.Toolbar>
+          <ViewModeToolbar
+            mode={workspaceNavigation.state.mode}
+            activeItemLabel={
+              specSelectors.selectedSpec !== null &&
+              specSelectors.selectedFile !== null
+                ? specSelectors.selectedSpec.label +
+                  " / " +
+                  specSelectors.selectedFile.fileName
+                : "ファイル未選択"
+            }
+            onModeChange={workspaceNavigation.actions.changeMode}
+          />
+        </WorkspaceLayout.Toolbar>
+        <WorkspaceLayout.Worktrees header={null}>
           <div className="left-navigation-panel">
+            <WorktreeTree
+              nodes={workspaceNavigation.navigationNodes}
+              selectedWorktreeId={workspaceNavigation.state.activeWorktreeId}
+              emptyLabel="Worktree データはまだ利用できません"
+              onSelectWorktree={workspaceNavigation.actions.selectWorktree}
+            />
             <WorkspaceSidebarSection
               currentWorkspacePath={activeWorkspaceRoot}
               isOpen={
@@ -287,105 +315,101 @@ function SpecViewAppContent(): ReactElement {
               }
             />
           </div>
-        </WorkspaceLayout.LeftNavigation>
-        <WorkspaceLayout.Main>
-          <WorkspaceLayout.Tabs>
-            <ReviewModeToolbar
-              mode={reviewMode}
-              fileLabel={
-                specSelectors.selectedSpec !== null &&
-                specSelectors.selectedFile !== null
-                  ? `${specSelectors.selectedSpec.label} / ${specSelectors.selectedFile.fileName}`
-                  : "ファイル未選択"
-              }
-              onModeChange={setReviewMode}
+        </WorkspaceLayout.Worktrees>
+        <WorkspaceLayout.ModeNavigation>
+          {workspaceNavigation.state.mode === "specs" ? (
+            <SpecTree
+              state={specState.specTreeState}
+              selectedSpecId={specState.selection.specId}
+              archivingSpecId={specState.archivingSpecId}
+              isLoading={isCurrentViewLoading}
+              onSelectSpec={guardedSpecActions.selectSpecFromTree}
+              onArchiveSpec={guardedSpecActions.archiveSpecFromTree}
+              onReload={guardedSpecActions.reloadSpecsFromTree}
             />
-          </WorkspaceLayout.Tabs>
-          <WorkspaceLayout.Viewer>
-            {reviewMode === "diff" ? (
-              <DiffWorkspace />
-            ) : (
-              <div className="specs-workspace">
-                <aside
-                  className="specs-workspace__navigation"
-                  aria-label="Specs"
-                >
-                  <SpecTree
-                    state={specState.specTreeState}
-                    selectedSpecId={specState.selection.specId}
-                    archivingSpecId={specState.archivingSpecId}
-                    isLoading={isCurrentViewLoading}
-                    onSelectSpec={guardedSpecActions.selectSpecFromTree}
-                    onArchiveSpec={guardedSpecActions.archiveSpecFromTree}
-                    onReload={guardedSpecActions.reloadSpecsFromTree}
-                  />
-                </aside>
-                <section
-                  className="specs-workspace__document"
-                  aria-label="Spec document"
-                >
-                  <SpecTabs
-                    spec={specSelectors.selectedSpec}
-                    selectedFileKey={specState.selection.fileKey}
-                    isSelectionDisabled={isCurrentViewLoading}
-                    onSelectFile={guardedSpecActions.selectFileFromTabs}
-                  />
-                  <div className="specs-workspace__viewer">
-                    {shouldShowOpenWorkspacePrompt ? (
-                      <OpenWorkspaceEmptyState
-                        isOpening={workspaceLoader.state.isBrowsingWorkspace}
-                        recentWorkspaces={
-                          workspaceLoader.recentWorkspaces.recentWorkspaces
-                        }
-                        onOpenWorkspace={() => {
-                          void workspaceLoader.actions.browseWorkspace();
-                        }}
-                        onOpenRecentWorkspace={(path) => {
-                          void workspaceLoader.actions.openRecentWorkspacePath(
-                            path,
-                          );
-                        }}
-                        onRemoveRecentWorkspace={
-                          workspaceLoader.recentWorkspaces.removeWorkspace
-                        }
-                      />
-                    ) : (
-                      <MarkdownViewer
-                        state={specState.documentState}
-                        selectedSpecLabel={
-                          specSelectors.selectedSpec?.label ?? null
-                        }
-                        selectedFileLabel={
-                          specSelectors.selectedFile?.label ?? null
-                        }
-                        comments={comments.comments}
-                        activeCommentId={commentSelection.activeCommentId}
-                        isAddingComment={isAddingComment}
-                        addCommentErrorMessage={addCommentErrorMessage}
-                        isUpdatingComment={isUpdatingComment}
-                        operationState={comments.operationState}
-                        isCommentScopeReady={isCommentScopeReady}
-                        onReload={guardedSpecActions.reloadDocumentFromViewer}
-                        onAddComment={commentSelection.addComment}
-                        onUpdateComment={commentSelection.updateComment}
-                        onResolveComment={commentSelection.resolveInlineComment}
-                        onReopenComment={commentSelection.reopenInlineComment}
-                        onDeleteComment={commentSelection.deleteInlineComment}
-                        onSelectComment={commentSelection.selectComment}
-                        onAnchorDisplayStatesChange={
-                          commentSelection.updateCommentAnchorDisplayStates
-                        }
-                        onFirstReadable={
-                          documentReadiness.markCurrentDocumentReadable
-                        }
-                      />
-                    )}
-                  </div>
-                </section>
-              </div>
-            )}
-          </WorkspaceLayout.Viewer>
-        </WorkspaceLayout.Main>
+          ) : (
+            <ChangesNavigation
+              items={[]}
+              selectedId={null}
+              availability={WorktreesLoadState}
+              onSelect={workspaceNavigation.actions.selectItem}
+            />
+          )}
+        </WorkspaceLayout.ModeNavigation>
+        <WorkspaceLayout.Content>
+          {workspaceNavigation.state.mode === "diff" ? (
+            <DiffWorkspace
+              selectedPath={null}
+              preview={null}
+              availability={WorktreesLoadState}
+            />
+          ) : (
+            <div className="specs-workspace">
+              <section
+                className="specs-workspace__document"
+                aria-label="Spec document"
+              >
+                <SpecTabs
+                  spec={specSelectors.selectedSpec}
+                  selectedFileKey={specState.selection.fileKey}
+                  isSelectionDisabled={isCurrentViewLoading}
+                  onSelectFile={guardedSpecActions.selectFileFromTabs}
+                />
+                <div className="specs-workspace__viewer">
+                  {shouldShowOpenWorkspacePrompt ? (
+                    <OpenWorkspaceEmptyState
+                      isOpening={workspaceLoader.state.isBrowsingWorkspace}
+                      recentWorkspaces={
+                        workspaceLoader.recentWorkspaces.recentWorkspaces
+                      }
+                      onOpenWorkspace={() => {
+                        void workspaceLoader.actions.browseWorkspace();
+                      }}
+                      onOpenRecentWorkspace={(path) => {
+                        void workspaceLoader.actions.openRecentWorkspacePath(
+                          path,
+                        );
+                      }}
+                      onRemoveRecentWorkspace={
+                        workspaceLoader.recentWorkspaces.removeWorkspace
+                      }
+                    />
+                  ) : (
+                    <MarkdownViewer
+                      state={specState.documentState}
+                      selectedSpecLabel={
+                        specSelectors.selectedSpec?.label ?? null
+                      }
+                      selectedFileLabel={
+                        specSelectors.selectedFile?.label ?? null
+                      }
+                      comments={comments.comments}
+                      activeCommentId={commentSelection.activeCommentId}
+                      isAddingComment={isAddingComment}
+                      addCommentErrorMessage={addCommentErrorMessage}
+                      isUpdatingComment={isUpdatingComment}
+                      operationState={comments.operationState}
+                      isCommentScopeReady={isCommentScopeReady}
+                      onReload={guardedSpecActions.reloadDocumentFromViewer}
+                      onAddComment={commentSelection.addComment}
+                      onUpdateComment={commentSelection.updateComment}
+                      onResolveComment={commentSelection.resolveInlineComment}
+                      onReopenComment={commentSelection.reopenInlineComment}
+                      onDeleteComment={commentSelection.deleteInlineComment}
+                      onSelectComment={commentSelection.selectComment}
+                      onAnchorDisplayStatesChange={
+                        commentSelection.updateCommentAnchorDisplayStates
+                      }
+                      onFirstReadable={
+                        documentReadiness.markCurrentDocumentReadable
+                      }
+                    />
+                  )}
+                </div>
+              </section>
+            </div>
+          )}
+        </WorkspaceLayout.Content>
         <WorkspaceLayout.Comments>
           <SpecViewCommentSidebar
             comments={comments.comments}

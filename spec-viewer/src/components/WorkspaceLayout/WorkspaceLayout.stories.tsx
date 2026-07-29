@@ -5,7 +5,7 @@ import {
   type ReactNode,
   useState,
 } from "react";
-import { expect, fn, within } from "storybook/test";
+import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import {
   type Comment,
   CommentSidebar,
@@ -13,9 +13,10 @@ import {
 } from "@/features/comments";
 import { CommentId } from "@/features/comments/domain/commentId";
 import {
+  ChangesNavigation,
   DiffWorkspace,
-  type ReviewMode,
-  ReviewModeToolbar,
+  type ViewMode,
+  ViewModeToolbar,
 } from "@/features/diff";
 import { ThemeProvider } from "@/features/preferences";
 import type {
@@ -30,6 +31,7 @@ import type {
 import { MarkdownViewer, SpecTabs, SpecTree } from "@/features/specs";
 import {
   WorkspaceSidebarSection,
+  WorktreeTree,
   WorkspaceToolbar,
 } from "@/features/workspace";
 import { WorkspaceLayout } from "@/components/WorkspaceLayout";
@@ -340,6 +342,7 @@ const sampleComments: readonly Comment[] = [
 ];
 
 type WorkspaceLayoutStoryProps = Readonly<{
+  pathbar: ReactNode;
   toolbar: ReactNode;
   leftHeader?: ReactNode;
   sidebar: ReactNode;
@@ -368,6 +371,7 @@ type WorkspaceLayoutStoryProps = Readonly<{
  */
 function WorkspaceLayoutStory(props: WorkspaceLayoutStoryProps) {
   const {
+    pathbar,
     toolbar,
     leftHeader,
     sidebar,
@@ -400,7 +404,7 @@ function WorkspaceLayoutStory(props: WorkspaceLayoutStoryProps) {
 
   return (
     <WorkspaceLayout.Root
-      leftNavigation={{
+      worktrees={{
         isOpen: storyLeftOpen,
         width: storyLeftWidth,
         minWidth: leftMinWidth,
@@ -418,7 +422,7 @@ function WorkspaceLayoutStory(props: WorkspaceLayoutStoryProps) {
           onLeftWidthChange?.(width);
         },
       }}
-      commentsSidebar={{
+      comments={{
         isOpen: storyCommentsOpen,
         width: storyCommentsWidth,
         minWidth: commentsMinWidth,
@@ -437,14 +441,13 @@ function WorkspaceLayoutStory(props: WorkspaceLayoutStoryProps) {
         },
       }}
     >
-      <WorkspaceLayout.Pathbar>{toolbar}</WorkspaceLayout.Pathbar>
-      <WorkspaceLayout.LeftNavigation header={leftHeader}>
+      <WorkspaceLayout.Pathbar>{pathbar}</WorkspaceLayout.Pathbar>
+      <WorkspaceLayout.Toolbar>{toolbar}</WorkspaceLayout.Toolbar>
+      <WorkspaceLayout.Worktrees header={leftHeader}>
         {sidebar}
-      </WorkspaceLayout.LeftNavigation>
-      <WorkspaceLayout.Main>
-        <WorkspaceLayout.Tabs>{tabs}</WorkspaceLayout.Tabs>
-        <WorkspaceLayout.Viewer>{viewer}</WorkspaceLayout.Viewer>
-      </WorkspaceLayout.Main>
+      </WorkspaceLayout.Worktrees>
+      <WorkspaceLayout.ModeNavigation>{tabs}</WorkspaceLayout.ModeNavigation>
+      <WorkspaceLayout.Content>{viewer}</WorkspaceLayout.Content>
       <WorkspaceLayout.Comments>{comments}</WorkspaceLayout.Comments>
     </WorkspaceLayout.Root>
   );
@@ -454,6 +457,17 @@ const meta = {
   component: WorkspaceLayoutStory,
   parameters: {
     layout: "fullscreen",
+    viewport: {
+      options: Object.fromEntries(
+        [1200, 1199, 900, 899, 761, 760].map((width) => [
+          "width-" + width,
+          {
+            name: width + "px",
+            styles: { width: width + "px", height: "800px" },
+          },
+        ]),
+      ),
+    },
   },
   decorators: [
     (Story) => (
@@ -463,6 +477,7 @@ const meta = {
     ),
   ],
   argTypes: {
+    pathbar: { control: false },
     toolbar: { control: false },
     sidebar: { control: false },
     tabs: { control: false },
@@ -490,7 +505,7 @@ async function verifyWorktreeOpenStory(
   );
   await expect(
     canvas.getByRole("treeitem", { name: new RegExp(worktreeName) }),
-  ).toHaveAttribute("aria-current", "location");
+  ).toHaveAttribute("aria-current", "page");
   await expect(
     canvas.getByRole("button", { name: `${worktreeName}を開く` }),
   ).toHaveAttribute("aria-current", "location");
@@ -501,11 +516,84 @@ async function verifyWorktreeOpenStory(
  *
  * @param canvasElement - Rendered Story canvas.
  */
+async function verifyShellAccessibility(
+  canvasElement: HTMLElement,
+): Promise<void> {
+  const canvas = within(canvasElement);
+  const selectedWorktree = canvas.getByRole("treeitem", { name: /root/ });
+  const specsTab = canvas.getByRole("tab", { name: "Specs" });
+  const diffTab = canvas.getByRole("tab", { name: "Diff" });
+  const separators = canvas.getAllByRole("separator");
+  const toolbar = canvasElement.querySelector<HTMLElement>(
+    ".app-shell__toolbar",
+  );
+  const toolbarContent = canvasElement.querySelector<HTMLElement>(
+    ".app-shell__toolbar-content",
+  );
+
+  await expect(getComputedStyle(toolbar as HTMLElement).overflowX).toBe(
+    "hidden",
+  );
+  await expect(
+    getComputedStyle(toolbarContent as HTMLElement).gridColumnStart,
+  ).toBe("2");
+  await expect((toolbarContent as HTMLElement).clientWidth).toBe(
+    (toolbar as HTMLElement).clientWidth,
+  );
+  await expect(selectedWorktree).toHaveAttribute("aria-current", "page");
+  await expect(specsTab).toHaveAttribute("aria-selected", "true");
+  await expect(separators).toHaveLength(3);
+  for (const separator of separators) {
+    await expect(separator).toHaveAttribute("aria-valuenow");
+  }
+
+  await userEvent.click(specsTab);
+  await userEvent.keyboard("{ArrowRight}");
+  await expect(diffTab).toHaveFocus();
+
+  await userEvent.click(
+    canvas.getByRole("button", { name: "仕様一覧を閉じる" }),
+  );
+  const reopenWorktrees = canvas.getByRole("button", {
+    name: "仕様一覧を開く",
+  });
+  await waitFor(async () => {
+    await expect(reopenWorktrees).toHaveFocus();
+  });
+  await userEvent.click(reopenWorktrees);
+  await waitFor(async () => {
+    await expect(
+      canvas.getByRole("button", { name: "仕様一覧を閉じる" }),
+    ).toHaveFocus();
+  });
+
+  const closeComments = canvasElement.querySelector<HTMLButtonElement>(
+    ".app-shell__comments-close",
+  );
+  await expect(closeComments).toBeVisible();
+  await userEvent.click(closeComments as HTMLButtonElement);
+  const reopenComments = canvas.getByRole("button", {
+    name: "サイドバーを開く",
+  });
+  await waitFor(async () => {
+    await expect(reopenComments).toHaveFocus();
+  });
+  await userEvent.click(reopenComments);
+  await waitFor(async () => {
+    await expect(closeComments).toHaveFocus();
+  });
+}
+
+/**
+ * Verifies that the Specs list only scrolls vertically.
+ *
+ *  canvasElement - Rendered Story canvas.
+ */
 async function verifySpecsListHasNoHorizontalOverflow(
   canvasElement: HTMLElement,
 ): Promise<void> {
   const specsList = canvasElement.querySelector<HTMLElement>(
-    ".specs-workspace__navigation .spec-tree__list",
+    ".app-shell__mode-navigation .spec-tree__list",
   );
 
   await expect(specsList).toBeInstanceOf(HTMLElement);
@@ -531,6 +619,7 @@ export const Default: Story = {
   args: readySpecsArgs,
   play: async ({ canvasElement }) => {
     await verifySpecsListHasNoHorizontalOverflow(canvasElement);
+    await verifyShellAccessibility(canvasElement);
   },
 };
 
@@ -550,6 +639,49 @@ export const EdgeCases: Story = {
   },
 };
 
+export const Viewport1200: Story = {
+  args: readySpecsArgs,
+  parameters: { viewport: { defaultViewport: "width-1200" } },
+};
+export const Viewport1199: Story = {
+  args: readySpecsArgs,
+  parameters: { viewport: { defaultViewport: "width-1199" } },
+};
+export const Viewport900: Story = {
+  args: readySpecsArgs,
+  parameters: { viewport: { defaultViewport: "width-900" } },
+};
+export const Viewport899: Story = {
+  args: readySpecsArgs,
+  parameters: { viewport: { defaultViewport: "width-899" } },
+};
+export const Viewport761: Story = {
+  args: readySpecsArgs,
+  parameters: { viewport: { defaultViewport: "width-761" } },
+};
+export const Viewport760: Story = {
+  args: readySpecsArgs,
+  parameters: { viewport: { defaultViewport: "width-760" } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      canvas.getByRole("button", { name: "仕様一覧を閉じる" }),
+    );
+    const closeComments = canvasElement.querySelector<HTMLButtonElement>(
+      ".app-shell__comments-close",
+    );
+    await expect(closeComments).toBeVisible();
+    await userEvent.click(closeComments as HTMLButtonElement);
+    await userEvent.click(canvas.getByRole("tab", { name: "Specs" }));
+    await userEvent.click(
+      canvas.getByRole("region", { name: "Spec document" }),
+    );
+    await userEvent.click(
+      canvas.getByRole("button", { name: "サイドバーを開く" }),
+    );
+  },
+};
+
 export const Diff: Story = {
   args: createShellArgs({
     treeState: readyTreeState,
@@ -558,7 +690,7 @@ export const Diff: Story = {
     selectedFileKey: "impl",
     workspaceInput: workspacePath,
     workspaceStatusPath: workspacePath,
-    reviewMode: "diff",
+    viewMode: "diff",
   }),
 };
 
@@ -586,7 +718,7 @@ export const WorktreeDiff: Story = {
     workspaceInput: worktreeWorkspacePath,
     workspaceStatusPath: worktreeWorkspacePath,
     activeWorktreeName: worktreeName,
-    reviewMode: "diff",
+    viewMode: "diff",
   }),
   play: async ({ canvasElement }) => {
     await verifyWorktreeOpenStory(canvasElement);
@@ -706,7 +838,7 @@ type ShellArgsOptions = Readonly<{
   workspaceErrorMessage?: string;
   isWorkspaceLoading?: boolean;
   archivingSpecId?: string | null;
-  reviewMode?: ReviewMode;
+  viewMode?: ViewMode;
   activeWorktreeName?: string | null;
 }>;
 
@@ -721,51 +853,41 @@ function createShellArgs({
   workspaceErrorMessage = undefined,
   isWorkspaceLoading = false,
   archivingSpecId = null,
-  reviewMode = "specs",
+  viewMode = "specs",
   activeWorktreeName = null,
 }: ShellArgsOptions): ComponentProps<typeof WorkspaceLayoutStory> {
   const selectedFile =
     selectedSpec?.files.find((file) => file.key === selectedFileKey) ?? null;
   let viewer: ReactNode;
 
-  if (reviewMode === "diff") {
-    viewer = <DiffWorkspace />;
+  if (viewMode === "diff") {
+    viewer = (
+      <DiffWorkspace
+        selectedPath={null}
+        preview={null}
+        availability={{ status: "ready" }}
+      />
+    );
   } else {
     viewer = (
-      <div className="specs-workspace">
-        <aside className="specs-workspace__navigation" aria-label="Specs">
-          <SpecTree
-            state={treeState}
-            selectedSpecId={selectedSpec?.id ?? null}
-            archivingSpecId={archivingSpecId}
-            isLoading={archivingSpecId !== null}
-            onSelectSpec={fn()}
-            onArchiveSpec={fn()}
+      <section className="specs-workspace__document" aria-label="Spec document">
+        <SpecTabs
+          spec={selectedSpec}
+          selectedFileKey={selectedFileKey}
+          onSelectFile={fn()}
+        />
+        <div className="specs-workspace__viewer">
+          <MarkdownViewer
+            state={documentState}
+            selectedSpecLabel={selectedSpec?.label ?? null}
+            selectedFileLabel={selectedFile?.label ?? null}
+            comments={sampleComments}
+            activeCommentId={commentId("cmt_story_open_1")}
             onReload={fn()}
+            onSelectComment={fn()}
           />
-        </aside>
-        <section
-          className="specs-workspace__document"
-          aria-label="Spec document"
-        >
-          <SpecTabs
-            spec={selectedSpec}
-            selectedFileKey={selectedFileKey}
-            onSelectFile={fn()}
-          />
-          <div className="specs-workspace__viewer">
-            <MarkdownViewer
-              state={documentState}
-              selectedSpecLabel={selectedSpec?.label ?? null}
-              selectedFileLabel={selectedFile?.label ?? null}
-              comments={sampleComments}
-              activeCommentId={commentId("cmt_story_open_1")}
-              onReload={fn()}
-              onSelectComment={fn()}
-            />
-          </div>
-        </section>
-      </div>
+        </div>
+      </section>
     );
   }
 
@@ -787,7 +909,7 @@ function createShellArgs({
   return {
     leftOpen: true,
     leftHeader: null,
-    toolbar: (
+    pathbar: (
       <ThemeProvider>
         <WorkspaceToolbar
           workspacePath={workspaceStatusPath}
@@ -803,6 +925,17 @@ function createShellArgs({
           onReset={fn()}
         />
       </ThemeProvider>
+    ),
+    toolbar: (
+      <ViewModeToolbar
+        mode={viewMode}
+        activeItemLabel={
+          selectedSpec !== null && selectedFile !== null
+            ? selectedSpec.label + " / " + selectedFile.fileName
+            : "ファイル未選択"
+        }
+        onModeChange={fn()}
+      />
     ),
     sidebar: (
       <div className="left-navigation-panel">
@@ -833,17 +966,28 @@ function createShellArgs({
         <StoryWorktreeTree activeWorktreeName={activeWorktreeName} />
       </div>
     ),
-    tabs: (
-      <ReviewModeToolbar
-        mode={reviewMode}
-        fileLabel={
-          selectedSpec !== null && selectedFile !== null
-            ? `${selectedSpec.label} / ${selectedFile.fileName}`
-            : "ファイル未選択"
-        }
-        onModeChange={fn()}
-      />
-    ),
+    tabs:
+      viewMode === "specs" ? (
+        <SpecTree
+          state={treeState}
+          selectedSpecId={selectedSpec?.id ?? null}
+          archivingSpecId={archivingSpecId}
+          isLoading={archivingSpecId !== null}
+          onSelectSpec={fn()}
+          onArchiveSpec={fn()}
+          onReload={fn()}
+        />
+      ) : (
+        <ChangesNavigation
+          items={[]}
+          selectedId={null}
+          availability={{
+            status: "unavailable",
+            reason: "data-source-not-connected",
+          }}
+          onSelect={fn()}
+        />
+      ),
     viewer,
     comments: (
       <CommentSidebar
@@ -888,30 +1032,17 @@ function StoryWorktreeTree({
         <span>ROOT / WORKTREES {storyWorktrees.length}</span>
         <span aria-hidden="true">↻</span>
       </div>
-      <div role="tree" aria-label="Workspace worktrees">
-        {storyWorktrees.map((worktree) => {
-          const isActive = worktree.name === selectedWorktreeName;
-          const className = [
-            "story-worktree-tree__row",
-            isActive ? "story-worktree-tree__row--active" : "",
-            worktree.isMuted ? "story-worktree-tree__row--muted" : "",
-          ]
-            .filter(Boolean)
-            .join(" ");
-
-          return (
-            <div
-              className={className}
-              role="treeitem"
-              aria-current={isActive ? "location" : undefined}
-              key={worktree.name}
-            >
-              {worktree.icon} {worktree.name}
-              <span>{worktree.changeCount}</span>
-            </div>
-          );
-        })}
-      </div>
+      <WorktreeTree
+        nodes={storyWorktrees.map((worktree) => ({
+          kind: "worktree",
+          id: worktree.name,
+          label: worktree.icon + " " + worktree.name,
+          count: { kind: "changed-file-count", value: worktree.changeCount },
+        }))}
+        selectedWorktreeId={selectedWorktreeName}
+        emptyLabel="Worktree はありません"
+        onSelectWorktree={fn()}
+      />
     </section>
   );
 }

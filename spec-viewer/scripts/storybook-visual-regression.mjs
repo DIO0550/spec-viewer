@@ -181,6 +181,8 @@ const capture = async (options) => {
       "--headless=new",
       "--disable-gpu",
       "--no-sandbox",
+      "--disable-dev-shm-usage",
+      "--no-zygote",
       "--remote-debugging-port=9222",
       `--user-data-dir=${userDataDir}`,
       "about:blank",

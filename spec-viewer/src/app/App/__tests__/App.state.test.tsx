@@ -14,12 +14,19 @@ test("Appはworkspace未選択の初期状態を表示する", () => {
 
   expect(container.textContent).toContain("Spec Reviewer");
   expect(container.textContent).toContain("ワークスペースが選択されていません");
-  expect(container.querySelector('aside[aria-label="Specs"]')).not.toBeNull();
   expect(
-    container
-      .querySelector('[aria-label="仕様一覧"]')
-      ?.querySelector('aside[aria-label="Specs"]'),
-  ).toBeNull();
+    container.querySelector('aside[aria-label="仕様一覧"]'),
+  ).not.toBeNull();
+  expect(
+    container.querySelector('aside[aria-label="Mode navigation"]'),
+  ).not.toBeNull();
+  expect(container.querySelector("main.app-shell__content")).not.toBeNull();
+  expect(
+    container.querySelector('aside[aria-label="コメントサイドバー"]'),
+  ).not.toBeNull();
+  expect(container.textContent).toContain(
+    "Worktree データはまだ利用できません",
+  );
 
   act(() => {
     root.unmount();

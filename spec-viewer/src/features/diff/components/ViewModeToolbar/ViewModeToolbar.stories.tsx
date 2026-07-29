@@ -1,13 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
 
-import { ReviewModeToolbar } from ".";
+import { ViewModeToolbar } from ".";
 
 const meta = {
-  component: ReviewModeToolbar,
+  component: ViewModeToolbar,
   args: {
     mode: "specs",
-    fileLabel: "Implementation",
+    activeItemLabel: "Implementation",
     onModeChange: fn(),
   },
   argTypes: {
@@ -24,7 +24,7 @@ const meta = {
       </div>
     ),
   ],
-} satisfies Meta<typeof ReviewModeToolbar>;
+} satisfies Meta<typeof ViewModeToolbar>;
 
 export default meta;
 
@@ -40,7 +40,7 @@ export const AllProps: Story = {
 
 export const EdgeCases: Story = {
   args: {
-    fileLabel:
+    activeItemLabel:
       "とても長いファイル名でもツールバー全体が崩れないことを確認するための仕様書.md",
   },
 };
