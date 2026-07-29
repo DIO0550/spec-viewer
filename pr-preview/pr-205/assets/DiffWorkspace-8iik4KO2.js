@@ -1,4 +1,0 @@
-import{n as e}from"./chunk-DnJy8xQt.js";import{t}from"./jsx-runtime-BpX3lQ6F.js";function n(e){let{selectedPath:t,preview:n,availability:a}=e;return a.status===`unavailable`?(0,i.jsx)(r,{children:a.reason===`contract-pending`?`Diff表示の契約を確認中です。Specsモードで仕様の確認を続けられます。`:`Diffデータはまだ利用できません。Specsモードで仕様の確認を続けられます。`}):t===null?(0,i.jsx)(r,{children:`表示する変更ファイルを選択してください。`}):(0,i.jsx)(`section`,{className:`diff-preview`,"aria-label":`${t} の差分`,children:n})}function r(e){return(0,i.jsx)(`p`,{className:`diff-workspace__status`,role:`status`,"aria-live":`polite`,"aria-label":`Diffデータ状態`,children:e.children})}var i,a=e((()=>{i=t(),n.__docgenInfo={description:`Displays only the controlled central Diff preview.
-
-@param props - Availability, selected path and caller-owned preview.
-@returns Diff preview or a recoverable status.`,methods:[],displayName:`DiffWorkspace`}}));export{a as n,n as t};
