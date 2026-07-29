@@ -11,7 +11,7 @@ use serde::Deserialize;
 use thiserror::Error;
 
 use crate::domain::{
-    spec::{SpecDomainError, SpecFileKey},
+    spec::{SpecDomainError, SpecFileKey, SpecNodeKind},
     workspace::{
         default_scan_excluded_directory_names, SpecConfigOverride, WorkspaceConfig,
         WorkspaceConfigError, WorkspaceConfigSource, WorkspaceFileMapping, WorkspaceKind,
@@ -99,6 +99,12 @@ fn parse_workspace_config(
             source,
         })?;
 
+    if raw_config.node_kind.is_some() {
+        return Err(ConfigLoadError::UnexpectedNodeKind {
+            path: display_path(path),
+        });
+    }
+
     let mut files = Vec::with_capacity(raw_config.files.len());
 
     for (raw_key, file_name) in raw_config.files {
@@ -160,9 +166,23 @@ fn parse_spec_config_override(
         files.push(mapping);
     }
 
-    SpecConfigOverride::new(files).map_err(|source| ConfigLoadError::InvalidFileMapping {
-        path: display_path(path),
-        source,
+    let node_kind = raw_config
+        .node_kind
+        .map(|value| match value.as_str() {
+            "spec" => Ok(SpecNodeKind::Spec),
+            "category" => Ok(SpecNodeKind::Category),
+            _ => Err(ConfigLoadError::InvalidNodeKind {
+                path: display_path(path),
+                value,
+            }),
+        })
+        .transpose()?;
+
+    SpecConfigOverride::with_node_kind(files, node_kind).map_err(|source| {
+        ConfigLoadError::InvalidFileMapping {
+            path: display_path(path),
+            source,
+        }
     })
 }
 
@@ -172,6 +192,8 @@ struct RawWorkspaceConfig {
     files: BTreeMap<String, String>,
     #[serde(rename = "scanExcludedDirectoryNames")]
     scan_excluded_directory_names: Option<Vec<String>>,
+    #[serde(rename = "nodeKind")]
+    node_kind: Option<String>,
 }
 
 #[derive(Debug, Error)]
@@ -183,6 +205,10 @@ pub enum ConfigLoadError {
         path: String,
         source: serde_json::Error,
     },
+    #[error("nodeKind is only supported in spec override config: {path}")]
+    UnexpectedNodeKind { path: String },
+    #[error("spec override nodeKind is invalid in {path}: {value}")]
+    InvalidNodeKind { path: String, value: String },
     #[error("workspace config file key is invalid in {path}: {key}")]
     InvalidFileKey {
         path: String,
@@ -481,6 +507,75 @@ mod tests {
                 .file_for_key(SpecFileKey::Requirements)
                 .map(WorkspaceFileMapping::file_name)
         );
+    }
+
+    #[test]
+    fn config_loader_reads_explicit_spec_node_kind_override() {
+        let workspace = TestWorkspace::new("node-kind-spec");
+        workspace.write_config(
+            ".plugin-workspace/.specs/auth/.spec-reviewer/config.json",
+            r#"{ "nodeKind": "spec" }"#,
+        );
+        let spec_directory = workspace.spec_directory(".plugin-workspace/.specs/auth");
+
+        let spec_override = WorkspaceConfigLoader::new()
+            .load_spec_override_from_directory(&spec_directory)
+            .expect("override should load")
+            .expect("override should exist");
+
+        assert_eq!(Some(SpecNodeKind::Spec), spec_override.node_kind());
+    }
+
+    #[test]
+    fn config_loader_reads_explicit_category_node_kind_override() {
+        let workspace = TestWorkspace::new("node-kind-category");
+        workspace.write_config(
+            ".plugin-workspace/.specs/planning/.spec-reviewer/config.json",
+            r#"{ "nodeKind": "category" }"#,
+        );
+        let spec_directory = workspace.spec_directory(".plugin-workspace/.specs/planning");
+
+        let spec_override = WorkspaceConfigLoader::new()
+            .load_spec_override_from_directory(&spec_directory)
+            .expect("override should load")
+            .expect("override should exist");
+
+        assert_eq!(Some(SpecNodeKind::Category), spec_override.node_kind());
+    }
+
+    #[test]
+    fn config_loader_rejects_invalid_spec_node_kind_override() {
+        let workspace = TestWorkspace::new("invalid-node-kind");
+        workspace.write_config(
+            ".plugin-workspace/.specs/auth/.spec-reviewer/config.json",
+            r#"{ "nodeKind": "archive" }"#,
+        );
+        let spec_directory = workspace.spec_directory(".plugin-workspace/.specs/auth");
+
+        let result =
+            WorkspaceConfigLoader::new().load_spec_override_from_directory(&spec_directory);
+
+        assert!(matches!(
+            result,
+            Err(ConfigLoadError::InvalidNodeKind { value, .. }) if value == "archive"
+        ));
+    }
+
+    #[test]
+    fn config_loader_rejects_node_kind_in_workspace_config() {
+        let workspace = TestWorkspace::new("workspace-node-kind");
+        workspace.write_config(
+            PLUGIN_WORKSPACE_CONFIG_FILE,
+            r#"{ "nodeKind": "category" }"#,
+        );
+        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
+
+        let result = WorkspaceConfigLoader::new().load(&layout);
+
+        assert!(matches!(
+            result,
+            Err(ConfigLoadError::UnexpectedNodeKind { .. })
+        ));
     }
 
     #[test]

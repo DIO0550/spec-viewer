@@ -477,12 +477,83 @@ impl MarkdownBlock {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum SpecNodeKind {
+    Spec,
+    Category,
+    Archive,
+    SourceGroup,
+}
+
+impl SpecNodeKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Spec => "spec",
+            Self::Category => "category",
+            Self::Archive => "archive",
+            Self::SourceGroup => "sourceGroup",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct SpecNodeIdentity {
+    source_group_id: String,
+    relative_id: String,
+}
+
+impl SpecNodeIdentity {
+    pub fn new(
+        source_group_id: impl Into<String>,
+        relative_id: impl Into<String>,
+    ) -> Result<Self, SpecDomainError> {
+        let source_group_id = source_group_id.into();
+        let relative_id = relative_id.into();
+        let trimmed_source_group_id = source_group_id.trim().trim_end_matches('/');
+        let trimmed_relative_id = relative_id.trim().trim_matches('/');
+
+        if trimmed_source_group_id.is_empty() {
+            return Err(SpecDomainError::MissingSourceGroupId);
+        }
+
+        if trimmed_relative_id.is_empty() {
+            return Err(SpecDomainError::MissingRelativeNodeId);
+        }
+
+        Ok(Self {
+            source_group_id: trimmed_source_group_id.to_string(),
+            relative_id: trimmed_relative_id.to_string(),
+        })
+    }
+
+    pub fn source_group_id(&self) -> &str {
+        &self.source_group_id
+    }
+
+    pub fn relative_id(&self) -> &str {
+        &self.relative_id
+    }
+
+    pub fn global_id(&self) -> String {
+        if self.relative_id == "." {
+            return self.source_group_id.clone();
+        }
+
+        format!("{}/{}", self.source_group_id, self.relative_id)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpecNode {
     id: String,
     label: String,
+    kind: SpecNodeKind,
+    source_group_id: String,
+    relative_id: String,
     files: Vec<SpecFile>,
     children: Vec<SpecNode>,
+    present_document_count: usize,
+    descendant_spec_count: usize,
 }
 
 impl SpecNode {
@@ -493,24 +564,20 @@ impl SpecNode {
         children: Vec<SpecNode>,
     ) -> Result<Self, SpecDomainError> {
         let id = id.into();
-        let label = label.into();
         let trimmed_id = id.trim();
-        let trimmed_label = label.trim();
-
         if trimmed_id.is_empty() {
             return Err(SpecDomainError::MissingNodeId);
         }
 
-        if trimmed_label.is_empty() {
-            return Err(SpecDomainError::MissingNodeLabel);
-        }
-
-        Ok(Self {
-            id: trimmed_id.to_string(),
-            label: trimmed_label.to_string(),
+        Self::build(
+            trimmed_id.to_string(),
+            label,
+            SpecNodeKind::Spec,
+            "legacy".to_string(),
+            trimmed_id.to_string(),
             files,
             children,
-        })
+        )
     }
 
     pub fn leaf(
@@ -521,6 +588,109 @@ impl SpecNode {
         Self::new(id, label, files, Vec::new())
     }
 
+    pub fn spec(
+        identity: SpecNodeIdentity,
+        label: impl Into<String>,
+        files: Vec<SpecFile>,
+        children: Vec<SpecNode>,
+    ) -> Result<Self, SpecDomainError> {
+        Self::from_identity(identity, label, SpecNodeKind::Spec, files, children)
+    }
+
+    pub fn category(
+        identity: SpecNodeIdentity,
+        label: impl Into<String>,
+        children: Vec<SpecNode>,
+    ) -> Result<Self, SpecDomainError> {
+        Self::from_identity(
+            identity,
+            label,
+            SpecNodeKind::Category,
+            Vec::new(),
+            children,
+        )
+    }
+
+    pub fn archive(
+        identity: SpecNodeIdentity,
+        label: impl Into<String>,
+        children: Vec<SpecNode>,
+    ) -> Result<Self, SpecDomainError> {
+        Self::from_identity(identity, label, SpecNodeKind::Archive, Vec::new(), children)
+    }
+
+    pub fn source_group(
+        identity: SpecNodeIdentity,
+        label: impl Into<String>,
+        children: Vec<SpecNode>,
+    ) -> Result<Self, SpecDomainError> {
+        Self::from_identity(
+            identity,
+            label,
+            SpecNodeKind::SourceGroup,
+            Vec::new(),
+            children,
+        )
+    }
+
+    fn from_identity(
+        identity: SpecNodeIdentity,
+        label: impl Into<String>,
+        kind: SpecNodeKind,
+        files: Vec<SpecFile>,
+        children: Vec<SpecNode>,
+    ) -> Result<Self, SpecDomainError> {
+        let id = identity.global_id();
+        Self::build(
+            id,
+            label,
+            kind,
+            identity.source_group_id,
+            identity.relative_id,
+            files,
+            children,
+        )
+    }
+
+    fn build(
+        id: String,
+        label: impl Into<String>,
+        kind: SpecNodeKind,
+        source_group_id: String,
+        relative_id: String,
+        files: Vec<SpecFile>,
+        children: Vec<SpecNode>,
+    ) -> Result<Self, SpecDomainError> {
+        let label = label.into();
+        let trimmed_label = label.trim();
+        if trimmed_label.is_empty() {
+            return Err(SpecDomainError::MissingNodeLabel);
+        }
+
+        let present_document_count = files
+            .iter()
+            .filter(|file| file.status() == SpecFileStatus::Present)
+            .count();
+        let descendant_spec_count = children
+            .iter()
+            .map(|child| {
+                usize::from(child.kind == SpecNodeKind::Spec) + child.descendant_spec_count
+            })
+            .sum();
+
+        Ok(Self {
+            id,
+            label: trimmed_label.to_string(),
+            kind,
+            source_group_id,
+            relative_id,
+            files,
+            children,
+            present_document_count,
+            descendant_spec_count,
+        })
+    }
+
     pub fn id(&self) -> &str {
         &self.id
     }
@@ -529,12 +699,32 @@ impl SpecNode {
         &self.label
     }
 
+    pub fn kind(&self) -> SpecNodeKind {
+        self.kind
+    }
+
+    pub fn source_group_id(&self) -> &str {
+        &self.source_group_id
+    }
+
+    pub fn relative_id(&self) -> &str {
+        &self.relative_id
+    }
+
     pub fn files(&self) -> &[SpecFile] {
         &self.files
     }
 
     pub fn children(&self) -> &[SpecNode] {
         &self.children
+    }
+
+    pub fn present_document_count(&self) -> usize {
+        self.present_document_count
+    }
+
+    pub fn descendant_spec_count(&self) -> usize {
+        self.descendant_spec_count
     }
 
     pub fn file_for_key(&self, key: SpecFileKey) -> Option<&SpecFile> {
@@ -556,6 +746,10 @@ pub enum SpecDomainError {
     MissingFileName { key: SpecFileKey },
     #[error("spec node id is required")]
     MissingNodeId,
+    #[error("spec source group id is required")]
+    MissingSourceGroupId,
+    #[error("spec relative node id is required")]
+    MissingRelativeNodeId,
     #[error("spec node label is required")]
     MissingNodeLabel,
     #[error("markdown block text is required")]
@@ -839,6 +1033,112 @@ mod tests {
         );
 
         assert_eq!(None, block.source_range());
+    }
+
+    #[test]
+    fn spec_node_kind_and_counts_distinguish_specs_from_containers() {
+        let present =
+            SpecFile::present(SpecFileKey::Tasks, "tasks.md").expect("file should be valid");
+        let missing = SpecFile::missing(SpecFileKey::Impl, "implementation-plan.md")
+            .expect("file should be valid");
+        let spec = SpecNode::spec(
+            SpecNodeIdentity::new(".plugin-workspace/.specs", "074-issue-193")
+                .expect("identity should be valid"),
+            "Issue 193",
+            vec![present, missing],
+            Vec::new(),
+        )
+        .expect("spec should be valid");
+        let archive = SpecNode::archive(
+            SpecNodeIdentity::new(".plugin-workspace/.specs", ".archive")
+                .expect("identity should be valid"),
+            "Archive",
+            vec![spec.clone()],
+        )
+        .expect("archive should be valid");
+
+        assert_eq!(SpecNodeKind::Spec, spec.kind());
+        assert_eq!(1, spec.present_document_count());
+        assert_eq!(0, spec.descendant_spec_count());
+        assert_eq!(SpecNodeKind::Archive, archive.kind());
+        assert_eq!(0, archive.present_document_count());
+        assert_eq!(1, archive.descendant_spec_count());
+    }
+
+    #[test]
+    fn spec_node_identity_is_unique_across_source_groups() {
+        let primary = SpecNodeIdentity::new(".plugin-workspace/.specs", "auth")
+            .expect("primary identity should be valid");
+        let secondary = SpecNodeIdentity::new(
+            ".claude/worktrees/feature-auth/.plugin-worktree/.specs",
+            "auth",
+        )
+        .expect("secondary identity should be valid");
+
+        assert_ne!(primary.global_id(), secondary.global_id());
+        assert_eq!(".plugin-workspace/.specs/auth", primary.global_id());
+    }
+
+    #[test]
+    fn spec_node_identity_rejects_missing_source_group_or_relative_id() {
+        assert_eq!(
+            Err(SpecDomainError::MissingSourceGroupId),
+            SpecNodeIdentity::new(" ", "auth"),
+        );
+        assert_eq!(
+            Err(SpecDomainError::MissingRelativeNodeId),
+            SpecNodeIdentity::new("primary", " "),
+        );
+    }
+
+    #[test]
+    fn category_counts_three_descendant_specs() {
+        let children = ["one", "two", "three"]
+            .into_iter()
+            .map(|relative_id| {
+                SpecNode::spec(
+                    SpecNodeIdentity::new("primary", relative_id)
+                        .expect("identity should be valid"),
+                    relative_id,
+                    Vec::new(),
+                    Vec::new(),
+                )
+                .expect("spec should be valid")
+            })
+            .collect();
+        let category = SpecNode::category(
+            SpecNodeIdentity::new("primary", "planning").expect("identity should be valid"),
+            "Planning",
+            children,
+        )
+        .expect("category should be valid");
+
+        assert_eq!(3, category.descendant_spec_count());
+    }
+
+    #[test]
+    fn category_counts_nested_specs_bottom_up() {
+        let nested_spec = SpecNode::spec(
+            SpecNodeIdentity::new("primary", "planning/auth").expect("identity should be valid"),
+            "Auth",
+            Vec::new(),
+            Vec::new(),
+        )
+        .expect("spec should be valid");
+        let nested_category = SpecNode::category(
+            SpecNodeIdentity::new("primary", "planning").expect("identity should be valid"),
+            "Planning",
+            vec![nested_spec],
+        )
+        .expect("category should be valid");
+        let root_category = SpecNode::category(
+            SpecNodeIdentity::new("primary", "root-category").expect("identity should be valid"),
+            "Root category",
+            vec![nested_category],
+        )
+        .expect("category should be valid");
+
+        assert_eq!(1, root_category.descendant_spec_count());
     }
 
     #[test]

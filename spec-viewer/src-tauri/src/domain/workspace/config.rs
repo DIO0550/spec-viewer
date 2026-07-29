@@ -7,7 +7,7 @@ use std::{
 
 use thiserror::Error;
 
-use crate::domain::spec::SpecFileKey;
+use crate::domain::spec::{SpecFileKey, SpecNodeKind};
 
 use super::WorkspaceKind;
 
@@ -196,17 +196,30 @@ impl WorkspaceConfig {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpecConfigOverride {
     config: WorkspaceConfig,
+    node_kind: Option<SpecNodeKind>,
 }
 
 impl SpecConfigOverride {
     pub fn new(files: Vec<WorkspaceFileMapping>) -> Result<Self, WorkspaceConfigError> {
+        Self::with_node_kind(files, None)
+    }
+
+    pub fn with_node_kind(
+        files: Vec<WorkspaceFileMapping>,
+        node_kind: Option<SpecNodeKind>,
+    ) -> Result<Self, WorkspaceConfigError> {
         Ok(Self {
             config: WorkspaceConfig::new(files)?,
+            node_kind,
         })
     }
 
     pub fn config(&self) -> &WorkspaceConfig {
         &self.config
+    }
+
+    pub fn node_kind(&self) -> Option<SpecNodeKind> {
+        self.node_kind
     }
 }
 
