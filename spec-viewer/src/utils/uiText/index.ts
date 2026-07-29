@@ -136,6 +136,9 @@ export const uiText = {
       "このワークスペースには設定済みのSpecファイルがまだありません。",
     refresh: "Specツリーを再読み込み",
     archive: "Specをアーカイブへ移動",
+    archiveSuffix: "をアーカイブへ移動",
+    retryArchive: "アーカイブを再試行",
+    revealMissing: "移動先が見つかりません。ツリーを再読み込みしてください。",
     tree: "Specツリー",
   },
   markdown: {

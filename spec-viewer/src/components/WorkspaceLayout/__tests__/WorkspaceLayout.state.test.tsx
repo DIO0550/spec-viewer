@@ -72,11 +72,21 @@ const hearingFile: SpecFile = {
 const selectedSpec: SpecNode = {
   id: "phase-1-viewer",
   label: "Phase 1 Viewer",
+  kind: "spec",
+  sourceGroupId: "primary",
+  relativeId: "phase-1-viewer",
+  presentDocumentCount: 0,
+  descendantSpecCount: 0,
   files: [taskFile, implFile],
   children: [
     {
       id: "phase-1-comments",
       label: "Phase 1 Comments",
+      kind: "spec",
+      sourceGroupId: "primary",
+      relativeId: "phase-1-comments",
+      presentDocumentCount: 0,
+      descendantSpecCount: 0,
       files: [taskFile],
       children: [],
     },
@@ -95,11 +105,21 @@ const issueTreeState: SpecTreeState = {
       {
         id: "021-issue-262",
         label: "021-issue-262",
+        kind: "spec",
+        sourceGroupId: "primary",
+        relativeId: "021-issue-262",
+        presentDocumentCount: 0,
+        descendantSpecCount: 0,
         files: [taskFile, implFile],
         children: [
           {
             id: "021-issue-262/code-review",
             label: "code-review",
+            kind: "spec",
+            sourceGroupId: "primary",
+            relativeId: "021-issue-262/code-review",
+            presentDocumentCount: 0,
+            descendantSpecCount: 0,
             files: [implFile],
             children: [],
           },
@@ -327,6 +347,11 @@ test("SpecTabsはbackendの6タブ順をそのまま表示する", () => {
       spec={{
         id: "tech-reference-tab",
         label: "Tech Reference Tab",
+        kind: "spec",
+        sourceGroupId: "primary",
+        relativeId: "tech-reference-tab",
+        presentDocumentCount: 0,
+        descendantSpecCount: 0,
         files: [
           implFile,
           taskFile,
@@ -849,6 +874,11 @@ test("SpecTreeはsource group rootにはアーカイブ操作を表示しない"
         {
           id: ".plugin-workspace/.specs",
           label: "ルート",
+          kind: "sourceGroup",
+          sourceGroupId: "primary",
+          relativeId: ".plugin-workspace/.specs",
+          presentDocumentCount: 0,
+          descendantSpecCount: 0,
           files: [],
           children: [selectedSpec],
         },

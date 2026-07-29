@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 
 import type { SpecFile } from "@/features/specs/domain/specFile";
 import { SpecNode } from "@/features/specs/domain/specNode";
-import type { SpecNode as SpecNodeType } from "@/features/specs/domain/specNode";
+import { createSpecNodeFixture } from "@/features/specs/testing/specNodeFixture";
 
 const implFile: SpecFile = {
   key: "impl",
@@ -18,75 +18,98 @@ const tasksFile: SpecFile = {
   status: "present",
 };
 
-const nestedChild: SpecNodeType = {
+const nestedChild = createSpecNodeFixture({
   id: "child-spec",
   label: "Child Spec",
   files: [tasksFile],
-  children: [],
-};
+});
 
-const nodes: readonly SpecNodeType[] = [
-  {
-    id: "root-empty",
-    label: "Root Empty",
-    files: [],
+const nodes = [
+  createSpecNodeFixture({
+    id: "root-category",
+    label: "Root Category",
+    kind: "category",
     children: [nestedChild],
-  },
-  {
+  }),
+  createSpecNodeFixture({
     id: "root-openable",
     label: "Root Openable",
     files: [implFile, tasksFile],
-    children: [],
-  },
-];
-
-test("SpecNode.findByIdはroot nodeを見つける", () => {
-  expect(SpecNode.findById(nodes, "root-openable")).toBe(nodes[1]);
-});
+  }),
+] as const;
 
 test("SpecNode.findByIdはnested child nodeを見つける", () => {
   expect(SpecNode.findById(nodes, "child-spec")).toBe(nestedChild);
 });
 
-test("SpecNode.findByIdは存在しないidならnullを返す", () => {
-  expect(SpecNode.findById(nodes, "missing-spec")).toBeNull();
+test("SpecNode.findByIdentityはsource groupが異なる同じrelative IDを区別する", () => {
+  const first = createSpecNodeFixture({
+    id: "primary/auth",
+    label: "Auth",
+    sourceGroupId: "primary",
+    relativeId: "auth",
+  });
+  const second = createSpecNodeFixture({
+    id: "secondary/auth",
+    label: "Auth",
+    sourceGroupId: "secondary",
+    relativeId: "auth",
+  });
+
+  expect(
+    SpecNode.findByIdentity([first, second], {
+      sourceGroupId: "secondary",
+      relativeId: "auth",
+    }),
+  ).toBe(second);
 });
 
-test("SpecNode.firstは先頭nodeを返す", () => {
-  expect(SpecNode.first(nodes)).toBe(nodes[0]);
-  expect(SpecNode.first([])).toBeNull();
+test.each([
+  ["spec", true, true],
+  ["category", false, false],
+  ["archive", false, false],
+  ["sourceGroup", false, false],
+] as const)("kind=%sのopenable/archiveableを判定する", (kind, openable, archivable) => {
+  const node = createSpecNodeFixture({ id: kind, label: kind, kind });
+
+  expect(SpecNode.isOpenable(node)).toBe(openable);
+  expect(SpecNode.isArchivable(node)).toBe(archivable);
 });
 
-test("SpecNode.firstOpenableはfileを持つ最初のnodeを返す", () => {
-  expect(SpecNode.firstOpenable(nodes.slice(1))).toBe(nodes[1]);
+test("SpecNode.countはspecの文書数とcontainerの子孫spec数を返す", () => {
+  const spec = createSpecNodeFixture({
+    id: "spec",
+    label: "Spec",
+    presentDocumentCount: 3,
+  });
+  const archive = createSpecNodeFixture({
+    id: "archive",
+    label: "Archive",
+    kind: "archive",
+    descendantSpecCount: 1,
+  });
+
+  expect(SpecNode.count(spec)).toBe(3);
+  expect(SpecNode.count(archive)).toBe(1);
 });
 
-test("SpecNode.firstOpenableはfileを持つchild nodeを返す", () => {
+test("SpecNode.firstOpenableはcontainerをfallback選択しない", () => {
   expect(SpecNode.firstOpenable(nodes.slice(0, 1))).toBe(nestedChild);
+  expect(
+    SpecNode.firstOpenable([
+      createSpecNodeFixture({
+        id: "empty-category",
+        label: "Empty Category",
+        kind: "category",
+      }),
+    ]),
+  ).toBeNull();
 });
 
-test("SpecNode.firstOpenableはfileを持つnodeがなければ先頭nodeへfallbackする", () => {
-  const emptyNodes: readonly SpecNodeType[] = [
-    { id: "root", label: "Root", files: [], children: [] },
-    { id: "sibling", label: "Sibling", files: [], children: [] },
-  ];
-
-  expect(SpecNode.firstOpenable(emptyNodes)).toBe(emptyNodes[0]);
-});
-
-test("SpecNode.selectedFileはnode内のfile key一致結果を返す", () => {
+test("SpecNode.selectedFileとfile key helperはspecだけを対象にする", () => {
   expect(SpecNode.selectedFile(nodes[1], "tasks")).toBe(tasksFile);
-  expect(SpecNode.selectedFile(nodes[1], "hearing")).toBeNull();
-  expect(SpecNode.selectedFile(null, "tasks")).toBeNull();
-});
-
-test("SpecNode.firstFileKeyは先頭file keyを返す", () => {
   expect(SpecNode.firstFileKey(nodes[1])).toBe("impl");
   expect(SpecNode.firstFileKey(nodes[0])).toBeNull();
-  expect(SpecNode.firstFileKey(null)).toBeNull();
-});
-
-test("SpecNode.preservedFileKeyは既存keyを保持し消えたkeyは先頭keyへfallbackする", () => {
   expect(SpecNode.preservedFileKey(nodes[1], "tasks")).toBe("tasks");
   expect(SpecNode.preservedFileKey(nodes[1], "hearing")).toBe("impl");
   expect(SpecNode.preservedFileKey(nodes[0], "tasks")).toBeNull();

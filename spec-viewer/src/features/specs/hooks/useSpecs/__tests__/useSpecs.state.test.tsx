@@ -2,6 +2,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { beforeEach, expect, test, vi } from "vitest";
 import { useSpecs } from "@/features/specs/hooks/useSpecs";
+import { createSpecNodeFixture } from "@/features/specs/testing/specNodeFixture";
 import type { SpecDocument, SpecTree } from "@/features/specs/types/spec";
 import type { SpecCommands } from "@/lib/api/tauri";
 
@@ -33,6 +34,11 @@ const populatedTree: SpecTree = {
     {
       id: "phase-1-viewer",
       label: "Phase 1 Viewer",
+      kind: "spec",
+      sourceGroupId: "primary",
+      relativeId: "phase-1-viewer",
+      presentDocumentCount: 0,
+      descendantSpecCount: 0,
       files: [
         {
           key: "tasks",
@@ -51,11 +57,21 @@ const nestedTree: SpecTree = {
     {
       id: "phase-root",
       label: "Phase Root",
+      kind: "category",
+      sourceGroupId: "primary",
+      relativeId: "phase-root",
+      presentDocumentCount: 0,
+      descendantSpecCount: 0,
       files: [],
       children: [
         {
           id: "phase-child",
           label: "Phase Child",
+          kind: "spec",
+          sourceGroupId: "primary",
+          relativeId: "phase-child",
+          presentDocumentCount: 0,
+          descendantSpecCount: 0,
           files: [
             {
               key: "requirements",
@@ -76,11 +92,21 @@ const refreshedNestedTree: SpecTree = {
     {
       id: "phase-root",
       label: "Phase Root",
+      kind: "category",
+      sourceGroupId: "primary",
+      relativeId: "phase-root",
+      presentDocumentCount: 0,
+      descendantSpecCount: 0,
       files: [],
       children: [
         {
           id: "phase-child",
           label: "Phase Child",
+          kind: "spec",
+          sourceGroupId: "primary",
+          relativeId: "phase-child",
+          presentDocumentCount: 0,
+          descendantSpecCount: 0,
           files: [
             {
               key: "requirements",
@@ -102,6 +128,11 @@ const refreshedNestedTree: SpecTree = {
     {
       id: "phase-new",
       label: "Phase New",
+      kind: "spec",
+      sourceGroupId: "primary",
+      relativeId: "phase-new",
+      presentDocumentCount: 0,
+      descendantSpecCount: 0,
       files: [
         {
           key: "tasks",
@@ -120,6 +151,11 @@ const tasksAndDesignTree: SpecTree = {
     {
       id: "phase-refresh",
       label: "Phase Refresh",
+      kind: "spec",
+      sourceGroupId: "primary",
+      relativeId: "phase-refresh",
+      presentDocumentCount: 0,
+      descendantSpecCount: 0,
       files: [
         {
           key: "requirements",
@@ -144,6 +180,11 @@ const sixTabTree: SpecTree = {
     {
       id: "tech-reference-tab",
       label: "Tech Reference Tab",
+      kind: "spec",
+      sourceGroupId: "primary",
+      relativeId: "tech-reference-tab",
+      presentDocumentCount: 0,
+      descendantSpecCount: 0,
       files: [
         {
           key: "impl",
@@ -194,6 +235,11 @@ const renamedTasksTree: SpecTree = {
     {
       id: "phase-refresh",
       label: "Phase Refresh",
+      kind: "spec",
+      sourceGroupId: "primary",
+      relativeId: "phase-refresh",
+      presentDocumentCount: 0,
+      descendantSpecCount: 0,
       files: [
         {
           key: "requirements",
@@ -212,6 +258,11 @@ const missingTasksTree: SpecTree = {
     {
       id: "phase-1-viewer",
       label: "Phase 1 Viewer",
+      kind: "spec",
+      sourceGroupId: "primary",
+      relativeId: "phase-1-viewer",
+      presentDocumentCount: 0,
+      descendantSpecCount: 0,
       files: [
         {
           key: "tasks",
@@ -328,6 +379,32 @@ function renderHook<Props, Result>(
     },
   };
 }
+
+const archivedDestination = createSpecNodeFixture({
+  id: "primary/.archive/phase-1-viewer",
+  label: "Phase 1 Viewer",
+  sourceGroupId: "primary",
+  relativeId: ".archive/phase-1-viewer",
+});
+const archivedTree: SpecTree = {
+  specs: [
+    createSpecNodeFixture({
+      id: "primary/.archive",
+      label: "Archive",
+      kind: "archive",
+      sourceGroupId: "primary",
+      relativeId: ".archive",
+      children: [archivedDestination],
+    }),
+  ],
+};
+const archiveResponse = {
+  archivedSpecId: "phase-1-viewer",
+  archivePath:
+    "/workspace/spec-reviewer/.plugin-workspace/.specs/.archive/phase-1-viewer",
+  sourceGroupId: "primary",
+  destinationNodeId: ".archive/phase-1-viewer",
+} as const;
 
 test("useSpecsはworkspace未選択ならspecとMarkdownをidleにする", () => {
   const result = renderHook(
@@ -989,6 +1066,8 @@ test("useSpecsはarchive完了後のreloadでworkspace変更後のstateを上書
     archivedSpecId: "phase-1-viewer",
     archivePath:
       "/workspace/spec-reviewer/.plugin-workspace/.specs/.archive/phase-1-viewer",
+    sourceGroupId: "primary",
+    destinationNodeId: ".archive/phase-1-viewer",
   };
   const newWorkspaceTree = createDeferred<SpecTree>();
   const listSpecs = specCommandMocks.listSpecs
@@ -1037,6 +1116,70 @@ test("useSpecsはarchive完了後のreloadでworkspace変更後のstateを上書
   result.unmount();
 });
 
+test("useSpecsはarchive後のreload中にworkspaceが変わったら古いselection callbackを通知しない", async () => {
+  const archiveResult = {
+    archivedSpecId: "phase-1-viewer",
+    archivePath:
+      "/workspace/spec-reviewer/.plugin-workspace/.specs/.archive/phase-1-viewer",
+    sourceGroupId: "primary",
+    destinationNodeId: ".archive/phase-1-viewer",
+  };
+  const oldWorkspaceReload = createDeferred<SpecTree>();
+  const onSelectionChange = vi.fn();
+  const listSpecs = specCommandMocks.listSpecs
+    .mockResolvedValueOnce(populatedTree)
+    .mockReturnValueOnce(oldWorkspaceReload.promise)
+    .mockResolvedValueOnce(populatedTree);
+  specCommandMocks.readSpecFile.mockResolvedValue(loadedDocument);
+  specCommandMocks.archiveSpec.mockResolvedValue(archiveResult);
+
+  const result = renderHook(
+    ({ workspacePath }) => useSpecs({ workspacePath, onSelectionChange }),
+    { workspacePath: "/workspace/spec-reviewer" },
+  );
+
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  const archive = result.current.actions.archiveSpec("phase-1-viewer");
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+  expect(listSpecs).toHaveBeenCalledTimes(2);
+
+  result.rerender({ workspacePath: "/workspace/other" });
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  expect(onSelectionChange).toHaveBeenLastCalledWith({
+    workspacePath: "/workspace/other",
+    specId: "phase-1-viewer",
+    fileKey: "tasks",
+  });
+  const callbackCountAfterWorkspaceChange = onSelectionChange.mock.calls.length;
+
+  await act(async () => {
+    oldWorkspaceReload.resolve(refreshedNestedTree);
+    await archive;
+  });
+
+  expect(onSelectionChange).toHaveBeenCalledTimes(
+    callbackCountAfterWorkspaceChange,
+  );
+  expect(result.current.state.specTreeState).toEqual(
+    expect.objectContaining({
+      status: "ready",
+      workspacePath: "/workspace/other",
+    }),
+  );
+  result.unmount();
+});
+
 test("useSpecsはspecをアーカイブした後にtreeを再読み込みする", async () => {
   const listSpecs = specCommandMocks.listSpecs.mockResolvedValue(populatedTree);
   specCommandMocks.readSpecFile.mockResolvedValue(loadedDocument);
@@ -1044,6 +1187,8 @@ test("useSpecsはspecをアーカイブした後にtreeを再読み込みする"
     archivedSpecId: "phase-1-viewer",
     archivePath:
       "/workspace/spec-reviewer/.plugin-workspace/.specs/.archive/phase-1-viewer",
+    sourceGroupId: "primary",
+    destinationNodeId: ".archive/phase-1-viewer",
   });
 
   const result = renderHook(
@@ -1068,11 +1213,107 @@ test("useSpecsはspecをアーカイブした後にtreeを再読み込みする"
   result.unmount();
 });
 
+test("useSpecsはarchive成功後に1回再取得して複合destinationを保持する", async () => {
+  const listSpecs = specCommandMocks.listSpecs
+    .mockResolvedValueOnce(populatedTree)
+    .mockResolvedValueOnce(archivedTree);
+  specCommandMocks.readSpecFile.mockResolvedValue(loadedDocument);
+  specCommandMocks.archiveSpec.mockResolvedValue(archiveResponse);
+  const result = renderHook(
+    ({ workspacePath }) => useSpecs({ workspacePath }),
+    { workspacePath: "/workspace/spec-reviewer" },
+  );
+
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+  await act(async () => {
+    await result.current.actions.archiveSpec("phase-1-viewer");
+  });
+
+  expect(listSpecs).toHaveBeenCalledTimes(2);
+  expect(result.current.state.archiveReveal).toEqual({
+    status: "success",
+    workspacePath: "/workspace/spec-reviewer",
+    response: archiveResponse,
+  });
+  result.unmount();
+});
+
+test("useSpecsは失敗した同じspec IDでarchiveをretryする", async () => {
+  const archiveError = new Error("archive failed");
+  specCommandMocks.listSpecs
+    .mockResolvedValueOnce(populatedTree)
+    .mockResolvedValueOnce(archivedTree);
+  specCommandMocks.readSpecFile.mockResolvedValue(loadedDocument);
+  const archiveSpec = specCommandMocks.archiveSpec
+    .mockRejectedValueOnce(archiveError)
+    .mockResolvedValueOnce(archiveResponse);
+  const result = renderHook(
+    ({ workspacePath }) => useSpecs({ workspacePath }),
+    { workspacePath: "/workspace/spec-reviewer" },
+  );
+
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+  await act(async () => {
+    await result.current.actions.archiveSpec("phase-1-viewer");
+  });
+  expect(result.current.state.archiveFailure?.specId).toBe("phase-1-viewer");
+  await act(async () => {
+    await result.current.actions.retryArchiveSpec();
+  });
+
+  expect(archiveSpec).toHaveBeenCalledTimes(2);
+  expect(archiveSpec).toHaveBeenLastCalledWith({
+    workspacePath: "/workspace/spec-reviewer",
+    specId: "phase-1-viewer",
+  });
+  expect(result.current.state.archiveFailure).toBeNull();
+  result.unmount();
+});
+
+test("useSpecsはdestination missingを保持しrefreshで通常fallbackへ回復する", async () => {
+  const listSpecs = specCommandMocks.listSpecs
+    .mockResolvedValueOnce(populatedTree)
+    .mockResolvedValueOnce(populatedTree)
+    .mockResolvedValueOnce(populatedTree);
+  specCommandMocks.readSpecFile.mockResolvedValue(loadedDocument);
+  specCommandMocks.archiveSpec.mockResolvedValue(archiveResponse);
+  const result = renderHook(
+    ({ workspacePath }) => useSpecs({ workspacePath }),
+    { workspacePath: "/workspace/spec-reviewer" },
+  );
+
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+  await act(async () => {
+    await result.current.actions.archiveSpec("phase-1-viewer");
+  });
+  expect(result.current.state.archiveReveal?.status).toBe("missing");
+  await act(async () => {
+    await result.current.actions.refreshArchiveReveal();
+  });
+
+  expect(listSpecs).toHaveBeenCalledTimes(3);
+  expect(result.current.state.archiveReveal).toBeNull();
+  expect(result.current.state.archiveFailure).toBeNull();
+  expect(result.current.state.selection.specId).toBe("phase-1-viewer");
+  result.unmount();
+});
+
 test("useSpecsはarchive中の追加archiveを実行しない", async () => {
   const archiveResult = {
     archivedSpecId: "phase-1-viewer",
     archivePath:
       "/workspace/spec-reviewer/.plugin-workspace/.specs/.archive/phase-1-viewer",
+    sourceGroupId: "primary",
+    destinationNodeId: ".archive/phase-1-viewer",
   };
   const deferredArchive = createDeferred<typeof archiveResult>();
   specCommandMocks.listSpecs.mockResolvedValue(populatedTree);
@@ -1113,6 +1354,8 @@ test("useSpecsは同一tickの追加archiveを実行しない", async () => {
     archivedSpecId: "phase-1-viewer",
     archivePath:
       "/workspace/spec-reviewer/.plugin-workspace/.specs/.archive/phase-1-viewer",
+    sourceGroupId: "primary",
+    destinationNodeId: ".archive/phase-1-viewer",
   };
   const deferredArchive = createDeferred<typeof archiveResult>();
   specCommandMocks.listSpecs.mockResolvedValue(populatedTree);
@@ -1271,6 +1514,8 @@ test("useSpecsはarchive errorをreloadやselectionで保持し次のarchive開�
       archivedSpecId: "phase-1-viewer",
       archivePath:
         "/workspace/spec-reviewer/.plugin-workspace/.specs/.archive/phase-1-viewer",
+      sourceGroupId: "primary",
+      destinationNodeId: ".archive/phase-1-viewer",
     });
 
   const result = renderHook(
@@ -1317,6 +1562,8 @@ test("useSpecsはarchive後に選択中specが消えたらdefault openable spec�
     archivedSpecId: "phase-1-viewer",
     archivePath:
       "/workspace/spec-reviewer/.plugin-workspace/.specs/.archive/phase-1-viewer",
+    sourceGroupId: "primary",
+    destinationNodeId: ".archive/phase-1-viewer",
   });
 
   const result = renderHook(
@@ -1372,6 +1619,8 @@ test("useSpecsはarchive実行中のworkspace changeでarchivingSpecIdを残留�
     archivedSpecId: "phase-1-viewer",
     archivePath:
       "/workspace/spec-reviewer/.plugin-workspace/.specs/.archive/phase-1-viewer",
+    sourceGroupId: "primary",
+    destinationNodeId: ".archive/phase-1-viewer",
   };
   const deferredArchive = createDeferred<typeof archiveResult>();
   specCommandMocks.listSpecs.mockResolvedValue(populatedTree);

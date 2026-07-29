@@ -11,6 +11,11 @@ const tree: SpecTreeData = {
     {
       id: "phase-1",
       label: "Phase 1",
+      kind: "spec",
+      sourceGroupId: "primary",
+      relativeId: "phase-1",
+      presentDocumentCount: 0,
+      descendantSpecCount: 0,
       files: [
         {
           key: "impl",
@@ -41,6 +46,8 @@ const baseState: SpecsState = {
   activeOperationId: null,
   archivingSpecId: null,
   archiveSpecError: null,
+  archiveFailure: null,
+  archiveReveal: null,
 };
 
 test("buildSpecsSelectorsはtreeとselectionからselected spec/fileを導出する", () => {
