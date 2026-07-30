@@ -18,10 +18,10 @@ const activeSpec = createSpecNodeFixture({
   presentDocumentCount: 3,
 });
 const archivedSpec = createSpecNodeFixture({
-  id: "primary/.archive/073-issue-192",
-  label: "073-issue-192",
+  id: "primary/.archive/074-issue-193",
+  label: "074-issue-193",
   sourceGroupId: "primary",
-  relativeId: ".archive/073-issue-192",
+  relativeId: ".archive/074-issue-193",
   presentDocumentCount: 2,
 });
 const archive = createSpecNodeFixture({
@@ -81,7 +81,7 @@ const archiveResponse = {
   archivedSpecId: activeSpec.id,
   archivePath: "/workspace/spec-reviewer/.plugin-workspace/.specs/.archive/074-issue-193",
   sourceGroupId: "primary",
-  destinationNodeId: ".archive/073-issue-192",
+  destinationNodeId: ".archive/074-issue-193",
 } as const;
 
 const meta: Meta<typeof SpecTree> = {
