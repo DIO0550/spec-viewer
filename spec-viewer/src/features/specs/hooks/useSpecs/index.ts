@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
 import { SpecDocumentState as SpecDocumentStateFactory } from "@/features/specs/domain/specDocumentState";
 import { OperationId } from "@/features/specs/domain/operationId";
@@ -55,6 +55,7 @@ type PreferredSelection = Readonly<{
 type ResolvedSelection = ReturnType<typeof SpecTreeDomain.resolveSelection>;
 
 type ShouldCommitState = () => boolean;
+type OnSpecTreeLoaded = (tree: NonNullable<SpecTreeState["tree"]>) => void;
 
 type LoadDocumentContext = Readonly<{
   operationId: OperationId;
@@ -125,6 +126,8 @@ const initialSpecsState: SpecsState = {
   activeOperationId: null,
   archivingSpecId: null,
   archiveSpecError: null,
+  archiveFailure: null,
+  archiveReveal: null,
 };
 
 /**
@@ -134,6 +137,8 @@ const initialSpecsState: SpecsState = {
 export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
   const { onSelectionChange, workspacePath } = options;
   const [state, setState] = useState<SpecsState>(initialSpecsState);
+  const workspacePathRef = useRef(workspacePath);
+  workspacePathRef.current = workspacePath;
   const { isLoading, selection, specTreeState } = state;
   const selectedSpecId = selection.specId;
   const selectedFileKey = selection.fileKey;
@@ -313,6 +318,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
       operationId: OperationId,
       preferredSelection: PreferredSelection,
       canCommit: ShouldCommitState = () => true,
+      onTreeLoaded?: OnSpecTreeLoaded,
     ): Promise<boolean> => {
       if (!canCommit()) {
         return false;
@@ -356,6 +362,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
           ...currentState,
           specTreeState: SpecTreeStateFactory.loaded(activeWorkspacePath, tree),
         }));
+        onTreeLoaded?.(tree);
         const nextSelection = SpecTreeDomain.resolveSelection(
           tree,
           preferredSelection,
@@ -418,6 +425,8 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
       ...currentState,
       activeOperationId: operationId,
       archiveSpecError: null,
+      archiveFailure: null,
+      archiveReveal: null,
       archivingSpecId: null,
       documentState: SpecDocumentStateFactory.idle(workspacePath),
       isLoading: workspacePath !== null,
@@ -632,25 +641,47 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
         commitLoadState(operationId, (currentState) => ({
           ...currentState,
           archiveSpecError: null,
+          archiveFailure: null,
+          archiveReveal: null,
           archivingSpecId: specId,
         }));
 
         try {
-          await specGateway.archiveSpec(specCommands, {
+          const response = await specGateway.archiveSpec(specCommands, {
             workspacePath: activeWorkspacePath,
             specId,
           });
 
-          return await loadSpecTree(operationId, {
-            specId: selectedSpecId,
-            fileKey: selectedFileKey,
-          });
+          return await loadSpecTree(
+            operationId,
+            {
+              specId: selectedSpecId,
+              fileKey: selectedFileKey,
+            },
+            () => workspacePathRef.current === activeWorkspacePath,
+            (loadedTree) => {
+              const destination = SpecTreeDomain.findNodeByIdentity(loadedTree, {
+                sourceGroupId: response.sourceGroupId,
+                relativeId: response.destinationNodeId,
+              });
+              commitLoadState(operationId, (currentState) => ({
+                ...currentState,
+                archiveReveal: {
+                  status: destination === null ? "missing" : "success",
+                  workspacePath: activeWorkspacePath,
+                  response,
+                },
+              }));
+            },
+          );
         } catch (error) {
+          const archiveError = SpecFeatureError.fromCommandError(
+            ArchiveSpecCommandError.fromUnknown(error),
+          );
           commitLoadState(operationId, (currentState) => ({
             ...currentState,
-            archiveSpecError: SpecFeatureError.fromCommandError(
-              ArchiveSpecCommandError.fromUnknown(error),
-            ),
+            archiveSpecError: archiveError,
+            archiveFailure: { specId, error: archiveError },
           }));
           return false;
         } finally {
@@ -671,6 +702,24 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
     ],
   );
 
+  const retryArchiveSpec = useCallback(async (): Promise<boolean> => {
+    if (state.archiveFailure === null) {
+      return false;
+    }
+
+    return await archiveSpec(state.archiveFailure.specId);
+  }, [archiveSpec, state.archiveFailure]);
+
+  const refreshArchiveReveal = useCallback(async (): Promise<boolean> => {
+    setState((currentState) => ({
+      ...currentState,
+      archiveFailure: null,
+      archiveReveal: null,
+      archiveSpecError: null,
+    }));
+    return await reloadSpecs();
+  }, [reloadSpecs]);
+
   const selectors: SpecsSelectors = useMemo(
     () => buildSpecsSelectors(state),
     [state],
@@ -678,6 +727,8 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
   const actions: SpecsActions = useMemo(
     () => ({
       archiveSpec,
+      retryArchiveSpec,
+      refreshArchiveReveal,
       reloadSpecs,
       selectSpec,
       selectFileKey,
@@ -686,9 +737,11 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
     }),
     [
       archiveSpec,
+      refreshArchiveReveal,
       reloadDocument,
       reloadSpecs,
       resetSelection,
+      retryArchiveSpec,
       selectFileKey,
       selectSpec,
     ],

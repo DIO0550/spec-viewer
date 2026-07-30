@@ -15,6 +15,11 @@ const implFile: SpecFile = {
 const specNode: SpecNode = {
   id: "spec-1",
   label: "Spec 1",
+  kind: "spec",
+  sourceGroupId: "primary",
+  relativeId: "spec-1",
+  presentDocumentCount: 0,
+  descendantSpecCount: 0,
   files: [implFile],
   children: [],
 };

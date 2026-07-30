@@ -113,11 +113,13 @@ impl FilesystemAppUseCases {
         workspace: &LoadWorkspaceResult,
         spec_id: &str,
     ) -> Result<ArchiveSpecResult, AppUseCaseError> {
-        let archive_path = archive_spec_directory(workspace.layout(), spec_id)?;
+        let destination = archive_spec_directory(workspace.layout(), workspace.config(), spec_id)?;
 
         Ok(ArchiveSpecResult::new(
             spec_id,
-            archive_path.to_string_lossy().into_owned(),
+            destination.path().to_string_lossy().into_owned(),
+            destination.source_group_id(),
+            destination.destination_node_id(),
         ))
     }
 
@@ -356,13 +358,22 @@ impl ListSpecsResult {
 pub struct ArchiveSpecResult {
     archived_spec_id: String,
     archive_path: String,
+    source_group_id: String,
+    destination_node_id: String,
 }
 
 impl ArchiveSpecResult {
-    pub fn new(archived_spec_id: impl Into<String>, archive_path: impl Into<String>) -> Self {
+    pub fn new(
+        archived_spec_id: impl Into<String>,
+        archive_path: impl Into<String>,
+        source_group_id: impl Into<String>,
+        destination_node_id: impl Into<String>,
+    ) -> Self {
         Self {
             archived_spec_id: archived_spec_id.into(),
             archive_path: archive_path.into(),
+            source_group_id: source_group_id.into(),
+            destination_node_id: destination_node_id.into(),
         }
     }
 
@@ -372,6 +383,14 @@ impl ArchiveSpecResult {
 
     pub fn archive_path(&self) -> &str {
         &self.archive_path
+    }
+
+    pub fn source_group_id(&self) -> &str {
+        &self.source_group_id
+    }
+
+    pub fn destination_node_id(&self) -> &str {
+        &self.destination_node_id
     }
 }
 

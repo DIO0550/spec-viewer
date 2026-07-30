@@ -1,5 +1,9 @@
 import type { SpecFileKey } from "@/features/specs/domain/specFile";
-import { SpecNode, type SpecNode as SpecNodeType } from "@/features/specs/domain/specNode";
+import {
+  SpecNode,
+  type SpecNode as SpecNodeType,
+  type SpecNodeIdentity,
+} from "@/features/specs/domain/specNode";
 
 export type SpecTree = Readonly<{
   specs: readonly SpecNodeType[];
@@ -11,40 +15,68 @@ export type SpecSelection = Readonly<{
 }>;
 
 export const SpecTree = {
-  /**
-   * @param tree - Spec tree to inspect
-   * @returns True when the tree has no root specs.
-   */
-  isEmpty: (tree: SpecTree): boolean => tree.specs.length === 0,
+  /** Returns true when no openable spec exists in the projection. */
+  isEmpty: (tree: SpecTree): boolean =>
+    SpecNode.firstOpenable(tree.specs) === null,
 
-  /**
-   * @param tree - Spec tree to search
-   * @param specId - Spec node id to find
-   * @returns Matching node, or null when absent.
-   */
+  /** Finds a node by its legacy global id. */
   findNode: (tree: SpecTree, specId: string): SpecNodeType | null =>
     SpecNode.findById(tree.specs, specId),
 
-  /**
-   * @param tree - Spec tree to inspect
-   * @returns Default openable node, or null when the tree is empty.
-   */
+  /** Finds a node by its stable composite identity. */
+  findNodeByIdentity: (
+    tree: SpecTree,
+    identity: SpecNodeIdentity,
+  ): SpecNodeType | null => SpecNode.findByIdentity(tree.specs, identity),
+
+  /** Returns the path from a root to the matching composite identity. */
+  findPathToNode: (
+    tree: SpecTree,
+    identity: SpecNodeIdentity,
+  ): readonly SpecNodeType[] => {
+    const visit = (
+      nodes: readonly SpecNodeType[],
+      ancestors: readonly SpecNodeType[],
+    ): readonly SpecNodeType[] => {
+      for (const node of nodes) {
+        const path = [...ancestors, node];
+
+        if (
+          node.sourceGroupId === identity.sourceGroupId &&
+          node.relativeId === identity.relativeId
+        ) {
+          return path;
+        }
+
+        const childPath = visit(node.children, path);
+
+        if (childPath.length > 0) {
+          return childPath;
+        }
+      }
+
+      return [];
+    };
+
+    return visit(tree.specs, []);
+  },
+
+  /** Returns the first openable spec node. */
   defaultNode: (tree: SpecTree): SpecNodeType | null =>
     SpecNode.firstOpenable(tree.specs),
 
-  /**
-   * @param tree - Spec tree containing candidate nodes
-   * @param preferred - Preferred spec and file selection
-   * @returns Resolved selection after preserving or falling back.
-   */
+  /** Preserves an openable preferred selection or falls back to a spec. */
   resolveSelection: (
     tree: SpecTree,
-    preferred: Readonly<{ specId: string | null; fileKey: SpecFileKey | null }>,
+    preferred: Readonly<{
+      specId: string | null;
+      fileKey: SpecFileKey | null;
+    }>,
   ): SpecSelection => {
     if (preferred.specId !== null) {
       const preferredSpec = SpecTree.findNode(tree, preferred.specId);
 
-      if (preferredSpec !== null) {
+      if (preferredSpec !== null && SpecNode.isOpenable(preferredSpec)) {
         return {
           spec: preferredSpec,
           fileKey: SpecNode.preservedFileKey(preferredSpec, preferred.fileKey),

@@ -322,9 +322,17 @@ function SpecViewAppContent(): ReactElement {
               state={specState.specTreeState}
               selectedSpecId={specState.selection.specId}
               archivingSpecId={specState.archivingSpecId}
+              archiveFailure={specState.archiveFailure}
+              archiveReveal={specState.archiveReveal}
               isLoading={isCurrentViewLoading}
               onSelectSpec={guardedSpecActions.selectSpecFromTree}
               onArchiveSpec={guardedSpecActions.archiveSpecFromTree}
+              onRetryArchive={() => {
+                void specActions.retryArchiveSpec();
+              }}
+              onRefreshArchiveReveal={() => {
+                void specActions.refreshArchiveReveal();
+              }}
               onReload={guardedSpecActions.reloadSpecsFromTree}
             />
           ) : (

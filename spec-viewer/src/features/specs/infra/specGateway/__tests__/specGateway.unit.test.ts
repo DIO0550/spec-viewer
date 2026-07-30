@@ -19,7 +19,9 @@ const document: SpecDocument = {
 
 const archiveResponse = {
   archivedSpecId: "spec-1",
-  archivePath: "/workspace/spec-viewer/.plugin-workspace/.specs/archive/spec-1",
+  archivePath: "/workspace/spec-viewer/.plugin-workspace/.specs/.archive/spec-1",
+  sourceGroupId: ".plugin-workspace/.specs",
+  destinationNodeId: ".archive/spec-1",
 };
 
 test("listSpecsはcommands.listSpecsへworkspacePathを委譲する", async () => {
@@ -52,7 +54,7 @@ test("readSpecFileはrequest DTOを維持してcommands.readSpecFileへ委譲す
   expect(commands.readSpecFile).toHaveBeenCalledWith(request);
 });
 
-test("archiveSpecはworkspacePathとspecIdを維持してcommands.archiveSpecへ委譲する", async () => {
+test("archiveSpecはrequestと複合destination responseを変換せず維持する", async () => {
   const request = {
     workspacePath: "/workspace/spec-viewer",
     specId: "spec-1",

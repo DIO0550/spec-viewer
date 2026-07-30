@@ -13,7 +13,7 @@ use crate::{
     },
     domain::spec::{
         MarkdownBlock, MarkdownBlockSourceRange, SpecDocumentFormat, SpecFile, SpecFileKey,
-        SpecFileStatus, SpecNode,
+        SpecFileStatus, SpecNode, SpecNodeKind,
     },
 };
 
@@ -132,6 +132,11 @@ impl SpecTreeResponse {
 pub struct SpecNodeResponse {
     id: String,
     label: String,
+    kind: String,
+    source_group_id: String,
+    relative_id: String,
+    present_document_count: usize,
+    descendant_spec_count: usize,
     files: Vec<SpecFileResponse>,
     children: Vec<SpecNodeResponse>,
 }
@@ -143,6 +148,26 @@ impl SpecNodeResponse {
 
     pub fn label(&self) -> &str {
         &self.label
+    }
+
+    pub fn kind(&self) -> &str {
+        &self.kind
+    }
+
+    pub fn source_group_id(&self) -> &str {
+        &self.source_group_id
+    }
+
+    pub fn relative_id(&self) -> &str {
+        &self.relative_id
+    }
+
+    pub fn present_document_count(&self) -> usize {
+        self.present_document_count
+    }
+
+    pub fn descendant_spec_count(&self) -> usize {
+        self.descendant_spec_count
     }
 
     pub fn files(&self) -> &[SpecFileResponse] {
@@ -207,6 +232,8 @@ pub struct ReadSpecFileResponse {
 pub struct ArchiveSpecResponse {
     archived_spec_id: String,
     archive_path: String,
+    source_group_id: String,
+    destination_node_id: String,
 }
 
 impl ArchiveSpecResponse {
@@ -216,6 +243,14 @@ impl ArchiveSpecResponse {
 
     pub fn archive_path(&self) -> &str {
         &self.archive_path
+    }
+
+    pub fn source_group_id(&self) -> &str {
+        &self.source_group_id
+    }
+
+    pub fn destination_node_id(&self) -> &str {
+        &self.destination_node_id
     }
 }
 
@@ -373,6 +408,11 @@ impl From<&SpecNode> for SpecNodeResponse {
         Self {
             id: node.id().to_string(),
             label: node.label().to_string(),
+            kind: kind_label(node.kind()).to_string(),
+            source_group_id: node.source_group_id().to_string(),
+            relative_id: node.relative_id().to_string(),
+            present_document_count: node.present_document_count(),
+            descendant_spec_count: node.descendant_spec_count(),
             files: node.files().iter().map(SpecFileResponse::from).collect(),
             children: node.children().iter().map(SpecNodeResponse::from).collect(),
         }
@@ -406,6 +446,8 @@ impl From<ArchiveSpecResult> for ArchiveSpecResponse {
         Self {
             archived_spec_id: result.archived_spec_id().to_string(),
             archive_path: result.archive_path().to_string(),
+            source_group_id: result.source_group_id().to_string(),
+            destination_node_id: result.destination_node_id().to_string(),
         }
     }
 }
@@ -474,6 +516,10 @@ fn format_label(format: SpecDocumentFormat) -> &'static str {
     format.as_str()
 }
 
+fn kind_label(kind: SpecNodeKind) -> &'static str {
+    kind.as_str()
+}
+
 fn create_block_text_snippet(text: &str) -> String {
     const MAX_BLOCK_TEXT_SNIPPET_LENGTH: usize = 160;
 
@@ -516,6 +562,18 @@ mod tests {
         assert_eq!(1, response.specs().len());
         assert_eq!("auth", response.specs()[0].id());
         assert_eq!("auth", response.specs()[0].label());
+        assert_eq!("spec", response.specs()[0].kind());
+        assert_eq!("legacy", response.specs()[0].source_group_id());
+        assert_eq!("auth", response.specs()[0].relative_id());
+        assert_eq!(1, response.specs()[0].present_document_count());
+        assert_eq!(1, response.specs()[0].descendant_spec_count());
+        let serialized = serde_json::to_value(&response.specs()[0])
+            .expect("spec node response should serialize");
+        assert_eq!("spec", serialized["kind"]);
+        assert_eq!("legacy", serialized["sourceGroupId"]);
+        assert_eq!("auth", serialized["relativeId"]);
+        assert_eq!(1, serialized["presentDocumentCount"]);
+        assert_eq!(1, serialized["descendantSpecCount"]);
         assert_eq!("impl", response.specs()[0].files()[0].key());
         assert_eq!("Implementation", response.specs()[0].files()[0].label());
         assert_eq!(
@@ -596,6 +654,8 @@ mod tests {
         let result = ArchiveSpecResult::new(
             ".plugin-workspace/.specs/auth",
             "/workspace/.plugin-workspace/.specs/.archive/auth",
+            ".plugin-workspace/.specs",
+            ".archive/auth",
         );
 
         let response = ArchiveSpecResponse::from(result);
@@ -605,6 +665,12 @@ mod tests {
             "/workspace/.plugin-workspace/.specs/.archive/auth",
             response.archive_path()
         );
+        assert_eq!(".plugin-workspace/.specs", response.source_group_id());
+        assert_eq!(".archive/auth", response.destination_node_id());
+        let serialized =
+            serde_json::to_value(&response).expect("archive response should serialize");
+        assert_eq!(".plugin-workspace/.specs", serialized["sourceGroupId"]);
+        assert_eq!(".archive/auth", serialized["destinationNodeId"]);
     }
 
     #[test]

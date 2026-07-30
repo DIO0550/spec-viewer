@@ -55,6 +55,11 @@ test("listSpecsはlist_specsへworkspacePathを渡す", async () => {
       {
         id: "auth",
         label: "auth",
+        kind: "spec",
+        sourceGroupId: "primary",
+        relativeId: "auth",
+        presentDocumentCount: 0,
+        descendantSpecCount: 0,
         files: [],
         children: [],
       },
@@ -64,6 +69,15 @@ test("listSpecsはlist_specsへworkspacePathを渡す", async () => {
   const result = await listSpecs("/workspace/spec-reviewer");
 
   expect(result.specs).toHaveLength(1);
+  expect(result.specs[0]).toEqual(
+    expect.objectContaining({
+      kind: "spec",
+      sourceGroupId: "primary",
+      relativeId: "auth",
+      presentDocumentCount: 0,
+      descendantSpecCount: 0,
+    }),
+  );
   expect(invokeMock).toHaveBeenCalledWith("list_specs", {
     request: { workspacePath: "/workspace/spec-reviewer" },
   });
@@ -114,6 +128,8 @@ test("archiveSpecはarchive_specへworkspacePathとspecIdを渡す", async () =>
   invokeMock.mockResolvedValue({
     archivedSpecId: ".plugin-workspace/.specs/auth",
     archivePath: "/workspace/.plugin-workspace/.specs/.archive/auth",
+    sourceGroupId: ".plugin-workspace/.specs",
+    destinationNodeId: ".archive/auth",
   });
 
   const result = await archiveSpec({
@@ -124,6 +140,8 @@ test("archiveSpecはarchive_specへworkspacePathとspecIdを渡す", async () =>
   expect(result.archivePath).toBe(
     "/workspace/.plugin-workspace/.specs/.archive/auth",
   );
+  expect(result.sourceGroupId).toBe(".plugin-workspace/.specs");
+  expect(result.destinationNodeId).toBe(".archive/auth");
   expect(invokeMock).toHaveBeenCalledWith("archive_spec", {
     request: {
       workspacePath: "/workspace/spec-reviewer",

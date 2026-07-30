@@ -16,7 +16,11 @@ export type {
   SpecFileKey,
   SpecFileStatus,
 } from "@/features/specs/domain/specFile";
-export type { SpecNode } from "@/features/specs/domain/specNode";
+export type {
+  SpecNode,
+  SpecNodeIdentity,
+  SpecNodeKind,
+} from "@/features/specs/domain/specNode";
 export type { SpecTree } from "@/features/specs/domain/specTree";
 
 export type MarkdownBlockType =
@@ -62,6 +66,8 @@ export type ArchiveSpecRequest = Readonly<{
 export type ArchiveSpecResponse = Readonly<{
   archivedSpecId: string;
   archivePath: string;
+  sourceGroupId: string;
+  destinationNodeId: string;
 }>;
 
 export type SpecDocument = Readonly<{

@@ -8,6 +8,11 @@ import { SpecTabs } from ".";
 const sampleSpec: SpecNode = {
   id: "phase-1-viewer",
   label: "Phase 1 Viewer",
+  kind: "spec",
+  sourceGroupId: "primary",
+  relativeId: "phase-1-viewer",
+  presentDocumentCount: 0,
+  descendantSpecCount: 0,
   files: [
     {
       key: "impl",
