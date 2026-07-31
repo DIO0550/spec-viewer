@@ -12,6 +12,7 @@ Completed task files are moved here from the active task groups.
 
 ## Completed Tasks
 
+- [Issue #201 Repository diff backend](./backend/issue-201-repository-diff.md)
 - [P1.1 Backend Module Skeleton](./phase-1-viewer/p1-01-backend-module-skeleton.md)
 - [P1.2 Workspace Domain](./phase-1-viewer/p1-02-workspace-domain.md)
 - [P1.3 Spec File Domain](./phase-1-viewer/p1-03-spec-file-domain.md)
