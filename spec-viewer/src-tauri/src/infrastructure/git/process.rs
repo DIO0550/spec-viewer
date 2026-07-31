@@ -1,0 +1,272 @@
+use crate::domain::repository::RepositoryPortError;
+use std::{
+    io::Read,
+    path::Path,
+    process::{Command, Stdio},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    thread,
+    time::{Duration, Instant},
+};
+
+#[derive(Debug, Clone)]
+pub struct GitCommandPolicy {
+    pub metadata_timeout: Duration,
+    pub content_timeout: Duration,
+    pub stdout_limit: usize,
+    pub stderr_limit: usize,
+}
+impl Default for GitCommandPolicy {
+    fn default() -> Self {
+        Self {
+            metadata_timeout: Duration::from_secs(15),
+            content_timeout: Duration::from_secs(30),
+            stdout_limit: 32 * 1024 * 1024,
+            stderr_limit: 1024 * 1024,
+        }
+    }
+}
+#[derive(Debug, Clone, Default)]
+pub struct GitRunner {
+    policy: GitCommandPolicy,
+}
+impl GitRunner {
+    pub fn run(
+        &self,
+        cwd: &Path,
+        operation: &str,
+        args: &[&str],
+        content: bool,
+    ) -> Result<Vec<u8>, RepositoryPortError> {
+        self.run_with_stdout_limit(cwd, operation, args, content, self.policy.stdout_limit)
+    }
+
+    pub fn run_with_stdout_limit(
+        &self,
+        cwd: &Path,
+        operation: &str,
+        args: &[&str],
+        content: bool,
+        stdout_limit: usize,
+    ) -> Result<Vec<u8>, RepositoryPortError> {
+        let mut child = Command::new("git")
+            .arg("-C")
+            .arg(cwd)
+            .args(args)
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .map_err(|error| {
+                if error.kind() == std::io::ErrorKind::NotFound {
+                    RepositoryPortError::GitUnavailable
+                } else {
+                    RepositoryPortError::Io
+                }
+            })?;
+        let stdout = child.stdout.take().ok_or(RepositoryPortError::Io)?;
+        let stderr = child.stderr.take().ok_or(RepositoryPortError::Io)?;
+        let err_limit = self.policy.stderr_limit;
+        let out_exceeded = Arc::new(AtomicBool::new(false));
+        let err_exceeded = Arc::new(AtomicBool::new(false));
+        let out_signal = Arc::clone(&out_exceeded);
+        let err_signal = Arc::clone(&err_exceeded);
+        let out_reader = thread::spawn(move || read_capped(stdout, stdout_limit, out_signal));
+        let err_reader = thread::spawn(move || read_capped(stderr, err_limit, err_signal));
+        let timeout = if content {
+            self.policy.content_timeout
+        } else {
+            self.policy.metadata_timeout
+        };
+        let start = Instant::now();
+        let status = loop {
+            if out_exceeded.load(Ordering::Acquire) || err_exceeded.load(Ordering::Acquire) {
+                let stream = if out_exceeded.load(Ordering::Acquire) {
+                    "stdout"
+                } else {
+                    "stderr"
+                };
+                let _ = child.kill();
+                let _ = child.wait();
+                let _ = out_reader.join();
+                let _ = err_reader.join();
+                return Err(RepositoryPortError::GitOutputLimitExceeded {
+                    stream: stream.into(),
+                });
+            }
+            match child.try_wait() {
+                Ok(Some(status)) => break status,
+                Ok(None) if start.elapsed() < timeout => thread::sleep(Duration::from_millis(10)),
+                Ok(None) => {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    let _ = out_reader.join();
+                    let _ = err_reader.join();
+                    return Err(RepositoryPortError::GitTimedOut {
+                        operation: operation.to_string(),
+                    });
+                }
+                Err(_) => {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    let _ = out_reader.join();
+                    let _ = err_reader.join();
+                    return Err(RepositoryPortError::Io);
+                }
+            }
+        };
+        let stdout = out_reader
+            .join()
+            .map_err(|_| reader_thread_error("stdout"))??;
+        let stderr = err_reader
+            .join()
+            .map_err(|_| reader_thread_error("stderr"))??;
+        if stdout.1 {
+            return Err(RepositoryPortError::GitOutputLimitExceeded {
+                stream: "stdout".into(),
+            });
+        }
+        if stderr.1 {
+            return Err(RepositoryPortError::GitOutputLimitExceeded {
+                stream: "stderr".into(),
+            });
+        }
+        if !status.success() {
+            return Err(RepositoryPortError::GitFailed {
+                operation: operation.to_string(),
+                code: status.code(),
+                stderr: sanitize_diagnostic(&stderr.0),
+            });
+        }
+        Ok(stdout.0)
+    }
+}
+fn sanitize_diagnostic(bytes: &[u8]) -> String {
+    let mut sanitized = String::new();
+    for character in String::from_utf8_lossy(bytes).chars() {
+        for escaped in character.escape_default() {
+            if sanitized.len() >= 4096 {
+                return sanitized;
+            }
+            sanitized.push(escaped);
+        }
+    }
+    sanitized
+}
+
+fn reader_thread_error(stream: &str) -> RepositoryPortError {
+    RepositoryPortError::GitFailed {
+        operation: format!("read-{stream}"),
+        code: None,
+        stderr: format!("{stream} reader thread terminated unexpectedly"),
+    }
+}
+
+fn read_capped(
+    mut reader: impl Read,
+    limit: usize,
+    exceeded_signal: Arc<AtomicBool>,
+) -> Result<(Vec<u8>, bool), RepositoryPortError> {
+    let mut bytes = Vec::new();
+    let mut chunk = [0_u8; 8192];
+    let mut exceeded = false;
+    loop {
+        let read = reader
+            .read(&mut chunk)
+            .map_err(|_| RepositoryPortError::Io)?;
+        if read == 0 {
+            break;
+        }
+        let remaining = limit.saturating_sub(bytes.len());
+        bytes.extend_from_slice(&chunk[..read.min(remaining)]);
+        if read > remaining {
+            exceeded = true;
+            exceeded_signal.store(true, Ordering::Release);
+            break;
+        }
+    }
+    Ok((bytes, exceeded))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn diagnostics_escape_control_characters_and_are_bounded() {
+        let input = format!("line\nsecret\0{}", "x".repeat(5000));
+        let diagnostic = sanitize_diagnostic(input.as_bytes());
+        assert!(!diagnostic.contains('\n'));
+        assert!(!diagnostic.contains('\0'));
+        assert!(diagnostic.contains("\\n"));
+        assert!(diagnostic.len() <= 4096);
+    }
+
+    #[test]
+    fn default_policy_matches_contract() {
+        let p = GitCommandPolicy::default();
+        assert_eq!(p.metadata_timeout, Duration::from_secs(15));
+        assert_eq!(p.content_timeout, Duration::from_secs(30));
+        assert_eq!(p.stdout_limit, 32 * 1024 * 1024);
+        assert_eq!(p.stderr_limit, 1024 * 1024);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn timeout_returns_typed_error_after_killing_and_reaping_child() {
+        let runner = GitRunner {
+            policy: GitCommandPolicy {
+                metadata_timeout: Duration::from_millis(20),
+                ..GitCommandPolicy::default()
+            },
+        };
+        let error = runner
+            .run(
+                Path::new(env!("CARGO_MANIFEST_DIR")),
+                "timeout-test",
+                &["-c", "alias.pause=!sleep 0.2", "pause"],
+                false,
+            )
+            .unwrap_err();
+        assert_eq!(
+            error,
+            RepositoryPortError::GitTimedOut {
+                operation: "timeout-test".into()
+            }
+        );
+    }
+
+    #[test]
+    fn stdout_cap_returns_typed_error_without_partial_output() {
+        let runner = GitRunner {
+            policy: GitCommandPolicy {
+                stdout_limit: 8,
+                ..GitCommandPolicy::default()
+            },
+        };
+        let error = runner
+            .run(
+                Path::new(env!("CARGO_MANIFEST_DIR")),
+                "bounded-output-test",
+                &["rev-parse", "--show-toplevel"],
+                false,
+            )
+            .unwrap_err();
+        assert_eq!(
+            error,
+            RepositoryPortError::GitOutputLimitExceeded {
+                stream: "stdout".into()
+            }
+        );
+    }
+
+    #[test]
+    fn capped_reader_signals_at_limit_plus_one() {
+        let signal = Arc::new(AtomicBool::new(false));
+        let (bytes, exceeded) = read_capped(&b"12345"[..], 4, Arc::clone(&signal)).unwrap();
+        assert_eq!(bytes, b"1234");
+        assert!(exceeded);
+        assert!(signal.load(Ordering::Acquire));
+    }
+}
