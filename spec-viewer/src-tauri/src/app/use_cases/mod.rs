@@ -1,6 +1,7 @@
 //! Use cases that coordinate domain logic and infrastructure.
 
 pub mod comments;
+pub mod repository_diff;
 
 use std::path::Path;
 
