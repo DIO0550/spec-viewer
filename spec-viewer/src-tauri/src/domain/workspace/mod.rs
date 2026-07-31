@@ -12,6 +12,62 @@ pub use config::{
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct WorktreeId {
+    value: String,
+}
+
+impl WorktreeId {
+    pub fn new(value: impl Into<String>) -> Result<Self, WorkspaceDomainError> {
+        let value = value.into();
+        if value.trim().is_empty() {
+            return Err(WorkspaceDomainError::MissingWorktreeId);
+        }
+        Ok(Self { value })
+    }
+    pub fn as_str(&self) -> &str {
+        &self.value
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ValidatedRefName {
+    value: String,
+}
+
+impl ValidatedRefName {
+    pub fn parse(value: impl Into<String>) -> Result<Self, WorkspaceDomainError> {
+        let value = value.into();
+        let invalid = value.trim() != value
+            || value.is_empty()
+            || value == "@"
+            || value.chars().any(char::is_whitespace)
+            || value.starts_with('-')
+            || value
+                .bytes()
+                .any(|byte| byte == 0 || byte < 0x20 || byte == 0x7f)
+            || value
+                .chars()
+                .any(|character| matches!(character, '~' | '^' | ':' | '?' | '*' | '[' | '\\'))
+            || value.contains("..")
+            || value.contains("@{")
+            || value.contains("//")
+            || value
+                .split('/')
+                .any(|segment| segment.is_empty() || segment.starts_with('.'))
+            || value.ends_with('.')
+            || value.ends_with('/')
+            || value.ends_with(".lock");
+        if invalid {
+            return Err(WorkspaceDomainError::InvalidRefName { value });
+        }
+        Ok(Self { value })
+    }
+    pub fn as_str(&self) -> &str {
+        &self.value
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct WorkspaceRoot {
     value: String,
 }
@@ -98,6 +154,10 @@ impl WorkspaceLayout {
 pub enum WorkspaceDomainError {
     #[error("workspace root is required")]
     MissingRoot,
+    #[error("worktree id is required")]
+    MissingWorktreeId,
+    #[error("invalid git ref name: {value}")]
+    InvalidRefName { value: String },
     #[error("unsupported workspace layout: {layout}")]
     UnsupportedLayout { layout: String },
 }
@@ -125,6 +185,33 @@ mod tests {
         let result = WorkspaceRoot::new("   ");
 
         assert_eq!(Err(WorkspaceDomainError::MissingRoot), result);
+    }
+
+    #[test]
+    fn worktree_and_ref_value_objects_enforce_boundaries() {
+        assert_eq!(
+            WorktreeId::new(" ").unwrap_err(),
+            WorkspaceDomainError::MissingWorktreeId
+        );
+        assert_eq!(
+            WorktreeId::new("worktree-1").unwrap().as_str(),
+            "worktree-1"
+        );
+        assert_eq!(
+            ValidatedRefName::parse("feature/review").unwrap().as_str(),
+            "feature/review"
+        );
+        for invalid in [
+            "", " branch", "-option", "a..b", "a@{b", "a//b", "a/", "a.", "a.lock", "a/\u{0}b",
+        ] {
+            assert!(
+                matches!(
+                    ValidatedRefName::parse(invalid),
+                    Err(WorkspaceDomainError::InvalidRefName { .. })
+                ),
+                "{invalid:?} must be rejected"
+            );
+        }
     }
 
     #[test]
