@@ -1,6 +1,11 @@
 //! Spec-scoped working-tree diff orchestration.
 
-use std::{collections::BTreeMap, error::Error, fmt, str::FromStr};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    error::Error,
+    fmt,
+    str::FromStr,
+};
 
 use crate::domain::{
     repository::{
@@ -11,17 +16,64 @@ use crate::domain::{
     workspace::WorktreeId,
 };
 
+type SpecIdentity = (SpecId, SpecFileKey);
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpecDiffTarget {
-    pub spec_id: SpecId,
-    pub file_key: SpecFileKey,
-    pub candidate_paths: Vec<RepositoryRelativePath>,
+    spec_id: SpecId,
+    file_key: SpecFileKey,
+    candidate_paths: Vec<RepositoryRelativePath>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SpecDiffTargetInvariantError {
+    MissingCandidatePath {
+        spec_id: SpecId,
+        file_key: SpecFileKey,
+    },
+    DuplicateIdentity {
+        spec_id: SpecId,
+        file_key: SpecFileKey,
+    },
+    AmbiguousCandidatePath {
+        path: RepositoryRelativePath,
+    },
+}
+
+impl fmt::Display for SpecDiffTargetInvariantError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::MissingCandidatePath { spec_id, file_key } => write!(
+                formatter,
+                "Spec diff target has no candidate path: {}/{file_key:?}",
+                spec_id.as_str()
+            ),
+            Self::DuplicateIdentity { spec_id, file_key } => write!(
+                formatter,
+                "Spec diff target identity is duplicated: {}/{file_key:?}",
+                spec_id.as_str()
+            ),
+            Self::AmbiguousCandidatePath { path } => write!(
+                formatter,
+                "Spec diff candidate path maps to multiple identities: {}",
+                path.as_str()
+            ),
+        }
+    }
+}
+
+impl Error for SpecDiffTargetInvariantError {}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ResolvedSpecDiffTargets {
-    pub worktree: WorktreeId,
-    pub targets: Vec<SpecDiffTarget>,
+    worktree: WorktreeId,
+    targets: Vec<SpecDiffTarget>,
+    identities_by_path: BTreeMap<RepositoryRelativePath, SpecIdentity>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SpecDiffProjectionError {
+    ConflictingRenameTargets,
 }
 
 pub trait ResolveSpecDiffTargets {
@@ -114,9 +166,10 @@ where
             .targets
             .resolve(workspace_path)
             .map_err(SpecDiffUseCaseError::Target)?;
-        let overview = self.git.load_working_tree_overview(&resolved.worktree)?;
-        let target_index = SpecDiffTargetIndex::new::<Targets::Error>(&resolved.targets)?;
-        let files = target_index.project::<Targets::Error>(&overview.changed)?;
+        let overview = self.git.load_working_tree_overview(resolved.worktree())?;
+        let files = resolved
+            .project_changed_files(&overview.changed)
+            .map_err(|_| SpecDiffUseCaseError::ConflictingRenameTargets)?;
 
         Ok(ChangedSpecFiles {
             current_snapshot_id: overview.current_snapshot_id,
@@ -146,79 +199,129 @@ where
             .find_target(spec_id, requested_key)
             .ok_or(SpecDiffUseCaseError::InvalidInput)?;
 
-        if !target.candidate_paths.contains(&requested_path) {
+        if !target.accepts(&requested_path) {
             return Err(SpecDiffUseCaseError::InvalidInput);
         }
 
         let review =
             self.git
-                .load_working_tree_file(&resolved.worktree, &snapshot, &requested_path)?;
+                .load_working_tree_file(resolved.worktree(), &snapshot, &requested_path)?;
 
         Ok(SpecFileDiff {
-            spec_id: target.spec_id.clone(),
-            file_key: target.file_key,
+            spec_id: target.spec_id().clone(),
+            file_key: target.file_key(),
             review,
         })
     }
 }
 
-type SpecIdentity = (SpecId, SpecFileKey);
+impl SpecDiffTarget {
+    pub fn new(
+        spec_id: SpecId,
+        file_key: SpecFileKey,
+        mut candidate_paths: Vec<RepositoryRelativePath>,
+    ) -> Result<Self, SpecDiffTargetInvariantError> {
+        if candidate_paths.is_empty() {
+            return Err(SpecDiffTargetInvariantError::MissingCandidatePath { spec_id, file_key });
+        }
+        candidate_paths.sort();
+        candidate_paths.dedup();
+        Ok(Self {
+            spec_id,
+            file_key,
+            candidate_paths,
+        })
+    }
+
+    pub fn spec_id(&self) -> &SpecId {
+        &self.spec_id
+    }
+
+    pub fn file_key(&self) -> SpecFileKey {
+        self.file_key
+    }
+
+    pub fn candidate_paths(&self) -> &[RepositoryRelativePath] {
+        &self.candidate_paths
+    }
+
+    fn identity(&self) -> SpecIdentity {
+        (self.spec_id.clone(), self.file_key)
+    }
+
+    fn accepts(&self, path: &RepositoryRelativePath) -> bool {
+        self.candidate_paths.binary_search(path).is_ok()
+    }
+}
 
 impl ResolvedSpecDiffTargets {
+    pub fn new(
+        worktree: WorktreeId,
+        mut targets: Vec<SpecDiffTarget>,
+    ) -> Result<Self, SpecDiffTargetInvariantError> {
+        targets.sort_by(|left, right| {
+            left.spec_id
+                .as_str()
+                .cmp(right.spec_id.as_str())
+                .then_with(|| left.file_key.cmp(&right.file_key))
+        });
+        let mut logical_identities = BTreeSet::<(String, SpecFileKey)>::new();
+        let mut identities_by_path = BTreeMap::new();
+        for target in &targets {
+            let logical_identity = (target.spec_id.as_str().to_string(), target.file_key);
+            if !logical_identities.insert(logical_identity) {
+                return Err(SpecDiffTargetInvariantError::DuplicateIdentity {
+                    spec_id: target.spec_id().clone(),
+                    file_key: target.file_key(),
+                });
+            }
+            for path in &target.candidate_paths {
+                let identity = target.identity();
+                if identities_by_path
+                    .insert(path.clone(), identity.clone())
+                    .is_some_and(|existing| existing != identity)
+                {
+                    return Err(SpecDiffTargetInvariantError::AmbiguousCandidatePath {
+                        path: path.clone(),
+                    });
+                }
+            }
+        }
+        Ok(Self {
+            worktree,
+            targets,
+            identities_by_path,
+        })
+    }
+
+    pub fn worktree(&self) -> &WorktreeId {
+        &self.worktree
+    }
+
     fn find_target(&self, spec_id: &str, file_key: SpecFileKey) -> Option<&SpecDiffTarget> {
         self.targets
             .iter()
             .find(|target| target.spec_id.as_str() == spec_id && target.file_key == file_key)
     }
-}
 
-impl ChangedSpecFile {
-    fn selected_path(&self) -> Option<&RepositoryRelativePath> {
-        self.new_path.as_ref().or(self.old_path.as_ref())
-    }
-}
-
-struct SpecDiffTargetIndex {
-    identities: BTreeMap<RepositoryRelativePath, SpecIdentity>,
-}
-
-impl SpecDiffTargetIndex {
-    fn new<TargetError>(
-        targets: &[SpecDiffTarget],
-    ) -> Result<Self, SpecDiffUseCaseError<TargetError>> {
-        let mut identities = BTreeMap::new();
-        for target in targets {
-            for path in &target.candidate_paths {
-                let identity = (target.spec_id.clone(), target.file_key);
-                if identities
-                    .insert(path.clone(), identity.clone())
-                    .is_some_and(|existing| existing != identity)
-                {
-                    return Err(SpecDiffUseCaseError::InvalidInput);
-                }
-            }
-        }
-        Ok(Self { identities })
-    }
-
-    fn project<TargetError>(
+    fn project_changed_files(
         &self,
         changed: &[DiffFile],
-    ) -> Result<Vec<ChangedSpecFile>, SpecDiffUseCaseError<TargetError>> {
+    ) -> Result<Vec<ChangedSpecFile>, SpecDiffProjectionError> {
         let mut projected = BTreeMap::<(String, SpecFileKey), ChangedSpecFile>::new();
 
         for file in changed {
             let old_identity = file
                 .old_path
                 .as_ref()
-                .and_then(|path| self.identities.get(path));
+                .and_then(|path| self.identities_by_path.get(path));
             let new_identity = file
                 .new_path
                 .as_ref()
-                .and_then(|path| self.identities.get(path));
+                .and_then(|path| self.identities_by_path.get(path));
             let identity = match (old_identity, new_identity) {
                 (Some(old), Some(new)) if old != new => {
-                    return Err(SpecDiffUseCaseError::ConflictingRenameTargets)
+                    return Err(SpecDiffProjectionError::ConflictingRenameTargets)
                 }
                 (Some(identity), _) | (_, Some(identity)) => identity,
                 (None, None) => continue,
@@ -252,6 +355,12 @@ impl SpecDiffTargetIndex {
     }
 }
 
+impl ChangedSpecFile {
+    fn selected_path(&self) -> Option<&RepositoryRelativePath> {
+        self.new_path.as_ref().or(self.old_path.as_ref())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #[derive(Debug, Clone, Copy)]
@@ -261,14 +370,11 @@ mod tests {
         type Error = std::io::Error;
 
         fn resolve(&self, _workspace_path: &str) -> Result<ResolvedSpecDiffTargets, Self::Error> {
-            Ok(ResolvedSpecDiffTargets {
-                worktree: WorktreeId::new("/repo").unwrap(),
-                targets: vec![target(
-                    "001-alpha",
-                    SpecFileKey::Tasks,
-                    &["specs/001/tasks.md"],
-                )],
-            })
+            Ok(resolved(vec![target(
+                "001-alpha",
+                SpecFileKey::Tasks,
+                &["specs/001/tasks.md"],
+            )]))
         }
     }
 
@@ -313,14 +419,19 @@ mod tests {
     use crate::domain::repository::{ContentClassification, EntryKind};
 
     fn target(spec_id: &str, key: SpecFileKey, paths: &[&str]) -> SpecDiffTarget {
-        SpecDiffTarget {
-            spec_id: SpecId::new(spec_id).unwrap(),
-            file_key: key,
-            candidate_paths: paths
+        SpecDiffTarget::new(
+            SpecId::new(spec_id).unwrap(),
+            key,
+            paths
                 .iter()
                 .map(|path| RepositoryRelativePath::parse(*path).unwrap())
                 .collect(),
-        }
+        )
+        .unwrap()
+    }
+
+    fn resolved(targets: Vec<SpecDiffTarget>) -> ResolvedSpecDiffTargets {
+        ResolvedSpecDiffTargets::new(WorktreeId::new("/repo").unwrap(), targets).unwrap()
     }
 
     fn diff(old: Option<&str>, new: Option<&str>, change: FileChangeKind) -> DiffFile {
@@ -365,10 +476,7 @@ mod tests {
             ),
         ];
 
-        let projected = SpecDiffTargetIndex::new::<std::io::Error>(&targets)
-            .unwrap()
-            .project::<std::io::Error>(&changed)
-            .unwrap();
+        let projected = resolved(targets).project_changed_files(&changed).unwrap();
 
         assert_eq!(projected.len(), 2);
         assert_eq!(projected[0].spec_id.as_str(), "001-alpha");
@@ -388,10 +496,7 @@ mod tests {
             FileChangeKind::Renamed,
         )];
 
-        let projected = SpecDiffTargetIndex::new::<std::io::Error>(&targets)
-            .unwrap()
-            .project::<std::io::Error>(&changed)
-            .unwrap();
+        let projected = resolved(targets).project_changed_files(&changed).unwrap();
 
         assert_eq!(projected.len(), 1);
         assert_eq!(
@@ -417,10 +522,8 @@ mod tests {
         )];
 
         assert!(matches!(
-            SpecDiffTargetIndex::new::<std::io::Error>(&targets)
-                .unwrap()
-                .project::<std::io::Error>(&changed),
-            Err(SpecDiffUseCaseError::ConflictingRenameTargets)
+            resolved(targets).project_changed_files(&changed),
+            Err(SpecDiffProjectionError::ConflictingRenameTargets)
         ));
     }
 
@@ -432,8 +535,49 @@ mod tests {
         ];
 
         assert!(matches!(
-            SpecDiffTargetIndex::new::<std::io::Error>(&targets),
-            Err(SpecDiffUseCaseError::InvalidInput)
+            ResolvedSpecDiffTargets::new(WorktreeId::new("/repo").unwrap(), targets),
+            Err(SpecDiffTargetInvariantError::AmbiguousCandidatePath { .. })
+        ));
+    }
+
+    #[test]
+    fn target_requires_at_least_one_candidate_path() {
+        assert!(matches!(
+            SpecDiffTarget::new(
+                SpecId::new("001-alpha").unwrap(),
+                SpecFileKey::Tasks,
+                vec![],
+            ),
+            Err(SpecDiffTargetInvariantError::MissingCandidatePath { .. })
+        ));
+    }
+
+    #[test]
+    fn target_normalizes_candidate_paths_for_membership_checks() {
+        let target = target(
+            "001-alpha",
+            SpecFileKey::Tasks,
+            &[
+                "specs/001/tasks.html",
+                "specs/001/tasks.md",
+                "specs/001/tasks.md",
+            ],
+        );
+
+        assert_eq!(target.candidate_paths().len(), 2);
+        assert!(target.accepts(&RepositoryRelativePath::parse("specs/001/tasks.md").unwrap()));
+    }
+
+    #[test]
+    fn resolved_targets_reject_duplicate_logical_identity() {
+        let targets = vec![
+            target("001-alpha", SpecFileKey::Tasks, &["specs/a/tasks.md"]),
+            target("001-alpha", SpecFileKey::Tasks, &["specs/b/tasks.md"]),
+        ];
+
+        assert!(matches!(
+            ResolvedSpecDiffTargets::new(WorktreeId::new("/repo").unwrap(), targets),
+            Err(SpecDiffTargetInvariantError::DuplicateIdentity { .. })
         ));
     }
 }
