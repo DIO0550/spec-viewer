@@ -16,7 +16,30 @@ export { commentCommands } from "./commentCommands";
 export { deleteComment } from "./deleteComment";
 export { exportComments } from "./exportComments";
 export { generateLlmPrompt } from "./generateLlmPrompt";
+export type {
+  GetSpecFileDiffCommandContract,
+  GetSpecFileDiffCommandErrorCode,
+  GetSpecFileDiffCommandRequest,
+  GetSpecFileDiffCommandResponse,
+} from "./getSpecFileDiff";
+export {
+  GET_SPEC_FILE_DIFF_COMMAND,
+  GetSpecFileDiffCommandError,
+  getSpecFileDiff,
+} from "./getSpecFileDiff";
 export { listComments } from "./listComments";
+export type {
+  ListChangedSpecFilesCommandContract,
+  ListChangedSpecFilesCommandErrorCode,
+  ListChangedSpecFilesCommandRequest,
+  ListChangedSpecFilesCommandResponse,
+  SpecDiffBackendErrorCode,
+} from "./listChangedSpecFiles";
+export {
+  LIST_CHANGED_SPEC_FILES_COMMAND,
+  ListChangedSpecFilesCommandError,
+  listChangedSpecFiles,
+} from "./listChangedSpecFiles";
 export { listSpecs } from "./listSpecs";
 export { loadWorkspace } from "./loadWorkspace";
 export { readSpecFile } from "./readSpecFile";
