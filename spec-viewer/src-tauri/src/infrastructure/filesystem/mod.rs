@@ -1,4 +1,6 @@
 //! Filesystem adapters.
+mod spec_diff_targets;
+pub use spec_diff_targets::{FilesystemSpecDiffTargetResolver, SpecDiffTargetResolutionError};
 
 use std::{
     collections::HashMap,

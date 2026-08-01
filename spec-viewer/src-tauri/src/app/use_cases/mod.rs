@@ -2,6 +2,7 @@
 
 pub mod comments;
 pub mod repository_diff;
+pub mod spec_diff;
 
 use std::path::Path;
 

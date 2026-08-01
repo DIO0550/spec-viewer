@@ -32,31 +32,38 @@ pub struct RepositoryCommandError {
     pub code: String,
     pub message: String,
 }
+impl RepositoryCommandError {
+    pub(crate) fn port_error_code(error: &RepositoryPortError) -> &'static str {
+        match error {
+            RepositoryPortError::UnbornHead => "unbornHead",
+            RepositoryPortError::HeadChangedDuringRead => "headChangedDuringRead",
+            RepositoryPortError::NotRepository => "notRepository",
+            RepositoryPortError::BareRepository => "bareRepository",
+            RepositoryPortError::WorktreeUnavailable => "worktreeUnavailable",
+            RepositoryPortError::CommonDirBoundaryEscape => "commonDirBoundaryEscape",
+            RepositoryPortError::GitUnavailable => "gitUnavailable",
+            RepositoryPortError::GitTimedOut { .. } => "gitTimedOut",
+            RepositoryPortError::GitOutputLimitExceeded { .. } => "gitOutputLimitExceeded",
+            RepositoryPortError::GitFailed { .. } => "gitFailed",
+            RepositoryPortError::UnsupportedPathEncoding => "unsupportedPathEncoding",
+            RepositoryPortError::InvalidRepositoryPath => "invalidRepositoryPath",
+            RepositoryPortError::StaleBase => "staleBase",
+            RepositoryPortError::StaleSnapshot => "staleSnapshot",
+            RepositoryPortError::StaleCursor => "staleCursor",
+            RepositoryPortError::InvalidCursor => "invalidCursor",
+            RepositoryPortError::EntryChangedDuringRead => "entryChangedDuringRead",
+            RepositoryPortError::PermissionDenied => "permissionDenied",
+            RepositoryPortError::Io => "io",
+        }
+    }
+}
 impl From<RepositoryUseCaseError> for RepositoryCommandError {
     fn from(error: RepositoryUseCaseError) -> Self {
         let code = match &error {
             RepositoryUseCaseError::InvalidInput(_)
             | RepositoryUseCaseError::InvalidRepositoryValue => "invalidInput",
             RepositoryUseCaseError::InvalidOverride { .. } => "invalidOverride",
-            RepositoryUseCaseError::Port(port) => match port {
-                RepositoryPortError::NotRepository => "notRepository",
-                RepositoryPortError::BareRepository => "bareRepository",
-                RepositoryPortError::WorktreeUnavailable => "worktreeUnavailable",
-                RepositoryPortError::CommonDirBoundaryEscape => "commonDirBoundaryEscape",
-                RepositoryPortError::GitUnavailable => "gitUnavailable",
-                RepositoryPortError::GitTimedOut { .. } => "gitTimedOut",
-                RepositoryPortError::GitOutputLimitExceeded { .. } => "gitOutputLimitExceeded",
-                RepositoryPortError::GitFailed { .. } => "gitFailed",
-                RepositoryPortError::UnsupportedPathEncoding => "unsupportedPathEncoding",
-                RepositoryPortError::InvalidRepositoryPath => "invalidRepositoryPath",
-                RepositoryPortError::StaleBase => "staleBase",
-                RepositoryPortError::StaleSnapshot => "staleSnapshot",
-                RepositoryPortError::StaleCursor => "staleCursor",
-                RepositoryPortError::InvalidCursor => "invalidCursor",
-                RepositoryPortError::EntryChangedDuringRead => "entryChangedDuringRead",
-                RepositoryPortError::PermissionDenied => "permissionDenied",
-                RepositoryPortError::Io => "io",
-            },
+            RepositoryUseCaseError::Port(port) => Self::port_error_code(port),
         };
         Self {
             code: code.into(),

@@ -31,10 +31,19 @@ struct RepositoryReviewContext {
 type ContextKey = (Vec<u8>, String);
 type ContextStore = Arc<Mutex<BTreeMap<ContextKey, RepositoryReviewContext>>>;
 
+#[derive(Debug, Clone)]
+struct WorkingTreeReviewContext {
+    head: CommitSha,
+    changed: Vec<DiffFile>,
+}
+
+type WorkingTreeContextStore = Arc<Mutex<BTreeMap<ContextKey, WorkingTreeReviewContext>>>;
+
 #[derive(Debug, Clone, Default)]
 pub struct GitRepositoryAdapter {
     runner: GitRunner,
     contexts: ContextStore,
+    working_tree_contexts: WorkingTreeContextStore,
 }
 impl GitRepositoryAdapter {
     fn context_key(root: &Path, snapshot: &SnapshotId) -> ContextKey {
@@ -42,6 +51,253 @@ impl GitRepositoryAdapter {
             root.as_os_str().as_encoded_bytes().to_vec(),
             snapshot.as_str().to_string(),
         )
+    }
+
+    fn remember_working_tree_context(
+        &self,
+        root: &Path,
+        snapshot: &SnapshotId,
+        head: CommitSha,
+        changed: Vec<DiffFile>,
+    ) -> Result<(), RepositoryPortError> {
+        let key = Self::context_key(root, snapshot);
+        let mut contexts = self
+            .working_tree_contexts
+            .lock()
+            .map_err(|_| RepositoryPortError::Io)?;
+        if contexts.len() >= 64 && !contexts.contains_key(&key) {
+            contexts.pop_first();
+        }
+        contexts.insert(key, WorkingTreeReviewContext { head, changed });
+        Ok(())
+    }
+
+    fn working_tree_context(
+        &self,
+        root: &Path,
+        snapshot: &SnapshotId,
+    ) -> Result<WorkingTreeReviewContext, RepositoryPortError> {
+        self.working_tree_contexts
+            .lock()
+            .map_err(|_| RepositoryPortError::Io)?
+            .get(&Self::context_key(root, snapshot))
+            .cloned()
+            .ok_or(RepositoryPortError::StaleSnapshot)
+    }
+
+    fn working_tree_head(&self, root: &Path) -> Result<CommitSha, RepositoryPortError> {
+        let bytes = match self.runner.run(
+            root,
+            "working-tree-head",
+            &["rev-parse", "--verify", "HEAD"],
+            false,
+        ) {
+            Ok(bytes) => bytes,
+            Err(error @ RepositoryPortError::GitFailed { .. }) => {
+                if self.is_unborn_head(root)? {
+                    return Err(RepositoryPortError::UnbornHead);
+                }
+                return Err(error);
+            }
+            Err(error) => return Err(error),
+        };
+        let value = std::str::from_utf8(&bytes)
+            .map_err(|_| RepositoryPortError::UnsupportedPathEncoding)?;
+        CommitSha::parse(value.trim()).map_err(|_| RepositoryPortError::GitFailed {
+            operation: "working-tree-head".into(),
+            code: None,
+            stderr: "Git returned an invalid object id".into(),
+        })
+    }
+
+    fn is_unborn_head(&self, root: &Path) -> Result<bool, RepositoryPortError> {
+        let symbolic_head = match self.runner.run(
+            root,
+            "working-tree-symbolic-head",
+            &["symbolic-ref", "-q", "HEAD"],
+            false,
+        ) {
+            Ok(bytes) => bytes,
+            Err(RepositoryPortError::GitFailed { .. }) => return Ok(false),
+            Err(error) => return Err(error),
+        };
+        let reference = std::str::from_utf8(&symbolic_head)
+            .map_err(|_| RepositoryPortError::UnsupportedPathEncoding)?;
+        match self.runner.run(
+            root,
+            "working-tree-head-reference",
+            &["show-ref", "--verify", "--quiet", reference.trim()],
+            false,
+        ) {
+            Ok(_) => Ok(false),
+            Err(RepositoryPortError::GitFailed { code: Some(1), .. }) => Ok(true),
+            Err(error) => Err(error),
+        }
+    }
+    fn build_working_tree_review(
+        &self,
+        root: &Path,
+        repository_id: &RepositoryId,
+        snapshot: &SnapshotId,
+        baseline: &CommitSha,
+        path: &RepositoryRelativePath,
+        mut file: DiffFile,
+    ) -> Result<FileReview, RepositoryPortError> {
+        if file.entry_kind == EntryKind::Submodule {
+            let omitted = ContentAvailability::Omitted {
+                reason: OmissionReason::UnsupportedEntryKind,
+                byte_length: None,
+            };
+            let review = FileReview {
+                file,
+                old_content: omitted.clone(),
+                new_content: omitted.clone(),
+                patch: omitted,
+                structured_diff: StructuredDiff::Omitted {
+                    reason: OmissionReason::UnsupportedEntryKind,
+                },
+                submodule: Some(self.submodule_state(root, baseline, path)),
+            };
+            if self.snapshot(root, repository_id)? != *snapshot {
+                return Err(RepositoryPortError::EntryChangedDuringRead);
+            }
+            return Ok(review);
+        }
+
+        let old_content =
+            self.base_side(root, baseline, file.old_path.as_ref(), file.entry_kind)?;
+        let new_content = self.current_side(root, file.new_path.as_ref(), file.entry_kind)?;
+        if file.entry_kind == EntryKind::Regular {
+            file.content_classification = if [&old_content, &new_content].iter().any(|content| {
+                matches!(
+                    content,
+                    ContentAvailability::Omitted {
+                        reason: OmissionReason::Binary,
+                        ..
+                    }
+                )
+            }) {
+                ContentClassification::Binary
+            } else if [&old_content, &new_content]
+                .iter()
+                .any(|content| matches!(content, ContentAvailability::Available(_)))
+            {
+                ContentClassification::Text
+            } else {
+                file.content_classification
+            };
+        }
+
+        let diff_omission = [&old_content, &new_content]
+            .into_iter()
+            .find_map(|content| match content {
+                ContentAvailability::Omitted {
+                    reason: reason @ (OmissionReason::Binary | OmissionReason::LargeFile),
+                    ..
+                } => Some(*reason),
+                _ => None,
+            });
+        let (patch, structured_diff) = if let Some(reason) = diff_omission {
+            (
+                ContentAvailability::Omitted {
+                    reason,
+                    byte_length: None,
+                },
+                StructuredDiff::Omitted { reason },
+            )
+        } else if file.change == FileChangeKind::Untracked {
+            match &new_content {
+                ContentAvailability::Available(text) => match untracked_patch(text) {
+                    Some(patch) => {
+                        let structured = parse_structured_diff(patch.as_bytes());
+                        (ContentAvailability::Available(patch), structured)
+                    }
+                    None => (
+                        ContentAvailability::Omitted {
+                            reason: OmissionReason::DiffLimit,
+                            byte_length: None,
+                        },
+                        StructuredDiff::Omitted {
+                            reason: OmissionReason::DiffLimit,
+                        },
+                    ),
+                },
+                ContentAvailability::Omitted { reason, .. } => (
+                    ContentAvailability::Omitted {
+                        reason: *reason,
+                        byte_length: None,
+                    },
+                    StructuredDiff::Omitted { reason: *reason },
+                ),
+            }
+        } else {
+            let mut patch_paths = Vec::with_capacity(2);
+            if let Some(old_path) = file.old_path.as_ref() {
+                patch_paths.push(old_path.as_str());
+            }
+            if let Some(new_path) = file.new_path.as_ref() {
+                if !patch_paths.contains(&new_path.as_str()) {
+                    patch_paths.push(new_path.as_str());
+                }
+            }
+            let mut arguments = vec![
+                "diff",
+                "--no-ext-diff",
+                "--no-textconv",
+                "--no-color",
+                "--unified=3",
+                "-M",
+                "-C",
+                baseline.as_str(),
+                "--",
+            ];
+            arguments.extend(patch_paths);
+            match self.runner.run_with_stdout_limit(
+                root,
+                "working-tree-file-patch",
+                &arguments,
+                true,
+                PATCH_LIMIT,
+            ) {
+                Ok(bytes) => match String::from_utf8(bytes) {
+                    Ok(text) => {
+                        let structured = parse_structured_diff(text.as_bytes());
+                        (ContentAvailability::Available(text), structured)
+                    }
+                    Err(_) => (
+                        ContentAvailability::Omitted {
+                            reason: OmissionReason::Binary,
+                            byte_length: None,
+                        },
+                        StructuredDiff::Omitted {
+                            reason: OmissionReason::Binary,
+                        },
+                    ),
+                },
+                Err(RepositoryPortError::GitOutputLimitExceeded { .. }) => (
+                    ContentAvailability::Omitted {
+                        reason: OmissionReason::DiffLimit,
+                        byte_length: None,
+                    },
+                    StructuredDiff::Omitted {
+                        reason: OmissionReason::DiffLimit,
+                    },
+                ),
+                Err(error) => return Err(error),
+            }
+        };
+        let review = FileReview {
+            file,
+            old_content,
+            new_content,
+            patch,
+            structured_diff,
+            submodule: None,
+        };
+        if self.snapshot(root, repository_id)? != *snapshot {
+            return Err(RepositoryPortError::EntryChangedDuringRead);
+        }
+        Ok(review)
     }
 
     fn remember_context(
@@ -1007,6 +1263,56 @@ impl GitRepositoryAdapter {
             })
     }
 }
+impl WorkingTreeDiffPort for GitRepositoryAdapter {
+    fn load_working_tree_overview(
+        &self,
+        worktree: &WorktreeId,
+    ) -> Result<WorkingTreeDiffOverview, RepositoryPortError> {
+        let root = self.root(worktree)?;
+        let repository_id = self.repository_id(&root)?;
+        let head = self.working_tree_head(&root)?;
+        let snapshot = self.snapshot(&root, &repository_id)?;
+        let changed = self.changes(&root, &head)?;
+        if self.working_tree_head(&root)? != head {
+            return Err(RepositoryPortError::HeadChangedDuringRead);
+        }
+        if self.snapshot(&root, &repository_id)? != snapshot {
+            return Err(RepositoryPortError::EntryChangedDuringRead);
+        }
+        self.remember_working_tree_context(&root, &snapshot, head.clone(), changed.clone())?;
+        Ok(WorkingTreeDiffOverview {
+            head_sha: head,
+            current_snapshot_id: snapshot,
+            changed,
+        })
+    }
+
+    fn load_working_tree_file(
+        &self,
+        worktree: &WorktreeId,
+        snapshot: &SnapshotId,
+        path: &RepositoryRelativePath,
+    ) -> Result<FileReview, RepositoryPortError> {
+        let root = self.root(worktree)?;
+        let repository_id = self.repository_id(&root)?;
+        if self.snapshot(&root, &repository_id)? != *snapshot {
+            return Err(RepositoryPortError::StaleSnapshot);
+        }
+        let context = self.working_tree_context(&root, snapshot)?;
+        if self.working_tree_head(&root)? != context.head {
+            return Err(RepositoryPortError::HeadChangedDuringRead);
+        }
+        let file = context
+            .changed
+            .into_iter()
+            .find(|file| {
+                file.new_path.as_ref() == Some(path) || file.old_path.as_ref() == Some(path)
+            })
+            .ok_or(RepositoryPortError::InvalidRepositoryPath)?;
+        self.build_working_tree_review(&root, &repository_id, snapshot, &context.head, path, file)
+    }
+}
+
 impl RepositoryPort for GitRepositoryAdapter {
     fn load_overview(
         &self,
@@ -1730,6 +2036,215 @@ fn map_filesystem_error(error: std::io::Error) -> RepositoryPortError {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn working_tree_diff_covers_staged_deleted_renamed_empty_and_space_paths() {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!(
+            "spec-viewer-working-tree-edges-{}-{nonce}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&root).unwrap();
+        git(&root, &["init", "-b", "main"]);
+        git(&root, &["config", "user.name", "Spec Viewer"]);
+        git(&root, &["config", "user.email", "fixture.invalid"]);
+        write(&root, "staged.md", "head staged\n");
+        write(&root, "deleted.md", "head deleted\n");
+        write(&root, "rename old.md", "rename content\n");
+        write(&root, "space path.md", "head with newline\n");
+        write(&root, "empty.md", "head nonempty\n");
+        git(&root, &["add", "."]);
+        git(&root, &["commit", "-m", "head"]);
+
+        write(&root, "staged.md", "index version\n");
+        git(&root, &["add", "staged.md"]);
+        fs::remove_file(root.join("deleted.md")).unwrap();
+        git(&root, &["mv", "rename old.md", "rename new.md"]);
+        write(&root, "space path.md", "working without newline");
+        write(&root, "empty.md", "");
+
+        let adapter = GitRepositoryAdapter::default();
+        let worktree = WorktreeId::new(root.to_string_lossy()).unwrap();
+        let overview = adapter.load_working_tree_overview(&worktree).unwrap();
+        assert_eq!(overview.changed.len(), 5);
+
+        let detail = |path: &str| {
+            adapter
+                .load_working_tree_file(
+                    &worktree,
+                    &overview.current_snapshot_id,
+                    &RepositoryRelativePath::parse(path).unwrap(),
+                )
+                .unwrap()
+        };
+        let staged = detail("staged.md");
+        assert_eq!(
+            staged.old_content,
+            ContentAvailability::Available("head staged\n".into())
+        );
+        assert_eq!(
+            staged.new_content,
+            ContentAvailability::Available("index version\n".into())
+        );
+
+        let deleted = detail("deleted.md");
+        assert_eq!(deleted.file.change, FileChangeKind::Deleted);
+        assert!(matches!(
+            deleted.new_content,
+            ContentAvailability::Omitted {
+                reason: OmissionReason::MissingSide,
+                ..
+            }
+        ));
+
+        let renamed = detail("rename new.md");
+        assert_eq!(renamed.file.change, FileChangeKind::Renamed);
+        assert_eq!(
+            renamed.file.old_path.as_ref().unwrap().as_str(),
+            "rename old.md"
+        );
+        assert_eq!(
+            renamed.file.new_path.as_ref().unwrap().as_str(),
+            "rename new.md"
+        );
+        let ContentAvailability::Available(rename_patch) = &renamed.patch else {
+            panic!("rename patch must be available");
+        };
+        assert!(rename_patch.contains("rename from rename old.md"));
+        assert!(rename_patch.contains("rename to rename new.md"));
+
+        let spaced = detail("space path.md");
+        assert_eq!(
+            spaced.new_content,
+            ContentAvailability::Available("working without newline".into())
+        );
+        let StructuredDiff::Available(hunks) = spaced.structured_diff else {
+            panic!("space path text must have a structured diff");
+        };
+        assert!(hunks
+            .iter()
+            .flat_map(|hunk| &hunk.lines)
+            .any(|line| line.kind == DiffLineKind::NoNewline));
+
+        let empty = detail("empty.md");
+        assert_eq!(
+            empty.new_content,
+            ContentAvailability::Available(String::new())
+        );
+
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn poisoned_working_tree_context_returns_io() {
+        let adapter = GitRepositoryAdapter::default();
+        let poison = adapter.clone();
+        let _ = std::thread::spawn(move || {
+            let _guard = poison.working_tree_contexts.lock().unwrap();
+            panic!("poison context store");
+        })
+        .join();
+        let snapshot = SnapshotId::parse(format!("rs1_{}", "a".repeat(64))).unwrap();
+
+        assert_eq!(
+            adapter
+                .working_tree_context(Path::new("/repo"), &snapshot)
+                .unwrap_err(),
+            RepositoryPortError::Io
+        );
+    }
+    #[test]
+    fn working_tree_diff_uses_head_and_keeps_context_separate_from_merge_base() {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!(
+            "spec-viewer-working-tree-diff-{}-{nonce}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&root).unwrap();
+        git(&root, &["init", "-b", "main"]);
+        git(&root, &["config", "user.name", "Spec Viewer"]);
+        git(&root, &["config", "user.email", "fixture.invalid"]);
+        write(&root, "specs/001/tasks.md", "head\n");
+        git(&root, &["add", "."]);
+        git(&root, &["commit", "-m", "head"]);
+        write(&root, "specs/001/tasks.md", "working\n");
+        write(&root, "specs/001/new.md", "new line\nsecond\n");
+
+        let adapter = GitRepositoryAdapter::default();
+        let worktree = WorktreeId::new(root.to_string_lossy()).unwrap();
+        let overview = adapter.load_working_tree_overview(&worktree).unwrap();
+        assert_eq!(overview.changed.len(), 2);
+
+        let main = ValidatedRefName::parse("main").unwrap();
+        adapter.load_overview(&worktree, Some(&main)).unwrap();
+
+        let modified_path = RepositoryRelativePath::parse("specs/001/tasks.md").unwrap();
+        let modified = adapter
+            .load_working_tree_file(&worktree, &overview.current_snapshot_id, &modified_path)
+            .unwrap();
+        assert_eq!(
+            modified.old_content,
+            ContentAvailability::Available("head\n".into())
+        );
+        assert_eq!(
+            modified.new_content,
+            ContentAvailability::Available("working\n".into())
+        );
+        let StructuredDiff::Available(hunks) = modified.structured_diff else {
+            panic!("text diff must be structured");
+        };
+        assert!(hunks
+            .iter()
+            .flat_map(|hunk| &hunk.lines)
+            .any(|line| line.kind == DiffLineKind::Removed));
+        assert!(hunks
+            .iter()
+            .flat_map(|hunk| &hunk.lines)
+            .any(|line| line.kind == DiffLineKind::Added));
+
+        let untracked_path = RepositoryRelativePath::parse("specs/001/new.md").unwrap();
+        let untracked = adapter
+            .load_working_tree_file(&worktree, &overview.current_snapshot_id, &untracked_path)
+            .unwrap();
+        let StructuredDiff::Available(hunks) = untracked.structured_diff else {
+            panic!("untracked text must be structured");
+        };
+        assert!(hunks
+            .iter()
+            .flat_map(|hunk| &hunk.lines)
+            .all(|line| line.kind == DiffLineKind::Added));
+
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn working_tree_diff_reports_unborn_head() {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!(
+            "spec-viewer-unborn-head-{}-{nonce}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&root).unwrap();
+        git(&root, &["init", "-b", "main"]);
+
+        let adapter = GitRepositoryAdapter::default();
+        let worktree = WorktreeId::new(root.to_string_lossy()).unwrap();
+        assert_eq!(
+            adapter.load_working_tree_overview(&worktree).unwrap_err(),
+            RepositoryPortError::UnbornHead
+        );
+
+        fs::remove_dir_all(root).unwrap();
+    }
+
     use super::*;
     use std::{
         process::Command,
