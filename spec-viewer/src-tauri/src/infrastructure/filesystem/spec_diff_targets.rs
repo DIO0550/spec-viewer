@@ -1,7 +1,6 @@
 //! Resolve configured Spec files to repository-relative diff targets.
 
 use std::{
-    collections::BTreeMap,
     fs,
     path::{Component, Path, PathBuf},
 };
@@ -9,10 +8,13 @@ use std::{
 use thiserror::Error;
 
 use crate::{
-    app::use_cases::spec_diff::{ResolveSpecDiffTargets, ResolvedSpecDiffTargets, SpecDiffTarget},
+    app::use_cases::spec_diff::{
+        ResolveSpecDiffTargets, ResolvedSpecDiffTargets, SpecDiffTarget,
+        SpecDiffTargetInvariantError,
+    },
     domain::{
         repository::RepositoryRelativePath,
-        spec::{SpecFileKey, SpecId, SpecNode, SpecNodeKind},
+        spec::{SpecId, SpecNode, SpecNodeKind},
         workspace::{WorkspaceKind, WorktreeId},
     },
     infrastructure::{
@@ -39,6 +41,17 @@ pub enum SpecDiffTargetResolutionError {
     #[error("I/O error while resolving Spec targets")]
     Io,
 }
+impl SpecDiffTargetResolutionError {
+    fn from_invariant(error: SpecDiffTargetInvariantError) -> Self {
+        match error {
+            SpecDiffTargetInvariantError::AmbiguousCandidatePath { path } => {
+                Self::AmbiguousSpecPath { path }
+            }
+            SpecDiffTargetInvariantError::MissingCandidatePath { .. }
+            | SpecDiffTargetInvariantError::DuplicateIdentity { .. } => Self::SpecTreeScan,
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct FilesystemSpecDiffTargetResolver;
@@ -62,21 +75,20 @@ impl FilesystemSpecDiffTargetResolver {
                     .map_err(|_| SpecDiffTargetResolutionError::RepositoryBoundaryEscape)?;
                 for file in node.files() {
                     let configured_path = directory.join(file.file_name());
-                    let mut candidate_paths =
-                        spec_file_path_candidates(file.key(), &configured_path)
-                            .into_iter()
-                            .map(|candidate| {
-                                Self::repository_relative_path(repository_root, candidate.path())
-                            })
-                            .collect::<Result<Vec<_>, _>>()?;
-                    candidate_paths.sort();
-                    candidate_paths.dedup();
-                    targets.push(SpecDiffTarget {
-                        spec_id: SpecId::new(node.id())
+                    let candidate_paths = spec_file_path_candidates(file.key(), &configured_path)
+                        .into_iter()
+                        .map(|candidate| {
+                            Self::repository_relative_path(repository_root, candidate.path())
+                        })
+                        .collect::<Result<Vec<_>, _>>()?;
+                    let target = SpecDiffTarget::new(
+                        SpecId::new(node.id())
                             .map_err(|_| SpecDiffTargetResolutionError::SpecTreeScan)?,
-                        file_key: file.key(),
+                        file.key(),
                         candidate_paths,
-                    });
+                    )
+                    .map_err(SpecDiffTargetResolutionError::from_invariant)?;
+                    targets.push(target);
                 }
             }
             self.collect_targets(
@@ -86,26 +98,6 @@ impl FilesystemSpecDiffTargetResolver {
                 repository_root,
                 targets,
             )?;
-        }
-        Ok(())
-    }
-
-    fn validate_unique_candidates(
-        targets: &[SpecDiffTarget],
-    ) -> Result<(), SpecDiffTargetResolutionError> {
-        let mut seen = BTreeMap::<RepositoryRelativePath, (String, SpecFileKey)>::new();
-        for target in targets {
-            for path in &target.candidate_paths {
-                let identity = (target.spec_id.as_str().to_string(), target.file_key);
-                if seen
-                    .insert(path.clone(), identity.clone())
-                    .is_some_and(|existing| existing != identity)
-                {
-                    return Err(SpecDiffTargetResolutionError::AmbiguousSpecPath {
-                        path: path.clone(),
-                    });
-                }
-            }
         }
         Ok(())
     }
@@ -182,11 +174,11 @@ impl ResolveSpecDiffTargets for FilesystemSpecDiffTargetResolver {
         };
         let mut targets = Vec::new();
         self.collect_targets(&nodes, primary_source_group, &layout, &root, &mut targets)?;
-        Self::validate_unique_candidates(&targets)?;
         let worktree = WorktreeId::new(Self::path_text(&root)?)
             .map_err(|_| SpecDiffTargetResolutionError::Io)?;
 
-        Ok(ResolvedSpecDiffTargets { worktree, targets })
+        ResolvedSpecDiffTargets::new(worktree, targets)
+            .map_err(SpecDiffTargetResolutionError::from_invariant)
     }
 }
 
@@ -276,6 +268,7 @@ mod tests {
     }
 
     use super::*;
+    use crate::domain::spec::SpecFileKey;
 
     #[test]
     fn repository_path_is_slash_separated_and_relative() {
@@ -300,23 +293,14 @@ mod tests {
     }
 
     #[test]
-    fn duplicate_path_for_different_identity_is_rejected() {
-        let shared = RepositoryRelativePath::parse("specs/shared.md").unwrap();
-        let targets = vec![
-            SpecDiffTarget {
-                spec_id: SpecId::new("001-a").unwrap(),
-                file_key: SpecFileKey::Tasks,
-                candidate_paths: vec![shared.clone()],
-            },
-            SpecDiffTarget {
-                spec_id: SpecId::new("002-b").unwrap(),
-                file_key: SpecFileKey::Tasks,
-                candidate_paths: vec![shared],
-            },
-        ];
+    fn ambiguous_aggregate_path_maps_to_resolution_error() {
+        let path = RepositoryRelativePath::parse("specs/shared.md").unwrap();
+
         assert!(matches!(
-            FilesystemSpecDiffTargetResolver::validate_unique_candidates(&targets),
-            Err(SpecDiffTargetResolutionError::AmbiguousSpecPath { .. })
+            SpecDiffTargetResolutionError::from_invariant(
+                SpecDiffTargetInvariantError::AmbiguousCandidatePath { path }
+            ),
+            SpecDiffTargetResolutionError::AmbiguousSpecPath { .. }
         ));
     }
 }
