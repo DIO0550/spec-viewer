@@ -115,7 +115,8 @@ where
             .resolve(workspace_path)
             .map_err(SpecDiffUseCaseError::Target)?;
         let overview = self.git.load_working_tree_overview(&resolved.worktree)?;
-        let files = project_changed_files(&resolved.targets, &overview.changed)?;
+        let target_index = SpecDiffTargetIndex::new::<Targets::Error>(&resolved.targets)?;
+        let files = target_index.project::<Targets::Error>(&overview.changed)?;
 
         Ok(ChangedSpecFiles {
             current_snapshot_id: overview.current_snapshot_id,
@@ -142,9 +143,7 @@ where
         let snapshot =
             SnapshotId::parse(snapshot_id).map_err(|_| SpecDiffUseCaseError::InvalidInput)?;
         let target = resolved
-            .targets
-            .iter()
-            .find(|target| target.spec_id.as_str() == spec_id && target.file_key == requested_key)
+            .find_target(spec_id, requested_key)
             .ok_or(SpecDiffUseCaseError::InvalidInput)?;
 
         if !target.candidate_paths.contains(&requested_path) {
@@ -165,71 +164,92 @@ where
 
 type SpecIdentity = (SpecId, SpecFileKey);
 
-fn project_changed_files<TargetError>(
-    targets: &[SpecDiffTarget],
-    changed: &[DiffFile],
-) -> Result<Vec<ChangedSpecFile>, SpecDiffUseCaseError<TargetError>> {
-    let index = target_index(targets)?;
-    let mut projected = BTreeMap::<(String, SpecFileKey), ChangedSpecFile>::new();
-
-    for file in changed {
-        let old_identity = file.old_path.as_ref().and_then(|path| index.get(path));
-        let new_identity = file.new_path.as_ref().and_then(|path| index.get(path));
-        let identity = match (old_identity, new_identity) {
-            (Some(old), Some(new)) if old != new => {
-                return Err(SpecDiffUseCaseError::ConflictingRenameTargets)
-            }
-            (Some(identity), _) | (_, Some(identity)) => identity,
-            (None, None) => continue,
-        };
-        let key = (identity.0.as_str().to_string(), identity.1);
-        projected.insert(
-            key,
-            ChangedSpecFile {
-                spec_id: identity.0.clone(),
-                file_key: identity.1,
-                old_path: file.old_path.clone(),
-                new_path: file.new_path.clone(),
-                change: file.change,
-            },
-        );
+impl ResolvedSpecDiffTargets {
+    fn find_target(&self, spec_id: &str, file_key: SpecFileKey) -> Option<&SpecDiffTarget> {
+        self.targets
+            .iter()
+            .find(|target| target.spec_id.as_str() == spec_id && target.file_key == file_key)
     }
-
-    let mut files = projected.into_values().collect::<Vec<_>>();
-    files.sort_by(|left, right| {
-        left.spec_id
-            .as_str()
-            .cmp(right.spec_id.as_str())
-            .then_with(|| left.file_key.cmp(&right.file_key))
-            .then_with(|| {
-                selected_path(left)
-                    .map(RepositoryRelativePath::as_str)
-                    .cmp(&selected_path(right).map(RepositoryRelativePath::as_str))
-            })
-    });
-    Ok(files)
 }
 
-fn target_index<TargetError>(
-    targets: &[SpecDiffTarget],
-) -> Result<BTreeMap<RepositoryRelativePath, SpecIdentity>, SpecDiffUseCaseError<TargetError>> {
-    let mut index = BTreeMap::new();
-    for target in targets {
-        for path in &target.candidate_paths {
-            let identity = (target.spec_id.clone(), target.file_key);
-            if index
-                .insert(path.clone(), identity.clone())
-                .is_some_and(|existing| existing != identity)
-            {
-                return Err(SpecDiffUseCaseError::InvalidInput);
+impl ChangedSpecFile {
+    fn selected_path(&self) -> Option<&RepositoryRelativePath> {
+        self.new_path.as_ref().or(self.old_path.as_ref())
+    }
+}
+
+struct SpecDiffTargetIndex {
+    identities: BTreeMap<RepositoryRelativePath, SpecIdentity>,
+}
+
+impl SpecDiffTargetIndex {
+    fn new<TargetError>(
+        targets: &[SpecDiffTarget],
+    ) -> Result<Self, SpecDiffUseCaseError<TargetError>> {
+        let mut identities = BTreeMap::new();
+        for target in targets {
+            for path in &target.candidate_paths {
+                let identity = (target.spec_id.clone(), target.file_key);
+                if identities
+                    .insert(path.clone(), identity.clone())
+                    .is_some_and(|existing| existing != identity)
+                {
+                    return Err(SpecDiffUseCaseError::InvalidInput);
+                }
             }
         }
+        Ok(Self { identities })
     }
-    Ok(index)
-}
 
-fn selected_path(file: &ChangedSpecFile) -> Option<&RepositoryRelativePath> {
-    file.new_path.as_ref().or(file.old_path.as_ref())
+    fn project<TargetError>(
+        &self,
+        changed: &[DiffFile],
+    ) -> Result<Vec<ChangedSpecFile>, SpecDiffUseCaseError<TargetError>> {
+        let mut projected = BTreeMap::<(String, SpecFileKey), ChangedSpecFile>::new();
+
+        for file in changed {
+            let old_identity = file
+                .old_path
+                .as_ref()
+                .and_then(|path| self.identities.get(path));
+            let new_identity = file
+                .new_path
+                .as_ref()
+                .and_then(|path| self.identities.get(path));
+            let identity = match (old_identity, new_identity) {
+                (Some(old), Some(new)) if old != new => {
+                    return Err(SpecDiffUseCaseError::ConflictingRenameTargets)
+                }
+                (Some(identity), _) | (_, Some(identity)) => identity,
+                (None, None) => continue,
+            };
+            let key = (identity.0.as_str().to_string(), identity.1);
+            projected.insert(
+                key,
+                ChangedSpecFile {
+                    spec_id: identity.0.clone(),
+                    file_key: identity.1,
+                    old_path: file.old_path.clone(),
+                    new_path: file.new_path.clone(),
+                    change: file.change,
+                },
+            );
+        }
+
+        let mut files = projected.into_values().collect::<Vec<_>>();
+        files.sort_by(|left, right| {
+            left.spec_id
+                .as_str()
+                .cmp(right.spec_id.as_str())
+                .then_with(|| left.file_key.cmp(&right.file_key))
+                .then_with(|| {
+                    left.selected_path()
+                        .map(RepositoryRelativePath::as_str)
+                        .cmp(&right.selected_path().map(RepositoryRelativePath::as_str))
+                })
+        });
+        Ok(files)
+    }
 }
 
 #[cfg(test)]
@@ -345,7 +365,10 @@ mod tests {
             ),
         ];
 
-        let projected = project_changed_files::<std::io::Error>(&targets, &changed).unwrap();
+        let projected = SpecDiffTargetIndex::new::<std::io::Error>(&targets)
+            .unwrap()
+            .project::<std::io::Error>(&changed)
+            .unwrap();
 
         assert_eq!(projected.len(), 2);
         assert_eq!(projected[0].spec_id.as_str(), "001-alpha");
@@ -365,7 +388,10 @@ mod tests {
             FileChangeKind::Renamed,
         )];
 
-        let projected = project_changed_files::<std::io::Error>(&targets, &changed).unwrap();
+        let projected = SpecDiffTargetIndex::new::<std::io::Error>(&targets)
+            .unwrap()
+            .project::<std::io::Error>(&changed)
+            .unwrap();
 
         assert_eq!(projected.len(), 1);
         assert_eq!(
@@ -391,7 +417,9 @@ mod tests {
         )];
 
         assert!(matches!(
-            project_changed_files::<std::io::Error>(&targets, &changed),
+            SpecDiffTargetIndex::new::<std::io::Error>(&targets)
+                .unwrap()
+                .project::<std::io::Error>(&changed),
             Err(SpecDiffUseCaseError::ConflictingRenameTargets)
         ));
     }
@@ -404,7 +432,7 @@ mod tests {
         ];
 
         assert!(matches!(
-            project_changed_files::<std::io::Error>(&targets, &[]),
+            SpecDiffTargetIndex::new::<std::io::Error>(&targets),
             Err(SpecDiffUseCaseError::InvalidInput)
         ));
     }
