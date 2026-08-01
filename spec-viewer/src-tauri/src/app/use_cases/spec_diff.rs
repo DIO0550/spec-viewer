@@ -86,6 +86,7 @@ pub trait ResolveSpecDiffTargets {
 pub struct ChangedSpecFile {
     pub spec_id: SpecId,
     pub file_key: SpecFileKey,
+    pub target_path: RepositoryRelativePath,
     pub old_path: Option<RepositoryRelativePath>,
     pub new_path: Option<RepositoryRelativePath>,
     pub change: FileChangeKind,
@@ -311,19 +312,21 @@ impl ResolvedSpecDiffTargets {
         let mut projected = BTreeMap::<(String, SpecFileKey), ChangedSpecFile>::new();
 
         for file in changed {
-            let old_identity = file
-                .old_path
-                .as_ref()
-                .and_then(|path| self.identities_by_path.get(path));
-            let new_identity = file
-                .new_path
-                .as_ref()
-                .and_then(|path| self.identities_by_path.get(path));
-            let identity = match (old_identity, new_identity) {
-                (Some(old), Some(new)) if old != new => {
+            let old_identity = file.old_path.as_ref().and_then(|path| {
+                self.identities_by_path
+                    .get(path)
+                    .map(|identity| (identity, path))
+            });
+            let new_identity = file.new_path.as_ref().and_then(|path| {
+                self.identities_by_path
+                    .get(path)
+                    .map(|identity| (identity, path))
+            });
+            let (identity, target_path) = match (old_identity, new_identity) {
+                (Some((old, _)), Some((new, _))) if old != new => {
                     return Err(SpecDiffProjectionError::ConflictingRenameTargets)
                 }
-                (Some(identity), _) | (_, Some(identity)) => identity,
+                (_, Some(matched)) | (Some(matched), None) => matched,
                 (None, None) => continue,
             };
             let key = (identity.0.as_str().to_string(), identity.1);
@@ -332,6 +335,7 @@ impl ResolvedSpecDiffTargets {
                 ChangedSpecFile {
                     spec_id: identity.0.clone(),
                     file_key: identity.1,
+                    target_path: target_path.clone(),
                     old_path: file.old_path.clone(),
                     new_path: file.new_path.clone(),
                     change: file.change,
@@ -507,6 +511,7 @@ mod tests {
             projected[0].new_path.as_ref().unwrap().as_str(),
             "specs/001/work.md"
         );
+        assert_eq!(projected[0].target_path.as_str(), "specs/001/tasks.md");
     }
 
     #[test]

@@ -34,6 +34,7 @@ pub struct GetSpecFileDiffRequest {
 pub struct ChangedSpecFileResponse {
     spec_id: String,
     file_key: String,
+    target_path: String,
     old_path: Option<String>,
     new_path: Option<String>,
     change: &'static str,
@@ -44,6 +45,7 @@ impl From<ChangedSpecFile> for ChangedSpecFileResponse {
         Self {
             spec_id: value.spec_id.as_str().to_string(),
             file_key: value.file_key.as_str().to_string(),
+            target_path: value.target_path.as_str().to_string(),
             old_path: value.old_path.map(|path| path.as_str().to_string()),
             new_path: value.new_path.map(|path| path.as_str().to_string()),
             change: Self::change_name(value.change),
@@ -257,6 +259,30 @@ mod tests {
         for (code, expected) in cases {
             assert_eq!(serde_json::to_value(code).unwrap(), expected);
         }
+    }
+
+    #[test]
+    fn changed_file_response_exposes_detail_target_path() {
+        let response = ChangedSpecFileResponse::from(ChangedSpecFile {
+            spec_id: crate::domain::spec::SpecId::new("001-feature").unwrap(),
+            file_key: crate::domain::spec::SpecFileKey::Tasks,
+            target_path: crate::domain::repository::RepositoryRelativePath::parse(
+                "specs/001/tasks.md",
+            )
+            .unwrap(),
+            old_path: Some(
+                crate::domain::repository::RepositoryRelativePath::parse("specs/001/tasks.md")
+                    .unwrap(),
+            ),
+            new_path: Some(
+                crate::domain::repository::RepositoryRelativePath::parse("specs/001/work.md")
+                    .unwrap(),
+            ),
+            change: FileChangeKind::Renamed,
+        });
+
+        let json = serde_json::to_value(response).unwrap();
+        assert_eq!(json["targetPath"], "specs/001/tasks.md");
     }
 
     #[test]
