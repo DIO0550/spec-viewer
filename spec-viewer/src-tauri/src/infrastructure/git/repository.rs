@@ -231,19 +231,31 @@ impl GitRepositoryAdapter {
                 ),
             }
         } else {
+            let mut patch_paths = Vec::with_capacity(2);
+            if let Some(old_path) = file.old_path.as_ref() {
+                patch_paths.push(old_path.as_str());
+            }
+            if let Some(new_path) = file.new_path.as_ref() {
+                if !patch_paths.contains(&new_path.as_str()) {
+                    patch_paths.push(new_path.as_str());
+                }
+            }
+            let mut arguments = vec![
+                "diff",
+                "--no-ext-diff",
+                "--no-textconv",
+                "--no-color",
+                "--unified=3",
+                "-M",
+                "-C",
+                baseline.as_str(),
+                "--",
+            ];
+            arguments.extend(patch_paths);
             match self.runner.run_with_stdout_limit(
                 root,
                 "working-tree-file-patch",
-                &[
-                    "diff",
-                    "--no-ext-diff",
-                    "--no-textconv",
-                    "--no-color",
-                    "--unified=3",
-                    baseline.as_str(),
-                    "--",
-                    path.as_str(),
-                ],
+                &arguments,
                 true,
                 PATCH_LIMIT,
             ) {
@@ -2097,6 +2109,11 @@ mod tests {
             renamed.file.new_path.as_ref().unwrap().as_str(),
             "rename new.md"
         );
+        let ContentAvailability::Available(rename_patch) = &renamed.patch else {
+            panic!("rename patch must be available");
+        };
+        assert!(rename_patch.contains("rename from rename old.md"));
+        assert!(rename_patch.contains("rename to rename new.md"));
 
         let spaced = detail("space path.md");
         assert_eq!(
