@@ -46,7 +46,7 @@ impl From<ChangedSpecFile> for ChangedSpecFileResponse {
             file_key: value.file_key.as_str().to_string(),
             old_path: value.old_path.map(|path| path.as_str().to_string()),
             new_path: value.new_path.map(|path| path.as_str().to_string()),
-            change: file_change_kind(value.change),
+            change: Self::change_name(value.change),
         }
     }
 }
@@ -141,7 +141,9 @@ impl From<SpecDiffUseCaseError<SpecDiffTargetResolutionError>> for SpecDiffComma
                 }
                 SpecDiffTargetResolutionError::Io => SpecDiffCommandErrorCode::Io,
             },
-            SpecDiffUseCaseError::Repository(repository) => repository_error_code(repository),
+            SpecDiffUseCaseError::Repository(repository) => {
+                SpecDiffCommandErrorCode::from_repository(repository)
+            }
         };
         Self {
             code,
@@ -150,51 +152,43 @@ impl From<SpecDiffUseCaseError<SpecDiffTargetResolutionError>> for SpecDiffComma
     }
 }
 
-fn repository_error_code(error: &RepositoryPortError) -> SpecDiffCommandErrorCode {
-    match error {
-        RepositoryPortError::UnbornHead => SpecDiffCommandErrorCode::UnbornHead,
-        RepositoryPortError::HeadChangedDuringRead => {
-            SpecDiffCommandErrorCode::HeadChangedDuringRead
+impl SpecDiffCommandErrorCode {
+    fn from_repository(error: &RepositoryPortError) -> Self {
+        match error {
+            RepositoryPortError::UnbornHead => Self::UnbornHead,
+            RepositoryPortError::HeadChangedDuringRead => Self::HeadChangedDuringRead,
+            RepositoryPortError::NotRepository => Self::NotRepository,
+            RepositoryPortError::BareRepository => Self::BareRepository,
+            RepositoryPortError::WorktreeUnavailable => Self::WorktreeUnavailable,
+            RepositoryPortError::CommonDirBoundaryEscape => Self::CommonDirBoundaryEscape,
+            RepositoryPortError::GitUnavailable => Self::GitUnavailable,
+            RepositoryPortError::GitTimedOut { .. } => Self::GitTimedOut,
+            RepositoryPortError::GitOutputLimitExceeded { .. } => Self::GitOutputLimitExceeded,
+            RepositoryPortError::GitFailed { .. } => Self::GitFailed,
+            RepositoryPortError::UnsupportedPathEncoding => Self::UnsupportedPathEncoding,
+            RepositoryPortError::InvalidRepositoryPath => Self::InvalidRepositoryPath,
+            RepositoryPortError::StaleBase => Self::StaleBase,
+            RepositoryPortError::StaleSnapshot
+            | RepositoryPortError::StaleCursor
+            | RepositoryPortError::InvalidCursor => Self::StaleSnapshot,
+            RepositoryPortError::EntryChangedDuringRead => Self::EntryChangedDuringRead,
+            RepositoryPortError::PermissionDenied => Self::PermissionDenied,
+            RepositoryPortError::Io => Self::Io,
         }
-        RepositoryPortError::NotRepository => SpecDiffCommandErrorCode::NotRepository,
-        RepositoryPortError::BareRepository => SpecDiffCommandErrorCode::BareRepository,
-        RepositoryPortError::WorktreeUnavailable => SpecDiffCommandErrorCode::WorktreeUnavailable,
-        RepositoryPortError::CommonDirBoundaryEscape => {
-            SpecDiffCommandErrorCode::CommonDirBoundaryEscape
-        }
-        RepositoryPortError::GitUnavailable => SpecDiffCommandErrorCode::GitUnavailable,
-        RepositoryPortError::GitTimedOut { .. } => SpecDiffCommandErrorCode::GitTimedOut,
-        RepositoryPortError::GitOutputLimitExceeded { .. } => {
-            SpecDiffCommandErrorCode::GitOutputLimitExceeded
-        }
-        RepositoryPortError::GitFailed { .. } => SpecDiffCommandErrorCode::GitFailed,
-        RepositoryPortError::UnsupportedPathEncoding => {
-            SpecDiffCommandErrorCode::UnsupportedPathEncoding
-        }
-        RepositoryPortError::InvalidRepositoryPath => {
-            SpecDiffCommandErrorCode::InvalidRepositoryPath
-        }
-        RepositoryPortError::StaleBase => SpecDiffCommandErrorCode::StaleBase,
-        RepositoryPortError::StaleSnapshot
-        | RepositoryPortError::StaleCursor
-        | RepositoryPortError::InvalidCursor => SpecDiffCommandErrorCode::StaleSnapshot,
-        RepositoryPortError::EntryChangedDuringRead => {
-            SpecDiffCommandErrorCode::EntryChangedDuringRead
-        }
-        RepositoryPortError::PermissionDenied => SpecDiffCommandErrorCode::PermissionDenied,
-        RepositoryPortError::Io => SpecDiffCommandErrorCode::Io,
     }
 }
 
-fn file_change_kind(change: FileChangeKind) -> &'static str {
-    match change {
-        FileChangeKind::Added => "added",
-        FileChangeKind::Modified => "modified",
-        FileChangeKind::Deleted => "deleted",
-        FileChangeKind::Renamed => "renamed",
-        FileChangeKind::Copied => "copied",
-        FileChangeKind::TypeChanged => "typeChanged",
-        FileChangeKind::Untracked => "untracked",
+impl ChangedSpecFileResponse {
+    fn change_name(change: FileChangeKind) -> &'static str {
+        match change {
+            FileChangeKind::Added => "added",
+            FileChangeKind::Modified => "modified",
+            FileChangeKind::Deleted => "deleted",
+            FileChangeKind::Renamed => "renamed",
+            FileChangeKind::Copied => "copied",
+            FileChangeKind::TypeChanged => "typeChanged",
+            FileChangeKind::Untracked => "untracked",
+        }
     }
 }
 
