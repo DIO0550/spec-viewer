@@ -47,6 +47,118 @@ impl FilesystemSpecDiffTargetResolver {
     pub fn new() -> Self {
         Self
     }
+
+    fn collect_targets(
+        &self,
+        nodes: &[SpecNode],
+        primary_source_group: &str,
+        layout: &crate::domain::workspace::WorkspaceLayout,
+        repository_root: &Path,
+        targets: &mut Vec<SpecDiffTarget>,
+    ) -> Result<(), SpecDiffTargetResolutionError> {
+        for node in nodes {
+            if node.kind() == SpecNodeKind::Spec && node.source_group_id() == primary_source_group {
+                let directory = spec_directory_path(layout, node.id())
+                    .map_err(|_| SpecDiffTargetResolutionError::RepositoryBoundaryEscape)?;
+                for file in node.files() {
+                    let configured_path = directory.join(file.file_name());
+                    let mut candidate_paths =
+                        spec_file_path_candidates(file.key(), &configured_path)
+                            .into_iter()
+                            .map(|candidate| {
+                                Self::repository_relative_path(repository_root, candidate.path())
+                            })
+                            .collect::<Result<Vec<_>, _>>()?;
+                    candidate_paths.sort();
+                    candidate_paths.dedup();
+                    targets.push(SpecDiffTarget {
+                        spec_id: SpecId::new(node.id())
+                            .map_err(|_| SpecDiffTargetResolutionError::SpecTreeScan)?,
+                        file_key: file.key(),
+                        candidate_paths,
+                    });
+                }
+            }
+            self.collect_targets(
+                node.children(),
+                primary_source_group,
+                layout,
+                repository_root,
+                targets,
+            )?;
+        }
+        Ok(())
+    }
+
+    fn validate_unique_candidates(
+        targets: &[SpecDiffTarget],
+    ) -> Result<(), SpecDiffTargetResolutionError> {
+        let mut seen = BTreeMap::<RepositoryRelativePath, (String, SpecFileKey)>::new();
+        for target in targets {
+            for path in &target.candidate_paths {
+                let identity = (target.spec_id.as_str().to_string(), target.file_key);
+                if seen
+                    .insert(path.clone(), identity.clone())
+                    .is_some_and(|existing| existing != identity)
+                {
+                    return Err(SpecDiffTargetResolutionError::AmbiguousSpecPath {
+                        path: path.clone(),
+                    });
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn repository_relative_path(
+        repository_root: &Path,
+        candidate: &Path,
+    ) -> Result<RepositoryRelativePath, SpecDiffTargetResolutionError> {
+        let candidate = Self::absolute_lexical_path(candidate)?;
+        let relative = candidate
+            .strip_prefix(repository_root)
+            .map_err(|_| SpecDiffTargetResolutionError::RepositoryBoundaryEscape)?;
+        let mut parts = Vec::new();
+        for component in relative.components() {
+            let Component::Normal(value) = component else {
+                return Err(SpecDiffTargetResolutionError::RepositoryBoundaryEscape);
+            };
+            parts.push(
+                value
+                    .to_str()
+                    .ok_or(SpecDiffTargetResolutionError::UnsupportedPathEncoding)?,
+            );
+        }
+        RepositoryRelativePath::parse(parts.join("/"))
+            .map_err(|_| SpecDiffTargetResolutionError::RepositoryBoundaryEscape)
+    }
+
+    fn absolute_lexical_path(path: &Path) -> Result<PathBuf, SpecDiffTargetResolutionError> {
+        if !path.is_absolute() {
+            return Err(SpecDiffTargetResolutionError::RepositoryBoundaryEscape);
+        }
+        let mut normalized = PathBuf::new();
+        for component in path.components() {
+            match component {
+                Component::Prefix(prefix) => normalized.push(prefix.as_os_str()),
+                Component::RootDir => normalized.push(component.as_os_str()),
+                Component::Normal(value) => normalized.push(value),
+                Component::CurDir => {}
+                Component::ParentDir => {
+                    if !normalized.pop() {
+                        return Err(SpecDiffTargetResolutionError::RepositoryBoundaryEscape);
+                    }
+                }
+            }
+        }
+        Ok(normalized)
+    }
+
+    fn path_text(path: &Path) -> Result<String, SpecDiffTargetResolutionError> {
+        path.to_str()
+            .map(str::to_string)
+            .ok_or(SpecDiffTargetResolutionError::UnsupportedPathEncoding)
+    }
 }
 
 impl ResolveSpecDiffTargets for FilesystemSpecDiffTargetResolver {
@@ -69,121 +181,13 @@ impl ResolveSpecDiffTargets for FilesystemSpecDiffTargetResolver {
             WorkspaceKind::PluginWorktree => ".specs",
         };
         let mut targets = Vec::new();
-        collect_targets(&nodes, primary_source_group, &layout, &root, &mut targets)?;
-        validate_unique_candidates(&targets)?;
-        let worktree =
-            WorktreeId::new(path_text(&root)?).map_err(|_| SpecDiffTargetResolutionError::Io)?;
+        self.collect_targets(&nodes, primary_source_group, &layout, &root, &mut targets)?;
+        Self::validate_unique_candidates(&targets)?;
+        let worktree = WorktreeId::new(Self::path_text(&root)?)
+            .map_err(|_| SpecDiffTargetResolutionError::Io)?;
 
         Ok(ResolvedSpecDiffTargets { worktree, targets })
     }
-}
-
-fn collect_targets(
-    nodes: &[SpecNode],
-    primary_source_group: &str,
-    layout: &crate::domain::workspace::WorkspaceLayout,
-    repository_root: &Path,
-    targets: &mut Vec<SpecDiffTarget>,
-) -> Result<(), SpecDiffTargetResolutionError> {
-    for node in nodes {
-        if node.kind() == SpecNodeKind::Spec && node.source_group_id() == primary_source_group {
-            let directory = spec_directory_path(layout, node.id())
-                .map_err(|_| SpecDiffTargetResolutionError::RepositoryBoundaryEscape)?;
-            for file in node.files() {
-                let configured_path = directory.join(file.file_name());
-                let mut candidate_paths = spec_file_path_candidates(file.key(), &configured_path)
-                    .into_iter()
-                    .map(|candidate| repository_relative_path(repository_root, candidate.path()))
-                    .collect::<Result<Vec<_>, _>>()?;
-                candidate_paths.sort();
-                candidate_paths.dedup();
-                targets.push(SpecDiffTarget {
-                    spec_id: SpecId::new(node.id())
-                        .map_err(|_| SpecDiffTargetResolutionError::SpecTreeScan)?,
-                    file_key: file.key(),
-                    candidate_paths,
-                });
-            }
-        }
-        collect_targets(
-            node.children(),
-            primary_source_group,
-            layout,
-            repository_root,
-            targets,
-        )?;
-    }
-    Ok(())
-}
-
-fn validate_unique_candidates(
-    targets: &[SpecDiffTarget],
-) -> Result<(), SpecDiffTargetResolutionError> {
-    let mut seen = BTreeMap::<RepositoryRelativePath, (String, SpecFileKey)>::new();
-    for target in targets {
-        for path in &target.candidate_paths {
-            let identity = (target.spec_id.as_str().to_string(), target.file_key);
-            if seen
-                .insert(path.clone(), identity.clone())
-                .is_some_and(|existing| existing != identity)
-            {
-                return Err(SpecDiffTargetResolutionError::AmbiguousSpecPath {
-                    path: path.clone(),
-                });
-            }
-        }
-    }
-    Ok(())
-}
-
-fn repository_relative_path(
-    repository_root: &Path,
-    candidate: &Path,
-) -> Result<RepositoryRelativePath, SpecDiffTargetResolutionError> {
-    let candidate = absolute_lexical_path(candidate)?;
-    let relative = candidate
-        .strip_prefix(repository_root)
-        .map_err(|_| SpecDiffTargetResolutionError::RepositoryBoundaryEscape)?;
-    let mut parts = Vec::new();
-    for component in relative.components() {
-        let Component::Normal(value) = component else {
-            return Err(SpecDiffTargetResolutionError::RepositoryBoundaryEscape);
-        };
-        parts.push(
-            value
-                .to_str()
-                .ok_or(SpecDiffTargetResolutionError::UnsupportedPathEncoding)?,
-        );
-    }
-    RepositoryRelativePath::parse(parts.join("/"))
-        .map_err(|_| SpecDiffTargetResolutionError::RepositoryBoundaryEscape)
-}
-
-fn absolute_lexical_path(path: &Path) -> Result<PathBuf, SpecDiffTargetResolutionError> {
-    if !path.is_absolute() {
-        return Err(SpecDiffTargetResolutionError::RepositoryBoundaryEscape);
-    }
-    let mut normalized = PathBuf::new();
-    for component in path.components() {
-        match component {
-            Component::Prefix(prefix) => normalized.push(prefix.as_os_str()),
-            Component::RootDir => normalized.push(component.as_os_str()),
-            Component::Normal(value) => normalized.push(value),
-            Component::CurDir => {}
-            Component::ParentDir => {
-                if !normalized.pop() {
-                    return Err(SpecDiffTargetResolutionError::RepositoryBoundaryEscape);
-                }
-            }
-        }
-    }
-    Ok(normalized)
-}
-
-fn path_text(path: &Path) -> Result<String, SpecDiffTargetResolutionError> {
-    path.to_str()
-        .map(str::to_string)
-        .ok_or(SpecDiffTargetResolutionError::UnsupportedPathEncoding)
 }
 
 #[cfg(test)]
@@ -276,14 +280,21 @@ mod tests {
     #[test]
     fn repository_path_is_slash_separated_and_relative() {
         let root = Path::new("/repo");
-        let path = repository_relative_path(root, Path::new("/repo/specs/001/tasks.md")).unwrap();
+        let path = FilesystemSpecDiffTargetResolver::repository_relative_path(
+            root,
+            Path::new("/repo/specs/001/tasks.md"),
+        )
+        .unwrap();
         assert_eq!(path.as_str(), "specs/001/tasks.md");
     }
 
     #[test]
     fn repository_path_rejects_boundary_escape() {
         assert!(matches!(
-            repository_relative_path(Path::new("/repo"), Path::new("/outside/tasks.md")),
+            FilesystemSpecDiffTargetResolver::repository_relative_path(
+                Path::new("/repo"),
+                Path::new("/outside/tasks.md")
+            ),
             Err(SpecDiffTargetResolutionError::RepositoryBoundaryEscape)
         ));
     }
@@ -304,7 +315,7 @@ mod tests {
             },
         ];
         assert!(matches!(
-            validate_unique_candidates(&targets),
+            FilesystemSpecDiffTargetResolver::validate_unique_candidates(&targets),
             Err(SpecDiffTargetResolutionError::AmbiguousSpecPath { .. })
         ));
     }
