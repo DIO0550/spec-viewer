@@ -323,8 +323,19 @@ pub struct IgnoredPage {
     pub next_cursor: Option<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkingTreeDiffOverview {
+    pub head_sha: CommitSha,
+    pub current_snapshot_id: SnapshotId,
+    pub changed: Vec<DiffFile>,
+}
+
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 pub enum RepositoryPortError {
+    #[error("repository HEAD does not exist")]
+    UnbornHead,
+    #[error("repository HEAD changed during read")]
+    HeadChangedDuringRead,
     #[error("not a Git repository")]
     NotRepository,
     #[error("bare repository")]
@@ -386,8 +397,49 @@ pub trait RepositoryPort {
     ) -> Result<FileReview, RepositoryPortError>;
 }
 
+pub trait WorkingTreeDiffPort {
+    fn load_working_tree_overview(
+        &self,
+        worktree: &crate::domain::workspace::WorktreeId,
+    ) -> Result<WorkingTreeDiffOverview, RepositoryPortError>;
+
+    fn load_working_tree_file(
+        &self,
+        worktree: &crate::domain::workspace::WorktreeId,
+        snapshot: &SnapshotId,
+        path: &RepositoryRelativePath,
+    ) -> Result<FileReview, RepositoryPortError>;
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn working_tree_overview_requires_head_snapshot_and_changes() {
+        let head_sha = CommitSha::parse("a".repeat(40)).unwrap();
+        let snapshot = SnapshotId::parse(format!("rs1_{}", "b".repeat(64))).unwrap();
+        let overview = WorkingTreeDiffOverview {
+            head_sha: head_sha.clone(),
+            current_snapshot_id: snapshot.clone(),
+            changed: vec![],
+        };
+
+        assert_eq!(overview.head_sha, head_sha);
+        assert_eq!(overview.current_snapshot_id, snapshot);
+        assert!(overview.changed.is_empty());
+    }
+
+    #[test]
+    fn working_tree_race_errors_remain_distinct() {
+        assert_ne!(
+            RepositoryPortError::UnbornHead,
+            RepositoryPortError::HeadChangedDuringRead
+        );
+        assert_ne!(
+            RepositoryPortError::HeadChangedDuringRead,
+            RepositoryPortError::EntryChangedDuringRead
+        );
+    }
+
     use super::*;
     fn diff_file(
         old_path: Option<&str>,
