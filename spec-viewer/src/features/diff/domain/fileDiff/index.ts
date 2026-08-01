@@ -125,6 +125,12 @@ const parseHunkStartLines = (
     throw new Error(`Invalid unified diff hunk header: ${header}`);
   }
 
+  const hasInvalidOldRange = oldStart === 0 && oldCount > 0;
+  const hasInvalidNewRange = newStart === 0 && newCount > 0;
+  if (hasInvalidOldRange || hasInvalidNewRange) {
+    throw new Error(`Invalid unified diff hunk header: ${header}`);
+  }
+
   return { oldStart, newStart };
 };
 
