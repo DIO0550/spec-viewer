@@ -22,6 +22,7 @@ export function createSideBySideHunk(
   const changeIds: string[] = [];
   let lineIndex = 0;
   let previousKind: DiffLine["kind"] | null = null;
+  let activeChangeId: string | null = null;
 
   while (lineIndex < hunk.lines.length) {
     const line = hunk.lines[lineIndex];
@@ -43,6 +44,7 @@ export function createSideBySideHunk(
     }
 
     if (line.kind === "context") {
+      activeChangeId = null;
       rows.push(createContextRow(line, hunkIndex, lineIndex));
       previousKind = line.kind;
       lineIndex += 1;
@@ -65,8 +67,12 @@ export function createSideBySideHunk(
       continue;
     }
 
-    const changeId = `hunk-${hunkIndex}-change-${changeIds.length}`;
-    changeIds.push(changeId);
+    const changeId =
+      activeChangeId ?? `hunk-${hunkIndex}-change-${changeIds.length}`;
+    if (activeChangeId === null) {
+      activeChangeId = changeId;
+      changeIds.push(changeId);
+    }
     rows.push(...createChangedRows({ block, blockStart, changeId, hunkIndex }));
     previousKind = block[block.length - 1]?.kind ?? previousKind;
   }
