@@ -12,6 +12,8 @@ export type UseGuardedSpecActionsOptions = Readonly<{
   reloadSpecs: () => Promise<unknown>;
   /** Selects a spec file. @param fileKey - Key of the file to select. */
   selectFileKey: (fileKey: SpecFileKey) => Promise<unknown>;
+  /** Atomically selects a Spec file from Changes. */
+  selectSpecFile?: (specId: string, fileKey: string) => Promise<unknown>;
   /** Reloads the current document. */
   reloadDocument: () => Promise<unknown>;
 }>;
@@ -25,6 +27,8 @@ export type UseGuardedSpecActionsResult = Readonly<{
   reloadSpecsFromTree: () => void;
   /** Selects a file from the tabs. @param fileKey - Key of the file to select. */
   selectFileFromTabs: (fileKey: SpecFileKey) => void;
+  /** Selects one logical file from Changes. */
+  selectSpecFileFromChanges: (specId: string, fileKey: string) => void;
   /** Reloads the document from the viewer. */
   reloadDocumentFromViewer: () => void;
 }>;
@@ -42,6 +46,7 @@ export function useGuardedSpecActions(
     archiveSpec,
     reloadSpecs,
     selectFileKey,
+    selectSpecFile,
     reloadDocument,
   } = options;
 
@@ -86,6 +91,17 @@ export function useGuardedSpecActions(
     [isCurrentViewLoading, selectFileKey],
   );
 
+  const selectSpecFileFromChanges = useCallback(
+    (specId: string, fileKey: string): void => {
+      if (isCurrentViewLoading || selectSpecFile === undefined) {
+        return;
+      }
+
+      void selectSpecFile(specId, fileKey);
+    },
+    [isCurrentViewLoading, selectSpecFile],
+  );
+
   const reloadDocumentFromViewer = useCallback((): void => {
     if (isCurrentViewLoading) {
       return;
@@ -99,6 +115,7 @@ export function useGuardedSpecActions(
     archiveSpecFromTree,
     reloadSpecsFromTree,
     selectFileFromTabs,
+    selectSpecFileFromChanges,
     reloadDocumentFromViewer,
   };
 }
