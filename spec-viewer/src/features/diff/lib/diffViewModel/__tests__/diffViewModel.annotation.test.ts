@@ -52,6 +52,34 @@ test.each([
   );
 });
 
+test("noNewlineを挟むchanged linesで表示mode間のchange IDを維持する", () => {
+  const model = buildDiffViewModel(
+    createFileDiff([
+      { kind: "removed", text: "old" },
+      { kind: "noNewline", text: "\\ No newline at end of file" },
+      { kind: "added", text: "new" },
+    ]),
+  );
+  const inlineChangeIds = model.inlineRows
+    .filter((row) => row.kind === "content")
+    .map((row) => row.changeId)
+    .filter((changeId) => changeId !== null);
+  const sideBySideChangeIds = model.sideBySideRows
+    .filter((row) => row.kind === "content")
+    .map((row) => row.changeId)
+    .filter((changeId) => changeId !== null);
+
+  expect(model.changeIds).toEqual(["hunk-0-change-0"]);
+  expect(inlineChangeIds).toEqual([
+    "hunk-0-change-0",
+    "hunk-0-change-0",
+  ]);
+  expect(sideBySideChangeIds).toEqual([
+    "hunk-0-change-0",
+    "hunk-0-change-0",
+  ]);
+});
+
 function createFileDiff(lines: readonly DiffLineSource[]): FileDiff {
   return {
     specId: "078-issue-167",
