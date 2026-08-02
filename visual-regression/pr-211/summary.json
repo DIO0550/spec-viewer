@@ -1,5 +1,5 @@
 {
-  "reportVersion": "f052f07d6b21d65f3d65b5a6625126b521ab58d9",
+  "reportVersion": "82e38512ddd56018d3728bf54756984c1e099dd9",
   "maxDiffRatio": 0.002,
   "changed": 0,
   "new": 0,
@@ -1352,12 +1352,12 @@
       "title": "features/specs/components/SpecTree",
       "name": "Success Reveal",
       "status": "passed",
-      "reason": "match",
-      "diffPixels": 0,
-      "diffRatio": 0,
+      "reason": "within-threshold",
+      "diffPixels": 1076,
+      "diffRatio": 0.0012,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": false
+      "hasDiff": true
     },
     {
       "story": "features-workspace-components-openworkspaceemptystate--all-props",
