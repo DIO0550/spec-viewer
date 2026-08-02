@@ -25,7 +25,7 @@ test("Workspace pathbarは4カラム共通shellの全幅領域としてmode tool
   });
 });
 
-test("mode切替は外側WorktreesとCommentsを保持して中央2 slotだけを差し替える", () => {
+test("workspace未選択ではDiffを無効化してSpecsと外側slotを保持する", () => {
   const container = document.createElement("div");
   const root = createRoot(container);
 
@@ -47,10 +47,9 @@ test("mode切替は外側WorktreesとCommentsを保持して中央2 slotだけ�
     worktreesBefore,
   );
   expect(container.querySelector(".app-shell__comments")).toBe(commentsBefore);
-  expect(container.textContent).toContain(
-    "変更ファイル一覧はまだ利用できません。",
-  );
-  expect(container.textContent).toContain("Diffデータはまだ利用できません。");
+  expect(diffTab?.getAttribute("aria-disabled")).toBe("true");
+  expect(diffTab?.title).toBe("ワークスペースを選択するとDiffを利用できます");
+  expect(container.textContent).toContain("ワークスペースが選択されていません");
   expect(
     container.querySelector('aside[aria-label="Mode navigation"]'),
   ).not.toBeNull();
