@@ -250,6 +250,36 @@
     "name": "Edge Cases"
   },
   {
+    "id": "features-diff-components-diffviewer--added-only",
+    "title": "features/diff/components/DiffViewer",
+    "name": "Added Only"
+  },
+  {
+    "id": "features-diff-components-diffviewer--empty-diff",
+    "title": "features/diff/components/DiffViewer",
+    "name": "Empty Diff"
+  },
+  {
+    "id": "features-diff-components-diffviewer--large-diff",
+    "title": "features/diff/components/DiffViewer",
+    "name": "Large Diff"
+  },
+  {
+    "id": "features-diff-components-diffviewer--mixed",
+    "title": "features/diff/components/DiffViewer",
+    "name": "Mixed"
+  },
+  {
+    "id": "features-diff-components-diffviewer--omitted-diff",
+    "title": "features/diff/components/DiffViewer",
+    "name": "Omitted Diff"
+  },
+  {
+    "id": "features-diff-components-diffviewer--removed-only",
+    "title": "features/diff/components/DiffViewer",
+    "name": "Removed Only"
+  },
+  {
     "id": "features-diff-components-viewmodetoolbar--all-props",
     "title": "features/diff/components/ViewModeToolbar",
     "name": "All Props"
