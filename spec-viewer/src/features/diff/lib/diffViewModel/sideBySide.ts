@@ -67,7 +67,7 @@ export function createSideBySideHunk(
       continue;
     }
 
-    const changeId =
+    const changeId: string =
       activeChangeId ?? `hunk-${hunkIndex}-change-${changeIds.length}`;
     if (activeChangeId === null) {
       activeChangeId = changeId;
