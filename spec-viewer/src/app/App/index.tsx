@@ -27,7 +27,13 @@ import { CommentScope } from "@/features/comments/domain/commentScope";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import {
   ChangesNavigation,
+  createSpecChangeId,
+  DiffViewer,
   DiffWorkspace,
+  type DiffWorkspaceState,
+  findSpecChange,
+  type SpecDiffWorkspaceState,
+  useSpecDiffWorkspace,
   ViewModeToolbar,
 } from "@/features/diff";
 import {
@@ -129,6 +135,10 @@ function SpecViewAppContent(): ReactElement {
   const specState = specs.state;
   const specActions = specs.actions;
   const specSelectors = specs.selectors;
+  const specDiff = useSpecDiffWorkspace({
+    workspacePath: activeWorkspaceRoot,
+    selection: specState.selection,
+  });
   const isCurrentViewLoading = specSelectors.isLoading;
   const documentReadiness = useDocumentReadiness(specState.documentState);
   const commentScope = useMemo(
@@ -176,6 +186,7 @@ function SpecViewAppContent(): ReactElement {
     archiveSpec: specActions.archiveSpec,
     reloadSpecs: specActions.reloadSpecs,
     selectFileKey: specActions.selectFileKey,
+    selectSpecFile: specActions.selectSpecFile,
     reloadDocument: specActions.reloadDocument,
   });
 
@@ -186,6 +197,7 @@ function SpecViewAppContent(): ReactElement {
       document: specActions.reloadDocument,
       specs: specActions.reloadSpecs,
       comments: comments.reloadComments,
+      diff: specDiff.refresh,
     },
     onError: setDialogErrorMessage,
   });
@@ -202,6 +214,20 @@ function SpecViewAppContent(): ReactElement {
   useEffect(() => {
     setDialogErrorMessage(null);
   }, [resetKeys.fileKey, resetKeys.specId, resetKeys.workspaceRoot]);
+
+  useEffect(() => {
+    if (
+      workspaceNavigation.state.mode === "diff" &&
+      (specDiff.state.status === "idle" ||
+        specDiff.state.status === "unavailable")
+    ) {
+      workspaceNavigation.actions.changeMode("specs");
+    }
+  }, [
+    specDiff.state.status,
+    workspaceNavigation.actions.changeMode,
+    workspaceNavigation.state.mode,
+  ]);
 
   // resetWorkspace のドメイン横断副作用を明示的な合成で維持する。
   /** Clears the active comment and resets the workspace. */
@@ -235,6 +261,55 @@ function SpecViewAppContent(): ReactElement {
     documentReadiness.isDocumentReadable;
   const canRefresh =
     activeWorkspaceRoot !== null && specSelectors.canReloadDocument;
+  const currentSpecChange = useMemo(
+    () =>
+      specDiff.state.status === "ready"
+        ? findSpecChange(specDiff.state.overview.files, specState.selection)
+        : null,
+    [specDiff.state, specState.selection],
+  );
+  const selectedChangeId =
+    currentSpecChange === null ? null : createSpecChangeId(currentSpecChange);
+  const changesItems = useMemo(
+    () =>
+      specDiff.state.status === "ready"
+        ? specDiff.state.overview.files.map((file) => ({
+            id: createSpecChangeId(file),
+            path: file.targetPath,
+            change: file.change,
+          }))
+        : [],
+    [specDiff.state],
+  );
+  const changesAvailability =
+    specDiff.state.status === "ready"
+      ? ({ status: "ready" } as const)
+      : specDiff.state.status === "failed"
+        ? ({ status: "failed", message: specDiff.state.message } as const)
+        : specDiff.state.status === "unavailable"
+          ? ({ status: "unavailable", reason: specDiff.state.reason } as const)
+          : ({ status: "loading" } as const);
+  const diffTabAvailability =
+    activeWorkspaceRoot === null
+      ? ({
+          status: "unavailable",
+          reason: "ワークスペースを選択するとDiffを利用できます",
+        } as const)
+      : specDiff.state.status === "idle" || specDiff.state.status === "loading"
+        ? ({
+            status: "unavailable",
+            reason: "Diff情報を読み込んでいます",
+          } as const)
+        : specDiff.state.status === "unavailable"
+          ? ({ status: "unavailable", reason: specDiff.state.reason } as const)
+          : ({ status: "ready" } as const);
+  const diffWorkspaceState: DiffWorkspaceState = createDiffWorkspaceState(
+    specDiff.state,
+    specState.selection.specId,
+    specState.selection.fileKey,
+    currentSpecChange?.targetPath ?? null,
+    specDiff.refresh,
+  );
 
   return (
     <div className="app-drop-root">
@@ -271,6 +346,7 @@ function SpecViewAppContent(): ReactElement {
         <WorkspaceLayout.Toolbar>
           <ViewModeToolbar
             mode={workspaceNavigation.state.mode}
+            diffAvailability={diffTabAvailability}
             activeItemLabel={
               specSelectors.selectedSpec !== null &&
               specSelectors.selectedFile !== null
@@ -321,6 +397,7 @@ function SpecViewAppContent(): ReactElement {
             <SpecTree
               state={specState.specTreeState}
               selectedSpecId={specState.selection.specId}
+              changeBadgesBySpecId={specDiff.badges}
               archivingSpecId={specState.archivingSpecId}
               archiveFailure={specState.archiveFailure}
               archiveReveal={specState.archiveReveal}
@@ -337,19 +414,38 @@ function SpecViewAppContent(): ReactElement {
             />
           ) : (
             <ChangesNavigation
-              items={[]}
-              selectedId={null}
-              availability={WorktreesLoadState}
-              onSelect={workspaceNavigation.actions.selectItem}
+              items={changesItems}
+              selectedId={selectedChangeId}
+              availability={changesAvailability}
+              onSelect={(id) => {
+                const change =
+                  specDiff.state.status === "ready"
+                    ? (specDiff.state.overview.files.find(
+                        (file) => createSpecChangeId(file) === id,
+                      ) ?? null)
+                    : null;
+                if (change === null) {
+                  return;
+                }
+                workspaceNavigation.actions.selectItem(id);
+                guardedSpecActions.selectSpecFileFromChanges(
+                  change.specId,
+                  change.fileKey,
+                );
+              }}
+              onRetry={() => {
+                void specDiff.refresh();
+              }}
             />
           )}
         </WorkspaceLayout.ModeNavigation>
         <WorkspaceLayout.Content>
           {workspaceNavigation.state.mode === "diff" ? (
             <DiffWorkspace
-              selectedPath={null}
+              state={diffWorkspaceState}
+              selectedPath={currentSpecChange?.targetPath ?? null}
               preview={null}
-              availability={WorktreesLoadState}
+              availability={{ status: "ready" }}
             />
           ) : (
             <div className="specs-workspace">
@@ -418,30 +514,68 @@ function SpecViewAppContent(): ReactElement {
             </div>
           )}
         </WorkspaceLayout.Content>
-        <WorkspaceLayout.Comments>
-          <SpecViewCommentSidebar
-            comments={comments.comments}
-            resetKeys={resetKeys}
-            listState={comments.listState}
-            operationState={comments.operationState}
-            activeCommentId={commentSelection.activeCommentId}
-            anchorDisplayStates={commentSelection.commentAnchorDisplayStates}
-            onSelectComment={commentSelection.selectComment}
-            onResolveComment={commentSelection.resolveComment}
-            onReopenComment={commentSelection.reopenComment}
-            onDeleteComment={commentSelection.deleteComment}
-            onUpdateComment={commentSelection.updateComment}
-            onReloadComments={() => {
-              void comments.reloadComments();
-            }}
-          />
-        </WorkspaceLayout.Comments>
+        {workspaceNavigation.state.mode === "specs" ? (
+          <WorkspaceLayout.Comments>
+            <SpecViewCommentSidebar
+              comments={comments.comments}
+              resetKeys={resetKeys}
+              listState={comments.listState}
+              operationState={comments.operationState}
+              activeCommentId={commentSelection.activeCommentId}
+              anchorDisplayStates={commentSelection.commentAnchorDisplayStates}
+              onSelectComment={commentSelection.selectComment}
+              onResolveComment={commentSelection.resolveComment}
+              onReopenComment={commentSelection.reopenComment}
+              onDeleteComment={commentSelection.deleteComment}
+              onUpdateComment={commentSelection.updateComment}
+              onReloadComments={() => {
+                void comments.reloadComments();
+              }}
+            />
+          </WorkspaceLayout.Comments>
+        ) : null}
       </SidebarLayout>
       <WorkspaceDropOverlay
         isVisible={workspaceLoader.state.isDraggingWorkspace}
       />
     </div>
   );
+}
+
+function createDiffWorkspaceState(
+  state: SpecDiffWorkspaceState,
+  selectedSpecId: string | null,
+  selectedFileKey: string | null,
+  selectedPath: string | null,
+  onRetry: () => Promise<boolean>,
+): DiffWorkspaceState {
+  if (selectedSpecId === null || selectedFileKey === null) {
+    return { status: "noSelection" };
+  }
+  if (state.status === "idle" || state.status === "loading") {
+    return { status: "loading" };
+  }
+  if (state.status === "unavailable") {
+    return { status: "failed", message: state.reason, onRetry };
+  }
+  if (state.status === "failed") {
+    return { status: "failed", message: state.message, onRetry };
+  }
+  if (state.detail.status === "unchanged") {
+    return { status: "unchanged" };
+  }
+  if (state.detail.status === "loading") {
+    return { status: "loading" };
+  }
+  if (state.detail.status === "failed") {
+    return { status: "failed", message: state.detail.message, onRetry };
+  }
+
+  return {
+    status: "ready",
+    selectedPath: selectedPath ?? selectedFileKey,
+    preview: <DiffViewer fileDiff={state.detail.value} />,
+  };
 }
 
 export default App;
