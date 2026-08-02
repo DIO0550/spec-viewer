@@ -60,17 +60,21 @@ test("previous・nextはchange block単位で移動し端点ではdisabledにな
 });
 
 test("offscreen changeへ移動するとwindowとactive rowを更新する", () => {
-  const lines = Array.from({ length: 150 }, (_, index) => [
-    { kind: "removed" as const, text: "old " + index },
-    { kind: "added" as const, text: "new " + index },
-    { kind: "context" as const, text: "context " + index },
-  ]).flat();
+  const lines = [
+    { kind: "removed" as const, text: "old first" },
+    { kind: "added" as const, text: "new first" },
+    { kind: "context" as const, text: "context" },
+    ...Array.from({ length: 150 }, () => ({
+      kind: "noNewline" as const,
+      text: "\\ No newline at end of file",
+    })),
+    { kind: "removed" as const, text: "old second" },
+    { kind: "added" as const, text: "new second" },
+  ];
   const result = renderViewer(createDiffViewerFixture({ lines }));
   const next = getButton(result.container, "次の変更");
 
-  Array.from({ length: 149 }).forEach(() => {
-    act(() => next.click());
-  });
+  act(() => next.click());
 
   const scrollSurface = result.container.querySelector(
     ".diff-viewer__scroll-surface",
@@ -80,7 +84,7 @@ test("offscreen changeへ移動するとwindowとactive rowを更新する", () 
     result.container
       .querySelector('[data-active="true"]')
       ?.getAttribute("data-change-id"),
-  ).toBe("hunk-0-change-149");
+  ).toBe("hunk-0-change-1");
   result.unmount();
 });
 
