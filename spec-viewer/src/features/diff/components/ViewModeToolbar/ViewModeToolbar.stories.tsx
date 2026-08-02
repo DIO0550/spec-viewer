@@ -44,3 +44,25 @@ export const EdgeCases: Story = {
       "とても長いファイル名でもツールバー全体が崩れないことを確認するための仕様書.md",
   },
 };
+
+export const Ready: Story = {
+  args: { diffAvailability: { status: "ready" } },
+};
+
+export const NonRepository: Story = {
+  args: {
+    diffAvailability: {
+      status: "unavailable",
+      reason: "Git repositoryではありません",
+    },
+  },
+};
+
+export const Loading: Story = {
+  args: {
+    diffAvailability: {
+      status: "unavailable",
+      reason: "Diff情報を読み込んでいます",
+    },
+  },
+};

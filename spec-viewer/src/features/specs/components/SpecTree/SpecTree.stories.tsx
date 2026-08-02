@@ -79,7 +79,8 @@ const archiveError = {
 };
 const archiveResponse = {
   archivedSpecId: activeSpec.id,
-  archivePath: "/workspace/spec-reviewer/.plugin-workspace/.specs/.archive/074-issue-193",
+  archivePath:
+    "/workspace/spec-reviewer/.plugin-workspace/.specs/.archive/074-issue-193",
   sourceGroupId: "primary",
   destinationNodeId: ".archive/074-issue-193",
 } as const;
@@ -170,7 +171,9 @@ export const FailureRetry: Story = {
     await expect(canvas.getByRole("alert")).toHaveTextContent(
       "The spec could not be archived.",
     );
-    await userEvent.click(canvas.getByRole("button", { name: "アーカイブを再試行" }));
+    await userEvent.click(
+      canvas.getByRole("button", { name: "アーカイブを再試行" }),
+    );
     await expect(args.onRetryArchive).toHaveBeenCalledOnce();
   },
 };
@@ -234,4 +237,26 @@ export const EdgeCases: Story = {
     selectedSpecId: null,
     onArchiveSpec: undefined,
   },
+};
+
+export const Modified: Story = {
+  render: (args) => (
+    <SpecTree
+      {...args}
+      changeBadgesBySpecId={new Map([[activeSpec.id, "M"]])}
+    />
+  ),
+};
+
+export const UntrackedPriority: Story = {
+  render: (args) => (
+    <SpecTree
+      {...args}
+      changeBadgesBySpecId={new Map([[activeSpec.id, "U"]])}
+    />
+  ),
+};
+
+export const NoChanges: Story = {
+  render: (args) => <SpecTree {...args} changeBadgesBySpecId={new Map()} />,
 };
