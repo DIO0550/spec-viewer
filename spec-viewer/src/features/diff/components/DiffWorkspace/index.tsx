@@ -8,7 +8,15 @@ export type DiffWorkspaceAvailability =
       status: "unavailable";
       reason: WorkspaceWorktreesUnavailableReason;
     }>;
+export type DiffWorkspaceState =
+  | Readonly<{ status: "noSelection" }>
+  | Readonly<{ status: "unchanged" }>
+  | Readonly<{ status: "loading" }>
+  | Readonly<{ status: "failed"; message: string; onRetry: () => void }>
+  | Readonly<{ status: "ready"; selectedPath: string; preview: ReactNode }>;
+
 export type DiffWorkspaceProps = Readonly<{
+  state?: DiffWorkspaceState;
   selectedPath: string | null;
   preview: ReactNode;
   availability: DiffWorkspaceAvailability;
@@ -21,7 +29,11 @@ export type DiffWorkspaceProps = Readonly<{
  * @returns Diff preview or a recoverable status.
  */
 export function DiffWorkspace(props: DiffWorkspaceProps): ReactElement {
-  const { selectedPath, preview, availability } = props;
+  const { state, selectedPath, preview, availability } = props;
+
+  if (state !== undefined) {
+    return renderDiffWorkspaceState(state);
+  }
 
   if (availability.status === "unavailable") {
     return (
@@ -58,5 +70,36 @@ function DiffStatus(props: Readonly<{ children: string }>): ReactElement {
     >
       {props.children}
     </p>
+  );
+}
+
+function renderDiffWorkspaceState(state: DiffWorkspaceState): ReactElement {
+  if (state.status === "noSelection") {
+    return <DiffStatus>表示するSpecファイルを選択してください。</DiffStatus>;
+  }
+  if (state.status === "unchanged") {
+    return <DiffStatus>選択中のファイルに変更はありません。</DiffStatus>;
+  }
+  if (state.status === "loading") {
+    return <DiffStatus>差分を読み込んでいます。</DiffStatus>;
+  }
+  if (state.status === "failed") {
+    return (
+      <div className="diff-workspace__error" role="alert" aria-live="polite">
+        <p>{state.message}</p>
+        <button type="button" onClick={state.onRetry}>
+          再試行
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <section
+      className="diff-preview"
+      aria-label={state.selectedPath + " の差分"}
+    >
+      {state.preview}
+    </section>
   );
 }

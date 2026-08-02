@@ -39,10 +39,12 @@ import { uiText } from "@/utils/uiText";
 
 const BASE_TREE_ITEM_INDENT = 10;
 const TREE_ITEM_INDENT_STEP = 16;
+const EMPTY_CHANGE_BADGES: ReadonlyMap<string, "M" | "U"> = new Map();
 
 type Props = Readonly<{
   state: SpecTreeState;
   selectedSpecId: string | null;
+  changeBadgesBySpecId?: ReadonlyMap<string, "M" | "U">;
   archivingSpecId?: string | null;
   archiveFailure?: ArchiveFailure | null;
   archiveReveal?: ArchiveRevealState | null;
@@ -58,6 +60,7 @@ type Props = Readonly<{
 export function SpecTree({
   state,
   selectedSpecId,
+  changeBadgesBySpecId = EMPTY_CHANGE_BADGES,
   archivingSpecId = null,
   archiveFailure = null,
   archiveReveal = null,
@@ -247,6 +250,7 @@ export function SpecTree({
             insideArchive={false}
             presentation={presentation}
             selectedSpecId={selectedSpecId}
+            changeBadgesBySpecId={changeBadgesBySpecId}
             initialFocusNodeId={firstNodeId}
             archivingSpecId={archivingSpecId}
             archiveFailure={archiveFailure}
@@ -277,6 +281,7 @@ type SpecTreeItemProps = Readonly<{
   insideArchive: boolean;
   presentation: SpecTreePresentationState;
   selectedSpecId: string | null;
+  changeBadgesBySpecId: ReadonlyMap<string, "M" | "U">;
   initialFocusNodeId: string | null;
   archivingSpecId: string | null;
   archiveFailure: ArchiveFailure | null;
@@ -296,6 +301,7 @@ function SpecTreeItem(props: SpecTreeItemProps) {
     insideArchive,
     presentation,
     selectedSpecId,
+    changeBadgesBySpecId,
     initialFocusNodeId,
     archivingSpecId,
     archiveFailure,
@@ -352,7 +358,8 @@ function SpecTreeItem(props: SpecTreeItemProps) {
           aria-expanded={hasChildren ? isExpanded : undefined}
           aria-selected={isSelected}
           tabIndex={
-            isSelected || (selectedSpecId === null && node.id === initialFocusNodeId)
+            isSelected ||
+            (selectedSpecId === null && node.id === initialFocusNodeId)
               ? 0
               : -1
           }
@@ -400,6 +407,18 @@ function SpecTreeItem(props: SpecTreeItemProps) {
           </span>
           <NodeKindIcon kind={node.kind} />
           <span className="spec-tree__item-label">{node.label}</span>
+          {isSpec && !insideArchive && changeBadgesBySpecId.has(node.id) ? (
+            <span
+              className="spec-tree__change-badge"
+              aria-label={
+                changeBadgesBySpecId.get(node.id) === "U"
+                  ? "未追跡の変更あり"
+                  : "変更あり"
+              }
+            >
+              {changeBadgesBySpecId.get(node.id)}
+            </span>
+          ) : null}
           <span className="spec-tree__file-count">
             {SpecNodeDomain.count(node)}
           </span>
@@ -494,7 +513,11 @@ function handleTreeItemKeyDown(
     return;
   }
 
-  if (event.key === "ArrowRight" && options.hasChildren && !options.isExpanded) {
+  if (
+    event.key === "ArrowRight" &&
+    options.hasChildren &&
+    !options.isExpanded
+  ) {
     event.preventDefault();
     options.onToggleExpanded();
     return;
@@ -511,7 +534,7 @@ function handleTreeItemKeyDown(
     return;
   }
 
-  const tree = event.currentTarget.closest("[role=\"tree\"]");
+  const tree = event.currentTarget.closest('[role="tree"]');
   const items = Array.from(
     tree?.querySelectorAll<HTMLButtonElement>(".spec-tree__item") ?? [],
   );
@@ -527,7 +550,7 @@ function handleTreeItemKeyDown(
 function getNextTreeItemIndex(
   event: KeyboardEvent<HTMLButtonElement>,
 ): number | null {
-  const tree = event.currentTarget.closest("[role=\"tree\"]");
+  const tree = event.currentTarget.closest('[role="tree"]');
   const items = Array.from(
     tree?.querySelectorAll<HTMLButtonElement>(".spec-tree__item") ?? [],
   );
