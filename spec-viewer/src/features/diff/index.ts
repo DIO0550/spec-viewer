@@ -2,6 +2,7 @@ export {
   ChangesNavigation,
   type ChangesNavigationProps,
 } from "./components/ChangesNavigation";
+export { DiffViewer, type DiffViewerProps } from "./components/DiffViewer";
 export {
   DiffWorkspace,
   type DiffWorkspaceProps,
