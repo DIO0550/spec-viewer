@@ -24,6 +24,27 @@ test("hunk間gapは両contentが利用可能で同一なら展開できる", () 
   ).toHaveLength(10);
 });
 
+test("複数のhunk間gapを順序通りに展開できる", () => {
+  const content = availableContent(
+    Array.from({ length: 25 }, (_, index) => `line ${index + 1}`).join("\n"),
+  );
+  const model = buildDiffViewModel(
+    createFileDiff(content, content, [1, 10, 20]),
+  );
+  const expandedTexts = model.inlineRows
+    .filter((row) => row.kind === "gap")
+    .map((gap) =>
+      gap.expandableRows
+        ?.filter((row) => row.kind === "content")
+        .map((row) => row.inline?.line.text),
+    );
+
+  expect(expandedTexts).toEqual([
+    Array.from({ length: 8 }, (_, index) => `line ${index + 2}`),
+    Array.from({ length: 9 }, (_, index) => `line ${index + 11}`),
+  ]);
+});
+
 test.each([
   [omittedContent(), availableContent("line 1\nline 2")],
   [availableContent("line 1\nline 2"), omittedContent()],
@@ -38,6 +59,7 @@ test.each([
 function createFileDiff(
   oldContent: FileContent,
   newContent: FileContent,
+  hunkLineNumbers: readonly number[] = [1, 10],
 ): FileDiff {
   return {
     specId: "078-issue-167",
@@ -58,14 +80,11 @@ function createFileDiff(
       patch: { state: "available", text: "", reason: null, byteLength: null },
       structuredDiff: {
         state: "available",
-        hunks: [
-          Hunk.fromLines("@@ -1,1 +1,1 @@", [
-            { kind: "context", text: "line 1" },
+        hunks: hunkLineNumbers.map((lineNumber) =>
+          Hunk.fromLines(`@@ -${lineNumber},1 +${lineNumber},1 @@`, [
+            { kind: "context", text: `line ${lineNumber}` },
           ]),
-          Hunk.fromLines("@@ -10,1 +10,1 @@", [
-            { kind: "context", text: "line 10" },
-          ]),
-        ],
+        ),
         reason: null,
       },
       submodule: null,
