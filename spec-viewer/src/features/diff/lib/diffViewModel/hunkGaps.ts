@@ -132,14 +132,8 @@ function createExpandableRows(
     return null;
   }
 
-  const oldLines = input.oldLineReader(
-    input.previousOld,
-    input.oldGapCount,
-  );
-  const newLines = input.newLineReader(
-    input.previousNew,
-    input.newGapCount,
-  );
+  const oldLines = input.oldLineReader(input.previousOld, input.oldGapCount);
+  const newLines = input.newLineReader(input.previousNew, input.newGapCount);
   if (oldLines === null || newLines === null) {
     return null;
   }
@@ -173,9 +167,7 @@ function createExpandableRows(
   });
 }
 
-function createLineRangeReader(
-  content: FileContent,
-): LineRangeReader | null {
+function createLineRangeReader(content: FileContent): LineRangeReader | null {
   if (content.state !== "available") {
     return null;
   }
@@ -194,8 +186,7 @@ function createLineRangeReader(
         return null;
       }
       const newlineIndex = text.indexOf("\n", nextLineStart);
-      nextLineStart =
-        newlineIndex === -1 ? text.length + 1 : newlineIndex + 1;
+      nextLineStart = newlineIndex === -1 ? text.length + 1 : newlineIndex + 1;
       nextLineIndex += 1;
     }
 
@@ -207,8 +198,7 @@ function createLineRangeReader(
       const newlineIndex = text.indexOf("\n", nextLineStart);
       const lineEnd = newlineIndex === -1 ? text.length : newlineIndex;
       lines.push(text.slice(nextLineStart, lineEnd));
-      nextLineStart =
-        newlineIndex === -1 ? text.length + 1 : newlineIndex + 1;
+      nextLineStart = newlineIndex === -1 ? text.length + 1 : newlineIndex + 1;
       nextLineIndex += 1;
     }
 

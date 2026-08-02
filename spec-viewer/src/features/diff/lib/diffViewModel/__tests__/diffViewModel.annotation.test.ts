@@ -70,14 +70,8 @@ test("noNewlineを挟むchanged linesで表示mode間のchange IDを維持する
     .filter((changeId) => changeId !== null);
 
   expect(model.changeIds).toEqual(["hunk-0-change-0"]);
-  expect(inlineChangeIds).toEqual([
-    "hunk-0-change-0",
-    "hunk-0-change-0",
-  ]);
-  expect(sideBySideChangeIds).toEqual([
-    "hunk-0-change-0",
-    "hunk-0-change-0",
-  ]);
+  expect(inlineChangeIds).toEqual(["hunk-0-change-0", "hunk-0-change-0"]);
+  expect(sideBySideChangeIds).toEqual(["hunk-0-change-0", "hunk-0-change-0"]);
 });
 
 function createFileDiff(lines: readonly DiffLineSource[]): FileDiff {
