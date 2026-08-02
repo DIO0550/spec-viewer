@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
 import { SpecDocumentState as SpecDocumentStateFactory } from "@/features/specs/domain/specDocumentState";
 import { OperationId } from "@/features/specs/domain/operationId";
+import { resolveSpecFileSelection } from "@/features/specs/domain/resolveSpecFileSelection";
 import { SpecFeatureError } from "@/features/specs/domain/specError";
 import { SpecNode as SpecNodeDomain } from "@/features/specs/domain/specNode";
 import { SpecTree as SpecTreeDomain } from "@/features/specs/domain/specTree";
@@ -539,6 +540,33 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
     ],
   );
 
+  const selectSpecFile = useCallback(
+    async (specId: string, fileKey: string): Promise<void> => {
+      await runSpecLoad(async (operationId) => {
+        const target = resolveSpecFileSelection(
+          tree,
+          workspacePath,
+          specId,
+          fileKey,
+        );
+        if (target === null || tree === null) {
+          return false;
+        }
+
+        const spec = SpecTreeDomain.findNode(tree, target.specId);
+        if (spec === null) {
+          return false;
+        }
+
+        return loadResolvedSelection(operationId, target.workspacePath, {
+          spec,
+          fileKey: target.fileKey,
+        });
+      });
+    },
+    [loadResolvedSelection, runSpecLoad, tree, workspacePath],
+  );
+
   const selectFileKey = useCallback(
     async (fileKey: SpecFileKey): Promise<void> => {
       await runSpecLoad(async (operationId) => {
@@ -660,10 +688,13 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
             },
             () => workspacePathRef.current === activeWorkspacePath,
             (loadedTree) => {
-              const destination = SpecTreeDomain.findNodeByIdentity(loadedTree, {
-                sourceGroupId: response.sourceGroupId,
-                relativeId: response.destinationNodeId,
-              });
+              const destination = SpecTreeDomain.findNodeByIdentity(
+                loadedTree,
+                {
+                  sourceGroupId: response.sourceGroupId,
+                  relativeId: response.destinationNodeId,
+                },
+              );
               commitLoadState(operationId, (currentState) => ({
                 ...currentState,
                 archiveReveal: {
@@ -731,6 +762,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
       refreshArchiveReveal,
       reloadSpecs,
       selectSpec,
+      selectSpecFile,
       selectFileKey,
       reloadDocument,
       resetSelection,
@@ -744,6 +776,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
       retryArchiveSpec,
       selectFileKey,
       selectSpec,
+      selectSpecFile,
     ],
   );
 

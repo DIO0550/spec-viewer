@@ -48,6 +48,7 @@ export type SpecsActions = Readonly<{
   /** Selects a spec. @param specId - ID of the spec to select. */
   selectSpec: (specId: string) => Promise<void>;
   /** Selects a file. @param fileKey - Key of the file to select. */
+  selectSpecFile: (specId: string, fileKey: string) => Promise<void>;
   selectFileKey: (fileKey: SpecFileKey) => Promise<void>;
   /** Reloads the current document. */
   reloadDocument: () => Promise<boolean>;
