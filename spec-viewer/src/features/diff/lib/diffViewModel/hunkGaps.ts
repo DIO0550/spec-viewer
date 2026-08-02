@@ -9,6 +9,11 @@ import type {
   DiffViewRow,
 } from "@/features/diff/lib/diffViewModel";
 
+type LineRangeReader = (
+  startLineIndex: number,
+  lineCount: number,
+) => readonly string[] | null;
+
 /**
  * Inserts hunk-gap rows and reconstructs expandable unchanged content when safe.
  *
@@ -24,6 +29,9 @@ export function insertHunkGaps(
     mode: DiffViewMode;
   }>,
 ): readonly DiffViewRow[] {
+  const oldLineReader = createLineRangeReader(input.oldContent);
+  const newLineReader = createLineRangeReader(input.newContent);
+
   return input.transformedHunks.flatMap((transformedHunk, hunkIndex) => {
     if (hunkIndex === 0) {
       return transformedHunk.rows;
@@ -39,8 +47,8 @@ export function insertHunkGaps(
       previousHunk,
       currentHunk,
       hunkIndex,
-      oldContent: input.oldContent,
-      newContent: input.newContent,
+      oldLineReader,
+      newLineReader,
       mode: input.mode,
     });
     return gap === null ? transformedHunk.rows : [gap, ...transformedHunk.rows];
@@ -52,8 +60,8 @@ function createHunkGap(
     previousHunk: Hunk;
     currentHunk: Hunk;
     hunkIndex: number;
-    oldContent: FileContent;
-    newContent: FileContent;
+    oldLineReader: LineRangeReader | null;
+    newLineReader: LineRangeReader | null;
     mode: DiffViewMode;
   }>,
 ): DiffViewRow | null {
@@ -106,8 +114,8 @@ function createHunkGap(
 
 function createExpandableRows(
   input: Readonly<{
-    oldContent: FileContent;
-    newContent: FileContent;
+    oldLineReader: LineRangeReader | null;
+    newLineReader: LineRangeReader | null;
     previousOld: number;
     previousNew: number;
     oldGapCount: number;
@@ -118,18 +126,23 @@ function createExpandableRows(
 ): readonly DiffViewRow[] | null {
   if (
     input.oldGapCount !== input.newGapCount ||
-    input.oldContent.state !== "available" ||
-    input.newContent.state !== "available"
+    input.oldLineReader === null ||
+    input.newLineReader === null
   ) {
     return null;
   }
 
-  const oldLines = input.oldContent.text
-    .split("\n")
-    .slice(input.previousOld, input.previousOld + input.oldGapCount);
-  const newLines = input.newContent.text
-    .split("\n")
-    .slice(input.previousNew, input.previousNew + input.newGapCount);
+  const oldLines = input.oldLineReader(
+    input.previousOld,
+    input.oldGapCount,
+  );
+  const newLines = input.newLineReader(
+    input.previousNew,
+    input.newGapCount,
+  );
+  if (oldLines === null || newLines === null) {
+    return null;
+  }
   const hasCompleteRanges =
     oldLines.length === input.oldGapCount &&
     newLines.length === input.newGapCount;
@@ -158,6 +171,49 @@ function createExpandableRows(
       estimatedHeight: 20,
     };
   });
+}
+
+function createLineRangeReader(
+  content: FileContent,
+): LineRangeReader | null {
+  if (content.state !== "available") {
+    return null;
+  }
+
+  const text = content.text;
+  let nextLineIndex = 0;
+  let nextLineStart = 0;
+
+  return (startLineIndex, lineCount) => {
+    if (startLineIndex < nextLineIndex) {
+      return null;
+    }
+
+    while (nextLineIndex < startLineIndex) {
+      if (nextLineStart > text.length) {
+        return null;
+      }
+      const newlineIndex = text.indexOf("\n", nextLineStart);
+      nextLineStart =
+        newlineIndex === -1 ? text.length + 1 : newlineIndex + 1;
+      nextLineIndex += 1;
+    }
+
+    const lines: string[] = [];
+    while (lines.length < lineCount) {
+      if (nextLineStart > text.length) {
+        return null;
+      }
+      const newlineIndex = text.indexOf("\n", nextLineStart);
+      const lineEnd = newlineIndex === -1 ? text.length : newlineIndex;
+      lines.push(text.slice(nextLineStart, lineEnd));
+      nextLineStart =
+        newlineIndex === -1 ? text.length + 1 : newlineIndex + 1;
+      nextLineIndex += 1;
+    }
+
+    return lines;
+  };
 }
 
 function findLastLineNumber(
