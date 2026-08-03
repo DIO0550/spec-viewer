@@ -1,5 +1,5 @@
 {
-  "reportVersion": "81f4dea3b9692a87bf445b2cef56f3fdaf72e358",
+  "reportVersion": "8f0d66599cff6d732dc57e87d80c2b9fbd9d36a7",
   "maxDiffRatio": 0.002,
   "changed": 0,
   "new": 15,
@@ -1534,12 +1534,12 @@
       "title": "features/specs/components/SpecTree",
       "name": "Success Reveal",
       "status": "passed",
-      "reason": "match",
-      "diffPixels": 0,
-      "diffRatio": 0,
+      "reason": "within-threshold",
+      "diffPixels": 1076,
+      "diffRatio": 0.0012,
       "hasExpected": true,
       "hasActual": true,
-      "hasDiff": false
+      "hasDiff": true
     },
     {
       "story": "features-specs-components-spectree--untracked-priority",
