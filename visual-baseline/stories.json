@@ -5,6 +5,11 @@
     "name": "Default"
   },
   {
+    "id": "app--diff-integration",
+    "title": "App",
+    "name": "Diff Integration"
+  },
+  {
     "id": "app-app-specviewcommentsidebar--default",
     "title": "app/App/SpecViewCommentSidebar",
     "name": "Default"
@@ -250,6 +255,26 @@
     "name": "Edge Cases"
   },
   {
+    "id": "features-diff-changesnavigation--empty",
+    "title": "Features/Diff/ChangesNavigation",
+    "name": "Empty"
+  },
+  {
+    "id": "features-diff-changesnavigation--failed",
+    "title": "Features/Diff/ChangesNavigation",
+    "name": "Failed"
+  },
+  {
+    "id": "features-diff-changesnavigation--loading",
+    "title": "Features/Diff/ChangesNavigation",
+    "name": "Loading"
+  },
+  {
+    "id": "features-diff-changesnavigation--ready-mixed",
+    "title": "Features/Diff/ChangesNavigation",
+    "name": "Ready Mixed"
+  },
+  {
     "id": "features-diff-components-diffviewer--added-only",
     "title": "features/diff/components/DiffViewer",
     "name": "Added Only"
@@ -295,9 +320,44 @@
     "name": "Edge Cases"
   },
   {
+    "id": "features-diff-components-viewmodetoolbar--loading",
+    "title": "features/diff/components/ViewModeToolbar",
+    "name": "Loading"
+  },
+  {
+    "id": "features-diff-components-viewmodetoolbar--non-repository",
+    "title": "features/diff/components/ViewModeToolbar",
+    "name": "Non Repository"
+  },
+  {
+    "id": "features-diff-components-viewmodetoolbar--ready",
+    "title": "features/diff/components/ViewModeToolbar",
+    "name": "Ready"
+  },
+  {
     "id": "features-diff-diffworkspace--default",
     "title": "Features/Diff/DiffWorkspace",
     "name": "Default"
+  },
+  {
+    "id": "features-diff-diffworkspace--failed",
+    "title": "Features/Diff/DiffWorkspace",
+    "name": "Failed"
+  },
+  {
+    "id": "features-diff-diffworkspace--loading",
+    "title": "Features/Diff/DiffWorkspace",
+    "name": "Loading"
+  },
+  {
+    "id": "features-diff-diffworkspace--ready",
+    "title": "Features/Diff/DiffWorkspace",
+    "name": "Ready"
+  },
+  {
+    "id": "features-diff-diffworkspace--unchanged",
+    "title": "Features/Diff/DiffWorkspace",
+    "name": "Unchanged"
   },
   {
     "id": "features-sidebar-components-sidebarlayout--all-props",
@@ -505,6 +565,16 @@
     "name": "Long List"
   },
   {
+    "id": "features-specs-components-spectree--modified",
+    "title": "features/specs/components/SpecTree",
+    "name": "Modified"
+  },
+  {
+    "id": "features-specs-components-spectree--no-changes",
+    "title": "features/specs/components/SpecTree",
+    "name": "No Changes"
+  },
+  {
     "id": "features-specs-components-spectree--processing",
     "title": "features/specs/components/SpecTree",
     "name": "Processing"
@@ -518,6 +588,11 @@
     "id": "features-specs-components-spectree--success-reveal",
     "title": "features/specs/components/SpecTree",
     "name": "Success Reveal"
+  },
+  {
+    "id": "features-specs-components-spectree--untracked-priority",
+    "title": "features/specs/components/SpecTree",
+    "name": "Untracked Priority"
   },
   {
     "id": "features-workspace-components-openworkspaceemptystate--all-props",
