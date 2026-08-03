@@ -39,6 +39,7 @@ export function ViewModeToolbar(props: ViewModeToolbarProps): ReactElement {
 
   const isModeAvailable = (candidate: ViewMode): boolean =>
     candidate === "specs" || diffAvailability.status === "ready";
+  const selectedMode = isModeAvailable(mode) ? mode : "specs";
 
   const selectMode = (nextMode: ViewMode): void => {
     if (!isModeAvailable(nextMode) || nextMode === mode) {
@@ -94,14 +95,14 @@ export function ViewModeToolbar(props: ViewModeToolbarProps): ReactElement {
             type="button"
             role="tab"
             id={`view-mode-${candidate}`}
-            aria-selected={mode === candidate}
+            aria-selected={selectedMode === candidate}
             aria-disabled={!isModeAvailable(candidate) || undefined}
             title={
               candidate === "diff" && diffAvailability.status === "unavailable"
                 ? diffAvailability.reason
                 : undefined
             }
-            tabIndex={mode === candidate ? 0 : -1}
+            tabIndex={selectedMode === candidate ? 0 : -1}
             onClick={() => {
               selectMode(candidate);
             }}
