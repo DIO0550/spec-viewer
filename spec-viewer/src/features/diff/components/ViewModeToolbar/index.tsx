@@ -7,9 +7,14 @@ import {
 
 import type { ViewMode } from "@/features/workspace/types/viewMode";
 
+export type ViewModeDiffAvailability =
+  | Readonly<{ status: "ready" }>
+  | Readonly<{ status: "unavailable"; reason: string }>;
+
 export type ViewModeToolbarProps = Readonly<{
   mode: ViewMode;
   activeItemLabel: string;
+  diffAvailability?: ViewModeDiffAvailability;
   modeControls?: Readonly<Partial<Record<ViewMode, ReactNode>>>;
   onModeChange: (mode: ViewMode) => void;
 }>;
@@ -23,10 +28,24 @@ const Modes: readonly ViewMode[] = ["specs", "diff"];
  * @returns The accessible view-mode toolbar.
  */
 export function ViewModeToolbar(props: ViewModeToolbarProps): ReactElement {
-  const { mode, activeItemLabel, modeControls, onModeChange } = props;
+  const {
+    mode,
+    activeItemLabel,
+    diffAvailability = { status: "ready" },
+    modeControls,
+    onModeChange,
+  } = props;
   const tabRefs = useRef(new Map<ViewMode, HTMLButtonElement>());
 
+  const isModeAvailable = (candidate: ViewMode): boolean =>
+    candidate === "specs" || diffAvailability.status === "ready";
+  const selectedMode = isModeAvailable(mode) ? mode : "specs";
+
   const selectMode = (nextMode: ViewMode): void => {
+    if (!isModeAvailable(nextMode) || nextMode === mode) {
+      return;
+    }
+
     onModeChange(nextMode);
     tabRefs.current.get(nextMode)?.focus();
   };
@@ -35,17 +54,21 @@ export function ViewModeToolbar(props: ViewModeToolbarProps): ReactElement {
     event: KeyboardEvent<HTMLButtonElement>,
     currentMode: ViewMode,
   ): void => {
-    const currentIndex = Modes.indexOf(currentMode);
+    const availableModes = Modes.filter(isModeAvailable);
+    const currentIndex = availableModes.indexOf(currentMode);
     let nextMode: ViewMode | undefined;
 
     if (event.key === "ArrowRight") {
-      nextMode = Modes[(currentIndex + 1) % Modes.length];
+      nextMode = availableModes[(currentIndex + 1) % availableModes.length];
     } else if (event.key === "ArrowLeft") {
-      nextMode = Modes[(currentIndex - 1 + Modes.length) % Modes.length];
+      nextMode =
+        availableModes[
+          (currentIndex - 1 + availableModes.length) % availableModes.length
+        ];
     } else if (event.key === "Home") {
-      nextMode = Modes[0];
+      nextMode = availableModes[0];
     } else if (event.key === "End") {
-      nextMode = Modes[Modes.length - 1];
+      nextMode = availableModes[availableModes.length - 1];
     }
 
     if (nextMode === undefined) {
@@ -72,8 +95,14 @@ export function ViewModeToolbar(props: ViewModeToolbarProps): ReactElement {
             type="button"
             role="tab"
             id={`view-mode-${candidate}`}
-            aria-selected={mode === candidate}
-            tabIndex={mode === candidate ? 0 : -1}
+            aria-selected={selectedMode === candidate}
+            aria-disabled={!isModeAvailable(candidate) || undefined}
+            title={
+              candidate === "diff" && diffAvailability.status === "unavailable"
+                ? diffAvailability.reason
+                : undefined
+            }
+            tabIndex={selectedMode === candidate ? 0 : -1}
             onClick={() => {
               selectMode(candidate);
             }}

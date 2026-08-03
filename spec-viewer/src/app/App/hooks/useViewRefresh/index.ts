@@ -24,6 +24,8 @@ export type UseViewRefreshOptions = Readonly<{
     specs: () => Promise<boolean>;
     /** Reloads the comments. */
     comments: () => Promise<boolean>;
+    /** Reloads the diff overview and selected detail when connected. */
+    diff?: () => Promise<boolean>;
   }>;
   /** Reports an error message, or clears it. @param message - Error message, or null to clear. */
   onError: (message: string | null) => void;
@@ -92,7 +94,9 @@ export function useViewRefresh(
         run: async () => {
           const isDocumentReloaded = await reload.document();
           const areCommentsReloaded = await reload.comments();
-          return isDocumentReloaded && areCommentsReloaded;
+          const isDiffReloaded = await (reload.diff?.() ??
+            Promise.resolve(true));
+          return isDocumentReloaded && areCommentsReloaded && isDiffReloaded;
         },
       });
     }, [isCurrentViewLoading, refreshCurrentView, reload]);
@@ -109,7 +113,9 @@ export function useViewRefresh(
         run: async () => {
           const areSpecsReloaded = await reload.specs();
           const areCommentsReloaded = await reload.comments();
-          return areSpecsReloaded && areCommentsReloaded;
+          const isDiffReloaded = await (reload.diff?.() ??
+            Promise.resolve(true));
+          return areSpecsReloaded && areCommentsReloaded && isDiffReloaded;
         },
       });
     }, [isCurrentViewLoading, refreshCurrentView, reload]);
@@ -130,7 +136,8 @@ export function useViewRefresh(
       run: async () => {
         const areSpecsReloaded = await reload.specs();
         const areCommentsReloaded = await reload.comments();
-        return areSpecsReloaded && areCommentsReloaded;
+        const isDiffReloaded = await (reload.diff?.() ?? Promise.resolve(true));
+        return areSpecsReloaded && areCommentsReloaded && isDiffReloaded;
       },
     });
   }, [
