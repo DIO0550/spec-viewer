@@ -87,6 +87,7 @@ export const createMinimalDetailResponse = (): DetailResponseFixture => ({
 
 export const createMinimalListResponse = () => ({
   currentSnapshotId: "rs1_snapshot",
+  resolvedBaseSha: "a".repeat(40),
   files: [
     {
       specId: "077-issue-166",

@@ -12,6 +12,7 @@ const invokeMock = vi.mocked(invoke);
 test("listChangedSpecFilesは変更一覧commandへworkspacePathを渡してdecodeする", async () => {
   const response = {
     currentSnapshotId: "rs1_snapshot",
+    resolvedBaseSha: "a".repeat(40),
     files: [
       {
         specId: "077-issue-166",
@@ -32,6 +33,25 @@ test("listChangedSpecFilesは変更一覧commandへworkspacePathを渡してdeco
   expect(invokeMock).toHaveBeenCalledOnce();
   expect(invokeMock).toHaveBeenCalledWith("list_changed_spec_files", {
     request: { workspacePath: "/workspace" },
+  });
+});
+
+test("listChangedSpecFilesは明示comparisonをtagged payloadで渡す", async () => {
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue({
+    resolvedBaseSha: "b".repeat(40),
+    currentSnapshotId: "rs1_snapshot",
+    files: [],
+  });
+  const comparison = {
+    kind: "localBranch",
+    name: "refs/heads/previous",
+  } as const;
+
+  await listChangedSpecFiles({ workspacePath: "/workspace", comparison });
+
+  expect(invokeMock).toHaveBeenCalledWith("list_changed_spec_files", {
+    request: { workspacePath: "/workspace", comparison },
   });
 });
 
