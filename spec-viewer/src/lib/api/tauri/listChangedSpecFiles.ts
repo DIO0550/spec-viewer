@@ -1,3 +1,5 @@
+import type { ComparisonRevision } from "@/features/diff/domain/comparisonRevision";
+
 import { invokeTauriCommand } from "./invokeTauriCommand";
 import { isRecord } from "./isRecord";
 import {
@@ -11,6 +13,7 @@ export const LIST_CHANGED_SPEC_FILES_COMMAND =
 
 export type ListChangedSpecFilesCommandRequest = Readonly<{
   workspacePath: string;
+  comparison?: ComparisonRevision;
 }>;
 export type ListChangedSpecFilesCommandResponse = ChangedSpecFiles;
 export type SpecDiffBackendErrorCode =
@@ -29,6 +32,9 @@ export type SpecDiffBackendErrorCode =
   | "gitOutputLimitExceeded"
   | "gitFailed"
   | "unsupportedPathEncoding"
+  | "revisionNotFound"
+  | "revisionNotCommit"
+  | "invalidHistoryOutput"
   | "invalidRepositoryPath"
   | "staleBase"
   | "staleSnapshot"
@@ -68,6 +74,9 @@ const SPEC_DIFF_BACKEND_ERROR_CODES = [
   "gitOutputLimitExceeded",
   "gitFailed",
   "unsupportedPathEncoding",
+  "revisionNotFound",
+  "revisionNotCommit",
+  "invalidHistoryOutput",
   "invalidRepositoryPath",
   "staleBase",
   "staleSnapshot",
