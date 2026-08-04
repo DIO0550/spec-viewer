@@ -4,6 +4,10 @@ export {
 } from "./components/ChangesNavigation";
 export { DiffViewer, type DiffViewerProps } from "./components/DiffViewer";
 export {
+  RevisionSelector,
+  type RevisionSelectorProps,
+} from "./components/RevisionSelector";
+export {
   DiffWorkspace,
   type DiffWorkspaceProps,
   type DiffWorkspaceState,
@@ -30,6 +34,13 @@ export type {
   UseSpecDiffWorkspaceOptions,
   UseSpecDiffWorkspaceResult,
 } from "./hooks/useSpecDiffWorkspace";
+export { ComparisonRevision } from "./domain/comparisonRevision";
+export type {
+  ComparisonRevision as ComparisonRevisionValue,
+  RevisionOption,
+  SpecFileCommit,
+  SpecFileHistory,
+} from "./domain/comparisonRevision";
 export { Hunk, StructuredDiff } from "./domain/fileDiff";
 export type {
   ContentClassification,

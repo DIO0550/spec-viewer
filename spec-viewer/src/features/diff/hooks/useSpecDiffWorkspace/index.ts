@@ -1,4 +1,17 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
+import {
+  ComparisonRevision,
+  type ComparisonRevision as ComparisonRevisionValue,
+  type RevisionOption,
+  type SpecFileHistory,
+} from "@/features/diff/domain/comparisonRevision";
 import {
   createInitialSpecDiffWorkspaceState,
   createSpecChangeId,
@@ -14,11 +27,29 @@ import {
   GetSpecFileDiffCommandError,
   listChangedSpecFiles,
   ListChangedSpecFilesCommandError,
+  listSpecDiffRevisions,
+  listSpecFileCommitHistory,
   type GetSpecFileDiffCommandRequest,
   type GetSpecFileDiffCommandResponse,
   type ListChangedSpecFilesCommandRequest,
   type ListChangedSpecFilesCommandResponse,
+  type ListSpecDiffRevisionsRequest,
+  type ListSpecFileCommitHistoryRequest,
 } from "@/lib/api/tauri";
+
+export type AsyncCatalogState<T> =
+  | Readonly<{ status: "loading"; value: T }>
+  | Readonly<{ status: "ready"; value: T }>
+  | Readonly<{ status: "failed"; value: T; message: string }>;
+
+export type ComparisonOperation =
+  | Readonly<{ status: "idle" }>
+  | Readonly<{ status: "loading"; requested: ComparisonRevisionValue }>
+  | Readonly<{
+      status: "failed";
+      requested: ComparisonRevisionValue;
+      message: string;
+    }>;
 
 export type SpecDiffWorkspaceApi = Readonly<{
   listChangedSpecFiles: (
@@ -27,6 +58,12 @@ export type SpecDiffWorkspaceApi = Readonly<{
   getSpecFileDiff: (
     request: GetSpecFileDiffCommandRequest,
   ) => Promise<GetSpecFileDiffCommandResponse>;
+  listSpecDiffRevisions?: (
+    request: ListSpecDiffRevisionsRequest,
+  ) => Promise<readonly RevisionOption[]>;
+  listSpecFileCommitHistory?: (
+    request: ListSpecFileCommitHistoryRequest,
+  ) => Promise<SpecFileHistory>;
 }>;
 
 export type UseSpecDiffWorkspaceOptions = Readonly<{
@@ -39,6 +76,13 @@ export type UseSpecDiffWorkspaceResult = Readonly<{
   state: SpecDiffWorkspaceState;
   badges: ReadonlyMap<string, "U" | "M">;
   refresh: () => Promise<boolean>;
+  comparison: ComparisonRevisionValue;
+  revisionOptions: AsyncCatalogState<readonly RevisionOption[]>;
+  fileHistory: AsyncCatalogState<SpecFileHistory>;
+  comparisonOperation: ComparisonOperation;
+  selectComparison: (revision: ComparisonRevisionValue) => Promise<boolean>;
+  retryRevisionOptions: () => Promise<boolean>;
+  retryFileHistory: () => Promise<boolean>;
 }>;
 
 type RequestIdentity = Readonly<{
@@ -50,7 +94,17 @@ type RequestIdentity = Readonly<{
 const DEFAULT_API: SpecDiffWorkspaceApi = {
   listChangedSpecFiles,
   getSpecFileDiff,
+  listSpecDiffRevisions,
+  listSpecFileCommitHistory,
 };
+
+const HEAD_OPTION: RevisionOption = {
+  id: "head",
+  revision: ComparisonRevision.head(),
+  label: "HEAD",
+  resolvedCommitSha: "",
+};
+const EMPTY_HISTORY: SpecFileHistory = { items: [], truncated: false };
 
 const STALE_DETAIL_ERROR_CODES = new Set([
   "staleSnapshot",
@@ -69,6 +123,7 @@ export function toSpecChangeOverview(
   response: ListChangedSpecFilesCommandResponse,
 ): SpecChangeOverview {
   return {
+    resolvedBaseSha: response.resolvedBaseSha,
     currentSnapshotId: response.currentSnapshotId,
     files: response.files.map((file) => ({ ...file })),
   };
@@ -85,6 +140,17 @@ export function useSpecDiffWorkspace({
     undefined,
     createInitialSpecDiffWorkspaceState,
   );
+  const [comparison, setComparison] = useState<ComparisonRevisionValue>(
+    ComparisonRevision.head,
+  );
+  const [revisionOptions, setRevisionOptions] = useState<
+    AsyncCatalogState<readonly RevisionOption[]>
+  >({ status: "loading", value: [HEAD_OPTION] });
+  const [fileHistory, setFileHistory] = useState<
+    AsyncCatalogState<SpecFileHistory>
+  >({ status: "loading", value: EMPTY_HISTORY });
+  const [comparisonOperation, setComparisonOperation] =
+    useState<ComparisonOperation>({ status: "idle" });
   const mountedRef = useRef(true);
   const workspacePathRef = useRef(workspacePath);
   const selectionRef = useRef(selection);
@@ -94,10 +160,15 @@ export function useSpecDiffWorkspace({
   const detailGenerationRef = useRef(0);
   const refreshDrainRef = useRef<Promise<boolean> | null>(null);
   const refreshPendingRef = useRef(false);
+  const comparisonRef = useRef<ComparisonRevisionValue>(comparison);
+  const comparisonRequestTokenRef = useRef<symbol>(Symbol());
+  const optionsRequestTokenRef = useRef<symbol>(Symbol());
+  const historyRequestTokenRef = useRef<symbol>(Symbol());
 
   workspacePathRef.current = workspacePath;
   selectionRef.current = selection;
   stateRef.current = state;
+  comparisonRef.current = comparison;
 
   const isActive = useCallback((identity: RequestIdentity): boolean => {
     return (
@@ -128,6 +199,7 @@ export function useSpecDiffWorkspace({
         const value = await api.getSpecFileDiff({
           workspacePath: identity.workspacePath,
           currentSnapshotId: overview.currentSnapshotId,
+          resolvedBaseSha: overview.resolvedBaseSha,
           specId: change.specId,
           fileKey: change.fileKey,
           path: change.targetPath,
@@ -189,9 +261,14 @@ export function useSpecDiffWorkspace({
       dispatch({ type: "overviewStarted", ...identity });
 
       try {
-        const response = await api.listChangedSpecFiles({
-          workspacePath: activeWorkspacePath,
-        });
+        const response = await api.listChangedSpecFiles(
+          comparisonRef.current.kind === "head"
+            ? { workspacePath: activeWorkspacePath }
+            : {
+                workspacePath: activeWorkspacePath,
+                comparison: comparisonRef.current,
+              },
+        );
         if (!isActive(identity)) {
           return false;
         }
@@ -229,6 +306,198 @@ export function useSpecDiffWorkspace({
     [api, isActive, loadDetail],
   );
 
+  const retryRevisionOptions = useCallback(async (): Promise<boolean> => {
+    const activeWorkspacePath = workspacePathRef.current;
+    const token = Symbol();
+    optionsRequestTokenRef.current = token;
+    setRevisionOptions((current) => ({
+      status: "loading",
+      value: current.value,
+    }));
+    if (
+      activeWorkspacePath === null ||
+      api.listSpecDiffRevisions === undefined
+    ) {
+      setRevisionOptions({ status: "ready", value: [HEAD_OPTION] });
+      return false;
+    }
+    try {
+      const options = await api.listSpecDiffRevisions({
+        workspacePath: activeWorkspacePath,
+      });
+      if (
+        !mountedRef.current ||
+        optionsRequestTokenRef.current !== token ||
+        workspacePathRef.current !== activeWorkspacePath
+      ) {
+        return false;
+      }
+      const withoutDuplicateHead = options.filter(
+        (option) => option.revision.kind !== "head",
+      );
+      setRevisionOptions({
+        status: "ready",
+        value: [HEAD_OPTION, ...withoutDuplicateHead],
+      });
+      return true;
+    } catch (error) {
+      if (
+        !mountedRef.current ||
+        optionsRequestTokenRef.current !== token ||
+        workspacePathRef.current !== activeWorkspacePath
+      ) {
+        return false;
+      }
+      const normalized = ListChangedSpecFilesCommandError.fromUnknown(error);
+      setRevisionOptions((current) => ({
+        status: "failed",
+        value: current.value,
+        message: normalized.message,
+      }));
+      return false;
+    }
+  }, [api]);
+
+  const retryFileHistory = useCallback(async (): Promise<boolean> => {
+    const activeWorkspacePath = workspacePathRef.current;
+    const currentState = stateRef.current;
+    const change =
+      currentState.status === "ready"
+        ? findSpecChange(currentState.overview.files, selectionRef.current)
+        : null;
+    const token = Symbol();
+    historyRequestTokenRef.current = token;
+    setFileHistory((current) => ({ status: "loading", value: current.value }));
+    if (
+      activeWorkspacePath === null ||
+      change === null ||
+      api.listSpecFileCommitHistory === undefined
+    ) {
+      setFileHistory({ status: "ready", value: EMPTY_HISTORY });
+      return false;
+    }
+    try {
+      const history = await api.listSpecFileCommitHistory({
+        workspacePath: activeWorkspacePath,
+        specId: change.specId,
+        fileKey: change.fileKey,
+        path: change.targetPath,
+      });
+      if (
+        !mountedRef.current ||
+        historyRequestTokenRef.current !== token ||
+        workspacePathRef.current !== activeWorkspacePath ||
+        selectionRef.current.specId !== change.specId ||
+        selectionRef.current.fileKey !== change.fileKey
+      ) {
+        return false;
+      }
+      setFileHistory({ status: "ready", value: history });
+      return true;
+    } catch (error) {
+      if (!mountedRef.current || historyRequestTokenRef.current !== token) {
+        return false;
+      }
+      const normalized = ListChangedSpecFilesCommandError.fromUnknown(error);
+      setFileHistory((current) => ({
+        status: "failed",
+        value: current.value,
+        message: normalized.message,
+      }));
+      return false;
+    }
+  }, [api]);
+
+  const selectComparison = useCallback(
+    async (requested: ComparisonRevisionValue): Promise<boolean> => {
+      const currentState = stateRef.current;
+      if (
+        currentState.status !== "ready" ||
+        ComparisonRevision.equals(comparisonRef.current, requested)
+      ) {
+        return currentState.status === "ready";
+      }
+      const token = Symbol();
+      comparisonRequestTokenRef.current = token;
+      setComparisonOperation({ status: "loading", requested });
+      const identity = {
+        workspacePath: currentState.workspacePath,
+        cycleId: currentState.cycleId,
+        requestGeneration: currentState.requestGeneration,
+      };
+
+      const attempt = async (allowStaleRecovery: boolean): Promise<boolean> => {
+        try {
+          const response = await api.listChangedSpecFiles({
+            workspacePath: identity.workspacePath,
+            comparison: requested,
+          });
+          const overview = toSpecChangeOverview(response);
+          const currentSelection = selectionRef.current;
+          const change = findSpecChange(overview.files, currentSelection);
+          const detail =
+            change === null
+              ? null
+              : await api.getSpecFileDiff({
+                  workspacePath: identity.workspacePath,
+                  currentSnapshotId: overview.currentSnapshotId,
+                  resolvedBaseSha: overview.resolvedBaseSha,
+                  specId: change.specId,
+                  fileKey: change.fileKey,
+                  path: change.targetPath,
+                });
+          if (
+            !isActive(identity) ||
+            comparisonRequestTokenRef.current !== token
+          ) {
+            return false;
+          }
+          dispatch({
+            type: "overviewSucceeded",
+            ...identity,
+            overview,
+            selection: currentSelection,
+          });
+          if (change !== null && detail !== null) {
+            dispatch({
+              type: "detailSucceeded",
+              ...identity,
+              fileId: createSpecChangeId(change),
+              value: detail,
+            });
+          }
+          comparisonRef.current = requested;
+          setComparison(requested);
+          setComparisonOperation({ status: "idle" });
+          return true;
+        } catch (error) {
+          const normalized =
+            ListChangedSpecFilesCommandError.fromUnknown(error);
+          if (
+            !isActive(identity) ||
+            comparisonRequestTokenRef.current !== token
+          ) {
+            return false;
+          }
+          if (
+            allowStaleRecovery &&
+            STALE_DETAIL_ERROR_CODES.has(normalized.code)
+          ) {
+            return attempt(false);
+          }
+          setComparisonOperation({
+            status: "failed",
+            requested,
+            message: normalized.message,
+          });
+          return false;
+        }
+      };
+      return attempt(true);
+    },
+    [api, isActive],
+  );
+
   const refresh = useCallback((): Promise<boolean> => {
     if (workspacePathRef.current === null) {
       dispatch({ type: "workspaceCleared" });
@@ -259,6 +528,14 @@ export function useSpecDiffWorkspace({
   }, [executeOverview]);
 
   useEffect(() => {
+    comparisonRequestTokenRef.current = Symbol();
+    optionsRequestTokenRef.current = Symbol();
+    historyRequestTokenRef.current = Symbol();
+    comparisonRef.current = ComparisonRevision.head();
+    setComparison(ComparisonRevision.head());
+    setComparisonOperation({ status: "idle" });
+    setRevisionOptions({ status: "loading", value: [HEAD_OPTION] });
+    setFileHistory({ status: "loading", value: EMPTY_HISTORY });
     if (workspacePath === null) {
       detailGenerationRef.current += 1;
       requestGenerationRef.current += 1;
@@ -267,9 +544,18 @@ export function useSpecDiffWorkspace({
     }
 
     void refresh();
-  }, [refresh, workspacePath]);
+    void retryRevisionOptions();
+  }, [refresh, retryRevisionOptions, workspacePath]);
 
   useEffect(() => {
+    comparisonRequestTokenRef.current = Symbol();
+    setComparisonOperation({ status: "idle" });
+    if (comparisonRef.current.kind !== "head") {
+      comparisonRef.current = ComparisonRevision.head();
+      setComparison(ComparisonRevision.head());
+      void refresh();
+      return;
+    }
     const currentState = stateRef.current;
     if (
       currentState.status !== "ready" ||
@@ -291,13 +577,29 @@ export function useSpecDiffWorkspace({
       false,
       async () => false,
     );
-  }, [loadDetail, selection.fileKey, selection.specId, workspacePath]);
+  }, [loadDetail, refresh, selection.fileKey, selection.specId, workspacePath]);
+
+  useEffect(() => {
+    if (state.status !== "ready") {
+      return;
+    }
+    void retryFileHistory();
+  }, [
+    retryFileHistory,
+    selection.fileKey,
+    selection.specId,
+    state.status,
+    state.status === "ready" ? state.overview.currentSnapshotId : null,
+  ]);
 
   useEffect(() => {
     return () => {
       mountedRef.current = false;
       detailGenerationRef.current += 1;
       requestGenerationRef.current += 1;
+      comparisonRequestTokenRef.current = Symbol();
+      optionsRequestTokenRef.current = Symbol();
+      historyRequestTokenRef.current = Symbol();
     };
   }, []);
 
@@ -309,5 +611,16 @@ export function useSpecDiffWorkspace({
     [state],
   );
 
-  return { state, badges, refresh };
+  return {
+    state,
+    badges,
+    refresh,
+    comparison,
+    revisionOptions,
+    fileHistory,
+    comparisonOperation,
+    selectComparison,
+    retryRevisionOptions,
+    retryFileHistory,
+  };
 }
