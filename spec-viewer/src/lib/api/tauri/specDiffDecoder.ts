@@ -83,7 +83,9 @@ const decodeGitObjectId = (
   raw: unknown,
 ): string => {
   const objectId = decodeString(value, path, raw);
-  if (!/^(?:[0-9a-f]{40}|[0-9a-f]{64})/.test(objectId)) {
+  const hasValidLength = objectId.length === 40 || objectId.length === 64;
+  const isLowercaseHex = !/[^0-9a-f]/.test(objectId);
+  if (!hasValidLength || !isLowercaseHex) {
     throw invalid(
       path,
       "a lowercase 40 or 64 character Git object ID",
