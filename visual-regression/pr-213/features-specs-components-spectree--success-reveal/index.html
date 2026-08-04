@@ -156,7 +156,7 @@
       </div>
       <footer class="sidebar__footer">
         <p class="sidebar__brand">Storybook Visual Regression</p>
-        <p class="sidebar__version">Visual report UI v8 · 1ec7703</p>
+        <p class="sidebar__version">Visual report UI v8 · 50cf96c</p>
       </footer>
     </aside>
     <main>
@@ -169,12 +169,12 @@
       <ul class="cards">
         <li class="card card--passed">
           <a class="card__open" href="./" data-open="features-specs-components-spectree--success-reveal" aria-label="Open features-specs-components-spectree--success-reveal">
-            <span class="card__thumb checker"><img loading="lazy" src="../actual/features-specs-components-spectree--success-reveal.png" alt="features-specs-components-spectree--success-reveal"></span>
+            <span class="card__thumb checker"><img loading="lazy" src="../diff/features-specs-components-spectree--success-reveal.png" alt="features-specs-components-spectree--success-reveal"></span>
             <span class="card__badge"><span class="ball ball--passed" aria-hidden="true"></span></span>
           </a>
           <div class="card__meta">
             <p class="card__name" title="features-specs-components-spectree--success-reveal">features/specs/components/SpecTree / Success Reveal</p>
-            <p class="card__sub">Identical</p>
+            <p class="card__sub">Within threshold</p>
           </div>
         </li>
       </ul>
@@ -196,7 +196,7 @@
       <button type="button" role="tab" data-view-mode="diff" aria-selected="false">Diff</button><button type="button" role="tab" data-view-mode="slide" aria-selected="false">Slide</button><button type="button" role="tab" data-view-mode="2up" aria-selected="false">2up</button><button type="button" role="tab" data-view-mode="blend" aria-selected="false">Blend</button><button type="button" role="tab" data-view-mode="toggle" aria-selected="false">Toggle</button>
     </nav>
   </div>
-  <script type="application/json" id="report-data">{"pathPrefix":"../","initialStory":"features-specs-components-spectree--success-reveal","items":[{"story":"features-specs-components-spectree--success-reveal","label":"features/specs/components/SpecTree / Success Reveal","status":"passed","reason":"match","diffPixels":0,"diffRatio":0,"hasExpected":true,"hasActual":true,"hasDiff":false}]}</script>
+  <script type="application/json" id="report-data">{"pathPrefix":"../","initialStory":"features-specs-components-spectree--success-reveal","items":[{"story":"features-specs-components-spectree--success-reveal","label":"features/specs/components/SpecTree / Success Reveal","status":"passed","reason":"within-threshold","diffPixels":1076,"diffRatio":0.0012,"hasExpected":true,"hasActual":true,"hasDiff":true}]}</script>
   <script>
     const data = JSON.parse(document.getElementById("report-data").textContent);
     const prefix = data.pathPrefix;
