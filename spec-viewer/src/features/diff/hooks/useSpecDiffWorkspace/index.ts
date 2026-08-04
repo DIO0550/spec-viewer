@@ -332,12 +332,15 @@ export function useSpecDiffWorkspace({
       ) {
         return false;
       }
+      const headOption =
+        options.find((option) => option.revision.kind === "head") ??
+        HEAD_OPTION;
       const withoutDuplicateHead = options.filter(
         (option) => option.revision.kind !== "head",
       );
       setRevisionOptions({
         status: "ready",
-        value: [HEAD_OPTION, ...withoutDuplicateHead],
+        value: [headOption, ...withoutDuplicateHead],
       });
       return true;
     } catch (error) {

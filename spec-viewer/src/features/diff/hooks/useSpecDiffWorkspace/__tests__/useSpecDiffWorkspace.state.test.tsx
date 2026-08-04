@@ -110,6 +110,40 @@ test("API responseをpureなSpecChangeOverviewへ切り離して変換する", (
   expect(overview.files[0]).not.toBe(changedResponse.files[0]);
 });
 
+test("revision catalogのHEAD候補はresolved commit SHAを保持する", async () => {
+  const resolvedCommitSha = "b".repeat(40);
+  const api = createApi({
+    listSpecDiffRevisions: vi.fn(async () => [
+      {
+        id: "head",
+        revision: { kind: "head" } as const,
+        label: "HEAD",
+        resolvedCommitSha,
+      },
+    ]),
+  });
+  const hook = renderHook({
+    workspacePath: "/workspace",
+    selection: { specId: null, fileKey: null },
+    api,
+  });
+
+  await flush();
+
+  expect(hook.current().revisionOptions).toEqual({
+    status: "ready",
+    value: [
+      {
+        id: "head",
+        revision: { kind: "head" },
+        label: "HEAD",
+        resolvedCommitSha,
+      },
+    ],
+  });
+  hook.unmount();
+});
+
 test("workspace選択時に変更一覧を読み込みunchangedになる", async () => {
   const api = createApi();
   const hook = renderHook({
