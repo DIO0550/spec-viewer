@@ -7,7 +7,13 @@ use crate::{
     app::use_cases::spec_diff::{
         ChangedSpecFile, ChangedSpecFiles, SpecDiffUseCaseError, SpecFileDiff,
     },
-    domain::repository::{FileChangeKind, RepositoryPortError},
+    domain::{
+        repository::{
+            CommitSha, ComparisonRevision, FileChangeKind, RepositoryPortError, RevisionOption,
+            SpecFileCommit, SpecFileHistory,
+        },
+        workspace::ValidatedRefName,
+    },
     infrastructure::filesystem::SpecDiffTargetResolutionError,
 };
 
@@ -17,6 +23,40 @@ use super::{repository::FileReviewResponse, CommandState};
 #[serde(rename_all = "camelCase")]
 pub struct ListChangedSpecFilesRequest {
     workspace_path: String,
+    #[serde(default)]
+    comparison: Option<ComparisonRevisionRequest>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum ComparisonRevisionRequest {
+    Head,
+    Commit { sha: String },
+    LocalBranch { name: String },
+    Tag { name: String },
+}
+
+impl ComparisonRevisionRequest {
+    fn into_domain(self) -> Result<ComparisonRevision, SpecDiffCommandError> {
+        let invalid = || SpecDiffCommandError {
+            code: SpecDiffCommandErrorCode::InvalidInput,
+            message: "invalid comparison revision".into(),
+        };
+        match self {
+            Self::Head => Ok(ComparisonRevision::Head),
+            Self::Commit { sha } => CommitSha::parse(sha)
+                .map(ComparisonRevision::Commit)
+                .map_err(|_| invalid()),
+            Self::LocalBranch { name } => ValidatedRefName::parse(name)
+                .map_err(|_| invalid())
+                .and_then(|reference| {
+                    ComparisonRevision::local_branch(reference).map_err(|_| invalid())
+                }),
+            Self::Tag { name } => ValidatedRefName::parse(name)
+                .map_err(|_| invalid())
+                .and_then(|reference| ComparisonRevision::tag(reference).map_err(|_| invalid())),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -24,9 +64,110 @@ pub struct ListChangedSpecFilesRequest {
 pub struct GetSpecFileDiffRequest {
     workspace_path: String,
     current_snapshot_id: String,
+    #[serde(default)]
+    resolved_base_sha: Option<String>,
     spec_id: String,
     file_key: String,
     path: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ListSpecDiffRevisionsRequest {
+    workspace_path: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ListSpecFileCommitHistoryRequest {
+    workspace_path: String,
+    spec_id: String,
+    file_key: String,
+    path: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum ComparisonRevisionResponse {
+    Head,
+    Commit { sha: String },
+    LocalBranch { name: String },
+    Tag { name: String },
+}
+
+impl From<ComparisonRevision> for ComparisonRevisionResponse {
+    fn from(value: ComparisonRevision) -> Self {
+        match value {
+            ComparisonRevision::Head => Self::Head,
+            ComparisonRevision::Commit(commit) => Self::Commit {
+                sha: commit.as_str().to_string(),
+            },
+            ComparisonRevision::LocalBranch(reference) => Self::LocalBranch {
+                name: reference.as_str().to_string(),
+            },
+            ComparisonRevision::Tag(reference) => Self::Tag {
+                name: reference.as_str().to_string(),
+            },
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RevisionOptionResponse {
+    revision: ComparisonRevisionResponse,
+    label: String,
+    resolved_commit_sha: String,
+}
+
+impl From<RevisionOption> for RevisionOptionResponse {
+    fn from(value: RevisionOption) -> Self {
+        Self {
+            revision: value.revision.into(),
+            label: value.label,
+            resolved_commit_sha: value.resolved_commit.as_str().to_string(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RevisionOptionsResponse {
+    options: Vec<RevisionOptionResponse>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SpecFileCommitResponse {
+    sha: String,
+    committed_at: String,
+    message: String,
+}
+
+impl From<SpecFileCommit> for SpecFileCommitResponse {
+    fn from(value: SpecFileCommit) -> Self {
+        Self {
+            sha: value.commit.as_str().to_string(),
+            committed_at: value.committed_at,
+            message: value.message,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SpecFileCommitHistoryResponse {
+    items: Vec<SpecFileCommitResponse>,
+    truncated: bool,
+}
+
+impl From<SpecFileHistory> for SpecFileCommitHistoryResponse {
+    fn from(value: SpecFileHistory) -> Self {
+        Self {
+            items: value.items.into_iter().map(Into::into).collect(),
+            truncated: value.truncated,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -56,6 +197,7 @@ impl From<ChangedSpecFile> for ChangedSpecFileResponse {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChangedSpecFilesResponse {
+    resolved_base_sha: String,
     current_snapshot_id: String,
     files: Vec<ChangedSpecFileResponse>,
 }
@@ -63,6 +205,7 @@ pub struct ChangedSpecFilesResponse {
 impl From<ChangedSpecFiles> for ChangedSpecFilesResponse {
     fn from(value: ChangedSpecFiles) -> Self {
         Self {
+            resolved_base_sha: value.resolved_base_sha.as_str().to_string(),
             current_snapshot_id: value.current_snapshot_id.as_str().to_string(),
             files: value.files.into_iter().map(Into::into).collect(),
         }
@@ -105,6 +248,9 @@ pub enum SpecDiffCommandErrorCode {
     GitOutputLimitExceeded,
     GitFailed,
     UnsupportedPathEncoding,
+    RevisionNotFound,
+    RevisionNotCommit,
+    InvalidHistoryOutput,
     InvalidRepositoryPath,
     StaleBase,
     StaleSnapshot,
@@ -168,6 +314,9 @@ impl SpecDiffCommandErrorCode {
             RepositoryPortError::GitOutputLimitExceeded { .. } => Self::GitOutputLimitExceeded,
             RepositoryPortError::GitFailed { .. } => Self::GitFailed,
             RepositoryPortError::UnsupportedPathEncoding => Self::UnsupportedPathEncoding,
+            RepositoryPortError::RevisionNotFound => Self::RevisionNotFound,
+            RepositoryPortError::RevisionNotCommit => Self::RevisionNotCommit,
+            RepositoryPortError::InvalidHistoryOutput => Self::InvalidHistoryOutput,
             RepositoryPortError::InvalidRepositoryPath => Self::InvalidRepositoryPath,
             RepositoryPortError::StaleBase => Self::StaleBase,
             RepositoryPortError::StaleSnapshot
@@ -201,7 +350,44 @@ pub fn list_changed_spec_files(
 ) -> Result<ChangedSpecFilesResponse, SpecDiffCommandError> {
     state
         .spec_diff_use_cases()
-        .list_changed_spec_files(&request.workspace_path)
+        .list_changed_spec_files(
+            &request.workspace_path,
+            request
+                .comparison
+                .unwrap_or(ComparisonRevisionRequest::Head)
+                .into_domain()?,
+        )
+        .map(Into::into)
+        .map_err(Into::into)
+}
+
+#[tauri::command]
+pub fn list_spec_diff_revisions(
+    state: State<'_, CommandState>,
+    request: ListSpecDiffRevisionsRequest,
+) -> Result<RevisionOptionsResponse, SpecDiffCommandError> {
+    state
+        .spec_diff_use_cases()
+        .list_spec_diff_revisions(&request.workspace_path)
+        .map(|options| RevisionOptionsResponse {
+            options: options.into_iter().map(Into::into).collect(),
+        })
+        .map_err(Into::into)
+}
+
+#[tauri::command]
+pub fn list_spec_file_commit_history(
+    state: State<'_, CommandState>,
+    request: ListSpecFileCommitHistoryRequest,
+) -> Result<SpecFileCommitHistoryResponse, SpecDiffCommandError> {
+    state
+        .spec_diff_use_cases()
+        .list_spec_file_commit_history(
+            &request.workspace_path,
+            &request.spec_id,
+            &request.file_key,
+            &request.path,
+        )
         .map(Into::into)
         .map_err(Into::into)
 }
@@ -216,6 +402,7 @@ pub fn get_spec_file_diff(
         .get_spec_file_diff(
             &request.workspace_path,
             &request.current_snapshot_id,
+            request.resolved_base_sha.as_deref(),
             &request.spec_id,
             &request.file_key,
             &request.path,
@@ -243,6 +430,44 @@ mod tests {
     }
 
     #[test]
+    fn overview_request_defaults_to_head_and_accepts_canonical_tagged_comparison() {
+        let legacy: ListChangedSpecFilesRequest = serde_json::from_value(serde_json::json!({
+            "workspacePath": "/repo"
+        }))
+        .unwrap();
+        assert_eq!(legacy.comparison, None);
+
+        let explicit: ListChangedSpecFilesRequest = serde_json::from_value(serde_json::json!({
+            "workspacePath": "/repo",
+            "comparison": {
+                "kind": "localBranch",
+                "name": "refs/heads/previous"
+            }
+        }))
+        .unwrap();
+        assert!(matches!(
+            explicit.comparison.unwrap().into_domain().unwrap(),
+            ComparisonRevision::LocalBranch(reference)
+                if reference.as_str() == "refs/heads/previous"
+        ));
+    }
+
+    #[test]
+    fn comparison_request_rejects_short_ref_and_malformed_sha() {
+        for request in [
+            ComparisonRevisionRequest::LocalBranch {
+                name: "main".into(),
+            },
+            ComparisonRevisionRequest::Commit { sha: "bad".into() },
+        ] {
+            assert_eq!(
+                request.into_domain().unwrap_err().code,
+                SpecDiffCommandErrorCode::InvalidInput
+            );
+        }
+    }
+
+    #[test]
     fn command_error_codes_serialize_as_camel_case() {
         let cases = [
             (SpecDiffCommandErrorCode::UnbornHead, "unbornHead"),
@@ -251,6 +476,18 @@ mod tests {
                 "headChangedDuringRead",
             ),
             (SpecDiffCommandErrorCode::StaleSnapshot, "staleSnapshot"),
+            (
+                SpecDiffCommandErrorCode::RevisionNotFound,
+                "revisionNotFound",
+            ),
+            (
+                SpecDiffCommandErrorCode::RevisionNotCommit,
+                "revisionNotCommit",
+            ),
+            (
+                SpecDiffCommandErrorCode::InvalidHistoryOutput,
+                "invalidHistoryOutput",
+            ),
             (
                 SpecDiffCommandErrorCode::UnsupportedPathEncoding,
                 "unsupportedPathEncoding",

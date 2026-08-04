@@ -33,11 +33,13 @@ type ContextStore = Arc<Mutex<BTreeMap<ContextKey, RepositoryReviewContext>>>;
 
 #[derive(Debug, Clone)]
 struct WorkingTreeReviewContext {
-    head: CommitSha,
+    resolved_base: CommitSha,
     changed: Vec<DiffFile>,
 }
 
-type WorkingTreeContextStore = Arc<Mutex<BTreeMap<ContextKey, WorkingTreeReviewContext>>>;
+type WorkingTreeContextKey = (Vec<u8>, String, String);
+type WorkingTreeContextStore =
+    Arc<Mutex<BTreeMap<WorkingTreeContextKey, WorkingTreeReviewContext>>>;
 
 #[derive(Debug, Clone, Default)]
 pub struct GitRepositoryAdapter {
@@ -57,10 +59,10 @@ impl GitRepositoryAdapter {
         &self,
         root: &Path,
         snapshot: &SnapshotId,
-        head: CommitSha,
+        resolved_base: CommitSha,
         changed: Vec<DiffFile>,
     ) -> Result<(), RepositoryPortError> {
-        let key = Self::context_key(root, snapshot);
+        let key = Self::working_tree_context_key(root, snapshot, &resolved_base);
         let mut contexts = self
             .working_tree_contexts
             .lock()
@@ -68,19 +70,42 @@ impl GitRepositoryAdapter {
         if contexts.len() >= 64 && !contexts.contains_key(&key) {
             contexts.pop_first();
         }
-        contexts.insert(key, WorkingTreeReviewContext { head, changed });
+        contexts.insert(
+            key,
+            WorkingTreeReviewContext {
+                resolved_base,
+                changed,
+            },
+        );
         Ok(())
+    }
+
+    fn working_tree_context_key(
+        root: &Path,
+        snapshot: &SnapshotId,
+        resolved_base: &CommitSha,
+    ) -> WorkingTreeContextKey {
+        (
+            root.as_os_str().as_encoded_bytes().to_vec(),
+            snapshot.as_str().to_string(),
+            resolved_base.as_str().to_string(),
+        )
     }
 
     fn working_tree_context(
         &self,
         root: &Path,
         snapshot: &SnapshotId,
+        resolved_base: &CommitSha,
     ) -> Result<WorkingTreeReviewContext, RepositoryPortError> {
         self.working_tree_contexts
             .lock()
             .map_err(|_| RepositoryPortError::Io)?
-            .get(&Self::context_key(root, snapshot))
+            .get(&Self::working_tree_context_key(
+                root,
+                snapshot,
+                resolved_base,
+            ))
             .cloned()
             .ok_or(RepositoryPortError::StaleSnapshot)
     }
@@ -108,6 +133,50 @@ impl GitRepositoryAdapter {
             code: None,
             stderr: "Git returned an invalid object id".into(),
         })
+    }
+
+    fn resolve_comparison_revision(
+        &self,
+        root: &Path,
+        comparison: &ComparisonRevision,
+    ) -> Result<CommitSha, RepositoryPortError> {
+        if matches!(comparison, ComparisonRevision::Head) {
+            return self.working_tree_head(root);
+        }
+        let reference = match comparison {
+            ComparisonRevision::Head => unreachable!(),
+            ComparisonRevision::Commit(commit) => commit.as_str(),
+            ComparisonRevision::LocalBranch(reference) | ComparisonRevision::Tag(reference) => {
+                reference.as_str()
+            }
+        };
+        self.runner
+            .run(
+                root,
+                "comparison-revision-exists",
+                &["rev-parse", "--verify", reference],
+                false,
+            )
+            .map_err(|error| match error {
+                RepositoryPortError::GitFailed { .. } => RepositoryPortError::RevisionNotFound,
+                other => other,
+            })?;
+        let commit_reference = format!("{reference}^{{commit}}");
+        let bytes = self
+            .runner
+            .run(
+                root,
+                "comparison-revision-commit",
+                &["rev-parse", "--verify", &commit_reference],
+                false,
+            )
+            .map_err(|error| match error {
+                RepositoryPortError::GitFailed { .. } => RepositoryPortError::RevisionNotCommit,
+                other => other,
+            })?;
+        let value = std::str::from_utf8(&bytes)
+            .map_err(|_| RepositoryPortError::UnsupportedPathEncoding)?;
+        CommitSha::parse(value.trim()).map_err(|_| RepositoryPortError::RevisionNotCommit)
     }
 
     fn is_unborn_head(&self, root: &Path) -> Result<bool, RepositoryPortError> {
@@ -1264,24 +1333,133 @@ impl GitRepositoryAdapter {
     }
 }
 impl WorkingTreeDiffPort for GitRepositoryAdapter {
+    fn list_comparison_revisions(
+        &self,
+        worktree: &WorktreeId,
+    ) -> Result<Vec<RevisionOption>, RepositoryPortError> {
+        let root = self.root(worktree)?;
+        let head = self.working_tree_head(&root)?;
+        let mut revisions = vec![RevisionOption {
+            revision: ComparisonRevision::Head,
+            label: "HEAD".into(),
+            resolved_commit: head,
+        }];
+        let output = self.text(
+            &root,
+            "comparison-revisions",
+            &[
+                "for-each-ref",
+                "--format=%(refname)%00%(objectname)%00%(objecttype)",
+                "refs/heads",
+                "refs/tags",
+            ],
+            false,
+        )?;
+        for line in output.lines().filter(|line| !line.is_empty()) {
+            let fields = line.splitn(3, "\0").collect::<Vec<_>>();
+            if fields.len() != 3 {
+                return Err(RepositoryPortError::InvalidHistoryOutput);
+            }
+            let reference = fields[0];
+            let validated = ValidatedRefName::parse(reference.to_string())
+                .map_err(|_| RepositoryPortError::InvalidHistoryOutput)?;
+            let revision = if reference.starts_with("refs/heads/") {
+                ComparisonRevision::local_branch(validated)
+            } else {
+                ComparisonRevision::tag(validated)
+            }
+            .map_err(|_| RepositoryPortError::InvalidHistoryOutput)?;
+            let resolved_commit = if fields[2] == "commit" {
+                CommitSha::parse(fields[1])
+                    .map_err(|_| RepositoryPortError::InvalidHistoryOutput)?
+            } else {
+                self.resolve_comparison_revision(&root, &revision)?
+            };
+            let label = reference
+                .strip_prefix("refs/heads/")
+                .or_else(|| reference.strip_prefix("refs/tags/"))
+                .unwrap_or(reference)
+                .to_string();
+            revisions.push(RevisionOption {
+                revision,
+                label,
+                resolved_commit,
+            });
+        }
+        Ok(revisions)
+    }
+
+    fn list_file_history(
+        &self,
+        worktree: &WorktreeId,
+        path: &RepositoryRelativePath,
+        limit: usize,
+    ) -> Result<SpecFileHistory, RepositoryPortError> {
+        let root = self.root(worktree)?;
+        let max_count = format!("--max-count={}", limit.saturating_add(1));
+        let output = self.runner.run(
+            &root,
+            "spec-file-history",
+            &[
+                "log",
+                &max_count,
+                "--format=%H%x00%cI%x00%s",
+                "--",
+                path.as_str(),
+            ],
+            false,
+        )?;
+        let mut items = output
+            .split(|byte| *byte == 10)
+            .filter(|line| !line.is_empty())
+            .map(|line| {
+                let fields = line.splitn(3, |byte| *byte == 0).collect::<Vec<_>>();
+                if fields.len() != 3 || fields[1].is_empty() {
+                    return Err(RepositoryPortError::InvalidHistoryOutput);
+                }
+                let sha = std::str::from_utf8(fields[0])
+                    .map_err(|_| RepositoryPortError::InvalidHistoryOutput)?;
+                let committed_at = std::str::from_utf8(fields[1])
+                    .map_err(|_| RepositoryPortError::InvalidHistoryOutput)?;
+                Ok(SpecFileCommit {
+                    commit: CommitSha::parse(sha)
+                        .map_err(|_| RepositoryPortError::InvalidHistoryOutput)?,
+                    committed_at: committed_at.to_string(),
+                    message: String::from_utf8_lossy(fields[2]).into_owned(),
+                })
+            })
+            .collect::<Result<Vec<_>, RepositoryPortError>>()?;
+        let truncated = items.len() > limit;
+        items.truncate(limit);
+        Ok(SpecFileHistory { items, truncated })
+    }
+
     fn load_working_tree_overview(
         &self,
         worktree: &WorktreeId,
+        comparison: &ComparisonRevision,
     ) -> Result<WorkingTreeDiffOverview, RepositoryPortError> {
         let root = self.root(worktree)?;
         let repository_id = self.repository_id(&root)?;
-        let head = self.working_tree_head(&root)?;
+        let resolved_base = self.resolve_comparison_revision(&root, comparison)?;
         let snapshot = self.snapshot(&root, &repository_id)?;
-        let changed = self.changes(&root, &head)?;
-        if self.working_tree_head(&root)? != head {
+        let changed = self.changes(&root, &resolved_base)?;
+        if matches!(comparison, ComparisonRevision::Head)
+            && self.working_tree_head(&root)? != resolved_base
+        {
             return Err(RepositoryPortError::HeadChangedDuringRead);
         }
         if self.snapshot(&root, &repository_id)? != snapshot {
             return Err(RepositoryPortError::EntryChangedDuringRead);
         }
-        self.remember_working_tree_context(&root, &snapshot, head.clone(), changed.clone())?;
+        self.remember_working_tree_context(
+            &root,
+            &snapshot,
+            resolved_base.clone(),
+            changed.clone(),
+        )?;
         Ok(WorkingTreeDiffOverview {
-            head_sha: head,
+            resolved_base_sha: resolved_base,
             current_snapshot_id: snapshot,
             changed,
         })
@@ -1291,6 +1469,7 @@ impl WorkingTreeDiffPort for GitRepositoryAdapter {
         &self,
         worktree: &WorktreeId,
         snapshot: &SnapshotId,
+        resolved_base: &CommitSha,
         path: &RepositoryRelativePath,
     ) -> Result<FileReview, RepositoryPortError> {
         let root = self.root(worktree)?;
@@ -1298,10 +1477,7 @@ impl WorkingTreeDiffPort for GitRepositoryAdapter {
         if self.snapshot(&root, &repository_id)? != *snapshot {
             return Err(RepositoryPortError::StaleSnapshot);
         }
-        let context = self.working_tree_context(&root, snapshot)?;
-        if self.working_tree_head(&root)? != context.head {
-            return Err(RepositoryPortError::HeadChangedDuringRead);
-        }
+        let context = self.working_tree_context(&root, snapshot, resolved_base)?;
         let file = context
             .changed
             .into_iter()
@@ -1309,7 +1485,14 @@ impl WorkingTreeDiffPort for GitRepositoryAdapter {
                 file.new_path.as_ref() == Some(path) || file.old_path.as_ref() == Some(path)
             })
             .ok_or(RepositoryPortError::InvalidRepositoryPath)?;
-        self.build_working_tree_review(&root, &repository_id, snapshot, &context.head, path, file)
+        self.build_working_tree_review(
+            &root,
+            &repository_id,
+            snapshot,
+            &context.resolved_base,
+            path,
+            file,
+        )
     }
 }
 
@@ -2067,7 +2250,9 @@ mod tests {
 
         let adapter = GitRepositoryAdapter::default();
         let worktree = WorktreeId::new(root.to_string_lossy()).unwrap();
-        let overview = adapter.load_working_tree_overview(&worktree).unwrap();
+        let overview = adapter
+            .load_working_tree_overview(&worktree, &ComparisonRevision::Head)
+            .unwrap();
         assert_eq!(overview.changed.len(), 5);
 
         let detail = |path: &str| {
@@ -2075,6 +2260,7 @@ mod tests {
                 .load_working_tree_file(
                     &worktree,
                     &overview.current_snapshot_id,
+                    &overview.resolved_base_sha,
                     &RepositoryRelativePath::parse(path).unwrap(),
                 )
                 .unwrap()
@@ -2150,7 +2336,11 @@ mod tests {
 
         assert_eq!(
             adapter
-                .working_tree_context(Path::new("/repo"), &snapshot)
+                .working_tree_context(
+                    Path::new("/repo"),
+                    &snapshot,
+                    &CommitSha::parse("a".repeat(40)).unwrap(),
+                )
                 .unwrap_err(),
             RepositoryPortError::Io
         );
@@ -2177,7 +2367,9 @@ mod tests {
 
         let adapter = GitRepositoryAdapter::default();
         let worktree = WorktreeId::new(root.to_string_lossy()).unwrap();
-        let overview = adapter.load_working_tree_overview(&worktree).unwrap();
+        let overview = adapter
+            .load_working_tree_overview(&worktree, &ComparisonRevision::Head)
+            .unwrap();
         assert_eq!(overview.changed.len(), 2);
 
         let main = ValidatedRefName::parse("main").unwrap();
@@ -2185,7 +2377,12 @@ mod tests {
 
         let modified_path = RepositoryRelativePath::parse("specs/001/tasks.md").unwrap();
         let modified = adapter
-            .load_working_tree_file(&worktree, &overview.current_snapshot_id, &modified_path)
+            .load_working_tree_file(
+                &worktree,
+                &overview.current_snapshot_id,
+                &overview.resolved_base_sha,
+                &modified_path,
+            )
             .unwrap();
         assert_eq!(
             modified.old_content,
@@ -2209,7 +2406,12 @@ mod tests {
 
         let untracked_path = RepositoryRelativePath::parse("specs/001/new.md").unwrap();
         let untracked = adapter
-            .load_working_tree_file(&worktree, &overview.current_snapshot_id, &untracked_path)
+            .load_working_tree_file(
+                &worktree,
+                &overview.current_snapshot_id,
+                &overview.resolved_base_sha,
+                &untracked_path,
+            )
             .unwrap();
         let StructuredDiff::Available(hunks) = untracked.structured_diff else {
             panic!("untracked text must be structured");
@@ -2238,9 +2440,173 @@ mod tests {
         let adapter = GitRepositoryAdapter::default();
         let worktree = WorktreeId::new(root.to_string_lossy()).unwrap();
         assert_eq!(
-            adapter.load_working_tree_overview(&worktree).unwrap_err(),
+            adapter
+                .load_working_tree_overview(&worktree, &ComparisonRevision::Head)
+                .unwrap_err(),
             RepositoryPortError::UnbornHead
         );
+
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn revision_catalog_history_and_arbitrary_baseline_use_resolved_commits() {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!(
+            "spec-viewer-revisions-{}-{nonce}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&root).unwrap();
+        git(&root, &["init", "-b", "main"]);
+        git(&root, &["config", "user.name", "Spec Viewer"]);
+        git(&root, &["config", "user.email", "fixture.invalid"]);
+        write(&root, "specs/001/tasks.md", "first\n");
+        git(&root, &["add", "."]);
+        git(&root, &["commit", "-m", "first 日本語 🚀"]);
+
+        let adapter = GitRepositoryAdapter::default();
+        let worktree = WorktreeId::new(root.to_string_lossy()).unwrap();
+        let first = adapter.working_tree_head(&root).unwrap();
+        git(&root, &["branch", "same"]);
+        git(&root, &["tag", "-a", "same", "-m", "annotated"]);
+        write(&root, "specs/001/tasks.md", "second\n");
+        git(&root, &["add", "."]);
+        git(&root, &["commit", "-m", "second line"]);
+        write(&root, "specs/001/tasks.md", "working\n");
+
+        let revisions = adapter.list_comparison_revisions(&worktree).unwrap();
+        assert!(matches!(revisions[0].revision, ComparisonRevision::Head));
+        let branch = revisions
+            .iter()
+            .find(|option| {
+                option.label == "same"
+                    && matches!(option.revision, ComparisonRevision::LocalBranch(_))
+            })
+            .unwrap();
+        let tag = revisions
+            .iter()
+            .find(|option| {
+                option.label == "same" && matches!(option.revision, ComparisonRevision::Tag(_))
+            })
+            .unwrap();
+        assert_eq!(branch.label, "same");
+        assert_eq!(tag.label, "same");
+        assert_eq!(branch.resolved_commit, first);
+        assert_eq!(tag.resolved_commit, first);
+
+        git(&root, &["branch", "-D", "same"]);
+        let deleted_branch =
+            ComparisonRevision::local_branch(ValidatedRefName::parse("refs/heads/same").unwrap())
+                .unwrap();
+        assert_eq!(
+            adapter
+                .resolve_comparison_revision(&root, &deleted_branch)
+                .unwrap_err(),
+            RepositoryPortError::RevisionNotFound
+        );
+        let blob = Command::new("git")
+            .arg("-C")
+            .arg(&root)
+            .args(["hash-object", "-w", "specs/001/tasks.md"])
+            .output()
+            .unwrap();
+        let blob = String::from_utf8(blob.stdout).unwrap();
+        git(&root, &["update-ref", "refs/tags/blob", blob.trim()]);
+        let blob_tag =
+            ComparisonRevision::tag(ValidatedRefName::parse("refs/tags/blob").unwrap()).unwrap();
+        assert_eq!(
+            adapter
+                .resolve_comparison_revision(&root, &blob_tag)
+                .unwrap_err(),
+            RepositoryPortError::RevisionNotCommit
+        );
+
+        let path = RepositoryRelativePath::parse("specs/001/tasks.md").unwrap();
+        let history = adapter.list_file_history(&worktree, &path, 50).unwrap();
+        assert_eq!(history.items.len(), 2);
+        assert!(!history.truncated);
+        assert_eq!(history.items[1].message, "first 日本語 🚀");
+
+        let head_overview = adapter
+            .load_working_tree_overview(&worktree, &ComparisonRevision::Head)
+            .unwrap();
+        let overview = adapter
+            .load_working_tree_overview(&worktree, &ComparisonRevision::Commit(first.clone()))
+            .unwrap();
+        assert_eq!(
+            overview.current_snapshot_id,
+            head_overview.current_snapshot_id
+        );
+        assert_ne!(overview.resolved_base_sha, head_overview.resolved_base_sha);
+        assert_eq!(overview.resolved_base_sha, first);
+        let detail = adapter
+            .load_working_tree_file(
+                &worktree,
+                &overview.current_snapshot_id,
+                &overview.resolved_base_sha,
+                &path,
+            )
+            .unwrap();
+        assert_eq!(
+            detail.old_content,
+            ContentAvailability::Available("first\n".into())
+        );
+        assert_eq!(
+            detail.new_content,
+            ContentAvailability::Available("working\n".into())
+        );
+
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn file_history_limits_results_and_reports_truncation() {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!(
+            "spec-viewer-history-limit-{}-{nonce}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&root).unwrap();
+        git(&root, &["init", "-b", "main"]);
+        git(&root, &["config", "user.name", "Spec Viewer"]);
+        git(&root, &["config", "user.email", "fixture.invalid"]);
+        for index in 0..51 {
+            write(&root, "history.md", &format!("{index}\n"));
+            git(&root, &["add", "history.md"]);
+            git(&root, &["commit", "-m", &format!("commit {index}")]);
+            if index == 49 {
+                let adapter = GitRepositoryAdapter::default();
+                let worktree = WorktreeId::new(root.to_string_lossy()).unwrap();
+                let path = RepositoryRelativePath::parse("history.md").unwrap();
+                let history = adapter.list_file_history(&worktree, &path, 50).unwrap();
+                assert_eq!(history.items.len(), 50);
+                assert!(!history.truncated);
+            }
+        }
+
+        let adapter = GitRepositoryAdapter::default();
+        let worktree = WorktreeId::new(root.to_string_lossy()).unwrap();
+        let path = RepositoryRelativePath::parse("history.md").unwrap();
+        let history = adapter.list_file_history(&worktree, &path, 50).unwrap();
+        assert_eq!(history.items.len(), 50);
+        assert!(history.truncated);
+        assert_eq!(history.items[0].message, "commit 50");
+        assert_eq!(history.items[49].message, "commit 1");
+        let missing = adapter
+            .list_file_history(
+                &worktree,
+                &RepositoryRelativePath::parse("missing.md").unwrap(),
+                50,
+            )
+            .unwrap();
+        assert!(missing.items.is_empty());
+        assert!(!missing.truncated);
 
         fs::remove_dir_all(root).unwrap();
     }

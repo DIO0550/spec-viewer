@@ -193,7 +193,7 @@ mod tests {
 
         use crate::{
             app::use_cases::spec_diff::SpecDiffUseCases,
-            domain::repository::{ContentAvailability, StructuredDiff},
+            domain::repository::{ComparisonRevision, ContentAvailability, StructuredDiff},
             infrastructure::git::GitRepositoryAdapter,
         };
 
@@ -236,7 +236,7 @@ mod tests {
             GitRepositoryAdapter::default(),
         );
         let listed = use_cases
-            .list_changed_spec_files(root.to_str().unwrap())
+            .list_changed_spec_files(root.to_str().unwrap(), ComparisonRevision::Head)
             .unwrap();
         assert_eq!(listed.files.len(), 1);
         let changed = &listed.files[0];
@@ -246,6 +246,7 @@ mod tests {
             .get_spec_file_diff(
                 root.to_str().unwrap(),
                 listed.current_snapshot_id.as_str(),
+                Some(listed.resolved_base_sha.as_str()),
                 changed.spec_id.as_str(),
                 changed.file_key.as_str(),
                 &path,

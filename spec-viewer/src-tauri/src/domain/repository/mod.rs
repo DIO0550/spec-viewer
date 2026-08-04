@@ -91,6 +91,54 @@ impl RepositoryRelativePath {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum ComparisonRevision {
+    Head,
+    Commit(CommitSha),
+    LocalBranch(crate::domain::workspace::ValidatedRefName),
+    Tag(crate::domain::workspace::ValidatedRefName),
+}
+
+impl ComparisonRevision {
+    pub fn local_branch(
+        reference: crate::domain::workspace::ValidatedRefName,
+    ) -> Result<Self, RepositoryError> {
+        if !reference.as_str().starts_with("refs/heads/") {
+            return Err(RepositoryError::InvalidValue(reference.as_str().into()));
+        }
+        Ok(Self::LocalBranch(reference))
+    }
+
+    pub fn tag(
+        reference: crate::domain::workspace::ValidatedRefName,
+    ) -> Result<Self, RepositoryError> {
+        if !reference.as_str().starts_with("refs/tags/") {
+            return Err(RepositoryError::InvalidValue(reference.as_str().into()));
+        }
+        Ok(Self::Tag(reference))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RevisionOption {
+    pub revision: ComparisonRevision,
+    pub label: String,
+    pub resolved_commit: CommitSha,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SpecFileCommit {
+    pub commit: CommitSha,
+    pub committed_at: String,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SpecFileHistory {
+    pub items: Vec<SpecFileCommit>,
+    pub truncated: bool,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BaseResolutionFailure {
     NotFound,
@@ -325,7 +373,7 @@ pub struct IgnoredPage {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkingTreeDiffOverview {
-    pub head_sha: CommitSha,
+    pub resolved_base_sha: CommitSha,
     pub current_snapshot_id: SnapshotId,
     pub changed: Vec<DiffFile>,
 }
@@ -358,6 +406,12 @@ pub enum RepositoryPortError {
     },
     #[error("unsupported path encoding")]
     UnsupportedPathEncoding,
+    #[error("comparison revision was not found")]
+    RevisionNotFound,
+    #[error("comparison revision does not resolve to a commit")]
+    RevisionNotCommit,
+    #[error("invalid Git history output")]
+    InvalidHistoryOutput,
     #[error("invalid repository path")]
     InvalidRepositoryPath,
     #[error("stale base")]
@@ -398,32 +452,81 @@ pub trait RepositoryPort {
 }
 
 pub trait WorkingTreeDiffPort {
+    fn list_comparison_revisions(
+        &self,
+        worktree: &crate::domain::workspace::WorktreeId,
+    ) -> Result<Vec<RevisionOption>, RepositoryPortError>;
+
+    fn list_file_history(
+        &self,
+        worktree: &crate::domain::workspace::WorktreeId,
+        path: &RepositoryRelativePath,
+        limit: usize,
+    ) -> Result<SpecFileHistory, RepositoryPortError>;
+
     fn load_working_tree_overview(
         &self,
         worktree: &crate::domain::workspace::WorktreeId,
+        comparison: &ComparisonRevision,
     ) -> Result<WorkingTreeDiffOverview, RepositoryPortError>;
 
     fn load_working_tree_file(
         &self,
         worktree: &crate::domain::workspace::WorktreeId,
         snapshot: &SnapshotId,
+        resolved_base: &CommitSha,
         path: &RepositoryRelativePath,
     ) -> Result<FileReview, RepositoryPortError>;
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::domain::workspace::ValidatedRefName;
+
+    #[test]
+    fn comparison_revision_accepts_head_commit_and_canonical_local_refs() {
+        let commit = CommitSha::parse("a".repeat(40)).unwrap();
+
+        assert_eq!(ComparisonRevision::Head, ComparisonRevision::Head);
+        assert!(matches!(
+            ComparisonRevision::Commit(commit),
+            ComparisonRevision::Commit(_)
+        ));
+        assert!(ComparisonRevision::local_branch(
+            ValidatedRefName::parse("refs/heads/feature/revisions").unwrap()
+        )
+        .is_ok());
+        assert!(
+            ComparisonRevision::tag(ValidatedRefName::parse("refs/tags/v1.2.3").unwrap()).is_ok()
+        );
+    }
+
+    #[test]
+    fn comparison_revision_rejects_short_remote_and_mismatched_refs() {
+        for value in [
+            "feature/revisions",
+            "refs/remotes/origin/main",
+            "refs/tags/v1",
+        ] {
+            let reference = ValidatedRefName::parse(value).unwrap();
+            assert!(ComparisonRevision::local_branch(reference).is_err());
+        }
+
+        let branch = ValidatedRefName::parse("refs/heads/main").unwrap();
+        assert!(ComparisonRevision::tag(branch).is_err());
+    }
+
     #[test]
     fn working_tree_overview_requires_head_snapshot_and_changes() {
         let head_sha = CommitSha::parse("a".repeat(40)).unwrap();
         let snapshot = SnapshotId::parse(format!("rs1_{}", "b".repeat(64))).unwrap();
         let overview = WorkingTreeDiffOverview {
-            head_sha: head_sha.clone(),
+            resolved_base_sha: head_sha.clone(),
             current_snapshot_id: snapshot.clone(),
             changed: vec![],
         };
 
-        assert_eq!(overview.head_sha, head_sha);
+        assert_eq!(overview.resolved_base_sha, head_sha);
         assert_eq!(overview.current_snapshot_id, snapshot);
         assert!(overview.changed.is_empty());
     }
