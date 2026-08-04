@@ -101,6 +101,23 @@ test("RevisionSelectorはloadingとfailed catalogを独立して通知する", (
   result.unmount();
 });
 
+test("RevisionSelectorは候補0件でもcatalog失敗をgroup外で通知する", () => {
+  const result = render(
+    <RevisionSelector
+      {...props}
+      options={props.options.slice(0, 1)}
+      optionsStatus="failed"
+      optionsErrorMessage="catalog failure"
+    />,
+  );
+  act(() => result.container.querySelector("button")?.click());
+
+  const alert = result.container.querySelector("[role=alert]");
+  expect(alert?.textContent).toContain("catalog failure");
+  expect(alert?.closest("section")).toBeNull();
+  result.unmount();
+});
+
 test("RevisionSelectorはEscapeで閉じてretry操作を各callbackへ渡す", () => {
   const onRetryOptions = vi.fn();
   const onRetryHistory = vi.fn();

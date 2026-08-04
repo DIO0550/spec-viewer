@@ -199,11 +199,21 @@ export function RevisionSelector(props: RevisionSelectorProps): ReactElement {
           aria-activedescendant={entries[activeIndex]?.id}
           onKeyDown={handleListKeyDown}
         >
+          {optionsStatus === "loading" ? (
+            <p role="status">候補を読み込んでいます。</p>
+          ) : null}
+          {optionsStatus === "failed" ? (
+            <div role="alert">
+              <p>{optionsErrorMessage ?? "候補を取得できませんでした。"}</p>
+              <button type="button" onClick={onRetryOptions}>
+                再試行
+              </button>
+            </div>
+          ) : null}
           {groups.map((group) => {
             const groupEntries = entries.filter(
               (entry) => entry.group === group,
             );
-            const isOptionsGroup = group === "Branches";
             const isHistoryGroup = group === "ファイル履歴（最新50件）";
             if (groupEntries.length === 0 && group === "HEAD") {
               return null;
@@ -235,19 +245,6 @@ export function RevisionSelector(props: RevisionSelectorProps): ReactElement {
                     </button>
                   );
                 })}
-                {isOptionsGroup && optionsStatus === "loading" ? (
-                  <p role="status">候補を読み込んでいます。</p>
-                ) : null}
-                {isOptionsGroup && optionsStatus === "failed" ? (
-                  <div role="alert">
-                    <p>
-                      {optionsErrorMessage ?? "候補を取得できませんでした。"}
-                    </p>
-                    <button type="button" onClick={onRetryOptions}>
-                      再試行
-                    </button>
-                  </div>
-                ) : null}
                 {isHistoryGroup && historyStatus === "loading" ? (
                   <p role="status">履歴を読み込んでいます。</p>
                 ) : null}
