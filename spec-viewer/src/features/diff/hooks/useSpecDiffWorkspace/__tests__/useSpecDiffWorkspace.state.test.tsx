@@ -23,11 +23,13 @@ type Deferred<T> = Readonly<{
 
 const unchangedResponse: ListChangedSpecFilesCommandResponse = {
   currentSnapshotId: "snapshot-1",
+  resolvedBaseSha: "a".repeat(40),
   files: [],
 };
 
 const changedResponse: ListChangedSpecFilesCommandResponse = {
   currentSnapshotId: "snapshot-2",
+  resolvedBaseSha: "a".repeat(40),
   files: [
     {
       specId: "079-issue-168",
@@ -108,6 +110,40 @@ test("API responseをpureなSpecChangeOverviewへ切り離して変換する", (
   expect(overview.files[0]).not.toBe(changedResponse.files[0]);
 });
 
+test("revision catalogのHEAD候補はresolved commit SHAを保持する", async () => {
+  const resolvedCommitSha = "b".repeat(40);
+  const api = createApi({
+    listSpecDiffRevisions: vi.fn(async () => [
+      {
+        id: "head",
+        revision: { kind: "head" } as const,
+        label: "HEAD",
+        resolvedCommitSha,
+      },
+    ]),
+  });
+  const hook = renderHook({
+    workspacePath: "/workspace",
+    selection: { specId: null, fileKey: null },
+    api,
+  });
+
+  await flush();
+
+  expect(hook.current().revisionOptions).toEqual({
+    status: "ready",
+    value: [
+      {
+        id: "head",
+        revision: { kind: "head" },
+        label: "HEAD",
+        resolvedCommitSha,
+      },
+    ],
+  });
+  hook.unmount();
+});
+
 test("workspace選択時に変更一覧を読み込みunchangedになる", async () => {
   const api = createApi();
   const hook = renderHook({
@@ -144,6 +180,7 @@ test("変更対象の選択では同じsnapshotの詳細を読み込む", async 
   expect(api.getSpecFileDiff).toHaveBeenCalledExactlyOnceWith({
     workspacePath: "/workspace",
     currentSnapshotId: "snapshot-2",
+    resolvedBaseSha: "a".repeat(40),
     specId: "079-issue-168",
     fileKey: "impl",
     path: ".plugin-workspace/.specs/079-issue-168/implementation-plan.md",
@@ -233,6 +270,89 @@ test("古いdetail応答は後続選択へ反映しない", async () => {
   expect(hook.current().state).toMatchObject({
     status: "ready",
     detail: { status: "ready", value: { fileKey: "tasks" } },
+  });
+  hook.unmount();
+});
+
+test("comparison成功時だけoverviewとdetailを同じresolved baseでcommitする", async () => {
+  const selected = {
+    kind: "localBranch",
+    name: "refs/heads/previous",
+  } as const;
+  const selectedResponse = {
+    ...changedResponse,
+    currentSnapshotId: "snapshot-selected",
+    resolvedBaseSha: "b".repeat(40),
+  };
+  const api = createApi({
+    listChangedSpecFiles: vi
+      .fn<SpecDiffWorkspaceApi["listChangedSpecFiles"]>()
+      .mockResolvedValueOnce(changedResponse)
+      .mockResolvedValueOnce(selectedResponse),
+  });
+  const hook = renderHook({
+    workspacePath: "/workspace",
+    selection: { specId: "079-issue-168", fileKey: "impl" },
+    api,
+  });
+  await flush();
+
+  let succeeded = false;
+  await act(async () => {
+    succeeded = await hook.current().selectComparison(selected);
+  });
+
+  expect(succeeded).toBe(true);
+  expect(hook.current().comparison).toEqual(selected);
+  expect(hook.current().state).toMatchObject({
+    status: "ready",
+    overview: {
+      currentSnapshotId: "snapshot-selected",
+      resolvedBaseSha: "b".repeat(40),
+    },
+    detail: { status: "ready" },
+  });
+  expect(api.getSpecFileDiff).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      currentSnapshotId: "snapshot-selected",
+      resolvedBaseSha: "b".repeat(40),
+    }),
+  );
+  hook.unmount();
+});
+
+test("comparison detail失敗時は直前diffと選択を保持してerrorだけ公開する", async () => {
+  const selected = { kind: "tag", name: "refs/tags/missing" } as const;
+  const api = createApi({
+    listChangedSpecFiles: vi.fn(async () => changedResponse),
+    getSpecFileDiff: vi
+      .fn<SpecDiffWorkspaceApi["getSpecFileDiff"]>()
+      .mockResolvedValueOnce(createDiffViewerFixture())
+      .mockRejectedValueOnce({
+        code: "revisionNotFound",
+        message: "deleted ref",
+      }),
+  });
+  const hook = renderHook({
+    workspacePath: "/workspace",
+    selection: { specId: "079-issue-168", fileKey: "impl" },
+    api,
+  });
+  await flush();
+  const previousState = hook.current().state;
+
+  let succeeded = true;
+  await act(async () => {
+    succeeded = await hook.current().selectComparison(selected);
+  });
+
+  expect(succeeded).toBe(false);
+  expect(hook.current().comparison).toEqual({ kind: "head" });
+  expect(hook.current().state).toBe(previousState);
+  expect(hook.current().comparisonOperation).toEqual({
+    status: "failed",
+    requested: selected,
+    message: "deleted ref",
   });
   hook.unmount();
 });

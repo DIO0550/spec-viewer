@@ -22,6 +22,7 @@ export type ChangedSpecFile = Readonly<{
 }>;
 
 export type ChangedSpecFiles = Readonly<{
+  resolvedBaseSha: string;
   currentSnapshotId: string;
   files: readonly ChangedSpecFile[];
 }>;
@@ -73,6 +74,26 @@ const decodeString = (value: unknown, path: string, raw: unknown): string => {
   }
 
   return value;
+};
+
+/** Decodes a Git object ID in SHA-1 or SHA-256 form. */
+const decodeGitObjectId = (
+  value: unknown,
+  path: string,
+  raw: unknown,
+): string => {
+  const objectId = decodeString(value, path, raw);
+  const hasValidLength = objectId.length === 40 || objectId.length === 64;
+  const isLowercaseHex = !/[^0-9a-f]/.test(objectId);
+  if (!hasValidLength || !isLowercaseHex) {
+    throw invalid(
+      path,
+      "a lowercase 40 or 64 character Git object ID",
+      "received an invalid value",
+      raw,
+    );
+  }
+  return objectId;
 };
 
 /** Decodes an unknown value as a nullable string. */
@@ -468,6 +489,11 @@ export function decodeChangedSpecFiles(value: unknown): ChangedSpecFiles {
   }
 
   return {
+    resolvedBaseSha: decodeGitObjectId(
+      record.resolvedBaseSha,
+      "resolvedBaseSha",
+      value,
+    ),
     currentSnapshotId: decodeString(
       record.currentSnapshotId,
       "currentSnapshotId",

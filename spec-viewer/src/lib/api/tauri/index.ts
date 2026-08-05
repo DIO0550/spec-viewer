@@ -40,6 +40,16 @@ export {
   ListChangedSpecFilesCommandError,
   listChangedSpecFiles,
 } from "./listChangedSpecFiles";
+export type { ListSpecDiffRevisionsRequest } from "./listSpecDiffRevisions";
+export {
+  LIST_SPEC_DIFF_REVISIONS_COMMAND,
+  listSpecDiffRevisions,
+} from "./listSpecDiffRevisions";
+export type { ListSpecFileCommitHistoryRequest } from "./listSpecFileCommitHistory";
+export {
+  LIST_SPEC_FILE_COMMIT_HISTORY_COMMAND,
+  listSpecFileCommitHistory,
+} from "./listSpecFileCommitHistory";
 export { listSpecs } from "./listSpecs";
 export { loadWorkspace } from "./loadWorkspace";
 export { readSpecFile } from "./readSpecFile";

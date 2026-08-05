@@ -62,6 +62,26 @@ test("DiffWorkspaceはready未選択を通知する", () => {
   result.unmount();
 });
 
+test("DiffWorkspaceはrevision selectorとpreviewを併存表示する", () => {
+  const result = renderDiff(
+    <DiffWorkspace
+      state={{
+        status: "ready",
+        selectedPath: "tasks.md",
+        preview: <pre>diff preview</pre>,
+      }}
+      selectedPath="tasks.md"
+      preview={null}
+      availability={{ status: "ready" }}
+      revisionSelector={<button type="button">HEADと比較</button>}
+    />,
+  );
+
+  expect(result.container.textContent).toContain("HEADと比較");
+  expect(result.container.textContent).toContain("diff preview");
+  result.unmount();
+});
+
 function renderDiff(element: ReactElement): Readonly<{
   container: HTMLDivElement;
   unmount: () => void;

@@ -59,6 +59,7 @@ export function projectSpecChangeBadges(
 }
 
 export type SpecChangeOverview = Readonly<{
+  resolvedBaseSha: string;
   currentSnapshotId: string;
   files: readonly SpecChange[];
 }>;

@@ -10,7 +10,10 @@ use presentation::commands::{
         reopen_comment, resolve_comment, update_comment,
     },
     repository::{load_repository_diff, load_repository_file, traverse_repository_ignored},
-    spec_diff::{get_spec_file_diff, list_changed_spec_files},
+    spec_diff::{
+        get_spec_file_diff, list_changed_spec_files, list_spec_diff_revisions,
+        list_spec_file_commit_history,
+    },
     specs::{archive_spec, list_specs, read_spec_file},
     watch::{start_spec_file_watch, stop_spec_file_watch},
     workspace::{load_workspace, validate_workspace_directory},
@@ -46,7 +49,9 @@ pub fn run() {
             traverse_repository_ignored,
             load_repository_file,
             list_changed_spec_files,
-            get_spec_file_diff
+            get_spec_file_diff,
+            list_spec_diff_revisions,
+            list_spec_file_commit_history
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

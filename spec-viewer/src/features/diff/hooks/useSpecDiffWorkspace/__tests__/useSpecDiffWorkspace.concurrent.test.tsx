@@ -11,11 +11,13 @@ import type { ListChangedSpecFilesCommandResponse } from "@/lib/api/tauri";
 
 const unchangedResponse: ListChangedSpecFilesCommandResponse = {
   currentSnapshotId: "snapshot-1",
+  resolvedBaseSha: "a".repeat(40),
   files: [],
 };
 
 const changedResponse: ListChangedSpecFilesCommandResponse = {
   currentSnapshotId: "snapshot-2",
+  resolvedBaseSha: "a".repeat(40),
   files: [
     {
       specId: "079-issue-168",
@@ -116,6 +118,7 @@ test("stale detailは同じrefresh cycleでoverviewから一度だけ復旧す�
       .mockResolvedValueOnce({
         ...changedResponse,
         currentSnapshotId: "snapshot-3",
+        resolvedBaseSha: "a".repeat(40),
       }),
     getSpecFileDiff: vi
       .fn<SpecDiffWorkspaceApi["getSpecFileDiff"]>()
@@ -138,7 +141,10 @@ test("stale detailは同じrefresh cycleでoverviewから一度だけ復旧す�
   expect(api.getSpecFileDiff).toHaveBeenCalledTimes(2);
   expect(hook.current().state).toMatchObject({
     status: "ready",
-    overview: { currentSnapshotId: "snapshot-3" },
+    overview: {
+      currentSnapshotId: "snapshot-3",
+      resolvedBaseSha: "a".repeat(40),
+    },
     detail: { status: "ready" },
   });
   hook.unmount();

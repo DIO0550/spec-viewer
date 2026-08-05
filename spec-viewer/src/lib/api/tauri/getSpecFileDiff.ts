@@ -16,6 +16,7 @@ export const GET_SPEC_FILE_DIFF_COMMAND = "get_spec_file_diff" as const;
 export type GetSpecFileDiffCommandRequest = Readonly<{
   workspacePath: string;
   currentSnapshotId: string;
+  resolvedBaseSha?: string;
   specId: string;
   fileKey: string;
   path: string;

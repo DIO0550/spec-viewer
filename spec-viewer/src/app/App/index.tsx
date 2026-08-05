@@ -32,6 +32,7 @@ import {
   DiffWorkspace,
   type DiffWorkspaceState,
   findSpecChange,
+  RevisionSelector,
   type SpecDiffWorkspaceState,
   useSpecDiffWorkspace,
   ViewModeToolbar,
@@ -443,6 +444,44 @@ function SpecViewAppContent(): ReactElement {
           {workspaceNavigation.state.mode === "diff" ? (
             <DiffWorkspace
               state={diffWorkspaceState}
+              revisionSelector={
+                activeWorkspaceRoot === null ? null : (
+                  <RevisionSelector
+                    value={specDiff.comparison}
+                    options={specDiff.revisionOptions.value}
+                    history={specDiff.fileHistory.value}
+                    optionsStatus={specDiff.revisionOptions.status}
+                    historyStatus={specDiff.fileHistory.status}
+                    isComparing={
+                      specDiff.comparisonOperation.status === "loading"
+                    }
+                    errorMessage={
+                      specDiff.comparisonOperation.status === "failed"
+                        ? specDiff.comparisonOperation.message
+                        : null
+                    }
+                    optionsErrorMessage={
+                      specDiff.revisionOptions.status === "failed"
+                        ? specDiff.revisionOptions.message
+                        : null
+                    }
+                    historyErrorMessage={
+                      specDiff.fileHistory.status === "failed"
+                        ? specDiff.fileHistory.message
+                        : null
+                    }
+                    onChange={(revision) => {
+                      void specDiff.selectComparison(revision);
+                    }}
+                    onRetryOptions={() => {
+                      void specDiff.retryRevisionOptions();
+                    }}
+                    onRetryHistory={() => {
+                      void specDiff.retryFileHistory();
+                    }}
+                  />
+                )
+              }
               selectedPath={currentSpecChange?.targetPath ?? null}
               preview={null}
               availability={{ status: "ready" }}

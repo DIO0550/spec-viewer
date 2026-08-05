@@ -9,14 +9,16 @@ use std::{
 
 use crate::domain::{
     repository::{
-        DiffFile, FileChangeKind, FileReview, RepositoryPortError, RepositoryRelativePath,
-        SnapshotId, WorkingTreeDiffPort,
+        CommitSha, ComparisonRevision, DiffFile, FileChangeKind, FileReview, RepositoryPortError,
+        RepositoryRelativePath, RevisionOption, SnapshotId, SpecFileHistory, WorkingTreeDiffPort,
     },
     spec::{SpecFileKey, SpecId},
     workspace::WorktreeId,
 };
 
 type SpecIdentity = (SpecId, SpecFileKey);
+
+const SPEC_FILE_HISTORY_LIMIT: usize = 50;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpecDiffTarget {
@@ -94,6 +96,7 @@ pub struct ChangedSpecFile {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChangedSpecFiles {
+    pub resolved_base_sha: CommitSha,
     pub current_snapshot_id: SnapshotId,
     pub files: Vec<ChangedSpecFile>,
 }
@@ -162,26 +165,74 @@ where
     pub fn list_changed_spec_files(
         &self,
         workspace_path: &str,
+        comparison: ComparisonRevision,
     ) -> Result<ChangedSpecFiles, SpecDiffUseCaseError<Targets::Error>> {
         let resolved = self
             .targets
             .resolve(workspace_path)
             .map_err(SpecDiffUseCaseError::Target)?;
-        let overview = self.git.load_working_tree_overview(resolved.worktree())?;
+        let overview = self
+            .git
+            .load_working_tree_overview(resolved.worktree(), &comparison)?;
         let files = resolved
             .project_changed_files(&overview.changed)
             .map_err(|_| SpecDiffUseCaseError::ConflictingRenameTargets)?;
 
         Ok(ChangedSpecFiles {
+            resolved_base_sha: overview.resolved_base_sha,
             current_snapshot_id: overview.current_snapshot_id,
             files,
         })
+    }
+
+    pub fn list_spec_diff_revisions(
+        &self,
+        workspace_path: &str,
+    ) -> Result<Vec<RevisionOption>, SpecDiffUseCaseError<Targets::Error>> {
+        let resolved = self
+            .targets
+            .resolve(workspace_path)
+            .map_err(SpecDiffUseCaseError::Target)?;
+        self.git
+            .list_comparison_revisions(resolved.worktree())
+            .map_err(SpecDiffUseCaseError::Repository)
+    }
+
+    pub fn list_spec_file_commit_history(
+        &self,
+        workspace_path: &str,
+        spec_id: &str,
+        file_key: &str,
+        path: &str,
+    ) -> Result<SpecFileHistory, SpecDiffUseCaseError<Targets::Error>> {
+        let resolved = self
+            .targets
+            .resolve(workspace_path)
+            .map_err(SpecDiffUseCaseError::Target)?;
+        let requested_key =
+            SpecFileKey::from_str(file_key).map_err(|_| SpecDiffUseCaseError::InvalidInput)?;
+        let requested_path =
+            RepositoryRelativePath::parse(path).map_err(|_| SpecDiffUseCaseError::InvalidInput)?;
+        let target = resolved
+            .find_target(spec_id, requested_key)
+            .ok_or(SpecDiffUseCaseError::InvalidInput)?;
+        if !target.accepts(&requested_path) {
+            return Err(SpecDiffUseCaseError::InvalidInput);
+        }
+        self.git
+            .list_file_history(
+                resolved.worktree(),
+                &requested_path,
+                SPEC_FILE_HISTORY_LIMIT,
+            )
+            .map_err(SpecDiffUseCaseError::Repository)
     }
 
     pub fn get_spec_file_diff(
         &self,
         workspace_path: &str,
         snapshot_id: &str,
+        resolved_base_sha: Option<&str>,
         spec_id: &str,
         file_key: &str,
         path: &str,
@@ -204,9 +255,22 @@ where
             return Err(SpecDiffUseCaseError::InvalidInput);
         }
 
-        let review =
-            self.git
-                .load_working_tree_file(resolved.worktree(), &snapshot, &requested_path)?;
+        let resolved_base = match resolved_base_sha {
+            Some(value) => {
+                CommitSha::parse(value).map_err(|_| SpecDiffUseCaseError::InvalidInput)?
+            }
+            None => {
+                self.git
+                    .load_working_tree_overview(resolved.worktree(), &ComparisonRevision::Head)?
+                    .resolved_base_sha
+            }
+        };
+        let review = self.git.load_working_tree_file(
+            resolved.worktree(),
+            &snapshot,
+            &resolved_base,
+            &requested_path,
+        )?;
 
         Ok(SpecFileDiff {
             spec_id: target.spec_id().clone(),
@@ -386,9 +450,26 @@ mod tests {
     struct UnexpectedGitCall;
 
     impl WorkingTreeDiffPort for UnexpectedGitCall {
+        fn list_comparison_revisions(
+            &self,
+            _worktree: &WorktreeId,
+        ) -> Result<Vec<RevisionOption>, RepositoryPortError> {
+            panic!("Git must not be called for invalid detail input")
+        }
+
+        fn list_file_history(
+            &self,
+            _worktree: &WorktreeId,
+            _path: &RepositoryRelativePath,
+            _limit: usize,
+        ) -> Result<SpecFileHistory, RepositoryPortError> {
+            panic!("Git must not be called for invalid detail input")
+        }
+
         fn load_working_tree_overview(
             &self,
             _worktree: &WorktreeId,
+            _comparison: &ComparisonRevision,
         ) -> Result<crate::domain::repository::WorkingTreeDiffOverview, RepositoryPortError>
         {
             panic!("Git must not be called for invalid detail input")
@@ -398,6 +479,7 @@ mod tests {
             &self,
             _worktree: &WorktreeId,
             _snapshot: &SnapshotId,
+            _resolved_base: &CommitSha,
             _path: &RepositoryRelativePath,
         ) -> Result<FileReview, RepositoryPortError> {
             panic!("Git must not be called for invalid detail input")
@@ -412,6 +494,7 @@ mod tests {
             use_cases.get_spec_file_diff(
                 "/repo",
                 &format!("rs1_{}", "a".repeat(64)),
+                None,
                 "001-alpha",
                 "tasks",
                 "specs/other/tasks.md",
@@ -419,6 +502,38 @@ mod tests {
             Err(SpecDiffUseCaseError::InvalidInput)
         ));
     }
+    #[test]
+    fn detail_rejects_malformed_resolved_base_before_calling_git() {
+        let use_cases = SpecDiffUseCases::new(StaticTargets, UnexpectedGitCall);
+
+        assert!(matches!(
+            use_cases.get_spec_file_diff(
+                "/repo",
+                &format!("rs1_{}", "a".repeat(64)),
+                Some("not-a-sha"),
+                "001-alpha",
+                "tasks",
+                "specs/001/tasks.md",
+            ),
+            Err(SpecDiffUseCaseError::InvalidInput)
+        ));
+    }
+
+    #[test]
+    fn history_rejects_candidate_outside_resolved_target_before_calling_git() {
+        let use_cases = SpecDiffUseCases::new(StaticTargets, UnexpectedGitCall);
+
+        assert!(matches!(
+            use_cases.list_spec_file_commit_history(
+                "/repo",
+                "001-alpha",
+                "tasks",
+                "specs/other/tasks.md",
+            ),
+            Err(SpecDiffUseCaseError::InvalidInput)
+        ));
+    }
+
     use super::*;
     use crate::domain::repository::{ContentClassification, EntryKind};
 
