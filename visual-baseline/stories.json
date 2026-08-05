@@ -360,6 +360,46 @@
     "name": "Unchanged"
   },
   {
+    "id": "features-diff-revisionselector--branch-selected",
+    "title": "Features/Diff/RevisionSelector",
+    "name": "Branch Selected"
+  },
+  {
+    "id": "features-diff-revisionselector--commit-selected",
+    "title": "Features/Diff/RevisionSelector",
+    "name": "Commit Selected"
+  },
+  {
+    "id": "features-diff-revisionselector--default-head",
+    "title": "Features/Diff/RevisionSelector",
+    "name": "Default Head"
+  },
+  {
+    "id": "features-diff-revisionselector--empty-history",
+    "title": "Features/Diff/RevisionSelector",
+    "name": "Empty History"
+  },
+  {
+    "id": "features-diff-revisionselector--failed",
+    "title": "Features/Diff/RevisionSelector",
+    "name": "Failed"
+  },
+  {
+    "id": "features-diff-revisionselector--loading",
+    "title": "Features/Diff/RevisionSelector",
+    "name": "Loading"
+  },
+  {
+    "id": "features-diff-revisionselector--long-messages",
+    "title": "Features/Diff/RevisionSelector",
+    "name": "Long Messages"
+  },
+  {
+    "id": "features-diff-revisionselector--tag-selected",
+    "title": "Features/Diff/RevisionSelector",
+    "name": "Tag Selected"
+  },
+  {
     "id": "features-sidebar-components-sidebarlayout--all-props",
     "title": "features/sidebar/components/SidebarLayout",
     "name": "All Props"
