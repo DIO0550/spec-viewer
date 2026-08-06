@@ -1,3 +1,5 @@
+export { SpecArtifactTabs } from "@/features/specs/components/SpecArtifactTabs";
+export { SpecArtifactViewer } from "@/features/specs/components/SpecArtifactViewer";
 export { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
 export { SpecTabs } from "@/features/specs/components/SpecTabs";
 export { SpecTree } from "@/features/specs/components/SpecTree";

@@ -48,9 +48,9 @@ import {
   useSidebarPreference,
 } from "@/features/sidebar";
 import {
-  MarkdownViewer,
+  SpecArtifactViewer,
   type SpecSelectionChange,
-  SpecTabs,
+  SpecArtifactTabs,
   SpecTree,
   useSpecs,
 } from "@/features/specs";
@@ -492,11 +492,12 @@ function SpecViewAppContent(): ReactElement {
                 className="specs-workspace__document"
                 aria-label="Spec document"
               >
-                <SpecTabs
-                  spec={specSelectors.selectedSpec}
-                  selectedFileKey={specState.selection.fileKey}
+                <SpecArtifactTabs
+                  specLabel={specSelectors.selectedSpec?.label ?? null}
+                  artifacts={specState.bundleState.bundle?.artifacts ?? []}
+                  selectedIdentity={specState.selection.artifactIdentity}
                   isSelectionDisabled={isCurrentViewLoading}
-                  onSelectFile={guardedSpecActions.selectFileFromTabs}
+                  onSelectArtifact={specActions.selectArtifact}
                 />
                 <div className="specs-workspace__viewer">
                   {shouldShowOpenWorkspacePrompt ? (
@@ -518,13 +519,12 @@ function SpecViewAppContent(): ReactElement {
                       }
                     />
                   ) : (
-                    <MarkdownViewer
-                      state={specState.documentState}
+                    <SpecArtifactViewer
+                      bundleState={specState.bundleState}
+                      artifact={specSelectors.selectedArtifact}
+                      workspacePath={activeWorkspaceRoot}
                       selectedSpecLabel={
                         specSelectors.selectedSpec?.label ?? null
-                      }
-                      selectedFileLabel={
-                        specSelectors.selectedFile?.label ?? null
                       }
                       comments={comments.comments}
                       activeCommentId={commentSelection.activeCommentId}
