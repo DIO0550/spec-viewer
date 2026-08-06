@@ -6,6 +6,7 @@ import { resolveSpecFileSelection } from "@/features/specs/domain/resolveSpecFil
 import { SpecFeatureError } from "@/features/specs/domain/specError";
 import { SpecNode as SpecNodeDomain } from "@/features/specs/domain/specNode";
 import { SpecTree as SpecTreeDomain } from "@/features/specs/domain/specTree";
+import { SpecBundleState } from "@/features/specs/domain/specBundleState";
 import type { SpecTreeState } from "@/features/specs/domain/specTreeState";
 import { SpecTreeState as SpecTreeStateFactory } from "@/features/specs/domain/specTreeState";
 import {
@@ -119,8 +120,10 @@ async function readDocument(
 const initialSpecsState: SpecsState = {
   specTreeState: initialSpecTreeState,
   documentState: initialDocumentState,
+  bundleState: SpecBundleState.idle(),
   selection: {
     specId: null,
+    artifactIdentity: null,
     fileKey: null,
   },
   isLoading: false,
@@ -135,7 +138,7 @@ const initialSpecsState: SpecsState = {
  * @param options - Hook options including the workspace path and selection callback.
  * @returns Spec tree, selection, and Markdown loading state for a workspace.
  */
-export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
+export function useSpecsLegacy(options: UseSpecsOptions): UseSpecsResult {
   const { onSelectionChange, workspacePath } = options;
   const [state, setState] = useState<SpecsState>(initialSpecsState);
   const workspacePathRef = useRef(workspacePath);
@@ -215,6 +218,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
       documentState: SpecDocumentStateFactory.idle(workspacePath),
       selection: {
         specId: null,
+        artifactIdentity: null,
         fileKey: null,
       },
     }));
@@ -285,6 +289,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
         ...currentState,
         selection: {
           specId: selection.spec?.id ?? null,
+          artifactIdentity: null,
           fileKey: selection.fileKey,
         },
       }));
@@ -331,6 +336,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
           documentState: SpecDocumentStateFactory.idle(null),
           selection: {
             specId: null,
+            artifactIdentity: null,
             fileKey: null,
           },
           specTreeState: initialSpecTreeState,
@@ -385,6 +391,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
           documentState: SpecDocumentStateFactory.idle(activeWorkspacePath),
           selection: {
             specId: null,
+            artifactIdentity: null,
             fileKey: null,
           },
           specTreeState: SpecTreeStateFactory.failed(
@@ -433,6 +440,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
       isLoading: workspacePath !== null,
       selection: {
         specId: null,
+        artifactIdentity: null,
         fileKey: null,
       },
       specTreeState:
@@ -488,6 +496,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
           ...currentState,
           selection: {
             specId,
+            artifactIdentity: null,
             fileKey: defaultFileKey,
           },
         }));
@@ -757,6 +766,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
   );
   const actions: SpecsActions = useMemo(
     () => ({
+      selectArtifact: () => undefined,
       archiveSpec,
       retryArchiveSpec,
       refreshArchiveReveal,
@@ -786,3 +796,5 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
     selectors,
   };
 }
+
+export { useSpecs } from "../useSpecsV2";

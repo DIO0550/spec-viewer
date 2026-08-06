@@ -1,5 +1,7 @@
 import type { OperationId } from "@/features/specs/domain/operationId";
 import type { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
+import type { SpecArtifactIdentity } from "@/features/specs/domain/specArtifact";
+import type { SpecBundleState } from "@/features/specs/domain/specBundleState";
 import type { SpecFeatureError } from "@/features/specs/domain/specError";
 import type { SpecTreeState } from "@/features/specs/domain/specTreeState";
 import type { SpecsSelectors } from "@/features/specs/hooks/useSpecs/selectors";
@@ -21,12 +23,14 @@ export type ArchiveRevealState = Readonly<{
 
 export type SpecSelectionState = Readonly<{
   specId: string | null;
+  artifactIdentity: SpecArtifactIdentity | null;
   fileKey: SpecFileKey | null;
 }>;
 
 export type SpecsState = Readonly<{
   specTreeState: SpecTreeState;
   documentState: SpecDocumentState;
+  bundleState: SpecBundleState;
   selection: SpecSelectionState;
   isLoading: boolean;
   activeOperationId: OperationId | null;
@@ -50,6 +54,8 @@ export type SpecsActions = Readonly<{
   /** Selects a file. @param fileKey - Key of the file to select. */
   selectSpecFile: (specId: string, fileKey: string) => Promise<void>;
   selectFileKey: (fileKey: SpecFileKey) => Promise<void>;
+  /** Selects an already-loaded bundle artifact without IPC. */
+  selectArtifact: (identity: SpecArtifactIdentity) => void;
   /** Reloads the current document. */
   reloadDocument: () => Promise<boolean>;
   /** Resets the current spec/file selection. */
