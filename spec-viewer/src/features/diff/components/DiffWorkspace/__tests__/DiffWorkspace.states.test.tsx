@@ -34,10 +34,12 @@ test("failedはretryを通知しreadyはcaller-owned previewを表示する", ()
     selectedPath: "tasks.md",
     preview: <div data-testid="diff-viewer">preview</div>,
   });
-  expect(ready.container.querySelector("[data-testid=diff-viewer]")).not.toBeNull();
-  expect(ready.container.querySelector("section")?.getAttribute("aria-label")).toBe(
-    "tasks.md の差分",
-  );
+  expect(
+    ready.container.querySelector("[data-testid=diff-viewer]"),
+  ).not.toBeNull();
+  expect(
+    ready.container.querySelector("section")?.getAttribute("aria-label"),
+  ).toBe("tasks.md の差分");
   ready.unmount();
 });
 

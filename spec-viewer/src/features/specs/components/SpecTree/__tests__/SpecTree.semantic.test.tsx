@@ -101,7 +101,7 @@ test("SpecTreeはprimary implicit rootとsecondary headingを表示しArchiveを
 test("SpecTreeはArchive配下を展開してもarchive actionを表示しない", () => {
   const result = renderTree();
   const expand = result.container.querySelector(
-    "[aria-label=\"Archiveを展開\"]",
+    '[aria-label="Archiveを展開"]',
   ) as HTMLElement;
 
   act(() => expand.click());
@@ -109,7 +109,7 @@ test("SpecTreeはArchive配下を展開してもarchive actionを表示しない
   expect(result.container.querySelector("[role=group]")).not.toBeNull();
   expect(result.container.textContent).toContain("Old");
   expect(
-    result.container.querySelector("[aria-label=\"Oldをアーカイブへ移動\"]"),
+    result.container.querySelector('[aria-label="Oldをアーカイブへ移動"]'),
   ).toBeNull();
   result.unmount();
 });
@@ -117,10 +117,10 @@ test("SpecTreeはArchive配下を展開してもarchive actionを表示しない
 test("SpecTreeはEnterでcontainerを展開しSpaceでspecを選択する", () => {
   const result = renderTree({ selectedSpecId: null });
   const archiveRow = result.container.querySelector(
-    "[data-node-kind=\"archive\"]",
+    '[data-node-kind="archive"]',
   ) as HTMLButtonElement;
   const activeRow = result.container.querySelector(
-    "[data-node-kind=\"spec\"]",
+    '[data-node-kind="spec"]',
   ) as HTMLButtonElement;
 
   act(() => {

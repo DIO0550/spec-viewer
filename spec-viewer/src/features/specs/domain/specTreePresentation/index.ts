@@ -1,5 +1,11 @@
-import type { SpecNode, SpecNodeIdentity } from "@/features/specs/domain/specNode";
-import { SpecTree, type SpecTree as SpecTreeType } from "@/features/specs/domain/specTree";
+import type {
+  SpecNode,
+  SpecNodeIdentity,
+} from "@/features/specs/domain/specNode";
+import {
+  SpecTree,
+  type SpecTree as SpecTreeType,
+} from "@/features/specs/domain/specTree";
 
 export type SpecTreePresentationState = Readonly<{
   workspacePath: string | null;

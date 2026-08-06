@@ -152,9 +152,7 @@ test("useThemeは選択したlight preferenceを同じact cycleで保存してdo
 
   expect(result.current.themeMode).toBe("light");
   expect(result.current.resolvedTheme).toBe("light");
-  expect(window.localStorage.getItem("spec-reviewer.theme-mode")).toBe(
-    "light",
-  );
+  expect(window.localStorage.getItem("spec-reviewer.theme-mode")).toBe("light");
   expect(document.documentElement.dataset.theme).toBe("light");
   expect(document.documentElement.dataset.themeMode).toBe("light");
   expect(document.documentElement.style.colorScheme).toBe("light");

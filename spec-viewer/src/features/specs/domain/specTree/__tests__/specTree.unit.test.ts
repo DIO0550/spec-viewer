@@ -62,7 +62,12 @@ test("SpecTree.resolveSelectionはcategory/archive/source groupだけならnull�
 
   expect(
     SpecTree.resolveSelection(
-      { specs: [categoryNode, archiveNode, sourceGroup].map((node) => ({ ...node, children: [] })) },
+      {
+        specs: [categoryNode, archiveNode, sourceGroup].map((node) => ({
+          ...node,
+          children: [],
+        })),
+      },
       { specId: archiveNode.id, fileKey: null },
     ),
   ).toEqual({ spec: null, fileKey: null });
@@ -107,7 +112,6 @@ test("SpecTree.resolveSelectionはpreferred specとfileが有効なら保持す�
     }),
   ).toEqual({ spec: childNode, fileKey: "impl" });
 });
-
 
 test("SpecTreeは1000 nodeを追加IPCなしのpure projectionで走査する", () => {
   const specs = Array.from({ length: 1000 }, (_, index) =>

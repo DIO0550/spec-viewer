@@ -101,28 +101,28 @@ test.each([
   });
 });
 
-test.each(["suffix", "\n"])(
-  "listChangedSpecFilesは末尾文字付きresolved SHAをinvalidResponseにする: %j",
-  async (trailing) => {
-    const raw = {
-      currentSnapshotId: "rs1_snapshot",
-      resolvedBaseSha: "a".repeat(40) + trailing,
-      files: [],
-    };
-    invokeMock.mockReset();
-    invokeMock.mockResolvedValue(raw);
+test.each([
+  "suffix",
+  "\n",
+])("listChangedSpecFilesは末尾文字付きresolved SHAをinvalidResponseにする: %j", async (trailing) => {
+  const raw = {
+    currentSnapshotId: "rs1_snapshot",
+    resolvedBaseSha: "a".repeat(40) + trailing,
+    files: [],
+  };
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue(raw);
 
-    await expect(
-      listChangedSpecFiles({ workspacePath: "/workspace" }),
-    ).rejects.toMatchObject({
-      command: "list_changed_spec_files",
-      code: "invalidResponse",
-      message:
-        "resolvedBaseSha must be a lowercase 40 or 64 character Git object ID: received an invalid value",
-      raw,
-    });
-  },
-);
+  await expect(
+    listChangedSpecFiles({ workspacePath: "/workspace" }),
+  ).rejects.toMatchObject({
+    command: "list_changed_spec_files",
+    code: "invalidResponse",
+    message:
+      "resolvedBaseSha must be a lowercase 40 or 64 character Git object ID: received an invalid value",
+    raw,
+  });
+});
 
 test("listChangedSpecFilesはresolved不正payloadをinvalidResponseにする", async () => {
   const raw = { currentSnapshotId: "rs1_snapshot", files: "invalid" };
