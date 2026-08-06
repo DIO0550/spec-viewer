@@ -3,6 +3,10 @@ import type {
   SpecFileKey,
 } from "@/features/specs/domain/specFile";
 
+import type {
+  SpecArtifactIdentity,
+  SpecProgress,
+} from "@/features/specs/domain/specArtifact";
 export type SpecFileScope = Readonly<{
   workspacePath: string;
   specId: string;
@@ -58,6 +62,11 @@ export type ReadSpecFileRequest = Readonly<{
   correlationId?: string;
 }>;
 
+export type LoadSpecBundleRequest = Readonly<{
+  workspacePath: string;
+  specId: string;
+}>;
+
 export type ArchiveSpecRequest = Readonly<{
   workspacePath: string;
   specId: string;
@@ -78,3 +87,34 @@ export type SpecDocument = Readonly<{
   missing: boolean;
   blocks: readonly MarkdownBlockMetadata[];
 }>;
+
+export type SpecArtifactErrorCode =
+  | "markdownRead"
+  | "markdownParse"
+  | "invalidArtifact";
+
+export type SpecArtifactError = Readonly<{
+  code: SpecArtifactErrorCode;
+  message: string;
+}>;
+
+export type SpecArtifact = Readonly<{
+  identity: SpecArtifactIdentity;
+  fileKey: SpecFileKey | null;
+  fileName: string;
+  label: string;
+  format: SpecDocumentFormat;
+  progress: SpecProgress;
+  path: string;
+  contents: string | null;
+  blocks: readonly MarkdownBlockMetadata[];
+  error: SpecArtifactError | null;
+}>;
+
+export type SpecBundle = Readonly<{
+  specId: string;
+  progress: SpecProgress;
+  artifacts: readonly SpecArtifact[];
+}>;
+
+export type { SpecArtifactIdentity, SpecProgress };

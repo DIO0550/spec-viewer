@@ -1,6 +1,11 @@
 import { expect, test, vi } from "vitest";
 
-import { archiveSpec, createReadSpecFileRequest, listSpecs, readSpecFile } from "@/features/specs/infra/specGateway";
+import {
+  archiveSpec,
+  createReadSpecFileRequest,
+  listSpecs,
+  readSpecFile,
+} from "@/features/specs/infra/specGateway";
 import type { SpecCommands } from "@/lib/api/tauri";
 import type { SpecDocument, SpecTree } from "@/features/specs/types/spec";
 
@@ -19,7 +24,8 @@ const document: SpecDocument = {
 
 const archiveResponse = {
   archivedSpecId: "spec-1",
-  archivePath: "/workspace/spec-viewer/.plugin-workspace/.specs/.archive/spec-1",
+  archivePath:
+    "/workspace/spec-viewer/.plugin-workspace/.specs/.archive/spec-1",
   sourceGroupId: ".plugin-workspace/.specs",
   destinationNodeId: ".archive/spec-1",
 };
@@ -27,11 +33,14 @@ const archiveResponse = {
 test("listSpecsはcommands.listSpecsへworkspacePathを委譲する", async () => {
   const commands: SpecCommands = {
     listSpecs: vi.fn().mockResolvedValue(tree),
+    loadSpecBundle: vi.fn(),
     readSpecFile: vi.fn().mockResolvedValue(document),
     archiveSpec: vi.fn().mockResolvedValue(archiveResponse),
   };
 
-  await expect(listSpecs(commands, "/workspace/spec-viewer")).resolves.toBe(tree);
+  await expect(listSpecs(commands, "/workspace/spec-viewer")).resolves.toBe(
+    tree,
+  );
 
   expect(commands.listSpecs).toHaveBeenCalledWith("/workspace/spec-viewer");
 });
@@ -45,6 +54,7 @@ test("readSpecFileはrequest DTOを維持してcommands.readSpecFileへ委譲す
   } as const;
   const commands: SpecCommands = {
     listSpecs: vi.fn().mockResolvedValue(tree),
+    loadSpecBundle: vi.fn(),
     readSpecFile: vi.fn().mockResolvedValue(document),
     archiveSpec: vi.fn().mockResolvedValue(archiveResponse),
   };
@@ -61,6 +71,7 @@ test("archiveSpecはrequestと複合destination responseを変換せず維持す
   } as const;
   const commands: SpecCommands = {
     listSpecs: vi.fn().mockResolvedValue(tree),
+    loadSpecBundle: vi.fn(),
     readSpecFile: vi.fn().mockResolvedValue(document),
     archiveSpec: vi.fn().mockResolvedValue(archiveResponse),
   };

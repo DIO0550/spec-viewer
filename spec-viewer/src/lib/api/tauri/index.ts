@@ -52,6 +52,17 @@ export {
 } from "./listSpecFileCommitHistory";
 export { listSpecs } from "./listSpecs";
 export { loadWorkspace } from "./loadWorkspace";
+export type {
+  LoadSpecBundleCommandContract,
+  LoadSpecBundleCommandErrorCode,
+  LoadSpecBundleCommandRequest,
+  LoadSpecBundleCommandResponse,
+} from "./loadSpecBundle";
+export {
+  LOAD_SPEC_BUNDLE_COMMAND,
+  LoadSpecBundleCommandError,
+  loadSpecBundle,
+} from "./loadSpecBundle";
 export { readSpecFile } from "./readSpecFile";
 export { reopenComment } from "./reopenComment";
 export { resolveComment } from "./resolveComment";
