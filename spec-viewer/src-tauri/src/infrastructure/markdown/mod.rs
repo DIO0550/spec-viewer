@@ -6,7 +6,7 @@ pub mod parser;
 
 use std::{
     fs, io,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
     string::FromUtf8Error,
 };
 
@@ -14,11 +14,11 @@ use thiserror::Error;
 
 use crate::{
     domain::{
-        spec::{MarkdownBlock, SpecDocumentFormat, SpecFileKey},
+        spec::{MarkdownBlock, SpecArtifactIdentity, SpecDocumentFormat, SpecFileKey},
         workspace::{WorkspaceConfig, WorkspaceLayout},
     },
     infrastructure::{
-        filesystem::spec_directory_path,
+        filesystem::{spec_directory_path, DiscoveredSpecArtifact},
         spec_file_resolution::{spec_file_path_candidates, SpecFilePathCandidate},
     },
 };
@@ -42,38 +42,22 @@ impl FilesystemMarkdownReader {
     ) -> Result<MarkdownReadResult, MarkdownReadError> {
         let resolved_path = resolve_spec_document_path(layout, config, spec_id, key)?;
         let file_path = resolved_path.path();
-
-        let contents = match fs::read(file_path) {
-            Ok(contents) => contents,
-            Err(error) if error.kind() == io::ErrorKind::NotFound => {
+        let (contents, blocks) = match read_existing_document(file_path, resolved_path.format()) {
+            Ok(document) => document,
+            Err(error)
+                if matches!(
+                    &error,
+                    MarkdownReadError::UnreadableFile { source, .. }
+                        if source.kind() == io::ErrorKind::NotFound
+                ) =>
+            {
                 return Ok(MarkdownReadResult::Missing(MissingMarkdownFile {
                     key,
                     format: resolved_path.format(),
                     path: display_path(resolved_path.preferred_path()),
                 }));
             }
-            Err(source) => {
-                return Err(MarkdownReadError::UnreadableFile {
-                    path: display_path(file_path),
-                    source,
-                });
-            }
-        };
-
-        let contents =
-            String::from_utf8(contents).map_err(|source| MarkdownReadError::InvalidUtf8 {
-                path: display_path(file_path),
-                source,
-            })?;
-
-        let blocks = match resolved_path.format() {
-            SpecDocumentFormat::Markdown => parse_markdown_blocks(&contents).map_err(|source| {
-                MarkdownReadError::ParseMarkdown {
-                    path: display_path(file_path),
-                    source,
-                }
-            })?,
-            SpecDocumentFormat::Html => Vec::new(),
+            Err(error) => return Err(error),
         };
 
         Ok(MarkdownReadResult::Found(MarkdownDocument::new(
@@ -84,6 +68,52 @@ impl FilesystemMarkdownReader {
             blocks,
         )))
     }
+
+    pub fn read_artifact(
+        &self,
+        spec_directory: &Path,
+        artifact: &DiscoveredSpecArtifact,
+    ) -> Result<MarkdownDocument, MarkdownReadError> {
+        validate_discovered_artifact(artifact)?;
+
+        let file_path = spec_directory.join(&artifact.file_name);
+        let (contents, blocks) = read_existing_document(&file_path, artifact.format)?;
+
+        Ok(MarkdownDocument::new_artifact(
+            artifact.identity.clone(),
+            artifact.file_key,
+            artifact.format,
+            display_path(&file_path),
+            contents,
+            blocks,
+        ))
+    }
+}
+
+fn read_existing_document(
+    file_path: &Path,
+    format: SpecDocumentFormat,
+) -> Result<(String, Vec<MarkdownBlock>), MarkdownReadError> {
+    let contents = fs::read(file_path).map_err(|source| MarkdownReadError::UnreadableFile {
+        path: display_path(file_path),
+        source,
+    })?;
+    let contents =
+        String::from_utf8(contents).map_err(|source| MarkdownReadError::InvalidUtf8 {
+            path: display_path(file_path),
+            source,
+        })?;
+    let blocks = match format {
+        SpecDocumentFormat::Markdown => {
+            parse_markdown_blocks(&contents).map_err(|source| MarkdownReadError::ParseMarkdown {
+                path: display_path(file_path),
+                source,
+            })?
+        }
+        SpecDocumentFormat::Html => Vec::new(),
+    };
+
+    Ok((contents, blocks))
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -100,7 +130,8 @@ impl MarkdownReadResult {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MarkdownDocument {
-    key: SpecFileKey,
+    identity: SpecArtifactIdentity,
+    file_key: Option<SpecFileKey>,
     format: SpecDocumentFormat,
     path: String,
     contents: String,
@@ -115,8 +146,27 @@ impl MarkdownDocument {
         contents: impl Into<String>,
         blocks: Vec<MarkdownBlock>,
     ) -> Self {
+        Self::new_artifact(
+            SpecArtifactIdentity::Standard(key),
+            Some(key),
+            format,
+            path,
+            contents,
+            blocks,
+        )
+    }
+
+    pub fn new_artifact(
+        identity: SpecArtifactIdentity,
+        file_key: Option<SpecFileKey>,
+        format: SpecDocumentFormat,
+        path: impl Into<String>,
+        contents: impl Into<String>,
+        blocks: Vec<MarkdownBlock>,
+    ) -> Self {
         Self {
-            key,
+            identity,
+            file_key,
             format,
             path: path.into(),
             contents: contents.into(),
@@ -125,7 +175,16 @@ impl MarkdownDocument {
     }
 
     pub fn key(&self) -> SpecFileKey {
-        self.key
+        self.file_key
+            .expect("legacy Markdown documents should have a fixed file key")
+    }
+
+    pub fn identity(&self) -> &SpecArtifactIdentity {
+        &self.identity
+    }
+
+    pub fn file_key(&self) -> Option<SpecFileKey> {
+        self.file_key
     }
 
     pub fn format(&self) -> SpecDocumentFormat {
@@ -192,8 +251,32 @@ impl ResolvedSpecDocumentPath {
     }
 }
 
+fn validate_discovered_artifact(
+    artifact: &DiscoveredSpecArtifact,
+) -> Result<(), MarkdownReadError> {
+    let mut components = Path::new(&artifact.file_name).components();
+    let is_single_basename =
+        matches!(components.next(), Some(Component::Normal(_))) && components.next().is_none();
+    let identity_matches = match &artifact.identity {
+        SpecArtifactIdentity::Standard(key) => artifact.file_key == Some(*key),
+        SpecArtifactIdentity::DirectMarkdown(file_name) => {
+            artifact.file_key.is_none() && file_name == &artifact.file_name
+        }
+    };
+
+    if is_single_basename && identity_matches {
+        return Ok(());
+    }
+
+    Err(MarkdownReadError::InvalidArtifact {
+        file_name: artifact.file_name.clone(),
+    })
+}
+
 #[derive(Debug, Error)]
 pub enum MarkdownReadError {
+    #[error("invalid discovered spec artifact: {file_name}")]
+    InvalidArtifact { file_name: String },
     #[error("workspace config does not define a file for key: {key}")]
     MissingFileMapping { key: SpecFileKey },
     #[error("spec id is invalid: {spec_id}")]
@@ -364,10 +447,10 @@ mod tests {
 
     use super::*;
     use crate::domain::{
-        spec::SpecFileKey,
+        spec::{SpecArtifactIdentity, SpecFileKey},
         workspace::{WorkspaceConfig, WorkspaceKind, WorkspaceRoot},
     };
-    use crate::infrastructure::filesystem::safe_relative_spec_path;
+    use crate::infrastructure::filesystem::{safe_relative_spec_path, DiscoveredSpecArtifact};
 
     const SPECS_DIR: &str = ".plugin-workspace/.specs";
 
@@ -419,6 +502,81 @@ mod tests {
         }
     }
 
+    fn discovered_artifact(
+        identity: SpecArtifactIdentity,
+        file_name: &str,
+        file_key: Option<SpecFileKey>,
+    ) -> DiscoveredSpecArtifact {
+        DiscoveredSpecArtifact {
+            identity,
+            file_name: file_name.to_string(),
+            file_key,
+            label: file_name.to_string(),
+            format: SpecDocumentFormat::Markdown,
+        }
+    }
+
+    #[test]
+    fn reads_standard_direct_empty_and_typed_artifact_failures() {
+        let workspace = TestWorkspace::new("artifacts");
+        workspace.write_file(
+            ".plugin-workspace/.specs/auth/tasks.md",
+            "# Tasks\n\n- [ ] Review",
+        );
+        workspace.write_file(".plugin-workspace/.specs/auth/notes.md", "");
+        workspace.write_bytes(".plugin-workspace/.specs/auth/invalid.md", &[0xff, 0xfe]);
+        workspace.create_dir(".plugin-workspace/.specs/auth/unreadable.md");
+        let spec_directory = workspace.root.join(".plugin-workspace/.specs/auth");
+        let reader = FilesystemMarkdownReader::new();
+        let standard = discovered_artifact(
+            SpecArtifactIdentity::Standard(SpecFileKey::Tasks),
+            "tasks.md",
+            Some(SpecFileKey::Tasks),
+        );
+        let direct = discovered_artifact(
+            SpecArtifactIdentity::direct_markdown("notes.md")
+                .expect("direct artifact identity should be valid"),
+            "notes.md",
+            None,
+        );
+
+        let standard_document = reader
+            .read_artifact(&spec_directory, &standard)
+            .expect("standard artifact should be readable");
+        assert_eq!(&standard.identity, standard_document.identity());
+        assert_eq!(Some(SpecFileKey::Tasks), standard_document.file_key());
+        assert_eq!(2, standard_document.blocks().len());
+
+        let direct_document = reader
+            .read_artifact(&spec_directory, &direct)
+            .expect("direct artifact should be readable");
+        assert_eq!(&direct.identity, direct_document.identity());
+        assert_eq!(None, direct_document.file_key());
+        assert!(direct_document.contents().is_empty());
+        assert!(direct_document.blocks().is_empty());
+
+        let invalid = discovered_artifact(
+            SpecArtifactIdentity::direct_markdown("invalid.md")
+                .expect("direct artifact identity should be valid"),
+            "invalid.md",
+            None,
+        );
+        assert!(matches!(
+            reader.read_artifact(&spec_directory, &invalid),
+            Err(MarkdownReadError::InvalidUtf8 { .. })
+        ));
+
+        let unreadable = discovered_artifact(
+            SpecArtifactIdentity::direct_markdown("unreadable.md")
+                .expect("direct artifact identity should be valid"),
+            "unreadable.md",
+            None,
+        );
+        assert!(matches!(
+            reader.read_artifact(&spec_directory, &unreadable),
+            Err(MarkdownReadError::UnreadableFile { .. })
+        ));
+    }
     #[test]
     fn reads_configured_markdown_file_as_utf8() {
         let workspace = TestWorkspace::new("valid");
