@@ -1,5 +1,14 @@
 //! Spec document and tree domain concepts.
 
+mod artifact;
+mod progress;
+
+pub use artifact::{ArtifactEvaluation, ArtifactPresence, SpecArtifactFact, SpecArtifactIdentity};
+pub use progress::{
+    artifact_progress, progress_for_present_tasks, progress_without_tasks, ArtifactEvaluationError,
+    SpecProgress, TaskCounts,
+};
+
 use std::{fmt, str::FromStr};
 
 use thiserror::Error;
@@ -553,6 +562,7 @@ pub struct SpecNode {
     files: Vec<SpecFile>,
     children: Vec<SpecNode>,
     present_document_count: usize,
+    progress: SpecProgress,
     descendant_spec_count: usize,
 }
 
@@ -595,6 +605,18 @@ impl SpecNode {
         children: Vec<SpecNode>,
     ) -> Result<Self, SpecDomainError> {
         Self::from_identity(identity, label, SpecNodeKind::Spec, files, children)
+    }
+
+    pub fn spec_with_progress(
+        identity: SpecNodeIdentity,
+        label: impl Into<String>,
+        files: Vec<SpecFile>,
+        children: Vec<SpecNode>,
+        progress: SpecProgress,
+    ) -> Result<Self, SpecDomainError> {
+        let mut node = Self::from_identity(identity, label, SpecNodeKind::Spec, files, children)?;
+        node.progress = progress;
+        Ok(node)
     }
 
     pub fn category(
@@ -687,6 +709,7 @@ impl SpecNode {
             files,
             children,
             present_document_count,
+            progress: SpecProgress::NotStarted,
             descendant_spec_count,
         })
     }
@@ -705,6 +728,9 @@ impl SpecNode {
 
     pub fn source_group_id(&self) -> &str {
         &self.source_group_id
+    }
+    pub fn progress(&self) -> SpecProgress {
+        self.progress
     }
 
     pub fn relative_id(&self) -> &str {
@@ -744,6 +770,10 @@ pub enum SpecDomainError {
     UnsupportedFileKey { key: String },
     #[error("file name is required for spec file key: {key}")]
     MissingFileName { key: SpecFileKey },
+    #[error("invalid direct Markdown artifact file name: {file_name}")]
+    InvalidArtifactFileName { file_name: String },
+    #[error("completed task count {completed} cannot exceed total task count {total}")]
+    InvalidTaskCounts { completed: usize, total: usize },
     #[error("spec node id is required")]
     MissingNodeId,
     #[error("spec source group id is required")]
