@@ -3,6 +3,7 @@ import {
   type SpecFile as SpecFileType,
   type SpecFileKey,
 } from "@/features/specs/domain/specFile";
+import type { SpecProgress } from "@/features/specs/domain/specArtifact";
 
 export type SpecNodeKind = "spec" | "category" | "archive" | "sourceGroup";
 
@@ -19,6 +20,7 @@ export type SpecNode = Readonly<{
   relativeId: string;
   presentDocumentCount: number;
   descendantSpecCount: number;
+  progress?: SpecProgress;
   files: readonly SpecFileType[];
   children: readonly SpecNode[];
 }>;
@@ -72,9 +74,7 @@ export const SpecNode = {
 
   /** Returns the semantic count rendered for this node kind. */
   count: (node: SpecNode): number =>
-    node.kind === "spec"
-      ? node.presentDocumentCount
-      : node.descendantSpecCount,
+    node.kind === "spec" ? node.presentDocumentCount : node.descendantSpecCount,
 
   /** Returns the first node, or null when empty. */
   first: (nodes: readonly SpecNode[]): SpecNode | null => nodes[0] ?? null,
