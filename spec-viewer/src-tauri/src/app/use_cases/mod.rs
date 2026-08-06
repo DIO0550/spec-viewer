@@ -2,7 +2,11 @@
 
 pub mod comments;
 pub mod repository_diff;
+pub mod spec_bundle;
 pub mod spec_diff;
+pub use spec_bundle::{
+    LoadSpecBundleResult, SpecArtifactBundleItem, SpecArtifactError, SpecArtifactErrorCode,
+};
 
 use std::path::Path;
 
@@ -419,7 +423,8 @@ impl From<MarkdownReadResult> for ReadSpecFileResult {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AppMarkdownDocument {
-    key: SpecFileKey,
+    identity: crate::domain::spec::SpecArtifactIdentity,
+    file_key: Option<SpecFileKey>,
     format: SpecDocumentFormat,
     path: String,
     contents: String,
@@ -453,8 +458,27 @@ impl AppMarkdownDocument {
         contents: impl Into<String>,
         blocks: Vec<MarkdownBlock>,
     ) -> Self {
+        Self::with_artifact(
+            crate::domain::spec::SpecArtifactIdentity::Standard(key),
+            Some(key),
+            format,
+            path,
+            contents,
+            blocks,
+        )
+    }
+
+    pub fn with_artifact(
+        identity: crate::domain::spec::SpecArtifactIdentity,
+        file_key: Option<SpecFileKey>,
+        format: SpecDocumentFormat,
+        path: impl Into<String>,
+        contents: impl Into<String>,
+        blocks: Vec<MarkdownBlock>,
+    ) -> Self {
         Self {
-            key,
+            identity,
+            file_key,
             format,
             path: path.into(),
             contents: contents.into(),
@@ -463,7 +487,16 @@ impl AppMarkdownDocument {
     }
 
     pub fn key(&self) -> SpecFileKey {
-        self.key
+        self.file_key
+            .expect("legacy app Markdown documents should have a fixed file key")
+    }
+
+    pub fn identity(&self) -> &crate::domain::spec::SpecArtifactIdentity {
+        &self.identity
+    }
+
+    pub fn file_key(&self) -> Option<SpecFileKey> {
+        self.file_key
     }
 
     pub fn format(&self) -> SpecDocumentFormat {
@@ -485,8 +518,9 @@ impl AppMarkdownDocument {
 
 impl From<MarkdownDocument> for AppMarkdownDocument {
     fn from(document: MarkdownDocument) -> Self {
-        Self::with_format_and_blocks(
-            document.key(),
+        Self::with_artifact(
+            document.identity().clone(),
+            document.file_key(),
             document.format(),
             document.path().to_string(),
             document.contents().to_string(),
@@ -494,7 +528,6 @@ impl From<MarkdownDocument> for AppMarkdownDocument {
         )
     }
 }
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AppMissingMarkdownFile {
     key: SpecFileKey,
