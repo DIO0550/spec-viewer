@@ -1,5 +1,4 @@
 # Specs navigation
-
 Specs 列は、ワークスペース内の仕様を spec、category、Archive、secondary source group の階層として表示します。primary source group のルート見出しは表示せず、active node の後に Archive、その後に secondary source group を表示します。各 source group 内では active node を名前順に並べ、Archive を末尾に固定します。
 
 ## Node と件数
@@ -29,3 +28,45 @@ Archive が失敗した場合は元の tree と選択を維持し、該当行の
 - Home / End: 最初 / 最後の表示 node へ移動
 - Enter / Space: Spec を選択、または container を展開・折りたたみ
 - Tab: Specs tree の外にある次の control へ移動
+
+## Artifact tabs と identity
+
+Spec を選択すると、frontend は `load_spec_bundle` を1回呼び、表示対象の
+artifact 本文・Markdown block metadata・progress・error metadata をまとめて
+取得します。tab 切替は取得済み bundle 内の同期 projection だけで行い、
+`read_spec_file` を追加呼び出ししません。
+
+Artifact の順序は、存在する standard artifact を effective config 順、その後に
+spec directory 直下の追加 `.md` を安定した名前順で並べます。nested file、
+hidden file、symlink、設定済み standard file と同じ実体は追加対象にしません。
+
+- Standard identity: `{ kind: "standard", fileKey }`
+- Direct identity: `{ kind: "directMarkdown", fileName }`
+
+Identity 比較は大文字小文字を含む完全一致です。同じ spec の reload では成功・
+Unknown を問わず現在 identity を維持し、消失した場合だけ先頭へ fallback
+します。別 spec へ移動した場合は新しい bundle の先頭を選びます。direct
+artifact の `fileKey` は `null` であり、閲覧専用です。comments、watch、
+diff など既存 fixed-key 機能には standard artifact だけを渡します。
+
+## Progress
+
+各 tab は色だけでなく、次の visible text と ARIA label で状態を示します。
+
+| 状態 | 表示 | 判定 |
+| --- | --- | --- |
+| `notStarted` | Not started | 空文書、または tasks の checkbox が0件 |
+| `inProgress` | In progress | tasks の完了数が0より多く総数より少ない |
+| `completed` | Completed | tasks の全checkbox完了、またはnon-task非空 |
+| `unknown` | Unknown | read/parse error、またはtasks不在時の集約error |
+
+Spec tree の progress は tasks-first です。tasks が存在する場合はtasksだけで
+判定し、存在しない場合はconfigured non-taskを集約して
+Unknown > In progress > Completed > Not started の優先順位を適用します。
+
+## Empty・partial error・互換境界
+
+Artifact 0件はcommand成功のempty bundleであり、bundle-level failureとは区別
+します。1件のread/parse失敗はbundle全体を失敗させず、そのartifactだけを
+`contents: null`、`blocks: []`、`progress: unknown` として返します。
+成功tabは引き続き閲覧でき、Unknown panelからbundleをreloadできます。
