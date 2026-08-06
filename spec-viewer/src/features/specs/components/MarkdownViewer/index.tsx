@@ -182,6 +182,7 @@ type Props = Readonly<{
   state: SpecDocumentState;
   selectedSpecLabel: string | null;
   selectedFileLabel: string | null;
+  selectedFileTypeLabel?: string;
   comments?: readonly Comment[];
   activeCommentId?: CommentId | null;
   isAddingComment?: boolean;
@@ -208,6 +209,7 @@ export function MarkdownViewer({
   state,
   selectedSpecLabel,
   selectedFileLabel,
+  selectedFileTypeLabel,
   comments = emptyComments,
   activeCommentId = null,
   isAddingComment = false,
@@ -585,6 +587,7 @@ export function MarkdownViewer({
       <MarkdownViewerHeader
         selectedSpecLabel={selectedSpecLabel}
         selectedFileLabel={selectedFileLabel}
+        fileTypeLabel={selectedFileTypeLabel}
         fileKey={state.fileKey}
         path={state.document.path}
         htmlZoom={
