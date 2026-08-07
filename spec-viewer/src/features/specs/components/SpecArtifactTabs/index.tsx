@@ -56,6 +56,16 @@ export function SpecArtifactTabs({
     );
   }
 
+  if (artifacts.length === 0 && isSelectionDisabled) {
+    return (
+      <EmptyState
+        title="Loading…"
+        description="Loading spec artifacts…"
+        variant="inline"
+      />
+    );
+  }
+
   if (artifacts.length === 0) {
     return (
       <EmptyState
