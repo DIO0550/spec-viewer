@@ -1,11 +1,11 @@
 import {
-  Hunk,
   type DiffLineSource,
   type FileChange,
   type FileChangeStatus,
   type FileContent,
   type FileDiff,
   type FileReview,
+  Hunk,
   type StructuredDiff,
   type SubmoduleState,
 } from "@/features/diff/domain/fileDiff";
@@ -67,7 +67,15 @@ const decodeRecord = (
   return value;
 };
 
-/** Decodes an unknown value as a string at the specified validation path. */
+/**
+ * Decodes an unknown value as a string at the specified validation path.
+ *
+ * @param value - Candidate value to validate.
+ * @param path - Validation path used in the error message.
+ * @param raw - Complete raw response, attached to the thrown error for debugging.
+ * @returns The value, unchanged, when it is a string.
+ * @throws InvalidSpecDiffResponseError when the value is not a string.
+ */
 const decodeString = (value: unknown, path: string, raw: unknown): string => {
   if (typeof value !== "string") {
     throw invalid(path, "a string", "received a non-string value", raw);
@@ -150,7 +158,15 @@ const decodeSimilarity = (
   return similarity;
 };
 
-/** Decodes an unknown value as a boolean. */
+/**
+ * Decodes an unknown value as a boolean.
+ *
+ * @param value - Candidate value to validate.
+ * @param path - Validation path used in the error message.
+ * @param raw - Complete raw response, attached to the thrown error for debugging.
+ * @returns The value, unchanged, when it is a boolean.
+ * @throws InvalidSpecDiffResponseError when the value is not a boolean.
+ */
 const decodeBoolean = (value: unknown, path: string, raw: unknown): boolean => {
   if (typeof value !== "boolean") {
     throw invalid(path, "a boolean", `received ${String(value)}`, raw);

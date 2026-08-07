@@ -59,9 +59,13 @@ type LayoutContextValue = Readonly<{
   worktreesCloseRef: RefObject<HTMLButtonElement | null>;
   commentsOpenRef: RefObject<HTMLButtonElement | null>;
   commentsCloseRef: RefObject<HTMLButtonElement | null>;
+  /** Closes the worktrees panel and restores focus to its open control. */
   closeWorktrees: () => void;
+  /** Opens the worktrees panel and moves focus to its close control. */
   openWorktrees: () => void;
+  /** Closes the comments panel and restores focus to its open control. */
   closeComments: () => void;
+  /** Opens the comments panel and moves focus to its close control. */
   openComments: () => void;
 }>;
 
@@ -457,6 +461,13 @@ function PanelResizeHandle(props: PanelResizeHandleProps): ReactElement {
   );
 }
 
+/**
+ * Merges caller-provided panel control overrides with defaults, clamping width to the resolved bounds.
+ *
+ * @param control - Caller-provided panel control, or undefined to use only defaults.
+ * @param defaults - Fallback isOpen, width, minWidth, and maxWidth used for any unset fields.
+ * @returns A fully resolved panel control with isOpen, width, minWidth, and maxWidth always defined.
+ */
 function resolvePanelControl(
   control: WorkspaceLayoutPanelControl | undefined,
   defaults: Required<
@@ -484,6 +495,10 @@ function resolvePanelControl(
   };
 }
 
+/**
+ * @returns The shared layout context provided by the nearest WorkspaceLayout.Root.
+ * @throws Error when called outside a WorkspaceLayout.Root subtree.
+ */
 function useLayout(): LayoutContextValue {
   const value = useContext(LayoutContext);
   if (value === null) {

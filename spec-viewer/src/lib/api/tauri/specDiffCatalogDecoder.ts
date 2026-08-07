@@ -8,16 +8,42 @@ import {
 import { isRecord } from "./isRecord";
 import { InvalidSpecDiffResponseError } from "./specDiffDecoder";
 
+/**
+ * Raises a stable response-validation error for the given path.
+ *
+ * @param message - Path-and-constraint validation message.
+ * @param raw - Complete raw IPC response.
+ * @returns Never returns; always throws.
+ * @throws InvalidSpecDiffResponseError with the given message and raw payload.
+ */
 const fail = (message: string, raw: unknown): never => {
   throw new InvalidSpecDiffResponseError(message, raw);
 };
 
+/**
+ * Decodes an unknown value as a string at the specified validation path.
+ *
+ * @param value - Candidate value to validate.
+ * @param path - Validation path used in the error message.
+ * @param raw - Complete raw response, attached to the thrown error for debugging.
+ * @returns The value, unchanged, when it is a string.
+ * @throws InvalidSpecDiffResponseError when the value is not a string.
+ */
 const stringAt = (value: unknown, path: string, raw: unknown): string => {
   return typeof value === "string"
     ? value
     : fail(`${path} must be a string`, raw);
 };
 
+/**
+ * Decodes a Git object ID in SHA-1 or SHA-256 form.
+ *
+ * @param value - Candidate value to validate.
+ * @param path - Validation path used in the error message.
+ * @param raw - Complete raw response, attached to the thrown error for debugging.
+ * @returns The value, unchanged, when it is a lowercase 40 or 64 character Git object id.
+ * @throws InvalidSpecDiffResponseError when the value is not a string, or is not a valid Git object id.
+ */
 const shaAt = (value: unknown, path: string, raw: unknown): string => {
   const sha = stringAt(value, path, raw);
   return /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(sha)
@@ -25,6 +51,15 @@ const shaAt = (value: unknown, path: string, raw: unknown): string => {
     : fail(`${path} must be a 40 or 64 character lowercase Git object id`, raw);
 };
 
+/**
+ * Decodes a comparison revision discriminated union from an unknown value.
+ *
+ * @param value - Candidate value to validate.
+ * @param path - Validation path used in error messages.
+ * @param raw - Complete raw response, attached to any thrown error for debugging.
+ * @returns The decoded comparison revision (head, commit, local branch, or tag).
+ * @throws InvalidSpecDiffResponseError when the value's shape or `kind` is unsupported or invalid.
+ */
 const revisionAt = (
   value: unknown,
   path: string,
@@ -54,6 +89,13 @@ const revisionAt = (
   return fail(`${path}.kind is unsupported`, raw);
 };
 
+/**
+ * Decodes the `list_spec_diff_revisions` response into revision options.
+ *
+ * @param value - Unknown IPC response.
+ * @returns The validated readonly list of revision options.
+ * @throws InvalidSpecDiffResponseError when the response violates the contract.
+ */
 export function decodeRevisionOptions(
   value: unknown,
 ): readonly RevisionOption[] {
@@ -79,6 +121,13 @@ export function decodeRevisionOptions(
   });
 }
 
+/**
+ * Decodes the `list_spec_file_commit_history` response into commit history.
+ *
+ * @param value - Unknown IPC response.
+ * @returns The validated commit history, including the truncation flag.
+ * @throws InvalidSpecDiffResponseError when the response violates the contract.
+ */
 export function decodeSpecFileHistory(value: unknown): SpecFileHistory {
   if (!isRecord(value) || !Array.isArray(value.items)) {
     return fail("response.items must be an array", value);

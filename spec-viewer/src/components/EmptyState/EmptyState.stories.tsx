@@ -30,6 +30,7 @@ export const Default: Story = {};
 export const AllProps: Story = {
   args: {
     variant: "inline",
+    /** Call-to-action button rendered alongside the empty state message. */
     action: (
       <button className="button button--primary" type="button">
         Open workspace

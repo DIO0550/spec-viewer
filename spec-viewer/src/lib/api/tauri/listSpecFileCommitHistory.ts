@@ -15,6 +15,13 @@ export type ListSpecFileCommitHistoryRequest = Readonly<{
   path: string;
 }>;
 
+/**
+ * Invokes the `list_spec_file_commit_history` Tauri command and decodes its response.
+ *
+ * @param request - Workspace path, spec id, file key, and target path to fetch commit history for.
+ * @returns The validated commit history for the given spec file.
+ * @throws The command error (transport failure or `invalidResponse` when the payload violates the contract).
+ */
 export async function listSpecFileCommitHistory(
   request: ListSpecFileCommitHistoryRequest,
 ): Promise<SpecFileHistory> {

@@ -6,6 +6,7 @@ import {
   useState,
 } from "react";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
+import { WorkspaceLayout } from "@/components/WorkspaceLayout";
 import {
   type Comment,
   CommentSidebar,
@@ -31,10 +32,9 @@ import type {
 import { MarkdownViewer, SpecTabs, SpecTree } from "@/features/specs";
 import {
   WorkspaceSidebarSection,
-  WorktreeTree,
   WorkspaceToolbar,
+  WorktreeTree,
 } from "@/features/workspace";
-import { WorkspaceLayout } from "@/components/WorkspaceLayout";
 
 const workspacePath = "/workspace/pdfmod";
 const worktreeName = "agent-a1b3ff42";
@@ -660,6 +660,11 @@ const readySpecsArgs = createShellArgs({
 export const Default: Story = {
   name: "Specs",
   args: readySpecsArgs,
+  /**
+   * Verifies the Specs list scrolls only vertically and the shell stays accessible.
+   *
+   * @param context - Storybook play context with the rendered canvas element.
+   */
   play: async ({ canvasElement }) => {
     await verifySpecsListHasNoHorizontalOverflow(canvasElement);
     await verifyShellAccessibility(canvasElement);
@@ -705,6 +710,12 @@ export const Viewport761: Story = {
 export const Viewport760: Story = {
   args: readySpecsArgs,
   parameters: { viewport: { defaultViewport: "width-760" } },
+  /**
+   * Exercises the narrow-viewport flow: close the worktrees panel, close comments,
+   * switch to Specs, and reopen comments.
+   *
+   * @param context - Storybook play context with the rendered canvas element.
+   */
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
@@ -747,6 +758,11 @@ export const WorktreeOpen: Story = {
     workspaceStatusPath: worktreeWorkspacePath,
     activeWorktreeName: worktreeName,
   }),
+  /**
+   * Verifies the worktree Story keeps its path and selected tree row aligned.
+   *
+   * @param context - Storybook play context with the rendered canvas element.
+   */
   play: async ({ canvasElement }) => {
     await verifyWorktreeOpenStory(canvasElement);
   },
@@ -763,6 +779,11 @@ export const WorktreeDiff: Story = {
     activeWorktreeName: worktreeName,
     viewMode: "diff",
   }),
+  /**
+   * Verifies the worktree Story keeps its path and selected tree row aligned.
+   *
+   * @param context - Storybook play context with the rendered canvas element.
+   */
   play: async ({ canvasElement }) => {
     await verifyWorktreeOpenStory(canvasElement);
   },
