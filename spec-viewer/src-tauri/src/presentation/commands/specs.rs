@@ -491,12 +491,12 @@ impl From<SpecArtifactBundleItem> for SpecArtifactResponse {
             label,
             format,
             progress,
+            path,
             document,
             error,
         } = item;
-        let (path, contents, blocks) = match document {
+        let (contents, blocks) = match document {
             Some(document) => (
-                document.path().to_string(),
                 Some(document.contents().to_string()),
                 document
                     .blocks()
@@ -504,7 +504,7 @@ impl From<SpecArtifactBundleItem> for SpecArtifactResponse {
                     .map(MarkdownBlockResponse::from)
                     .collect(),
             ),
-            None => (file_name.clone(), None, Vec::new()),
+            None => (None, Vec::new()),
         };
 
         Self {
@@ -750,6 +750,7 @@ mod tests {
                     label: "Tasks".to_string(),
                     format: SpecDocumentFormat::Markdown,
                     progress: SpecProgress::Completed,
+                    path: "/workspace/001-feature/tasks.md".to_string(),
                     document: Some(AppMarkdownDocument::with_artifact(
                         SpecArtifactIdentity::Standard(SpecFileKey::Tasks),
                         Some(SpecFileKey::Tasks),
@@ -768,6 +769,7 @@ mod tests {
                     label: "notes.md".to_string(),
                     format: SpecDocumentFormat::Markdown,
                     progress: SpecProgress::Unknown,
+                    path: "/workspace/001-feature/notes.md".to_string(),
                     document: None,
                     error: Some(SpecArtifactError {
                         code: SpecArtifactErrorCode::MarkdownRead,
@@ -786,10 +788,20 @@ mod tests {
         assert_eq!("tasks", value["artifacts"][0]["identity"]["fileKey"]);
         assert_eq!("tasks", value["artifacts"][0]["fileKey"]);
         assert_eq!("- [x] Done", value["artifacts"][0]["contents"]);
+        assert_eq!(
+            "/workspace/001-feature/tasks.md",
+            value["artifacts"][0]["path"]
+        );
         assert_eq!("directMarkdown", value["artifacts"][1]["identity"]["kind"]);
         assert_eq!("notes.md", value["artifacts"][1]["identity"]["fileName"]);
         assert!(value["artifacts"][1]["fileKey"].is_null());
         assert!(value["artifacts"][1]["contents"].is_null());
+        // A failed read still exposes the full resolved path (matching the
+        // success-case `document.path()` format), not just the base file name.
+        assert_eq!(
+            "/workspace/001-feature/notes.md",
+            value["artifacts"][1]["path"]
+        );
         assert_eq!(0, value["artifacts"][1]["blocks"].as_array().unwrap().len());
         assert_eq!("markdownRead", value["artifacts"][1]["error"]["code"]);
         assert_eq!(

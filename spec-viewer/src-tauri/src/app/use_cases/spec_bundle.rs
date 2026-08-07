@@ -47,6 +47,10 @@ pub struct SpecArtifactBundleItem {
     pub label: String,
     pub format: SpecDocumentFormat,
     pub progress: SpecProgress,
+    /// Resolved artifact path in the same representation as
+    /// [`AppMarkdownDocument::path`], preserved even when the document fails to
+    /// load so the presentation layer can expose a stable path in both cases.
+    pub path: String,
     pub document: Option<AppMarkdownDocument>,
     pub error: Option<SpecArtifactError>,
 }
@@ -123,6 +127,12 @@ impl FilesystemAppUseCases {
         artifact: &DiscoveredSpecArtifact,
     ) -> (SpecArtifactBundleItem, SpecArtifactFact) {
         let is_tasks = artifact.file_key == Some(SpecFileKey::Tasks);
+        // Resolve the path the same way `read_artifact` does so failed reads keep
+        // the identical representation returned by `document.path()` on success.
+        let path = spec_directory
+            .join(&artifact.file_name)
+            .to_string_lossy()
+            .into_owned();
         let read_result = self.markdown_reader.read_artifact(spec_directory, artifact);
         let (evaluation, document, error) = match read_result {
             Ok(document) => {
@@ -152,6 +162,7 @@ impl FilesystemAppUseCases {
                 label: artifact.label.clone(),
                 format: artifact.format,
                 progress,
+                path,
                 document,
                 error,
             },
@@ -360,10 +371,23 @@ mod tests {
 
         assert_eq!(SpecProgress::Completed, result.progress);
         assert_eq!(2, result.artifacts.len());
-        assert!(result.artifacts[0].document.is_some());
+        let ok_artifact = &result.artifacts[0];
+        assert!(ok_artifact.document.is_some());
+        // The success case keeps the path field aligned with `document.path()`.
+        assert_eq!(
+            ok_artifact.document.as_ref().unwrap().path(),
+            ok_artifact.path,
+        );
         let broken = &result.artifacts[1];
         assert_eq!(SpecProgress::Unknown, broken.progress);
         assert!(broken.document.is_none());
+        // Even without a document, the failed artifact keeps the full resolved
+        // path (spec directory + file name), not just the base file name.
+        assert_ne!(broken.file_name, broken.path);
+        assert!(broken.path.ends_with("001-feature/broken.md"));
+        assert!(broken
+            .path
+            .starts_with(workspace.root.to_string_lossy().as_ref()));
         let error = broken
             .error
             .as_ref()
