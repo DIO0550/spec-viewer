@@ -88,21 +88,40 @@ impl FilesystemMarkdownReader {
             blocks,
         ))
     }
+
+    /// Reads only the UTF-8 contents of an artifact, skipping Markdown block
+    /// extraction. Progress evaluation for spec tree scans needs the raw text
+    /// (empty/non-empty and task checkbox counts) but not parsed blocks, so this
+    /// avoids the extra `parse_markdown_blocks` cost per file.
+    pub fn read_artifact_contents(
+        &self,
+        spec_directory: &Path,
+        artifact: &DiscoveredSpecArtifact,
+    ) -> Result<String, MarkdownReadError> {
+        validate_discovered_artifact(artifact)?;
+
+        let file_path = spec_directory.join(&artifact.file_name);
+        read_document_contents(&file_path)
+    }
+}
+
+fn read_document_contents(file_path: &Path) -> Result<String, MarkdownReadError> {
+    let contents = fs::read(file_path).map_err(|source| MarkdownReadError::UnreadableFile {
+        path: display_path(file_path),
+        source,
+    })?;
+
+    String::from_utf8(contents).map_err(|source| MarkdownReadError::InvalidUtf8 {
+        path: display_path(file_path),
+        source,
+    })
 }
 
 fn read_existing_document(
     file_path: &Path,
     format: SpecDocumentFormat,
 ) -> Result<(String, Vec<MarkdownBlock>), MarkdownReadError> {
-    let contents = fs::read(file_path).map_err(|source| MarkdownReadError::UnreadableFile {
-        path: display_path(file_path),
-        source,
-    })?;
-    let contents =
-        String::from_utf8(contents).map_err(|source| MarkdownReadError::InvalidUtf8 {
-            path: display_path(file_path),
-            source,
-        })?;
+    let contents = read_document_contents(file_path)?;
     let blocks = match format {
         SpecDocumentFormat::Markdown => {
             parse_markdown_blocks(&contents).map_err(|source| MarkdownReadError::ParseMarkdown {

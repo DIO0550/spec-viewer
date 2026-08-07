@@ -27,7 +27,7 @@ use crate::domain::{
     },
 };
 use crate::infrastructure::markdown::parser::count_task_markers;
-use crate::infrastructure::markdown::{FilesystemMarkdownReader, MarkdownReadError};
+use crate::infrastructure::markdown::FilesystemMarkdownReader;
 use crate::infrastructure::persistence::config::{ConfigLoadError, WorkspaceConfigLoader};
 use crate::infrastructure::spec_file_resolution::{
     spec_file_path_candidates, SpecFilePathCandidate,
@@ -1008,18 +1008,15 @@ fn calculate_spec_progress(
                     ArtifactEvaluation::Empty,
                 );
             };
-            let evaluation = match reader.read_artifact(directory, artifact) {
-                Ok(document) if document.contents().trim().is_empty() => ArtifactEvaluation::Empty,
-                Ok(document) if is_tasks => match count_task_markers(document.contents()) {
+            let evaluation = match reader.read_artifact_contents(directory, artifact) {
+                Ok(contents) if contents.trim().is_empty() => ArtifactEvaluation::Empty,
+                Ok(contents) if is_tasks => match count_task_markers(&contents) {
                     Ok(task_counts) => ArtifactEvaluation::NonEmpty {
                         task_counts: Some(task_counts),
                     },
                     Err(_) => ArtifactEvaluation::Error(ArtifactEvaluationError::Parse),
                 },
                 Ok(_) => ArtifactEvaluation::NonEmpty { task_counts: None },
-                Err(MarkdownReadError::ParseMarkdown { .. }) => {
-                    ArtifactEvaluation::Error(ArtifactEvaluationError::Parse)
-                }
                 Err(_) => ArtifactEvaluation::Error(ArtifactEvaluationError::Read),
             };
 
