@@ -20,6 +20,11 @@ export type WorktreeTreeProps = Readonly<{
   nodes: readonly WorktreeTreeNode[];
   selectedWorktreeId: WorktreeId | null;
   emptyLabel: string;
+  /**
+   * Notifies the parent that a worktree row was activated (click or keyboard).
+   *
+   * @param worktreeId - Id of the selected worktree.
+   */
   onSelectWorktree: (worktreeId: WorktreeId) => void;
 }>;
 
@@ -168,8 +173,24 @@ type TreeLevelProps = Readonly<{
   selectedWorktreeId: WorktreeId | null;
   tabbableId: string | null | undefined;
   itemRefs: Map<string, HTMLButtonElement>;
+  /**
+   * Toggles the expanded/collapsed state of a category node.
+   *
+   * @param id - Id of the category to toggle.
+   */
   onToggleCategory: (id: string) => void;
+  /**
+   * Notifies that a worktree row was activated.
+   *
+   * @param id - Id of the selected worktree.
+   */
   onSelectWorktree: (id: WorktreeId) => void;
+  /**
+   * Handles keyboard navigation for a tree item.
+   *
+   * @param event - The originating keyboard event.
+   * @param visibleNode - The tree item that received the event.
+   */
   onKeyDown: (
     event: KeyboardEvent<HTMLButtonElement>,
     visibleNode: VisibleNode,
@@ -177,10 +198,11 @@ type TreeLevelProps = Readonly<{
 }>;
 
 /**
- * Recursively renders one ARIA tree level.
+ * Recursively renders one ARIA tree level, including nested groups for
+ * expanded categories.
  *
- *  props - Nodes and shared tree interaction controls.
- *  Tree items with nested groups for expanded categories.
+ * @param props - Nodes and shared tree interaction controls.
+ * @returns The tree items for this level and its expanded descendants.
  */
 function TreeLevel(props: TreeLevelProps): ReactElement {
   const {
@@ -270,6 +292,16 @@ function TreeLevel(props: TreeLevelProps): ReactElement {
   );
 }
 
+/**
+ * Flattens the tree into the ordered list of currently visible rows,
+ * descending into a category's children only while it is expanded.
+ *
+ * @param nodes - Nodes at the current level.
+ * @param expandedIds - Ids of categories that are currently expanded.
+ * @param parentId - Id of the category that owns `nodes`, or `null` at the root.
+ * @param depth - Nesting depth of `nodes`, used to compute descendant depths.
+ * @returns The visible nodes in display order, each paired with its parent id and depth.
+ */
 function flattenVisibleNodes(
   nodes: readonly WorktreeTreeNode[],
   expandedIds: ReadonlySet<string>,
@@ -284,6 +316,13 @@ function flattenVisibleNodes(
   ]);
 }
 
+/**
+ * Collects the ids of every category node in the tree, including nested
+ * categories, so they can be used as the default expanded set.
+ *
+ * @param nodes - Nodes to search, recursively including their children.
+ * @returns The ids of all category nodes found.
+ */
 function listCategoryIds(
   nodes: readonly WorktreeTreeNode[],
 ): readonly string[] {
@@ -294,12 +333,25 @@ function listCategoryIds(
   );
 }
 
+/**
+ * Builds the accessible label describing a worktree row's count, for use
+ * as the count badge's `aria-label`.
+ *
+ * @param count - The row's spec or changed-file count.
+ * @returns A Japanese label naming the count kind and value.
+ */
 function formatWorktreeCountLabel(count: WorktreeRowCount): string {
   return count.kind === "spec-count"
     ? `仕様 ${count.value}件`
     : `変更ファイル ${count.value}件`;
 }
 
+/**
+ * Formats a worktree row's count as the short text shown in its badge.
+ *
+ * @param count - The row's spec or changed-file count.
+ * @returns The count value as a string.
+ */
 function formatWorktreeCount(count: WorktreeRowCount): string {
   return String(count.value);
 }

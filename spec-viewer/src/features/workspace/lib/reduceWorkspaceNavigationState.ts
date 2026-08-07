@@ -1,6 +1,6 @@
-import { createNavigationHistoryKey } from "./createNavigationHistoryKey";
 import type { WorkspaceNavigationAction } from "@/features/workspace/types/workspaceNavigationAction";
 import type { WorkspaceNavigationState } from "@/features/workspace/types/workspaceNavigationState";
+import { createNavigationHistoryKey } from "./createNavigationHistoryKey";
 
 export const initialWorkspaceNavigationState: WorkspaceNavigationState = {
   workspaceId: null,
@@ -33,6 +33,17 @@ export function reduceWorkspaceNavigationState(
   }
 }
 
+/**
+ * Reconciles navigation state with a fresh worktree data snapshot: clears
+ * the active worktree/item when the source is unavailable, otherwise keeps
+ * the current worktree if it still exists (falling back to the first one)
+ * and restores the previously selected item for that worktree/mode when
+ * still available.
+ *
+ * @param state - Current navigation state.
+ * @param source - The `sourceChanged` action's worktree source payload.
+ * @returns The reconciled navigation state.
+ */
 function reduceSourceChanged(
   state: WorkspaceNavigationState,
   source: Extract<
@@ -95,6 +106,16 @@ function reduceSourceChanged(
   };
 }
 
+/**
+ * Switches the active worktree and restores the item that was last
+ * selected for it under the current mode, if any. No-ops when no
+ * workspace is loaded yet.
+ *
+ * @param state - Current navigation state.
+ * @param worktreeId - Id of the worktree to activate.
+ * @returns The navigation state with the worktree activated, or the
+ * unchanged state when no workspace is loaded.
+ */
 function activateWorktree(
   state: WorkspaceNavigationState,
   worktreeId: NonNullable<WorkspaceNavigationState["activeWorktreeId"]>,
@@ -113,6 +134,15 @@ function activateWorktree(
   };
 }
 
+/**
+ * Switches the view mode and restores the item that was last selected for
+ * the active worktree under the new mode, if any. Clears the selected item
+ * when no workspace or worktree is active yet.
+ *
+ * @param state - Current navigation state.
+ * @param mode - The mode to switch to.
+ * @returns The navigation state with the mode changed.
+ */
 function activateMode(
   state: WorkspaceNavigationState,
   mode: WorkspaceNavigationState["mode"],
@@ -135,6 +165,15 @@ function activateMode(
   };
 }
 
+/**
+ * Records the selected item for the current worktree/mode so it can be
+ * restored on later navigation back to the same worktree and mode.
+ *
+ * @param state - Current navigation state.
+ * @param itemId - Id of the item to select, or `null` to clear the selection.
+ * @returns The navigation state with the item selected and its selection
+ * history updated when a workspace and worktree are active.
+ */
 function selectItem(
   state: WorkspaceNavigationState,
   itemId: string | null,

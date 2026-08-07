@@ -13,6 +13,7 @@ const meta: Meta<typeof CommentPopover> = {
     ),
   ],
   args: {
+    /** Default popover body used by most stories: a short note with a close action. */
     children: (
       <div style={{ display: "grid", gap: 8 }}>
         <strong>Comment details</strong>
@@ -42,6 +43,7 @@ export const AllProps: Story = {
     id: "comment-popover-example",
     "aria-label": "Comment actions",
     isDismissDisabled: true,
+    /** Body shown while dismissal is disabled, e.g. during a save. */
     children: (
       <div style={{ display: "grid", gap: 8 }}>
         <strong>Dismissal disabled</strong>

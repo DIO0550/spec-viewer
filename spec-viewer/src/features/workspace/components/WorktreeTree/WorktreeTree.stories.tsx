@@ -1,8 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, within } from "storybook/test";
-
-import { WorktreeTree } from ".";
 import type { WorktreeTreeNode } from "@/features/workspace/types/worktreeTreeNode";
+import { WorktreeTree } from ".";
 
 const specsNodes: readonly WorktreeTreeNode[] = [
   {
@@ -41,6 +40,12 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const SpecsHierarchy: Story = {
+  /**
+   * Confirms the selected worktree is marked current and that pressing
+   * End then Enter selects the last visible row.
+   *
+   * @param context - Storybook play context providing the rendered canvas element.
+   */
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const selected = canvas.getByRole("treeitem", { name: /agent-a/ });
