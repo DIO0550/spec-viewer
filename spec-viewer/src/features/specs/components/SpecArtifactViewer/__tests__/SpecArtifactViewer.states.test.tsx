@@ -76,6 +76,66 @@ test("direct Markdownを既存rendererへ接続しraw scriptを実行しない",
   result.unmount();
 });
 
+test("direct Markdownはコメント追加UIを無効化しread-only表示にする", () => {
+  const result = renderViewer();
+
+  expect(
+    result.container.querySelector(".markdown-block-comment-button"),
+  ).toBeNull();
+  result.unmount();
+});
+
+const standardArtifact: SpecArtifact = {
+  identity: { kind: "standard", fileKey: "impl" },
+  fileKey: "impl",
+  fileName: "implementation-plan.md",
+  label: "Implementation Plan",
+  format: "markdown",
+  progress: "inProgress",
+  path: ".plugin-workspace/.specs/081/implementation-plan.md",
+  contents: "# Plan\n\nA commentable paragraph.",
+  blocks: [
+    {
+      blockType: "heading",
+      blockIndex: 0,
+      textHash: "sha256:plan",
+      textSnippet: "Plan",
+      sourceRange: null,
+    },
+    {
+      blockType: "paragraph",
+      blockIndex: 1,
+      textHash: "sha256:paragraph",
+      textSnippet: "A commentable paragraph.",
+      sourceRange: null,
+    },
+  ],
+  error: null,
+};
+
+test("standard artifactはコメント追加UIを表示する", () => {
+  const result = renderViewer(
+    SpecBundleState.loaded({ ...bundle, artifacts: [standardArtifact] }),
+    standardArtifact,
+  );
+
+  expect(
+    result.container.querySelector(".markdown-block-comment-button"),
+  ).not.toBeNull();
+  expect(result.container.textContent).toContain("Standard artifact");
+  result.unmount();
+});
+
+test("statusパネルはtab UIと関連付くtabpanel roleを維持する", () => {
+  const loading = renderViewer(SpecBundleState.loading(), null);
+  const loadingPanel = loading.container.querySelector(
+    "#markdown-viewer-panel",
+  );
+  expect(loadingPanel?.getAttribute("role")).toBe("tabpanel");
+  expect(loadingPanel?.getAttribute("tabindex")).toBe("-1");
+  loading.unmount();
+});
+
 test("zero artifactsをbundle errorと区別する", () => {
   const result = renderViewer(
     SpecBundleState.loaded({
