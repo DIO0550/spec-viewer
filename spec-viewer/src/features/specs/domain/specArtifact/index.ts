@@ -14,6 +14,12 @@ type ArtifactIdentityCarrier = Readonly<{
   identity: SpecArtifactIdentity;
 }>;
 
+/**
+ * Compares two artifact identities for structural equality.
+ * @param left - First identity to compare.
+ * @param right - Second identity to compare.
+ * @returns True when both identities share the same kind and matching kind-specific fields.
+ */
 function identitiesEqual(
   left: SpecArtifactIdentity,
   right: SpecArtifactIdentity,
@@ -34,19 +40,33 @@ function identitiesEqual(
 }
 
 export const SpecArtifact = {
-  /** Returns a deterministic, kind-qualified identity for rendering keys. */
+  /**
+   * Returns a deterministic, kind-qualified identity for rendering keys.
+   * @param identity - Artifact identity to encode.
+   * @returns `standard:<fileKey>` for standard artifacts, or `directMarkdown:<fileName>` otherwise.
+   */
   stableId(identity: SpecArtifactIdentity): string {
     return identity.kind === "standard"
       ? `standard:${identity.fileKey}`
       : `directMarkdown:${identity.fileName}`;
   },
 
-  /** Returns the legacy fixed file key only for standard artifacts. */
+  /**
+   * Returns the legacy fixed file key only for standard artifacts.
+   * @param identity - Artifact identity to read.
+   * @returns The file key for standard artifacts, or null for direct-markdown artifacts.
+   */
   fixedFileKey(identity: SpecArtifactIdentity): SpecFileKey | null {
     return identity.kind === "standard" ? identity.fileKey : null;
   },
 
-  /** Preserves an exact identity when present, otherwise selects the first item. */
+  /**
+   * Preserves an exact identity when present, otherwise selects the first item.
+   * @param artifacts - Artifact list to search, in display order.
+   * @param preferred - Previously selected identity to preserve, or null when none.
+   * @returns The preferred identity when it still exists among `artifacts`, otherwise the first
+   * artifact's identity, or null when `artifacts` is empty.
+   */
   preserveOrFirst(
     artifacts: readonly ArtifactIdentityCarrier[],
     preferred: SpecArtifactIdentity | null,

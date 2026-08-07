@@ -1,13 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { fn } from "storybook/test";
-
-import { SpecArtifactTabs } from ".";
 import {
   SpecArtifact as SpecArtifactDomain,
   type SpecArtifactIdentity,
 } from "@/features/specs/domain/specArtifact";
 import type { SpecArtifact } from "@/features/specs/types/spec";
+import { SpecArtifactTabs } from ".";
 
 const artifacts: readonly SpecArtifact[] = [
   {
@@ -87,11 +86,13 @@ export const ZeroArtifacts: Story = {
   args: { artifacts: [], selectedIdentity: null },
 };
 
+/** Demonstrates selection fallback when the currently selected artifact disappears on reload. */
 function ReloadSelectionFallbackDemo() {
   const [visibleArtifacts, setVisibleArtifacts] = useState(artifacts);
   const [selectedIdentity, setSelectedIdentity] =
     useState<SpecArtifactIdentity | null>(artifacts[2]!.identity);
 
+  /** Simulates a reload that removes the currently selected artifact from the list. */
   const simulateReload = (): void => {
     const selectedId =
       selectedIdentity === null
@@ -124,5 +125,6 @@ function ReloadSelectionFallbackDemo() {
 }
 
 export const ReloadSelectionFallback: Story = {
+  /** Renders the interactive selection-fallback demo component. */
   render: () => <ReloadSelectionFallbackDemo />,
 };

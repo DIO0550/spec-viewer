@@ -1,18 +1,21 @@
 import { type KeyboardEvent, useRef } from "react";
-
+import { EmptyState } from "@/components/EmptyState";
 import { SpecArtifact } from "@/features/specs/domain/specArtifact";
 import type {
-  SpecArtifact as SpecArtifactType,
   SpecArtifactIdentity,
+  SpecArtifact as SpecArtifactType,
   SpecProgress,
 } from "@/features/specs/types/spec";
-import { EmptyState } from "@/components/EmptyState";
 
 type Props = Readonly<{
   specLabel: string | null;
   artifacts: readonly SpecArtifactType[];
   selectedIdentity: SpecArtifactIdentity | null;
   isSelectionDisabled?: boolean;
+  /**
+   * Selects an artifact tab.
+   * @param identity - The identity of the artifact to select.
+   */
   onSelectArtifact: (identity: SpecArtifactIdentity) => void;
 }>;
 
@@ -23,6 +26,10 @@ const progressLabels: Readonly<Record<SpecProgress, string>> = {
   unknown: "Unknown",
 };
 
+/**
+ * @param progress - The artifact's progress state.
+ * @returns Human-readable label text for the given progress state.
+ */
 export function progressLabel(progress: SpecProgress): string {
   return progressLabels[progress];
 }

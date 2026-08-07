@@ -123,6 +123,10 @@ export default meta;
 type Story = StoryObj<typeof SpecTree>;
 
 export const Hierarchy: Story = {
+  /**
+   * Expands the archive, triggers archiving, and verifies roving focus reaches the last item.
+   * @param context - Story play context, including test args and the rendered canvas element.
+   */
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getByRole("tree")).toBeInTheDocument();
@@ -166,6 +170,10 @@ export const FailureRetry: Story = {
   args: {
     archiveFailure: { specId: activeSpec.id, error: archiveError },
   },
+  /**
+   * Verifies the archive failure banner renders and the retry button triggers the handler.
+   * @param context - Story play context, including test args and the rendered canvas element.
+   */
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getByRole("alert")).toHaveTextContent(
@@ -240,6 +248,10 @@ export const EdgeCases: Story = {
 };
 
 export const Modified: Story = {
+  /**
+   * Renders the tree with a "modified" change badge on the active spec.
+   * @param args - The story's resolved component args.
+   */
   render: (args) => (
     <SpecTree
       {...args}
@@ -249,6 +261,10 @@ export const Modified: Story = {
 };
 
 export const UntrackedPriority: Story = {
+  /**
+   * Renders the tree with an "untracked" change badge on the active spec.
+   * @param args - The story's resolved component args.
+   */
   render: (args) => (
     <SpecTree
       {...args}
@@ -258,5 +274,9 @@ export const UntrackedPriority: Story = {
 };
 
 export const NoChanges: Story = {
+  /**
+   * Renders the tree with no change badges applied.
+   * @param args - The story's resolved component args.
+   */
   render: (args) => <SpecTree {...args} changeBadgesBySpecId={new Map()} />,
 };

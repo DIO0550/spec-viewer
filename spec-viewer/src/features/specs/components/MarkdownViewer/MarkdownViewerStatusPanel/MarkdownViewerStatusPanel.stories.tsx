@@ -8,6 +8,11 @@ import { MarkdownViewerStatusPanel } from "./index";
 
 const workspacePath = "/workspace/spec-reviewer";
 
+/**
+ * @param contents - The document's Markdown contents, or null when unread.
+ * @param missing - Whether the underlying file is missing from disk.
+ * @returns A spec document fixture for status panel stories.
+ */
 function createDocument(
   contents: string | null,
   missing = false,
@@ -81,6 +86,10 @@ const meta: Meta<typeof MarkdownViewerStatusPanel> = {
   parameters: {
     layout: "fullscreen",
   },
+  /**
+   * Renders the status panel with the story's resolved args and a fresh panel ref.
+   * @param args - The story's resolved component args.
+   */
   render: (args) => (
     <MarkdownViewerStatusPanel {...args} panelRef={createRef<HTMLElement>()} />
   ),

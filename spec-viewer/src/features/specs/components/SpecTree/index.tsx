@@ -22,18 +22,18 @@ import { EmptyState } from "@/components/EmptyState";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { SpecNode as SpecNodeDomain } from "@/features/specs/domain/specNode";
 import {
+  createSpecTreePresentationState,
   pruneSpecTreeExpansion,
   revealSpecTreeDestination,
+  type SpecTreePresentationState,
   specNodeIdentityKey,
   toggleSpecTreeNode,
-  createSpecTreePresentationState,
-  type SpecTreePresentationState,
 } from "@/features/specs/domain/specTreePresentation";
+import type { SpecTreeState } from "@/features/specs/hooks/useSpecs";
 import type {
   ArchiveFailure,
   ArchiveRevealState,
 } from "@/features/specs/hooks/useSpecs/types";
-import type { SpecTreeState } from "@/features/specs/hooks/useSpecs";
 import type { SpecNode, SpecNodeKind } from "@/features/specs/types/spec";
 import { uiText } from "@/utils/uiText";
 
@@ -49,10 +49,15 @@ type Props = Readonly<{
   archiveFailure?: ArchiveFailure | null;
   archiveReveal?: ArchiveRevealState | null;
   isLoading?: boolean;
+  /**
+   * Selects a spec node for viewing.
+   * @param specId - The identifier of the spec to select.
+   */
   onSelectSpec: (specId: string) => void;
   onArchiveSpec?: (specId: string) => void;
   onRetryArchive?: () => void;
   onRefreshArchiveReveal?: () => void;
+  /** Reloads the spec tree from the workspace. */
   onReload: () => void;
 }>;
 
@@ -286,14 +291,30 @@ type SpecTreeItemProps = Readonly<{
   archivingSpecId: string | null;
   archiveFailure: ArchiveFailure | null;
   isActionDisabled: boolean;
+  /**
+   * Selects a spec node for viewing.
+   * @param specId - The identifier of the spec to select.
+   */
   onSelectSpec: (specId: string) => void;
   onArchiveSpec?: (specId: string) => void;
   onRetryArchive?: () => void;
+  /**
+   * Toggles the expanded state of a tree node.
+   * @param node - The node whose expansion should be toggled.
+   */
   onToggle: (node: SpecNode) => void;
+  /**
+   * Registers or clears the row button element used for focus management.
+   * @param key - The identity key of the row.
+   * @param row - The row's button element, or null when unmounting.
+   */
   registerRow: (key: string, row: HTMLButtonElement | null) => void;
 }>;
 
-/** Renders one semantic node and its visible descendants. */
+/**
+ * Renders one semantic node and its visible descendants.
+ * @param props - The tree item's node, presentation state, and action handlers.
+ */
 function SpecTreeItem(props: SpecTreeItemProps) {
   const {
     node,
@@ -473,7 +494,11 @@ function SpecTreeItem(props: SpecTreeItemProps) {
   );
 }
 
-/** Renders the icon assigned to a semantic node kind. */
+/**
+ * Renders the icon assigned to a semantic node kind.
+ * @param kind - The semantic kind of the tree node.
+ * @returns The icon element for the given node kind.
+ */
 function NodeKindIcon({ kind }: Readonly<{ kind: SpecNodeKind }>): ReactNode {
   const iconProps = {
     className: "spec-tree__item-icon",
@@ -498,7 +523,9 @@ type TreeItemKeyDownOptions = Readonly<{
   hasChildren: boolean;
   isExpanded: boolean;
   isSpec: boolean;
+  /** Activates the tree item (selects a spec or toggles a container). */
   onActivate: () => void;
+  /** Toggles the expanded state of the tree item. */
   onToggleExpanded: () => void;
 }>;
 
@@ -637,7 +664,11 @@ function findPathById(
   return [];
 }
 
-/** Reads the ARIA tree level with a safe root fallback. */
+/**
+ * Reads the ARIA tree level with a safe root fallback.
+ * @param item - The tree item button element, or undefined when out of range.
+ * @returns The item's aria-level, or 1 when missing or non-numeric.
+ */
 function readTreeItemLevel(item: HTMLButtonElement | undefined): number {
   if (item === undefined) {
     return 1;

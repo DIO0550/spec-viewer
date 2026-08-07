@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
-import { SpecDocumentState as SpecDocumentStateFactory } from "@/features/specs/domain/specDocumentState";
 import { OperationId } from "@/features/specs/domain/operationId";
 import { resolveSpecFileSelection } from "@/features/specs/domain/resolveSpecFileSelection";
+import { SpecBundleState } from "@/features/specs/domain/specBundleState";
+import type { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
+import { SpecDocumentState as SpecDocumentStateFactory } from "@/features/specs/domain/specDocumentState";
 import { SpecFeatureError } from "@/features/specs/domain/specError";
 import { SpecNode as SpecNodeDomain } from "@/features/specs/domain/specNode";
 import { SpecTree as SpecTreeDomain } from "@/features/specs/domain/specTree";
-import { SpecBundleState } from "@/features/specs/domain/specBundleState";
 import type { SpecTreeState } from "@/features/specs/domain/specTreeState";
 import { SpecTreeState as SpecTreeStateFactory } from "@/features/specs/domain/specTreeState";
 import {
@@ -766,6 +766,7 @@ export function useSpecsLegacy(options: UseSpecsOptions): UseSpecsResult {
   );
   const actions: SpecsActions = useMemo(
     () => ({
+      /** No-op: the legacy hook has no in-memory bundle to select artifacts from without IPC. */
       selectArtifact: () => undefined,
       archiveSpec,
       retryArchiveSpec,

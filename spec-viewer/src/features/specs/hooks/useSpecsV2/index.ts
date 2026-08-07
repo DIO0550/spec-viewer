@@ -68,10 +68,21 @@ const specFileKeys: readonly SpecFileKey[] = [
   "quiz-impl",
 ];
 
+/**
+ * Checks whether a raw string is one of the known standard file keys.
+ * @param value - Raw string to check.
+ * @returns True when `value` matches one of `specFileKeys`.
+ */
 function isSpecFileKey(value: string): value is SpecFileKey {
   return specFileKeys.some((key) => key === value);
 }
 
+/**
+ * Finds the artifact matching an identity within an already-loaded bundle.
+ * @param bundle - Bundle whose artifacts are searched.
+ * @param identity - Identity to match, or null when nothing is selected.
+ * @returns The matching artifact, or null when `identity` is null or no artifact matches.
+ */
 function selectedArtifact(
   bundle: SpecBundle,
   identity: SpecArtifactIdentity | null,
@@ -88,6 +99,14 @@ function selectedArtifact(
   );
 }
 
+/**
+ * Projects a selected bundle artifact into document state without an IPC read.
+ * @param workspacePath - Workspace containing the spec.
+ * @param specId - ID of the spec that owns the artifact.
+ * @param artifact - Selected artifact, or null when nothing is selected.
+ * @returns An idle document state when the artifact is missing, has no file key, or failed to
+ * load; otherwise a loaded document state built from the artifact's contents.
+ */
 function projectDocumentState(
   workspacePath: string,
   specId: string,
@@ -115,6 +134,12 @@ function projectDocumentState(
   });
 }
 
+/**
+ * Resolves which spec node should be active after a tree load.
+ * @param tree - Freshly loaded spec tree.
+ * @param preferredSpecId - Previously selected spec id to keep when still valid, or null.
+ * @returns The preferred spec when it exists and is openable, otherwise the tree's default spec.
+ */
 function resolveSpec(tree: SpecTreeType, preferredSpecId: string | null) {
   if (preferredSpecId !== null) {
     const preferred = SpecTree.findNode(tree, preferredSpecId);
@@ -126,7 +151,11 @@ function resolveSpec(tree: SpecTreeType, preferredSpecId: string | null) {
   return SpecTree.defaultNode(tree);
 }
 
-/** Bundle-oriented spec state machine. Artifact tab selection is IPC-free. */
+/**
+ * Bundle-oriented spec state machine. Artifact tab selection is IPC-free.
+ * @param options - Hook options including the workspace path and selection callback.
+ * @returns Spec tree, bundle, and document state plus actions for a workspace.
+ */
 export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
   const { onSelectionChange, workspacePath } = options;
   const [state, setState] = useState<SpecsState>(initialState);

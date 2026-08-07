@@ -842,7 +842,10 @@ function MarkdownDocument({
   );
 }
 
-/** @returns A sequential block indexer scoped to one Markdown render. */
+/**
+ * @returns A sequential block indexer scoped to one Markdown render.
+ * @throws {Error} When a rendered Markdown block has no matching backend block metadata.
+ */
 function createBlockIndexer({
   blocks,
   highlights,
@@ -1021,6 +1024,7 @@ function createResolvedAnchorDisplayStatus({
 /**
  * @param block - The rendered block element to read the hash from.
  * @returns The required backend text hash for a rendered block.
+ * @throws {Error} When the rendered block is missing its backend text hash.
  */
 function readRenderedBlockTextHash(block: HTMLElement): string {
   const textHash = block.dataset.textHash;

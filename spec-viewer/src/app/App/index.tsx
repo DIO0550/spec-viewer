@@ -18,6 +18,8 @@ import {
   SpecViewSelectionProvider,
   useSpecViewSelection,
 } from "@/app/context/specViewSelection";
+import { WorkspaceLayout } from "@/components";
+import { WorkspacePath } from "@/domains/workspacePath";
 import {
   CommentOperationFailedState,
   CommentOperationSavingState,
@@ -48,26 +50,24 @@ import {
   useSidebarPreference,
 } from "@/features/sidebar";
 import {
+  SpecArtifactTabs,
   SpecArtifactViewer,
   type SpecSelectionChange,
-  SpecArtifactTabs,
   SpecTree,
   useSpecs,
 } from "@/features/specs";
 import {
   OpenWorkspaceEmptyState,
-  type WorkspaceWorktreesLoadState,
-  WorktreeTree,
-  useWorkspaceNavigationState,
   useWorkspaceLoader,
+  useWorkspaceNavigationState,
   useWorkspaceSidebarSectionPreference,
   WorkspaceDropOverlay,
   WorkspaceProvider,
   WorkspaceSidebarSection,
   WorkspaceToolbar,
+  type WorkspaceWorktreesLoadState,
+  WorktreeTree,
 } from "@/features/workspace";
-import { WorkspacePath } from "@/domains/workspacePath";
-import { WorkspaceLayout } from "@/components";
 
 const WorktreesLoadState: WorkspaceWorktreesLoadState = {
   status: "unavailable",
@@ -581,11 +581,25 @@ function SpecViewAppContent(): ReactElement {
   );
 }
 
+/**
+ * Maps the spec diff workspace's loading state and current selection into
+ * the `DiffWorkspace` view state, short-circuiting to `noSelection` before
+ * a spec/file is selected and threading `onRetry` through every failure
+ * branch.
+ *
+ * @param state - Current spec diff workspace load state.
+ * @param selectedSpecId - Id of the currently selected spec, or `null`.
+ * @param selectedFileKey - Key of the currently selected file, or `null`.
+ * @param selectedPath - Target path of the currently selected change, or `null`.
+ * @param onRetry - Callback to retry loading after a failure.
+ * @returns The `DiffWorkspace` view state matching the current selection and load state.
+ */
 function createDiffWorkspaceState(
   state: SpecDiffWorkspaceState,
   selectedSpecId: string | null,
   selectedFileKey: string | null,
   selectedPath: string | null,
+  /** Retries loading the diff after a failure. */
   onRetry: () => Promise<boolean>,
 ): DiffWorkspaceState {
   if (selectedSpecId === null || selectedFileKey === null) {

@@ -1,8 +1,8 @@
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import { DiffWorkspace, ViewModeToolbar } from "@/features/diff";
 import type { ViewMode } from "@/features/workspace/types/viewMode";
-import type { Meta, StoryObj } from "@storybook/react-vite";
 import App from ".";
 
 const meta = {
@@ -27,7 +27,14 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {};
 
 export const DiffIntegration: Story = {
+  /** Renders the standalone fixture that toggles between Specs and Diff modes. */
   render: () => <DiffIntegrationFixture />,
+  /**
+   * Verifies the comment sidebar is shown in Specs mode, hidden in Diff
+   * mode, and shown again when switching back to Specs.
+   *
+   * @param context - Storybook play context providing the rendered canvas element.
+   */
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
@@ -47,6 +54,11 @@ export const DiffIntegration: Story = {
   },
 };
 
+/**
+ * Standalone fixture pairing `ViewModeToolbar` with a Diff/Specs body so
+ * the comment sidebar's mode-dependent visibility can be exercised in
+ * isolation from the full `App` tree.
+ */
 function DiffIntegrationFixture() {
   const [mode, setMode] = useState<ViewMode>("specs");
   return (

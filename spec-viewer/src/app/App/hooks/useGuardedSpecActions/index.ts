@@ -27,7 +27,12 @@ export type UseGuardedSpecActionsResult = Readonly<{
   reloadSpecsFromTree: () => void;
   /** Selects a file from the tabs. @param fileKey - Key of the file to select. */
   selectFileFromTabs: (fileKey: SpecFileKey) => void;
-  /** Selects one logical file from Changes. */
+  /**
+   * Selects one logical file from Changes.
+   *
+   * @param specId - Id of the spec the file belongs to.
+   * @param fileKey - Key of the file to select.
+   */
   selectSpecFileFromChanges: (specId: string, fileKey: string) => void;
   /** Reloads the document from the viewer. */
   reloadDocumentFromViewer: () => void;
