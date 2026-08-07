@@ -22,6 +22,13 @@ export type SpecFileHistory = Readonly<{
   truncated: boolean;
 }>;
 
+/**
+ * Extracts the comparable, kind-specific value used for revision equality.
+ *
+ * @param revision - The comparison revision to extract a value from.
+ * @returns "head" for HEAD, the SHA for a commit, or the ref name for a
+ *   branch/tag.
+ */
 const valueOf = (revision: ComparisonRevision): string => {
   if (revision.kind === "head") {
     return "head";

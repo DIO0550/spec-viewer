@@ -23,8 +23,15 @@ export type RevisionSelectorProps = Readonly<{
   errorMessage: string | null;
   optionsErrorMessage?: string | null;
   historyErrorMessage?: string | null;
+  /**
+   * Notifies the caller that a new comparison revision was selected.
+   *
+   * @param value - The newly selected comparison revision.
+   */
   onChange: (value: ComparisonRevisionValue) => void;
+  /** Requests a retry of the failed revision options fetch. */
   onRetryOptions: () => void;
+  /** Requests a retry of the failed file history fetch. */
   onRetryHistory: () => void;
 }>;
 
@@ -35,6 +42,15 @@ type SelectableRevision = Readonly<{
   revision: ComparisonRevisionValue;
 }>;
 
+/**
+ * Resolves the human-readable label for the currently selected revision.
+ *
+ * @param value - The currently selected comparison revision.
+ * @param options - Known revision options (HEAD, branches, tags).
+ * @param history - File-scoped commit history used to label ad-hoc commits.
+ * @returns The label to display in the trigger button, falling back to a
+ *   shortened SHA or raw name when no catalog entry matches.
+ */
 const labelForValue = (
   value: ComparisonRevisionValue,
   options: readonly RevisionOption[],
@@ -60,6 +76,14 @@ const labelForValue = (
   return value.name;
 };
 
+/**
+ * Merges the revision catalog and file commit history into one flat,
+ * groupable list for the listbox.
+ *
+ * @param options - Known revision options (HEAD, branches, tags).
+ * @param history - File-scoped commit history to list as selectable commits.
+ * @returns The combined selectable revisions, catalog entries first.
+ */
 const selectableRevisions = (
   options: readonly RevisionOption[],
   history: SpecFileHistory,
@@ -88,6 +112,15 @@ const selectableRevisions = (
   return [...catalog, ...commits];
 };
 
+/**
+ * Accessible combobox-style selector for the Diff comparison revision,
+ * combining a static catalog (HEAD, branches, tags) with file-scoped commit
+ * history.
+ *
+ * @param props - Selected revision, catalogs, their load status and the
+ *   change/retry callbacks.
+ * @returns The revision selector trigger and, when open, its listbox.
+ */
 export function RevisionSelector(props: RevisionSelectorProps): ReactElement {
   const {
     value,
@@ -116,10 +149,15 @@ export function RevisionSelector(props: RevisionSelectorProps): ReactElement {
     [entries],
   );
 
+  /** Closes the listbox and returns focus to the trigger button. */
   const close = (): void => {
     setIsOpen(false);
     triggerRef.current?.focus();
   };
+  /**
+   * Opens the listbox, moving the active option to the currently selected
+   * revision (or the first entry when none matches), then focuses it.
+   */
   const open = (): void => {
     const selectedIndex = entries.findIndex((entry) =>
       ComparisonRevision.equals(entry.revision, value),
@@ -128,10 +166,21 @@ export function RevisionSelector(props: RevisionSelectorProps): ReactElement {
     setIsOpen(true);
     queueMicrotask(() => listboxRef.current?.focus());
   };
+  /**
+   * Commits the chosen revision and closes the listbox.
+   *
+   * @param entry - The selectable revision the user picked.
+   */
   const select = (entry: SelectableRevision): void => {
     onChange(entry.revision);
     close();
   };
+  /**
+   * Handles roving-focus keyboard navigation within the open listbox
+   * (Escape to close, Arrow keys to move, Enter/Space to select).
+   *
+   * @param event - The keyboard event dispatched on the listbox.
+   */
   const handleListKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
     if (entries.length === 0) {
       return;

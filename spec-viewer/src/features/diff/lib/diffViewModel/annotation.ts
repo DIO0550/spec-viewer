@@ -24,6 +24,13 @@ export function createAnnotationRow(
   };
 }
 
+/**
+ * Determines which side an end-of-file annotation belongs to, based on the kind of the line
+ * that immediately preceded it in the hunk.
+ *
+ * @param previousKind - The kind of the line preceding the annotation, or null if it is first.
+ * @returns `"old"` when the preceding line was removed, `"new"` when it was added, otherwise `"both"`.
+ */
 function resolveAnnotationSide(
   previousKind: DiffLineKind | null,
 ): "old" | "new" | "both" {

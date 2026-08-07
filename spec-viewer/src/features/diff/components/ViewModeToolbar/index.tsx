@@ -16,6 +16,11 @@ export type ViewModeToolbarProps = Readonly<{
   activeItemLabel: string;
   diffAvailability?: ViewModeDiffAvailability;
   modeControls?: Readonly<Partial<Record<ViewMode, ReactNode>>>;
+  /**
+   * Notifies the caller that the active view mode should change.
+   *
+   * @param mode - The newly selected, available view mode.
+   */
   onModeChange: (mode: ViewMode) => void;
 }>;
 
