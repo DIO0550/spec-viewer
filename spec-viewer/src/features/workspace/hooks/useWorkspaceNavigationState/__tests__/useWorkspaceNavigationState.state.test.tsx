@@ -76,6 +76,16 @@ type HookResult = Readonly<{
 }>;
 
 /**
+ * Signals that the probe component never captured a hook result.
+ *
+ * @throws Always throws to surface an unrendered hook as a test failure.
+ * @returns Never returns; the call site treats it as a nullish fallback.
+ */
+function raiseHookNotRendered(): never {
+  throw new Error("Hook result was not rendered");
+}
+
+/**
  * Renders the navigation hook with a mutable result holder.
  *
  * @param source - Initial worktree source.
@@ -100,11 +110,7 @@ function renderHook(source: WorkspaceWorktreesLoadState): HookResult {
 
   return {
     get current() {
-      if (holder.current === null) {
-        throw new Error("Hook result was not rendered");
-      }
-
-      return holder.current;
+      return holder.current ?? raiseHookNotRendered();
     },
     unmount: () => {
       act(() => {
