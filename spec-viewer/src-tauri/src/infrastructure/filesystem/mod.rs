@@ -344,6 +344,16 @@ pub fn archive_spec_directory(
         });
     }
 
+    // Serialize the whole read-validate-move sequence per source group. The
+    // tree scan below reads the specs directory, so it must run under the same
+    // lock as the move; otherwise a concurrent archive in the same source group
+    // can mutate the directory mid-scan and surface a spurious ReadDirectory
+    // error.
+    let lock = archive_source_group_lock(layout, &archive_paths.source_group_id)?;
+    let _guard = lock.lock().map_err(|_| SpecArchiveError::ArchiveLock {
+        source_group_id: archive_paths.source_group_id.clone(),
+    })?;
+
     let relative_id = display_path(&archive_paths.relative_spec_path);
     let tree = FilesystemSpecTreeScanner::new()
         .scan(layout, config)
@@ -378,10 +388,6 @@ pub fn archive_spec_directory(
         });
     }
 
-    let lock = archive_source_group_lock(layout, &archive_paths.source_group_id)?;
-    let _guard = lock.lock().map_err(|_| SpecArchiveError::ArchiveLock {
-        source_group_id: archive_paths.source_group_id.clone(),
-    })?;
     let archive_root = archive_paths.source_root.join(SPEC_ARCHIVE_DIRECTORY);
     fs::create_dir_all(&archive_root).map_err(|source| {
         SpecArchiveError::CreateArchiveDirectory {
