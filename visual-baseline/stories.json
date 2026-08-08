@@ -550,6 +550,51 @@
     "name": "Missing"
   },
   {
+    "id": "features-specs-components-specartifacttabs--all-progress-states",
+    "title": "features/specs/components/SpecArtifactTabs",
+    "name": "All Progress States"
+  },
+  {
+    "id": "features-specs-components-specartifacttabs--reload-selection-fallback",
+    "title": "features/specs/components/SpecArtifactTabs",
+    "name": "Reload Selection Fallback"
+  },
+  {
+    "id": "features-specs-components-specartifacttabs--zero-artifacts",
+    "title": "features/specs/components/SpecArtifactTabs",
+    "name": "Zero Artifacts"
+  },
+  {
+    "id": "features-specs-components-specartifactviewer--default",
+    "title": "features/specs/components/SpecArtifactViewer",
+    "name": "Default"
+  },
+  {
+    "id": "features-specs-components-specartifactviewer--empty-document",
+    "title": "features/specs/components/SpecArtifactViewer",
+    "name": "Empty Document"
+  },
+  {
+    "id": "features-specs-components-specartifactviewer--loading",
+    "title": "features/specs/components/SpecArtifactViewer",
+    "name": "Loading"
+  },
+  {
+    "id": "features-specs-components-specartifactviewer--long-markdown-with-wide-table-and-code",
+    "title": "features/specs/components/SpecArtifactViewer",
+    "name": "Long Markdown With Wide Table And Code"
+  },
+  {
+    "id": "features-specs-components-specartifactviewer--partial-read-error",
+    "title": "features/specs/components/SpecArtifactViewer",
+    "name": "Partial Read Error"
+  },
+  {
+    "id": "features-specs-components-specartifactviewer--zero-artifacts",
+    "title": "features/specs/components/SpecArtifactViewer",
+    "name": "Zero Artifacts"
+  },
+  {
     "id": "features-specs-components-spectabs--all-props",
     "title": "features/specs/components/SpecTabs",
     "name": "All Props"
