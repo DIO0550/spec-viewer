@@ -3,6 +3,14 @@ import { expect, test } from "vitest";
 import type { DiffLineSource, FileDiff } from "@/features/diff/domain/fileDiff";
 import { Hunk } from "@/features/diff/domain/fileDiff";
 import { buildDiffViewModel } from "@/features/diff/lib/diffViewModel";
+import { createMinimalFileReviewResponse } from "@/lib/api/tauri/__tests__/repositoryDiffTestFixtures";
+import { decodeRepositoryFileReview } from "@/lib/api/tauri/repositoryDiffDecoder";
+
+test("specIdとfileKeyを持たない素のFileReviewからview modelを構築できる", () => {
+  const review = decodeRepositoryFileReview(createMinimalFileReviewResponse());
+
+  expect(buildDiffViewModel(review).status.change).toBe("added");
+});
 
 test("1 hunkのcontext・removed・addedをsource orderと行番号を保ってinline化する", () => {
   const review = createFileDiff([
