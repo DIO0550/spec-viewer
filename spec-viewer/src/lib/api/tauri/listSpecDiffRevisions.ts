@@ -3,7 +3,7 @@ import type { RevisionOption } from "@/features/diff/domain/comparisonRevision";
 import { invokeTauriCommand } from "./invokeTauriCommand";
 import { ListChangedSpecFilesCommandError } from "./listChangedSpecFiles";
 import { decodeRevisionOptions } from "./specDiffCatalogDecoder";
-import { InvalidSpecDiffResponseError } from "./specDiffDecoder";
+import { InvalidDiffResponseError } from "./diffPayloadDecoder";
 
 export const LIST_SPEC_DIFF_REVISIONS_COMMAND =
   "list_spec_diff_revisions" as const;
@@ -31,7 +31,7 @@ export async function listSpecDiffRevisions(
   try {
     return decodeRevisionOptions(response);
   } catch (error) {
-    if (error instanceof InvalidSpecDiffResponseError) {
+    if (error instanceof InvalidDiffResponseError) {
       throw {
         command: LIST_SPEC_DIFF_REVISIONS_COMMAND,
         code: "invalidResponse",

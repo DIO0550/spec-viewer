@@ -1,11 +1,11 @@
 import type { ComparisonRevision } from "@/features/diff/domain/comparisonRevision";
 
+import { InvalidDiffResponseError } from "./diffPayloadDecoder";
 import { invokeTauriCommand } from "./invokeTauriCommand";
 import { isRecord } from "./isRecord";
 import {
-  decodeChangedSpecFiles,
   type ChangedSpecFiles,
-  InvalidSpecDiffResponseError,
+  decodeChangedSpecFiles,
 } from "./specDiffDecoder";
 
 export const LIST_CHANGED_SPEC_FILES_COMMAND =
@@ -136,7 +136,7 @@ export const ListChangedSpecFilesCommandError = {
    * @returns A command-local invalidResponse error.
    */
   invalidResponse(
-    error: InvalidSpecDiffResponseError,
+    error: InvalidDiffResponseError,
   ): ListChangedSpecFilesCommandError {
     return {
       command: LIST_CHANGED_SPEC_FILES_COMMAND,
@@ -207,7 +207,7 @@ export async function listChangedSpecFiles(
   try {
     return decodeChangedSpecFiles(response);
   } catch (error) {
-    if (error instanceof InvalidSpecDiffResponseError) {
+    if (error instanceof InvalidDiffResponseError) {
       throw ListChangedSpecFilesCommandError.invalidResponse(error);
     }
     throw error;

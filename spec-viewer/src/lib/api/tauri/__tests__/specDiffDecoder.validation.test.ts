@@ -1,9 +1,7 @@
 import { expect, test } from "vitest";
 
-import {
-  decodeSpecFileDiff,
-  InvalidSpecDiffResponseError,
-} from "@/lib/api/tauri/specDiffDecoder";
+import { InvalidDiffResponseError } from "@/lib/api/tauri/diffPayloadDecoder";
+import { decodeSpecFileDiff } from "@/lib/api/tauri/specDiffDecoder";
 
 import { createMinimalDetailResponse } from "./specDiffTestFixtures";
 
@@ -107,7 +105,5 @@ test.each([
       raw: payload,
     }),
   );
-  expect(() => decodeSpecFileDiff(payload)).toThrow(
-    InvalidSpecDiffResponseError,
-  );
+  expect(() => decodeSpecFileDiff(payload)).toThrow(InvalidDiffResponseError);
 });

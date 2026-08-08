@@ -14,6 +14,7 @@ export { archiveSpec } from "./archiveSpec";
 export type { CommentCommands } from "./commentCommands";
 export { commentCommands } from "./commentCommands";
 export { deleteComment } from "./deleteComment";
+export { InvalidDiffResponseError } from "./diffPayloadDecoder";
 export { exportComments } from "./exportComments";
 export { generateLlmPrompt } from "./generateLlmPrompt";
 export type {
@@ -27,7 +28,6 @@ export {
   GetSpecFileDiffCommandError,
   getSpecFileDiff,
 } from "./getSpecFileDiff";
-export { listComments } from "./listComments";
 export type {
   ListChangedSpecFilesCommandContract,
   ListChangedSpecFilesCommandErrorCode,
@@ -40,6 +40,7 @@ export {
   ListChangedSpecFilesCommandError,
   listChangedSpecFiles,
 } from "./listChangedSpecFiles";
+export { listComments } from "./listComments";
 export type { ListSpecDiffRevisionsRequest } from "./listSpecDiffRevisions";
 export {
   LIST_SPEC_DIFF_REVISIONS_COMMAND,
@@ -51,7 +52,6 @@ export {
   listSpecFileCommitHistory,
 } from "./listSpecFileCommitHistory";
 export { listSpecs } from "./listSpecs";
-export { loadWorkspace } from "./loadWorkspace";
 export type {
   LoadSpecBundleCommandContract,
   LoadSpecBundleCommandErrorCode,
@@ -63,6 +63,7 @@ export {
   LoadSpecBundleCommandError,
   loadSpecBundle,
 } from "./loadSpecBundle";
+export { loadWorkspace } from "./loadWorkspace";
 export { readSpecFile } from "./readSpecFile";
 export { reopenComment } from "./reopenComment";
 export { resolveComment } from "./resolveComment";

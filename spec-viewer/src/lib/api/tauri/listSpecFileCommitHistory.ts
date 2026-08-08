@@ -3,7 +3,7 @@ import type { SpecFileHistory } from "@/features/diff/domain/comparisonRevision"
 import { invokeTauriCommand } from "./invokeTauriCommand";
 import { ListChangedSpecFilesCommandError } from "./listChangedSpecFiles";
 import { decodeSpecFileHistory } from "./specDiffCatalogDecoder";
-import { InvalidSpecDiffResponseError } from "./specDiffDecoder";
+import { InvalidDiffResponseError } from "./diffPayloadDecoder";
 
 export const LIST_SPEC_FILE_COMMIT_HISTORY_COMMAND =
   "list_spec_file_commit_history" as const;
@@ -36,7 +36,7 @@ export async function listSpecFileCommitHistory(
   try {
     return decodeSpecFileHistory(response);
   } catch (error) {
-    if (error instanceof InvalidSpecDiffResponseError) {
+    if (error instanceof InvalidDiffResponseError) {
       throw {
         command: LIST_SPEC_FILE_COMMIT_HISTORY_COMMAND,
         code: "invalidResponse",

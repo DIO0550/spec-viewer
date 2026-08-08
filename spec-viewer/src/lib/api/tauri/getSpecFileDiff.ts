@@ -1,15 +1,13 @@
 import type { FileDiff } from "@/features/diff/domain/fileDiff";
 
+import { InvalidDiffResponseError } from "./diffPayloadDecoder";
 import { invokeTauriCommand } from "./invokeTauriCommand";
 import { isRecord } from "./isRecord";
 import {
   ListChangedSpecFilesCommandError,
   type SpecDiffBackendErrorCode,
 } from "./listChangedSpecFiles";
-import {
-  decodeSpecFileDiff,
-  InvalidSpecDiffResponseError,
-} from "./specDiffDecoder";
+import { decodeSpecFileDiff } from "./specDiffDecoder";
 
 export const GET_SPEC_FILE_DIFF_COMMAND = "get_spec_file_diff" as const;
 
@@ -90,7 +88,7 @@ export const GetSpecFileDiffCommandError = {
    * @returns A command-local invalidResponse error.
    */
   invalidResponse(
-    error: InvalidSpecDiffResponseError,
+    error: InvalidDiffResponseError,
   ): GetSpecFileDiffCommandError {
     return {
       command: GET_SPEC_FILE_DIFF_COMMAND,
@@ -156,7 +154,7 @@ export async function getSpecFileDiff(
   try {
     return decodeSpecFileDiff(response);
   } catch (error) {
-    if (error instanceof InvalidSpecDiffResponseError) {
+    if (error instanceof InvalidDiffResponseError) {
       throw GetSpecFileDiffCommandError.invalidResponse(error);
     }
     throw error;
