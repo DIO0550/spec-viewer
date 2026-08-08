@@ -182,6 +182,7 @@ type Props = Readonly<{
   state: SpecDocumentState;
   selectedSpecLabel: string | null;
   selectedFileLabel: string | null;
+  selectedFileTypeLabel?: string;
   comments?: readonly Comment[];
   activeCommentId?: CommentId | null;
   isAddingComment?: boolean;
@@ -189,6 +190,12 @@ type Props = Readonly<{
   isUpdatingComment?: boolean;
   operationState?: CommentOperationState;
   isCommentScopeReady?: boolean;
+  /**
+   * Enables inline comment affordances. Set to `false` for read-only artifacts
+   * (e.g. direct Markdown) so no block/selection comment UI is shown and no
+   * comment anchor can be created against a non-commentable file.
+   */
+  commentsEnabled?: boolean;
   /** Reloads the current spec document. */
   onReload: () => void;
   onAddComment?: (input: AddCommentSubmitInput) => Promise<boolean>;
@@ -208,6 +215,7 @@ export function MarkdownViewer({
   state,
   selectedSpecLabel,
   selectedFileLabel,
+  selectedFileTypeLabel,
   comments = emptyComments,
   activeCommentId = null,
   isAddingComment = false,
@@ -215,6 +223,7 @@ export function MarkdownViewer({
   isUpdatingComment = false,
   operationState = idleCommentOperationState,
   isCommentScopeReady = true,
+  commentsEnabled = true,
   onReload,
   onAddComment,
   onUpdateComment,
@@ -246,7 +255,9 @@ export function MarkdownViewer({
   const normalizedDocumentSearchQuery =
     normalizeDocumentSearchQuery(documentSearchQuery);
   const selectionFileKey =
-    state.status === "ready" && !isHtmlDocument ? state.fileKey : null;
+    state.status === "ready" && !isHtmlDocument && commentsEnabled
+      ? state.fileKey
+      : null;
   const readyContents =
     state.status === "ready" ? state.document.contents : null;
   const htmlSearchIndex = useMemo(() => {
@@ -585,6 +596,7 @@ export function MarkdownViewer({
       <MarkdownViewerHeader
         selectedSpecLabel={selectedSpecLabel}
         selectedFileLabel={selectedFileLabel}
+        fileTypeLabel={selectedFileTypeLabel}
         fileKey={state.fileKey}
         path={state.document.path}
         htmlZoom={
@@ -635,34 +647,40 @@ export function MarkdownViewer({
             activeDocumentSearchIndex={activeDocumentSearchIndex}
             syntaxHighlightMaxBytes={SYNTAX_HIGHLIGHT_MAX_BYTES}
             onSelectComment={onSelectComment}
-            onRequestCommentEdit={requestCommentEdit}
-            onCreateBlockDraft={createBlockDraft}
+            onRequestCommentEdit={
+              commentsEnabled ? requestCommentEdit : undefined
+            }
+            onCreateBlockDraft={commentsEnabled ? createBlockDraft : undefined}
           />
-          <TextSelectionCommentButton
-            draft={selectionDraft}
-            onCreateDraft={(draft) => {
-              setActiveAnchorDraft(draft);
-              clearSelectionDraft();
-            }}
-          />
-          <CommentAnchorDraftPopover
-            draft={activeAnchorDraft}
-            isSaving={isAddingComment}
-            errorMessage={addCommentErrorMessage}
-            isScopeReady={isCommentScopeReady}
-            onSubmit={addComment}
-            onCancel={closeAnchorDraft}
-          />
-          <CommentEditPopover
-            draft={visibleEditDraft}
-            isSaving={isUpdatingComment}
-            operationState={operationState}
-            onSubmit={updateComment}
-            onResolveComment={resolveComment}
-            onReopenComment={reopenComment}
-            onDeleteComment={deleteComment}
-            onCancel={closeEditDraft}
-          />
+          {commentsEnabled ? (
+            <>
+              <TextSelectionCommentButton
+                draft={selectionDraft}
+                onCreateDraft={(draft) => {
+                  setActiveAnchorDraft(draft);
+                  clearSelectionDraft();
+                }}
+              />
+              <CommentAnchorDraftPopover
+                draft={activeAnchorDraft}
+                isSaving={isAddingComment}
+                errorMessage={addCommentErrorMessage}
+                isScopeReady={isCommentScopeReady}
+                onSubmit={addComment}
+                onCancel={closeAnchorDraft}
+              />
+              <CommentEditPopover
+                draft={visibleEditDraft}
+                isSaving={isUpdatingComment}
+                operationState={operationState}
+                onSubmit={updateComment}
+                onResolveComment={resolveComment}
+                onReopenComment={reopenComment}
+                onDeleteComment={deleteComment}
+                onCancel={closeEditDraft}
+              />
+            </>
+          ) : null}
         </>
       )}
     </MarkdownViewerPanel>
@@ -778,7 +796,7 @@ type MarkdownDocumentProps = Readonly<{
   syntaxHighlightMaxBytes: number;
   onSelectComment?: (commentId: CommentId) => void;
   onRequestCommentEdit?: RequestCommentEdit;
-  onCreateBlockDraft: CreateBlockCommentDraft;
+  onCreateBlockDraft?: CreateBlockCommentDraft;
 }>;
 
 /** @returns Rendered Markdown with stable block metadata for comments. */
@@ -839,7 +857,10 @@ function MarkdownDocument({
   );
 }
 
-/** @returns A sequential block indexer scoped to one Markdown render. */
+/**
+ * @returns A sequential block indexer scoped to one Markdown render.
+ * @throws {Error} When a rendered Markdown block has no matching backend block metadata.
+ */
 function createBlockIndexer({
   blocks,
   highlights,
@@ -1018,6 +1039,7 @@ function createResolvedAnchorDisplayStatus({
 /**
  * @param block - The rendered block element to read the hash from.
  * @returns The required backend text hash for a rendered block.
+ * @throws {Error} When the rendered block is missing its backend text hash.
  */
 function readRenderedBlockTextHash(block: HTMLElement): string {
   const textHash = block.dataset.textHash;
@@ -1489,7 +1511,7 @@ function createMarkdownComponents({
 }: Readonly<{
   blockIndexer: BlockIndexer;
   documentSearchCursor: DocumentSearchCursor | null;
-  onCreateBlockDraft: CreateBlockCommentDraft;
+  onCreateBlockDraft?: CreateBlockCommentDraft;
   onSelectComment?: (commentId: CommentId) => void;
   onRequestCommentEdit?: RequestCommentEdit;
 }>): Components {
@@ -1712,7 +1734,7 @@ function createMarkdownComponents({
 type MarkdownCommentableBlockProps = Readonly<{
   children: ReactElement;
   commentAnnotations: readonly CommentBlockAnnotation[];
-  onCreateBlockDraft: CreateBlockCommentDraft;
+  onCreateBlockDraft?: CreateBlockCommentDraft;
   onSelectComment?: (commentId: CommentId) => void;
   onRequestCommentEdit?: RequestCommentEdit;
 }>;
@@ -1736,7 +1758,7 @@ function MarkdownCommentableBlock({
       return;
     }
 
-    onCreateBlockDraft(block);
+    onCreateBlockDraft?.(block);
   };
 
   return (
@@ -1747,19 +1769,21 @@ function MarkdownCommentableBlock({
       }
     >
       {children}
-      <button
-        className="markdown-block-comment-button"
-        type="button"
-        aria-label="コメント追加"
-        title="コメント追加"
-        onMouseDown={(event) => {
-          event.preventDefault();
-        }}
-        onClick={createDraftFromRenderedBlock}
-      >
-        <MessageSquarePlus aria-hidden="true" size={14} />
-        <span>コメント追加</span>
-      </button>
+      {onCreateBlockDraft !== undefined ? (
+        <button
+          className="markdown-block-comment-button"
+          type="button"
+          aria-label="コメント追加"
+          title="コメント追加"
+          onMouseDown={(event) => {
+            event.preventDefault();
+          }}
+          onClick={createDraftFromRenderedBlock}
+        >
+          <MessageSquarePlus aria-hidden="true" size={14} />
+          <span>コメント追加</span>
+        </button>
+      ) : null}
       <CommentAnnotationStack
         annotations={commentAnnotations}
         onSelectComment={onSelectComment}
@@ -2890,7 +2914,7 @@ type ListItemProps = Omit<ComponentPropsWithoutRef<"li">, keyof BlockMetadata> &
     checked?: boolean | null;
     node?: unknown;
     commentAnnotations: readonly CommentBlockAnnotation[];
-    onCreateBlockDraft: CreateBlockCommentDraft;
+    onCreateBlockDraft?: CreateBlockCommentDraft;
     onSelectComment?: (commentId: CommentId) => void;
     onRequestCommentEdit?: RequestCommentEdit;
   }> &
@@ -2918,24 +2942,26 @@ function MarkdownListItem({
       return;
     }
 
-    onCreateBlockDraft(block);
+    onCreateBlockDraft?.(block);
   };
 
   return (
     <li {...props}>
       {children}
-      <button
-        className="markdown-block-comment-button markdown-block-comment-button--inline"
-        type="button"
-        aria-label="コメント追加"
-        title="コメント追加"
-        onMouseDown={(event) => {
-          event.preventDefault();
-        }}
-        onClick={createDraftFromListItem}
-      >
-        <MessageSquarePlus aria-hidden="true" size={14} />
-      </button>
+      {onCreateBlockDraft !== undefined ? (
+        <button
+          className="markdown-block-comment-button markdown-block-comment-button--inline"
+          type="button"
+          aria-label="コメント追加"
+          title="コメント追加"
+          onMouseDown={(event) => {
+            event.preventDefault();
+          }}
+          onClick={createDraftFromListItem}
+        >
+          <MessageSquarePlus aria-hidden="true" size={14} />
+        </button>
+      ) : null}
       <CommentAnnotationStack
         annotations={commentAnnotations}
         onSelectComment={onSelectComment}

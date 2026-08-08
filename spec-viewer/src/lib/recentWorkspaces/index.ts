@@ -113,6 +113,7 @@ export function clearStoredRecentWorkspaces(
   }
 }
 
+/** @returns The browser's `localStorage`, or null outside a browser environment. */
 function getBrowserStorage(): RecentWorkspaceStorage | null {
   if (typeof window === "undefined") {
     return null;

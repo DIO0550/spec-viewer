@@ -55,6 +55,7 @@ export const Failed: Story = {
     state: {
       status: "failed",
       message: "差分の取得に失敗しました",
+      /** No-op story stub; the story does not model a diff retry. */
       onRetry: () => undefined,
     },
   },

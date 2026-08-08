@@ -1,12 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
-
+import { WorkspaceLayout } from "@/components/WorkspaceLayout";
 import { ThemeProvider } from "@/features/preferences";
 import { SidebarPreferenceProvider } from "@/features/sidebar/hooks/useSidebarPreference";
-import { WorkspaceLayout } from "@/components/WorkspaceLayout";
 
 import { SidebarLayout } from ".";
 
+/** Fixture slot content covering every `WorkspaceLayout` region for the default story. */
 const layoutContent = (
   <>
     <WorkspaceLayout.Toolbar>
@@ -92,6 +92,7 @@ export const AllProps: Story = {
 
 export const EdgeCases: Story = {
   args: {
+    /** Minimal single-region content to check the layout with sparse slots. */
     children: (
       <WorkspaceLayout.Content>
         <div style={{ padding: 24 }}>

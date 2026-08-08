@@ -131,7 +131,11 @@ export type SpecDiffWorkspaceAction =
         message: string;
       }>);
 
-/**  The initial state before a workspace is available. */
+/**
+ * The initial state before a workspace is available.
+ *
+ * @returns The idle state with a zeroed request identity.
+ */
 export function createInitialSpecDiffWorkspaceState(): SpecDiffWorkspaceState {
   return {
     status: "idle",
@@ -258,6 +262,15 @@ export function reduceSpecDiffWorkspaceState(
   };
 }
 
+/**
+ * Derives the initial detail state for a newly resolved overview and
+ * selection pair.
+ *
+ * @param files - Changed Spec files from the current overview.
+ * @param selection - Shared Markdown and Diff logical file selection.
+ * @returns "unchanged" when nothing is selected or the selection has no
+ *   diff, otherwise "loading" for the matching file's ID.
+ */
 function createDetailState(
   files: readonly SpecChange[],
   selection: SpecDiffSelection,
@@ -270,6 +283,16 @@ function createDetailState(
   return { status: "loading", fileId: createSpecChangeId(selectedChange) };
 }
 
+/**
+ * Determines whether an incoming action's request identity still matches
+ * the state's in-flight (or last completed) request, so stale results from
+ * superseded requests are discarded.
+ *
+ * @param state - Current immutable workspace state.
+ * @param action - The request identity carried by an incoming action.
+ * @returns False for the idle state or a mismatched identity; true
+ *   otherwise.
+ */
 function isCurrentRequest(
   state: SpecDiffWorkspaceState,
   action: RequestIdentity,

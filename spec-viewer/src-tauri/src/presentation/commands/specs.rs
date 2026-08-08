@@ -9,11 +9,12 @@ use crate::{
     app::services::performance::{emit_span, start_span, PerformanceContext},
     app::use_cases::{
         AppMarkdownDocument, AppMissingMarkdownFile, AppUseCaseError, ArchiveSpecResult,
-        LoadWorkspaceResult, ReadSpecFileResult,
+        LoadSpecBundleResult, LoadWorkspaceResult, ReadSpecFileResult, SpecArtifactBundleItem,
+        SpecArtifactError,
     },
     domain::spec::{
-        MarkdownBlock, MarkdownBlockSourceRange, SpecDocumentFormat, SpecFile, SpecFileKey,
-        SpecFileStatus, SpecNode, SpecNodeKind,
+        MarkdownBlock, MarkdownBlockSourceRange, SpecArtifactIdentity, SpecDocumentFormat,
+        SpecFile, SpecFileKey, SpecFileStatus, SpecNode, SpecNodeKind,
     },
 };
 
@@ -22,6 +23,7 @@ use super::CommandState;
 type SpecCommandResult<T> = Result<T, SpecCommandError>;
 
 pub type ListSpecsCommandResult<T> = SpecCommandResult<T>;
+pub type LoadSpecBundleCommandResult<T> = SpecCommandResult<T>;
 pub type ReadSpecFileCommandResult<T> = SpecCommandResult<T>;
 pub type ArchiveSpecCommandResult<T> = SpecCommandResult<T>;
 
@@ -107,6 +109,12 @@ pub struct ReadSpecFileRequest {
     file_key: String,
     correlation_id: Option<String>,
 }
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LoadSpecBundleRequest {
+    workspace_path: String,
+    spec_id: String,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -119,6 +127,46 @@ pub struct ArchiveSpecRequest {
 #[serde(rename_all = "camelCase")]
 pub struct SpecTreeResponse {
     specs: Vec<SpecNodeResponse>,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SpecBundleResponse {
+    spec_id: String,
+    progress: String,
+    artifacts: Vec<SpecArtifactResponse>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SpecArtifactResponse {
+    identity: SpecArtifactIdentityResponse,
+    file_key: Option<String>,
+    file_name: String,
+    label: String,
+    format: String,
+    progress: String,
+    path: String,
+    contents: Option<String>,
+    blocks: Vec<MarkdownBlockResponse>,
+    error: Option<SpecArtifactErrorResponse>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum SpecArtifactIdentityResponse {
+    Standard { file_key: String },
+    DirectMarkdown { file_name: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SpecArtifactErrorResponse {
+    code: String,
+    message: String,
 }
 
 impl SpecTreeResponse {
@@ -137,6 +185,7 @@ pub struct SpecNodeResponse {
     relative_id: String,
     present_document_count: usize,
     descendant_spec_count: usize,
+    progress: String,
     files: Vec<SpecFileResponse>,
     children: Vec<SpecNodeResponse>,
 }
@@ -156,6 +205,10 @@ impl SpecNodeResponse {
 
     pub fn source_group_id(&self) -> &str {
         &self.source_group_id
+    }
+
+    pub fn progress(&self) -> &str {
+        &self.progress
     }
 
     pub fn relative_id(&self) -> &str {
@@ -341,6 +394,18 @@ pub fn list_specs(
 }
 
 #[tauri::command]
+pub fn load_spec_bundle(
+    state: State<'_, CommandState>,
+    request: LoadSpecBundleRequest,
+) -> LoadSpecBundleCommandResult<SpecBundleResponse> {
+    let workspace = load_workspace(state.use_cases(), &request.workspace_path)?;
+    let result = state
+        .use_cases()
+        .load_spec_bundle(&workspace, &request.spec_id)?;
+
+    Ok(SpecBundleResponse::from(result))
+}
+#[tauri::command]
 pub fn read_spec_file(
     state: State<'_, CommandState>,
     request: ReadSpecFileRequest,
@@ -403,6 +468,79 @@ impl From<Vec<SpecNode>> for SpecTreeResponse {
     }
 }
 
+impl From<LoadSpecBundleResult> for SpecBundleResponse {
+    fn from(result: LoadSpecBundleResult) -> Self {
+        Self {
+            spec_id: result.spec_id,
+            progress: result.progress.as_str().to_string(),
+            artifacts: result
+                .artifacts
+                .into_iter()
+                .map(SpecArtifactResponse::from)
+                .collect(),
+        }
+    }
+}
+
+impl From<SpecArtifactBundleItem> for SpecArtifactResponse {
+    fn from(item: SpecArtifactBundleItem) -> Self {
+        let SpecArtifactBundleItem {
+            identity,
+            file_key,
+            file_name,
+            label,
+            format,
+            progress,
+            path,
+            document,
+            error,
+        } = item;
+        let (contents, blocks) = match document {
+            Some(document) => (
+                Some(document.contents().to_string()),
+                document
+                    .blocks()
+                    .iter()
+                    .map(MarkdownBlockResponse::from)
+                    .collect(),
+            ),
+            None => (None, Vec::new()),
+        };
+
+        Self {
+            identity: SpecArtifactIdentityResponse::from(identity),
+            file_key: file_key.map(|key| key.as_str().to_string()),
+            file_name,
+            label,
+            format: format.as_str().to_string(),
+            progress: progress.as_str().to_string(),
+            path,
+            contents,
+            blocks,
+            error: error.map(SpecArtifactErrorResponse::from),
+        }
+    }
+}
+
+impl From<SpecArtifactIdentity> for SpecArtifactIdentityResponse {
+    fn from(identity: SpecArtifactIdentity) -> Self {
+        match identity {
+            SpecArtifactIdentity::Standard(file_key) => Self::Standard {
+                file_key: file_key.as_str().to_string(),
+            },
+            SpecArtifactIdentity::DirectMarkdown(file_name) => Self::DirectMarkdown { file_name },
+        }
+    }
+}
+
+impl From<SpecArtifactError> for SpecArtifactErrorResponse {
+    fn from(error: SpecArtifactError) -> Self {
+        Self {
+            code: error.code.as_str().to_string(),
+            message: error.message,
+        }
+    }
+}
 impl From<&SpecNode> for SpecNodeResponse {
     fn from(node: &SpecNode) -> Self {
         Self {
@@ -413,6 +551,7 @@ impl From<&SpecNode> for SpecNodeResponse {
             relative_id: node.relative_id().to_string(),
             present_document_count: node.present_document_count(),
             descendant_spec_count: node.descendant_spec_count(),
+            progress: node.progress().as_str().to_string(),
             files: node.files().iter().map(SpecFileResponse::from).collect(),
             children: node.children().iter().map(SpecNodeResponse::from).collect(),
         }
@@ -529,8 +668,12 @@ fn create_block_text_snippet(text: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app::use_cases::{
+        LoadSpecBundleResult, SpecArtifactBundleItem, SpecArtifactError, SpecArtifactErrorCode,
+    };
     use crate::domain::spec::{
         MarkdownBlockHash, MarkdownBlockIndex, MarkdownBlockText, MarkdownBlockType,
+        SpecArtifactIdentity, SpecProgress,
     };
 
     #[test]
@@ -574,6 +717,7 @@ mod tests {
         assert_eq!("auth", serialized["relativeId"]);
         assert_eq!(1, serialized["presentDocumentCount"]);
         assert_eq!(1, serialized["descendantSpecCount"]);
+        assert_eq!("notStarted", serialized["progress"]);
         assert_eq!("impl", response.specs()[0].files()[0].key());
         assert_eq!("Implementation", response.specs()[0].files()[0].label());
         assert_eq!(
@@ -593,6 +737,78 @@ mod tests {
         );
     }
 
+    #[test]
+    fn spec_bundle_response_serializes_camel_case_artifact_contract() {
+        let result = LoadSpecBundleResult {
+            spec_id: "001-feature".to_string(),
+            progress: SpecProgress::Completed,
+            artifacts: vec![
+                SpecArtifactBundleItem {
+                    identity: SpecArtifactIdentity::Standard(SpecFileKey::Tasks),
+                    file_key: Some(SpecFileKey::Tasks),
+                    file_name: "tasks.md".to_string(),
+                    label: "Tasks".to_string(),
+                    format: SpecDocumentFormat::Markdown,
+                    progress: SpecProgress::Completed,
+                    path: "/workspace/001-feature/tasks.md".to_string(),
+                    document: Some(AppMarkdownDocument::with_artifact(
+                        SpecArtifactIdentity::Standard(SpecFileKey::Tasks),
+                        Some(SpecFileKey::Tasks),
+                        SpecDocumentFormat::Markdown,
+                        "/workspace/001-feature/tasks.md",
+                        "- [x] Done",
+                        Vec::new(),
+                    )),
+                    error: None,
+                },
+                SpecArtifactBundleItem {
+                    identity: SpecArtifactIdentity::direct_markdown("notes.md")
+                        .expect("direct identity should be valid"),
+                    file_key: None,
+                    file_name: "notes.md".to_string(),
+                    label: "notes.md".to_string(),
+                    format: SpecDocumentFormat::Markdown,
+                    progress: SpecProgress::Unknown,
+                    path: "/workspace/001-feature/notes.md".to_string(),
+                    document: None,
+                    error: Some(SpecArtifactError {
+                        code: SpecArtifactErrorCode::MarkdownRead,
+                        message: "This artifact could not be read.".to_string(),
+                    }),
+                },
+            ],
+        };
+
+        let response = SpecBundleResponse::from(result);
+        let value = serde_json::to_value(response).expect("bundle response should serialize");
+
+        assert_eq!("001-feature", value["specId"]);
+        assert_eq!("completed", value["progress"]);
+        assert_eq!("standard", value["artifacts"][0]["identity"]["kind"]);
+        assert_eq!("tasks", value["artifacts"][0]["identity"]["fileKey"]);
+        assert_eq!("tasks", value["artifacts"][0]["fileKey"]);
+        assert_eq!("- [x] Done", value["artifacts"][0]["contents"]);
+        assert_eq!(
+            "/workspace/001-feature/tasks.md",
+            value["artifacts"][0]["path"]
+        );
+        assert_eq!("directMarkdown", value["artifacts"][1]["identity"]["kind"]);
+        assert_eq!("notes.md", value["artifacts"][1]["identity"]["fileName"]);
+        assert!(value["artifacts"][1]["fileKey"].is_null());
+        assert!(value["artifacts"][1]["contents"].is_null());
+        // A failed read still exposes the full resolved path (matching the
+        // success-case `document.path()` format), not just the base file name.
+        assert_eq!(
+            "/workspace/001-feature/notes.md",
+            value["artifacts"][1]["path"]
+        );
+        assert_eq!(0, value["artifacts"][1]["blocks"].as_array().unwrap().len());
+        assert_eq!("markdownRead", value["artifacts"][1]["error"]["code"]);
+        assert_eq!(
+            "This artifact could not be read.",
+            value["artifacts"][1]["error"]["message"],
+        );
+    }
     #[test]
     fn read_spec_file_response_serializes_found_document() {
         let source_range =

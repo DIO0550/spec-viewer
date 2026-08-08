@@ -10,6 +10,13 @@ export const LIST_SPEC_DIFF_REVISIONS_COMMAND =
 
 export type ListSpecDiffRevisionsRequest = Readonly<{ workspacePath: string }>;
 
+/**
+ * Invokes the `list_spec_diff_revisions` Tauri command and decodes its response.
+ *
+ * @param request - Workspace path to list comparison revision options for.
+ * @returns The validated readonly list of revision options.
+ * @throws The command error (transport failure or `invalidResponse` when the payload violates the contract).
+ */
 export async function listSpecDiffRevisions(
   request: ListSpecDiffRevisionsRequest,
 ): Promise<readonly RevisionOption[]> {

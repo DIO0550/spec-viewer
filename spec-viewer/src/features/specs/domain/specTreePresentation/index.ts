@@ -1,5 +1,11 @@
-import type { SpecNode, SpecNodeIdentity } from "@/features/specs/domain/specNode";
-import { SpecTree, type SpecTree as SpecTreeType } from "@/features/specs/domain/specTree";
+import type {
+  SpecNode,
+  SpecNodeIdentity,
+} from "@/features/specs/domain/specNode";
+import {
+  SpecTree,
+  type SpecTree as SpecTreeType,
+} from "@/features/specs/domain/specTree";
 
 export type SpecTreePresentationState = Readonly<{
   workspacePath: string | null;
@@ -14,7 +20,11 @@ export type SpecTreeRevealRequest = Readonly<{
   target: SpecNodeIdentity;
 }>;
 
-/** Creates an opaque key for one source-group-relative node identity. */
+/**
+ * Creates an opaque key for one source-group-relative node identity.
+ * @param identity - Source-group-relative node identity to encode.
+ * @returns A JSON-encoded string suitable for use as a Set/Map key.
+ */
 export function specNodeIdentityKey(identity: SpecNodeIdentity): string {
   return JSON.stringify([identity.sourceGroupId, identity.relativeId]);
 }
@@ -104,9 +114,17 @@ export function isSpecTreeNodeExpanded(
   return state.expandedNodeKeys.has(specNodeIdentityKey(identity));
 }
 
-/** Collects composite node keys once for expansion pruning. */
+/**
+ * Collects composite node keys once for expansion pruning.
+ * @param nodes - Root node list to traverse, including all descendants.
+ * @returns The set of composite identity keys for every node in the tree.
+ */
 function collectNodeKeys(nodes: readonly SpecNode[]): ReadonlySet<string> {
   const keys = new Set<string>();
+  /**
+   * Recursively adds each node's composite key to the outer `keys` set.
+   * @param candidates - Sibling nodes to visit at the current depth.
+   */
   const visit = (candidates: readonly SpecNode[]): void => {
     candidates.forEach((node) => {
       keys.add(specNodeIdentityKey(node));

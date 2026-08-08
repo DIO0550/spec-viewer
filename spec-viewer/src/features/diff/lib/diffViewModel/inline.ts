@@ -47,6 +47,13 @@ export function createInlineHunk(hunk: Hunk, hunkIndex: number): InlineHunk {
   return { rows, changeIds };
 }
 
+/**
+ * Builds the header row that introduces a hunk in the row list.
+ *
+ * @param hunkIndex - Stable index of the hunk, used for the row ID.
+ * @param header - The hunk header text (e.g. `@@ ... @@`) to display.
+ * @returns A `hunk`-kind row.
+ */
 function createHunkRow(hunkIndex: number, header: string): DiffViewRow {
   return {
     kind: "hunk",
@@ -56,6 +63,13 @@ function createHunkRow(hunkIndex: number, header: string): DiffViewRow {
   };
 }
 
+/**
+ * Builds a source-ordered inline content row for a single line, placing it on the `old` side
+ * unless it was added, and on the `new` side unless it was removed.
+ *
+ * @param input - The enclosing hunk index, the line's position, the line itself and the active change ID (or null for context).
+ * @returns A `content`-kind row with the same cell shared across `inline`, and whichever of `old`/`next` apply.
+ */
 function createInlineRow(
   input: Readonly<{
     hunkIndex: number;
@@ -76,6 +90,12 @@ function createInlineRow(
   };
 }
 
+/**
+ * Wraps a domain line in a diff cell with a single unsegmented text run.
+ *
+ * @param line - The line to wrap.
+ * @returns A cell whose single segment kind matches the line kind (`added`/`removed`), or `unchanged` for context lines.
+ */
 function createCell(line: DiffLine): DiffCell {
   const kind =
     line.kind === "added" || line.kind === "removed" ? line.kind : "unchanged";

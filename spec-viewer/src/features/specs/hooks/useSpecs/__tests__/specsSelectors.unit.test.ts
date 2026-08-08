@@ -1,3 +1,4 @@
+import { SpecBundleState } from "@/features/specs/domain/specBundleState";
 import { expect, test } from "vitest";
 
 import { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
@@ -37,9 +38,11 @@ const tree: SpecTreeData = {
 
 const baseState: SpecsState = {
   specTreeState: SpecTreeState.loaded("/workspace/spec-reviewer", tree),
+  bundleState: SpecBundleState.idle(),
   documentState: SpecDocumentState.idle("/workspace/spec-reviewer"),
   selection: {
     specId: "phase-1",
+    artifactIdentity: { kind: "standard", fileKey: "tasks" },
     fileKey: "tasks",
   },
   isLoading: false,
@@ -64,6 +67,7 @@ test("buildSpecsSelectorsは未選択やloading中にreload不可を返す", () 
     ...baseState,
     selection: {
       specId: null,
+      artifactIdentity: null,
       fileKey: null,
     },
     isLoading: true,

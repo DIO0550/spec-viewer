@@ -1,5 +1,9 @@
 //! Filesystem adapters.
+mod spec_artifacts;
 mod spec_diff_targets;
+pub use spec_artifacts::{
+    discover_spec_artifacts, DiscoveredSpecArtifact, SpecArtifactDiscoveryError,
+};
 pub use spec_diff_targets::{FilesystemSpecDiffTargetResolver, SpecDiffTargetResolutionError};
 
 use std::{
@@ -13,13 +17,17 @@ use thiserror::Error;
 
 use crate::domain::{
     spec::{
-        SpecDocumentFormat, SpecDomainError, SpecFile, SpecFileKey, SpecFileStatus, SpecNode,
-        SpecNodeIdentity, SpecNodeKind,
+        artifact_progress, progress_without_tasks, ArtifactEvaluation, ArtifactEvaluationError,
+        ArtifactPresence, SpecArtifactFact, SpecArtifactIdentity, SpecDocumentFormat,
+        SpecDomainError, SpecFile, SpecFileKey, SpecFileStatus, SpecNode, SpecNodeIdentity,
+        SpecNodeKind, SpecProgress,
     },
     workspace::{
         WorkspaceConfig, WorkspaceDomainError, WorkspaceKind, WorkspaceLayout, WorkspaceRoot,
     },
 };
+use crate::infrastructure::markdown::parser::count_task_markers;
+use crate::infrastructure::markdown::FilesystemMarkdownReader;
 use crate::infrastructure::persistence::config::{ConfigLoadError, WorkspaceConfigLoader};
 use crate::infrastructure::spec_file_resolution::{
     spec_file_path_candidates, SpecFilePathCandidate,
@@ -336,6 +344,16 @@ pub fn archive_spec_directory(
         });
     }
 
+    // Serialize the whole read-validate-move sequence per source group. The
+    // tree scan below reads the specs directory, so it must run under the same
+    // lock as the move; otherwise a concurrent archive in the same source group
+    // can mutate the directory mid-scan and surface a spurious ReadDirectory
+    // error.
+    let lock = archive_source_group_lock(layout, &archive_paths.source_group_id)?;
+    let _guard = lock.lock().map_err(|_| SpecArchiveError::ArchiveLock {
+        source_group_id: archive_paths.source_group_id.clone(),
+    })?;
+
     let relative_id = display_path(&archive_paths.relative_spec_path);
     let tree = FilesystemSpecTreeScanner::new()
         .scan(layout, config)
@@ -370,10 +388,6 @@ pub fn archive_spec_directory(
         });
     }
 
-    let lock = archive_source_group_lock(layout, &archive_paths.source_group_id)?;
-    let _guard = lock.lock().map_err(|_| SpecArchiveError::ArchiveLock {
-        source_group_id: archive_paths.source_group_id.clone(),
-    })?;
     let archive_root = archive_paths.source_root.join(SPEC_ARCHIVE_DIRECTORY);
     fs::create_dir_all(&archive_root).map_err(|source| {
         SpecArchiveError::CreateArchiveDirectory {
@@ -889,7 +903,10 @@ fn scan_directory_projection(
     })?;
 
     match kind {
-        SpecNodeKind::Spec => SpecNode::spec(identity, label, files, children),
+        SpecNodeKind::Spec => {
+            let progress = calculate_spec_progress(directory, &effective.config)?;
+            SpecNode::spec_with_progress(identity, label, files, children, progress)
+        }
         SpecNodeKind::Category => SpecNode::category(identity, label, children),
         SpecNodeKind::Archive | SpecNodeKind::SourceGroup => {
             unreachable!("spec override only accepts spec or category kinds")
@@ -968,6 +985,66 @@ fn scan_spec_files(
         })
         .collect()
 }
+fn calculate_spec_progress(
+    directory: &Path,
+    config: &WorkspaceConfig,
+) -> Result<SpecProgress, SpecTreeScanError> {
+    let artifacts = discover_spec_artifacts(directory, config).map_err(|source| {
+        SpecTreeScanError::ArtifactDiscovery {
+            path: display_path(directory),
+            source,
+        }
+    })?;
+    let reader = FilesystemMarkdownReader::new();
+    let facts = config
+        .files()
+        .iter()
+        .map(|mapping| {
+            let identity = SpecArtifactIdentity::Standard(mapping.key());
+            let is_tasks = mapping.key() == SpecFileKey::Tasks;
+            let Some(artifact) = artifacts
+                .iter()
+                .find(|artifact| artifact.identity == identity)
+            else {
+                return SpecArtifactFact::new(
+                    identity,
+                    true,
+                    is_tasks,
+                    ArtifactPresence::Missing,
+                    ArtifactEvaluation::Empty,
+                );
+            };
+            let evaluation = match reader.read_artifact_contents(directory, artifact) {
+                Ok(contents) if contents.trim().is_empty() => ArtifactEvaluation::Empty,
+                Ok(contents) if is_tasks => match count_task_markers(&contents) {
+                    Ok(task_counts) => ArtifactEvaluation::NonEmpty {
+                        task_counts: Some(task_counts),
+                    },
+                    Err(_) => ArtifactEvaluation::Error(ArtifactEvaluationError::Parse),
+                },
+                Ok(_) => ArtifactEvaluation::NonEmpty { task_counts: None },
+                Err(_) => ArtifactEvaluation::Error(ArtifactEvaluationError::Read),
+            };
+
+            SpecArtifactFact::new(
+                identity,
+                true,
+                is_tasks,
+                ArtifactPresence::Present,
+                evaluation,
+            )
+        })
+        .collect::<Vec<_>>();
+
+    if let Some(tasks) = facts
+        .iter()
+        .find(|fact| fact.is_tasks() && fact.presence() == ArtifactPresence::Present)
+    {
+        return Ok(artifact_progress(tasks));
+    }
+
+    Ok(progress_without_tasks(&facts))
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct ScannedSpecFile {
@@ -1026,6 +1103,12 @@ fn is_hidden_name(name: &str) -> bool {
 
 #[derive(Debug, Error)]
 pub enum SpecTreeScanError {
+    #[error("failed to discover spec artifacts for {path}")]
+    ArtifactDiscovery {
+        path: String,
+        source: SpecArtifactDiscoveryError,
+    },
+
     #[error("failed to read spec directory: {path}")]
     ReadDirectory { path: String, source: io::Error },
     #[error("failed to inspect spec path: {path}")]
@@ -1120,7 +1203,7 @@ mod tests {
 
     use super::*;
     use crate::domain::{
-        spec::{SpecDocumentFormat, SpecFileKey, SpecFileStatus, SpecNodeKind},
+        spec::{SpecDocumentFormat, SpecFileKey, SpecFileStatus, SpecNodeKind, SpecProgress},
         workspace::{WorkspaceFileMapping, WorkspaceRoot},
     };
 
@@ -2160,6 +2243,61 @@ mod tests {
             result,
             Err(SpecTreeScanError::ConfigOverrideLoad { path, .. }) if path.ends_with("auth")
         ));
+    }
+
+    #[test]
+    fn spec_tree_scan_computes_tasks_first_and_tasks_missing_progress() {
+        let workspace = TestWorkspace::new("authoritative-progress");
+        workspace.write_file(
+            ".plugin-workspace/.specs/001-complete/tasks.md",
+            "- [x] done",
+        );
+        workspace.write_file(
+            ".plugin-workspace/.specs/002-in-progress/tasks.md",
+            "# Tasks without markers",
+        );
+        workspace.write_file(
+            ".plugin-workspace/.specs/003-not-started/tasks.md",
+            "- [ ] todo",
+        );
+        workspace.write_file(
+            ".plugin-workspace/.specs/004-fallback-complete/implementation-plan.md",
+            "# Plan",
+        );
+        workspace.write_file(
+            ".plugin-workspace/.specs/005-fallback-progress/implementation-plan.md",
+            "",
+        );
+        workspace.create_dir(".plugin-workspace/.specs/006-fallback-none");
+        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
+        let config = WorkspaceConfig::new(vec![
+            WorkspaceFileMapping::new(SpecFileKey::Tasks, "tasks.md")
+                .expect("tasks mapping should be valid"),
+            WorkspaceFileMapping::new(SpecFileKey::Impl, "implementation-plan.md")
+                .expect("implementation mapping should be valid"),
+        ])
+        .expect("config should be valid");
+
+        let tree = FilesystemSpecTreeScanner::new()
+            .scan(&layout, &config)
+            .expect("spec tree should be scanned");
+        let cases = [
+            ("001-complete", SpecProgress::Completed),
+            ("002-in-progress", SpecProgress::InProgress),
+            ("003-not-started", SpecProgress::NotStarted),
+            ("004-fallback-complete", SpecProgress::Completed),
+            ("005-fallback-progress", SpecProgress::InProgress),
+            ("006-fallback-none", SpecProgress::NotStarted),
+        ];
+
+        for (label, expected) in cases {
+            let node = tree
+                .iter()
+                .find(|node| node.label() == label)
+                .expect("progress fixture node should exist");
+
+            assert_eq!(expected, node.progress(), "progress mismatch for {label}");
+        }
     }
 
     fn node_ids(nodes: &[SpecNode]) -> Vec<&str> {

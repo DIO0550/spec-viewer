@@ -60,6 +60,14 @@ export function calculateVisibleWindow(
   };
 }
 
+/**
+ * Binary-searches for the index of the first offset strictly greater than the target, treating
+ * missing entries as positive infinity.
+ *
+ * @param offsets - Cumulative row offsets, assumed non-decreasing.
+ * @param target - The scroll position to search past.
+ * @returns The index of the first offset greater than `target`; equals `offsets.length` if none is.
+ */
 function findFirstOffsetGreaterThan(
   offsets: readonly number[],
   target: number,
@@ -78,6 +86,14 @@ function findFirstOffsetGreaterThan(
   return lower;
 }
 
+/**
+ * Binary-searches for the index of the first offset at least equal to the target, treating
+ * missing entries as positive infinity.
+ *
+ * @param offsets - Cumulative row offsets, assumed non-decreasing.
+ * @param target - The visible-bottom position to search up to.
+ * @returns The index of the first offset that is `>= target`; equals `offsets.length` if none is.
+ */
 function findFirstOffsetAtLeast(
   offsets: readonly number[],
   target: number,

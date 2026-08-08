@@ -1,7 +1,7 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { beforeEach, expect, test, vi } from "vitest";
-import { useSpecs } from "@/features/specs/hooks/useSpecs";
+import { useSpecsLegacy as useSpecs } from "@/features/specs/hooks/useSpecs";
 import { createSpecNodeFixture } from "@/features/specs/testing/specNodeFixture";
 import type { SpecCommands } from "@/lib/api/tauri";
 
@@ -72,6 +72,7 @@ test("selectSpecFileはspec/fileを原子的に更新しcallbackとdocument read
 
   expect(hook.current().state.selection).toEqual({
     specId: "target",
+    artifactIdentity: null,
     fileKey: "tasks",
   });
   expect(onSelectionChange).toHaveBeenCalledExactlyOnceWith({

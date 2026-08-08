@@ -15,8 +15,23 @@ export type UseWorkspaceNavigationStateResult = Readonly<{
   state: WorkspaceNavigationState;
   navigationNodes: readonly WorktreeTreeNode[];
   actions: Readonly<{
+    /**
+     * Activates a worktree and restores its previously selected item.
+     *
+     * @param worktreeId - Id of the worktree to activate.
+     */
     selectWorktree: (worktreeId: WorktreeId) => void;
+    /**
+     * Switches the view mode and restores the item last selected under it.
+     *
+     * @param mode - The mode to switch to.
+     */
     changeMode: (mode: ViewMode) => void;
+    /**
+     * Records the selected item for the active worktree/mode.
+     *
+     * @param itemId - Id of the item to select, or `null` to clear it.
+     */
     selectItem: (itemId: string | null) => void;
   }>;
 }>;

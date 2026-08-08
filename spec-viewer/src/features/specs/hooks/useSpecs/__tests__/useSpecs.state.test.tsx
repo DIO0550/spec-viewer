@@ -1,13 +1,14 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { beforeEach, expect, test, vi } from "vitest";
-import { useSpecs } from "@/features/specs/hooks/useSpecs";
+import { useSpecsLegacy as useSpecs } from "@/features/specs/hooks/useSpecs";
 import { createSpecNodeFixture } from "@/features/specs/testing/specNodeFixture";
 import type { SpecDocument, SpecTree } from "@/features/specs/types/spec";
 import type { SpecCommands } from "@/lib/api/tauri";
 
 const specCommandMocks = vi.hoisted(() => ({
   listSpecs: vi.fn<SpecCommands["listSpecs"]>(),
+  loadSpecBundle: vi.fn<SpecCommands["loadSpecBundle"]>(),
   readSpecFile: vi.fn<SpecCommands["readSpecFile"]>(),
   archiveSpec: vi.fn<SpecCommands["archiveSpec"]>(),
 }));
@@ -25,6 +26,7 @@ void (specCommandMocks satisfies SpecCommands);
 
 beforeEach(() => {
   specCommandMocks.listSpecs.mockReset();
+  specCommandMocks.loadSpecBundle.mockReset();
   specCommandMocks.readSpecFile.mockReset();
   specCommandMocks.archiveSpec.mockReset();
 });

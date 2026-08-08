@@ -82,7 +82,10 @@ export function parseRecentWorkspaces(
   ).slice(0, recentWorkspaceLimit);
 }
 
-/** @returns A non-empty trimmed workspace path, or null for blank input. */
+/**
+ * @param path - Raw workspace path to normalize.
+ * @returns A non-empty trimmed workspace path with trailing slashes removed, or null for blank input.
+ */
 export function normalizeWorkspacePath(path: string): string | null {
   const trimmedPath = path.trim();
 
@@ -154,7 +157,10 @@ export function dedupeRecentWorkspaces(
   return dedupedWorkspaces;
 }
 
-/** @returns A readable display name for the workspace path. */
+/**
+ * @param path - Workspace path to derive a display name from.
+ * @returns The final path segment (after the last slash or backslash), or the original path when it has no segments.
+ */
 export function createWorkspaceDisplayName(path: string): string {
   const normalizedPath = path.replace(/[\\/]+$/, "");
   const pathParts = normalizedPath.split(/[\\/]/);
@@ -167,6 +173,10 @@ export function createWorkspaceDisplayName(path: string): string {
   return path;
 }
 
+/**
+ * @param value - Candidate value to check.
+ * @returns True when the value is a recognized `WorkspaceKind` literal.
+ */
 function isWorkspaceKind(value: unknown): value is WorkspaceKind {
   return value === "plugin-workspace" || value === "plugin-worktree";
 }

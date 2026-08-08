@@ -51,8 +51,11 @@ const meta = {
     historyStatus: "ready",
     isComparing: false,
     errorMessage: null,
+    /** No-op story stub; the story does not model revision selection. */
     onChange: () => undefined,
+    /** No-op story stub; the story does not model an options retry. */
     onRetryOptions: () => undefined,
+    /** No-op story stub; the story does not model a history retry. */
     onRetryHistory: () => undefined,
   },
   decorators: [

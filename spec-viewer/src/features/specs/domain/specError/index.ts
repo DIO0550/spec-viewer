@@ -1,10 +1,12 @@
 import type { ArchiveSpecCommandError } from "@/lib/api/tauri/archiveSpec";
 import type { ListSpecsCommandError } from "@/lib/api/tauri/listSpecs";
+import type { LoadSpecBundleCommandError } from "@/lib/api/tauri/loadSpecBundle";
 import type { ReadSpecFileCommandError } from "@/lib/api/tauri/readSpecFile";
 
 export type SpecCommandError =
   | ArchiveSpecCommandError
   | ListSpecsCommandError
+  | LoadSpecBundleCommandError
   | ReadSpecFileCommandError;
 
 export type SpecFeatureErrorCode =

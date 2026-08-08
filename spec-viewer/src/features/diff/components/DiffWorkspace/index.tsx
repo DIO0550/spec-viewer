@@ -82,6 +82,13 @@ function DiffStatus(props: Readonly<{ children: string }>): ReactElement {
   );
 }
 
+/**
+ * Renders the controlled Diff preview state (empty selection, unchanged
+ * file, loading, failed, or ready).
+ *
+ * @param state - The controlled Diff workspace state to render.
+ * @returns The status message, error with retry, or the ready preview.
+ */
 function renderDiffWorkspaceState(state: DiffWorkspaceState): ReactElement {
   if (state.status === "noSelection") {
     return <DiffStatus>表示するSpecファイルを選択してください。</DiffStatus>;

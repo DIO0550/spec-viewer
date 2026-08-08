@@ -18,6 +18,8 @@ import {
   SpecViewSelectionProvider,
   useSpecViewSelection,
 } from "@/app/context/specViewSelection";
+import { WorkspaceLayout } from "@/components";
+import { WorkspacePath } from "@/domains/workspacePath";
 import {
   CommentOperationFailedState,
   CommentOperationSavingState,
@@ -48,26 +50,24 @@ import {
   useSidebarPreference,
 } from "@/features/sidebar";
 import {
-  MarkdownViewer,
+  SpecArtifactTabs,
+  SpecArtifactViewer,
   type SpecSelectionChange,
-  SpecTabs,
   SpecTree,
   useSpecs,
 } from "@/features/specs";
 import {
   OpenWorkspaceEmptyState,
-  type WorkspaceWorktreesLoadState,
-  WorktreeTree,
-  useWorkspaceNavigationState,
   useWorkspaceLoader,
+  useWorkspaceNavigationState,
   useWorkspaceSidebarSectionPreference,
   WorkspaceDropOverlay,
   WorkspaceProvider,
   WorkspaceSidebarSection,
   WorkspaceToolbar,
+  type WorkspaceWorktreesLoadState,
+  WorktreeTree,
 } from "@/features/workspace";
-import { WorkspacePath } from "@/domains/workspacePath";
-import { WorkspaceLayout } from "@/components";
 
 const WorktreesLoadState: WorkspaceWorktreesLoadState = {
   status: "unavailable",
@@ -492,11 +492,12 @@ function SpecViewAppContent(): ReactElement {
                 className="specs-workspace__document"
                 aria-label="Spec document"
               >
-                <SpecTabs
-                  spec={specSelectors.selectedSpec}
-                  selectedFileKey={specState.selection.fileKey}
+                <SpecArtifactTabs
+                  specLabel={specSelectors.selectedSpec?.label ?? null}
+                  artifacts={specState.bundleState.bundle?.artifacts ?? []}
+                  selectedIdentity={specState.selection.artifactIdentity}
                   isSelectionDisabled={isCurrentViewLoading}
-                  onSelectFile={guardedSpecActions.selectFileFromTabs}
+                  onSelectArtifact={specActions.selectArtifact}
                 />
                 <div className="specs-workspace__viewer">
                   {shouldShowOpenWorkspacePrompt ? (
@@ -518,13 +519,12 @@ function SpecViewAppContent(): ReactElement {
                       }
                     />
                   ) : (
-                    <MarkdownViewer
-                      state={specState.documentState}
+                    <SpecArtifactViewer
+                      bundleState={specState.bundleState}
+                      artifact={specSelectors.selectedArtifact}
+                      workspacePath={activeWorkspaceRoot}
                       selectedSpecLabel={
                         specSelectors.selectedSpec?.label ?? null
-                      }
-                      selectedFileLabel={
-                        specSelectors.selectedFile?.label ?? null
                       }
                       comments={comments.comments}
                       activeCommentId={commentSelection.activeCommentId}
@@ -581,11 +581,25 @@ function SpecViewAppContent(): ReactElement {
   );
 }
 
+/**
+ * Maps the spec diff workspace's loading state and current selection into
+ * the `DiffWorkspace` view state, short-circuiting to `noSelection` before
+ * a spec/file is selected and threading `onRetry` through every failure
+ * branch.
+ *
+ * @param state - Current spec diff workspace load state.
+ * @param selectedSpecId - Id of the currently selected spec, or `null`.
+ * @param selectedFileKey - Key of the currently selected file, or `null`.
+ * @param selectedPath - Target path of the currently selected change, or `null`.
+ * @param onRetry - Callback to retry loading after a failure.
+ * @returns The `DiffWorkspace` view state matching the current selection and load state.
+ */
 function createDiffWorkspaceState(
   state: SpecDiffWorkspaceState,
   selectedSpecId: string | null,
   selectedFileKey: string | null,
   selectedPath: string | null,
+  /** Retries loading the diff after a failure. */
   onRetry: () => Promise<boolean>,
 ): DiffWorkspaceState {
   if (selectedSpecId === null || selectedFileKey === null) {

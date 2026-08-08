@@ -3,6 +3,12 @@ import type { ReactElement } from "react";
 
 import { ErrorBoundary } from ".";
 
+/**
+ * Storybook helper component that always throws during render, to exercise ErrorBoundary's fallback.
+ *
+ * @returns Never returns; always throws.
+ * @throws Error unconditionally, with a fixed "Story child render failed" message.
+ */
 function ThrowingChild(): ReactElement {
   throw new globalThis.Error("Story child render failed");
 }
@@ -38,6 +44,7 @@ export const Error: Story = {
 
 export const EdgeCases: Story = {
   args: {
+    /** Recoverable children rendered when ErrorBoundary catches no error. */
     children: (
       <div>
         <h2>Recoverable content</h2>

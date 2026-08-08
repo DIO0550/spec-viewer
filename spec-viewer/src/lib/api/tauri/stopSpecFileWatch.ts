@@ -89,7 +89,9 @@ export const StopSpecFileWatchCommandError = {
   },
 
   /** @returns True when the value is a stop_spec_file_watch command error code. */
-  isCommandErrorCode(value: unknown): value is StopSpecFileWatchCommandErrorCode {
+  isCommandErrorCode(
+    value: unknown,
+  ): value is StopSpecFileWatchCommandErrorCode {
     return StopSpecFileWatchCommandError.isCode(value) || value === "unknown";
   },
 

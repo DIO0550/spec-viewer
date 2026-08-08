@@ -9,6 +9,7 @@ import { foldContextRows } from "@/features/diff/lib/diffViewModel/contextFoldin
 import { insertHunkGaps } from "@/features/diff/lib/diffViewModel/hunkGaps";
 import { createInlineHunk } from "@/features/diff/lib/diffViewModel/inline";
 import { createSideBySideHunk } from "@/features/diff/lib/diffViewModel/sideBySide";
+
 export {
   calculateVisibleWindow,
   type VisibleWindow,
@@ -233,6 +234,15 @@ export function calculateRowOffsets(
   return offsets;
 }
 
+/**
+ * Builds a view model with no rows for a diff that has no content to render (either omitted by
+ * the backend or genuinely empty), preserving the file's status label.
+ *
+ * @param state - Whether the diff was omitted or has no hunks.
+ * @param omissionReason - The backend-provided reason when omitted, or null.
+ * @param status - The file's change status and its display label.
+ * @returns A view model with empty `inlineRows`, `sideBySideRows` and `changeIds`.
+ */
 function createNonReadyModel(
   state: "empty" | "omitted",
   omissionReason: OmissionReason | null,

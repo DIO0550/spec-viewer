@@ -55,6 +55,12 @@ export function insertHunkGaps(
   });
 }
 
+/**
+ * Builds a gap row spanning the omitted lines between two consecutive hunks, if any exist.
+ *
+ * @param input - The adjacent hunks, the current hunk's index, line readers for reconstructing content and the layout mode.
+ * @returns A `gap`-kind row, or null when either hunk has no resolvable line numbers or the hunks are contiguous (no omitted lines).
+ */
 function createHunkGap(
   input: Readonly<{
     previousHunk: Hunk;
@@ -112,6 +118,14 @@ function createHunkGap(
   };
 }
 
+/**
+ * Reconstructs the omitted context lines as expandable content rows, but only when both readers
+ * are available and the reconstructed old/new ranges are complete and textually identical
+ * (i.e. the gap is genuinely unchanged context, not a mismatch between old/new line counts).
+ *
+ * @param input - Line readers, the last known old/new line numbers before the gap, the gap sizes on each side, the hunk index and the layout mode.
+ * @returns One content row per omitted line, or null when the gap cannot be safely reconstructed.
+ */
 function createExpandableRows(
   input: Readonly<{
     oldLineReader: LineRangeReader | null;
@@ -167,6 +181,15 @@ function createExpandableRows(
   });
 }
 
+/**
+ * Creates a stateful, forward-only reader that returns a slice of lines from file content by
+ * line index. Returns null immediately when the content is unavailable, and the returned reader
+ * itself returns null when asked to seek backward or when the requested range runs past the end
+ * of the text.
+ *
+ * @param content - File content, which may or may not have been successfully loaded.
+ * @returns A line-range reader, or null when the content is not available.
+ */
 function createLineRangeReader(content: FileContent): LineRangeReader | null {
   if (content.state !== "available") {
     return null;
@@ -206,6 +229,14 @@ function createLineRangeReader(content: FileContent): LineRangeReader | null {
   };
 }
 
+/**
+ * Finds the last non-null line number (old or new side) among a hunk's lines, by scanning
+ * forward and keeping the most recent non-null value found.
+ *
+ * @param lines - Lines of a hunk, in source order.
+ * @param key - Which side's line number to read.
+ * @returns The last non-null line number, or null if none of the lines carry one.
+ */
 function findLastLineNumber(
   lines: readonly DiffLine[],
   key: "oldLineNumber" | "newLineNumber",
@@ -216,6 +247,13 @@ function findLastLineNumber(
   );
 }
 
+/**
+ * Finds the first non-null line number (old or new side) among a hunk's lines.
+ *
+ * @param lines - Lines of a hunk, in source order.
+ * @param key - Which side's line number to read.
+ * @returns The first non-null line number, or null if none of the lines carry one.
+ */
 function findFirstLineNumber(
   lines: readonly DiffLine[],
   key: "oldLineNumber" | "newLineNumber",
@@ -223,6 +261,12 @@ function findFirstLineNumber(
   return lines.find((line) => line[key] !== null)?.[key] ?? null;
 }
 
+/**
+ * Wraps a reconstructed context line in a diff cell with a single unchanged segment.
+ *
+ * @param line - The context line to wrap.
+ * @returns A cell containing exactly one `unchanged` segment holding the line's text.
+ */
 function createCell(line: DiffLine): DiffCell {
   return { line, segments: [{ kind: "unchanged", text: line.text }] };
 }

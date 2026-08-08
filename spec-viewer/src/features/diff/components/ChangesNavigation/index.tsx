@@ -16,7 +16,13 @@ export type ChangesNavigationProps = Readonly<{
   items: readonly ChangesNavigationItem[];
   selectedId: string | null;
   availability: ChangesNavigationAvailability;
+  /**
+   * Notifies the caller that a changed file was selected.
+   *
+   * @param id - The stable ID of the selected file.
+   */
   onSelect: (id: string) => void;
+  /** Requests a retry after a failed changed-file fetch. */
   onRetry?: () => void;
 }>;
 
@@ -99,6 +105,13 @@ function ChangesStatus(props: Readonly<{ children: string }>): ReactElement {
   );
 }
 
+/**
+ * Maps a known "unavailable" reason code to its user-facing message.
+ *
+ * @param reason - The unavailable reason code from the availability state.
+ * @returns The message for known reason codes, or the raw reason string
+ *   unchanged when it is not one of the known codes.
+ */
 function getUnavailableMessage(reason: string): string {
   if (reason === "contract-pending") {
     return "Changesの契約を確認中です。Specsモードで仕様の確認を続けられます。";
@@ -119,10 +132,24 @@ const CHANGE_LABELS = {
   untracked: "未追跡",
 } as const satisfies Readonly<Record<FileChangeStatus, string>>;
 
+/**
+ * Reduces a file change status to its compact navigation token.
+ *
+ * @param change - The file's change status, or undefined when unknown.
+ * @returns "U" for added/untracked files, "M" for every other change
+ *   (including the undefined/unknown case).
+ */
 function getChangeToken(change: FileChangeStatus | undefined): "M" | "U" {
   return change === "added" || change === "untracked" ? "U" : "M";
 }
 
+/**
+ * Resolves the accessible label for a file's change status.
+ *
+ * @param change - The file's change status, or undefined when unknown.
+ * @returns The Japanese change label, defaulting to "変更" when the status
+ *   is unknown.
+ */
 function getChangeLabel(change: FileChangeStatus | undefined): string {
   return change === undefined ? "変更" : CHANGE_LABELS[change];
 }

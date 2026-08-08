@@ -23,18 +23,18 @@ import {
   type SpecDiffWorkspaceState,
 } from "@/features/diff/domain/specDiffWorkspaceState";
 import {
-  getSpecFileDiff,
   GetSpecFileDiffCommandError,
-  listChangedSpecFiles,
-  ListChangedSpecFilesCommandError,
-  listSpecDiffRevisions,
-  listSpecFileCommitHistory,
   type GetSpecFileDiffCommandRequest,
   type GetSpecFileDiffCommandResponse,
+  getSpecFileDiff,
+  ListChangedSpecFilesCommandError,
   type ListChangedSpecFilesCommandRequest,
   type ListChangedSpecFilesCommandResponse,
   type ListSpecDiffRevisionsRequest,
   type ListSpecFileCommitHistoryRequest,
+  listChangedSpecFiles,
+  listSpecDiffRevisions,
+  listSpecFileCommitHistory,
 } from "@/lib/api/tauri";
 
 export type AsyncCatalogState<T> =
@@ -52,9 +52,21 @@ export type ComparisonOperation =
     }>;
 
 export type SpecDiffWorkspaceApi = Readonly<{
+  /**
+   * Fetches the changed Spec files overview for a workspace.
+   *
+   * @param request - Workspace path and optional comparison revision.
+   * @returns The overview response for the requested comparison.
+   */
   listChangedSpecFiles: (
     request: ListChangedSpecFilesCommandRequest,
   ) => Promise<ListChangedSpecFilesCommandResponse>;
+  /**
+   * Fetches the decoded diff detail for one changed Spec file.
+   *
+   * @param request - Identity of the workspace, snapshot and target file.
+   * @returns The decoded file diff response.
+   */
   getSpecFileDiff: (
     request: GetSpecFileDiffCommandRequest,
   ) => Promise<GetSpecFileDiffCommandResponse>;
@@ -75,13 +87,38 @@ export type UseSpecDiffWorkspaceOptions = Readonly<{
 export type UseSpecDiffWorkspaceResult = Readonly<{
   state: SpecDiffWorkspaceState;
   badges: ReadonlyMap<string, "U" | "M">;
+  /**
+   * Re-fetches the changed-files overview (and selected file detail) for
+   * the current workspace, coalescing overlapping calls into one run.
+   *
+   * @returns True once the overview (and detail, if selected) loaded
+   *   successfully; false if the workspace is unset or the request failed.
+   */
   refresh: () => Promise<boolean>;
   comparison: ComparisonRevisionValue;
   revisionOptions: AsyncCatalogState<readonly RevisionOption[]>;
   fileHistory: AsyncCatalogState<SpecFileHistory>;
   comparisonOperation: ComparisonOperation;
+  /**
+   * Switches the active comparison revision and reloads the overview and
+   * selected file detail against it.
+   *
+   * @param revision - The comparison revision to select.
+   * @returns True once the switch succeeded; false if it was skipped
+   *   (no workspace ready) or the request failed.
+   */
   selectComparison: (revision: ComparisonRevisionValue) => Promise<boolean>;
+  /**
+   * Retries fetching the revision options catalog after a failure.
+   *
+   * @returns True once the options loaded successfully; false otherwise.
+   */
   retryRevisionOptions: () => Promise<boolean>;
+  /**
+   * Retries fetching the selected file's commit history after a failure.
+   *
+   * @returns True once the history loaded successfully; false otherwise.
+   */
   retryFileHistory: () => Promise<boolean>;
 }>;
 
@@ -429,6 +466,15 @@ export function useSpecDiffWorkspace({
         requestGeneration: currentState.requestGeneration,
       };
 
+      /**
+       * Runs one comparison switch attempt, optionally recovering once from
+       * a stale-snapshot detail error by retrying without recovery.
+       *
+       * @param allowStaleRecovery - Whether a stale-detail error should
+       *   trigger one retry instead of surfacing as a failure.
+       * @returns True once the overview (and detail, if selected) switched
+       *   successfully; false if superseded or the request failed.
+       */
       const attempt = async (allowStaleRecovery: boolean): Promise<boolean> => {
         try {
           const response = await api.listChangedSpecFiles({
@@ -512,6 +558,13 @@ export function useSpecDiffWorkspace({
       return refreshDrainRef.current;
     }
 
+    /**
+     * Repeatedly re-runs the overview fetch while another refresh was
+     * requested during the in-flight run, so callers observe one settled
+     * result instead of overlapping requests.
+     *
+     * @returns The result of the last overview fetch performed.
+     */
     const drain = async (): Promise<boolean> => {
       let result = false;
       do {

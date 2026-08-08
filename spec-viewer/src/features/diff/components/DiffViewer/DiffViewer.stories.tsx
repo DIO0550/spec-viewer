@@ -62,6 +62,13 @@ export const Mixed: Story = {
       ],
     }),
   },
+  /**
+   * Verifies switching to side-by-side mode, navigating to the next change
+   * disabling the "next" control at the last change, and expanding a
+   * collapsed gap removes its expand button.
+   *
+   * @param context - Storybook play context providing the rendered canvas element.
+   */
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("radio", { name: "Side by side" }));
@@ -83,6 +90,12 @@ export const Mixed: Story = {
 
 export const LargeDiff: Story = {
   args: { fileDiff: createLargeDiffViewerFixture() },
+  /**
+   * Verifies the virtualized row window never renders more than the
+   * semantic row hard cap, regardless of the diff's total size.
+   *
+   * @param context - Storybook play context providing the rendered canvas element.
+   */
   play: async ({ canvasElement }) => {
     await expect(
       canvasElement.querySelectorAll(".diff-viewer__row").length,

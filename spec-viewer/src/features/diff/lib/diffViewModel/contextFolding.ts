@@ -42,6 +42,14 @@ export function foldContextRows(
   return foldedRows;
 }
 
+/**
+ * Collapses a single contiguous run of context rows into a leading/trailing radius plus a gap
+ * row for the rows in between, when the run is longer than the visible threshold.
+ *
+ * @param rows - A contiguous run of context rows (all `content` rows with no changeId).
+ * @param contextRadius - Number of leading and trailing rows to keep visible around the gap.
+ * @returns The original rows when the run is short enough to show in full; otherwise the leading rows, a `gap` row, and the trailing rows.
+ */
 function foldContextRun(
   rows: readonly DiffViewRow[],
   contextRadius: number,
@@ -67,6 +75,13 @@ function foldContextRun(
   return [...firstRows, gap, ...lastRows];
 }
 
+/**
+ * Determines whether a row represents unchanged context: a content row with no change ID whose
+ * inline cell (or both side-by-side cells) hold a `context`-kind line.
+ *
+ * @param row - The row to classify.
+ * @returns True when the row is eligible to be folded as context.
+ */
 function isContextRow(row: DiffViewRow): boolean {
   if (row.kind !== "content" || row.changeId !== null) {
     return false;

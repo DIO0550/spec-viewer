@@ -15,12 +15,12 @@ import {
   buildDiffViewModel,
   calculateRowOffsets,
   calculateVisibleWindow,
-  findAdjacentChangeIndex,
-  materializeRows,
   type DiffCell,
   type DiffSegment,
   type DiffViewMode,
   type DiffViewRow,
+  findAdjacentChangeIndex,
+  materializeRows,
 } from "@/features/diff/lib/diffViewModel";
 
 export type DiffViewerProps = Readonly<{ fileDiff: FileDiff }>;
@@ -258,6 +258,12 @@ export function DiffViewer({ fileDiff }: DiffViewerProps): ReactElement {
   );
 }
 
+/**
+ * Wraps diff content with the shared file path header and status label.
+ *
+ * @param props - The file path, status label and diff content to frame.
+ * @returns The framed diff section.
+ */
 function DiffViewerFrame(
   props: Readonly<{
     filePath: string;
@@ -276,6 +282,14 @@ function DiffViewerFrame(
   );
 }
 
+/**
+ * Renders one materialized diff row (hunk header, annotation, collapsible
+ * gap, or content) according to the current view mode.
+ *
+ * @param props - The row to render, the active view mode, the currently
+ *   active change ID and the gap-expansion callback.
+ * @returns The rendered row element.
+ */
 function DiffRow(
   props: Readonly<{
     row: DiffViewRow;
@@ -347,6 +361,14 @@ function DiffRow(
   );
 }
 
+/**
+ * Renders one side of a diff row, or an empty spacer cell when the line has
+ * no counterpart on this side.
+ *
+ * @param props - The cell to render (or null for a spacer) and which side
+ *   it belongs to.
+ * @returns The rendered cell element.
+ */
 function DiffCellView(
   props: Readonly<{
     cell: DiffCell | null;
@@ -394,6 +416,13 @@ function DiffCellView(
   );
 }
 
+/**
+ * Maps a diff line kind to its gutter marker character.
+ *
+ * @param kind - The kind of the diff line.
+ * @returns "+" for added lines, "-" for removed lines, otherwise a single
+ *   space for context lines.
+ */
 function getLineMarker(kind: DiffCell["line"]["kind"]): string {
   if (kind === "added") {
     return "+";
@@ -405,6 +434,14 @@ function getLineMarker(kind: DiffCell["line"]["kind"]): string {
   return " ";
 }
 
+/**
+ * Renders each intraline diff segment as its own span so it can be styled
+ * by segment kind (added/removed/unchanged).
+ *
+ * @param segments - Ordered intraline segments for one diff cell.
+ * @returns One span element per segment, using a single space for empty
+ *   segment text so the span retains layout height.
+ */
 function renderSegments(
   segments: readonly DiffSegment[],
 ): readonly ReactElement[] {

@@ -1,6 +1,4 @@
-export {
-  getUnknownErrorMessage,
-} from "./errorMessage";
+export { getUnknownErrorMessage } from "./errorMessage";
 export {
   createWorkspaceDisplayName,
   dedupeRecentWorkspaces,

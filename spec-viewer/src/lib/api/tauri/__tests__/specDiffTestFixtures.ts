@@ -44,6 +44,7 @@ export type DetailResponseFixture = {
   };
 };
 
+/** @returns A minimal valid `get_spec_file_diff` response fixture: one added text file with an empty structured diff and no submodule. */
 export const createMinimalDetailResponse = (): DetailResponseFixture => ({
   specId: "077-issue-166",
   fileKey: "tasks",
@@ -85,6 +86,7 @@ export const createMinimalDetailResponse = (): DetailResponseFixture => ({
   },
 });
 
+/** @returns A minimal valid `list_changed_spec_files` response fixture: one added file. */
 export const createMinimalListResponse = () => ({
   currentSnapshotId: "rs1_snapshot",
   resolvedBaseSha: "a".repeat(40),

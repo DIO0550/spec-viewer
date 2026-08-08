@@ -67,7 +67,7 @@ test("Markdownブロック内のコメントUIは選択アンカー文字列に�
     [
       '<ul><li data-block-type="list-item" data-block-index="2">',
       '<button class="markdown-block-comment-button"><span>コメント追加</span></button>',
-      '<span>Alpha beta gamma</span>',
+      "<span>Alpha beta gamma</span>",
       '<aside class="markdown-comment-annotations">Unrelated comment body</aside>',
       "</li></ul>",
     ].join(""),
