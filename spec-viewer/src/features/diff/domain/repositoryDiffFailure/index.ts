@@ -14,7 +14,8 @@ export type RepositoryCommandError =
   | TraverseRepositoryIgnoredCommandError;
 
 /**
- * Repository-only input failures.
+ * Codes the repository diff treats as malformed input: the shared
+ * `invalidInput` plus the repository-only `invalidOverride`.
  *
  * The `unavailable` and `stale` code sets are NOT redefined here: they live in
  * `diffAvailability`, which classifies both the Spec-scoped and the
@@ -92,7 +93,7 @@ export type RepositoryDiffFailure =
 
 /**
  * @param code - Command error code to test.
- * @returns True for the two repository-only invalid-input codes.
+ * @returns True for the two codes classified as malformed input.
  */
 const isInvalidInput = (code: string): code is RepositoryInvalidInputCode =>
   REPOSITORY_INVALID_INPUT_CODES.includes(code as RepositoryInvalidInputCode);
