@@ -10,7 +10,7 @@ test("side-by-sideではcontextを左右同一row、removedとaddedをindex対�
       { kind: "context", text: "const before = 1;" },
       { kind: "removed", text: "const value = before;" },
       { kind: "added", text: "const value = after;" },
-    ]),
+    ]).review,
   );
   const contentRows = model.sideBySideRows.filter(
     (row) => row.kind === "content",

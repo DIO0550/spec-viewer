@@ -8,7 +8,9 @@ import {
 } from "@/features/diff/lib/diffViewModel";
 
 test("7行contextはすべて表示する", () => {
-  const model = buildDiffViewModel(createFileDiff(createContextLines(7)));
+  const model = buildDiffViewModel(
+    createFileDiff(createContextLines(7)).review,
+  );
 
   expect(model.inlineRows.filter((row) => row.kind === "content")).toHaveLength(
     7,
@@ -17,7 +19,9 @@ test("7行contextはすべて表示する", () => {
 });
 
 test("8行contextは先頭3・gap・末尾3へ折りたたむ", () => {
-  const model = buildDiffViewModel(createFileDiff(createContextLines(8)));
+  const model = buildDiffViewModel(
+    createFileDiff(createContextLines(8)).review,
+  );
   const gap = model.inlineRows.find((row) => row.kind === "gap");
 
   expect(model.inlineRows.filter((row) => row.kind === "content")).toHaveLength(
@@ -29,7 +33,9 @@ test("8行contextは先頭3・gap・末尾3へ折りたたむ", () => {
 });
 
 test("選択したcontext gapだけを元の全行へ展開する", () => {
-  const model = buildDiffViewModel(createFileDiff(createContextLines(8)));
+  const model = buildDiffViewModel(
+    createFileDiff(createContextLines(8)).review,
+  );
   const gap = model.inlineRows.find((row) => row.kind === "gap");
   expect(gap?.kind).toBe("gap");
 

@@ -10,7 +10,10 @@ import {
   useState,
 } from "react";
 
-import type { FileDiff, OmissionReason } from "@/features/diff/domain/fileDiff";
+import type {
+  FileReview,
+  OmissionReason,
+} from "@/features/diff/domain/fileDiff";
 import {
   buildDiffViewModel,
   calculateRowOffsets,
@@ -23,7 +26,7 @@ import {
   materializeRows,
 } from "@/features/diff/lib/diffViewModel";
 
-export type DiffViewerProps = Readonly<{ fileDiff: FileDiff }>;
+export type DiffViewerProps = Readonly<{ review: FileReview }>;
 
 const OmissionMessages = {
   binary: "バイナリファイルのため差分を表示できません。",
@@ -43,8 +46,8 @@ const SemanticRowHardCap = 500;
  * @param props - Decoded diff input without loading or IPC concerns.
  * @returns The ready viewer or a clear empty/omitted state.
  */
-export function DiffViewer({ fileDiff }: DiffViewerProps): ReactElement {
-  const model = useMemo(() => buildDiffViewModel(fileDiff), [fileDiff]);
+export function DiffViewer({ review }: DiffViewerProps): ReactElement {
+  const model = useMemo(() => buildDiffViewModel(review), [review]);
   const [mode, setMode] = useState<DiffViewMode>("inline");
   const [activeChangeId, setActiveChangeId] = useState<string | null>(
     () => model.changeIds[0] ?? null,
@@ -56,10 +59,7 @@ export function DiffViewer({ fileDiff }: DiffViewerProps): ReactElement {
   const [viewportHeight, setViewportHeight] = useState(0);
   const scrollSurfaceRef = useRef<HTMLDivElement>(null);
   const pendingFrameRef = useRef<number | null>(null);
-  const filePath =
-    fileDiff.review.file.newPath ??
-    fileDiff.review.file.oldPath ??
-    fileDiff.fileKey;
+  const filePath = review.file.newPath ?? review.file.oldPath ?? "";
 
   useEffect(() => {
     setActiveChangeId(model.changeIds[0] ?? null);
@@ -68,7 +68,7 @@ export function DiffViewer({ fileDiff }: DiffViewerProps): ReactElement {
     if (scrollSurfaceRef.current !== null) {
       scrollSurfaceRef.current.scrollTop = 0;
     }
-  }, [fileDiff.fileKey, model.changeIds]);
+  }, [review, model.changeIds]);
 
   useEffect(() => {
     return () => {

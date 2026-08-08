@@ -627,7 +627,7 @@ function createDiffWorkspaceState(
   return {
     status: "ready",
     selectedPath: selectedPath ?? selectedFileKey,
-    preview: <DiffViewer fileDiff={state.detail.value} />,
+    preview: <DiffViewer review={state.detail.value.review} />,
   };
 }
 

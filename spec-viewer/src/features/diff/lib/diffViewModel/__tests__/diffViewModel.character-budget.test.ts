@@ -17,7 +17,7 @@ test.each([
     createFileDiff([
       { kind: "removed", text: `${"a".repeat(oldLength - 1)}x` },
       { kind: "added", text: `${"a".repeat(newLength - 1)}y` },
-    ]),
+    ]).review,
   );
   const row = findChangedRows(model)[0];
 
@@ -34,7 +34,9 @@ test("251 pair目は既定pair budgetを超えてwhole-lineへfallbackする", (
       { kind: "added", text: `after-${index}` },
     ],
   ).flat();
-  const rows = findChangedRows(buildDiffViewModel(createFileDiff(lines)));
+  const rows = findChangedRows(
+    buildDiffViewModel(createFileDiff(lines).review),
+  );
 
   expect(
     rows[249]?.old?.segments.some((segment) => segment.kind === "unchanged"),
@@ -51,7 +53,7 @@ test("累積100,000 code units超過pairはwhole-lineへfallbackする", () => {
       { kind: "added", text: `${"a".repeat(49_999)}y` },
       { kind: "removed", text: "before" },
       { kind: "added", text: "after" },
-    ]),
+    ]).review,
     { maxCodeUnitsPerPair: 100_000 },
   );
   const rows = findChangedRows(model);

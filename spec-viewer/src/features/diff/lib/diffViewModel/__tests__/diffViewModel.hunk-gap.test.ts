@@ -11,7 +11,7 @@ test("hunk間gapは両contentが利用可能で同一なら展開できる", () 
   const content = availableContent(
     Array.from({ length: 12 }, (_, index) => `line ${index + 1}`).join("\n"),
   );
-  const model = buildDiffViewModel(createFileDiff(content, content));
+  const model = buildDiffViewModel(createFileDiff(content, content).review);
   const gap = model.inlineRows.find((row) => row.kind === "gap");
   expect(gap?.kind).toBe("gap");
 
@@ -29,7 +29,7 @@ test("複数のhunk間gapを順序通りに展開できる", () => {
     Array.from({ length: 25 }, (_, index) => `line ${index + 1}`).join("\n"),
   );
   const model = buildDiffViewModel(
-    createFileDiff(content, content, [1, 10, 20]),
+    createFileDiff(content, content, [1, 10, 20]).review,
   );
   const expandedTexts = model.inlineRows
     .filter((row) => row.kind === "gap")
@@ -49,7 +49,9 @@ test.each([
   [omittedContent(), availableContent("line 1\nline 2")],
   [availableContent("line 1\nline 2"), omittedContent()],
 ] as const)("片側content omittedならhunk間gapを展開不可にする", (oldContent, newContent) => {
-  const model = buildDiffViewModel(createFileDiff(oldContent, newContent));
+  const model = buildDiffViewModel(
+    createFileDiff(oldContent, newContent).review,
+  );
   const gap = model.inlineRows.find((row) => row.kind === "gap");
 
   expect(gap?.kind).toBe("gap");

@@ -3,15 +3,15 @@ import { expect, userEvent, within } from "storybook/test";
 
 import { DiffViewer } from "@/features/diff/components/DiffViewer";
 import {
-  createDiffViewerFixture,
-  createLargeDiffViewerFixture,
+  createFileReviewFixture,
+  createLargeFileReviewFixture,
 } from "@/features/diff/components/DiffViewer/testFixtures";
 
 const meta = {
   component: DiffViewer,
   parameters: { layout: "fullscreen" },
   argTypes: {
-    fileDiff: { control: false },
+    review: { control: false },
   },
 } satisfies Meta<typeof DiffViewer>;
 
@@ -20,7 +20,7 @@ type Story = StoryObj<typeof meta>;
 
 export const AddedOnly: Story = {
   args: {
-    fileDiff: createDiffViewerFixture({
+    review: createFileReviewFixture({
       status: "added",
       lines: [
         { kind: "added", text: "export const added = true;" },
@@ -35,7 +35,7 @@ export const AddedOnly: Story = {
 
 export const RemovedOnly: Story = {
   args: {
-    fileDiff: createDiffViewerFixture({
+    review: createFileReviewFixture({
       status: "deleted",
       lines: [
         { kind: "removed", text: "export const legacy = true;" },
@@ -47,7 +47,7 @@ export const RemovedOnly: Story = {
 
 export const Mixed: Story = {
   args: {
-    fileDiff: createDiffViewerFixture({
+    review: createFileReviewFixture({
       lines: [
         ...Array.from({ length: 8 }, (_, index) => ({
           kind: "context" as const,
@@ -89,7 +89,7 @@ export const Mixed: Story = {
 };
 
 export const LargeDiff: Story = {
-  args: { fileDiff: createLargeDiffViewerFixture() },
+  args: { review: createLargeFileReviewFixture() },
   /**
    * Verifies the virtualized row window never renders more than the
    * semantic row hard cap, regardless of the diff's total size.
@@ -104,11 +104,11 @@ export const LargeDiff: Story = {
 };
 
 export const EmptyDiff: Story = {
-  args: { fileDiff: createDiffViewerFixture({ lines: [] }) },
+  args: { review: createFileReviewFixture({ lines: [] }) },
 };
 
 export const OmittedDiff: Story = {
   args: {
-    fileDiff: createDiffViewerFixture({ omissionReason: "largeFile" }),
+    review: createFileReviewFixture({ omissionReason: "largeFile" }),
   },
 };

@@ -37,7 +37,7 @@ test.each([
     side: "both",
   },
 ])("$nameのnoNewlineを$side側annotationにする", ({ lines, side }) => {
-  const model = buildDiffViewModel(createFileDiff(lines));
+  const model = buildDiffViewModel(createFileDiff(lines).review);
   const annotations = model.inlineRows.filter(
     (row) => row.kind === "annotation",
   );
@@ -58,7 +58,7 @@ test("noNewlineを挟むchanged linesで表示mode間のchange IDを維持する
       { kind: "removed", text: "old" },
       { kind: "noNewline", text: "\\ No newline at end of file" },
       { kind: "added", text: "new" },
-    ]),
+    ]).review,
   );
   const inlineChangeIds = model.inlineRows
     .filter((row) => row.kind === "content")

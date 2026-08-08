@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, expect, test } from "vitest";
 
 import { DiffViewer } from "@/features/diff/components/DiffViewer";
-import { createDiffViewerFixture } from "@/features/diff/components/DiffViewer/testFixtures";
+import { createFileReviewFixture } from "@/features/diff/components/DiffViewer/testFixtures";
 
 const mountedContainers: HTMLDivElement[] = [];
 
@@ -71,7 +71,7 @@ test("offscreen changeへ移動するとwindowとactive rowを更新する", () 
     { kind: "removed" as const, text: "old second" },
     { kind: "added" as const, text: "new second" },
   ];
-  const result = renderViewer(createDiffViewerFixture({ lines }));
+  const result = renderViewer(createFileReviewFixture({ lines }));
   const next = getButton(result.container, "次の変更");
 
   act(() => next.click());
@@ -93,7 +93,7 @@ test("expandable context gapをbuttonで展開する", () => {
     kind: "context" as const,
     text: `line ${index + 1}`,
   }));
-  const result = renderViewer(createDiffViewerFixture({ lines }));
+  const result = renderViewer(createFileReviewFixture({ lines }));
   const expand = getButton(result.container, "省略した2行を展開");
 
   expect(
@@ -106,7 +106,7 @@ test("expandable context gapをbuttonで展開する", () => {
   result.unmount();
 });
 
-test("fileKeyが変わるとactive changeとexpanded gapをresetする", () => {
+test("reviewが変わるとactive changeとexpanded gapをresetする", () => {
   const result = renderViewer();
   act(() => getButton(result.container, "次の変更").click());
   expect(
@@ -117,7 +117,7 @@ test("fileKeyが変わるとactive changeとexpanded gapをresetする", () => {
 
   act(() => {
     result.root.render(
-      <DiffViewer fileDiff={createDiffViewerFixture({ fileKey: "tasks" })} />,
+      <DiffViewer review={createFileReviewFixture({ fileKey: "tasks" })} />,
     );
   });
   expect(
@@ -141,12 +141,12 @@ function getButton(
   return button as HTMLButtonElement;
 }
 
-function renderViewer(fileDiff = createDiffViewerFixture()) {
+function renderViewer(review = createFileReviewFixture()) {
   const container = document.createElement("div");
   document.body.append(container);
   mountedContainers.push(container);
   const root = createRoot(container);
-  act(() => root.render(<DiffViewer fileDiff={fileDiff} />));
+  act(() => root.render(<DiffViewer review={review} />));
 
   return {
     container,

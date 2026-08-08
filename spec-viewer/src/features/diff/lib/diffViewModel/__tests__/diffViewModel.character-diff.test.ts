@@ -5,7 +5,7 @@ import { Hunk } from "@/features/diff/domain/fileDiff";
 import { buildDiffViewModel } from "@/features/diff/lib/diffViewModel";
 
 test("paired removed・addedを文字単位segmentへ変換する", () => {
-  const model = buildDiffViewModel(createFileDiff());
+  const model = buildDiffViewModel(createFileDiff().review);
   const changedRow = model.sideBySideRows.find(
     (row) => row.kind === "content" && row.changeId !== null,
   );

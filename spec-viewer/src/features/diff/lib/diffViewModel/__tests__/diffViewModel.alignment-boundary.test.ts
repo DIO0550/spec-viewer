@@ -49,7 +49,7 @@ test.each([
     pairs: [["old one", null]],
   },
 ])("$name blockは不足側をnull spacerにする", ({ lines, pairs }) => {
-  const model = buildDiffViewModel(createFileDiff(lines));
+  const model = buildDiffViewModel(createFileDiff(lines).review);
   const actualPairs = model.sideBySideRows
     .filter(
       (row): row is Extract<DiffViewRow, { kind: "content" }> =>

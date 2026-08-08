@@ -16,14 +16,14 @@ test.each([
   "typeChanged",
   "untracked",
 ] satisfies readonly FileChangeStatus[])("%s statusを表示labelへ写像する", (status) => {
-  const model = buildDiffViewModel(createAvailableFileDiff(status));
+  const model = buildDiffViewModel(createAvailableFileDiff(status).review);
 
   expect(model.status.change).toBe(status);
   expect(model.status.label.length).toBeGreaterThan(0);
 });
 
 test("availableでhunksが空ならempty modelにする", () => {
-  const model = buildDiffViewModel(createAvailableFileDiff("modified"));
+  const model = buildDiffViewModel(createAvailableFileDiff("modified").review);
 
   expect(model.state).toBe("empty");
   expect(model.omissionReason).toBeNull();
@@ -36,7 +36,7 @@ test.each([
   "missingSide",
   "unsupportedEntryKind",
 ] satisfies readonly OmissionReason[])("%s omitted reasonを保持する", (reason) => {
-  const model = buildDiffViewModel(createOmittedFileDiff(reason));
+  const model = buildDiffViewModel(createOmittedFileDiff(reason).review);
 
   expect(model.state).toBe("omitted");
   expect(model.omissionReason).toBe(reason);

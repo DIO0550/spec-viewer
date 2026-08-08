@@ -2,6 +2,7 @@ import type {
   DiffLineSource,
   FileChangeStatus,
   FileDiff,
+  FileReview,
   OmissionReason,
   StructuredDiff,
 } from "@/features/diff/domain/fileDiff";
@@ -86,6 +87,28 @@ export function createDiffViewerFixture(
       submodule: null,
     },
   };
+}
+
+/**
+ * Creates a readonly FileReview fixture without any Spec-scoped identity.
+ *
+ * @param options - Domain overrides for the scenario.
+ * @returns The review half of a complete decoded FileDiff value.
+ */
+export function createFileReviewFixture(
+  options: DiffViewerFixtureOptions = {},
+): FileReview {
+  return createDiffViewerFixture(options).review;
+}
+
+/**
+ * Creates a large changed review that exercises DOM windowing.
+ *
+ * @param lineCount - Number of source diff lines to generate.
+ * @returns A FileReview with alternating removed and added lines.
+ */
+export function createLargeFileReviewFixture(lineCount = 20_000): FileReview {
+  return createLargeDiffViewerFixture(lineCount).review;
 }
 
 /**

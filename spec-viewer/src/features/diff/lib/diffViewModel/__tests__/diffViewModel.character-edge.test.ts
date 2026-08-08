@@ -9,7 +9,7 @@ test("空textのpaired変更でも両sideに表示segmentを残す", () => {
     createFileDiff([
       { kind: "removed", text: "" },
       { kind: "added", text: "" },
-    ]),
+    ]).review,
   );
   const row = findChangedRow(model.sideBySideRows);
 
@@ -22,7 +22,7 @@ test("空白とemojiの変更を文字列破損なく再構成する", () => {
     createFileDiff([
       { kind: "removed", text: "hello  👋" },
       { kind: "added", text: "hello 👋🏻" },
-    ]),
+    ]).review,
   );
   const row = findChangedRow(model.sideBySideRows);
 
@@ -46,7 +46,7 @@ test.each([
     "old",
   ],
 ] as const)("片側だけの変更は行全体を%s表示する", (lines, expectedKind, cellSide) => {
-  const model = buildDiffViewModel(createFileDiff(lines));
+  const model = buildDiffViewModel(createFileDiff(lines).review);
   const row = findChangedRow(model.sideBySideRows);
   const cell = row[cellSide];
 

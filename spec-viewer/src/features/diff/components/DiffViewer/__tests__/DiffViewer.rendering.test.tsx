@@ -4,8 +4,8 @@ import { afterEach, expect, test } from "vitest";
 
 import { DiffViewer } from "@/features/diff/components/DiffViewer";
 import {
-  createDiffViewerFixture,
-  createLargeDiffViewerFixture,
+  createFileReviewFixture,
+  createLargeFileReviewFixture,
 } from "@/features/diff/components/DiffViewer/testFixtures";
 import type { OmissionReason } from "@/features/diff/domain/fileDiff";
 
@@ -16,7 +16,7 @@ afterEach(() => {
 });
 
 test("ready diffはpath・status・inline controls・行番号・markerを描画する", () => {
-  const result = renderViewer(createDiffViewerFixture());
+  const result = renderViewer(createFileReviewFixture());
 
   expect(
     result.container.querySelector(
@@ -38,7 +38,7 @@ test("ready diffはpath・status・inline controls・行番号・markerを描画
 });
 
 test("availableでhunkが空なら明確な空状態と非活性controlsを表示する", () => {
-  const result = renderViewer(createDiffViewerFixture({ lines: [] }));
+  const result = renderViewer(createFileReviewFixture({ lines: [] }));
 
   expect(result.container.textContent).toContain(
     "表示できる行変更はありません",
@@ -57,7 +57,7 @@ test.each([
   OmissionReason,
   string,
 ][])("%s omitted reasonは%sを含む状態を表示する", (omissionReason, expectedText) => {
-  const result = renderViewer(createDiffViewerFixture({ omissionReason }));
+  const result = renderViewer(createFileReviewFixture({ omissionReason }));
 
   expect(result.container.textContent).toContain(expectedText);
   expect(result.container.querySelector('[role="radiogroup"]')).toBeNull();
@@ -65,7 +65,7 @@ test.each([
 });
 
 test("20,000行入力でも初期semantic rowを500以下にwindowingする", () => {
-  const result = renderViewer(createLargeDiffViewerFixture());
+  const result = renderViewer(createLargeFileReviewFixture());
 
   expect(
     result.container.querySelectorAll(".diff-viewer__row").length,
@@ -73,14 +73,14 @@ test("20,000行入力でも初期semantic rowを500以下にwindowingする", ()
   result.unmount();
 });
 
-function renderViewer(fileDiff: ReturnType<typeof createDiffViewerFixture>) {
+function renderViewer(review: ReturnType<typeof createFileReviewFixture>) {
   const container = document.createElement("div");
   document.body.append(container);
   mountedContainers.push(container);
   const root = createRoot(container);
 
   act(() => {
-    root.render(<DiffViewer fileDiff={fileDiff} />);
+    root.render(<DiffViewer review={review} />);
   });
 
   return {

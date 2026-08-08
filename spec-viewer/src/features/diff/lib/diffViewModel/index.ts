@@ -1,7 +1,7 @@
 import type {
   DiffLine,
   FileChangeStatus,
-  FileDiff,
+  FileReview,
   OmissionReason,
 } from "@/features/diff/domain/fileDiff";
 import { applyCharacterDiff } from "@/features/diff/lib/diffViewModel/characterDiff";
@@ -94,20 +94,20 @@ const DefaultOptions: DiffModelOptions = {
 /**
  * Builds the immutable presentation model used by both diff layouts.
  *
- * @param fileDiff - Decoded diff domain input.
+ * @param review - Decoded file review, without any Spec-scoped identity.
  * @param options - Optional transformation budgets.
  * @returns A presentation model without React or DOM dependencies.
  */
 export function buildDiffViewModel(
-  fileDiff: FileDiff,
+  review: FileReview,
   options: Partial<DiffModelOptions> = {},
 ): DiffViewModel {
   const resolvedOptions: DiffModelOptions = { ...DefaultOptions, ...options };
   const status = {
-    change: fileDiff.review.file.change,
-    label: StatusLabels[fileDiff.review.file.change],
+    change: review.file.change,
+    label: StatusLabels[review.file.change],
   } as const;
-  const structuredDiff = fileDiff.review.structuredDiff;
+  const structuredDiff = review.structuredDiff;
 
   if (structuredDiff.state === "omitted") {
     return createNonReadyModel("omitted", structuredDiff.reason, status);
@@ -126,15 +126,15 @@ export function buildDiffViewModel(
   const inlineRowsWithHunkGaps = insertHunkGaps({
     hunks: structuredDiff.hunks,
     transformedHunks: inlineHunks,
-    oldContent: fileDiff.review.oldContent,
-    newContent: fileDiff.review.newContent,
+    oldContent: review.oldContent,
+    newContent: review.newContent,
     mode: "inline",
   });
   const sideBySideRowsWithHunkGaps = insertHunkGaps({
     hunks: structuredDiff.hunks,
     transformedHunks: sideBySideHunks,
-    oldContent: fileDiff.review.oldContent,
-    newContent: fileDiff.review.newContent,
+    oldContent: review.oldContent,
+    newContent: review.newContent,
     mode: "sideBySide",
   });
   const rowsWithCharacterDiff = applyCharacterDiff(

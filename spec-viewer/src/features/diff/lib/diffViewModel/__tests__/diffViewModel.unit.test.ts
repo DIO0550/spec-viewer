@@ -5,13 +5,13 @@ import { Hunk } from "@/features/diff/domain/fileDiff";
 import { buildDiffViewModel } from "@/features/diff/lib/diffViewModel";
 
 test("1 hunkのcontext・removed・addedをsource orderと行番号を保ってinline化する", () => {
-  const fileDiff = createFileDiff([
+  const review = createFileDiff([
     { kind: "context", text: "const before = 1;" },
     { kind: "removed", text: "const value = before;" },
     { kind: "added", text: "const value = after;" },
-  ]);
+  ]).review;
 
-  const model = buildDiffViewModel(fileDiff);
+  const model = buildDiffViewModel(review);
 
   expect(model.state).toBe("ready");
   expect(model.inlineRows[0]?.kind).toBe("hunk");
