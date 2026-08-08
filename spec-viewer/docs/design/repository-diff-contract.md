@@ -135,3 +135,28 @@ paths and raw control characters are not included in command error messages.
 
 The feature is additive. It does not add stage, commit, discard, arbitrary two-revision
 selection, or submodule-recursive diff behavior.
+
+## Issue #202 frontend coverage
+
+The frontend consumes this contract through three IPC wrappers, a runtime
+decoder, a Spec-free domain model and a pure retrieval state machine.
+
+| Contract area | Frontend implementation |
+| --- | --- |
+| `load_repository_diff` / `traverse_repository_ignored` / `load_repository_file` | `src/lib/api/tauri/loadRepositoryDiff.ts`, `traverseRepositoryIgnored.ts`, `loadRepositoryFile.ts`; injected as one bundle via `repositoryCommands.ts` |
+| Every serde payload and `&'static str` value set | `src/lib/api/tauri/repositoryDiffDecoder.ts`, with the shared primitives in `diffPayloadDecoder.ts` |
+| Flat `BaseResponse` | Promoted to the `BaseResolution` discriminated union in `src/features/diff/domain/repositoryDiff/index.ts`; each variant's null contract is validated |
+| `RepositoryCommandError.code` (21 shared + 3 repository-only) | `gitBackendErrorCode.ts` holds the shared set; `repositoryDiffCommandError.ts` composes the repository set from it |
+| Error classification for the UI | `src/features/diff/domain/repositoryDiffFailure/index.ts`; the `unavailable` and `stale` sets are owned by `domain/diffAvailability` |
+| Opaque `repositoryId` / `currentSnapshotId` / `nodeId` / `cursor` | Branded string types with `fromString` / `toString` companions. The decoder deliberately does **not** validate their format, so the backend can change its issuing scheme without a frontend release |
+| Lazy ignored-directory paging (200 entries per page) | `RepositoryDirectoryExpansion` in `src/features/diff/domain/repositoryDiffState/index.ts` accumulates pages; `expanding` and `failed` keep the entries already fetched |
+| Snapshot scoping | Every lazy-expansion and file-review action carries `currentSnapshotId`; the reducer discards any action whose snapshot is no longer current |
+
+Deferred to follow-up issues:
+
+- The repository-scoped file watch is not wired. `notifyExternalChange()` is the
+  entry point; the frontend debounce window currently coalesces manual
+  `refresh()` calls only, so it does not double up with the backend's own
+  `debounceMs`.
+- Anchor invariants beyond the old/new path rules are delegated to #198.
+- Consolidating the three existing `FileChangeStatus` label maps is #195.

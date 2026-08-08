@@ -57,8 +57,8 @@ export type UseRepositoryDiffWorkspaceResult = Readonly<{
 /**
  * Wires repository-wide diff retrieval to the pure state machine.
  *
- * Stale results are discarded by generation token alone; `AbortSignal` is not
- * used because a Tauri `invoke` cannot be cancelled.
+ * Stale results are discarded by generation token alone: a Tauri `invoke`
+ * cannot be cancelled, so there is nothing for a cancellation signal to abort.
  *
  * @param options - Worktree identity, optional base override and injectable IPC commands.
  * @returns The current state plus the four command callbacks.
