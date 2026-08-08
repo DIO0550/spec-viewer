@@ -72,6 +72,7 @@ export {
 } from "./domain/repositoryDiff";
 export type {
   RepositoryCommandError,
+  RepositoryFailureCause,
   RepositoryInvalidInputCode,
   RepositoryTransientCode,
 } from "./domain/repositoryDiffFailure";

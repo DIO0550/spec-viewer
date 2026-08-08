@@ -14,6 +14,20 @@ export type RepositoryCommandError =
   | TraverseRepositoryIgnoredCommandError;
 
 /**
+ * The minimum shape a thrown value needs for classification.
+ *
+ * Every {@link RepositoryCommandError} satisfies it, but so does a bare
+ * `{ code, message }` — which is all the backend itself rejects with. Keeping
+ * `cause` at this width means the classifier never claims a `command` or `raw`
+ * field it did not actually verify; consumers that need those must narrow to
+ * {@link RepositoryCommandError} themselves.
+ */
+export type RepositoryFailureCause = Readonly<{
+  code: string;
+  message: string;
+}>;
+
+/**
  * Codes the repository diff treats as malformed input: the shared
  * `invalidInput` plus the repository-only `invalidOverride`.
  *
@@ -50,7 +64,7 @@ export type RepositoryDiffFailure =
       kind: "unavailable";
       code: RepositoryWideUnavailableCode;
       message: string;
-      cause: RepositoryCommandError;
+      cause: RepositoryFailureCause;
     }>
   /** The base, snapshot or cursor expired; a fresh overview can recover. */
   | Readonly<{
@@ -58,7 +72,7 @@ export type RepositoryDiffFailure =
       kind: "stale";
       code: DiffStaleCode;
       message: string;
-      cause: RepositoryCommandError;
+      cause: RepositoryFailureCause;
     }>
   /** The request was malformed; `invalidOverride` only reaches the overview path. */
   | Readonly<{
@@ -66,7 +80,7 @@ export type RepositoryDiffFailure =
       kind: "invalidInput";
       code: RepositoryInvalidInputCode;
       message: string;
-      cause: RepositoryCommandError;
+      cause: RepositoryFailureCause;
     }>
   /** A transient I/O or git failure; a user-driven retry is worthwhile. */
   | Readonly<{
@@ -74,14 +88,14 @@ export type RepositoryDiffFailure =
       kind: "transient";
       code: RepositoryTransientCode;
       message: string;
-      cause: RepositoryCommandError;
+      cause: RepositoryFailureCause;
     }>
   /** The backend response violated the contract; treat as a bug, do not retry. */
   | Readonly<{
       feature: "diff";
       kind: "invalidResponse";
       message: string;
-      cause: RepositoryCommandError;
+      cause: RepositoryFailureCause;
     }>
   /** Unclassifiable; non-Error thrown values land here, so `cause` stays unknown. */
   | Readonly<{
@@ -107,14 +121,14 @@ const isTransient = (code: string): code is RepositoryTransientCode =>
 
 /**
  * @param value - Value thrown by a repository command.
- * @returns True when the value has the shape of a normalized command error.
+ * @returns True when the value carries the code and message classification needs.
  */
-const isCommandError = (value: unknown): value is RepositoryCommandError => {
+const isFailureCause = (value: unknown): value is RepositoryFailureCause => {
   return (
     typeof value === "object" &&
     value !== null &&
-    typeof (value as RepositoryCommandError).code === "string" &&
-    typeof (value as RepositoryCommandError).message === "string"
+    typeof (value as RepositoryFailureCause).code === "string" &&
+    typeof (value as RepositoryFailureCause).message === "string"
   );
 };
 
@@ -129,7 +143,7 @@ export const RepositoryDiffFailure = {
    * @returns A tagged failure the UI can match exhaustively.
    */
   fromCommandError(error: unknown): RepositoryDiffFailure {
-    if (!isCommandError(error)) {
+    if (!isFailureCause(error)) {
       return {
         feature: "diff",
         kind: "unknown",

@@ -8,7 +8,10 @@ import {
   type RepositoryTreeNode,
   RepositoryWorktreeId,
 } from "@/features/diff/domain/repositoryDiff";
-import type { RepositoryDiffFailure } from "@/features/diff/domain/repositoryDiffFailure";
+import type {
+  RepositoryCommandError,
+  RepositoryDiffFailure,
+} from "@/features/diff/domain/repositoryDiffFailure";
 import type { RepositoryDiffRequestIdentity } from "@/features/diff/domain/repositoryDiffState";
 
 export const WORKTREE_A = RepositoryWorktreeId.fromString("/repo/a");
@@ -103,17 +106,20 @@ export function createPage(
   return { nodeId, entries: names.map(createEntry), nextCursor };
 }
 
+/** A normalized command error, exactly as the IPC wrapper produces it. */
+const ioCommandError: RepositoryCommandError = {
+  command: "load_repository_diff",
+  code: "io",
+  message: "io failure",
+  raw: null,
+};
+
 export const failure: RepositoryDiffFailure = {
   feature: "diff",
   kind: "transient",
   code: "io",
   message: "io failure",
-  cause: {
-    command: "load_repository_diff",
-    code: "io",
-    message: "io failure",
-    raw: null,
-  },
+  cause: ioCommandError,
 };
 
 export const review: RepositoryFileReview = {

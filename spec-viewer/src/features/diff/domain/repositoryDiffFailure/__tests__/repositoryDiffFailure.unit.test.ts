@@ -126,6 +126,23 @@ test.each(
   ).toBe("diff");
 });
 
+test("commandとrawを持たない素のcode/messageも分類できる", () => {
+  const cause = { code: "notRepository", message: "not a repository" };
+
+  const failure = RepositoryDiffFailure.fromCommandError(cause);
+
+  expect(failure).toMatchObject({ kind: "unavailable", code: "notRepository" });
+  expect(failure.cause).toBe(cause);
+});
+
+test.each([
+  { name: "codeが非string", value: { code: 42, message: "boom" } },
+  { name: "messageが欠落", value: { code: "io" } },
+  { name: "空オブジェクト", value: {} },
+])("$nameの値はunknownへ落とす", ({ value }) => {
+  expect(RepositoryDiffFailure.fromCommandError(value).kind).toBe("unknown");
+});
+
 test("未知codeはunknownへ落とす", () => {
   expect(
     RepositoryDiffFailure.fromCommandError(createCommandError("somethingElse")),
