@@ -1,6 +1,10 @@
 import type { ComparisonRevision } from "@/features/diff/domain/comparisonRevision";
 
 import { InvalidDiffResponseError } from "./diffPayloadDecoder";
+import {
+  GIT_BACKEND_ERROR_CODES,
+  type GitBackendErrorCode,
+} from "./gitBackendErrorCode";
 import { invokeTauriCommand } from "./invokeTauriCommand";
 import { isRecord } from "./isRecord";
 import {
@@ -16,31 +20,15 @@ export type ListChangedSpecFilesCommandRequest = Readonly<{
   comparison?: ComparisonRevision;
 }>;
 export type ListChangedSpecFilesCommandResponse = ChangedSpecFiles;
-export type SpecDiffBackendErrorCode =
-  | "invalidInput"
+/** Backend error codes raised only by the Spec-scoped diff commands. */
+export type SpecOnlyBackendErrorCode =
   | "workspaceDetection"
   | "configLoad"
-  | "specTreeScan"
-  | "notRepository"
-  | "bareRepository"
-  | "worktreeUnavailable"
-  | "commonDirBoundaryEscape"
-  | "unbornHead"
-  | "headChangedDuringRead"
-  | "gitUnavailable"
-  | "gitTimedOut"
-  | "gitOutputLimitExceeded"
-  | "gitFailed"
-  | "unsupportedPathEncoding"
-  | "revisionNotFound"
-  | "revisionNotCommit"
-  | "invalidHistoryOutput"
-  | "invalidRepositoryPath"
-  | "staleBase"
-  | "staleSnapshot"
-  | "entryChangedDuringRead"
-  | "permissionDenied"
-  | "io";
+  | "specTreeScan";
+
+export type SpecDiffBackendErrorCode =
+  | GitBackendErrorCode
+  | SpecOnlyBackendErrorCode;
 export type ListChangedSpecFilesCommandErrorCode =
   | SpecDiffBackendErrorCode
   | "invalidResponse"
@@ -58,31 +46,15 @@ export type ListChangedSpecFilesCommandContract = Readonly<{
   error: ListChangedSpecFilesCommandError;
 }>;
 
-const SPEC_DIFF_BACKEND_ERROR_CODES = [
-  "invalidInput",
+const SPEC_ONLY_BACKEND_ERROR_CODES = [
   "workspaceDetection",
   "configLoad",
   "specTreeScan",
-  "notRepository",
-  "bareRepository",
-  "worktreeUnavailable",
-  "commonDirBoundaryEscape",
-  "unbornHead",
-  "headChangedDuringRead",
-  "gitUnavailable",
-  "gitTimedOut",
-  "gitOutputLimitExceeded",
-  "gitFailed",
-  "unsupportedPathEncoding",
-  "revisionNotFound",
-  "revisionNotCommit",
-  "invalidHistoryOutput",
-  "invalidRepositoryPath",
-  "staleBase",
-  "staleSnapshot",
-  "entryChangedDuringRead",
-  "permissionDenied",
-  "io",
+] as const satisfies readonly SpecOnlyBackendErrorCode[];
+
+export const SPEC_DIFF_BACKEND_ERROR_CODES = [
+  ...GIT_BACKEND_ERROR_CODES,
+  ...SPEC_ONLY_BACKEND_ERROR_CODES,
 ] as const satisfies readonly SpecDiffBackendErrorCode[];
 
 export const ListChangedSpecFilesCommandError = {
