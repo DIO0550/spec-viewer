@@ -28,6 +28,11 @@ export {
   GetSpecFileDiffCommandError,
   getSpecFileDiff,
 } from "./getSpecFileDiff";
+export type { GitBackendErrorCode } from "./gitBackendErrorCode";
+export {
+  GIT_BACKEND_ERROR_CODES,
+  isGitBackendErrorCode,
+} from "./gitBackendErrorCode";
 export type {
   ListChangedSpecFilesCommandContract,
   ListChangedSpecFilesCommandErrorCode,
@@ -53,6 +58,28 @@ export {
 } from "./listSpecFileCommitHistory";
 export { listSpecs } from "./listSpecs";
 export type {
+  LoadRepositoryDiffCommandContract,
+  LoadRepositoryDiffCommandErrorCode,
+  LoadRepositoryDiffCommandRequest,
+  LoadRepositoryDiffCommandResponse,
+} from "./loadRepositoryDiff";
+export {
+  LOAD_REPOSITORY_DIFF_COMMAND,
+  LoadRepositoryDiffCommandError,
+  loadRepositoryDiff,
+} from "./loadRepositoryDiff";
+export type {
+  LoadRepositoryFileCommandContract,
+  LoadRepositoryFileCommandErrorCode,
+  LoadRepositoryFileCommandRequest,
+  LoadRepositoryFileCommandResponse,
+} from "./loadRepositoryFile";
+export {
+  LOAD_REPOSITORY_FILE_COMMAND,
+  LoadRepositoryFileCommandError,
+  loadRepositoryFile,
+} from "./loadRepositoryFile";
+export type {
   LoadSpecBundleCommandContract,
   LoadSpecBundleCommandErrorCode,
   LoadSpecBundleCommandRequest,
@@ -66,6 +93,18 @@ export {
 export { loadWorkspace } from "./loadWorkspace";
 export { readSpecFile } from "./readSpecFile";
 export { reopenComment } from "./reopenComment";
+export type { RepositoryCommands } from "./repositoryCommands";
+export { repositoryCommands } from "./repositoryCommands";
+export type {
+  RepositoryBackendErrorCode,
+  RepositoryCommandErrorCode,
+  RepositoryCommandErrorOf,
+} from "./repositoryDiffCommandError";
+export {
+  isRepositoryBackendErrorCode,
+  isRepositoryCommandErrorCode,
+  REPOSITORY_BACKEND_ERROR_CODES,
+} from "./repositoryDiffCommandError";
 export { resolveComment } from "./resolveComment";
 export { selectCommentExportDestination } from "./selectCommentExportDestination";
 export { selectWorkspaceDirectory } from "./selectWorkspaceDirectory";
@@ -77,5 +116,16 @@ export {
   subscribeWorkspaceDragDropEvents,
   type WorkspaceDragDropEvent,
 } from "./subscribeWorkspaceDragDropEvents";
+export type {
+  TraverseRepositoryIgnoredCommandContract,
+  TraverseRepositoryIgnoredCommandErrorCode,
+  TraverseRepositoryIgnoredCommandRequest,
+  TraverseRepositoryIgnoredCommandResponse,
+} from "./traverseRepositoryIgnored";
+export {
+  TRAVERSE_REPOSITORY_IGNORED_COMMAND,
+  TraverseRepositoryIgnoredCommandError,
+  traverseRepositoryIgnored,
+} from "./traverseRepositoryIgnored";
 export { updateComment } from "./updateComment";
 export { validateWorkspaceDirectory } from "./validateWorkspaceDirectory";
