@@ -219,6 +219,32 @@ export const decodeBoolean = (
   return value;
 };
 
+/**
+ * Validates an array of strings without copying it, so a large path list can
+ * be shared with the raw response instead of doubling memory.
+ *
+ * @param value - Candidate value to validate.
+ * @param path - Validation path used in the error message.
+ * @param raw - Complete raw response, attached to the thrown error for debugging.
+ * @returns The very same array instance, typed as readonly strings.
+ * @throws InvalidDiffResponseError when the value is not an array of strings.
+ */
+export const decodeStringArrayInPlace = (
+  value: unknown,
+  path: string,
+  raw: unknown,
+): readonly string[] => {
+  if (!Array.isArray(value)) {
+    throw invalid(path, "an array", "received a non-array value", raw);
+  }
+
+  for (const [index, entry] of value.entries()) {
+    decodeString(entry, `${path}[${index}]`, raw);
+  }
+
+  return value as readonly string[];
+};
+
 export const FILE_CHANGE_STATUSES = [
   "added",
   "modified",
