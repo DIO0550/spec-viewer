@@ -109,10 +109,11 @@ export function createDeferred<T>(): Deferred<T> {
  * Flushes pending microtasks and timers inside `act` so state updates from
  * settled promises are applied before assertions run.
  *
+ * @param delayMs - How long to wait, for state updates gated on a timer.
  * @returns A promise that settles once React has processed the updates.
  */
-export async function flush(): Promise<void> {
+export async function flush(delayMs = 0): Promise<void> {
   await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
   });
 }
