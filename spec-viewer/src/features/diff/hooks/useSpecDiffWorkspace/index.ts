@@ -12,6 +12,7 @@ import {
   type RevisionOption,
   type SpecFileHistory,
 } from "@/features/diff/domain/comparisonRevision";
+import { DiffAvailability } from "@/features/diff/domain/diffAvailability";
 import {
   createInitialSpecDiffWorkspaceState,
   createSpecChangeId,
@@ -143,13 +144,6 @@ const HEAD_OPTION: RevisionOption = {
 };
 const EMPTY_HISTORY: SpecFileHistory = { items: [], truncated: false };
 
-const STALE_DETAIL_ERROR_CODES = new Set([
-  "staleSnapshot",
-  "headChangedDuringRead",
-  "staleBase",
-  "entryChangedDuringRead",
-]);
-
 /**
  * Detaches the transport response from the pure diff workspace domain.
  *
@@ -258,10 +252,7 @@ export function useSpecDiffWorkspace({
         ) {
           return false;
         }
-        if (
-          allowStaleRecovery &&
-          STALE_DETAIL_ERROR_CODES.has(normalized.code)
-        ) {
+        if (allowStaleRecovery && DiffAvailability.isStale(normalized.code)) {
           return recoverOverview();
         }
 
@@ -528,10 +519,7 @@ export function useSpecDiffWorkspace({
           ) {
             return false;
           }
-          if (
-            allowStaleRecovery &&
-            STALE_DETAIL_ERROR_CODES.has(normalized.code)
-          ) {
+          if (allowStaleRecovery && DiffAvailability.isStale(normalized.code)) {
             return attempt(false);
           }
           setComparisonOperation({
