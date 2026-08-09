@@ -108,12 +108,17 @@ export function buildDiffViewModel(
     label: StatusLabels[fileDiff.review.file.change],
   } as const;
   const structuredDiff = fileDiff.review.structuredDiff;
+  const availability = fileDiff.availability;
 
-  if (structuredDiff.state === "omitted") {
-    return createNonReadyModel("omitted", structuredDiff.reason, status);
+  if (availability.kind === "omitted") {
+    return createNonReadyModel("omitted", availability.reason, status);
   }
 
-  if (structuredDiff.hunks.length === 0) {
+  if (availability.kind === "missing") {
+    return createNonReadyModel("omitted", "missingSide", status);
+  }
+
+  if (availability.kind === "empty") {
     return createNonReadyModel("empty", null, status);
   }
 

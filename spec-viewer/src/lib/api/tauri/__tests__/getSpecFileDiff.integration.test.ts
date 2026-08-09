@@ -34,6 +34,11 @@ test("getSpecFileDiffはdetail commandへ5 fieldを渡してdomainへdecodeす�
     path: ".plugin-workspace/.specs/077-issue-166/tasks.md",
   });
 
+  expect(result.identity).toEqual({
+    sourceId: "spec:077-issue-166",
+    path: "tasks",
+  });
+  expect(result.availability).toEqual({ kind: "ready" });
   expect(result.review.structuredDiff).toEqual({
     state: "available",
     hunks: [

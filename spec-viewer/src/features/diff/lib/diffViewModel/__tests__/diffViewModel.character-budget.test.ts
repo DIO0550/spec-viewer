@@ -73,8 +73,11 @@ function findChangedRows(
 
 function createFileDiff(lines: readonly DiffLineSource[]): FileDiff {
   return {
-    specId: "078-issue-167",
-    fileKey: "implementation-plan",
+    identity: {
+      sourceId: "spec:078-issue-167",
+      path: "implementation-plan",
+    },
+    availability: { kind: "ready" },
     review: {
       file: {
         oldPath: "implementation-plan.md",

@@ -28,7 +28,7 @@ test("ready diffはpath・status・inline controls・行番号・markerを描画
   expect(
     result.container.querySelector('[role="radio"][aria-checked="true"]')
       ?.textContent,
-  ).toBe("Inline");
+  ).toBe("Unified");
   expect(result.container.textContent).toContain("-");
   expect(result.container.textContent).toContain("+");
   expect(

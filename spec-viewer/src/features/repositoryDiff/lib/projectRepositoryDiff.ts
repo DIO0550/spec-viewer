@@ -1,3 +1,4 @@
+import { deriveDiffAvailability } from "@/features/diff/domain/fileDiff";
 import type {
   FileChangeStatus,
   FileDiff,
@@ -118,9 +119,12 @@ export function toDiffViewerFileDiff(
   selection: RepositoryDiffSelection,
 ): FileDiff {
   return {
-    specId: selection.worktreeId,
-    fileKey: selection.path,
+    identity: {
+      sourceId: "repository:" + selection.worktreeId,
+      path: selection.path,
+    },
     review,
+    availability: deriveDiffAvailability(review),
   };
 }
 

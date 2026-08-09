@@ -162,7 +162,7 @@
 .diff-viewer__marker {
   display: inline-block;
   min-width: 0;
-  color: var(--color-text-muted);
+  color: var(--color-text-body);
   background: var(--diff-gutter-bg);
   text-align: right;
   user-select: none;

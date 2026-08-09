@@ -94,11 +94,110 @@ export type FileReview = Readonly<{
   submodule: SubmoduleState | null;
 }>;
 
-export type FileDiff = Readonly<{
-  specId: string;
-  fileKey: string;
-  review: FileReview;
+export type DiffFileIdentity = Readonly<{
+  sourceId: string;
+  path: string;
 }>;
+
+export type FileDiffAvailability =
+  | Readonly<{ kind: "ready" }>
+  | Readonly<{ kind: "empty" }>
+  | Readonly<{ kind: "omitted"; reason: OmissionReason }>
+  | Readonly<{ kind: "missing"; side: "old" | "new" | "both" }>;
+
+export type FileDiff = Readonly<{
+  identity: DiffFileIdentity;
+  review: FileReview;
+  availability: FileDiffAvailability;
+}>;
+
+/**
+ * Derives the display availability from a decoded review without depending on a source adapter.
+ *
+ * @param review - Decoded file review to classify.
+ * @returns The safe top-level state for the diff viewer.
+ */
+export function deriveDiffAvailability(
+  review: FileReview,
+): FileDiffAvailability {
+  if (review.file.contentClassification === "binary") {
+    return { kind: "omitted", reason: "binary" };
+  }
+
+  if (review.structuredDiff.state === "omitted") {
+    if (review.structuredDiff.reason === "missingSide") {
+      return { kind: "missing", side: getMissingSide(review) ?? "both" };
+    }
+
+    return { kind: "omitted", reason: review.structuredDiff.reason };
+  }
+
+  const missingSide = getMissingSide(review);
+  if (missingSide !== null && !isExpectedOneSidedMissing(review, missingSide)) {
+    return { kind: "missing", side: missingSide };
+  }
+
+  if (review.structuredDiff.hunks.length === 0) {
+    return { kind: "empty" };
+  }
+
+  return { kind: "ready" };
+}
+
+/**
+ * Finds whether either content side is explicitly unavailable.
+ *
+ * @param review - Review whose old and new content states are inspected.
+ * @returns The missing side, or null when both sides are available.
+ */
+function getMissingSide(review: FileReview): "old" | "new" | "both" | null {
+  const oldMissing =
+    review.oldContent.state === "omitted" &&
+    review.oldContent.reason === "missingSide";
+  const newMissing =
+    review.newContent.state === "omitted" &&
+    review.newContent.reason === "missingSide";
+
+  if (oldMissing && newMissing) {
+    return "both";
+  }
+  if (oldMissing) {
+    return "old";
+  }
+  if (newMissing) {
+    return "new";
+  }
+
+  return null;
+}
+
+/**
+ * Keeps the expected missing side of a one-sided file renderable.
+ *
+ * @param review - Review carrying the file status and available counterpart.
+ * @param side - Side reported as missing.
+ * @returns True when the missing side is intrinsic to the file change.
+ */
+function isExpectedOneSidedMissing(
+  review: FileReview,
+  side: "old" | "new" | "both",
+): boolean {
+  if (side === "old") {
+    return (
+      (review.file.change === "added" || review.file.change === "untracked") &&
+      review.newContent.state === "available"
+    );
+  }
+
+  if (side === "new") {
+    return (
+      review.file.change === "deleted" &&
+      review.oldContent.state === "available"
+    );
+  }
+
+  return false;
+}
 
 const HUNK_HEADER_PATTERN =
   /^@@ -([0-9]+)(?:,([0-9]+))? \+([0-9]+)(?:,([0-9]+))? @@(?: .*)?$/;
