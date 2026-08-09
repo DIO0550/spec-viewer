@@ -16,6 +16,24 @@ test.each([
   unmount();
 });
 
+test("selectionRequired は base selection message と retry を表示する", () => {
+  const onRetry = vi.fn();
+  const result = renderWorkspace({
+    status: "selectionRequired",
+    message: "比較元を選択してください",
+    onRetry,
+  });
+
+  expect(result.container.querySelector("p")?.textContent).toBe(
+    "比較元を選択してください",
+  );
+  act(() => {
+    result.container.querySelector<HTMLButtonElement>("button")?.click();
+  });
+  expect(onRetry).toHaveBeenCalledOnce();
+  result.unmount();
+});
+
 test("failedはretryを通知しreadyはcaller-owned previewを表示する", () => {
   const onRetry = vi.fn();
   const failed = renderWorkspace({

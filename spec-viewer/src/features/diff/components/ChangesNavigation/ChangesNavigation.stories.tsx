@@ -28,6 +28,28 @@ export const ReadyMixed: Story = {
   },
 };
 
+export const RepositoryIgnoredDeferred: Story = {
+  args: {
+    selectedId: "vendor",
+    items: [
+      {
+        id: "vendor",
+        path: "vendor",
+        change: null,
+        ignored: true,
+        deferredNodeId: "in1_deferred",
+      },
+      {
+        id: "vendor/pkg",
+        path: "vendor/pkg",
+        change: null,
+        ignored: true,
+        deferredNodeId: null,
+      },
+    ],
+  },
+};
+
 export const Empty: Story = {};
 
 export const Loading: Story = {
@@ -37,5 +59,13 @@ export const Loading: Story = {
 export const Failed: Story = {
   args: {
     availability: { status: "failed", message: "変更一覧の取得に失敗しました" },
+  },
+};
+export const Unavailable: Story = {
+  args: {
+    availability: {
+      status: "unavailable",
+      reason: "比較元のブランチを選択してください。",
+    },
   },
 };
