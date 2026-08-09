@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 
 import { DiffViewer } from "@/features/diff/components/DiffViewer";
+import { Hunk } from "@/features/diff/domain/fileDiff";
 import {
   createDiffViewerFixture,
   createLargeDiffViewerFixture,
@@ -71,10 +72,8 @@ export const Mixed: Story = {
    */
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("radio", { name: "Side by side" }));
-    await expect(
-      canvas.getByRole("radio", { name: "Side by side" }),
-    ).toBeChecked();
+    await userEvent.click(canvas.getByRole("radio", { name: "Split" }));
+    await expect(canvas.getByRole("radio", { name: "Split" })).toBeChecked();
     await userEvent.click(canvas.getByRole("button", { name: "次の変更" }));
     await expect(
       canvas.getByRole("button", { name: "次の変更" }),
@@ -86,6 +85,44 @@ export const Mixed: Story = {
       canvas.queryByRole("button", { name: "省略した2行を展開" }),
     ).not.toBeInTheDocument();
   },
+};
+
+export const MultipleHunks: Story = {
+  args: {
+    fileDiff: createDiffViewerFixture({
+      lines: Array.from({ length: 24 }, (_, index) => ({
+        kind: "context" as const,
+        text: "context " + (index + 1),
+      })),
+      hunks: [
+        Hunk.fromLines("@@ -1,2 +1,2 @@", [
+          { kind: "removed", text: "const first = before;" },
+          { kind: "added", text: "const first = after;" },
+        ]),
+        Hunk.fromLines("@@ -20,2 +20,2 @@", [
+          { kind: "removed", text: "const second = before;" },
+          { kind: "added", text: "const second = after;" },
+        ]),
+      ],
+    }),
+  },
+};
+
+export const KeyboardFocus: Story = {
+  args: { fileDiff: createDiffViewerFixture() },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const unified = canvas.getByRole("radio", { name: "Unified" });
+    unified.focus();
+    await userEvent.keyboard("{ArrowRight}");
+    await expect(canvas.getByRole("radio", { name: "Split" })).toBeChecked();
+    await expect(unified).toHaveFocus();
+  },
+};
+
+export const DarkTheme: Story = {
+  globals: { theme: "Dark" },
+  args: { fileDiff: createDiffViewerFixture() },
 };
 
 export const LargeDiff: Story = {
@@ -110,5 +147,37 @@ export const EmptyDiff: Story = {
 export const OmittedDiff: Story = {
   args: {
     fileDiff: createDiffViewerFixture({ omissionReason: "largeFile" }),
+  },
+};
+
+export const BinaryDiff: Story = {
+  args: {
+    fileDiff: createDiffViewerFixture({ omissionReason: "binary" }),
+  },
+};
+
+export const MissingSideDiff: Story = {
+  args: {
+    fileDiff: createDiffViewerFixture({
+      omissionReason: "missingSide",
+      status: "modified",
+    }),
+  },
+};
+
+export const UnsupportedDiff: Story = {
+  args: {
+    fileDiff: createDiffViewerFixture({
+      omissionReason: "unsupportedEntryKind",
+    }),
+  },
+};
+
+export const UntrackedDiff: Story = {
+  args: {
+    fileDiff: createDiffViewerFixture({
+      status: "untracked",
+      lines: [{ kind: "added", text: "const untracked = true;" }],
+    }),
   },
 };
