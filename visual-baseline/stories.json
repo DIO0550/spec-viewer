@@ -290,9 +290,24 @@
     "name": "Added Only"
   },
   {
+    "id": "features-diff-components-diffviewer--binary-diff",
+    "title": "features/diff/components/DiffViewer",
+    "name": "Binary Diff"
+  },
+  {
+    "id": "features-diff-components-diffviewer--dark-theme",
+    "title": "features/diff/components/DiffViewer",
+    "name": "Dark Theme"
+  },
+  {
     "id": "features-diff-components-diffviewer--empty-diff",
     "title": "features/diff/components/DiffViewer",
     "name": "Empty Diff"
+  },
+  {
+    "id": "features-diff-components-diffviewer--keyboard-focus",
+    "title": "features/diff/components/DiffViewer",
+    "name": "Keyboard Focus"
   },
   {
     "id": "features-diff-components-diffviewer--large-diff",
@@ -300,9 +315,19 @@
     "name": "Large Diff"
   },
   {
+    "id": "features-diff-components-diffviewer--missing-side-diff",
+    "title": "features/diff/components/DiffViewer",
+    "name": "Missing Side Diff"
+  },
+  {
     "id": "features-diff-components-diffviewer--mixed",
     "title": "features/diff/components/DiffViewer",
     "name": "Mixed"
+  },
+  {
+    "id": "features-diff-components-diffviewer--multiple-hunks",
+    "title": "features/diff/components/DiffViewer",
+    "name": "Multiple Hunks"
   },
   {
     "id": "features-diff-components-diffviewer--omitted-diff",
@@ -313,6 +338,16 @@
     "id": "features-diff-components-diffviewer--removed-only",
     "title": "features/diff/components/DiffViewer",
     "name": "Removed Only"
+  },
+  {
+    "id": "features-diff-components-diffviewer--unsupported-diff",
+    "title": "features/diff/components/DiffViewer",
+    "name": "Unsupported Diff"
+  },
+  {
+    "id": "features-diff-components-diffviewer--untracked-diff",
+    "title": "features/diff/components/DiffViewer",
+    "name": "Untracked Diff"
   },
   {
     "id": "features-diff-components-viewmodetoolbar--all-props",
