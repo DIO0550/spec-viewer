@@ -275,6 +275,16 @@
     "name": "Ready Mixed"
   },
   {
+    "id": "features-diff-changesnavigation--repository-ignored-deferred",
+    "title": "Features/Diff/ChangesNavigation",
+    "name": "Repository Ignored Deferred"
+  },
+  {
+    "id": "features-diff-changesnavigation--unavailable",
+    "title": "Features/Diff/ChangesNavigation",
+    "name": "Unavailable"
+  },
+  {
     "id": "features-diff-components-diffviewer--added-only",
     "title": "features/diff/components/DiffViewer",
     "name": "Added Only"
@@ -335,14 +345,34 @@
     "name": "Ready"
   },
   {
+    "id": "features-diff-diffworkspace--binary",
+    "title": "Features/Diff/DiffWorkspace",
+    "name": "Binary"
+  },
+  {
     "id": "features-diff-diffworkspace--default",
     "title": "Features/Diff/DiffWorkspace",
     "name": "Default"
   },
   {
+    "id": "features-diff-diffworkspace--deleted",
+    "title": "Features/Diff/DiffWorkspace",
+    "name": "Deleted"
+  },
+  {
+    "id": "features-diff-diffworkspace--detail-loading",
+    "title": "Features/Diff/DiffWorkspace",
+    "name": "Detail Loading"
+  },
+  {
     "id": "features-diff-diffworkspace--failed",
     "title": "Features/Diff/DiffWorkspace",
     "name": "Failed"
+  },
+  {
+    "id": "features-diff-diffworkspace--invalid-override",
+    "title": "Features/Diff/DiffWorkspace",
+    "name": "Invalid Override"
   },
   {
     "id": "features-diff-diffworkspace--loading",
@@ -353,6 +383,16 @@
     "id": "features-diff-diffworkspace--ready",
     "title": "Features/Diff/DiffWorkspace",
     "name": "Ready"
+  },
+  {
+    "id": "features-diff-diffworkspace--selection-required",
+    "title": "Features/Diff/DiffWorkspace",
+    "name": "Selection Required"
+  },
+  {
+    "id": "features-diff-diffworkspace--unavailable",
+    "title": "Features/Diff/DiffWorkspace",
+    "name": "Unavailable"
   },
   {
     "id": "features-diff-diffworkspace--unchanged",
