@@ -58,7 +58,12 @@ const SemanticRowHardCap = 500;
 export function DiffViewer({ fileDiff }: DiffViewerProps): ReactElement {
   const model = useMemo(
     () => buildDiffViewModel(fileDiff),
-    [fileDiff.identity.sourceId, fileDiff.identity.path, fileDiff.review],
+    [
+      fileDiff.identity.sourceId,
+      fileDiff.identity.path,
+      fileDiff.review,
+      fileDiff.availability,
+    ],
   );
   const [mode, setMode] = useState<DiffViewerMode>("unified");
   const [activeChangeId, setActiveChangeId] = useState<string | null>(
