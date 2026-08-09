@@ -29,6 +29,7 @@ import { CommentScope } from "@/features/comments/domain/commentScope";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import {
   ChangesNavigation,
+  type ChangesNavigationAvailability,
   createSpecChangeId,
   DiffViewer,
   DiffWorkspace,
@@ -39,6 +40,16 @@ import {
   useSpecDiffWorkspace,
   ViewModeToolbar,
 } from "@/features/diff";
+import { useRepositoryDiffWorkspace } from "@/features/repositoryDiff/hooks/useRepositoryDiffWorkspace";
+import type { RepositoryDiffSelection } from "@/features/repositoryDiff/domain/repositoryDiff";
+import type { RepositoryDiffWorkspaceState } from "@/features/repositoryDiff/domain/repositoryDiffWorkspaceState";
+import {
+  projectChangedFiles,
+  projectFileReview,
+  projectIgnoredPage,
+  projectRepositoryTree,
+  toDiffViewerFileDiff,
+} from "@/features/repositoryDiff/lib/projectRepositoryDiff";
 import {
   ThemeProvider,
   useLeftNavigationPreference,
@@ -140,6 +151,16 @@ function SpecViewAppContent(): ReactElement {
     workspacePath: activeWorkspaceRoot,
     selection: specState.selection,
   });
+  const repositoryDiff = useRepositoryDiffWorkspace({
+    workspacePath: activeWorkspaceRoot,
+    worktreeId: activeWorkspaceRoot,
+  });
+  const repositoryMayOwnDiff =
+    activeWorkspaceRoot !== null &&
+    repositoryDiff.state.status !== "failed" &&
+    repositoryDiff.state.status !== "unavailable";
+  const isRepositoryDiffView =
+    workspaceNavigation.state.mode === "diff" && repositoryMayOwnDiff;
   const isCurrentViewLoading = specSelectors.isLoading;
   const documentReadiness = useDocumentReadiness(specState.documentState);
   const commentScope = useMemo(
@@ -194,11 +215,14 @@ function SpecViewAppContent(): ReactElement {
   const viewRefresh = useViewRefresh({
     selection: resetKeys,
     isCurrentViewLoading,
+    isRepositoryView: isRepositoryDiffView,
     reload: {
       document: specActions.reloadDocument,
       specs: specActions.reloadSpecs,
       comments: comments.reloadComments,
       diff: specDiff.refresh,
+      repositoryInvalidate: repositoryDiff.invalidate,
+      repository: repositoryDiff.refresh,
     },
     onError: setDialogErrorMessage,
   });
@@ -220,11 +244,13 @@ function SpecViewAppContent(): ReactElement {
     if (
       workspaceNavigation.state.mode === "diff" &&
       (specDiff.state.status === "idle" ||
-        specDiff.state.status === "unavailable")
+        specDiff.state.status === "unavailable") &&
+      !repositoryMayOwnDiff
     ) {
       workspaceNavigation.actions.changeMode("specs");
     }
   }, [
+    repositoryMayOwnDiff,
     specDiff.state.status,
     workspaceNavigation.actions.changeMode,
     workspaceNavigation.state.mode,
@@ -261,7 +287,8 @@ function SpecViewAppContent(): ReactElement {
     resetKeys.fileKey !== null &&
     documentReadiness.isDocumentReadable;
   const canRefresh =
-    activeWorkspaceRoot !== null && specSelectors.canReloadDocument;
+    activeWorkspaceRoot !== null &&
+    (isRepositoryDiffView || specSelectors.canReloadDocument);
   const currentSpecChange = useMemo(
     () =>
       specDiff.state.status === "ready"
@@ -282,8 +309,55 @@ function SpecViewAppContent(): ReactElement {
         : [],
     [specDiff.state],
   );
-  const changesAvailability =
-    specDiff.state.status === "ready"
+  const repositoryItems = useMemo(() => {
+    if (
+      activeWorkspaceRoot === null ||
+      repositoryDiff.state.overview === null
+    ) {
+      return [];
+    }
+    const overview = repositoryDiff.state.overview;
+    const changedItems = projectChangedFiles(overview, activeWorkspaceRoot);
+    const treeItems = projectRepositoryTree(
+      overview.allRoot,
+      overview,
+      activeWorkspaceRoot,
+    );
+    const ignoredPageItems = Object.values(
+      repositoryDiff.state.ignoredPages,
+    ).flatMap((page) =>
+      projectIgnoredPage(page, overview, activeWorkspaceRoot),
+    );
+    const changedPaths = new Set(changedItems.map((item) => item.path));
+    const treePaths = new Set(treeItems.map((item) => item.path));
+    return [
+      ...changedItems,
+      ...treeItems.filter((item) => !changedPaths.has(item.path)),
+      ...ignoredPageItems.filter(
+        (item) => !changedPaths.has(item.path) && !treePaths.has(item.path),
+      ),
+    ];
+  }, [
+    activeWorkspaceRoot,
+    repositoryDiff.state.ignoredPages,
+    repositoryDiff.state.overview,
+  ]);
+  const repositorySelectedId = useMemo(
+    () =>
+      repositoryDiff.selection === null
+        ? null
+        : (repositoryItems.find(
+            (item) => item.path === repositoryDiff.selection?.path,
+          )?.id ?? null),
+    [repositoryDiff.selection, repositoryItems],
+  );
+  const navigationItems = isRepositoryDiffView ? repositoryItems : changesItems;
+  const navigationSelectedId = isRepositoryDiffView
+    ? repositorySelectedId
+    : selectedChangeId;
+  const changesAvailability = isRepositoryDiffView
+    ? createRepositoryChangesAvailability(repositoryDiff.state)
+    : specDiff.state.status === "ready"
       ? ({ status: "ready" } as const)
       : specDiff.state.status === "failed"
         ? ({ status: "failed", message: specDiff.state.message } as const)
@@ -296,21 +370,39 @@ function SpecViewAppContent(): ReactElement {
           status: "unavailable",
           reason: "ワークスペースを選択するとDiffを利用できます",
         } as const)
-      : specDiff.state.status === "idle" || specDiff.state.status === "loading"
-        ? ({
-            status: "unavailable",
-            reason: "Diff情報を読み込んでいます",
-          } as const)
-        : specDiff.state.status === "unavailable"
-          ? ({ status: "unavailable", reason: specDiff.state.reason } as const)
-          : ({ status: "ready" } as const);
-  const diffWorkspaceState: DiffWorkspaceState = createDiffWorkspaceState(
-    specDiff.state,
-    specState.selection.specId,
-    specState.selection.fileKey,
-    currentSpecChange?.targetPath ?? null,
-    specDiff.refresh,
-  );
+      : isRepositoryDiffView
+        ? repositoryDiff.state.status === "loading" ||
+          repositoryDiff.state.status === "idle"
+          ? ({
+              status: "unavailable",
+              reason: "Repository diffを読み込んでいます",
+            } as const)
+          : ({ status: "ready" } as const)
+        : specDiff.state.status === "idle" ||
+            specDiff.state.status === "loading"
+          ? ({
+              status: "unavailable",
+              reason: "Diff情報を読み込んでいます",
+            } as const)
+          : specDiff.state.status === "unavailable"
+            ? ({
+                status: "unavailable",
+                reason: specDiff.state.reason,
+              } as const)
+            : ({ status: "ready" } as const);
+  const diffWorkspaceState: DiffWorkspaceState = isRepositoryDiffView
+    ? createRepositoryDiffWorkspaceState(
+        repositoryDiff.state,
+        repositoryDiff.selection,
+        repositoryDiff.refresh,
+      )
+    : createDiffWorkspaceState(
+        specDiff.state,
+        specState.selection.specId,
+        specState.selection.fileKey,
+        currentSpecChange?.targetPath ?? null,
+        specDiff.refresh,
+      );
 
   return (
     <div className="app-drop-root">
@@ -349,12 +441,14 @@ function SpecViewAppContent(): ReactElement {
             mode={workspaceNavigation.state.mode}
             diffAvailability={diffTabAvailability}
             activeItemLabel={
-              specSelectors.selectedSpec !== null &&
-              specSelectors.selectedFile !== null
-                ? specSelectors.selectedSpec.label +
-                  " / " +
-                  specSelectors.selectedFile.fileName
-                : "ファイル未選択"
+              isRepositoryDiffView
+                ? (repositoryDiff.selection?.path ?? "ファイル未選択")
+                : specSelectors.selectedSpec !== null &&
+                    specSelectors.selectedFile !== null
+                  ? specSelectors.selectedSpec.label +
+                    " / " +
+                    specSelectors.selectedFile.fileName
+                  : "ファイル未選択"
             }
             onModeChange={workspaceNavigation.actions.changeMode}
           />
@@ -415,10 +509,27 @@ function SpecViewAppContent(): ReactElement {
             />
           ) : (
             <ChangesNavigation
-              items={changesItems}
-              selectedId={selectedChangeId}
+              items={navigationItems}
+              selectedId={navigationSelectedId}
               availability={changesAvailability}
               onSelect={(id) => {
+                if (isRepositoryDiffView) {
+                  const item = repositoryItems.find(
+                    (candidate) => candidate.id === id,
+                  );
+                  if (item === undefined) {
+                    return;
+                  }
+                  workspaceNavigation.actions.selectItem(id);
+                  if (item.deferredNodeId !== null) {
+                    void repositoryDiff.loadIgnoredChildren(
+                      item.deferredNodeId,
+                    );
+                    return;
+                  }
+                  void repositoryDiff.selectPath(item.path);
+                  return;
+                }
                 const change =
                   specDiff.state.status === "ready"
                     ? (specDiff.state.overview.files.find(
@@ -435,7 +546,9 @@ function SpecViewAppContent(): ReactElement {
                 );
               }}
               onRetry={() => {
-                void specDiff.refresh();
+                void (isRepositoryDiffView
+                  ? repositoryDiff.retry()
+                  : specDiff.refresh());
               }}
             />
           )}
@@ -445,7 +558,7 @@ function SpecViewAppContent(): ReactElement {
             <DiffWorkspace
               state={diffWorkspaceState}
               revisionSelector={
-                activeWorkspaceRoot === null ? null : (
+                isRepositoryDiffView || activeWorkspaceRoot === null ? null : (
                   <RevisionSelector
                     value={specDiff.comparison}
                     options={specDiff.revisionOptions.value}
@@ -482,7 +595,11 @@ function SpecViewAppContent(): ReactElement {
                   />
                 )
               }
-              selectedPath={currentSpecChange?.targetPath ?? null}
+              selectedPath={
+                isRepositoryDiffView
+                  ? (repositoryDiff.selection?.path ?? null)
+                  : (currentSpecChange?.targetPath ?? null)
+              }
               preview={null}
               availability={{ status: "ready" }}
             />
@@ -628,6 +745,99 @@ function createDiffWorkspaceState(
     status: "ready",
     selectedPath: selectedPath ?? selectedFileKey,
     preview: <DiffViewer fileDiff={state.detail.value} />,
+  };
+}
+
+function createRepositoryChangesAvailability(
+  state: RepositoryDiffWorkspaceState,
+): ChangesNavigationAvailability {
+  if (state.status === "ready") {
+    return { status: "ready" };
+  }
+  if (state.status === "idle" || state.status === "loading") {
+    return { status: "loading" };
+  }
+  if (state.status === "needsSelection") {
+    return {
+      status: "unavailable",
+      reason: "比較元のブランチを選択してください。",
+    };
+  }
+  if (state.status === "invalidOverride") {
+    return {
+      status: "unavailable",
+      reason: "指定された比較元ブランチを解決できません。",
+    };
+  }
+  if (state.status === "unavailable") {
+    return {
+      status: "unavailable",
+      reason: state.error?.message ?? "Repository diff は利用できません。",
+    };
+  }
+  return {
+    status: "failed",
+    message: state.error?.message ?? "Repository diff の取得に失敗しました。",
+  };
+}
+
+function createRepositoryDiffWorkspaceState(
+  state: RepositoryDiffWorkspaceState,
+  selection: RepositoryDiffSelection | null,
+  onRetry: () => Promise<boolean>,
+): DiffWorkspaceState {
+  if (state.status === "idle" || state.status === "loading") {
+    return { status: "loading" };
+  }
+  if (state.status === "needsSelection") {
+    return {
+      status: "selectionRequired",
+      message: "比較元のブランチを選択してください。",
+      onRetry,
+    };
+  }
+  if (state.status === "invalidOverride") {
+    return {
+      status: "failed",
+      message: "指定された比較元ブランチを解決できません。",
+      onRetry,
+    };
+  }
+  if (state.status === "unavailable" || state.status === "failed") {
+    return {
+      status: "failed",
+      message: state.error?.message ?? "Repository diff は利用できません。",
+      onRetry,
+    };
+  }
+  if (selection === null) {
+    return { status: "noSelection", label: "変更ファイル" };
+  }
+  if (state.detail.status === "unchanged") {
+    return { status: "unchanged" };
+  }
+  if (state.detail.status === "loading") {
+    return { status: "loading" };
+  }
+  if (
+    state.detail.status === "unavailable" ||
+    state.detail.status === "failed"
+  ) {
+    return {
+      status: "failed",
+      message: state.detail.error.message,
+      onRetry,
+    };
+  }
+  const projection = projectFileReview(state.detail.review, selection);
+  return {
+    status: "ready",
+    selectedPath: projection.path,
+    preview: (
+      <DiffViewer
+        fileDiff={toDiffViewerFileDiff(projection.review, projection.selection)}
+      />
+    ),
   };
 }
 

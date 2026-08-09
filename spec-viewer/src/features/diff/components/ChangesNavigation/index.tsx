@@ -5,7 +5,9 @@ import type { FileChangeStatus } from "@/features/diff/domain/fileDiff";
 export type ChangesNavigationItem = Readonly<{
   id: string;
   path: string;
-  change?: FileChangeStatus;
+  change?: FileChangeStatus | null;
+  ignored?: boolean;
+  deferredNodeId?: string | null;
 }>;
 export type ChangesNavigationAvailability =
   | Readonly<{ status: "ready" }>
@@ -77,11 +79,20 @@ export function ChangesNavigation(props: ChangesNavigationProps): ReactElement {
         >
           <span
             className="changes-navigation__change-token"
-            aria-label={getChangeLabel(item.change)}
+            aria-label={getChangeLabel(item.change, item.ignored === true)}
           >
-            {getChangeToken(item.change)}
+            {getChangeToken(item.change, item.ignored === true)}
           </span>
           <span className="changes-navigation__path">{item.path}</span>
+          {item.deferredNodeId === undefined ||
+          item.deferredNodeId === null ? null : (
+            <span
+              className="changes-navigation__deferred"
+              aria-label="遅延読み込みのディレクトリ"
+            >
+              …
+            </span>
+          )}
         </button>
       ))}
     </nav>
@@ -139,17 +150,31 @@ const CHANGE_LABELS = {
  * @returns "U" for added/untracked files, "M" for every other change
  *   (including the undefined/unknown case).
  */
-function getChangeToken(change: FileChangeStatus | undefined): "M" | "U" {
+function getChangeToken(
+  change: FileChangeStatus | null | undefined,
+  ignored: boolean,
+): "I" | "M" | "U" {
+  if (ignored) {
+    return "I";
+  }
   return change === "added" || change === "untracked" ? "U" : "M";
 }
 
 /**
- * Resolves the accessible label for a file's change status.
+ * Resolves the accessible label for a file change or ignored node.
  *
- * @param change - The file's change status, or undefined when unknown.
- * @returns The Japanese change label, defaulting to "変更" when the status
- *   is unknown.
+ * @param change - The file change status, or undefined when unknown.
+ * @param ignored - Whether the item is ignored.
+ * @returns The Japanese status label.
  */
-function getChangeLabel(change: FileChangeStatus | undefined): string {
-  return change === undefined ? "変更" : CHANGE_LABELS[change];
+function getChangeLabel(
+  change: FileChangeStatus | null | undefined,
+  ignored: boolean,
+): string {
+  if (ignored) {
+    return "無視";
+  }
+  return change === undefined || change === null
+    ? "変更"
+    : CHANGE_LABELS[change];
 }
