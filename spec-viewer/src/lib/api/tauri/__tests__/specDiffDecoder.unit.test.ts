@@ -19,7 +19,11 @@ test("decodeChangedSpecFilesは最小の変更一覧responseをdecodeする", ()
 test("decodeSpecFileDiffはtext contentと空hunksとnull submoduleをdecodeする", () => {
   const response = createMinimalDetailResponse();
 
-  expect(decodeSpecFileDiff(response)).toEqual(response);
+  expect(decodeSpecFileDiff(response)).toMatchObject({
+    identity: { sourceId: "spec:077-issue-166", path: "tasks" },
+    review: response.review,
+    availability: { kind: "empty" },
+  });
 });
 
 test.each([
@@ -125,5 +129,9 @@ test("decodeSpecFileDiffはomitted・nullable・submoduleを欠落なく保持�
     uninitialized: false,
   };
 
-  expect(decodeSpecFileDiff(response)).toEqual(response);
+  expect(decodeSpecFileDiff(response)).toMatchObject({
+    identity: { sourceId: "spec:077-issue-166", path: "tasks" },
+    review: response.review,
+    availability: { kind: "omitted", reason: "diffLimit" },
+  });
 });

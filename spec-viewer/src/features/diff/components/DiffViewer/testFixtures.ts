@@ -1,11 +1,14 @@
 import type {
+  ContentClassification,
   DiffLineSource,
   FileChangeStatus,
+  FileContent,
   FileDiff,
+  FileReview,
   OmissionReason,
   StructuredDiff,
 } from "@/features/diff/domain/fileDiff";
-import { Hunk } from "@/features/diff/domain/fileDiff";
+import { deriveDiffAvailability, Hunk } from "@/features/diff/domain/fileDiff";
 
 export type DiffViewerFixtureOptions = Readonly<{
   status?: FileChangeStatus;
@@ -14,13 +17,17 @@ export type DiffViewerFixtureOptions = Readonly<{
   oldContent?: string;
   newContent?: string;
   fileKey?: string;
+  oldPath?: string | null;
+  newPath?: string | null;
+  contentClassification?: ContentClassification;
+  hunks?: readonly Hunk[];
 }>;
 
 /**
- * Creates a readonly FileDiff fixture for component tests and stories.
+ * Creates a readonly generic FileDiff fixture for component tests and stories.
  *
  * @param options - Domain overrides for the scenario.
- * @returns A complete decoded FileDiff value.
+ * @returns A complete source-independent FileDiff value.
  */
 export function createDiffViewerFixture(
   options: DiffViewerFixtureOptions = {},
@@ -33,58 +40,69 @@ export function createDiffViewerFixture(
     { kind: "removed", text: "const second = before;" },
     { kind: "added", text: "const second = after;" },
   ];
+  const status = options.status ?? "modified";
   const omissionReason = options.omissionReason ?? null;
+  const isAdded = status === "added" || status === "untracked";
+  const isDeleted = status === "deleted";
+  const contentClassification =
+    options.contentClassification ??
+    (omissionReason === "binary" ? "binary" : "text");
+  const oldPath =
+    options.oldPath ?? (isAdded ? null : "implementation-plan.md");
+  const newPath =
+    options.newPath ?? (isDeleted ? null : "implementation-plan.md");
   const structuredDiff: StructuredDiff =
     omissionReason === null
       ? {
-          state: "available" as const,
+          state: "available",
           hunks:
-            lines.length === 0
+            options.hunks ??
+            (lines.length === 0
               ? []
-              : [Hunk.fromLines("@@ -1,6 +1,6 @@", lines)],
+              : [Hunk.fromLines("@@ -1,6 +1,6 @@", lines)]),
           reason: null,
         }
       : {
-          state: "omitted" as const,
+          state: "omitted",
           hunks: [],
           reason: omissionReason,
         };
+  const review: FileReview = {
+    file: {
+      oldPath,
+      newPath,
+      change: status,
+      entryKind: "regular",
+      contentClassification,
+      similarity: null,
+      oldMode: isAdded ? null : "100644",
+      newMode: isDeleted ? null : "100644",
+    },
+    oldContent: createFixtureContent(
+      options.oldContent,
+      isAdded,
+      lines.map((line) => line.text).join("\n"),
+    ),
+    newContent: createFixtureContent(
+      options.newContent,
+      isDeleted,
+      lines.map((line) => line.text).join("\n"),
+    ),
+    patch:
+      omissionReason === null
+        ? availableContent("")
+        : omittedContent(omissionReason),
+    structuredDiff,
+    submodule: null,
+  };
 
   return {
-    specId: "078-issue-167",
-    fileKey: options.fileKey ?? "implementation-plan",
-    review: {
-      file: {
-        oldPath: "implementation-plan.md",
-        newPath: "implementation-plan.md",
-        change: options.status ?? "modified",
-        entryKind: "regular",
-        contentClassification: omissionReason === "binary" ? "binary" : "text",
-        similarity: null,
-        oldMode: "100644",
-        newMode: "100644",
-      },
-      oldContent: {
-        state: "available",
-        text: options.oldContent ?? lines.map((line) => line.text).join("\n"),
-        reason: null,
-        byteLength: null,
-      },
-      newContent: {
-        state: "available",
-        text: options.newContent ?? lines.map((line) => line.text).join("\n"),
-        reason: null,
-        byteLength: null,
-      },
-      patch: {
-        state: "available",
-        text: "",
-        reason: null,
-        byteLength: null,
-      },
-      structuredDiff,
-      submodule: null,
+    identity: {
+      sourceId: "spec:078-issue-167",
+      path: options.fileKey ?? "implementation-plan",
     },
+    review,
+    availability: deriveDiffAvailability(review),
   };
 }
 
@@ -103,4 +121,46 @@ export function createLargeDiffViewerFixture(lineCount = 20_000): FileDiff {
     }),
   );
   return createDiffViewerFixture({ lines });
+}
+
+/**
+ * Creates an available fixture side or the expected missing side marker.
+ *
+ * @param text - Explicit fixture text, when supplied.
+ * @param missing - Whether this side is absent for a one-sided file.
+ * @param fallbackText - Text used when the side is available by default.
+ * @returns A decoded file content fixture.
+ */
+function createFixtureContent(
+  text: string | undefined,
+  missing: boolean,
+  fallbackText: string,
+): FileContent {
+  if (text !== undefined) {
+    return availableContent(text);
+  }
+  if (missing) {
+    return omittedContent("missingSide");
+  }
+  return availableContent(fallbackText);
+}
+
+/**
+ * Creates an available file content fixture.
+ *
+ * @param text - Content text.
+ * @returns An available file content value.
+ */
+function availableContent(text: string): FileContent {
+  return { state: "available", text, reason: null, byteLength: null };
+}
+
+/**
+ * Creates an omitted file content fixture.
+ *
+ * @param reason - The reason the content cannot be rendered.
+ * @returns An omitted file content value.
+ */
+function omittedContent(reason: OmissionReason): FileContent {
+  return { state: "omitted", text: null, reason, byteLength: null };
 }

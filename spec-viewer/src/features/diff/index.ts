@@ -3,7 +3,11 @@ export {
   type ChangesNavigationAvailability,
   type ChangesNavigationProps,
 } from "./components/ChangesNavigation";
-export { DiffViewer, type DiffViewerProps } from "./components/DiffViewer";
+export {
+  DiffViewer,
+  type DiffViewerMode,
+  type DiffViewerProps,
+} from "./components/DiffViewer";
 export {
   RevisionSelector,
   type RevisionSelectorProps,
@@ -42,17 +46,23 @@ export type {
   SpecFileCommit,
   SpecFileHistory,
 } from "./domain/comparisonRevision";
-export { Hunk, StructuredDiff } from "./domain/fileDiff";
+export {
+  deriveDiffAvailability,
+  Hunk,
+  StructuredDiff,
+} from "./domain/fileDiff";
 export type {
   ContentClassification,
   DiffLine,
   DiffLineKind,
   DiffLineSource,
+  DiffFileIdentity,
   EntryKind,
   FileChange,
   FileChangeStatus,
   FileContent,
   FileDiff,
+  FileDiffAvailability,
   FileReview,
   OmissionReason,
   SubmoduleState,

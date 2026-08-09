@@ -92,6 +92,20 @@ recheck the snapshot before returning.
   hunks.
 - Canonical parent checks reject intermediate symlink escapes before reading content.
 
+## Frontend viewer projection contract
+
+The Spec decoder and repository adapter expose the same source-independent `FileDiff`
+shape to `DiffViewer`. The generic identity is `sourceId` plus logical `path`; Spec
+uses `spec:<specId>` and repository uses `repository:<worktreeId>`. Wire-only fields
+remain at their source boundary.
+
+`availability` is derived before rendering and is one of `ready`, `empty`, `omitted`,
+or `missing`. `Unified` and `Split` are the public viewer modes and map to the
+existing `inline` and `sideBySide` row projections. Added/untracked old-only and
+deleted new-only text files remain renderable with a semantic blank counterpart cell;
+binary, unsupported, oversized, and unexpected missing-side reviews render a status
+message instead of an interactive grid.
+
 ## Typed outcomes
 
 | Category | Stable outcomes |

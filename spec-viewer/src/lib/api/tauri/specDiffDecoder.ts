@@ -1,3 +1,4 @@
+import { deriveDiffAvailability } from "@/features/diff/domain/fileDiff";
 import {
   type DiffLineSource,
   type FileChange,
@@ -554,10 +555,16 @@ export function decodeChangedSpecFiles(value: unknown): ChangedSpecFiles {
  */
 export function decodeSpecFileDiff(value: unknown): FileDiff {
   const record = decodeRecord(value, "response", value);
+  const specId = decodeString(record.specId, "specId", value);
+  const fileKey = decodeString(record.fileKey, "fileKey", value);
+  const review = decodeReview(record.review, "review", value);
 
   return {
-    specId: decodeString(record.specId, "specId", value),
-    fileKey: decodeString(record.fileKey, "fileKey", value),
-    review: decodeReview(record.review, "review", value),
+    identity: {
+      sourceId: "spec:" + specId,
+      path: fileKey,
+    },
+    review,
+    availability: deriveDiffAvailability(review),
   };
 }

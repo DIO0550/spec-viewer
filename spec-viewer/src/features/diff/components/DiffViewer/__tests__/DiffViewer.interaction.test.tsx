@@ -13,12 +13,12 @@ afterEach(() => {
 
 test("表示モードをclickとArrowRightでside-by-sideへ切り替える", () => {
   const result = renderViewer();
-  const sideBySide = getButton(result.container, "Side by side");
+  const sideBySide = getButton(result.container, "Split");
 
   act(() => sideBySide.click());
   expect(sideBySide.getAttribute("aria-checked")).toBe("true");
 
-  const inline = getButton(result.container, "Inline");
+  const inline = getButton(result.container, "Unified");
   act(() => {
     sideBySide.dispatchEvent(
       new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }),
@@ -106,7 +106,7 @@ test("expandable context gapをbuttonで展開する", () => {
   result.unmount();
 });
 
-test("fileKeyが変わるとactive changeとexpanded gapをresetする", () => {
+test("identityのpathが変わるとactive changeとexpanded gapをresetする", () => {
   const result = renderViewer();
   act(() => getButton(result.container, "次の変更").click());
   expect(
@@ -156,3 +156,31 @@ function renderViewer(fileDiff = createDiffViewerFixture()) {
     },
   };
 }
+
+test("identityのsourceIdが変わると同一pathでもactive changeをresetする", () => {
+  const result = renderViewer();
+  act(() => getButton(result.container, "次の変更").click());
+  expect(
+    result.container
+      .querySelector('[data-active="true"]')
+      ?.getAttribute("data-change-id"),
+  ).toBe("hunk-0-change-1");
+
+  const repositoryFileDiff = {
+    ...createDiffViewerFixture(),
+    identity: {
+      sourceId: "repository:/workspace",
+      path: "implementation-plan",
+    },
+  };
+  act(() => {
+    result.root.render(<DiffViewer fileDiff={repositoryFileDiff} />);
+  });
+
+  expect(
+    result.container
+      .querySelector('[data-active="true"]')
+      ?.getAttribute("data-change-id"),
+  ).toBe("hunk-0-change-0");
+  result.unmount();
+});

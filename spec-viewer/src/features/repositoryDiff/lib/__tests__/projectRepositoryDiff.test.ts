@@ -10,6 +10,7 @@ import {
   projectFileReview,
   projectIgnoredPage,
   projectRepositoryTree,
+  toDiffViewerFileDiff,
 } from "@/features/repositoryDiff/lib/projectRepositoryDiff";
 
 const snapshotId = "rs1_" + "a".repeat(64);
@@ -218,4 +219,58 @@ test("file review projection は binary と deleted の availability を UI-deci
   ).toEqual(
     expect.objectContaining({ path: "src/old.ts", availability: "deleted" }),
   );
+});
+
+test("toDiffViewerFileDiffはrepository identityとavailabilityをgeneric modelへ変換する", () => {
+  const selection: RepositoryDiffSelection = {
+    worktreeId: "/workspace",
+    snapshotId,
+    path: "src/file.ts",
+  };
+  const result = toDiffViewerFileDiff(review("modified", "text"), selection);
+
+  expect(result.identity).toEqual({
+    sourceId: "repository:/workspace",
+    path: "src/file.ts",
+  });
+  expect(result.availability).toEqual({ kind: "empty" });
+});
+
+test("toDiffViewerFileDiffはbinary reviewをomitted binaryとして変換する", () => {
+  const selection: RepositoryDiffSelection = {
+    worktreeId: "/workspace",
+    snapshotId,
+    path: "src/file.bin",
+  };
+  const result = toDiffViewerFileDiff(review("modified", "binary"), selection);
+
+  expect(result.availability).toEqual({ kind: "omitted", reason: "binary" });
+});
+
+test.each([
+  { change: "added", oldPath: null, newPath: "src/added.ts" },
+  { change: "modified", oldPath: "src/file.ts", newPath: "src/file.ts" },
+  { change: "deleted", oldPath: "src/deleted.ts", newPath: null },
+  { change: "renamed", oldPath: "src/before.ts", newPath: "src/after.ts" },
+  { change: "copied", oldPath: "src/source.ts", newPath: "src/copy.ts" },
+  { change: "typeChanged", oldPath: "src/file.ts", newPath: "src/file.ts" },
+  { change: "untracked", oldPath: null, newPath: "src/untracked.ts" },
+] as const)("projectChangedFilesはstatus=%sを保持する", ({
+  change,
+  oldPath,
+  newPath,
+}) => {
+  const item = projectChangedFiles(
+    createOverview([
+      {
+        ...added,
+        change,
+        oldPath,
+        newPath,
+      },
+    ]),
+    "/workspace",
+  )[0];
+
+  expect(item?.change).toBe(change);
 });

@@ -33,7 +33,19 @@ const OmissionMessages = {
   unsupportedEntryKind: "未対応のファイル種類のため差分を表示できません。",
 } satisfies Record<OmissionReason, string>;
 
-const ViewModes: readonly DiffViewMode[] = ["inline", "sideBySide"];
+export type DiffViewerMode = "unified" | "split";
+
+const ViewModes: readonly DiffViewerMode[] = ["unified", "split"];
+
+/**
+ * Maps the public viewer mode to the internal row projection mode.
+ *
+ * @param mode - Public mode selected by the viewer user.
+ * @returns Internal projection mode used by the existing row model.
+ */
+function toProjectionMode(mode: DiffViewerMode): DiffViewMode {
+  return mode === "unified" ? "inline" : "sideBySide";
+}
 const OverscanRows = 100;
 const SemanticRowHardCap = 500;
 
@@ -44,8 +56,16 @@ const SemanticRowHardCap = 500;
  * @returns The ready viewer or a clear empty/omitted state.
  */
 export function DiffViewer({ fileDiff }: DiffViewerProps): ReactElement {
-  const model = useMemo(() => buildDiffViewModel(fileDiff), [fileDiff]);
-  const [mode, setMode] = useState<DiffViewMode>("inline");
+  const model = useMemo(
+    () => buildDiffViewModel(fileDiff),
+    [
+      fileDiff.identity.sourceId,
+      fileDiff.identity.path,
+      fileDiff.review,
+      fileDiff.availability,
+    ],
+  );
+  const [mode, setMode] = useState<DiffViewerMode>("unified");
   const [activeChangeId, setActiveChangeId] = useState<string | null>(
     () => model.changeIds[0] ?? null,
   );
@@ -59,7 +79,7 @@ export function DiffViewer({ fileDiff }: DiffViewerProps): ReactElement {
   const filePath =
     fileDiff.review.file.newPath ??
     fileDiff.review.file.oldPath ??
-    fileDiff.fileKey;
+    fileDiff.identity.path;
 
   useEffect(() => {
     setActiveChangeId(model.changeIds[0] ?? null);
@@ -68,7 +88,7 @@ export function DiffViewer({ fileDiff }: DiffViewerProps): ReactElement {
     if (scrollSurfaceRef.current !== null) {
       scrollSurfaceRef.current.scrollTop = 0;
     }
-  }, [fileDiff.fileKey, model.changeIds]);
+  }, [fileDiff.identity.sourceId, fileDiff.identity.path, fileDiff.review]);
 
   useEffect(() => {
     return () => {
@@ -99,7 +119,7 @@ export function DiffViewer({ fileDiff }: DiffViewerProps): ReactElement {
     );
   }
 
-  const rows = materializeRows(model, mode, expandedGapIds);
+  const rows = materializeRows(model, toProjectionMode(mode), expandedGapIds);
   const offsets = calculateRowOffsets(rows);
   const visibleWindow = calculateVisibleWindow({
     offsets,
@@ -147,10 +167,10 @@ export function DiffViewer({ fileDiff }: DiffViewerProps): ReactElement {
 
   const handleModeKeyDown = (
     event: KeyboardEvent<HTMLButtonElement>,
-    currentMode: DiffViewMode,
+    currentMode: DiffViewerMode,
   ): void => {
     const currentIndex = ViewModes.indexOf(currentMode);
-    let nextMode: DiffViewMode | undefined;
+    let nextMode: DiffViewerMode | undefined;
     if (event.key === "ArrowRight") {
       nextMode = ViewModes[(currentIndex + 1) % ViewModes.length];
     } else if (event.key === "ArrowLeft") {
@@ -197,17 +217,18 @@ export function DiffViewer({ fileDiff }: DiffViewerProps): ReactElement {
               onClick={() => setMode(candidate)}
               onKeyDown={(event) => handleModeKeyDown(event, candidate)}
             >
-              {candidate === "inline" ? (
+              {candidate === "unified" ? (
                 <Rows3 aria-hidden="true" size={14} />
               ) : (
                 <Columns2 aria-hidden="true" size={14} />
               )}
-              {candidate === "inline" ? "Inline" : "Side by side"}
+              {candidate === "unified" ? "Unified" : "Split"}
             </button>
           ))}
         </div>
         <div
           className="diff-viewer__navigation"
+          role="group"
           aria-label="変更箇所ナビゲーション"
         >
           <button
@@ -234,6 +255,9 @@ export function DiffViewer({ fileDiff }: DiffViewerProps): ReactElement {
       <div
         ref={scrollSurfaceRef}
         className="diff-viewer__scroll-surface"
+        role="grid"
+        aria-label={filePath + " の差分行"}
+        tabIndex={0}
         onScroll={handleScroll}
       >
         <div
@@ -244,7 +268,7 @@ export function DiffViewer({ fileDiff }: DiffViewerProps): ReactElement {
           <DiffRow
             key={row.id}
             row={row}
-            mode={mode}
+            mode={toProjectionMode(mode)}
             activeChangeId={activeChangeId}
             onExpandGap={expandGap}
           />
@@ -301,8 +325,15 @@ function DiffRow(
   const { row, mode, activeChangeId, onExpandGap } = props;
   if (row.kind === "hunk") {
     return (
-      <div className="diff-viewer__row diff-viewer__hunk" data-row-kind="hunk">
-        {row.header}
+      <div
+        className="diff-viewer__row diff-viewer__hunk"
+        data-row-kind="hunk"
+        role="row"
+        aria-label={row.header}
+      >
+        <div role="gridcell" aria-colspan={mode === "sideBySide" ? 2 : 1}>
+          {row.header}
+        </div>
       </div>
     );
   }
@@ -312,24 +343,35 @@ function DiffRow(
         className="diff-viewer__row diff-viewer__annotation"
         data-row-kind="annotation"
         data-side={row.side}
+        role="row"
+        aria-label={row.side + " side note: " + row.text}
       >
-        {row.text}
+        <div role="gridcell" aria-colspan={mode === "sideBySide" ? 2 : 1}>
+          {row.text}
+        </div>
       </div>
     );
   }
   if (row.kind === "gap") {
     return (
-      <div className="diff-viewer__row diff-viewer__gap" data-row-kind="gap">
-        {row.expandableRows === null ? (
-          <span>
-            … {row.omittedLineCount}
-            行のコンテキストを省略（内容を取得できません）
-          </span>
-        ) : (
-          <button type="button" onClick={() => onExpandGap(row.id)}>
-            省略した{row.omittedLineCount}行を展開
-          </button>
-        )}
+      <div
+        className="diff-viewer__row diff-viewer__gap"
+        data-row-kind="gap"
+        role="row"
+        aria-label={"コンテキスト " + row.omittedLineCount + " 行を省略"}
+      >
+        <div role="gridcell" aria-colspan={mode === "sideBySide" ? 2 : 1}>
+          {row.expandableRows === null ? (
+            <span>
+              … {row.omittedLineCount}
+              行のコンテキストを省略（内容を取得できません）
+            </span>
+          ) : (
+            <button type="button" onClick={() => onExpandGap(row.id)}>
+              省略した{row.omittedLineCount}行を展開
+            </button>
+          )}
+        </div>
       </div>
     );
   }
@@ -342,6 +384,7 @@ function DiffRow(
         data-row-kind="content"
         data-change-id={row.changeId ?? undefined}
         data-active={isActive}
+        role="row"
       >
         <DiffCellView cell={row.old} side="old" />
         <DiffCellView cell={row.next} side="new" />
@@ -355,6 +398,7 @@ function DiffRow(
       data-row-kind="content"
       data-change-id={row.changeId ?? undefined}
       data-active={isActive}
+      role="row"
     >
       <DiffCellView cell={row.inline} side="inline" />
     </div>
@@ -377,10 +421,13 @@ function DiffCellView(
 ): ReactElement {
   const { cell, side } = props;
   if (cell === null) {
+    const sideLabel = side === "old" ? "旧側" : "新側";
     return (
       <div
         className="diff-viewer__cell diff-viewer__cell--spacer"
-        aria-hidden="true"
+        data-side={side}
+        role="gridcell"
+        aria-label={sideLabel + "に対応する行なし"}
       />
     );
   }
@@ -391,18 +438,20 @@ function DiffCellView(
       className="diff-viewer__cell"
       data-kind={cell.line.kind}
       data-side={side}
+      role="gridcell"
+      aria-label={getCellAccessibleLabel(cell, side)}
     >
       {side === "inline" ? (
         <>
-          <span className="diff-viewer__line-number">
+          <span className="diff-viewer__line-number" aria-hidden="true">
             {cell.line.oldLineNumber ?? ""}
           </span>
-          <span className="diff-viewer__line-number">
+          <span className="diff-viewer__line-number" aria-hidden="true">
             {cell.line.newLineNumber ?? ""}
           </span>
         </>
       ) : (
-        <span className="diff-viewer__line-number">
+        <span className="diff-viewer__line-number" aria-hidden="true">
           {side === "old"
             ? (cell.line.oldLineNumber ?? "")
             : (cell.line.newLineNumber ?? "")}
@@ -411,9 +460,87 @@ function DiffCellView(
       <span className="diff-viewer__marker" aria-hidden="true">
         {marker}
       </span>
-      <code>{renderSegments(cell.segments)}</code>
+      <code aria-hidden="true">{renderSegments(cell.segments)}</code>
     </div>
   );
+}
+
+/**
+ * Creates a screen-reader label for one rendered diff cell.
+ *
+ * @param cell - The diff cell to describe.
+ * @param side - The visible side containing the cell.
+ * @returns A localized accessible description.
+ */
+function getCellAccessibleLabel(
+  cell: DiffCell,
+  side: "old" | "new" | "inline",
+): string {
+  const sideLabel = getSideLabel(side);
+  const kindLabel = getLineKindLabel(cell.line.kind);
+  const lineLabel = getLineLabel(cell, side);
+
+  return (
+    sideLabel + "、" + kindLabel + "、" + lineLabel + "、" + cell.line.text
+  );
+}
+
+/**
+ * Resolves the visible side label.
+ *
+ * @param side - The visible side containing the cell.
+ * @returns A localized side label.
+ */
+function getSideLabel(side: "old" | "new" | "inline"): string {
+  if (side === "old") {
+    return "旧ファイル";
+  }
+  if (side === "new") {
+    return "新ファイル";
+  }
+  return "Unified";
+}
+
+/**
+ * Resolves line-number text for the visible side.
+ *
+ * @param cell - The diff cell containing line numbers.
+ * @param side - The visible side containing the cell.
+ * @returns A localized line-number label.
+ */
+function getLineLabel(cell: DiffCell, side: "old" | "new" | "inline"): string {
+  if (side === "inline") {
+    return (
+      "旧行 " +
+      (cell.line.oldLineNumber ?? "なし") +
+      "、新行 " +
+      (cell.line.newLineNumber ?? "なし")
+    );
+  }
+  if (side === "old") {
+    return "旧行 " + (cell.line.oldLineNumber ?? "なし");
+  }
+  return "新行 " + (cell.line.newLineNumber ?? "なし");
+}
+
+/**
+ * Resolves a localized line-kind label.
+ *
+ * @param kind - The domain line kind.
+ * @returns A localized line-kind label.
+ */
+function getLineKindLabel(kind: DiffCell["line"]["kind"]): string {
+  if (kind === "added") {
+    return "追加";
+  }
+  if (kind === "removed") {
+    return "削除";
+  }
+  if (kind === "noNewline") {
+    return "改行なし";
+  }
+
+  return "コンテキスト";
 }
 
 /**

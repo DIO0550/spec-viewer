@@ -269,7 +269,7 @@ test("古いdetail応答は後続選択へ反映しない", async () => {
 
   expect(hook.current().state).toMatchObject({
     status: "ready",
-    detail: { status: "ready", value: { fileKey: "tasks" } },
+    detail: { status: "ready", value: { identity: { path: "tasks" } } },
   });
   hook.unmount();
 });

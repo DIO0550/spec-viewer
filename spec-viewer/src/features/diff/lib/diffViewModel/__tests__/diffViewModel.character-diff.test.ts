@@ -34,8 +34,11 @@ test("paired removed・addedを文字単位segmentへ変換する", () => {
 
 function createFileDiff(): FileDiff {
   return {
-    specId: "078-issue-167",
-    fileKey: "implementation-plan",
+    identity: {
+      sourceId: "spec:078-issue-167",
+      path: "implementation-plan",
+    },
+    availability: { kind: "ready" },
     review: {
       file: {
         oldPath: "implementation-plan.md",

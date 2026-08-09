@@ -1,6 +1,13 @@
 import { expect, test } from "vitest";
 
-import { Hunk } from "@/features/diff/domain/fileDiff";
+import {
+  deriveDiffAvailability,
+  Hunk,
+  type FileChangeStatus,
+  type FileContent,
+  type FileReview,
+  type StructuredDiff,
+} from "@/features/diff/domain/fileDiff";
 
 test("Hunk.fromLinesはline kindごとに旧行番号と新行番号を導出する", () => {
   const hunk = Hunk.fromLines("@@ -1,3 +1,4 @@", [
@@ -100,3 +107,160 @@ test.each([
     "Invalid unified diff hunk header",
   );
 });
+
+test("deriveDiffAvailabilityはhunkを持つtext reviewをreadyにする", () => {
+  const availability = deriveDiffAvailability(
+    createReview({
+      structuredDiff: {
+        state: "available",
+        hunks: [
+          Hunk.fromLines("@@ -1 +1 @@", [
+            { kind: "removed", text: "old" },
+            { kind: "added", text: "new" },
+          ]),
+        ],
+        reason: null,
+      },
+    }),
+  );
+
+  expect(availability).toEqual({ kind: "ready" });
+});
+
+test("deriveDiffAvailabilityはhunkがないavailable reviewをemptyにする", () => {
+  const availability = deriveDiffAvailability(createReview());
+
+  expect(availability).toEqual({ kind: "empty" });
+});
+
+test("deriveDiffAvailabilityはbinary classificationをhunkより優先してomittedにする", () => {
+  const review = createReview({
+    structuredDiff: {
+      state: "available",
+      hunks: [
+        Hunk.fromLines("@@ -1 +1 @@", [
+          { kind: "removed", text: "old" },
+          { kind: "added", text: "new" },
+        ]),
+      ],
+      reason: null,
+    },
+  });
+  const binaryReview = {
+    ...review,
+    file: { ...review.file, contentClassification: "binary" as const },
+  };
+
+  expect(deriveDiffAvailability(binaryReview)).toEqual({
+    kind: "omitted",
+    reason: "binary",
+  });
+});
+
+test.each([
+  "binary",
+  "largeFile",
+  "diffLimit",
+  "unsupportedEntryKind",
+] as const)("deriveDiffAvailabilityはstructured diff omission=%sをomittedにする", (reason) => {
+  const availability = deriveDiffAvailability(
+    createReview({
+      structuredDiff: { state: "omitted", hunks: [], reason },
+    }),
+  );
+
+  expect(availability).toEqual({ kind: "omitted", reason });
+});
+
+test.each([
+  "added",
+  "deleted",
+] as const)("deriveDiffAvailabilityは%sのmissingSideをreadyとして扱う", (change) => {
+  const availability = deriveDiffAvailability(
+    createReview({
+      change,
+      oldContent:
+        change === "added"
+          ? omittedContent("missingSide")
+          : availableContent("old"),
+      newContent:
+        change === "deleted"
+          ? omittedContent("missingSide")
+          : availableContent("new"),
+      structuredDiff: {
+        state: "available",
+        hunks: [
+          Hunk.fromLines("@@ -1,1 +1,1 @@", [
+            { kind: change === "added" ? "added" : "removed", text: "line" },
+          ]),
+        ],
+        reason: null,
+      },
+    }),
+  );
+
+  expect(availability).toEqual({ kind: "ready" });
+});
+
+test("deriveDiffAvailabilityは予期しないmissingSideをmissingとして返す", () => {
+  const availability = deriveDiffAvailability(
+    createReview({
+      oldContent: omittedContent("missingSide"),
+      structuredDiff: {
+        state: "available",
+        hunks: [
+          Hunk.fromLines("@@ -1,1 +1,1 @@", [
+            { kind: "removed", text: "old" },
+            { kind: "added", text: "new" },
+          ]),
+        ],
+        reason: null,
+      },
+    }),
+  );
+
+  expect(availability).toEqual({ kind: "missing", side: "old" });
+});
+
+function createReview(
+  overrides: Readonly<{
+    change?: FileChangeStatus;
+    oldContent?: FileContent;
+    newContent?: FileContent;
+    structuredDiff?: StructuredDiff;
+  }> = {},
+): FileReview {
+  return {
+    file: {
+      oldPath: "src/file.ts",
+      newPath: "src/file.ts",
+      change: overrides.change ?? "modified",
+      entryKind: "regular",
+      contentClassification: "text",
+      similarity: null,
+      oldMode: null,
+      newMode: null,
+    },
+    oldContent: overrides.oldContent ?? availableContent("old"),
+    newContent: overrides.newContent ?? availableContent("new"),
+    patch: availableContent("patch"),
+    structuredDiff:
+      overrides.structuredDiff ??
+      ({
+        state: "available",
+        hunks: [],
+        reason: null,
+      } satisfies StructuredDiff),
+    submodule: null,
+  };
+}
+
+function availableContent(text: string): FileContent {
+  return { state: "available", text, reason: null, byteLength: null };
+}
+
+function omittedContent(
+  reason: Extract<FileContent, { state: "omitted" }>["reason"],
+): FileContent {
+  return { state: "omitted", text: null, reason, byteLength: null };
+}

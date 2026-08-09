@@ -61,8 +61,16 @@ function createFileDiff(
   structuredDiff: FileDiff["review"]["structuredDiff"],
 ): FileDiff {
   return {
-    specId: "078-issue-167",
-    fileKey: "implementation-plan",
+    identity: {
+      sourceId: "spec:078-issue-167",
+      path: "implementation-plan",
+    },
+    availability:
+      structuredDiff.state === "omitted"
+        ? { kind: "omitted", reason: structuredDiff.reason }
+        : structuredDiff.hunks.length === 0
+          ? { kind: "empty" }
+          : { kind: "ready" },
     review: {
       file: {
         oldPath: "implementation-plan.md",
