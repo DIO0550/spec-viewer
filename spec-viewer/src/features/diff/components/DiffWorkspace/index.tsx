@@ -9,9 +9,14 @@ export type DiffWorkspaceAvailability =
       reason: WorkspaceWorktreesUnavailableReason;
     }>;
 export type DiffWorkspaceState =
-  | Readonly<{ status: "noSelection" }>
+  | Readonly<{ status: "noSelection"; label?: string }>
   | Readonly<{ status: "unchanged" }>
   | Readonly<{ status: "loading" }>
+  | Readonly<{
+      status: "selectionRequired";
+      message: string;
+      onRetry: () => void;
+    }>
   | Readonly<{ status: "failed"; message: string; onRetry: () => void }>
   | Readonly<{ status: "ready"; selectedPath: string; preview: ReactNode }>;
 
@@ -69,7 +74,7 @@ export function DiffWorkspace(props: DiffWorkspaceProps): ReactElement {
  * @param props - Status text.
  * @returns An announced Diff state.
  */
-function DiffStatus(props: Readonly<{ children: string }>): ReactElement {
+function DiffStatus(props: Readonly<{ children: ReactNode }>): ReactElement {
   return (
     <p
       className="diff-workspace__status"
@@ -91,13 +96,24 @@ function DiffStatus(props: Readonly<{ children: string }>): ReactElement {
  */
 function renderDiffWorkspaceState(state: DiffWorkspaceState): ReactElement {
   if (state.status === "noSelection") {
-    return <DiffStatus>表示するSpecファイルを選択してください。</DiffStatus>;
+    const label = state.label ?? "Specファイル";
+    return <DiffStatus>表示する{label}を選択してください。</DiffStatus>;
   }
   if (state.status === "unchanged") {
     return <DiffStatus>選択中のファイルに変更はありません。</DiffStatus>;
   }
   if (state.status === "loading") {
     return <DiffStatus>差分を読み込んでいます。</DiffStatus>;
+  }
+  if (state.status === "selectionRequired") {
+    return (
+      <div className="diff-workspace__error" role="status">
+        <p>{state.message}</p>
+        <button type="button" onClick={state.onRetry}>
+          再試行
+        </button>
+      </div>
+    );
   }
   if (state.status === "failed") {
     return (

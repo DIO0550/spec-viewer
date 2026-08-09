@@ -78,3 +78,25 @@ export {
 } from "./subscribeWorkspaceDragDropEvents";
 export { updateComment } from "./updateComment";
 export { validateWorkspaceDirectory } from "./validateWorkspaceDirectory";
+
+export type {
+  LoadRepositoryDiffRequest,
+  LoadRepositoryDiffResponse,
+  LoadRepositoryFileRequest,
+  LoadRepositoryFileResponse,
+  RepositoryDiffAnchor,
+  RepositoryDiffBackendErrorCode,
+  RepositoryDiffCommandErrorCode,
+  RepositoryDiffCommandName,
+  TraverseRepositoryIgnoredRequest,
+  TraverseRepositoryIgnoredResponse,
+} from "./repositoryDiff";
+export {
+  LOAD_REPOSITORY_DIFF_COMMAND,
+  LOAD_REPOSITORY_FILE_COMMAND,
+  RepositoryDiffCommandError,
+  TRAVERSE_REPOSITORY_IGNORED_COMMAND,
+  loadRepositoryDiff,
+  loadRepositoryFile,
+  traverseRepositoryIgnored,
+} from "./repositoryDiff";

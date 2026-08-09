@@ -1,5 +1,6 @@
 export {
   ChangesNavigation,
+  type ChangesNavigationAvailability,
   type ChangesNavigationProps,
 } from "./components/ChangesNavigation";
 export { DiffViewer, type DiffViewerProps } from "./components/DiffViewer";
