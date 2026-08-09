@@ -14,10 +14,12 @@ const snapshotId = `rs1_${"b".repeat(64)}`;
 
 const baseOverview = (
   base: Record<string, unknown>,
+  repositoryIdValue: string | null = repositoryId,
+  currentSnapshotIdValue: string | null = snapshotId,
 ): Record<string, unknown> => ({
-  repositoryId,
+  repositoryId: repositoryIdValue,
   base,
-  currentSnapshotId: snapshotId,
+  currentSnapshotId: currentSnapshotIdValue,
   changed: [],
   changedTree: [],
   allRoot: [],
@@ -52,16 +54,20 @@ test("resolved base を source と snapshot 付きで decode する", () => {
 });
 
 test("unbornHead の needsSelection を candidates 付きで decode する", () => {
-  const response = baseOverview({
-    state: "needsSelection",
-    source: null,
-    branchRef: null,
-    mergeBaseSha: null,
-    headSha: null,
-    reason: "unbornHead",
-    candidates: ["refs/heads/main"],
-    overrideRef: null,
-  });
+  const response = baseOverview(
+    {
+      state: "needsSelection",
+      source: null,
+      branchRef: null,
+      mergeBaseSha: null,
+      headSha: null,
+      reason: "unbornHead",
+      candidates: ["refs/heads/main"],
+      overrideRef: null,
+    },
+    repositoryId,
+    null,
+  );
 
   expect(decodeRepositoryOverview(response).base).toEqual({
     state: "needsSelection",
@@ -71,16 +77,20 @@ test("unbornHead の needsSelection を candidates 付きで decode する", () 
 });
 
 test("invalidOverride の missingRef を overrideRef 付きで decode する", () => {
-  const response = baseOverview({
-    state: "invalidOverride",
-    source: null,
-    branchRef: null,
-    mergeBaseSha: null,
-    headSha: null,
-    reason: "missingRef",
-    candidates: [],
-    overrideRef: "refs/heads/missing",
-  });
+  const response = baseOverview(
+    {
+      state: "invalidOverride",
+      source: null,
+      branchRef: null,
+      mergeBaseSha: null,
+      headSha: null,
+      reason: "missingRef",
+      candidates: [],
+      overrideRef: "refs/heads/missing",
+    },
+    null,
+    null,
+  );
 
   expect(decodeRepositoryOverview(response).base).toEqual({
     state: "invalidOverride",
@@ -146,6 +156,55 @@ const resolvedBase = (): Record<string, unknown> => ({
   reason: null,
   candidates: [],
   overrideRef: null,
+});
+
+test.each([
+  {
+    name: "resolved に snapshot がない",
+    base: resolvedBase(),
+    repositoryIdValue: repositoryId,
+    currentSnapshotIdValue: null,
+  },
+  {
+    name: "needsSelection に snapshot がある",
+    base: {
+      state: "needsSelection",
+      source: null,
+      branchRef: null,
+      mergeBaseSha: null,
+      headSha: null,
+      reason: "unbornHead",
+      candidates: ["refs/heads/main"],
+      overrideRef: null,
+    },
+    repositoryIdValue: repositoryId,
+    currentSnapshotIdValue: snapshotId,
+  },
+  {
+    name: "invalidOverride に repository identity がある",
+    base: {
+      state: "invalidOverride",
+      source: null,
+      branchRef: null,
+      mergeBaseSha: null,
+      headSha: null,
+      reason: "missingRef",
+      candidates: [],
+      overrideRef: "refs/heads/missing",
+    },
+    repositoryIdValue: repositoryId,
+    currentSnapshotIdValue: snapshotId,
+  },
+] as const)("base state と repository identity の不整合=$nameをrejectする", ({
+  base,
+  repositoryIdValue,
+  currentSnapshotIdValue,
+}) => {
+  expect(() =>
+    decodeRepositoryOverview(
+      baseOverview(base, repositoryIdValue, currentSnapshotIdValue),
+    ),
+  ).toThrow(InvalidRepositoryDiffResponseError);
 });
 
 const changedOverview = (

@@ -854,6 +854,28 @@ const decodeTreeNode = (
 };
 
 /**
+ * @param base - Decoded base resolution.
+ * @param repositoryId - Decoded repository identity.
+ * @param currentSnapshotId - Decoded working-tree snapshot identity.
+ * @returns Whether the overview identities match the base state contract.
+ */
+const isOverviewIdentityConsistent = (
+  base: BaseResolution,
+  repositoryId: string | null,
+  currentSnapshotId: string | null,
+): boolean => {
+  if (base.state === "resolved") {
+    return repositoryId !== null && currentSnapshotId !== null;
+  }
+
+  if (base.state === "needsSelection") {
+    return repositoryId !== null && currentSnapshotId === null;
+  }
+
+  return repositoryId === null && currentSnapshotId === null;
+};
+
+/**
  * @param value - Unknown load_repository_diff response.
  * @returns A validated repository-wide overview.
  * @throws InvalidRepositoryDiffResponseError for malformed response data.
@@ -870,6 +892,15 @@ export function decodeRepositoryOverview(
     record.currentSnapshotId === null
       ? null
       : decodeSnapshotId(record.currentSnapshotId, "currentSnapshotId", value);
+  const base = decodeBase(record.base, "base", value);
+  if (!isOverviewIdentityConsistent(base, repositoryId, currentSnapshotId)) {
+    throw invalid(
+      "response",
+      "a base state with matching repository identities",
+      "shape is invalid",
+      value,
+    );
+  }
   const changed = decodeArray(record.changed, "changed", value).map(
     (file, index) => decodeFileChange(file, "changed[" + index + "]", value),
   );
@@ -895,7 +926,7 @@ export function decodeRepositoryOverview(
 
   return {
     repositoryId,
-    base: decodeBase(record.base, "base", value),
+    base,
     currentSnapshotId,
     changed,
     changedTree,
