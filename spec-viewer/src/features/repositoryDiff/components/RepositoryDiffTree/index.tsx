@@ -464,6 +464,16 @@ const CHANGE_LABELS: Readonly<Record<FileChangeStatus, string>> = {
   untracked: "未追跡",
 };
 
+const CHANGE_TOKENS = {
+  added: "A",
+  modified: "M",
+  deleted: "D",
+  renamed: "R",
+  copied: "C",
+  typeChanged: "T",
+  untracked: "U",
+} as const satisfies Readonly<Record<FileChangeStatus, string>>;
+
 function getNodeLabel(node: RepositoryDiffTreeProjectionNode): string {
   if (node.ignored) {
     return "無視";
@@ -493,8 +503,5 @@ function getNodeToken(node: RepositoryDiffTreeProjectionNode): string {
   if (node.change === null) {
     return "—";
   }
-  if (node.change === "added" || node.change === "untracked") {
-    return "U";
-  }
-  return "M";
+  return CHANGE_TOKENS[node.change];
 }

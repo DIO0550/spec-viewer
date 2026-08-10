@@ -270,16 +270,17 @@ test("RepositoryDiffTreeはArrow/Home/EndとEnterでroving focusとselectionを�
 });
 
 test.each([
-  { label: "追加", change: "added" as const },
-  { label: "変更", change: "modified" as const },
-  { label: "削除", change: "deleted" as const },
-  { label: "名前変更", change: "renamed" as const },
-  { label: "コピー", change: "copied" as const },
-  { label: "種別変更", change: "typeChanged" as const },
-  { label: "未追跡", change: "untracked" as const },
-  { label: "変更なし", change: null },
+  { label: "追加", token: "A", change: "added" as const },
+  { label: "変更", token: "M", change: "modified" as const },
+  { label: "削除", token: "D", change: "deleted" as const },
+  { label: "名前変更", token: "R", change: "renamed" as const },
+  { label: "コピー", token: "C", change: "copied" as const },
+  { label: "種別変更", token: "T", change: "typeChanged" as const },
+  { label: "未追跡", token: "U", change: "untracked" as const },
+  { label: "変更なし", token: "—", change: null },
 ])("RepositoryDiffTreeはchange=%sのsafe labelを表示する", ({
   label,
+  token,
   change,
 }) => {
   const result = renderTree({
@@ -305,6 +306,9 @@ test.each([
   });
 
   expect(result.container.textContent).toContain(label);
+  expect(
+    result.container.querySelector(".repository-diff-tree__token")?.textContent,
+  ).toBe(token);
   result.unmount();
 });
 
