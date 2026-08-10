@@ -1,19 +1,22 @@
 import { expect, test } from "vitest";
 import type {
+  IgnoredPage,
   RepositoryDiffOverview,
   RepositoryDiffSelection,
   RepositoryFileReview,
   RepositoryTreeNode,
 } from "@/features/repositoryDiff/domain/repositoryDiff";
 import {
+  deriveRepositoryDiffSummary,
   projectChangedFiles,
   projectFileReview,
   projectIgnoredPage,
+  projectRepositoryDiffTree,
   projectRepositoryTree,
   toDiffViewerFileDiff,
 } from "@/features/repositoryDiff/lib/projectRepositoryDiff";
 
-const snapshotId = "rs1_" + "a".repeat(64);
+const snapshotId = `rs1_${"a".repeat(64)}`;
 const overviewBase: RepositoryDiffOverview["base"] = {
   state: "resolved",
   source: "main",
@@ -26,7 +29,7 @@ function createOverview(
   changed: RepositoryDiffOverview["changed"],
 ): RepositoryDiffOverview {
   return {
-    repositoryId: "rr1_" + "d".repeat(64),
+    repositoryId: `rr1_${"d".repeat(64)}`,
     base: overviewBase,
     currentSnapshotId: snapshotId,
     changed,
@@ -76,7 +79,7 @@ const ignoredDirectory: RepositoryTreeNode = {
   entryKind: null,
   change: null,
   ignored: true,
-  children: { state: "deferred", nodeId: "in1_" + "e".repeat(64) },
+  children: { state: "deferred", nodeId: `in1_${"e".repeat(64)}` },
 };
 
 const review = (
@@ -147,7 +150,7 @@ test("projection id は worktree/base/snapshot/path の変更で衝突しない"
     "/other",
   )[0];
   const otherSnapshot = projectChangedFiles(
-    { ...createOverview([added]), currentSnapshotId: "rs1_" + "f".repeat(64) },
+    { ...createOverview([added]), currentSnapshotId: `rs1_${"f".repeat(64)}` },
     "/workspace",
   )[0];
   const otherBase = projectChangedFiles(
@@ -172,7 +175,7 @@ test("ignored/deferred tree と ignored page は change status と分離して�
   );
   const pageItems = projectIgnoredPage(
     {
-      nodeId: "in1_" + "e".repeat(64),
+      nodeId: `in1_${"e".repeat(64)}`,
       entries: [{ ...ignoredDirectory, path: "vendor/pkg", name: "pkg" }],
       nextCursor: "cursor-2",
     },
@@ -185,7 +188,7 @@ test("ignored/deferred tree と ignored page は change status と分離して�
       path: "vendor",
       ignored: true,
       change: null,
-      deferredNodeId: "in1_" + "e".repeat(64),
+      deferredNodeId: `in1_${"e".repeat(64)}`,
     }),
   ]);
   expect(pageItems[0]).toEqual(
@@ -273,4 +276,202 @@ test.each([
   )[0];
 
   expect(item?.change).toBe(change);
+});
+
+test("summaryはChangedとAllでlogical totalを切り替え、ignored directoryを別集計する", () => {
+  const overview = {
+    ...createOverview([added, deleted]),
+    allPaths: ["src/new.ts", "src/old.ts", "vendor/package.json"],
+    ignoredDirectories: ["vendor"],
+  };
+
+  expect(deriveRepositoryDiffSummary(overview, "changed")).toEqual({
+    filter: "changed",
+    totalPaths: 2,
+    changedPaths: 2,
+    statusCounts: { added: 1, deleted: 1 },
+    ignoredDirectoryCount: 1,
+  });
+  expect(deriveRepositoryDiffSummary(overview, "all")).toEqual({
+    filter: "all",
+    totalPaths: 3,
+    changedPaths: 2,
+    statusCounts: { added: 1, deleted: 1 },
+    ignoredDirectoryCount: 1,
+  });
+});
+
+test("summaryは全FileChangeStatusをstage bucketなしで集計する", () => {
+  const statuses = [
+    "added",
+    "modified",
+    "deleted",
+    "renamed",
+    "copied",
+    "typeChanged",
+    "untracked",
+  ] as const;
+  const overview = createOverview(
+    statuses.map((change) => ({ ...added, change })),
+  );
+
+  expect(deriveRepositoryDiffSummary(overview, "changed").statusCounts).toEqual(
+    Object.fromEntries(statuses.map((change) => [change, 1])),
+  );
+});
+
+test("nested projectionはChangedのloaded treeとAllのdeferred treeを区別する", () => {
+  const file: RepositoryTreeNode = {
+    path: "src/main.ts",
+    name: "main.ts",
+    kind: "file",
+    entryKind: "regular",
+    change: "modified",
+    ignored: false,
+    children: { state: "loaded", items: [] },
+  };
+  const source: RepositoryTreeNode = {
+    path: "src",
+    name: "src",
+    kind: "directory",
+    entryKind: null,
+    change: null,
+    ignored: false,
+    children: { state: "loaded", items: [file] },
+  };
+  const ignored: RepositoryTreeNode = {
+    ...ignoredDirectory,
+    path: "vendor",
+    name: "vendor",
+  };
+  const overview = {
+    ...createOverview([added]),
+    changedTree: [source],
+    allRoot: [source, ignored],
+    allPaths: ["src/main.ts", "vendor/package.json"],
+  };
+  const common = {
+    overview,
+    worktreeId: "/workspace",
+    ignoredPages: {},
+    ignoredPageStates: {},
+  };
+  const changed = projectRepositoryDiffTree({
+    ...common,
+    filter: "changed",
+    nodes: overview.changedTree,
+  });
+  const all = projectRepositoryDiffTree({
+    ...common,
+    filter: "all",
+    nodes: overview.allRoot,
+  });
+
+  expect(changed[0]?.children.items[0]).toEqual(
+    expect.objectContaining({ path: "src/main.ts", deferredNodeId: null }),
+  );
+  expect(all[1]).toEqual(
+    expect.objectContaining({
+      path: "vendor",
+      deferredNodeId: `in1_${"e".repeat(64)}`,
+      children: expect.objectContaining({ state: "deferred" }),
+    }),
+  );
+  expect(all[1]?.id).not.toBe(all[1]?.deferredNodeId);
+});
+
+test("ignored pageは親nodeのchildrenへappendし、page件数をsummaryへ加算しない", () => {
+  const pageNode: RepositoryTreeNode = {
+    path: "vendor/package.json",
+    name: "package.json",
+    kind: "file",
+    entryKind: "regular",
+    change: null,
+    ignored: true,
+    children: { state: "loaded", items: [] },
+  };
+  const overview = {
+    ...createOverview([]),
+    allRoot: [ignoredDirectory],
+    allPaths: ["vendor/package.json"],
+  };
+  const projected = projectRepositoryDiffTree({
+    nodes: overview.allRoot,
+    overview,
+    worktreeId: "/workspace",
+    filter: "all",
+    ignoredPages: {
+      [ignoredDirectory.children.state === "deferred"
+        ? ignoredDirectory.children.nodeId
+        : ""]: {
+        nodeId: `in1_${"e".repeat(64)}`,
+        entries: [pageNode, { ...pageNode }],
+        nextCursor: "cursor-2",
+      },
+    },
+    ignoredPageStates: {},
+  });
+
+  expect(projected[0]?.children).toEqual(
+    expect.objectContaining({
+      state: "loaded",
+      nextCursor: "cursor-2",
+      items: [expect.objectContaining({ path: "vendor/package.json" })],
+    }),
+  );
+  expect(deriveRepositoryDiffSummary(overview, "all").totalPaths).toBe(1);
+});
+
+test("ignored pageのloading・failed stateは既存rowを残して状態を投影する", () => {
+  const overview = { ...createOverview([]), allRoot: [ignoredDirectory] };
+  const nodeId =
+    ignoredDirectory.children.state === "deferred"
+      ? ignoredDirectory.children.nodeId
+      : "";
+  const page: IgnoredPage = {
+    nodeId,
+    entries: [],
+    nextCursor: null,
+  };
+  const identity = {
+    request: {
+      workspacePath: "/workspace",
+      worktreeId: "/workspace",
+      baseOverride: null,
+      cycleId: 1,
+      requestGeneration: 1,
+    },
+    snapshotId,
+    nodeId,
+    cursor: null,
+    pageGeneration: 1,
+  };
+
+  const loading = projectRepositoryDiffTree({
+    nodes: overview.allRoot,
+    overview,
+    worktreeId: "/workspace",
+    filter: "all",
+    ignoredPages: { [nodeId]: page },
+    ignoredPageStates: { [nodeId]: { status: "loading", identity } },
+  });
+  const failed = projectRepositoryDiffTree({
+    nodes: overview.allRoot,
+    overview,
+    worktreeId: "/workspace",
+    filter: "all",
+    ignoredPages: { [nodeId]: page },
+    ignoredPageStates: {
+      [nodeId]: {
+        status: "failed",
+        identity,
+        error: { code: "staleCursor", message: "retry", retryable: true },
+      },
+    },
+  });
+
+  expect(loading[0]?.children.state).toBe("loading");
+  expect(failed[0]?.children).toEqual(
+    expect.objectContaining({ state: "failed", message: "retry" }),
+  );
 });

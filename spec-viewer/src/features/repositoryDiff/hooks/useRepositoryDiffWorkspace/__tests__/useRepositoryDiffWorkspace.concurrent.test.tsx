@@ -1,20 +1,22 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-import {
-  type RepositoryDiffWorkspaceApi,
-  type UseRepositoryDiffWorkspaceOptions,
-  useRepositoryDiffWorkspace,
-} from "@/features/repositoryDiff/hooks/useRepositoryDiffWorkspace";
 import type {
   IgnoredPage,
   RepositoryDiffOverview,
   RepositoryFileReview,
 } from "@/features/repositoryDiff/domain/repositoryDiff";
+import {
+  type RepositoryDiffWorkspaceApi,
+  type UseRepositoryDiffWorkspaceOptions,
+  useRepositoryDiffWorkspace,
+} from "@/features/repositoryDiff/hooks/useRepositoryDiffWorkspace";
 
-const snapshotOne = "rs1_" + "a".repeat(64);
-const snapshotTwo = "rs1_" + "b".repeat(64);
-const nodeId = "in1_" + "c".repeat(64);
+const snapshotOne = `rs1_${"a".repeat(64)}`;
+const snapshotTwo = `rs1_${"b".repeat(64)}`;
+const nodeId = `in1_${"c".repeat(64)}`;
+const nodeIdTwo = `in1_${"d".repeat(64)}`;
+const nodeIdThree = `in1_${"e".repeat(64)}`;
 const resolvedBase: RepositoryDiffOverview["base"] = {
   state: "resolved",
   source: "main",
@@ -25,7 +27,7 @@ const resolvedBase: RepositoryDiffOverview["base"] = {
 
 function createOverview(snapshotId: string): RepositoryDiffOverview {
   return {
-    repositoryId: "rr1_" + "f".repeat(64),
+    repositoryId: `rr1_${"f".repeat(64)}`,
     base: resolvedBase,
     currentSnapshotId: snapshotId,
     changed: [],
@@ -65,6 +67,10 @@ const review: RepositoryFileReview = {
   submodule: null,
 };
 const page: IgnoredPage = { nodeId, entries: [], nextCursor: null };
+
+function createPageFor(targetNodeId: string): IgnoredPage {
+  return { nodeId: targetNodeId, entries: [], nextCursor: null };
+}
 
 function createApi(
   overrides: Partial<RepositoryDiffWorkspaceApi> = {},
@@ -308,5 +314,179 @@ test("deferred ignored directoryはsnapshotとcursor identityでloadingからrea
   });
   expect(hook.current().state.ignoredPages[nodeId]).toEqual(page);
   expect(hook.current().state.ignoredPageStates[nodeId]?.status).toBe("ready");
+  hook.unmount();
+});
+
+test("path-only selectionはoverviewのcurrentSnapshotIdを注入してdetailを取得する", async () => {
+  const api = createApi();
+  const hook = renderHook({
+    ...options(api),
+    selection: { worktreeId: "/workspace", path: "src/file.ts" },
+  });
+
+  await flush();
+  await flush();
+
+  expect(api.loadRepositoryFile).toHaveBeenCalledWith({
+    worktreeId: "/workspace",
+    currentSnapshotId: snapshotOne,
+    path: "src/file.ts",
+  });
+  expect(hook.current().selection).toEqual({
+    worktreeId: "/workspace",
+    snapshotId: snapshotOne,
+    path: "src/file.ts",
+  });
+  hook.unmount();
+});
+
+test("同一ignored page identityの重複要求をcoalesceする", async () => {
+  const deferredPage = createDeferred<IgnoredPage>();
+  const api = createApi({
+    traverseRepositoryIgnored: vi
+      .fn<RepositoryDiffWorkspaceApi["traverseRepositoryIgnored"]>()
+      .mockImplementationOnce(async () => deferredPage.promise),
+  });
+  const hook = renderHook(options(api));
+  await flush();
+
+  const first = hook.current().loadIgnoredChildren(nodeId);
+  const second = hook.current().loadIgnoredChildren(nodeId);
+
+  expect(first).toBe(second);
+  await flush();
+  expect(api.traverseRepositoryIgnored).toHaveBeenCalledTimes(1);
+  deferredPage.resolve(page);
+  await expect(first).resolves.toBe(true);
+  hook.unmount();
+});
+
+test("同一ignored nodeの異なるcursorは直列化する", async () => {
+  const firstPage = createDeferred<IgnoredPage>();
+  const secondPage = createDeferred<IgnoredPage>();
+  const api = createApi({
+    traverseRepositoryIgnored: vi
+      .fn<RepositoryDiffWorkspaceApi["traverseRepositoryIgnored"]>()
+      .mockImplementationOnce(async () => firstPage.promise)
+      .mockImplementationOnce(async () => secondPage.promise),
+  });
+  const hook = renderHook(options(api));
+  await flush();
+
+  const first = hook.current().loadIgnoredChildren(nodeId);
+  const second = hook.current().loadIgnoredChildren(nodeId, "cursor-2");
+  await flush();
+  expect(api.traverseRepositoryIgnored).toHaveBeenCalledTimes(1);
+  firstPage.resolve(page);
+  await expect(first).resolves.toBe(true);
+  await flush();
+  expect(api.traverseRepositoryIgnored).toHaveBeenNthCalledWith(2, {
+    worktreeId: "/workspace",
+    currentSnapshotId: snapshotOne,
+    nodeId,
+    cursor: "cursor-2",
+  });
+  secondPage.resolve(page);
+  await expect(second).resolves.toBe(true);
+  hook.unmount();
+});
+
+test("異なるignored nodeは最大2件までin-flightでFIFOに排出する", async () => {
+  const deferredPages: Array<{
+    promise: Promise<IgnoredPage>;
+    resolve: (value: IgnoredPage) => void;
+  }> = [];
+  const api = createApi({
+    traverseRepositoryIgnored: vi
+      .fn<RepositoryDiffWorkspaceApi["traverseRepositoryIgnored"]>()
+      .mockImplementation(async () => {
+        const deferredPage = createDeferred<IgnoredPage>();
+        deferredPages.push(deferredPage);
+        return deferredPage.promise;
+      }),
+  });
+  const hook = renderHook(options(api));
+  await flush();
+
+  const first = hook.current().loadIgnoredChildren(nodeId);
+  const second = hook.current().loadIgnoredChildren(nodeIdTwo);
+  const third = hook.current().loadIgnoredChildren(nodeIdThree);
+  await flush();
+
+  expect(deferredPages).toHaveLength(2);
+  deferredPages[0]?.resolve(createPageFor(nodeId));
+  deferredPages[1]?.resolve(createPageFor(nodeIdTwo));
+  await Promise.all([first, second]);
+  await flush();
+  expect(deferredPages).toHaveLength(3);
+  deferredPages[2]?.resolve(createPageFor(nodeIdThree));
+  await expect(third).resolves.toBe(true);
+  hook.unmount();
+});
+
+test("ignored page pending queueは32件を上限にし、超過要求を拒否する", async () => {
+  const deferredPages: Array<{
+    promise: Promise<IgnoredPage>;
+    resolve: (value: IgnoredPage) => void;
+  }> = [];
+  const api = createApi({
+    traverseRepositoryIgnored: vi
+      .fn<RepositoryDiffWorkspaceApi["traverseRepositoryIgnored"]>()
+      .mockImplementation(async () => {
+        const deferredPage = createDeferred<IgnoredPage>();
+        deferredPages.push(deferredPage);
+        return deferredPage.promise;
+      }),
+  });
+  const hook = renderHook(options(api));
+  await flush();
+
+  const requests = Array.from({ length: 35 }, (_, index) =>
+    hook.current().loadIgnoredChildren(`queued-node-${String(index)}`),
+  );
+  await flush();
+
+  expect(deferredPages).toHaveLength(2);
+  await expect(requests[34]).resolves.toBe(false);
+  deferredPages[0]?.resolve(createPageFor(nodeId));
+  deferredPages[1]?.resolve(createPageFor(nodeIdTwo));
+  await Promise.all([requests[0], requests[1]]);
+  hook.unmount();
+});
+
+test("overview refresh中に進行中のignored page 2件を破棄し、新snapshotだけを採用する", async () => {
+  const nextOverview = createDeferred<RepositoryDiffOverview>();
+  const firstPage = createDeferred<IgnoredPage>();
+  const secondPage = createDeferred<IgnoredPage>();
+  const api = createApi({
+    loadRepositoryDiff: vi
+      .fn<RepositoryDiffWorkspaceApi["loadRepositoryDiff"]>()
+      .mockResolvedValueOnce(createOverview(snapshotOne))
+      .mockImplementationOnce(async () => nextOverview.promise),
+    traverseRepositoryIgnored: vi
+      .fn<RepositoryDiffWorkspaceApi["traverseRepositoryIgnored"]>()
+      .mockImplementationOnce(async () => firstPage.promise)
+      .mockImplementationOnce(async () => secondPage.promise),
+  });
+  const hook = renderHook(options(api));
+  await flush();
+
+  const first = hook.current().loadIgnoredChildren(nodeId);
+  const second = hook.current().loadIgnoredChildren(nodeIdTwo);
+  await flush();
+  expect(api.traverseRepositoryIgnored).toHaveBeenCalledTimes(2);
+
+  const refresh = hook.current().refresh();
+  firstPage.resolve(createPageFor(nodeId));
+  secondPage.resolve(createPageFor(nodeIdTwo));
+  await expect(first).resolves.toBe(false);
+  await expect(second).resolves.toBe(false);
+  expect(hook.current().state.ignoredPages).toEqual({});
+
+  nextOverview.resolve(createOverview(snapshotTwo));
+  await expect(refresh).resolves.toBe(true);
+  await flush();
+  expect(hook.current().state.overview?.currentSnapshotId).toBe(snapshotTwo);
+  expect(hook.current().state.ignoredPages).toEqual({});
   hook.unmount();
 });
