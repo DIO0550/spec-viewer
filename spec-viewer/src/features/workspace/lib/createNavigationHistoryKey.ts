@@ -16,3 +16,17 @@ export function createNavigationHistoryKey(
 ): string {
   return JSON.stringify([workspaceId, worktreeId, mode]);
 }
+
+/**
+ * Creates the Diff-local repository navigation key.
+ *
+ * @param workspaceId - Workspace identity.
+ * @param worktreeId - Active worktree identity.
+ * @returns A key scoped to the repository Diff session.
+ */
+export function createRepositoryDiffNavigationKey(
+  workspaceId: string,
+  worktreeId: WorktreeId,
+): string {
+  return createNavigationHistoryKey(workspaceId, worktreeId, "diff");
+}

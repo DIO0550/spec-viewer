@@ -482,6 +482,69 @@ test("ignored page は nodeId・entries・nextCursor をdecodeする", () => {
   expect(decodeIgnoredPage(response)).toEqual(response);
 });
 
+test("overviewはchangedTree/allRoot/allPathsとstatus invariantを同時にdecodeする", () => {
+  const response = {
+    ...baseOverview(resolvedBase()),
+    changed: [
+      fileChange({
+        change: "renamed",
+        oldPath: "src/old.ts",
+        newPath: "src/new.ts",
+        similarity: 80,
+      }),
+    ],
+    changedTree: [
+      treeNode({
+        path: "src/new.ts",
+        name: "new.ts",
+        kind: "file",
+        entryKind: "regular",
+        change: "renamed",
+        ignored: false,
+        children: { state: "loaded", items: [] },
+      }),
+    ],
+    allRoot: [
+      treeNode({
+        path: "src",
+        name: "src",
+        kind: "directory",
+        ignored: false,
+        children: { state: "loaded", items: [] },
+      }),
+    ],
+    all: ["src/new.ts", "generated/build.log"],
+  };
+
+  const decoded = decodeRepositoryOverview(response);
+  expect(decoded.changed[0]).toMatchObject({
+    change: "renamed",
+    oldPath: "src/old.ts",
+    newPath: "src/new.ts",
+    similarity: 80,
+  });
+  expect(decoded.changedTree[0]).toMatchObject({
+    path: "src/new.ts",
+    change: "renamed",
+  });
+  expect(decoded.allRoot[0]?.children).toEqual({
+    state: "loaded",
+    items: [],
+  });
+  expect(decoded.allPaths).toEqual(["src/new.ts", "generated/build.log"]);
+});
+
+test("allPathsのrepository-relative invariant違反をrejectする", () => {
+  const response = {
+    ...baseOverview(resolvedBase()),
+    all: ["../outside.ts"],
+  };
+
+  expect(() => decodeRepositoryOverview(response)).toThrow(
+    InvalidRepositoryDiffResponseError,
+  );
+});
+
 const diffAnchor = (
   overrides: Readonly<Record<string, unknown>> = {},
 ): Record<string, unknown> => ({

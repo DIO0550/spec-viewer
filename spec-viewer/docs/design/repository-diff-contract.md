@@ -106,6 +106,36 @@ deleted new-only text files remain renderable with a semantic blank counterpart 
 binary, unsupported, oversized, and unexpected missing-side reviews render a status
 message instead of an interactive grid.
 
+## Issue #195 frontend tree contract
+
+Issue #195 consumes the repository-wide overview from #201 and the snapshot-bound
+IPC/decoder contract from #202 while preserving the domain separation established
+by #191.
+
+- Changed and All are Diff-local filters inside the existing Diff mode. Changed
+  projects changedTree; All projects allRoot and may append lazy ignored pages.
+- The summary is derived locally: Changed uses overview.changed.length, All uses
+  overview.allPaths.length, changedPaths and status counts use overview.changed,
+  and ignoredDirectoryCount uses overview.ignoredDirectories.length. Lazy page
+  entries never inflate the logical total, and no commit/staged/unstaged buckets are
+  added.
+- Navigation state is in-memory for the App session and keyed by workspace,
+  worktree, and Diff. An unvisited repository starts at Changed with no selection or
+  expansion; revisits restore filter, selected path, and expanded directories.
+  Reconcile prunes paths that disappeared while retaining deferred/loading/failed
+  directory expansion for retry.
+- File detail and ignored traversal keep the overview currentSnapshotId.
+  Overview, detail, and page responses are accepted only when their complete request
+  identity and generation still match. Ignored page requests coalesce by
+  worktree/snapshot/node/cursor, serialize per node, run at most two nodes at once,
+  and retain a FIFO pending queue capped at 32.
+- The RepositoryDiffTree exposes normal, loading, empty, error, stale, binary,
+  deleted, unchanged, ignored, and submodule-safe states through controlled ARIA
+  tree rows. The existing generic ChangesNavigation remains the Spec branch.
+- No new Tauri command, filter argument, summary DTO field, or stage bucket is
+  introduced; projection and session behavior remain on the frontend boundary.
+
+
 ## Typed outcomes
 
 | Category | Stable outcomes |
