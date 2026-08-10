@@ -261,6 +261,32 @@ export type ProjectRepositoryDiffTreeOptions = Readonly<{
   ignoredPageStates: Readonly<Record<string, RepositoryDiffIgnoredPageState>>;
 }>;
 
+type ProjectRepositoryDiffTreeContext = ProjectRepositoryDiffTreeOptions &
+  Readonly<{
+    changedByPath: ReadonlyMap<
+      string,
+      RepositoryDiffOverview["changed"][number]
+    >;
+  }>;
+
+function createChangedFileByPath(
+  overview: RepositoryDiffOverview,
+): ReadonlyMap<string, RepositoryDiffOverview["changed"][number]> {
+  const changedByPath = new Map<
+    string,
+    RepositoryDiffOverview["changed"][number]
+  >();
+  overview.changed.forEach((file) => {
+    if (file.newPath !== null && !changedByPath.has(file.newPath)) {
+      changedByPath.set(file.newPath, file);
+    }
+    if (file.oldPath !== null && !changedByPath.has(file.oldPath)) {
+      changedByPath.set(file.oldPath, file);
+    }
+  });
+  return changedByPath;
+}
+
 /**
  * Projects the selected repository root into a nested tree view model.
  *
@@ -270,7 +296,11 @@ export type ProjectRepositoryDiffTreeOptions = Readonly<{
 export function projectRepositoryDiffTree(
   options: ProjectRepositoryDiffTreeOptions,
 ): readonly RepositoryDiffTreeProjectionNode[] {
-  return projectTreeNodes(options.nodes, options, false);
+  const context: ProjectRepositoryDiffTreeContext = {
+    ...options,
+    changedByPath: createChangedFileByPath(options.overview),
+  };
+  return projectTreeNodes(options.nodes, context, false);
 }
 
 /**
@@ -303,7 +333,7 @@ export function deriveRepositoryDiffSummary(
 
 function projectTreeNodes(
   nodes: readonly RepositoryTreeNode[],
-  options: ProjectRepositoryDiffTreeOptions,
+  options: ProjectRepositoryDiffTreeContext,
   inheritedIgnored: boolean,
 ): readonly RepositoryDiffTreeProjectionNode[] {
   const seenPaths = new Set<string>();
@@ -318,14 +348,12 @@ function projectTreeNodes(
 
 function projectTreeNode(
   node: RepositoryTreeNode,
-  options: ProjectRepositoryDiffTreeOptions,
+  options: ProjectRepositoryDiffTreeContext,
   inheritedIgnored: boolean,
 ): RepositoryDiffTreeProjectionNode {
   const deferredNodeId =
     node.children.state === "deferred" ? node.children.nodeId : null;
-  const changedFile = options.overview.changed.find(
-    (file) => file.newPath === node.path || file.oldPath === node.path,
-  );
+  const changedFile = options.changedByPath.get(node.path);
 
   return {
     id: createProjectionId({
@@ -351,7 +379,7 @@ function projectTreeNode(
 
 function projectTreeChildren(
   node: RepositoryTreeNode,
-  options: ProjectRepositoryDiffTreeOptions,
+  options: ProjectRepositoryDiffTreeContext,
   inheritedIgnored: boolean,
 ): RepositoryDiffTreeProjectionNode["children"] {
   if (node.children.state === "loaded") {
