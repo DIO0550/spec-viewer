@@ -151,6 +151,7 @@ export function RepositoryDiffTree(
         if (isExpanded) {
           onToggleDirectory(node.path);
         } else if (visibleNode.parentId !== null) {
+          setFocusedId(visibleNode.parentId);
           itemRefs.current.get(visibleNode.parentId)?.focus();
         }
         return;

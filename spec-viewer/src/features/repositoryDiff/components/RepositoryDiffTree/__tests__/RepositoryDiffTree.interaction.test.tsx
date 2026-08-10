@@ -269,6 +269,56 @@ test("RepositoryDiffTreeはArrow/Home/EndとEnterでroving focusとselectionを�
   result.unmount();
 });
 
+test("RepositoryDiffTreeは折りたたまれた子ディレクトリのArrowLeftで親のroving focusを復元する", () => {
+  const child = createNode({
+    id: "row:child",
+    path: "src/nested",
+    name: "nested",
+    kind: "directory",
+    entryKind: null,
+    ignored: false,
+    deferredNodeId: null,
+    children: { state: "loaded", items: [], nextCursor: null, message: null },
+  });
+  const parent = createNode({
+    id: "row:parent",
+    path: "src",
+    name: "src",
+    kind: "directory",
+    entryKind: null,
+    ignored: false,
+    deferredNodeId: null,
+    children: {
+      state: "loaded",
+      items: [child],
+      nextCursor: null,
+      message: null,
+    },
+  });
+  const result = renderTree({ nodes: [parent], expandedPaths: ["src"] });
+  const rows =
+    result.container.querySelectorAll<HTMLButtonElement>('[role="treeitem"]');
+
+  act(() => {
+    rows[0]?.focus();
+    rows[0]?.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
+    );
+  });
+  expect(document.activeElement).toBe(rows[1]);
+  expect(rows[1]?.tabIndex).toBe(0);
+
+  act(() => {
+    rows[1]?.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }),
+    );
+  });
+  expect(document.activeElement).toBe(rows[0]);
+  expect(rows[0]?.tabIndex).toBe(0);
+  expect(rows[1]?.tabIndex).toBe(-1);
+  result.unmount();
+});
+
 test.each([
   { label: "追加", token: "A", change: "added" as const },
   { label: "変更", token: "M", change: "modified" as const },
