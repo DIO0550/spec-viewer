@@ -87,6 +87,44 @@ export type RepositoryDiffOverview = Readonly<{
   warnings: readonly string[];
 }>;
 
+export type RepositoryDiffFilter = "changed" | "all";
+
+export type RepositoryDiffSelectionRequest = Readonly<{
+  worktreeId: string;
+  path: string;
+}>;
+
+export type RepositoryDiffStatusCounts = Readonly<
+  Partial<Record<FileChangeStatus, number>>
+>;
+
+export type RepositoryDiffSummary = Readonly<{
+  filter: RepositoryDiffFilter;
+  totalPaths: number;
+  changedPaths: number;
+  statusCounts: RepositoryDiffStatusCounts;
+  ignoredDirectoryCount: number;
+}>;
+
+export type RepositoryDiffTreeProjectionNode = Readonly<{
+  id: string;
+  path: string;
+  name: string;
+  kind: "file" | "directory";
+  entryKind: EntryKind | null;
+  contentClassification: ContentClassification | null;
+  oldPath: string | null;
+  change: FileChangeStatus | null;
+  ignored: boolean;
+  deferredNodeId: string | null;
+  children: Readonly<{
+    state: "loaded" | "deferred" | "loading" | "failed";
+    items: readonly RepositoryDiffTreeProjectionNode[];
+    nextCursor: string | null;
+    message: string | null;
+  }>;
+}>;
+
 export type RepositoryFileReview = Readonly<{
   file: RepositoryDiffFile;
   oldContent: FileContent;

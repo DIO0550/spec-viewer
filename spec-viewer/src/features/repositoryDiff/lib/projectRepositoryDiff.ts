@@ -1,17 +1,21 @@
-import { deriveDiffAvailability } from "@/features/diff/domain/fileDiff";
 import type {
   FileChangeStatus,
   FileDiff,
   OmissionReason,
 } from "@/features/diff/domain/fileDiff";
+import { deriveDiffAvailability } from "@/features/diff/domain/fileDiff";
 import type {
   IgnoredPage,
+  RepositoryDiffFilter,
   RepositoryDiffOverview,
   RepositoryDiffProjectionItem,
   RepositoryDiffSelection,
+  RepositoryDiffSummary,
+  RepositoryDiffTreeProjectionNode,
   RepositoryFileReview,
   RepositoryTreeNode,
 } from "@/features/repositoryDiff/domain/repositoryDiff";
+import type { RepositoryDiffIgnoredPageState } from "@/features/repositoryDiff/domain/repositoryDiffWorkspaceState";
 
 export type RepositoryFileReviewProjection = Readonly<{
   path: string;
@@ -27,6 +31,7 @@ type ProjectionScope = Readonly<{
   snapshotId: string;
   path: string;
   oldPath: string | null;
+  deferredNodeId?: string | null;
 }>;
 
 /**
@@ -120,7 +125,7 @@ export function toDiffViewerFileDiff(
 ): FileDiff {
   return {
     identity: {
-      sourceId: "repository:" + selection.worktreeId,
+      sourceId: `repository:${selection.worktreeId}`,
       path: selection.path,
     },
     review,
@@ -207,9 +212,9 @@ function createBaseKey(overview: RepositoryDiffOverview): string {
     return overview.base.mergeBaseSha;
   }
   if (overview.base.state === "invalidOverride") {
-    return overview.base.state + ":" + overview.base.overrideRef;
+    return `${overview.base.state}:${overview.base.overrideRef}`;
   }
-  return overview.base.state + ":" + overview.base.reason;
+  return `${overview.base.state}:${overview.base.reason}`;
 }
 
 /**
@@ -217,15 +222,17 @@ function createBaseKey(overview: RepositoryDiffOverview): string {
  * @returns Collision-resistant encoded navigation identity.
  */
 function createProjectionId(scope: ProjectionScope): string {
-  return [
+  const parts = [
     scope.worktreeId,
     scope.baseKey,
     scope.snapshotId,
     scope.path,
     scope.oldPath ?? "",
-  ]
-    .map((part) => encodeURIComponent(part))
-    .join(":");
+  ];
+  if (scope.deferredNodeId !== undefined) {
+    parts.push(scope.deferredNodeId ?? "");
+  }
+  return parts.map((part) => encodeURIComponent(part)).join(":");
 }
 
 /**
@@ -243,4 +250,149 @@ function findOmissionReason(
   ];
   const omitted = candidates.find((candidate) => candidate.state === "omitted");
   return omitted?.reason ?? null;
+}
+
+export type ProjectRepositoryDiffTreeOptions = Readonly<{
+  nodes: readonly RepositoryTreeNode[];
+  overview: RepositoryDiffOverview;
+  worktreeId: string;
+  filter: RepositoryDiffFilter;
+  ignoredPages: Readonly<Record<string, IgnoredPage>>;
+  ignoredPageStates: Readonly<Record<string, RepositoryDiffIgnoredPageState>>;
+}>;
+
+/**
+ * Projects the selected repository root into a nested tree view model.
+ *
+ * @param options - Overview, root nodes and lazy ignored-page state.
+ * @returns A stable, recursively projected repository tree.
+ */
+export function projectRepositoryDiffTree(
+  options: ProjectRepositoryDiffTreeOptions,
+): readonly RepositoryDiffTreeProjectionNode[] {
+  return projectTreeNodes(options.nodes, options, false);
+}
+
+/**
+ * Derives logical repository counts from the existing overview contract.
+ *
+ * @param overview - Repository-wide overview.
+ * @param filter - Current Diff-local filter.
+ * @returns Summary counts without adding lazy page entries.
+ */
+export function deriveRepositoryDiffSummary(
+  overview: RepositoryDiffOverview,
+  filter: RepositoryDiffFilter,
+): RepositoryDiffSummary {
+  const statusCounts = overview.changed.reduce<
+    Partial<Record<FileChangeStatus, number>>
+  >((counts, file) => {
+    counts[file.change] = (counts[file.change] ?? 0) + 1;
+    return counts;
+  }, {});
+
+  return {
+    filter,
+    totalPaths:
+      filter === "changed" ? overview.changed.length : overview.allPaths.length,
+    changedPaths: overview.changed.length,
+    statusCounts,
+    ignoredDirectoryCount: overview.ignoredDirectories.length,
+  };
+}
+
+function projectTreeNodes(
+  nodes: readonly RepositoryTreeNode[],
+  options: ProjectRepositoryDiffTreeOptions,
+  inheritedIgnored: boolean,
+): readonly RepositoryDiffTreeProjectionNode[] {
+  const seenPaths = new Set<string>();
+  return nodes.flatMap((node) => {
+    if (seenPaths.has(node.path)) {
+      return [];
+    }
+    seenPaths.add(node.path);
+    return [projectTreeNode(node, options, inheritedIgnored)];
+  });
+}
+
+function projectTreeNode(
+  node: RepositoryTreeNode,
+  options: ProjectRepositoryDiffTreeOptions,
+  inheritedIgnored: boolean,
+): RepositoryDiffTreeProjectionNode {
+  const deferredNodeId =
+    node.children.state === "deferred" ? node.children.nodeId : null;
+  const changedFile = options.overview.changed.find(
+    (file) => file.newPath === node.path || file.oldPath === node.path,
+  );
+
+  return {
+    id: createProjectionId({
+      worktreeId: options.worktreeId,
+      baseKey: createBaseKey(options.overview),
+      snapshotId: options.overview.currentSnapshotId ?? "unresolved",
+      path: node.path,
+      oldPath: changedFile?.oldPath ?? null,
+      deferredNodeId,
+    }),
+    path: node.path,
+    name: node.name,
+    kind: node.kind,
+    entryKind: node.entryKind,
+    contentClassification: changedFile?.contentClassification ?? null,
+    oldPath: changedFile?.oldPath ?? null,
+    change: node.change ?? changedFile?.change ?? null,
+    ignored: inheritedIgnored || node.ignored,
+    deferredNodeId,
+    children: projectTreeChildren(node, options, inheritedIgnored),
+  };
+}
+
+function projectTreeChildren(
+  node: RepositoryTreeNode,
+  options: ProjectRepositoryDiffTreeOptions,
+  inheritedIgnored: boolean,
+): RepositoryDiffTreeProjectionNode["children"] {
+  if (node.children.state === "loaded") {
+    return {
+      state: "loaded",
+      items: projectTreeNodes(
+        node.children.items,
+        options,
+        inheritedIgnored || node.ignored,
+      ),
+      nextCursor: null,
+      message: null,
+    };
+  }
+
+  const deferredNodeId = node.children.nodeId;
+  if (options.filter !== "all") {
+    return {
+      state: "deferred",
+      items: [],
+      nextCursor: null,
+      message: null,
+    };
+  }
+
+  const page = options.ignoredPages[deferredNodeId];
+  const pageState = options.ignoredPageStates[deferredNodeId];
+  const state =
+    pageState?.status === "loading"
+      ? "loading"
+      : pageState?.status === "failed"
+        ? "failed"
+        : page === undefined
+          ? "deferred"
+          : "loaded";
+
+  return {
+    state,
+    items:
+      page === undefined ? [] : projectTreeNodes(page.entries, options, true),
+    nextCursor: page?.nextCursor ?? null,
+    message: pageState?.status === "failed" ? pageState.error.message : null,
+  };
 }
