@@ -4958,3 +4958,199 @@ textarea:disabled {
 .markdown-rendered {
   min-width: 0;
 }
+
+.repository-diff-navigation {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+  padding: 8px;
+}
+
+.repository-diff-navigation__filters {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.repository-diff-navigation__filter {
+  flex: 1;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 6px 8px;
+  color: var(--color-text-body);
+  background: transparent;
+}
+
+.repository-diff-navigation__filter[aria-selected="true"] {
+  border-bottom-color: var(--color-accent);
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+.repository-diff-navigation__filter:hover,
+.repository-diff-navigation__filter:focus-visible {
+  background: var(--color-control-hover);
+}
+
+.repository-diff-summary {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 8px;
+  color: var(--color-text-body);
+  background: var(--color-surface);
+}
+
+.repository-diff-summary__headline,
+.repository-diff-summary__counts > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.repository-diff-summary__headline strong {
+  color: var(--color-text);
+}
+
+.repository-diff-summary__counts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 10px;
+  margin: 6px 0 0;
+  font-size: 0.9em;
+}
+
+.repository-diff-summary__counts dt,
+.repository-diff-summary__counts dd {
+  margin: 0;
+}
+
+.repository-diff-summary__counts dd {
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.repository-diff-tree {
+  min-height: 0;
+  overflow: auto;
+  padding-block: 2px;
+}
+
+.repository-diff-tree__node {
+  min-width: 0;
+}
+
+.repository-diff-tree__item {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  padding-block: 5px;
+  text-align: start;
+  color: var(--color-text-body);
+  background: transparent;
+}
+
+.repository-diff-tree__item:hover,
+.repository-diff-tree__item:focus-visible,
+.repository-diff-tree__item[aria-selected="true"] {
+  border-color: var(--color-accent-border);
+  color: var(--color-text);
+  background: var(--color-accent-soft);
+}
+
+.repository-diff-tree__chevron {
+  width: 12px;
+  flex: 0 0 12px;
+  color: var(--color-text-muted);
+}
+
+.repository-diff-tree__token {
+  width: 18px;
+  flex: 0 0 18px;
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  font-weight: 700;
+  text-align: center;
+}
+
+.repository-diff-tree__name,
+.repository-diff-tree__path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.repository-diff-tree__name {
+  color: var(--color-text);
+}
+
+.repository-diff-tree__path {
+  color: var(--color-text-muted);
+  font-size: 0.9em;
+}
+
+.repository-diff-tree__group {
+  margin-inline-start: 8px;
+  border-inline-start: 1px solid var(--color-border);
+}
+
+.repository-diff-tree__status,
+.repository-diff-tree__child-status,
+.repository-diff-tree__error,
+.repository-diff-tree__stale,
+.repository-diff-tree__child-error {
+  margin: 4px 0;
+  padding: 8px;
+  color: var(--color-text-body);
+}
+
+.repository-diff-tree__error,
+.repository-diff-tree__stale,
+.repository-diff-tree__child-error {
+  border: 1px solid var(--color-danger-border);
+  border-radius: 5px;
+  color: var(--color-danger);
+}
+
+.repository-diff-tree__error button,
+.repository-diff-tree__stale button,
+.repository-diff-tree__child-error button,
+.repository-diff-tree__load-more {
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 3px 7px;
+  color: var(--color-text);
+  background: var(--color-control);
+}
+
+.repository-diff-tree__child-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-inline-start: 8px;
+}
+
+.repository-diff-tree__load-more {
+  margin: 4px 8px;
+}
+
+.repository-diff-tree__sr-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  margin: -1px;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

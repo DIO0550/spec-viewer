@@ -29,7 +29,6 @@ import { CommentScope } from "@/features/comments/domain/commentScope";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import {
   ChangesNavigation,
-  type ChangesNavigationAvailability,
   createSpecChangeId,
   DiffViewer,
   DiffWorkspace,
@@ -40,21 +39,27 @@ import {
   useSpecDiffWorkspace,
   ViewModeToolbar,
 } from "@/features/diff";
-import { useRepositoryDiffWorkspace } from "@/features/repositoryDiff/hooks/useRepositoryDiffWorkspace";
-import type { RepositoryDiffSelection } from "@/features/repositoryDiff/domain/repositoryDiff";
-import type { RepositoryDiffWorkspaceState } from "@/features/repositoryDiff/domain/repositoryDiffWorkspaceState";
-import {
-  projectChangedFiles,
-  projectFileReview,
-  projectIgnoredPage,
-  projectRepositoryTree,
-  toDiffViewerFileDiff,
-} from "@/features/repositoryDiff/lib/projectRepositoryDiff";
 import {
   ThemeProvider,
   useLeftNavigationPreference,
   useResizableLeftNavigation,
 } from "@/features/preferences";
+import {
+  deriveRepositoryDiffSummary,
+  projectFileReview,
+  projectRepositoryDiffTree,
+  RepositoryDiffSummary,
+  RepositoryDiffTree,
+  type RepositoryDiffTreeAvailability,
+  toDiffViewerFileDiff,
+  useRepositoryDiffNavigationState,
+} from "@/features/repositoryDiff";
+import type {
+  RepositoryDiffSelection,
+  RepositoryDiffTreeProjectionNode,
+} from "@/features/repositoryDiff/domain/repositoryDiff";
+import type { RepositoryDiffWorkspaceState } from "@/features/repositoryDiff/domain/repositoryDiffWorkspaceState";
+import { useRepositoryDiffWorkspace } from "@/features/repositoryDiff/hooks/useRepositoryDiffWorkspace";
 import {
   SidebarLayout,
   SidebarPreferenceProvider,
@@ -151,6 +156,12 @@ function SpecViewAppContent(): ReactElement {
     workspacePath: activeWorkspaceRoot,
     selection: specState.selection,
   });
+  const repositoryNavigation = useRepositoryDiffNavigationState({
+    workspaceId: activeWorkspaceRoot,
+    worktreeId: activeWorkspaceRoot,
+  });
+  const repositoryNavigationEntry = repositoryNavigation.entry;
+  const repositoryNavigationActions = repositoryNavigation.actions;
   const repositoryDiff = useRepositoryDiffWorkspace({
     workspacePath: activeWorkspaceRoot,
     worktreeId: activeWorkspaceRoot,
@@ -237,6 +248,14 @@ function SpecViewAppContent(): ReactElement {
 
   // dialogErrorMessage の選択変更クリア（既存 effect(1) の該当分。deps は同一3値）。
   useEffect(() => {
+    if (
+      resetKeys.fileKey === null &&
+      resetKeys.specId === null &&
+      resetKeys.workspaceRoot === null
+    ) {
+      setDialogErrorMessage(null);
+      return;
+    }
     setDialogErrorMessage(null);
   }, [resetKeys.fileKey, resetKeys.specId, resetKeys.workspaceRoot]);
 
@@ -309,55 +328,69 @@ function SpecViewAppContent(): ReactElement {
         : [],
     [specDiff.state],
   );
-  const repositoryItems = useMemo(() => {
-    if (
-      activeWorkspaceRoot === null ||
-      repositoryDiff.state.overview === null
-    ) {
+  const repositoryTreeNodes = useMemo(() => {
+    const overview = repositoryDiff.state.overview;
+    if (overview === null || activeWorkspaceRoot === null) {
       return [];
     }
-    const overview = repositoryDiff.state.overview;
-    const changedItems = projectChangedFiles(overview, activeWorkspaceRoot);
-    const treeItems = projectRepositoryTree(
-      overview.allRoot,
+    const nodes =
+      repositoryNavigationEntry.filter === "changed"
+        ? overview.changedTree
+        : overview.allRoot;
+    return projectRepositoryDiffTree({
+      nodes,
       overview,
-      activeWorkspaceRoot,
-    );
-    const ignoredPageItems = Object.values(
-      repositoryDiff.state.ignoredPages,
-    ).flatMap((page) =>
-      projectIgnoredPage(page, overview, activeWorkspaceRoot),
-    );
-    const changedPaths = new Set(changedItems.map((item) => item.path));
-    const treePaths = new Set(treeItems.map((item) => item.path));
-    return [
-      ...changedItems,
-      ...treeItems.filter((item) => !changedPaths.has(item.path)),
-      ...ignoredPageItems.filter(
-        (item) => !changedPaths.has(item.path) && !treePaths.has(item.path),
-      ),
-    ];
+      worktreeId: activeWorkspaceRoot,
+      filter: repositoryNavigationEntry.filter,
+      ignoredPages: repositoryDiff.state.ignoredPages,
+      ignoredPageStates: repositoryDiff.state.ignoredPageStates,
+    });
   }, [
     activeWorkspaceRoot,
+    repositoryDiff.state.ignoredPageStates,
     repositoryDiff.state.ignoredPages,
     repositoryDiff.state.overview,
+    repositoryNavigationEntry.filter,
   ]);
-  const repositorySelectedId = useMemo(
-    () =>
-      repositoryDiff.selection === null
-        ? null
-        : (repositoryItems.find(
-            (item) => item.path === repositoryDiff.selection?.path,
-          )?.id ?? null),
-    [repositoryDiff.selection, repositoryItems],
+  const repositorySummary = useMemo(() => {
+    const overview = repositoryDiff.state.overview;
+    return overview === null
+      ? null
+      : deriveRepositoryDiffSummary(overview, repositoryNavigationEntry.filter);
+  }, [repositoryDiff.state.overview, repositoryNavigationEntry.filter]);
+  const repositoryTreePaths = useMemo(
+    () => collectRepositoryTreePaths(repositoryTreeNodes),
+    [repositoryTreeNodes],
   );
-  const navigationItems = isRepositoryDiffView ? repositoryItems : changesItems;
-  const navigationSelectedId = isRepositoryDiffView
-    ? repositorySelectedId
-    : selectedChangeId;
-  const changesAvailability = isRepositoryDiffView
-    ? createRepositoryChangesAvailability(repositoryDiff.state)
-    : specDiff.state.status === "ready"
+
+  useEffect(() => {
+    repositoryNavigationActions.reconcile(
+      repositoryTreePaths.visiblePaths,
+      repositoryTreePaths.directoryPaths,
+    );
+  }, [repositoryNavigationActions.reconcile, repositoryTreePaths]);
+
+  useEffect(() => {
+    const selectedPath = repositoryNavigationEntry.selectedPath;
+    if (
+      !isRepositoryDiffView ||
+      selectedPath === null ||
+      repositoryDiff.state.status !== "ready" ||
+      repositoryDiff.selection?.path === selectedPath
+    ) {
+      return;
+    }
+    void repositoryDiff.selectPath(selectedPath);
+  }, [
+    isRepositoryDiffView,
+    repositoryDiff.selectPath,
+    repositoryDiff.selection?.path,
+    repositoryDiff.state.status,
+    repositoryNavigationEntry.selectedPath,
+  ]);
+
+  const changesAvailability =
+    specDiff.state.status === "ready"
       ? ({ status: "ready" } as const)
       : specDiff.state.status === "failed"
         ? ({ status: "failed", message: specDiff.state.message } as const)
@@ -442,7 +475,7 @@ function SpecViewAppContent(): ReactElement {
             diffAvailability={diffTabAvailability}
             activeItemLabel={
               isRepositoryDiffView
-                ? (repositoryDiff.selection?.path ?? "ファイル未選択")
+                ? (repositoryNavigationEntry.selectedPath ?? "ファイル未選択")
                 : specSelectors.selectedSpec !== null &&
                     specSelectors.selectedFile !== null
                   ? specSelectors.selectedSpec.label +
@@ -507,29 +540,68 @@ function SpecViewAppContent(): ReactElement {
               }}
               onReload={guardedSpecActions.reloadSpecsFromTree}
             />
+          ) : isRepositoryDiffView ? (
+            <div className="repository-diff-navigation">
+              <div
+                className="repository-diff-navigation__filters"
+                role="tablist"
+                aria-label="Repository diff filter"
+              >
+                <button
+                  className="repository-diff-navigation__filter"
+                  type="button"
+                  role="tab"
+                  aria-selected={repositoryNavigationEntry.filter === "changed"}
+                  onClick={() => {
+                    repositoryNavigationActions.changeFilter("changed");
+                  }}
+                >
+                  Changed
+                </button>
+                <button
+                  className="repository-diff-navigation__filter"
+                  type="button"
+                  role="tab"
+                  aria-selected={repositoryNavigationEntry.filter === "all"}
+                  onClick={() => {
+                    repositoryNavigationActions.changeFilter("all");
+                  }}
+                >
+                  All
+                </button>
+              </div>
+              {repositorySummary === null ? null : (
+                <RepositoryDiffSummary summary={repositorySummary} />
+              )}
+              <RepositoryDiffTree
+                filter={repositoryNavigationEntry.filter}
+                nodes={repositoryTreeNodes}
+                selectedPath={repositoryNavigationEntry.selectedPath}
+                expandedPaths={repositoryNavigationEntry.expandedPaths}
+                availability={createRepositoryDiffTreeAvailability(
+                  repositoryDiff.state,
+                  repositoryTreeNodes.length,
+                )}
+                onSelectFile={(path) => {
+                  repositoryNavigationActions.selectPath(path);
+                }}
+                onToggleDirectory={(path) => {
+                  repositoryNavigationActions.toggleDirectory(path);
+                }}
+                onLoadChildren={(nodeId, cursor) => {
+                  void repositoryDiff.loadIgnoredChildren(nodeId, cursor);
+                }}
+                onRetry={() => {
+                  void repositoryDiff.retry();
+                }}
+              />
+            </div>
           ) : (
             <ChangesNavigation
-              items={navigationItems}
-              selectedId={navigationSelectedId}
+              items={changesItems}
+              selectedId={selectedChangeId}
               availability={changesAvailability}
               onSelect={(id) => {
-                if (isRepositoryDiffView) {
-                  const item = repositoryItems.find(
-                    (candidate) => candidate.id === id,
-                  );
-                  if (item === undefined) {
-                    return;
-                  }
-                  workspaceNavigation.actions.selectItem(id);
-                  if (item.deferredNodeId !== null) {
-                    void repositoryDiff.loadIgnoredChildren(
-                      item.deferredNodeId,
-                    );
-                    return;
-                  }
-                  void repositoryDiff.selectPath(item.path);
-                  return;
-                }
                 const change =
                   specDiff.state.status === "ready"
                     ? (specDiff.state.overview.files.find(
@@ -546,9 +618,7 @@ function SpecViewAppContent(): ReactElement {
                 );
               }}
               onRetry={() => {
-                void (isRepositoryDiffView
-                  ? repositoryDiff.retry()
-                  : specDiff.refresh());
+                void specDiff.refresh();
               }}
             />
           )}
@@ -597,7 +667,7 @@ function SpecViewAppContent(): ReactElement {
               }
               selectedPath={
                 isRepositoryDiffView
-                  ? (repositoryDiff.selection?.path ?? null)
+                  ? (repositoryNavigationEntry.selectedPath ?? null)
                   : (currentSpecChange?.targetPath ?? null)
               }
               preview={null}
@@ -748,37 +818,55 @@ function createDiffWorkspaceState(
   };
 }
 
-function createRepositoryChangesAvailability(
+function createRepositoryDiffTreeAvailability(
   state: RepositoryDiffWorkspaceState,
-): ChangesNavigationAvailability {
-  if (state.status === "ready") {
-    return { status: "ready" };
-  }
+  nodeCount: number,
+): RepositoryDiffTreeAvailability {
   if (state.status === "idle" || state.status === "loading") {
     return { status: "loading" };
   }
   if (state.status === "needsSelection") {
     return {
-      status: "unavailable",
-      reason: "比較元のブランチを選択してください。",
+      status: "error",
+      message: "比較元のブランチを選択してください。",
     };
   }
   if (state.status === "invalidOverride") {
     return {
-      status: "unavailable",
-      reason: "指定された比較元ブランチを解決できません。",
+      status: "error",
+      message: "指定された比較元ブランチを解決できません。",
     };
   }
-  if (state.status === "unavailable") {
+  if (state.status === "unavailable" || state.status === "failed") {
     return {
-      status: "unavailable",
-      reason: state.error?.message ?? "Repository diff は利用できません。",
+      status: "error",
+      message: state.error?.message ?? "Repository diff の取得に失敗しました。",
     };
   }
-  return {
-    status: "failed",
-    message: state.error?.message ?? "Repository diff の取得に失敗しました。",
+  return nodeCount === 0 ? { status: "empty" } : { status: "ready" };
+}
+
+function collectRepositoryTreePaths(
+  nodes: readonly RepositoryDiffTreeProjectionNode[],
+): Readonly<{
+  visiblePaths: readonly string[];
+  directoryPaths: readonly string[];
+}> {
+  const visiblePaths: string[] = [];
+  const directoryPaths: string[] = [];
+  const visit = (items: readonly RepositoryDiffTreeProjectionNode[]): void => {
+    items.forEach((node) => {
+      visiblePaths.push(node.path);
+      if (node.kind === "directory") {
+        directoryPaths.push(node.path);
+      }
+      if (node.children.items.length > 0) {
+        visit(node.children.items);
+      }
+    });
   };
+  visit(nodes);
+  return { visiblePaths, directoryPaths };
 }
 
 function createRepositoryDiffWorkspaceState(

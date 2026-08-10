@@ -1,34 +1,10 @@
-export { useRepositoryDiffWorkspace } from "./hooks/useRepositoryDiffWorkspace";
+export type { RepositoryDiffSummaryProps } from "./components/RepositoryDiffSummary";
+export { RepositoryDiffSummary } from "./components/RepositoryDiffSummary";
 export type {
-  RepositoryDiffWorkspaceApi,
-  UseRepositoryDiffWorkspaceOptions,
-  UseRepositoryDiffWorkspaceResult,
-} from "./hooks/useRepositoryDiffWorkspace";
-export {
-  projectChangedFiles,
-  projectFileReview,
-  projectIgnoredPage,
-  projectRepositoryTree,
-  toDiffViewerFileDiff,
-} from "./lib/projectRepositoryDiff";
-export type { RepositoryFileReviewProjection } from "./lib/projectRepositoryDiff";
-export type {
-  BaseResolution,
-  BaseResolutionFailure,
-  BaseResolutionSource,
-  IgnoredPage,
-  RepositoryDiffFile,
-  RepositoryDiffOverview,
-  RepositoryDiffProjectionItem,
-  RepositoryDiffSelection,
-  RepositoryFileReview,
-  RepositoryTreeChildren,
-  RepositoryTreeNode,
-} from "./domain/repositoryDiff";
-export {
-  DiffCommentAnchor,
-  isCanonicalDiffCommentRevision,
-} from "./domain/diffComment";
+  RepositoryDiffTreeAvailability,
+  RepositoryDiffTreeProps,
+} from "./components/RepositoryDiffTree";
+export { RepositoryDiffTree } from "./components/RepositoryDiffTree";
 export type {
   DiffCommentAnchorResolution,
   DiffCommentAnchorResolutionStatus,
@@ -37,3 +13,48 @@ export type {
   DiffCommentStatus,
   StoredDiffCommentDto,
 } from "./domain/diffComment";
+export {
+  DiffCommentAnchor,
+  isCanonicalDiffCommentRevision,
+} from "./domain/diffComment";
+export type {
+  BaseResolution,
+  BaseResolutionFailure,
+  BaseResolutionSource,
+  IgnoredPage,
+  RepositoryDiffFile,
+  RepositoryDiffFilter,
+  RepositoryDiffOverview,
+  RepositoryDiffProjectionItem,
+  RepositoryDiffSelection,
+  RepositoryDiffSelectionRequest,
+  RepositoryDiffStatusCounts,
+  RepositoryDiffTreeProjectionNode,
+  RepositoryFileReview,
+  RepositoryTreeChildren,
+  RepositoryTreeNode,
+} from "./domain/repositoryDiff";
+export type {
+  UseRepositoryDiffNavigationStateOptions,
+  UseRepositoryDiffNavigationStateResult,
+} from "./hooks/useRepositoryDiffNavigationState";
+export { useRepositoryDiffNavigationState } from "./hooks/useRepositoryDiffNavigationState";
+export type {
+  RepositoryDiffWorkspaceApi,
+  UseRepositoryDiffWorkspaceOptions,
+  UseRepositoryDiffWorkspaceResult,
+} from "./hooks/useRepositoryDiffWorkspace";
+export { useRepositoryDiffWorkspace } from "./hooks/useRepositoryDiffWorkspace";
+export type {
+  ProjectRepositoryDiffTreeOptions,
+  RepositoryFileReviewProjection,
+} from "./lib/projectRepositoryDiff";
+export {
+  deriveRepositoryDiffSummary,
+  projectChangedFiles,
+  projectFileReview,
+  projectIgnoredPage,
+  projectRepositoryDiffTree,
+  projectRepositoryTree,
+  toDiffViewerFileDiff,
+} from "./lib/projectRepositoryDiff";
