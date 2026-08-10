@@ -475,6 +475,51 @@
     "name": "Tag Selected"
   },
   {
+    "id": "features-repositorydiff-components-repositorydiffsummary--all-props",
+    "title": "features/repositoryDiff/components/RepositoryDiffSummary",
+    "name": "All Props"
+  },
+  {
+    "id": "features-repositorydiff-components-repositorydiffsummary--default",
+    "title": "features/repositoryDiff/components/RepositoryDiffSummary",
+    "name": "Default"
+  },
+  {
+    "id": "features-repositorydiff-components-repositorydiffsummary--empty",
+    "title": "features/repositoryDiff/components/RepositoryDiffSummary",
+    "name": "Empty"
+  },
+  {
+    "id": "features-repositorydiff-components-repositorydifftree--all-props",
+    "title": "features/repositoryDiff/components/RepositoryDiffTree",
+    "name": "All Props"
+  },
+  {
+    "id": "features-repositorydiff-components-repositorydifftree--default",
+    "title": "features/repositoryDiff/components/RepositoryDiffTree",
+    "name": "Default"
+  },
+  {
+    "id": "features-repositorydiff-components-repositorydifftree--empty",
+    "title": "features/repositoryDiff/components/RepositoryDiffTree",
+    "name": "Empty"
+  },
+  {
+    "id": "features-repositorydiff-components-repositorydifftree--error-state",
+    "title": "features/repositoryDiff/components/RepositoryDiffTree",
+    "name": "Error State"
+  },
+  {
+    "id": "features-repositorydiff-components-repositorydifftree--loading",
+    "title": "features/repositoryDiff/components/RepositoryDiffTree",
+    "name": "Loading"
+  },
+  {
+    "id": "features-repositorydiff-components-repositorydifftree--stale",
+    "title": "features/repositoryDiff/components/RepositoryDiffTree",
+    "name": "Stale"
+  },
+  {
     "id": "features-sidebar-components-sidebarlayout--all-props",
     "title": "features/sidebar/components/SidebarLayout",
     "name": "All Props"
