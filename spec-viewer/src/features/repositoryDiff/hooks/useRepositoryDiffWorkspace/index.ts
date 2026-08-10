@@ -1,31 +1,32 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
-import {
-  loadRepositoryDiff,
-  loadRepositoryFile,
-  traverseRepositoryIgnored,
-  type LoadRepositoryDiffRequest,
-  type LoadRepositoryFileRequest,
-  type TraverseRepositoryIgnoredRequest,
-} from "@/lib/api/tauri";
 import type {
   IgnoredPage,
   RepositoryDiffOverview,
   RepositoryDiffSelection,
+  RepositoryDiffSelectionRequest,
   RepositoryFileReview,
 } from "@/features/repositoryDiff/domain/repositoryDiff";
 import {
   createInitialRepositoryDiffWorkspaceState,
-  repositoryDiffWorkspaceReducer,
   type RepositoryDiffDetailIdentity,
   type RepositoryDiffIgnoredPageIdentity,
   type RepositoryDiffRequestIdentity,
   type RepositoryDiffWorkspaceState,
+  repositoryDiffWorkspaceReducer,
 } from "@/features/repositoryDiff/domain/repositoryDiffWorkspaceState";
 import {
   normalizeRepositoryDiffFileFailure,
   normalizeRepositoryDiffIgnoredPageFailure,
   normalizeRepositoryDiffOverviewFailure,
 } from "@/features/repositoryDiff/services/repositoryDiffFailure";
+import {
+  type LoadRepositoryDiffRequest,
+  type LoadRepositoryFileRequest,
+  loadRepositoryDiff,
+  loadRepositoryFile,
+  type TraverseRepositoryIgnoredRequest,
+  traverseRepositoryIgnored,
+} from "@/lib/api/tauri";
 
 export type RepositoryDiffWorkspaceApi = Readonly<{
   loadRepositoryDiff: (
@@ -43,7 +44,7 @@ export type UseRepositoryDiffWorkspaceOptions = Readonly<{
   workspacePath: string | null;
   worktreeId: string | null;
   baseOverride?: string | null;
-  selection?: RepositoryDiffSelection | null;
+  selection?: RepositoryDiffSelectionRequest | RepositoryDiffSelection | null;
   api?: RepositoryDiffWorkspaceApi;
 }>;
 
@@ -68,6 +69,32 @@ const DEFAULT_API: RepositoryDiffWorkspaceApi = {
   traverseRepositoryIgnored,
 };
 
+type IgnoredPageQueueItem = Readonly<{
+  key: string;
+  request: RepositoryDiffRequestIdentity;
+  snapshotId: string;
+  nodeId: string;
+  cursor: string | null;
+  resolve: (result: boolean) => void;
+}>;
+
+const createIgnoredPageRequestKey = (
+  request: RepositoryDiffRequestIdentity,
+  snapshotId: string,
+  nodeId: string,
+  cursor: string | null,
+): string =>
+  JSON.stringify([
+    request.workspacePath,
+    request.worktreeId,
+    request.baseOverride,
+    request.cycleId,
+    request.requestGeneration,
+    snapshotId,
+    nodeId,
+    cursor,
+  ]);
+
 const STALE_DETAIL_ERROR_CODES = new Set([
   "staleSnapshot",
   "staleBase",
@@ -76,9 +103,24 @@ const STALE_DETAIL_ERROR_CODES = new Set([
 ]);
 
 /**
- * @param request - Repository request identity.
- * @returns The backend overview request for the current base override.
+ * Input accepted by the workspace selection boundary.
  */
+type RepositoryDiffSelectionInput =
+  | RepositoryDiffSelectionRequest
+  | RepositoryDiffSelection;
+
+const isSnapshotSelection = (
+  selection: RepositoryDiffSelectionInput | null,
+): selection is RepositoryDiffSelection =>
+  selection !== null && "snapshotId" in selection;
+
+const toSelectionRequest = (
+  selection: RepositoryDiffSelectionInput | null,
+): RepositoryDiffSelectionRequest | null =>
+  selection === null
+    ? null
+    : { worktreeId: selection.worktreeId, path: selection.path };
+
 const createOverviewRequest = (
   request: RepositoryDiffRequestIdentity,
 ): LoadRepositoryDiffRequest =>
@@ -100,7 +142,7 @@ export function useRepositoryDiffWorkspace({
     createInitialRepositoryDiffWorkspaceState,
   );
   const [selection, setSelection] = useState<RepositoryDiffSelection | null>(
-    requestedSelection,
+    isSnapshotSelection(requestedSelection) ? requestedSelection : null,
   );
   const [activeBaseOverride, setActiveBaseOverride] = useState<string | null>(
     baseOverride,
@@ -111,7 +153,10 @@ export function useRepositoryDiffWorkspace({
   const baseOverrideRef = useRef<string | null>(baseOverride);
   const requestedBaseOverrideRef = useRef<string | null>(baseOverride);
   const selectionRef = useRef<RepositoryDiffSelection | null>(
-    requestedSelection,
+    isSnapshotSelection(requestedSelection) ? requestedSelection : null,
+  );
+  const selectionRequestRef = useRef<RepositoryDiffSelectionRequest | null>(
+    toSelectionRequest(requestedSelection),
   );
   const stateRef = useRef(state);
   const cycleIdRef = useRef(0);
@@ -120,6 +165,11 @@ export function useRepositoryDiffWorkspace({
   const ignoredPageGenerationRef = useRef(new Map<string, number>());
   const refreshDrainRef = useRef<Promise<boolean> | null>(null);
   const refreshPendingRef = useRef(false);
+  const ignoredQueueRef = useRef<IgnoredPageQueueItem[]>([]);
+  const ignoredPendingRef = useRef(new Map<string, Promise<boolean>>());
+  const ignoredRunningNodeRef = useRef(new Set<string>());
+  const ignoredActiveCountRef = useRef(0);
+  const ignoredDrainRef = useRef<() => void>(() => undefined);
 
   workspacePathRef.current = workspacePath;
   worktreeIdRef.current = worktreeId;
@@ -140,18 +190,27 @@ export function useRepositoryDiffWorkspace({
     [],
   );
 
+  const clearQueuedIgnoredRequests = useCallback((): void => {
+    const queued = ignoredQueueRef.current.splice(0);
+    queued.forEach((item) => {
+      ignoredPendingRef.current.delete(item.key);
+      item.resolve(false);
+    });
+  }, []);
+
   const invalidate = useCallback((): void => {
     requestGenerationRef.current += 1;
     detailGenerationRef.current += 1;
+    clearQueuedIgnoredRequests();
     ignoredPageGenerationRef.current.clear();
     dispatch({ type: "reset" });
-  }, []);
+  }, [clearQueuedIgnoredRequests]);
 
   const loadDetail = useCallback(
     async (
       request: RepositoryDiffRequestIdentity,
       overview: RepositoryDiffOverview,
-      requested: RepositoryDiffSelection | null,
+      requested: RepositoryDiffSelectionRequest | null,
       allowStaleRecovery: boolean,
       recoverOverview: () => Promise<boolean>,
     ): Promise<boolean> => {
@@ -165,9 +224,11 @@ export function useRepositoryDiffWorkspace({
       }
 
       const detailSelection: RepositoryDiffSelection = {
-        ...requested,
+        worktreeId: requested.worktreeId,
         snapshotId,
+        path: requested.path,
       };
+      selectionRequestRef.current = requested;
       selectionRef.current = detailSelection;
       setSelection(detailSelection);
       const detailGeneration = detailGenerationRef.current + 1;
@@ -225,6 +286,7 @@ export function useRepositoryDiffWorkspace({
       }
 
       detailGenerationRef.current += 1;
+      clearQueuedIgnoredRequests();
       ignoredPageGenerationRef.current.clear();
       const requestGeneration = requestGenerationRef.current + 1;
       requestGenerationRef.current = requestGeneration;
@@ -248,7 +310,7 @@ export function useRepositoryDiffWorkspace({
         return loadDetail(
           request,
           overview,
-          selectionRef.current,
+          selectionRequestRef.current,
           allowStaleRecovery,
           () => executeOverview(cycleId, false),
         );
@@ -261,7 +323,7 @@ export function useRepositoryDiffWorkspace({
         return false;
       }
     },
-    [api, isActive, loadDetail],
+    [api, clearQueuedIgnoredRequests, isActive, loadDetail],
   );
 
   const refresh = useCallback((): Promise<boolean> => {
@@ -316,6 +378,7 @@ export function useRepositoryDiffWorkspace({
         path,
       };
       selectionRef.current = nextSelection;
+      selectionRequestRef.current = toSelectionRequest(nextSelection);
       setSelection(nextSelection);
       return loadDetail(
         currentState.request,
@@ -342,11 +405,91 @@ export function useRepositoryDiffWorkspace({
     [invalidate, refresh],
   );
 
+  const runIgnoredPage = useCallback(
+    async (item: IgnoredPageQueueItem): Promise<void> => {
+      const currentGeneration =
+        ignoredPageGenerationRef.current.get(item.nodeId) ?? 0;
+      const pageGeneration = currentGeneration + 1;
+      ignoredPageGenerationRef.current.set(item.nodeId, pageGeneration);
+      const identity: RepositoryDiffIgnoredPageIdentity = {
+        request: item.request,
+        snapshotId: item.snapshotId,
+        nodeId: item.nodeId,
+        cursor: item.cursor,
+        pageGeneration,
+      };
+      dispatch({ type: "ignoredPageRequested", identity });
+
+      let result = false;
+      try {
+        if (isActive(item.request)) {
+          const requestPayload: TraverseRepositoryIgnoredRequest =
+            item.cursor === null
+              ? {
+                  worktreeId: item.request.worktreeId,
+                  currentSnapshotId: item.snapshotId,
+                  nodeId: item.nodeId,
+                }
+              : {
+                  worktreeId: item.request.worktreeId,
+                  currentSnapshotId: item.snapshotId,
+                  nodeId: item.nodeId,
+                  cursor: item.cursor,
+                };
+          const response = await api.traverseRepositoryIgnored(requestPayload);
+          if (
+            isActive(item.request) &&
+            ignoredPageGenerationRef.current.get(item.nodeId) === pageGeneration
+          ) {
+            dispatch({
+              type: "ignoredPageSucceeded",
+              identity,
+              page: response,
+            });
+            result = true;
+          }
+        }
+      } catch (error) {
+        const failure = normalizeRepositoryDiffIgnoredPageFailure(error);
+        if (
+          isActive(item.request) &&
+          ignoredPageGenerationRef.current.get(item.nodeId) === pageGeneration
+        ) {
+          dispatch({ type: "ignoredPageFailed", identity, error: failure });
+        }
+      } finally {
+        ignoredRunningNodeRef.current.delete(item.nodeId);
+        ignoredActiveCountRef.current -= 1;
+        ignoredPendingRef.current.delete(item.key);
+        item.resolve(result);
+        ignoredDrainRef.current();
+      }
+    },
+    [api, isActive],
+  );
+
+  const drainIgnoredQueue = useCallback((): void => {
+    while (ignoredActiveCountRef.current < 2) {
+      const nextIndex = ignoredQueueRef.current.findIndex(
+        (item) => !ignoredRunningNodeRef.current.has(item.nodeId),
+      );
+      if (nextIndex < 0) {
+        return;
+      }
+      const [nextItem] = ignoredQueueRef.current.splice(nextIndex, 1);
+      if (nextItem === undefined) {
+        return;
+      }
+      ignoredRunningNodeRef.current.add(nextItem.nodeId);
+      ignoredActiveCountRef.current += 1;
+      void runIgnoredPage(nextItem);
+    }
+  }, [runIgnoredPage]);
+
+  ignoredDrainRef.current = drainIgnoredQueue;
+
   const loadIgnoredChildren = useCallback(
-    async (
-      nodeId: string,
-      requestedCursor?: string | null,
-    ): Promise<boolean> => {
+    (nodeId: string, requestedCursor?: string | null): Promise<boolean> => {
       const currentState = stateRef.current;
       const request = currentState.request;
       const snapshotId = currentState.overview?.currentSnapshotId ?? null;
@@ -356,62 +499,43 @@ export function useRepositoryDiffWorkspace({
         snapshotId === null ||
         nodeId.length === 0
       ) {
-        return false;
+        return Promise.resolve(false);
       }
       const previousPage = currentState.ignoredPages[nodeId];
       const cursor =
         requestedCursor === undefined
           ? (previousPage?.nextCursor ?? null)
           : requestedCursor;
-      const currentGeneration =
-        ignoredPageGenerationRef.current.get(nodeId) ?? 0;
-      const pageGeneration = currentGeneration + 1;
-      ignoredPageGenerationRef.current.set(nodeId, pageGeneration);
-      const identity: RepositoryDiffIgnoredPageIdentity = {
+      const key = createIgnoredPageRequestKey(
         request,
         snapshotId,
         nodeId,
         cursor,
-        pageGeneration,
-      };
-      dispatch({ type: "ignoredPageRequested", identity });
-
-      try {
-        const requestPayload: TraverseRepositoryIgnoredRequest =
-          cursor === null
-            ? {
-                worktreeId: request.worktreeId,
-                currentSnapshotId: snapshotId,
-                nodeId,
-              }
-            : {
-                worktreeId: request.worktreeId,
-                currentSnapshotId: snapshotId,
-                nodeId,
-                cursor,
-              };
-        const response = await api.traverseRepositoryIgnored(requestPayload);
-        if (
-          !isActive(request) ||
-          ignoredPageGenerationRef.current.get(nodeId) !== pageGeneration
-        ) {
-          return false;
-        }
-        dispatch({ type: "ignoredPageSucceeded", identity, page: response });
-        return true;
-      } catch (error) {
-        const failure = normalizeRepositoryDiffIgnoredPageFailure(error);
-        if (
-          !isActive(request) ||
-          ignoredPageGenerationRef.current.get(nodeId) !== pageGeneration
-        ) {
-          return false;
-        }
-        dispatch({ type: "ignoredPageFailed", identity, error: failure });
-        return false;
+      );
+      const existing = ignoredPendingRef.current.get(key);
+      if (existing !== undefined) {
+        return existing;
       }
+      if (ignoredQueueRef.current.length >= 32) {
+        return Promise.resolve(false);
+      }
+      let resolvePromise: (result: boolean) => void = () => undefined;
+      const promise = new Promise<boolean>((resolve) => {
+        resolvePromise = resolve;
+      });
+      ignoredPendingRef.current.set(key, promise);
+      ignoredQueueRef.current.push({
+        key,
+        request,
+        snapshotId,
+        nodeId,
+        cursor,
+        resolve: resolvePromise,
+      });
+      ignoredDrainRef.current();
+      return promise;
     },
-    [api, isActive],
+    [],
   );
 
   const retry = useCallback((): Promise<boolean> => refresh(), [refresh]);
@@ -426,13 +550,14 @@ export function useRepositoryDiffWorkspace({
       baseOverrideRef.current = nextBaseOverride;
       setActiveBaseOverride(nextBaseOverride);
     }
-    selectionRef.current =
+    selectionRequestRef.current =
       requestedSelection !== null &&
       worktreeId !== null &&
       requestedSelection.worktreeId === worktreeId
-        ? requestedSelection
+        ? toSelectionRequest(requestedSelection)
         : null;
-    setSelection(selectionRef.current);
+    selectionRef.current = null;
+    setSelection(null);
     invalidate();
     if (workspacePath === null || worktreeId === null) {
       return;
@@ -452,10 +577,11 @@ export function useRepositoryDiffWorkspace({
       mountedRef.current = false;
       requestGenerationRef.current += 1;
       detailGenerationRef.current += 1;
+      clearQueuedIgnoredRequests();
       ignoredPageGenerationRef.current.clear();
       refreshPendingRef.current = false;
     };
-  }, []);
+  }, [clearQueuedIgnoredRequests]);
 
   return {
     state,
