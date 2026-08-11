@@ -2,6 +2,7 @@
 @import "highlight.js/styles/github-dark.css";
 @import "../styles/diff-viewer.css";
 @import "../styles/revision-selector.css";
+@import "../styles/repository-diff-workspace.css";
 
 :root {
   color-scheme: light;
@@ -3552,83 +3553,6 @@ textarea:disabled {
   background: #ffffff;
 }
 
-.diff-tabs {
-  display: flex;
-  min-width: 0;
-  overflow-x: auto;
-  border-bottom: 1px solid #e7e5e4;
-  background: #fafaf9;
-}
-
-.diff-tabs__tab {
-  position: relative;
-  display: flex;
-  align-items: center;
-  flex: 0 0 auto;
-  min-height: 35px;
-  gap: 7px;
-  border: 0;
-  border-right: 1px solid #e7e5e4;
-  padding: 7px 11px;
-  color: #57534e;
-  background: transparent;
-  font-size: 0.7rem;
-}
-
-.diff-tabs__tab[data-active="true"] {
-  color: #1c1917;
-  background: #ffffff;
-}
-
-.diff-tabs__tab[data-active="true"]::after {
-  position: absolute;
-  right: 0;
-  bottom: -1px;
-  left: 0;
-  height: 2px;
-  background: #2563eb;
-  content: "";
-}
-
-.diff-tabs__tab small {
-  color: #a8a29e;
-  font-family: var(--font-mono);
-  font-size: 0.58rem;
-}
-
-.diff-tabs__dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #d97706;
-}
-
-.diff-preview__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 42px;
-  gap: 12px;
-  border-bottom: 1px solid #e7e5e4;
-  padding: 7px 14px;
-}
-
-.diff-preview__header > div {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  gap: 9px;
-}
-
-.diff-preview__header strong {
-  overflow: hidden;
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  font-weight: 500;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .branch-badge {
   display: inline-flex;
   align-items: center;
@@ -4199,9 +4123,7 @@ textarea:disabled {
 }
 
 .changes-tree__folder,
-.changes-tree__file,
-.diff-tabs__tab,
-.diff-preview__header strong {
+.changes-tree__file {
   font-size: 12px;
 }
 

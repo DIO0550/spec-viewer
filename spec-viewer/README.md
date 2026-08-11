@@ -24,6 +24,7 @@ pnpm dev
 ## Usage
 
 Specs の階層、件数、Archive、retry、keyboard 操作は [Specs navigation guide](./docs/specs-navigation.md) を参照してください。
+Repository Diff の複数ファイルタブ、keyboard、3つの表示modeは [Repository Diff workspace guide](./docs/repository-diff-workspace.md) を参照してください。
 
 ## Checks
 

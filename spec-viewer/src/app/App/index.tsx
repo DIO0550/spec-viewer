@@ -1,5 +1,6 @@
 import {
   type ReactElement,
+  type ReactNode,
   useCallback,
   useEffect,
   useMemo,
@@ -29,10 +30,13 @@ import { CommentScope } from "@/features/comments/domain/commentScope";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import {
   ChangesNavigation,
+  CurrentFileViewer,
   createSpecChangeId,
   DiffViewer,
+  DiffViewModeControls,
   DiffWorkspace,
   type DiffWorkspaceState,
+  type FileDiff,
   findSpecChange,
   RevisionSelector,
   type SpecDiffWorkspaceState,
@@ -45,11 +49,18 @@ import {
   useResizableLeftNavigation,
 } from "@/features/preferences";
 import {
+  collectValidRepositoryFilePaths,
+  createRepositoryFileTabId,
   deriveRepositoryDiffSummary,
+  findRepositoryDiffFile,
+  formatRevisionIdentifier,
   projectFileReview,
   projectRepositoryDiffTree,
+  RepositoryDiffFileHeader,
   RepositoryDiffSummary,
   RepositoryDiffTree,
+  RepositoryFileTabs,
+  summarizeFileDiff,
   type RepositoryDiffTreeAvailability,
   toDiffViewerFileDiff,
   useRepositoryDiffNavigationState,
@@ -328,20 +339,16 @@ function SpecViewAppContent(): ReactElement {
         : [],
     [specDiff.state],
   );
-  const repositoryTreeNodes = useMemo(() => {
+  const repositoryAllTreeNodes = useMemo(() => {
     const overview = repositoryDiff.state.overview;
     if (overview === null || activeWorkspaceRoot === null) {
       return [];
     }
-    const nodes =
-      repositoryNavigationEntry.filter === "changed"
-        ? overview.changedTree
-        : overview.allRoot;
     return projectRepositoryDiffTree({
-      nodes,
+      nodes: overview.allRoot,
       overview,
       worktreeId: activeWorkspaceRoot,
-      filter: repositoryNavigationEntry.filter,
+      filter: "all",
       ignoredPages: repositoryDiff.state.ignoredPages,
       ignoredPageStates: repositoryDiff.state.ignoredPageStates,
     });
@@ -350,44 +357,146 @@ function SpecViewAppContent(): ReactElement {
     repositoryDiff.state.ignoredPageStates,
     repositoryDiff.state.ignoredPages,
     repositoryDiff.state.overview,
-    repositoryNavigationEntry.filter,
   ]);
+  const repositoryChangedTreeNodes = useMemo(() => {
+    const overview = repositoryDiff.state.overview;
+    if (overview === null || activeWorkspaceRoot === null) {
+      return [];
+    }
+    return projectRepositoryDiffTree({
+      nodes: overview.changedTree,
+      overview,
+      worktreeId: activeWorkspaceRoot,
+      filter: "changed",
+      ignoredPages: repositoryDiff.state.ignoredPages,
+      ignoredPageStates: repositoryDiff.state.ignoredPageStates,
+    });
+  }, [
+    activeWorkspaceRoot,
+    repositoryDiff.state.ignoredPageStates,
+    repositoryDiff.state.ignoredPages,
+    repositoryDiff.state.overview,
+  ]);
+  const repositoryTreeNodes =
+    repositoryNavigationEntry.filter === "changed"
+      ? repositoryChangedTreeNodes
+      : repositoryAllTreeNodes;
   const repositorySummary = useMemo(() => {
     const overview = repositoryDiff.state.overview;
     return overview === null
       ? null
       : deriveRepositoryDiffSummary(overview, repositoryNavigationEntry.filter);
   }, [repositoryDiff.state.overview, repositoryNavigationEntry.filter]);
-  const repositoryTreePaths = useMemo(
-    () => collectRepositoryTreePaths(repositoryTreeNodes),
-    [repositoryTreeNodes],
+  const repositoryAllTreePaths = useMemo(
+    () => collectRepositoryTreePaths(repositoryAllTreeNodes),
+    [repositoryAllTreeNodes],
   );
+  const repositoryValidPaths = useMemo(() => {
+    const overview = repositoryDiff.state.overview;
+    return overview === null
+      ? []
+      : collectValidRepositoryFilePaths(overview, repositoryAllTreeNodes);
+  }, [repositoryAllTreeNodes, repositoryDiff.state.overview]);
+  const repositoryTabItems = useMemo(() => {
+    const overview = repositoryDiff.state.overview;
+    return repositoryNavigationEntry.openPaths.map((path) => ({
+      path,
+      change:
+        overview === null
+          ? null
+          : (findRepositoryDiffFile(overview, path)?.change ?? null),
+    }));
+  }, [repositoryDiff.state.overview, repositoryNavigationEntry.openPaths]);
 
   useEffect(() => {
+    if (repositoryDiff.state.overview === null) {
+      return;
+    }
     repositoryNavigationActions.reconcile(
-      repositoryTreePaths.visiblePaths,
-      repositoryTreePaths.directoryPaths,
+      repositoryValidPaths,
+      repositoryAllTreePaths.directoryPaths,
     );
-  }, [repositoryNavigationActions.reconcile, repositoryTreePaths]);
+  }, [
+    repositoryAllTreePaths.directoryPaths,
+    repositoryDiff.state.overview,
+    repositoryNavigationActions.reconcile,
+    repositoryValidPaths,
+  ]);
 
   useEffect(() => {
-    const selectedPath = repositoryNavigationEntry.selectedPath;
+    const activePath = repositoryNavigationEntry.activePath;
     if (
       !isRepositoryDiffView ||
-      selectedPath === null ||
+      activePath === null ||
       repositoryDiff.state.status !== "ready" ||
-      repositoryDiff.selection?.path === selectedPath
+      repositoryDiff.selection?.path === activePath
     ) {
       return;
     }
-    void repositoryDiff.selectPath(selectedPath);
+    void repositoryDiff.selectPath(activePath);
   }, [
     isRepositoryDiffView,
     repositoryDiff.selectPath,
     repositoryDiff.selection?.path,
     repositoryDiff.state.status,
-    repositoryNavigationEntry.selectedPath,
+    repositoryNavigationEntry.activePath,
   ]);
+
+  const repositoryFileProjection = useMemo(() => {
+    const selection = repositoryDiff.selection;
+    const state = repositoryDiff.state;
+    if (
+      state.status !== "ready" ||
+      state.detail.status !== "ready" ||
+      selection === null ||
+      selection.path !== repositoryNavigationEntry.activePath
+    ) {
+      return null;
+    }
+    return projectFileReview(state.detail.review, selection);
+  }, [
+    repositoryDiff.selection,
+    repositoryDiff.state,
+    repositoryNavigationEntry.activePath,
+  ]);
+  const repositoryFileDiff =
+    repositoryFileProjection === null
+      ? null
+      : toDiffViewerFileDiff(
+          repositoryFileProjection.review,
+          repositoryFileProjection.selection,
+        );
+  const repositoryActiveChange = useMemo(() => {
+    const overview = repositoryDiff.state.overview;
+    const activePath = repositoryNavigationEntry.activePath;
+    if (overview === null || activePath === null) {
+      return null;
+    }
+    return findRepositoryDiffFile(overview, activePath);
+  }, [repositoryDiff.state.overview, repositoryNavigationEntry.activePath]);
+  const repositoryBaseIdentifier = formatRevisionIdentifier(
+    repositoryDiff.state.overview?.base.state === "resolved"
+      ? repositoryDiff.state.overview.base.mergeBaseSha
+      : null,
+  );
+  const repositoryCurrentIdentifier = formatRevisionIdentifier(
+    repositoryDiff.state.overview?.currentSnapshotId ?? null,
+  );
+  const repositoryLineSummary =
+    repositoryFileDiff === null ? null : summarizeFileDiff(repositoryFileDiff);
+  const repositoryToolbarLabel =
+    repositoryNavigationEntry.activePath === null
+      ? "ファイル未選択"
+      : [
+          repositoryNavigationEntry.activePath,
+          `base ${repositoryBaseIdentifier}`,
+          `current ${repositoryCurrentIdentifier}`,
+          repositoryLineSummary === null
+            ? null
+            : `+${repositoryLineSummary.additions} -${repositoryLineSummary.deletions}`,
+        ]
+          .filter((part): part is string => part !== null)
+          .join(" · ");
 
   const changesAvailability =
     specDiff.state.status === "ready"
@@ -423,10 +532,54 @@ function SpecViewAppContent(): ReactElement {
                 reason: specDiff.state.reason,
               } as const)
             : ({ status: "ready" } as const);
+  const repositoryPanel =
+    repositoryNavigationEntry.activePath === null ||
+    repositoryFileDiff === null ? null : (
+      <section
+        id="repository-diff-panel"
+        className="repository-diff-panel"
+        role="tabpanel"
+        aria-labelledby={createRepositoryFileTabId(
+          repositoryNavigationEntry.activePath,
+        )}
+      >
+        <RepositoryDiffFileHeader
+          path={repositoryNavigationEntry.activePath}
+          change={repositoryActiveChange?.change ?? null}
+          baseIdentifier={repositoryBaseIdentifier}
+          currentIdentifier={repositoryCurrentIdentifier}
+          summary={repositoryLineSummary}
+        />
+        {repositoryNavigationEntry.viewerMode === "editor" ? (
+          <CurrentFileViewer fileDiff={repositoryFileDiff} />
+        ) : (
+          <DiffViewer
+            fileDiff={repositoryFileDiff}
+            mode={repositoryNavigationEntry.viewerMode}
+            activeChangeId={
+              repositoryNavigationEntry.jumpTargetsByPath[
+                repositoryNavigationEntry.activePath
+              ] ?? null
+            }
+            onActiveChangeIdChange={(changeId) => {
+              const activePath = repositoryNavigationEntry.activePath;
+              if (activePath === null) {
+                return;
+              }
+              repositoryNavigationActions.changeJumpTarget(
+                activePath,
+                changeId,
+              );
+            }}
+          />
+        )}
+      </section>
+    );
   const diffWorkspaceState: DiffWorkspaceState = isRepositoryDiffView
     ? createRepositoryDiffWorkspaceState(
         repositoryDiff.state,
         repositoryDiff.selection,
+        repositoryPanel,
         repositoryDiff.refresh,
       )
     : createDiffWorkspaceState(
@@ -473,9 +626,18 @@ function SpecViewAppContent(): ReactElement {
           <ViewModeToolbar
             mode={workspaceNavigation.state.mode}
             diffAvailability={diffTabAvailability}
+            modeControls={{
+              diff: isRepositoryDiffView ? (
+                <DiffViewModeControls
+                  mode={repositoryNavigationEntry.viewerMode}
+                  disabled={repositoryNavigationEntry.activePath === null}
+                  onModeChange={repositoryNavigationActions.changeViewerMode}
+                />
+              ) : null,
+            }}
             activeItemLabel={
               isRepositoryDiffView
-                ? (repositoryNavigationEntry.selectedPath ?? "ファイル未選択")
+                ? repositoryToolbarLabel
                 : specSelectors.selectedSpec !== null &&
                     specSelectors.selectedFile !== null
                   ? specSelectors.selectedSpec.label +
@@ -576,18 +738,14 @@ function SpecViewAppContent(): ReactElement {
               <RepositoryDiffTree
                 filter={repositoryNavigationEntry.filter}
                 nodes={repositoryTreeNodes}
-                selectedPath={repositoryNavigationEntry.selectedPath}
+                selectedPath={repositoryNavigationEntry.activePath}
                 expandedPaths={repositoryNavigationEntry.expandedPaths}
                 availability={createRepositoryDiffTreeAvailability(
                   repositoryDiff.state,
                   repositoryTreeNodes.length,
                 )}
-                onSelectFile={(path) => {
-                  repositoryNavigationActions.selectPath(path);
-                }}
-                onToggleDirectory={(path) => {
-                  repositoryNavigationActions.toggleDirectory(path);
-                }}
+                onSelectFile={repositoryNavigationActions.openPath}
+                onToggleDirectory={repositoryNavigationActions.toggleDirectory}
                 onLoadChildren={(nodeId, cursor) => {
                   void repositoryDiff.loadIgnoredChildren(nodeId, cursor);
                 }}
@@ -665,9 +823,19 @@ function SpecViewAppContent(): ReactElement {
                   />
                 )
               }
+              fileTabs={
+                isRepositoryDiffView ? (
+                  <RepositoryFileTabs
+                    items={repositoryTabItems}
+                    activePath={repositoryNavigationEntry.activePath}
+                    onActivate={repositoryNavigationActions.activateTab}
+                    onClose={repositoryNavigationActions.closeTab}
+                  />
+                ) : null
+              }
               selectedPath={
                 isRepositoryDiffView
-                  ? (repositoryNavigationEntry.selectedPath ?? null)
+                  ? (repositoryNavigationEntry.activePath ?? null)
                   : (currentSpecChange?.targetPath ?? null)
               }
               preview={null}
@@ -814,8 +982,31 @@ function createDiffWorkspaceState(
   return {
     status: "ready",
     selectedPath: selectedPath ?? selectedFileKey,
-    preview: <DiffViewer fileDiff={state.detail.value} />,
+    preview: (
+      <SpecDiffViewerPreview
+        key={
+          state.detail.value.identity.sourceId +
+          ":" +
+          state.detail.value.identity.path
+        }
+        fileDiff={state.detail.value}
+      />
+    ),
   };
+}
+
+function SpecDiffViewerPreview(
+  props: Readonly<{ fileDiff: FileDiff }>,
+): ReactElement {
+  const [activeChangeId, setActiveChangeId] = useState<string | null>(null);
+  return (
+    <DiffViewer
+      fileDiff={props.fileDiff}
+      mode="unified"
+      activeChangeId={activeChangeId}
+      onActiveChangeIdChange={setActiveChangeId}
+    />
+  );
 }
 
 function createRepositoryDiffTreeAvailability(
@@ -872,6 +1063,7 @@ function collectRepositoryTreePaths(
 function createRepositoryDiffWorkspaceState(
   state: RepositoryDiffWorkspaceState,
   selection: RepositoryDiffSelection | null,
+  preview: ReactNode,
   onRetry: () => Promise<boolean>,
 ): DiffWorkspaceState {
   if (state.status === "idle" || state.status === "loading") {
@@ -917,15 +1109,10 @@ function createRepositoryDiffWorkspaceState(
       onRetry,
     };
   }
-  const projection = projectFileReview(state.detail.review, selection);
   return {
     status: "ready",
-    selectedPath: projection.path,
-    preview: (
-      <DiffViewer
-        fileDiff={toDiffViewerFileDiff(projection.review, projection.selection)}
-      />
-    ),
+    selectedPath: selection.path,
+    preview,
   };
 }
 

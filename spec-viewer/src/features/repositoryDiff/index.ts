@@ -5,6 +5,16 @@ export type {
   RepositoryDiffTreeProps,
 } from "./components/RepositoryDiffTree";
 export { RepositoryDiffTree } from "./components/RepositoryDiffTree";
+export {
+  RepositoryDiffFileHeader,
+  type RepositoryDiffFileHeaderProps,
+} from "./components/RepositoryDiffFileHeader";
+export {
+  createRepositoryFileTabId,
+  RepositoryFileTabs,
+  type RepositoryFileTabItem,
+  type RepositoryFileTabsProps,
+} from "./components/RepositoryFileTabs";
 export type {
   DiffCommentAnchorResolution,
   DiffCommentAnchorResolutionStatus,
@@ -58,3 +68,11 @@ export {
   projectRepositoryTree,
   toDiffViewerFileDiff,
 } from "./lib/projectRepositoryDiff";
+export {
+  collectValidRepositoryFilePaths,
+  findRepositoryDiffFile,
+  formatRevisionIdentifier,
+  getRepositoryDiffLogicalPath,
+  summarizeFileDiff,
+  type DiffLineSummary,
+} from "./lib/repositoryDiffFilePresentation";

@@ -15,7 +15,7 @@ afterEach(() => {
   mountedContainers.splice(0).forEach((container) => container.remove());
 });
 
-test("ready diffはpath・status・inline controls・行番号・markerを描画する", () => {
+test("ready diffはpath・change navigation・行番号・markerを描画する", () => {
   const result = renderViewer(createDiffViewerFixture());
 
   expect(
@@ -23,12 +23,10 @@ test("ready diffはpath・status・inline controls・行番号・markerを描画
       '[aria-label="implementation-plan.md の差分"]',
     ),
   ).not.toBeNull();
-  expect(result.container.textContent).toContain("変更");
-  expect(result.container.querySelector('[role="radiogroup"]')).not.toBeNull();
   expect(
-    result.container.querySelector('[role="radio"][aria-checked="true"]')
-      ?.textContent,
-  ).toBe("Unified");
+    result.container.querySelector('[aria-label="変更箇所ナビゲーション"]'),
+  ).not.toBeNull();
+  expect(result.container.querySelector('[role="radiogroup"]')).toBeNull();
   expect(result.container.textContent).toContain("-");
   expect(result.container.textContent).toContain("+");
   expect(
@@ -80,7 +78,14 @@ function renderViewer(fileDiff: ReturnType<typeof createDiffViewerFixture>) {
   const root = createRoot(container);
 
   act(() => {
-    root.render(<DiffViewer fileDiff={fileDiff} />);
+    root.render(
+      <DiffViewer
+        fileDiff={fileDiff}
+        mode="unified"
+        activeChangeId={null}
+        onActiveChangeIdChange={() => {}}
+      />,
+    );
   });
 
   return {

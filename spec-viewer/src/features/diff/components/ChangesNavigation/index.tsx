@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 
 import type { FileChangeStatus } from "@/features/diff/domain/fileDiff";
+import { getFileChangePresentation } from "@/features/diff/lib/fileChangePresentation";
 
 export type ChangesNavigationItem = Readonly<{
   id: string;
@@ -133,16 +134,6 @@ function getUnavailableMessage(reason: string): string {
   return reason;
 }
 
-const CHANGE_LABELS = {
-  added: "追加",
-  modified: "変更",
-  deleted: "削除",
-  renamed: "名前変更",
-  copied: "コピー",
-  typeChanged: "種別変更",
-  untracked: "未追跡",
-} as const satisfies Readonly<Record<FileChangeStatus, string>>;
-
 /**
  * Reduces a file change status to its compact navigation token.
  *
@@ -176,5 +167,5 @@ function getChangeLabel(
   }
   return change === undefined || change === null
     ? "変更"
-    : CHANGE_LABELS[change];
+    : getFileChangePresentation(change).label;
 }

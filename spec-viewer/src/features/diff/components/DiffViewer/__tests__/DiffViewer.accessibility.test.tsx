@@ -11,19 +11,10 @@ afterEach(() => {
   mountedContainers.splice(0).forEach((container) => container.remove());
 });
 
-test("DiffViewerはUnified/Split controlsとdiff gridに意味のあるrole/nameを付ける", () => {
+test("DiffViewerは外部controlsを持たずdiff gridに意味のあるrole/nameを付ける", () => {
   const result = renderViewer(createDiffViewerFixture());
 
-  expect(
-    result.container.querySelector(
-      '[role="radiogroup"][aria-label="差分表示形式"]',
-    ),
-  ).not.toBeNull();
-  expect(
-    Array.from(result.container.querySelectorAll('[role="radio"]')).map(
-      (radio) => radio.textContent,
-    ),
-  ).toEqual(["Unified", "Split"]);
+  expect(result.container.querySelector('[role="radiogroup"]')).toBeNull();
   expect(
     result.container.querySelector('[role="grid"][aria-label$="差分行"]'),
   ).not.toBeNull();
@@ -56,10 +47,8 @@ test("Splitのone-sided rowは対応行なしをaccessible labelで伝える", (
       status: "added",
       lines: [{ kind: "added", text: "const added = true;" }],
     }),
+    "split",
   );
-  const split = getButton(result.container, "Split");
-
-  act(() => split.click());
 
   expect(
     result.container
@@ -74,20 +63,10 @@ test("Splitのone-sided rowは対応行なしをaccessible labelで伝える", (
   result.unmount();
 });
 
-function getButton(
-  container: HTMLDivElement,
-  label: string,
-): HTMLButtonElement {
-  const button = Array.from(container.querySelectorAll("button")).find(
-    (candidate) =>
-      candidate.textContent === label ||
-      candidate.getAttribute("aria-label") === label,
-  );
-  expect(button, "button not found: " + label).toBeDefined();
-  return button as HTMLButtonElement;
-}
-
-function renderViewer(fileDiff = createDiffViewerFixture()): Readonly<{
+function renderViewer(
+  fileDiff = createDiffViewerFixture(),
+  mode: "unified" | "split" = "unified",
+): Readonly<{
   container: HTMLDivElement;
   unmount: () => void;
 }> {
@@ -95,7 +74,16 @@ function renderViewer(fileDiff = createDiffViewerFixture()): Readonly<{
   document.body.append(container);
   mountedContainers.push(container);
   const root = createRoot(container);
-  act(() => root.render(<DiffViewer fileDiff={fileDiff} />));
+  act(() =>
+    root.render(
+      <DiffViewer
+        fileDiff={fileDiff}
+        mode={mode}
+        activeChangeId={null}
+        onActiveChangeIdChange={() => {}}
+      />,
+    ),
+  );
 
   return {
     container,
@@ -111,10 +99,8 @@ test("Splitのdeleted rowは新側の対応行なしをaccessible labelで伝え
       status: "deleted",
       lines: [{ kind: "removed", text: "const removed = true;" }],
     }),
+    "split",
   );
-  const split = getButton(result.container, "Split");
-
-  act(() => split.click());
 
   expect(
     result.container

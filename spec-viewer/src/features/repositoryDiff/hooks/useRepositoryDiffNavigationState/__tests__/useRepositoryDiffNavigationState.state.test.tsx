@@ -7,7 +7,7 @@ import {
   useRepositoryDiffNavigationState,
 } from "@/features/repositoryDiff/hooks/useRepositoryDiffNavigationState";
 
-function renderHook(
+function renderNavigationHook(
   options: UseRepositoryDiffNavigationStateOptions,
 ): Readonly<{
   current: () => ReturnType<typeof useRepositoryDiffNavigationState>;
@@ -20,12 +20,14 @@ function renderHook(
       typeof useRepositoryDiffNavigationState
     >,
   };
+
   function TestComponent(
     props: Readonly<{ options: UseRepositoryDiffNavigationStateOptions }>,
   ): null {
     result.current = useRepositoryDiffNavigationState(props.options);
     return null;
   }
+
   act(() => root.render(<TestComponent options={options} />));
   return {
     current: () => result.current,
@@ -38,76 +40,118 @@ function renderHook(
   };
 }
 
-const repository = (
+function repository(
   worktreeId: string,
-): UseRepositoryDiffNavigationStateOptions => ({
-  workspaceId: "/workspace",
-  worktreeId,
-});
+): UseRepositoryDiffNavigationStateOptions {
+  return { workspaceId: "/workspace", worktreeId };
+}
 
-test("未訪問repositoryはChanged・未選択・未展開で始まる", () => {
-  const hook = renderHook(repository("worktree-a"));
+test("未訪問repositoryはtabなし・Unifiedで始まる", () => {
+  const hook = renderNavigationHook(repository("worktree-a"));
 
   expect(hook.current().entry).toEqual({
     filter: "changed",
-    selectedPath: null,
+    openPaths: [],
+    activePath: null,
     expandedPaths: [],
+    viewerMode: "unified",
+    jumpTargetsByPath: {},
   });
   hook.unmount();
 });
 
-test("worktree A/Bを往復するとrepository-specific entryを復元する", () => {
-  const hook = renderHook(repository("worktree-a"));
+test("公開actionはopen・activate・close・mode・jump・reconcileを接続する", () => {
+  const hook = renderNavigationHook(repository("worktree-a"));
+  act(() => {
+    hook.current().actions.openPath("a.ts");
+    hook.current().actions.openPath("b.ts");
+    hook.current().actions.activateTab("a.ts");
+    hook.current().actions.changeViewerMode("split");
+    hook.current().actions.changeJumpTarget("a.ts", "hunk-1");
+    hook.current().actions.toggleDirectory("src");
+  });
+  act(() => {
+    hook.current().actions.closeTab("b.ts");
+    hook.current().actions.reconcile(["a.ts"], ["src"]);
+  });
+
+  expect(hook.current().entry).toEqual({
+    filter: "changed",
+    openPaths: ["a.ts"],
+    activePath: "a.ts",
+    expandedPaths: ["src"],
+    viewerMode: "split",
+    jumpTargetsByPath: { "a.ts": "hunk-1" },
+  });
+  hook.unmount();
+});
+
+test("worktree A/Bを往復するとrepository固有entryを復元する", () => {
+  const hook = renderNavigationHook(repository("worktree-a"));
   act(() => {
     hook.current().actions.changeFilter("all");
-    hook.current().actions.selectPath("src/a.ts");
-    hook.current().actions.toggleDirectory("src");
+    hook.current().actions.openPath("src/a.ts");
+    hook.current().actions.changeViewerMode("editor");
   });
 
   hook.rerender(repository("worktree-b"));
-  expect(hook.current().entry.filter).toBe("changed");
   act(() => {
-    hook.current().actions.selectPath("src/b.ts");
+    hook.current().actions.openPath("src/b.ts");
   });
 
   hook.rerender(repository("worktree-a"));
-  expect(hook.current().entry).toEqual({
-    filter: "all",
-    selectedPath: "src/a.ts",
-    expandedPaths: ["src"],
-  });
+  expect(hook.current().entry.activePath).toBe("src/a.ts");
+  expect(hook.current().entry.viewerMode).toBe("editor");
   hook.rerender(repository("worktree-b"));
-  expect(hook.current().entry.selectedPath).toBe("src/b.ts");
+  expect(hook.current().entry.activePath).toBe("src/b.ts");
+  expect(hook.current().entry.viewerMode).toBe("unified");
   hook.unmount();
 });
 
-test("filter toggleはstateだけを更新し、reconcileは無効pathをpruneする", () => {
-  const hook = renderHook(repository("worktree-a"));
-  act(() => {
-    hook.current().actions.changeFilter("all");
-    hook.current().actions.selectPath("src/old.ts");
-    hook.current().actions.toggleDirectory("src");
+test("null keyのactionはstateを変更しない", () => {
+  const hook = renderNavigationHook({
+    workspaceId: null,
+    worktreeId: null,
   });
+  const initial = hook.current().state;
   act(() => {
-    hook.current().actions.reconcile(["src/new.ts"], []);
+    hook.current().actions.openPath("a.ts");
+    hook.current().actions.activateTab("a.ts");
+    hook.current().actions.closeTab("a.ts");
+    hook.current().actions.changeViewerMode("editor");
+    hook.current().actions.changeJumpTarget("a.ts", "hunk-1");
+    hook.current().actions.reconcile(["a.ts"], []);
   });
 
-  expect(hook.current().entry).toEqual({
-    filter: "all",
-    selectedPath: null,
-    expandedPaths: [],
-  });
+  expect(hook.current().key).toBeNull();
+  expect(hook.current().state).toBe(initial);
   hook.unmount();
 });
 
-test("unmounted hookのactionは外部stateを更新しない", () => {
-  const hook = renderHook(repository("worktree-a"));
+test("key不変のrerenderではaction objectの参照を維持する", () => {
+  const options = repository("worktree-a");
+  const hook = renderNavigationHook(options);
+  const actions = hook.current().actions;
+
+  hook.rerender({ ...options });
+
+  expect(hook.current().actions).toBe(actions);
+  hook.unmount();
+});
+
+test("unmount後に保持したactionを呼んでも例外にならない", () => {
+  const hook = renderNavigationHook(repository("worktree-a"));
   const actions = hook.current().actions;
   hook.unmount();
 
   expect(() => {
     actions.changeFilter("all");
-    actions.selectPath("src/a.ts");
+    actions.openPath("a.ts");
+    actions.activateTab("a.ts");
+    actions.closeTab("a.ts");
+    actions.changeViewerMode("editor");
+    actions.changeJumpTarget("a.ts", null);
     actions.toggleDirectory("src");
+    actions.reconcile([], []);
   }).not.toThrow();
 });

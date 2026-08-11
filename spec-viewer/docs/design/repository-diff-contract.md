@@ -179,3 +179,22 @@ paths and raw control characters are not included in command error messages.
 
 The feature is additive. It does not add stage, commit, discard, arbitrary two-revision
 selection, or submodule-recursive diff behavior.
+
+## Issue #196 file review workspace contract
+
+- Tree selection opens a persistent ordered tab immediately. Existing tabs retain
+  their order. Active close selects the right neighbor, then the left neighbor, then
+  no selection.
+- Every file tab exposes its A/M/D/R/C/T/U token and localized label. The active
+  tab controls one repository-diff-panel; roving focus and close shortcuts remain
+  local to the tab strip.
+- The shared toolbar owns Specs/Diff on the left, active file and revision/line
+  summary in the center, and controlled Unified/Split/Editor controls on the right.
+  Editor displays current content read-only and has no save or mutation path.
+- Open paths, active path, viewer mode, and per-path jump targets are keyed by
+  workspace/worktree/Diff for the application session. The key intentionally omits
+  snapshot ID. Refresh rebinds the active path through the existing snapshot-safe
+  detail loader and reconciles tabs against all repository logical paths.
+- Detail payloads, base resolution, and snapshot identity are never copied into tab
+  state. Stale overview/detail responses continue to be rejected by the existing
+  request identity and generation checks.

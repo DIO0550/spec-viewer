@@ -7,6 +7,9 @@ export type FileChangeStatus =
   | "typeChanged"
   | "untracked";
 
+export type FileReviewViewMode = "unified" | "split" | "editor";
+export type DiffProjectionViewMode = Exclude<FileReviewViewMode, "editor">;
+
 export type DiffLineKind = "context" | "added" | "removed" | "noNewline";
 export type EntryKind = "regular" | "symlink" | "submodule";
 export type ContentClassification =
