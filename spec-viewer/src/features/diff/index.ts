@@ -4,10 +4,14 @@ export {
   type ChangesNavigationProps,
 } from "./components/ChangesNavigation";
 export {
-  DiffViewer,
-  type DiffViewerMode,
-  type DiffViewerProps,
-} from "./components/DiffViewer";
+  CurrentFileViewer,
+  type CurrentFileViewerProps,
+} from "./components/CurrentFileViewer";
+export { DiffViewer, type DiffViewerProps } from "./components/DiffViewer";
+export {
+  DiffViewModeControls,
+  type DiffViewModeControlsProps,
+} from "./components/DiffViewModeControls";
 export {
   RevisionSelector,
   type RevisionSelectorProps,
@@ -64,6 +68,8 @@ export type {
   FileDiff,
   FileDiffAvailability,
   FileReview,
+  DiffProjectionViewMode,
+  FileReviewViewMode,
   OmissionReason,
   SubmoduleState,
 } from "./domain/fileDiff";

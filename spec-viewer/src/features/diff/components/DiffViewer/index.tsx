@@ -1,8 +1,6 @@
-import { ChevronLeft, ChevronRight, Columns2, Rows3 } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
-  type KeyboardEvent,
   type ReactElement,
-  type ReactNode,
   type UIEvent,
   useEffect,
   useMemo,
@@ -10,7 +8,11 @@ import {
   useState,
 } from "react";
 
-import type { FileDiff, OmissionReason } from "@/features/diff/domain/fileDiff";
+import type {
+  DiffProjectionViewMode,
+  FileDiff,
+  OmissionReason,
+} from "@/features/diff/domain/fileDiff";
 import {
   buildDiffViewModel,
   calculateRowOffsets,
@@ -23,7 +25,12 @@ import {
   materializeRows,
 } from "@/features/diff/lib/diffViewModel";
 
-export type DiffViewerProps = Readonly<{ fileDiff: FileDiff }>;
+export type DiffViewerProps = Readonly<{
+  fileDiff: FileDiff;
+  mode: DiffProjectionViewMode;
+  activeChangeId: string | null;
+  onActiveChangeIdChange: (changeId: string | null) => void;
+}>;
 
 const OmissionMessages = {
   binary: "バイナリファイルのため差分を表示できません。",
@@ -33,29 +40,27 @@ const OmissionMessages = {
   unsupportedEntryKind: "未対応のファイル種類のため差分を表示できません。",
 } satisfies Record<OmissionReason, string>;
 
-export type DiffViewerMode = "unified" | "split";
-
-const ViewModes: readonly DiffViewerMode[] = ["unified", "split"];
-
-/**
- * Maps the public viewer mode to the internal row projection mode.
- *
- * @param mode - Public mode selected by the viewer user.
- * @returns Internal projection mode used by the existing row model.
- */
-function toProjectionMode(mode: DiffViewerMode): DiffViewMode {
-  return mode === "unified" ? "inline" : "sideBySide";
-}
 const OverscanRows = 100;
 const SemanticRowHardCap = 500;
 
 /**
- * Displays an immutable FileDiff as an interactive editor-like comparison.
+ * Maps the public viewer mode to the internal row projection mode.
  *
- * @param props - Decoded diff input without loading or IPC concerns.
+ * @param mode - Controlled public projection mode.
+ * @returns Internal projection mode used by the row model.
+ */
+function toProjectionMode(mode: DiffProjectionViewMode): DiffViewMode {
+  return mode === "unified" ? "inline" : "sideBySide";
+}
+
+/**
+ * Displays an immutable FileDiff with controlled layout and jump state.
+ *
+ * @param props - Diff input, projection mode, and active change contract.
  * @returns The ready viewer or a clear empty/omitted state.
  */
-export function DiffViewer({ fileDiff }: DiffViewerProps): ReactElement {
+export function DiffViewer(props: DiffViewerProps): ReactElement {
+  const { fileDiff, mode, activeChangeId, onActiveChangeIdChange } = props;
   const model = useMemo(
     () => buildDiffViewModel(fileDiff),
     [
@@ -65,10 +70,10 @@ export function DiffViewer({ fileDiff }: DiffViewerProps): ReactElement {
       fileDiff.availability,
     ],
   );
-  const [mode, setMode] = useState<DiffViewerMode>("unified");
-  const [activeChangeId, setActiveChangeId] = useState<string | null>(
-    () => model.changeIds[0] ?? null,
-  );
+  const resolvedActiveChangeId =
+    activeChangeId !== null && model.changeIds.includes(activeChangeId)
+      ? activeChangeId
+      : (model.changeIds[0] ?? null);
   const [expandedGapIds, setExpandedGapIds] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
@@ -82,7 +87,12 @@ export function DiffViewer({ fileDiff }: DiffViewerProps): ReactElement {
     fileDiff.identity.path;
 
   useEffect(() => {
-    setActiveChangeId(model.changeIds[0] ?? null);
+    if (resolvedActiveChangeId !== activeChangeId) {
+      onActiveChangeIdChange(resolvedActiveChangeId);
+    }
+  }, [activeChangeId, onActiveChangeIdChange, resolvedActiveChangeId]);
+
+  useEffect(() => {
     setExpandedGapIds(new Set());
     setScrollTop(0);
     if (scrollSurfaceRef.current !== null) {
@@ -100,26 +110,27 @@ export function DiffViewer({ fileDiff }: DiffViewerProps): ReactElement {
 
   if (model.state === "empty") {
     return (
-      <DiffViewerFrame filePath={filePath} statusLabel={model.status.label}>
+      <section className="diff-viewer" aria-label={`${filePath} の差分`}>
         <p className="diff-viewer__state" role="status">
           このファイルに表示できる行変更はありません。
         </p>
-      </DiffViewerFrame>
+      </section>
     );
   }
 
   if (model.state === "omitted") {
     const reason = model.omissionReason ?? "diffLimit";
     return (
-      <DiffViewerFrame filePath={filePath} statusLabel={model.status.label}>
+      <section className="diff-viewer" aria-label={`${filePath} の差分`}>
         <p className="diff-viewer__state" role="status">
           {OmissionMessages[reason]}
         </p>
-      </DiffViewerFrame>
+      </section>
     );
   }
 
-  const rows = materializeRows(model, toProjectionMode(mode), expandedGapIds);
+  const projectionMode = toProjectionMode(mode);
+  const rows = materializeRows(model, projectionMode, expandedGapIds);
   const offsets = calculateRowOffsets(rows);
   const visibleWindow = calculateVisibleWindow({
     offsets,
@@ -133,14 +144,16 @@ export function DiffViewer({ fileDiff }: DiffViewerProps): ReactElement {
     visibleWindow.endIndex,
   );
   const activeIndex =
-    activeChangeId === null ? -1 : model.changeIds.indexOf(activeChangeId);
+    resolvedActiveChangeId === null
+      ? -1
+      : model.changeIds.indexOf(resolvedActiveChangeId);
   const hasPrevious = activeIndex > 0;
   const hasNext = activeIndex >= 0 && activeIndex < model.changeIds.length - 1;
 
   const navigate = (direction: "previous" | "next"): void => {
     const nextIndex = findAdjacentChangeIndex(
       model.changeIds,
-      activeChangeId,
+      resolvedActiveChangeId,
       direction,
     );
     if (nextIndex === null) {
@@ -151,7 +164,7 @@ export function DiffViewer({ fileDiff }: DiffViewerProps): ReactElement {
     if (nextChangeId === undefined) {
       return;
     }
-    setActiveChangeId(nextChangeId);
+    onActiveChangeIdChange(nextChangeId);
     const targetRowIndex = rows.findIndex(
       (row) => row.kind === "content" && row.changeId === nextChangeId,
     );
@@ -163,25 +176,6 @@ export function DiffViewer({ fileDiff }: DiffViewerProps): ReactElement {
     if (scrollSurfaceRef.current !== null) {
       scrollSurfaceRef.current.scrollTop = nextScrollTop;
     }
-  };
-
-  const handleModeKeyDown = (
-    event: KeyboardEvent<HTMLButtonElement>,
-    currentMode: DiffViewerMode,
-  ): void => {
-    const currentIndex = ViewModes.indexOf(currentMode);
-    let nextMode: DiffViewerMode | undefined;
-    if (event.key === "ArrowRight") {
-      nextMode = ViewModes[(currentIndex + 1) % ViewModes.length];
-    } else if (event.key === "ArrowLeft") {
-      nextMode =
-        ViewModes[(currentIndex - 1 + ViewModes.length) % ViewModes.length];
-    }
-    if (nextMode === undefined) {
-      return;
-    }
-    event.preventDefault();
-    setMode(nextMode);
   };
 
   const handleScroll = (event: UIEvent<HTMLDivElement>): void => {
@@ -201,56 +195,31 @@ export function DiffViewer({ fileDiff }: DiffViewerProps): ReactElement {
   };
 
   return (
-    <DiffViewerFrame filePath={filePath} statusLabel={model.status.label}>
-      <div className="diff-viewer__toolbar">
-        <div
-          className="diff-viewer__mode-control"
-          role="radiogroup"
-          aria-label="差分表示形式"
+    <section className="diff-viewer" aria-label={`${filePath} の差分`}>
+      <div
+        className="diff-viewer__navigation"
+        role="group"
+        aria-label="変更箇所ナビゲーション"
+      >
+        <button
+          type="button"
+          aria-label="前の変更"
+          disabled={!hasPrevious}
+          onClick={() => navigate("previous")}
         >
-          {ViewModes.map((candidate) => (
-            <button
-              key={candidate}
-              type="button"
-              role="radio"
-              aria-checked={mode === candidate}
-              onClick={() => setMode(candidate)}
-              onKeyDown={(event) => handleModeKeyDown(event, candidate)}
-            >
-              {candidate === "unified" ? (
-                <Rows3 aria-hidden="true" size={14} />
-              ) : (
-                <Columns2 aria-hidden="true" size={14} />
-              )}
-              {candidate === "unified" ? "Unified" : "Split"}
-            </button>
-          ))}
-        </div>
-        <div
-          className="diff-viewer__navigation"
-          role="group"
-          aria-label="変更箇所ナビゲーション"
+          <ChevronLeft aria-hidden="true" size={14} />
+        </button>
+        <span aria-live="polite">
+          {activeIndex < 0 ? 0 : activeIndex + 1} / {model.changeIds.length}
+        </span>
+        <button
+          type="button"
+          aria-label="次の変更"
+          disabled={!hasNext}
+          onClick={() => navigate("next")}
         >
-          <button
-            type="button"
-            aria-label="前の変更"
-            disabled={!hasPrevious}
-            onClick={() => navigate("previous")}
-          >
-            <ChevronLeft aria-hidden="true" size={14} />
-          </button>
-          <span aria-live="polite">
-            {activeIndex < 0 ? 0 : activeIndex + 1} / {model.changeIds.length}
-          </span>
-          <button
-            type="button"
-            aria-label="次の変更"
-            disabled={!hasNext}
-            onClick={() => navigate("next")}
-          >
-            <ChevronRight aria-hidden="true" size={14} />
-          </button>
-        </div>
+          <ChevronRight aria-hidden="true" size={14} />
+        </button>
       </div>
       <div
         ref={scrollSurfaceRef}
@@ -268,8 +237,8 @@ export function DiffViewer({ fileDiff }: DiffViewerProps): ReactElement {
           <DiffRow
             key={row.id}
             row={row}
-            mode={toProjectionMode(mode)}
-            activeChangeId={activeChangeId}
+            mode={projectionMode}
+            activeChangeId={resolvedActiveChangeId}
             onExpandGap={expandGap}
           />
         ))}
@@ -278,42 +247,10 @@ export function DiffViewer({ fileDiff }: DiffViewerProps): ReactElement {
           aria-hidden="true"
         />
       </div>
-    </DiffViewerFrame>
-  );
-}
-
-/**
- * Wraps diff content with the shared file path header and status label.
- *
- * @param props - The file path, status label and diff content to frame.
- * @returns The framed diff section.
- */
-function DiffViewerFrame(
-  props: Readonly<{
-    filePath: string;
-    statusLabel: string;
-    children: ReactNode;
-  }>,
-): ReactElement {
-  return (
-    <section className="diff-viewer" aria-label={`${props.filePath} の差分`}>
-      <header className="diff-viewer__header">
-        <strong>{props.filePath}</strong>
-        <span className="diff-viewer__status">{props.statusLabel}</span>
-      </header>
-      {props.children}
     </section>
   );
 }
 
-/**
- * Renders one materialized diff row (hunk header, annotation, collapsible
- * gap, or content) according to the current view mode.
- *
- * @param props - The row to render, the active view mode, the currently
- *   active change ID and the gap-expansion callback.
- * @returns The rendered row element.
- */
 function DiffRow(
   props: Readonly<{
     row: DiffViewRow;

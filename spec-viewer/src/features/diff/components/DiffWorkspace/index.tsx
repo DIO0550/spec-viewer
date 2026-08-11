@@ -26,6 +26,7 @@ export type DiffWorkspaceProps = Readonly<{
   preview: ReactNode;
   availability: DiffWorkspaceAvailability;
   revisionSelector?: ReactNode;
+  fileTabs?: ReactNode;
 }>;
 
 /**
@@ -35,13 +36,20 @@ export type DiffWorkspaceProps = Readonly<{
  * @returns Diff preview or a recoverable status.
  */
 export function DiffWorkspace(props: DiffWorkspaceProps): ReactElement {
-  const { state, selectedPath, preview, availability, revisionSelector } =
-    props;
+  const {
+    state,
+    selectedPath,
+    preview,
+    availability,
+    revisionSelector,
+    fileTabs,
+  } = props;
 
   if (state !== undefined) {
     return (
       <div className="diff-workspace">
         {revisionSelector}
+        {fileTabs}
         <div className="diff-workspace__content">
           {renderDiffWorkspaceState(state)}
         </div>
