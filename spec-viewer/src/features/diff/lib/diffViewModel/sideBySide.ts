@@ -1,4 +1,5 @@
 import type { DiffLine, Hunk } from "@/features/diff/domain/fileDiff";
+import type { ChangeBlock } from "@/features/diff/lib/changeBlocks";
 import type { DiffCell, DiffViewRow } from "@/features/diff/lib/diffViewModel";
 import { createAnnotationRow } from "@/features/diff/lib/diffViewModel/annotation";
 
@@ -17,12 +18,21 @@ export type SideBySideHunk = Readonly<{
 export function createSideBySideHunk(
   hunk: Hunk,
   hunkIndex: number,
+  changeBlocks: readonly ChangeBlock[],
 ): SideBySideHunk {
   const rows: DiffViewRow[] = [createHunkRow(hunkIndex, hunk.header)];
-  const changeIds: string[] = [];
+  const changeIdByLineIndex = Array.from<string | null>({
+    length: hunk.lines.length,
+  }).fill(null);
+  changeBlocks.forEach((block) => {
+    changeIdByLineIndex.fill(
+      block.id,
+      block.startLineIndex,
+      block.endLineIndex + 1,
+    );
+  });
   let lineIndex = 0;
   let previousKind: DiffLine["kind"] | null = null;
-  let activeChangeId: string | null = null;
 
   while (lineIndex < hunk.lines.length) {
     const line = hunk.lines[lineIndex];
@@ -44,7 +54,6 @@ export function createSideBySideHunk(
     }
 
     if (line.kind === "context") {
-      activeChangeId = null;
       rows.push(createContextRow(line, hunkIndex, lineIndex));
       previousKind = line.kind;
       lineIndex += 1;
@@ -67,17 +76,16 @@ export function createSideBySideHunk(
       continue;
     }
 
-    const changeId: string =
-      activeChangeId ?? `hunk-${hunkIndex}-change-${changeIds.length}`;
-    if (activeChangeId === null) {
-      activeChangeId = changeId;
-      changeIds.push(changeId);
+    const changeId = changeIdByLineIndex[blockStart] ?? null;
+    if (changeId === null) {
+      previousKind = block[block.length - 1]?.kind ?? previousKind;
+      continue;
     }
     rows.push(...createChangedRows({ block, blockStart, changeId, hunkIndex }));
     previousKind = block[block.length - 1]?.kind ?? previousKind;
   }
 
-  return { rows, changeIds };
+  return { rows, changeIds: changeBlocks.map((block) => block.id) };
 }
 
 /**

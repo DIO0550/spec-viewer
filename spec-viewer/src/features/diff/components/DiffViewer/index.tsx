@@ -87,10 +87,7 @@ export function DiffViewer(props: DiffViewerProps): ReactElement {
     fileDiff.identity.path;
 
   useEffect(() => {
-    if (
-      activeChangeId !== null &&
-      resolvedActiveChangeId !== activeChangeId
-    ) {
+    if (activeChangeId !== null && resolvedActiveChangeId !== activeChangeId) {
       onActiveChangeIdChange(resolvedActiveChangeId);
     }
   }, [activeChangeId, onActiveChangeIdChange, resolvedActiveChangeId]);

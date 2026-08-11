@@ -4,6 +4,10 @@ import type {
   FileDiff,
   OmissionReason,
 } from "@/features/diff/domain/fileDiff";
+import {
+  type ChangeBlock,
+  projectChangeBlocks,
+} from "@/features/diff/lib/changeBlocks";
 import { getFileChangePresentation } from "@/features/diff/lib/fileChangePresentation";
 import { applyCharacterDiff } from "@/features/diff/lib/diffViewModel/characterDiff";
 import { foldContextRows } from "@/features/diff/lib/diffViewModel/contextFolding";
@@ -66,6 +70,7 @@ export type DiffViewModel = Readonly<{
   inlineRows: readonly DiffViewRow[];
   sideBySideRows: readonly DiffViewRow[];
   changeIds: readonly string[];
+  changeBlocks: readonly ChangeBlock[];
 }>;
 
 export type DiffModelOptions = Readonly<{
@@ -113,11 +118,18 @@ export function buildDiffViewModel(
     return createNonReadyModel("empty", null, status);
   }
 
+  const changeBlocks = projectChangeBlocks(structuredDiff.hunks);
+  const changeBlocksByHunk: ChangeBlock[][] = structuredDiff.hunks.map(
+    () => [],
+  );
+  for (const block of changeBlocks) {
+    changeBlocksByHunk[block.hunkIndex]?.push(block);
+  }
   const inlineHunks = structuredDiff.hunks.map((hunk, hunkIndex) =>
-    createInlineHunk(hunk, hunkIndex),
+    createInlineHunk(hunk, hunkIndex, changeBlocksByHunk[hunkIndex] ?? []),
   );
   const sideBySideHunks = structuredDiff.hunks.map((hunk, hunkIndex) =>
-    createSideBySideHunk(hunk, hunkIndex),
+    createSideBySideHunk(hunk, hunkIndex, changeBlocksByHunk[hunkIndex] ?? []),
   );
   const inlineRowsWithHunkGaps = insertHunkGaps({
     hunks: structuredDiff.hunks,
@@ -151,7 +163,8 @@ export function buildDiffViewModel(
       rowsWithCharacterDiff.sideBySideRows,
       resolvedOptions.contextRadius,
     ),
-    changeIds: sideBySideHunks.flatMap((hunk) => hunk.changeIds),
+    changeIds: changeBlocks.map((block) => block.id),
+    changeBlocks,
   };
 }
 
@@ -251,5 +264,6 @@ function createNonReadyModel(
     inlineRows: [],
     sideBySideRows: [],
     changeIds: [],
+    changeBlocks: [],
   };
 }

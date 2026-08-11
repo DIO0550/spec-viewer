@@ -1,4 +1,5 @@
 import type { DiffLine, Hunk } from "@/features/diff/domain/fileDiff";
+import type { ChangeBlock } from "@/features/diff/lib/changeBlocks";
 import type { DiffCell, DiffViewRow } from "@/features/diff/lib/diffViewModel";
 import { createAnnotationRow } from "@/features/diff/lib/diffViewModel/annotation";
 
@@ -14,11 +15,23 @@ export type InlineHunk = Readonly<{
  * @param hunkIndex - Stable index within the structured diff.
  * @returns Inline rows and ordered change identifiers.
  */
-export function createInlineHunk(hunk: Hunk, hunkIndex: number): InlineHunk {
+export function createInlineHunk(
+  hunk: Hunk,
+  hunkIndex: number,
+  changeBlocks: readonly ChangeBlock[],
+): InlineHunk {
   const rows: DiffViewRow[] = [createHunkRow(hunkIndex, hunk.header)];
-  const changeIds: string[] = [];
-  let activeChangeId: string | null = null;
   let previousKind: DiffLine["kind"] | null = null;
+  const changeIdByLineIndex = Array.from<string | null>({
+    length: hunk.lines.length,
+  }).fill(null);
+  changeBlocks.forEach((block) => {
+    changeIdByLineIndex.fill(
+      block.id,
+      block.startLineIndex,
+      block.endLineIndex + 1,
+    );
+  });
 
   hunk.lines.forEach((line, lineIndex) => {
     if (line.kind === "noNewline") {
@@ -34,17 +47,25 @@ export function createInlineHunk(hunk: Hunk, hunkIndex: number): InlineHunk {
     }
 
     if (line.kind === "context") {
-      activeChangeId = null;
-    } else if (activeChangeId === null) {
-      activeChangeId = `hunk-${hunkIndex}-change-${changeIds.length}`;
-      changeIds.push(activeChangeId);
+      rows.push(
+        createInlineRow({ hunkIndex, lineIndex, line, activeChangeId: null }),
+      );
+      previousKind = line.kind;
+      return;
     }
 
-    rows.push(createInlineRow({ hunkIndex, lineIndex, line, activeChangeId }));
+    rows.push(
+      createInlineRow({
+        hunkIndex,
+        lineIndex,
+        line,
+        activeChangeId: changeIdByLineIndex[lineIndex] ?? null,
+      }),
+    );
     previousKind = line.kind;
   });
 
-  return { rows, changeIds };
+  return { rows, changeIds: changeBlocks.map((block) => block.id) };
 }
 
 /**

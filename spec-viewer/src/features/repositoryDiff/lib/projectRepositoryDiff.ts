@@ -125,7 +125,7 @@ export function toDiffViewerFileDiff(
 ): FileDiff {
   return {
     identity: {
-      sourceId: `repository:${selection.worktreeId}`,
+      sourceId: `repository:${selection.worktreeId}:${selection.snapshotId}`,
       path: selection.path,
     },
     review,
