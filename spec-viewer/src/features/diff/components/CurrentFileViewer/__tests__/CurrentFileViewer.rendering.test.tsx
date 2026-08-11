@@ -30,20 +30,36 @@ test("current内容を行番号付きread-only codeとして表示する", () =>
 });
 
 test("availableな空文字は空のファイルと表示する", () => {
-  const view = renderViewer(createDiffViewerFixture({ newContent: "" }));
+  const view = renderViewer(
+    createDiffViewerFixture({ newContent: "", lines: [] }),
+  );
 
   expect(view.container.textContent).toContain("空のファイルです。");
   view.unmount();
 });
 
-test("deletedはcontent stateより優先してcurrent側不在を表示する", () => {
+test("deletedはold contentをwhole-file deletion peekとして表示する", () => {
   const view = renderViewer(
-    createDiffViewerFixture({ status: "deleted", oldContent: "old" }),
+    createDiffViewerFixture({
+      status: "deleted",
+      oldContent: "old",
+      hunks: [
+        {
+          header: "@@ -1 +0,0 @@",
+          lines: [
+            {
+              kind: "removed",
+              text: "old",
+              oldLineNumber: 1,
+              newLineNumber: null,
+            },
+          ],
+        },
+      ],
+    }),
   );
 
-  expect(view.container.textContent).toContain(
-    "削除されたためcurrent側に存在しません。",
-  );
+  expect(view.container.textContent).toContain("1行削除");
   view.unmount();
 });
 

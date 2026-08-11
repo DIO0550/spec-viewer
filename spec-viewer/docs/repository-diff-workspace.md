@@ -30,7 +30,19 @@ close button、Editor内容、inputからfile-tab shortcutを横取りしませ�
 - Split: base/currentを左右に表示
 - Editor: current側の内容を行番号付きで読み取り専用表示
 
-Editorは編集・保存機能を持ちません。deleted file、空file、binary/large/missing/unsupported contentはそれぞれ異なるstatusで表示します。
+Editorは編集・保存機能を持たず、availableなcurrent snapshot全文を正本として表示します。追加行は緑、置換後行は青のgutterと読み上げlabelを持ち、行番号は常にcurrent側です。
+
+### Availabilityと安全なfallback
+
+current content自体がbinary / large / missing / unsupportedで取得できない場合は理由別statusを表示します。current全文がavailableでstructured diffだけが上限などにより取得できない場合は、degraded警告とunchangedな全文を表示し、誤ったgutter・peek・change jumpは公開しません。availableな空fileと「hunkが空の非空file」は別状態です。不正なhunk番号・範囲・順序・重複・text不一致も、安全なcurrent全文fallbackへ切り替わります。
+
+### 削除・変更前peek
+
+削除だけのchangeはcurrent上の挿入境界に「N行削除」、置換は変更後行の直前に「変更前 N行」と表示します。summary buttonはEnter / Spaceで開閉できます。summary、旧行、注釈はすべて非comment対象で、currentの実在行だけがcomment可能です。deleted fileはbackendから取得したold contentとremoved hunkが整合する場合に限りwhole-file peekを表示します。
+
+### Navigationと性能
+
+前後changeはUnified / Split / Editorで同じchange IDを共有します。peek開閉ではIDとcurrent行identityを変えません。同じrepository navigation entryはrefresh後もtab・mode・jumpを保持し、Editorの展開・scroll・focus・行高cacheだけが新しいrevision keyでresetされます。Editorは異なる行高を測定するwindowingを使い、20,000行でも最大500 semantic rowsだけをDOMへ出します。長い1行はwrapせず横scrollできます。gridは全論理行数をaria-rowcount、描画行の位置をaria-rowindexで公開します。
 
 ## 状態の保持
 

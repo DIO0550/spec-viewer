@@ -6,6 +6,33 @@ import {
   type RepositoryDiffNavigationState,
   reduceRepositoryDiffNavigationState,
 } from "@/features/repositoryDiff/domain/repositoryDiffNavigationState";
+import { createRepositoryDiffNavigationKey } from "@/features/workspace/lib/createNavigationHistoryKey";
+
+test("repository navigation keyはbaseとsnapshotに依存しない", () => {
+  const beforeRefresh = {
+    workspaceId: "/workspace",
+    worktreeId: "worktree-a",
+    baseIdentifier: "main@before",
+    snapshotId: "snapshot-before",
+  };
+  const afterRefresh = {
+    ...beforeRefresh,
+    baseIdentifier: "main@after",
+    snapshotId: "snapshot-after",
+  };
+
+  const beforeKey = createRepositoryDiffNavigationKey(
+    beforeRefresh.workspaceId,
+    beforeRefresh.worktreeId,
+  );
+  const afterKey = createRepositoryDiffNavigationKey(
+    afterRefresh.workspaceId,
+    afterRefresh.worktreeId,
+  );
+
+  expect(afterKey).toBe(beforeKey);
+  expect(afterKey).toBe('["/workspace","worktree-a","diff"]');
+});
 
 test("未訪問repositoryはChanged・tabなし・Unifiedで始まる", () => {
   expect(createInitialRepositoryDiffNavigationEntry()).toEqual({

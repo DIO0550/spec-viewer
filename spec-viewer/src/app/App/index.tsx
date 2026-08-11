@@ -551,7 +551,25 @@ function SpecViewAppContent(): ReactElement {
           summary={repositoryLineSummary}
         />
         {repositoryNavigationEntry.viewerMode === "editor" ? (
-          <CurrentFileViewer fileDiff={repositoryFileDiff} />
+          <CurrentFileViewer
+            fileDiff={repositoryFileDiff}
+            revisionKey={`${repositoryFileDiff.identity.sourceId}:${repositoryFileDiff.identity.path}`}
+            activeChangeId={
+              repositoryNavigationEntry.jumpTargetsByPath[
+                repositoryNavigationEntry.activePath
+              ] ?? null
+            }
+            onActiveChangeIdChange={(changeId: string | null) => {
+              const activePath = repositoryNavigationEntry.activePath;
+              if (activePath === null) {
+                return;
+              }
+              repositoryNavigationActions.changeJumpTarget(
+                activePath,
+                changeId,
+              );
+            }}
+          />
         ) : (
           <DiffViewer
             fileDiff={repositoryFileDiff}

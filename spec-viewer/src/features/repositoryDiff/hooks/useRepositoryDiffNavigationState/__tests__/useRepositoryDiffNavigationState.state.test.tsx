@@ -108,6 +108,27 @@ test("worktree A/Bを往復するとrepository固有entryを復元する", () =>
   hook.unmount();
 });
 
+test("同じrepositoryのrefresh相当rerender後もtab・mode・jump targetを維持する", () => {
+  const hook = renderNavigationHook(repository("worktree-a"));
+  act(() => {
+    hook.current().actions.openPath("src/a.ts");
+    hook.current().actions.changeViewerMode("editor");
+    hook.current().actions.changeJumpTarget("src/a.ts", "change-2");
+  });
+  const keyBeforeRefresh = hook.current().key;
+
+  hook.rerender({ ...repository("worktree-a") });
+
+  expect(hook.current().key).toBe(keyBeforeRefresh);
+  expect(hook.current().entry).toMatchObject({
+    openPaths: ["src/a.ts"],
+    activePath: "src/a.ts",
+    viewerMode: "editor",
+    jumpTargetsByPath: { "src/a.ts": "change-2" },
+  });
+  hook.unmount();
+});
+
 test("null keyのactionはstateを変更しない", () => {
   const hook = renderNavigationHook({
     workspaceId: null,

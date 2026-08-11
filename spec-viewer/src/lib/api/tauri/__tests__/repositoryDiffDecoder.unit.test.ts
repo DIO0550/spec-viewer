@@ -340,6 +340,259 @@ const fileReviewResponse = (): Record<string, unknown> => ({
   submodule: null,
 });
 
+type RepositoryReviewTraceCase = Readonly<{
+  origin: "committed" | "staged" | "unstaged" | "untracked";
+  response: Readonly<Record<string, unknown>>;
+  expected: Readonly<Record<string, unknown>>;
+}>;
+
+/**
+ * Builds a backend-shaped available text content value.
+ *
+ * @param text - Exact content returned by the backend fixture.
+ * @returns Transport content with no omission metadata.
+ */
+const availableContent = (text: string): Readonly<Record<string, unknown>> => ({
+  state: "available",
+  text,
+  reason: null,
+  byteLength: null,
+});
+
+/**
+ * Builds the four repository-origin fixtures that must share one decoder path.
+ *
+ * @returns Committed, staged, unstaged, and untracked review cases.
+ */
+const repositoryReviewTraceCases = (): readonly RepositoryReviewTraceCase[] => [
+  {
+    origin: "committed",
+    response: {
+      ...fileReviewResponse(),
+      file: fileChange({ oldPath: "committed.txt", newPath: "committed.txt" }),
+      oldContent: availableContent("base\n"),
+      newContent: availableContent("commit\n"),
+      structuredDiff: {
+        state: "available",
+        reason: null,
+        hunks: [
+          {
+            header: "@@ -1 +1 @@",
+            lines: [
+              { kind: "removed", text: "base" },
+              { kind: "added", text: "commit" },
+            ],
+          },
+        ],
+      },
+    },
+    expected: {
+      file: {
+        change: "modified",
+        oldPath: "committed.txt",
+        newPath: "committed.txt",
+      },
+      oldContent: { state: "available", text: "base\n" },
+      newContent: { state: "available", text: "commit\n" },
+      structuredDiff: {
+        state: "available",
+        hunks: [
+          {
+            lines: [
+              { kind: "removed", oldLineNumber: 1, newLineNumber: null },
+              { kind: "added", oldLineNumber: null, newLineNumber: 1 },
+            ],
+          },
+        ],
+      },
+    },
+  },
+  {
+    origin: "staged",
+    response: {
+      ...fileReviewResponse(),
+      file: fileChange({ oldPath: "staged.txt", newPath: "staged.txt" }),
+      oldContent: availableContent("base\n"),
+      newContent: availableContent("stage\n"),
+      structuredDiff: {
+        state: "available",
+        reason: null,
+        hunks: [
+          {
+            header: "@@ -1 +1 @@",
+            lines: [
+              { kind: "removed", text: "base" },
+              { kind: "added", text: "stage" },
+            ],
+          },
+        ],
+      },
+    },
+    expected: {
+      file: {
+        change: "modified",
+        oldPath: "staged.txt",
+        newPath: "staged.txt",
+      },
+      oldContent: { state: "available", text: "base\n" },
+      newContent: { state: "available", text: "stage\n" },
+      structuredDiff: {
+        state: "available",
+        hunks: [
+          {
+            lines: [
+              { kind: "removed", oldLineNumber: 1, newLineNumber: null },
+              { kind: "added", oldLineNumber: null, newLineNumber: 1 },
+            ],
+          },
+        ],
+      },
+    },
+  },
+  {
+    origin: "unstaged",
+    response: {
+      ...fileReviewResponse(),
+      file: fileChange({ oldPath: "unstaged.txt", newPath: "unstaged.txt" }),
+      oldContent: availableContent("base\n"),
+      newContent: availableContent("worktree\n"),
+      structuredDiff: {
+        state: "available",
+        reason: null,
+        hunks: [
+          {
+            header: "@@ -1 +1 @@",
+            lines: [
+              { kind: "removed", text: "base" },
+              { kind: "added", text: "worktree" },
+            ],
+          },
+        ],
+      },
+    },
+    expected: {
+      file: {
+        change: "modified",
+        oldPath: "unstaged.txt",
+        newPath: "unstaged.txt",
+      },
+      oldContent: { state: "available", text: "base\n" },
+      newContent: { state: "available", text: "worktree\n" },
+      structuredDiff: {
+        state: "available",
+        hunks: [
+          {
+            lines: [
+              { kind: "removed", oldLineNumber: 1, newLineNumber: null },
+              { kind: "added", oldLineNumber: null, newLineNumber: 1 },
+            ],
+          },
+        ],
+      },
+    },
+  },
+  {
+    origin: "untracked",
+    response: {
+      ...fileReviewResponse(),
+      file: fileChange({
+        change: "untracked",
+        oldPath: null,
+        newPath: "untracked.txt",
+      }),
+      oldContent: {
+        state: "omitted",
+        text: null,
+        reason: "missingSide",
+        byteLength: null,
+      },
+      newContent: availableContent("new\n"),
+      structuredDiff: {
+        state: "available",
+        reason: null,
+        hunks: [
+          { header: "@@ -0,0 +1 @@", lines: [{ kind: "added", text: "new" }] },
+        ],
+      },
+    },
+    expected: {
+      file: { change: "untracked", oldPath: null, newPath: "untracked.txt" },
+      oldContent: { state: "omitted", reason: "missingSide" },
+      newContent: { state: "available", text: "new\n" },
+      structuredDiff: {
+        state: "available",
+        hunks: [
+          {
+            lines: [{ kind: "added", oldLineNumber: null, newLineNumber: 1 }],
+          },
+        ],
+      },
+    },
+  },
+];
+
+test.each(
+  repositoryReviewTraceCases(),
+)("$origin 由来の review を共通 shape にdecodeする", ({
+  response,
+  expected,
+}) => {
+  expect(decodeRepositoryFileReview(response)).toMatchObject(expected);
+});
+
+test("deleted review の old content と removed hunk をdecodeする", () => {
+  const response = {
+    ...fileReviewResponse(),
+    file: fileChange({
+      change: "deleted",
+      oldPath: "deleted.txt",
+      newPath: null,
+    }),
+    oldContent: {
+      state: "available",
+      text: "deleted base\n",
+      reason: null,
+      byteLength: null,
+    },
+    newContent: {
+      state: "omitted",
+      text: null,
+      reason: "missingSide",
+      byteLength: null,
+    },
+    structuredDiff: {
+      state: "available",
+      reason: null,
+      hunks: [
+        {
+          header: "@@ -1 +0,0 @@",
+          lines: [{ kind: "removed", text: "deleted base" }],
+        },
+      ],
+    },
+  };
+
+  expect(decodeRepositoryFileReview(response)).toMatchObject({
+    oldContent: response.oldContent,
+    newContent: response.newContent,
+    structuredDiff: {
+      state: "available",
+      hunks: [
+        {
+          lines: [
+            {
+              kind: "removed",
+              text: "deleted base",
+              oldLineNumber: 1,
+              newLineNumber: null,
+            },
+          ],
+        },
+      ],
+    },
+  });
+});
+
 test.each([
   "text",
   "binary",

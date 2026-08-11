@@ -1,3 +1,5 @@
+@import "./editor-viewer.css";
+
 .repository-diff-panel {
   display: flex;
   min-width: 0;
