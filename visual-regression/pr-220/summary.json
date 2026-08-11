@@ -1,5 +1,5 @@
 {
-  "reportVersion": "d5ecdb85ae4485417ed7997017675ac43bd41e9a",
+  "reportVersion": "7f760114ba855ecb5ee2eda5fad752be692c48d7",
   "maxDiffRatio": 0.002,
   "changed": 3,
   "new": 12,
@@ -768,8 +768,8 @@
       "name": "All Props",
       "status": "changed",
       "reason": "pixel-diff",
-      "diffPixels": 17523,
-      "diffRatio": 0.019,
+      "diffPixels": 20743,
+      "diffRatio": 0.0225,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -807,8 +807,8 @@
       "name": "Default",
       "status": "changed",
       "reason": "pixel-diff",
-      "diffPixels": 10009,
-      "diffRatio": 0.0109,
+      "diffPixels": 8233,
+      "diffRatio": 0.0089,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
@@ -833,8 +833,8 @@
       "name": "Deleted",
       "status": "changed",
       "reason": "pixel-diff",
-      "diffPixels": 6286,
-      "diffRatio": 0.0068000000000000005,
+      "diffPixels": 6439,
+      "diffRatio": 0.006999999999999999,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
