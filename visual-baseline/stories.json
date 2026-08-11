@@ -285,14 +285,34 @@
     "name": "Unavailable"
   },
   {
+    "id": "features-diff-components-currentfileviewer--added-or-untracked",
+    "title": "features/diff/components/CurrentFileViewer",
+    "name": "Added Or Untracked"
+  },
+  {
     "id": "features-diff-components-currentfileviewer--all-props",
     "title": "features/diff/components/CurrentFileViewer",
     "name": "All Props"
   },
   {
+    "id": "features-diff-components-currentfileviewer--availability-matrix",
+    "title": "features/diff/components/CurrentFileViewer",
+    "name": "Availability Matrix"
+  },
+  {
+    "id": "features-diff-components-currentfileviewer--dark-theme",
+    "title": "features/diff/components/CurrentFileViewer",
+    "name": "Dark Theme"
+  },
+  {
     "id": "features-diff-components-currentfileviewer--default",
     "title": "features/diff/components/CurrentFileViewer",
     "name": "Default"
+  },
+  {
+    "id": "features-diff-components-currentfileviewer--degraded",
+    "title": "features/diff/components/CurrentFileViewer",
+    "name": "Degraded"
   },
   {
     "id": "features-diff-components-currentfileviewer--deleted",
@@ -303,6 +323,46 @@
     "id": "features-diff-components-currentfileviewer--edge-cases",
     "title": "features/diff/components/CurrentFileViewer",
     "name": "Edge Cases"
+  },
+  {
+    "id": "features-diff-components-currentfileviewer--empty",
+    "title": "features/diff/components/CurrentFileViewer",
+    "name": "Empty"
+  },
+  {
+    "id": "features-diff-components-currentfileviewer--error",
+    "title": "features/diff/components/CurrentFileViewer",
+    "name": "Error"
+  },
+  {
+    "id": "features-diff-components-currentfileviewer--invalid-hunks",
+    "title": "features/diff/components/CurrentFileViewer",
+    "name": "Invalid Hunks"
+  },
+  {
+    "id": "features-diff-components-currentfileviewer--keyboard-peek",
+    "title": "features/diff/components/CurrentFileViewer",
+    "name": "Keyboard Peek"
+  },
+  {
+    "id": "features-diff-components-currentfileviewer--large-line-count",
+    "title": "features/diff/components/CurrentFileViewer",
+    "name": "Large Line Count"
+  },
+  {
+    "id": "features-diff-components-currentfileviewer--line-endings",
+    "title": "features/diff/components/CurrentFileViewer",
+    "name": "Line Endings"
+  },
+  {
+    "id": "features-diff-components-currentfileviewer--long-single-line",
+    "title": "features/diff/components/CurrentFileViewer",
+    "name": "Long Single Line"
+  },
+  {
+    "id": "features-diff-components-currentfileviewer--workspace-refresh-and-mode",
+    "title": "features/diff/components/CurrentFileViewer",
+    "name": "Workspace Refresh And Mode"
   },
   {
     "id": "features-diff-components-diffviewer--added-only",
