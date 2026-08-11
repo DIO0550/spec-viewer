@@ -2277,6 +2277,10 @@ mod tests {
 
         let deleted = detail("deleted.md");
         assert_eq!(deleted.file.change, FileChangeKind::Deleted);
+        assert_eq!(
+            deleted.old_content,
+            ContentAvailability::Available("head deleted\n".into())
+        );
         assert!(matches!(
             deleted.new_content,
             ContentAvailability::Omitted {
@@ -2284,6 +2288,13 @@ mod tests {
                 ..
             }
         ));
+        let StructuredDiff::Available(deleted_hunks) = deleted.structured_diff else {
+            panic!("deleted text must have a structured diff");
+        };
+        assert!(deleted_hunks
+            .iter()
+            .flat_map(|hunk| &hunk.lines)
+            .any(|line| { line.kind == DiffLineKind::Removed && line.text == "head deleted" }));
 
         let renamed = detail("rename new.md");
         assert_eq!(renamed.file.change, FileChangeKind::Renamed);
@@ -2979,6 +2990,15 @@ mod tests {
         let committed_review = adapter
             .load_file(&worktree, snapshot, &committed_path)
             .unwrap();
+        assert_eq!(committed_review.file.change, FileChangeKind::Modified);
+        assert_eq!(
+            committed_review.old_content,
+            ContentAvailability::Available("base\n".into())
+        );
+        assert_eq!(
+            committed_review.new_content,
+            ContentAvailability::Available("commit\n".into())
+        );
         let StructuredDiff::Available(committed_hunks) = committed_review.structured_diff else {
             panic!("modified text must have a structured diff");
         };
@@ -2992,18 +3012,64 @@ mod tests {
                     .any(|line| line.kind == DiffLineKind::Added)
         }));
 
+        for (path, expected_current_content) in
+            [("staged.txt", "stage\n"), ("unstaged.txt", "worktree\n")]
+        {
+            let review = adapter
+                .load_file(
+                    &worktree,
+                    snapshot,
+                    &RepositoryRelativePath::parse(path).unwrap(),
+                )
+                .unwrap();
+            assert_eq!(review.file.change, FileChangeKind::Modified);
+            assert_eq!(
+                review.old_content,
+                ContentAvailability::Available("base\n".into()),
+                "unexpected base content for {path}"
+            );
+            assert_eq!(
+                review.new_content,
+                ContentAvailability::Available(expected_current_content.into()),
+                "unexpected current content for {path}"
+            );
+            let StructuredDiff::Available(hunks) = review.structured_diff else {
+                panic!("{path} must have a structured diff");
+            };
+            assert!(hunks.iter().any(|hunk| {
+                hunk.lines
+                    .iter()
+                    .any(|line| line.kind == DiffLineKind::Removed && line.text == "base")
+                    && hunk.lines.iter().any(|line| {
+                        line.kind == DiffLineKind::Added
+                            && line.text == expected_current_content.trim_end()
+                    })
+            }));
+        }
+
         let untracked_path = RepositoryRelativePath::parse("untracked.txt").unwrap();
         let untracked_review = adapter
             .load_file(&worktree, snapshot, &untracked_path)
             .unwrap();
+        assert_eq!(untracked_review.file.change, FileChangeKind::Untracked);
+        assert!(matches!(
+            untracked_review.old_content,
+            ContentAvailability::Omitted {
+                reason: OmissionReason::MissingSide,
+                ..
+            }
+        ));
+        assert_eq!(
+            untracked_review.new_content,
+            ContentAvailability::Available("new\n".into())
+        );
         let StructuredDiff::Available(untracked_hunks) = untracked_review.structured_diff else {
             panic!("untracked text must have a structured diff");
         };
         assert_eq!(untracked_hunks.len(), 1);
-        assert!(untracked_hunks[0]
-            .lines
-            .iter()
-            .all(|line| line.kind == DiffLineKind::Added));
+        assert_eq!(untracked_hunks[0].lines.len(), 1);
+        assert_eq!(untracked_hunks[0].lines[0].kind, DiffLineKind::Added);
+        assert_eq!(untracked_hunks[0].lines[0].text, "new");
 
         let first_page = adapter
             .traverse_ignored(&worktree, snapshot, &generated_node_id, None)

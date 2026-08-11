@@ -233,7 +233,7 @@ test("toDiffViewerFileDiffはrepository identityとavailabilityをgeneric model�
   const result = toDiffViewerFileDiff(review("modified", "text"), selection);
 
   expect(result.identity).toEqual({
-    sourceId: "repository:/workspace",
+    sourceId: `repository:/workspace:${snapshotId}`,
     path: "src/file.ts",
   });
   expect(result.availability).toEqual({ kind: "empty" });
