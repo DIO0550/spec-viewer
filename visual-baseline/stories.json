@@ -285,6 +285,26 @@
     "name": "Unavailable"
   },
   {
+    "id": "features-diff-components-currentfileviewer--all-props",
+    "title": "features/diff/components/CurrentFileViewer",
+    "name": "All Props"
+  },
+  {
+    "id": "features-diff-components-currentfileviewer--default",
+    "title": "features/diff/components/CurrentFileViewer",
+    "name": "Default"
+  },
+  {
+    "id": "features-diff-components-currentfileviewer--deleted",
+    "title": "features/diff/components/CurrentFileViewer",
+    "name": "Deleted"
+  },
+  {
+    "id": "features-diff-components-currentfileviewer--edge-cases",
+    "title": "features/diff/components/CurrentFileViewer",
+    "name": "Edge Cases"
+  },
+  {
     "id": "features-diff-components-diffviewer--added-only",
     "title": "features/diff/components/DiffViewer",
     "name": "Added Only"
@@ -348,6 +368,26 @@
     "id": "features-diff-components-diffviewer--untracked-diff",
     "title": "features/diff/components/DiffViewer",
     "name": "Untracked Diff"
+  },
+  {
+    "id": "features-diff-components-diffviewmodecontrols--all-props",
+    "title": "features/diff/components/DiffViewModeControls",
+    "name": "All Props"
+  },
+  {
+    "id": "features-diff-components-diffviewmodecontrols--default",
+    "title": "features/diff/components/DiffViewModeControls",
+    "name": "Default"
+  },
+  {
+    "id": "features-diff-components-diffviewmodecontrols--edge-cases",
+    "title": "features/diff/components/DiffViewModeControls",
+    "name": "Edge Cases"
+  },
+  {
+    "id": "features-diff-components-diffviewmodecontrols--keyboard",
+    "title": "features/diff/components/DiffViewModeControls",
+    "name": "Keyboard"
   },
   {
     "id": "features-diff-components-viewmodetoolbar--all-props",
@@ -475,6 +515,21 @@
     "name": "Tag Selected"
   },
   {
+    "id": "features-repositorydiff-components-repositorydifffileheader--all-props",
+    "title": "features/repositoryDiff/components/RepositoryDiffFileHeader",
+    "name": "All Props"
+  },
+  {
+    "id": "features-repositorydiff-components-repositorydifffileheader--default",
+    "title": "features/repositoryDiff/components/RepositoryDiffFileHeader",
+    "name": "Default"
+  },
+  {
+    "id": "features-repositorydiff-components-repositorydifffileheader--edge-cases",
+    "title": "features/repositoryDiff/components/RepositoryDiffFileHeader",
+    "name": "Edge Cases"
+  },
+  {
     "id": "features-repositorydiff-components-repositorydiffsummary--all-props",
     "title": "features/repositoryDiff/components/RepositoryDiffSummary",
     "name": "All Props"
@@ -518,6 +573,26 @@
     "id": "features-repositorydiff-components-repositorydifftree--stale",
     "title": "features/repositoryDiff/components/RepositoryDiffTree",
     "name": "Stale"
+  },
+  {
+    "id": "features-repositorydiff-components-repositoryfiletabs--all-props",
+    "title": "features/repositoryDiff/components/RepositoryFileTabs",
+    "name": "All Props"
+  },
+  {
+    "id": "features-repositorydiff-components-repositoryfiletabs--default",
+    "title": "features/repositoryDiff/components/RepositoryFileTabs",
+    "name": "Default"
+  },
+  {
+    "id": "features-repositorydiff-components-repositoryfiletabs--edge-cases",
+    "title": "features/repositoryDiff/components/RepositoryFileTabs",
+    "name": "Edge Cases"
+  },
+  {
+    "id": "features-repositorydiff-components-repositoryfiletabs--keyboard",
+    "title": "features/repositoryDiff/components/RepositoryFileTabs",
+    "name": "Keyboard"
   },
   {
     "id": "features-sidebar-components-sidebarlayout--all-props",
