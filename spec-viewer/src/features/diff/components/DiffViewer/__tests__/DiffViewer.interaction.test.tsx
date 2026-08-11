@@ -73,6 +73,30 @@ test("previous・nextはcontrolled change idを更新し端点でdisabledにな�
   view.unmount();
 });
 
+test("null jump targetは先頭changeを表示して親へ通知しない", () => {
+  const onChange = vi.fn();
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  act(() =>
+    root.render(
+      <DiffViewer
+        fileDiff={createDiffViewerFixture()}
+        mode="unified"
+        activeChangeId={null}
+        onActiveChangeIdChange={onChange}
+      />,
+    ),
+  );
+
+  expect(onChange).not.toHaveBeenCalled();
+  expect(
+    container
+      .querySelector('[data-active="true"]')
+      ?.getAttribute("data-change-id"),
+  ).toBe("hunk-0-change-0");
+  act(() => root.unmount());
+});
+
 test("invalid jump targetは先頭changeへ妥当化して親へ通知する", () => {
   const onChange = vi.fn();
   const container = document.createElement("div");
