@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, fn, userEvent, within } from "storybook/test";
 
 import { DiffViewer } from "@/features/diff/components/DiffViewer";
 import { Hunk } from "@/features/diff/domain/fileDiff";
@@ -11,6 +11,11 @@ import {
 const meta = {
   component: DiffViewer,
   parameters: { layout: "fullscreen" },
+  args: {
+    mode: "unified",
+    activeChangeId: null,
+    onActiveChangeIdChange: fn(),
+  },
   argTypes: {
     fileDiff: { control: false },
   },
@@ -72,8 +77,6 @@ export const Mixed: Story = {
    */
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("radio", { name: "Split" }));
-    await expect(canvas.getByRole("radio", { name: "Split" })).toBeChecked();
     await userEvent.click(canvas.getByRole("button", { name: "次の変更" }));
     await expect(
       canvas.getByRole("button", { name: "次の変更" }),
@@ -109,14 +112,11 @@ export const MultipleHunks: Story = {
 };
 
 export const KeyboardFocus: Story = {
-  args: { fileDiff: createDiffViewerFixture() },
+  args: { fileDiff: createDiffViewerFixture(), mode: "split" },
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const unified = canvas.getByRole("radio", { name: "Unified" });
-    unified.focus();
-    await userEvent.keyboard("{ArrowRight}");
-    await expect(canvas.getByRole("radio", { name: "Split" })).toBeChecked();
-    await expect(unified).toHaveFocus();
+    await expect(
+      canvasElement.querySelector(".diff-viewer__row--split"),
+    ).not.toBeNull();
   },
 };
 
