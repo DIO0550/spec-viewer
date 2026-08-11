@@ -452,7 +452,7 @@ export function CurrentFileViewer(props: CurrentFileViewerProps): ReactElement {
 
   return (
     <section
-      className="current-file-viewer"
+      className="current-file-viewer current-file-viewer--editor"
       aria-label={`${filePath} のcurrent内容`}
     >
       {model.state === "degraded" ? (
@@ -518,7 +518,7 @@ function ViewerState(
 ): ReactElement {
   return (
     <section
-      className="current-file-viewer"
+      className="current-file-viewer current-file-viewer--editor"
       aria-label={`${props.filePath} のcurrent内容`}
     >
       <p className="current-file-viewer__state" role="status">
@@ -627,6 +627,7 @@ const EditorRowView = memo(function EditorRowView(
   }
 
   if (row.kind === "peekSummary") {
+    const isActive = row.peek.changeId === props.activeChangeId;
     const expanded = props.expandedPeekIds.has(row.peek.id);
     const label =
       row.peek.kind === "previous"
@@ -637,6 +638,7 @@ const EditorRowView = memo(function EditorRowView(
         {...commonProps}
         className="current-file-viewer__row current-file-viewer__peek-summary"
         data-row-kind="peek-summary"
+        data-active-change={isActive ? "true" : "false"}
       >
         <span role="gridcell">
           <button

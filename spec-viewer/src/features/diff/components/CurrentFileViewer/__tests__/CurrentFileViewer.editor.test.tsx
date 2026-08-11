@@ -59,6 +59,46 @@ test("deleted fileはwhole-file peekだけを非comment対象で表示する", (
   view.unmount();
 });
 
+test("削除のみのactive changeはtargetのpeek summaryを強調する", () => {
+  const fileDiff = createDiffViewerFixture({
+    oldContent: "before\ndeleted\nafter",
+    newContent: "before\nafter",
+    hunks: [
+      {
+        header: "@@ -1,3 +1,2 @@",
+        lines: [
+          {
+            kind: "context",
+            text: "before",
+            oldLineNumber: 1,
+            newLineNumber: 1,
+          },
+          {
+            kind: "removed",
+            text: "deleted",
+            oldLineNumber: 2,
+            newLineNumber: null,
+          },
+          {
+            kind: "context",
+            text: "after",
+            oldLineNumber: 3,
+            newLineNumber: 2,
+          },
+        ],
+      },
+    ],
+  });
+  const view = renderViewer(fileDiff, "hunk-0-change-0");
+  const activeRow = view.container.querySelector<HTMLElement>(
+    '[data-active-change="true"]',
+  );
+
+  expect(activeRow?.dataset.rowKind).toBe("peek-summary");
+  expect(activeRow?.textContent).toContain("1行削除");
+  view.unmount();
+});
+
 test("structured diff omittedはdegraded警告とcurrent全文を同時表示する", () => {
   const base = createDiffViewerFixture({ newContent: "current" });
   const fileDiff = {
