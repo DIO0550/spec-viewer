@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 
-import type { FileChangeStatus } from "@/features/diff/domain/fileDiff";
+import { getFileChangePresentation } from "@/features/diff/lib/fileChangePresentation";
 import type {
   RepositoryDiffFilter,
   RepositoryDiffTreeProjectionNode,
@@ -455,26 +455,6 @@ function isExpandable(node: RepositoryDiffTreeProjectionNode): boolean {
   return node.kind === "directory" && node.entryKind !== "submodule";
 }
 
-const CHANGE_LABELS: Readonly<Record<FileChangeStatus, string>> = {
-  added: "追加",
-  modified: "変更",
-  deleted: "削除",
-  renamed: "名前変更",
-  copied: "コピー",
-  typeChanged: "種別変更",
-  untracked: "未追跡",
-};
-
-const CHANGE_TOKENS = {
-  added: "A",
-  modified: "M",
-  deleted: "D",
-  renamed: "R",
-  copied: "C",
-  typeChanged: "T",
-  untracked: "U",
-} as const satisfies Readonly<Record<FileChangeStatus, string>>;
-
 function getNodeLabel(node: RepositoryDiffTreeProjectionNode): string {
   if (node.ignored) {
     return "無視";
@@ -488,7 +468,7 @@ function getNodeLabel(node: RepositoryDiffTreeProjectionNode): string {
   if (node.change === null) {
     return "変更なし";
   }
-  return CHANGE_LABELS[node.change];
+  return getFileChangePresentation(node.change).label;
 }
 
 function getNodeToken(node: RepositoryDiffTreeProjectionNode): string {
@@ -504,5 +484,5 @@ function getNodeToken(node: RepositoryDiffTreeProjectionNode): string {
   if (node.change === null) {
     return "—";
   }
-  return CHANGE_TOKENS[node.change];
+  return getFileChangePresentation(node.change).token;
 }

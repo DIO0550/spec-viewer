@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useReducer } from "react";
 
+import type { FileReviewViewMode } from "@/features/diff/domain/fileDiff";
 import type { RepositoryDiffFilter } from "@/features/repositoryDiff/domain/repositoryDiff";
 import {
   createInitialRepositoryDiffNavigationEntry,
@@ -21,19 +22,24 @@ export type UseRepositoryDiffNavigationStateResult = Readonly<{
   entry: RepositoryDiffNavigationEntry;
   actions: Readonly<{
     changeFilter: (filter: RepositoryDiffFilter) => void;
-    selectPath: (path: string | null) => void;
+    openPath: (path: string) => void;
+    activateTab: (path: string) => void;
+    closeTab: (path: string) => void;
+    changeViewerMode: (mode: FileReviewViewMode) => void;
+    changeJumpTarget: (path: string, changeId: string | null) => void;
     toggleDirectory: (path: string) => void;
     reconcile: (
-      visiblePaths: readonly string[],
+      validFilePaths: readonly string[],
       directoryPaths: readonly string[],
     ) => void;
   }>;
 }>;
 
 /**
- * Keeps repository tree navigation in the App session without persistence.
- * Options identify the repository view.
- * Returns the current key-scoped entry and controlled actions.
+ * Keeps repository file navigation in the current application session.
+ *
+ * @param options - Workspace and worktree identity.
+ * @returns The key-scoped entry and stable controlled actions.
  */
 export function useRepositoryDiffNavigationState(
   options: UseRepositoryDiffNavigationStateOptions,
@@ -43,13 +49,16 @@ export function useRepositoryDiffNavigationState(
     undefined,
     createInitialRepositoryDiffNavigationState,
   );
-  const key =
-    options.workspaceId === null || options.worktreeId === null
-      ? null
-      : createRepositoryDiffNavigationKey(
-          options.workspaceId,
-          options.worktreeId,
-        );
+  const key = useMemo(
+    () =>
+      options.workspaceId === null || options.worktreeId === null
+        ? null
+        : createRepositoryDiffNavigationKey(
+            options.workspaceId,
+            options.worktreeId,
+          ),
+    [options.workspaceId, options.worktreeId],
+  );
   const entry = useMemo(
     () =>
       key === null
@@ -61,49 +70,107 @@ export function useRepositoryDiffNavigationState(
 
   const changeFilter = useCallback(
     (filter: RepositoryDiffFilter): void => {
-      if (key !== null) {
-        dispatch({ type: "filterChanged", key, filter });
+      if (key === null) {
+        return;
       }
+      dispatch({ type: "filterChanged", key, filter });
     },
     [key],
   );
-  const selectPath = useCallback(
-    (path: string | null): void => {
-      if (key !== null) {
-        dispatch({ type: "pathSelected", key, path });
+  const openPath = useCallback(
+    (path: string): void => {
+      if (key === null) {
+        return;
       }
+      dispatch({ type: "pathOpened", key, path });
+    },
+    [key],
+  );
+  const activateTab = useCallback(
+    (path: string): void => {
+      if (key === null) {
+        return;
+      }
+      dispatch({ type: "tabActivated", key, path });
+    },
+    [key],
+  );
+  const closeTab = useCallback(
+    (path: string): void => {
+      if (key === null) {
+        return;
+      }
+      dispatch({ type: "tabClosed", key, path });
+    },
+    [key],
+  );
+  const changeViewerMode = useCallback(
+    (mode: FileReviewViewMode): void => {
+      if (key === null) {
+        return;
+      }
+      dispatch({ type: "viewerModeChanged", key, mode });
+    },
+    [key],
+  );
+  const changeJumpTarget = useCallback(
+    (path: string, changeId: string | null): void => {
+      if (key === null) {
+        return;
+      }
+      dispatch({ type: "jumpTargetChanged", key, path, changeId });
     },
     [key],
   );
   const toggleDirectory = useCallback(
     (path: string): void => {
-      if (key !== null) {
-        dispatch({ type: "directoryToggled", key, path });
+      if (key === null) {
+        return;
       }
+      dispatch({ type: "directoryToggled", key, path });
     },
     [key],
   );
   const reconcile = useCallback(
     (
-      visiblePaths: readonly string[],
+      validFilePaths: readonly string[],
       directoryPaths: readonly string[],
     ): void => {
-      if (key !== null) {
-        dispatch({
-          type: "reconciled",
-          key,
-          visiblePaths,
-          directoryPaths,
-        });
+      if (key === null) {
+        return;
       }
+      dispatch({
+        type: "reconciled",
+        key,
+        validFilePaths,
+        directoryPaths,
+      });
     },
     [key],
   );
 
-  return {
-    key,
-    state,
-    entry,
-    actions: { changeFilter, selectPath, toggleDirectory, reconcile },
-  };
+  const actions = useMemo(
+    () => ({
+      changeFilter,
+      openPath,
+      activateTab,
+      closeTab,
+      changeViewerMode,
+      changeJumpTarget,
+      toggleDirectory,
+      reconcile,
+    }),
+    [
+      activateTab,
+      changeFilter,
+      changeJumpTarget,
+      changeViewerMode,
+      closeTab,
+      openPath,
+      reconcile,
+      toggleDirectory,
+    ],
+  );
+
+  return { key, state, entry, actions };
 }

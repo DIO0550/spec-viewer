@@ -4,6 +4,7 @@ import type {
   FileDiff,
   OmissionReason,
 } from "@/features/diff/domain/fileDiff";
+import { getFileChangePresentation } from "@/features/diff/lib/fileChangePresentation";
 import { applyCharacterDiff } from "@/features/diff/lib/diffViewModel/characterDiff";
 import { foldContextRows } from "@/features/diff/lib/diffViewModel/contextFolding";
 import { insertHunkGaps } from "@/features/diff/lib/diffViewModel/hunkGaps";
@@ -74,16 +75,6 @@ export type DiffModelOptions = Readonly<{
   maxCodeUnitsPerPair: number;
 }>;
 
-const StatusLabels = {
-  added: "追加",
-  modified: "変更",
-  deleted: "削除",
-  renamed: "名前変更",
-  copied: "コピー",
-  typeChanged: "種類変更",
-  untracked: "未追跡",
-} satisfies Record<FileChangeStatus, string>;
-
 const DefaultOptions: DiffModelOptions = {
   contextRadius: 3,
   maxCharacterPairs: 250,
@@ -105,7 +96,7 @@ export function buildDiffViewModel(
   const resolvedOptions: DiffModelOptions = { ...DefaultOptions, ...options };
   const status = {
     change: fileDiff.review.file.change,
-    label: StatusLabels[fileDiff.review.file.change],
+    label: getFileChangePresentation(fileDiff.review.file.change).label,
   } as const;
   const structuredDiff = fileDiff.review.structuredDiff;
   const availability = fileDiff.availability;

@@ -1,5 +1,8 @@
 import type { ReactElement } from "react";
 
+import type { FileChangeStatus } from "@/features/diff/domain/fileDiff";
+import { getFileChangePresentation } from "@/features/diff/lib/fileChangePresentation";
+
 import type {
   RepositoryDiffFilter,
   RepositoryDiffSummary as RepositoryDiffSummaryModel,
@@ -15,7 +18,7 @@ export function RepositoryDiffSummary(
 ): ReactElement {
   const { summary } = props;
   const statusEntries = Object.entries(summary.statusCounts).filter(
-    (entry): entry is [string, number] => entry[1] !== undefined,
+    (entry): entry is [FileChangeStatus, number] => entry[1] !== undefined,
   );
 
   return (
@@ -38,7 +41,7 @@ export function RepositoryDiffSummary(
         </div>
         {statusEntries.map(([status, count]) => (
           <div key={status}>
-            <dt>{getStatusLabel(status)}</dt>
+            <dt>{getFileChangePresentation(status).label}</dt>
             <dd>{count}</dd>
           </div>
         ))}
@@ -49,29 +52,4 @@ export function RepositoryDiffSummary(
 
 function filterLabel(filter: RepositoryDiffFilter): string {
   return filter === "changed" ? "変更ファイル" : "全ファイル";
-}
-
-function getStatusLabel(status: string): string {
-  if (status === "added") {
-    return "追加";
-  }
-  if (status === "modified") {
-    return "変更";
-  }
-  if (status === "deleted") {
-    return "削除";
-  }
-  if (status === "renamed") {
-    return "名前変更";
-  }
-  if (status === "copied") {
-    return "コピー";
-  }
-  if (status === "typeChanged") {
-    return "種別変更";
-  }
-  if (status === "untracked") {
-    return "未追跡";
-  }
-  return status;
 }
