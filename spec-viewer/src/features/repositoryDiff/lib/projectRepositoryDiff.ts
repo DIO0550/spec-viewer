@@ -1,6 +1,7 @@
 import type {
   FileChangeStatus,
   FileDiff,
+  FileReview,
   OmissionReason,
 } from "@/features/diff/domain/fileDiff";
 import { deriveDiffAvailability } from "@/features/diff/domain/fileDiff";
@@ -123,13 +124,42 @@ export function toDiffViewerFileDiff(
   review: RepositoryFileReview,
   selection: RepositoryDiffSelection,
 ): FileDiff {
+  const viewerReview = toViewerReview(review, selection.path);
   return {
     identity: {
       sourceId: `repository:${selection.worktreeId}:${selection.snapshotId}`,
       path: selection.path,
     },
-    review,
-    availability: deriveDiffAvailability(review),
+    review: viewerReview,
+    availability: deriveDiffAvailability(viewerReview),
+  };
+}
+
+/**
+ * Keeps repository-only unchanged metadata out of the generic diff model.
+ *
+ * @param review - Repository review that may represent an unchanged current file.
+ * @param selectionPath - Snapshot-bound path selected from the All tree.
+ * @returns A generic review with unchanged content represented as an empty diff.
+ */
+function toViewerReview(
+  review: RepositoryFileReview,
+  selectionPath: string,
+): FileReview {
+  if (review.file.change !== null) {
+    return { ...review, file: { ...review.file, change: review.file.change } };
+  }
+
+  const currentPath = review.file.newPath ?? selectionPath;
+  return {
+    ...review,
+    file: {
+      ...review.file,
+      oldPath: currentPath,
+      newPath: currentPath,
+      change: "modified",
+    },
+    oldContent: review.newContent,
   };
 }
 

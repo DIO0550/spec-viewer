@@ -83,11 +83,16 @@ const ignoredDirectory: RepositoryTreeNode = {
 };
 
 const review = (
-  change: "modified" | "deleted",
+  change: "modified" | "deleted" | null,
   classification: "text" | "binary",
 ): RepositoryFileReview => ({
   file: {
-    oldPath: change === "deleted" ? "src/old.ts" : "src/file.ts",
+    oldPath:
+      change === "deleted"
+        ? "src/old.ts"
+        : change === null
+          ? null
+          : "src/file.ts",
     newPath: change === "deleted" ? null : "src/file.ts",
     change,
     entryKind: "regular",
@@ -237,6 +242,37 @@ test("toDiffViewerFileDiffはrepository identityとavailabilityをgeneric model�
     path: "src/file.ts",
   });
   expect(result.availability).toEqual({ kind: "empty" });
+});
+
+test("Allの未変更fileはnull statusを保ちEditor用current modelへ変換する", () => {
+  const selection: RepositoryDiffSelection = {
+    worktreeId: "/workspace",
+    snapshotId,
+    path: "src/file.ts",
+  };
+  const repositoryReview = review(null, "text");
+
+  expect(
+    projectFileReview(repositoryReview, selection).review.file.change,
+  ).toBe(null);
+  expect(toDiffViewerFileDiff(repositoryReview, selection)).toMatchObject({
+    review: {
+      file: {
+        oldPath: "src/file.ts",
+        newPath: "src/file.ts",
+        change: "modified",
+      },
+      oldContent: {
+        state: "available",
+        text: "new",
+      },
+      newContent: {
+        state: "available",
+        text: "new",
+      },
+    },
+    availability: { kind: "empty" },
+  });
 });
 
 test("toDiffViewerFileDiffはbinary reviewをomitted binaryとして変換する", () => {

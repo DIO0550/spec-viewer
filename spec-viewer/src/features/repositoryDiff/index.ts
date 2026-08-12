@@ -16,18 +16,6 @@ export {
   type RepositoryFileTabsProps,
 } from "./components/RepositoryFileTabs";
 export type {
-  DiffCommentAnchorResolution,
-  DiffCommentAnchorResolutionStatus,
-  DiffCommentAnchorSide,
-  DiffCommentDto,
-  DiffCommentStatus,
-  StoredDiffCommentDto,
-} from "./domain/diffComment";
-export {
-  DiffCommentAnchor,
-  isCanonicalDiffCommentRevision,
-} from "./domain/diffComment";
-export type {
   BaseResolution,
   BaseResolutionFailure,
   BaseResolutionSource,

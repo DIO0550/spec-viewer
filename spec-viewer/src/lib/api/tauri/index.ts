@@ -80,6 +80,34 @@ export { updateComment } from "./updateComment";
 export { validateWorkspaceDirectory } from "./validateWorkspaceDirectory";
 
 export type {
+  DiffCommentBackendErrorCode,
+  DiffCommentCommandError,
+  DiffCommentCommandErrorCode,
+  DiffCommentCommandName,
+  DiffCommentCommands,
+  LoadDiffCommentsRequest,
+  SaveDiffCommentRequest,
+  UpdateDiffCommentRequest,
+} from "./diffComments";
+export {
+  LOAD_DIFF_COMMENTS_COMMAND,
+  SAVE_DIFF_COMMENT_COMMAND,
+  UPDATE_DIFF_COMMENT_COMMAND,
+  diffCommentCommands,
+  getDiffReviewIdentity,
+  loadDiffComments,
+  saveDiffComment,
+  updateDiffComment,
+} from "./diffComments";
+export {
+  InvalidDiffCommentResponseError,
+  decodeDiffCommentDocument,
+  decodeDiffCommentMutationOutcome,
+  decodeDiffCommentRevision,
+  decodeDiffReviewIdentity,
+} from "./diffCommentDecoder";
+
+export type {
   LoadRepositoryDiffRequest,
   LoadRepositoryDiffResponse,
   LoadRepositoryFileRequest,

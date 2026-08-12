@@ -11,10 +11,12 @@ import {
 } from "@/features/diff/domain/fileDiff";
 
 import { isRecord } from "./isRecord";
+import { decodeDiffReviewIdentity } from "./diffCommentDecoder";
 
 import type {
   BaseResolution,
   BaseResolutionFailure,
+  RepositoryChangedFile,
   BaseResolutionSource,
   IgnoredPage,
   RepositoryDiffFile,
@@ -515,6 +517,7 @@ const decodeFileChange = (
   value: unknown,
   path: string,
   raw: unknown,
+  allowUnchanged = false,
 ): RepositoryDiffFile => {
   const record = decodeRecord(value, path, raw);
   const oldPath = decodeNullableRepositoryPath(
@@ -527,12 +530,15 @@ const decodeFileChange = (
     path + ".newPath",
     raw,
   );
-  const change = decodeLiteral(
-    record.change,
-    path + ".change",
-    raw,
-    FILE_CHANGE_STATUSES,
-  );
+  const change =
+    record.change === null && allowUnchanged
+      ? null
+      : decodeLiteral(
+          record.change,
+          path + ".change",
+          raw,
+          FILE_CHANGE_STATUSES,
+        );
   const entryKind = decodeLiteral(
     record.entryKind,
     path + ".entryKind",
@@ -568,14 +574,26 @@ const decodeFileChange = (
     oldPath !== null &&
     newPath !== null &&
     oldPath !== newPath;
+  const hasUnchangedSides =
+    change === null && oldPath === null && newPath !== null;
   const sidesAreValid =
-    hasValidSides || hasDeletedSides || hasSameSides || hasRenamedSides;
+    hasValidSides ||
+    hasDeletedSides ||
+    hasSameSides ||
+    hasRenamedSides ||
+    hasUnchangedSides;
   const similarityIsValid =
     change === "renamed" || change === "copied"
       ? similarity !== null && similarity >= 50 && similarity <= 100
       : similarity === null;
+  const unchangedMetadataIsValid =
+    change !== null ||
+    (entryKind === "regular" &&
+      contentClassification === "text" &&
+      oldMode === null &&
+      newMode === null);
 
-  if (!sidesAreValid || !similarityIsValid) {
+  if (!sidesAreValid || !similarityIsValid || !unchangedMetadataIsValid) {
     throw invalid(
       path,
       "a diff file with valid oldPath/newPath/similarity invariants",
@@ -594,6 +612,29 @@ const decodeFileChange = (
     oldMode,
     newMode,
   };
+};
+
+/**
+ * @param value - Raw changed-file metadata.
+ * @param path - Decoder trace path.
+ * @param raw - Complete raw response.
+ * @returns Changed-only metadata with a non-null status.
+ */
+const decodeChangedFile = (
+  value: unknown,
+  path: string,
+  raw: unknown,
+): RepositoryChangedFile => {
+  const file = decodeFileChange(value, path, raw);
+  if (file.change === null) {
+    throw invalid(
+      path + ".change",
+      "a changed-file status",
+      "received null",
+      raw,
+    );
+  }
+  return { ...file, change: file.change };
 };
 
 const decodeContent = (
@@ -784,7 +825,7 @@ const decodeReview = (
 ): RepositoryFileReview => {
   const record = decodeRecord(value, path, raw);
   return {
-    file: decodeFileChange(record.file, path + ".file", raw),
+    file: decodeFileChange(record.file, path + ".file", raw, true),
     oldContent: decodeContent(record.oldContent, path + ".oldContent", raw),
     newContent: decodeContent(record.newContent, path + ".newContent", raw),
     patch: decodeContent(record.patch, path + ".patch", raw),
@@ -902,7 +943,7 @@ export function decodeRepositoryOverview(
     );
   }
   const changed = decodeArray(record.changed, "changed", value).map(
-    (file, index) => decodeFileChange(file, "changed[" + index + "]", value),
+    (file, index) => decodeChangedFile(file, "changed[" + index + "]", value),
   );
   const changedTree = decodeArray(record.changedTree, "changedTree", value).map(
     (node, index) => decodeTreeNode(node, "changedTree[" + index + "]", value),
@@ -923,6 +964,38 @@ export function decodeRepositoryOverview(
   const warnings = decodeArray(record.warnings, "warnings", value).map(
     (warning, index) => decodeString(warning, "warnings[" + index + "]", value),
   );
+  const diffReviewIdentity =
+    record.diffReviewIdentity === undefined ||
+    record.diffReviewIdentity === null
+      ? undefined
+      : decodeDiffReviewIdentity(
+          record.diffReviewIdentity,
+          "diffReviewIdentity",
+          value,
+        );
+  if (diffReviewIdentity !== undefined) {
+    const matchesResolvedOverview =
+      base.state === "resolved" &&
+      repositoryId === diffReviewIdentity.repositoryId &&
+      currentSnapshotId === diffReviewIdentity.currentSnapshotId &&
+      base.mergeBaseSha === diffReviewIdentity.baseSha;
+    if (!matchesResolvedOverview) {
+      throw invalid(
+        "diffReviewIdentity",
+        "a Diff review identity matching the resolved overview",
+        "identity values differ",
+        value,
+      );
+    }
+  }
+  const displayWorktreeLabel =
+    record.displayWorktreeLabel === undefined
+      ? undefined
+      : decodeString(
+          record.displayWorktreeLabel,
+          "displayWorktreeLabel",
+          value,
+        );
 
   return {
     repositoryId,
@@ -934,6 +1007,8 @@ export function decodeRepositoryOverview(
     allPaths,
     ignoredDirectories,
     warnings,
+    ...(diffReviewIdentity === undefined ? {} : { diffReviewIdentity }),
+    ...(displayWorktreeLabel === undefined ? {} : { displayWorktreeLabel }),
   };
 }
 
