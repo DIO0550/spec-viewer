@@ -49,3 +49,7 @@ current content自体がbinary / large / missing / unsupportedで取得できな
 open tab順、active path、Unified/Split/Editor、ファイルごとの変更jump、filter、展開directoryはapplication session内だけで保持します。keyはworkspaceとworktreeを含み、別worktreeへ状態を漏らしません。snapshot IDはkeyに含めず、refresh時は新snapshotのrepository全体に存在するlogical pathだけをreconcileします。
 
 detail data、base、snapshot IDはtab stateへ複製せず、snapshot-safe Repository Diff loaderを正本にします。
+
+## Diff comments
+
+行コメント、Review navigation、keyboard、storage/recoveryの詳細は [Repository Diff comments](./diff-comments.md) を参照してください。

@@ -177,6 +177,99 @@ paths and raw control characters are not included in command error messages.
 | Timeout/output cap lifecycle | `timeout_returns_typed_error_after_killing_and_reaping_child`, `stdout_cap_returns_typed_error_without_partial_output` |
 | camelCase DTO and node/cursor contract | `lazy_request_uses_current_snapshot_and_opaque_node_id_fields`, `tree_and_structured_diff_serialize_with_camel_case_contract` |
 
+## Issue #198 Diff comment contract
+
+Diff comments are an additive v1 store and command family. They do not reuse or migrate
+the Spec comment v2 document, command DTOs, anchors, export payload, MCP surface, or
+unknown-field preservation behavior. Existing Spec v2 golden read-update-write tests
+remain the compatibility authority.
+
+### Identity and presentation DTOs
+
+Repository overview is the only source of the complete `DiffReviewIdentity`:
+
+```ts
+type DiffReviewIdentity = {
+  repositoryId: `rr1_${string}`;
+  worktreeId: `rw1_${string}`;
+  baseSha: string;
+  currentSnapshotId: `rs1_${string}`;
+};
+```
+
+All load/save/update requests carry all four values unchanged. The frontend session and
+backend source lookup are keyed by all four. The persisted v1 document stores only
+`repositoryId` and `worktreeId`; immutable anchors store the historical four-value
+identity. `displayWorktreeLabel` is presentation-only and is neither a key nor persisted.
+Responses crossing repository/worktree scope are rejected by the strict frontend decoder.
+
+The commands are `load_diff_comments(identity)`,
+`save_diff_comment(identity, expectedRevision, target, body)`, and
+`update_diff_comment(identity, expectedRevision, commentId, body?, resolved?)`.
+Revision is a canonical decimal unsigned-u64 string. Lines are safe positive integers no
+greater than `u32::MAX`; `candidateCount` is a safe non-negative u32. Paths are
+canonical repository-relative UTF-8 values. Exact decoders reject unknown/retired fields,
+invalid canonical IDs/hashes/revisions, mismatched document scope, and inconsistent
+outcome revisions/warnings.
+
+Runtime resolution is exhaustive and never persisted:
+
+```ts
+type DiffAnchorResolution =
+  | { status: "exact" | "relocated"; selectionPath: string;
+      sidePath: string; side: "base" | "current"; line: number }
+  | { status: "stale"; reason: StaleAnchorReason; candidateCount: number }
+  | { status: "unavailable"; reason: UnavailableReason; canJump: false };
+```
+
+`selectionPath` chooses the logical tree/tab entry while `sidePath` labels and focuses
+the semantic base/current line. Stale and unavailable cards remain visible and cannot
+jump. Warning summaries are derived presentation data; each comment's resolution remains
+authoritative.
+
+### Mutation outcome union and commit point
+
+Successful atomic replacement is the commit point. Every mutation returns exactly one
+discriminated outcome:
+
+```ts
+type DiffCommentMutationOutcome =
+  | { kind: "committed"; document: ResolvedDiffComments; revision: string;
+      resolutionWarnings: ResolutionWarning[];
+      durability: "durable" | "uncertain" }
+  | { kind: "conflict"; latestDocument: ResolvedDiffComments;
+      latestRevision: string; resolutionWarnings: ResolutionWarning[] }
+  | { kind: "preCommitFailure"; code: "revisionOverflow";
+      currentDocument: ResolvedDiffComments; currentRevision: string;
+      retryable: false }
+  | { kind: "preCommitFailure"; code: "storeBusy" | "io"; retryable: true }
+  | { kind: "preCommitFailure"; code: "permission" | "invalidStore";
+      retryable: false };
+```
+
+Committed closes the origin draft. `durability: "uncertain"` is already committed, shows
+a reload warning, and never exposes mutation retry. Conflict installs the latest document
+while preserving and focusing the draft. Transient pre-commit failures alone expose
+retry. Permission and invalid-store establish a document-level write block across create,
+update, resolve, reopen, and re-anchor; it survives cancel/new-draft transitions and clears
+only after a successful validated reload. Overflow establishes the same block permanently
+because reload derives it again from the maximum revision. All three retain copyable text.
+Overflow also reconciles the returned current document.
+
+### Resolver deadline and cancellation
+
+A load groups anchors by candidate side/path/snapshot, loads each source once, and builds
+one hash index per loaded side. The total resolver deadline is monotonic
+`RESOLUTION_TOTAL_DEADLINE_MS = 200`. Deadline/cancellation is checked immediately before
+and after every external source load and before each index build. Once a structural
+ceiling, deadline, or cancellation is observed, no later external load starts. Every
+stored comment is still returned: the deterministic remaining suffix is
+`unavailable/budgetExceeded` or `unavailable/cancelled` with `canJump: false`.
+
+The structural ceilings are 10,000 comments/unique anchors, 100 files for the nominal
+fixture, 64 MiB total source, 2,000,000 logical lines, and 2,048 Git loads. They complement
+the deadline; they do not authorize omission or a guessed target.
+
 The feature is additive. It does not add stage, commit, discard, arbitrary two-revision
 selection, or submodule-recursive diff behavior.
 
