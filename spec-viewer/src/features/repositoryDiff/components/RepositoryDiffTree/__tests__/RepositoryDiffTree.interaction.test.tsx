@@ -112,7 +112,64 @@ test("RepositoryDiffTreeはnormal treeのfile・directory・selected stateを表
   result.unmount();
 });
 
-test("RepositoryDiffTreeはdeferred directoryのexpandとlazy callbackを起動する", () => {
+test("[R199-PERF-001] 20k treeは500 node以下を描画して選択行をmaterializeする", () => {
+  const nodes = Array.from({ length: 20_000 }, (_, index) =>
+    createNode({
+      id: `row:file-${index}`,
+      path: `src/file-${index}.ts`,
+      name: `file-${index}.ts`,
+      kind: "file",
+      entryKind: "regular",
+      contentClassification: "text",
+      change: "modified",
+      ignored: false,
+      deferredNodeId: null,
+      children: { state: "loaded", items: [], nextCursor: null, message: null },
+    }),
+  );
+  const result = renderTree({
+    nodes,
+    selectedPath: "src/file-19999.ts",
+  });
+  const rows =
+    result.container.querySelectorAll<HTMLButtonElement>('[role="treeitem"]');
+
+  expect(rows.length).toBeLessThanOrEqual(500);
+  expect(
+    result.container.querySelector('[aria-selected="true"]')?.textContent,
+  ).toContain("file-19999.ts");
+  expect(rows[rows.length - 1]?.getAttribute("aria-posinset")).toBe("20000");
+  expect(rows[rows.length - 1]?.getAttribute("aria-setsize")).toBe("20000");
+  result.unmount();
+});
+
+test("20k treeはEnd navigationでwindow外の末尾行をmaterializeしてfocusする", () => {
+  const nodes = Array.from({ length: 20_000 }, (_, index) =>
+    createNode({
+      id: `row:file-${index}`,
+      path: `src/file-${index}.ts`,
+      name: `file-${index}.ts`,
+      kind: "file",
+      entryKind: "regular",
+      deferredNodeId: null,
+      children: { state: "loaded", items: [], nextCursor: null, message: null },
+    }),
+  );
+  const result = renderTree({ nodes });
+  const first =
+    result.container.querySelector<HTMLButtonElement>('[role="treeitem"]')!;
+
+  act(() =>
+    first.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "End", bubbles: true }),
+    ),
+  );
+
+  expect(document.activeElement?.textContent).toContain("file-19999.ts");
+  result.unmount();
+});
+
+test("[R199-TREE-014] RepositoryDiffTreeはdeferred directoryのexpandとlazy callbackを起動する", () => {
   const onToggleDirectory = vi.fn();
   const onLoadChildren = vi.fn();
   const result = renderTree({

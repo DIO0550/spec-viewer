@@ -41,6 +41,7 @@ type VisibleNode = Readonly<{
 
 const TREE_ITEM_INDENT = 10;
 const TREE_ITEM_INDENT_STEP = 16;
+const MAX_RENDERED_TREE_ITEMS = 500;
 
 /** Displays the controlled repository tree and its safe async states. */
 export function RepositoryDiffTree(
@@ -82,6 +83,10 @@ export function RepositoryDiffTree(
       setFocusedId(visibleNodes[0]?.node.id ?? null);
     }
   }, [focusedId, selectedPath, visibleNodes]);
+
+  useEffect(() => {
+    itemRefs.current.get(focusedId ?? "")?.focus();
+  }, [focusedId]);
 
   const focusAt = useCallback(
     (index: number): void => {
@@ -174,6 +179,7 @@ export function RepositoryDiffTree(
       onToggleDirectory,
       toggleNode,
       visibleNodes,
+      expandedSet,
     ],
   );
 
@@ -246,20 +252,123 @@ export function RepositoryDiffTree(
       }
       aria-busy={false}
     >
-      <TreeLevel
-        nodes={nodes}
-        depth={0}
-        parentId={null}
-        expandedSet={expandedSet}
-        selectedPath={selectedPath}
-        tabbableId={tabbableId}
-        itemRefs={itemRefs.current}
-        onToggleNode={toggleNode}
-        onSelectFile={onSelectFile}
-        onLoadChildren={onLoadChildren}
-        onKeyDown={handleKeyDown}
-      />
+      {visibleNodes.length > MAX_RENDERED_TREE_ITEMS ? (
+        <WindowedTree
+          visibleNodes={windowVisibleNodes(visibleNodes, tabbableId)}
+          expandedSet={expandedSet}
+          totalSize={visibleNodes.length}
+          selectedPath={selectedPath}
+          tabbableId={tabbableId}
+          itemRefs={itemRefs.current}
+          onToggleNode={toggleNode}
+          onSelectFile={onSelectFile}
+          onKeyDown={handleKeyDown}
+        />
+      ) : (
+        <TreeLevel
+          nodes={nodes}
+          depth={0}
+          parentId={null}
+          expandedSet={expandedSet}
+          selectedPath={selectedPath}
+          tabbableId={tabbableId}
+          itemRefs={itemRefs.current}
+          onToggleNode={toggleNode}
+          onSelectFile={onSelectFile}
+          onLoadChildren={onLoadChildren}
+          onKeyDown={handleKeyDown}
+        />
+      )}
     </div>
+  );
+}
+
+type WindowedTreeProps = Readonly<{
+  visibleNodes: readonly Readonly<{
+    visibleNode: VisibleNode;
+    index: number;
+  }>[];
+  expandedSet: ReadonlySet<string>;
+  totalSize: number;
+  selectedPath: string | null;
+  tabbableId: string | null;
+  itemRefs: Map<string, HTMLButtonElement>;
+  onToggleNode: (node: RepositoryDiffTreeProjectionNode) => void;
+  onSelectFile: (path: string) => void;
+  onKeyDown: (
+    event: KeyboardEvent<HTMLButtonElement>,
+    visibleNode: VisibleNode,
+  ) => void;
+}>;
+
+function WindowedTree(props: WindowedTreeProps): ReactElement {
+  const {
+    visibleNodes,
+    expandedSet,
+    totalSize,
+    selectedPath,
+    tabbableId,
+    itemRefs,
+    onToggleNode,
+    onSelectFile,
+    onKeyDown,
+  } = props;
+
+  return (
+    <>
+      {visibleNodes.map(({ visibleNode, index }) => {
+        const { node, depth } = visibleNode;
+        const expandable = isExpandable(node);
+        const isSelected = node.kind === "file" && node.path === selectedPath;
+        return (
+          <button
+            key={node.id}
+            ref={(element) => {
+              if (element === null) {
+                itemRefs.delete(node.id);
+                return;
+              }
+              itemRefs.set(node.id, element);
+            }}
+            className="repository-diff-tree__item"
+            style={{
+              paddingInlineStart:
+                TREE_ITEM_INDENT + depth * TREE_ITEM_INDENT_STEP,
+            }}
+            type="button"
+            role="treeitem"
+            aria-level={depth + 1}
+            aria-posinset={index + 1}
+            aria-setsize={totalSize}
+            aria-expanded={expandable ? expandedSet.has(node.path) : undefined}
+            aria-selected={isSelected}
+            tabIndex={node.id === tabbableId ? 0 : -1}
+            onClick={() => {
+              if (expandable) {
+                onToggleNode(node);
+                return;
+              }
+              onSelectFile(node.path);
+            }}
+            onKeyDown={(event) => onKeyDown(event, visibleNode)}
+          >
+            <span className="repository-diff-tree__chevron" aria-hidden="true">
+              {expandable ? "▸" : ""}
+            </span>
+            <span className="repository-diff-tree__token" aria-hidden="true">
+              {getNodeToken(node)}
+            </span>
+            <span className="repository-diff-tree__sr-label">
+              {getNodeLabel(node)}
+            </span>
+            <span className="repository-diff-tree__name">{node.name}</span>
+            {node.path === node.name ? null : (
+              <span className="repository-diff-tree__path">{node.path}</span>
+            )}
+          </button>
+        );
+      })}
+    </>
   );
 }
 
@@ -449,6 +558,25 @@ function flattenVisibleNodes(
       ),
     ];
   });
+}
+
+function windowVisibleNodes(
+  visibleNodes: readonly VisibleNode[],
+  targetId: string | null,
+): readonly Readonly<{ visibleNode: VisibleNode; index: number }>[] {
+  const targetIndex = Math.max(
+    0,
+    visibleNodes.findIndex(({ node }) => node.id === targetId),
+  );
+  const halfWindow = Math.floor(MAX_RENDERED_TREE_ITEMS / 2);
+  const maximumStart = visibleNodes.length - MAX_RENDERED_TREE_ITEMS;
+  const start = Math.min(Math.max(0, targetIndex - halfWindow), maximumStart);
+  return visibleNodes
+    .slice(start, start + MAX_RENDERED_TREE_ITEMS)
+    .map((visibleNode, offset) => ({
+      visibleNode,
+      index: start + offset,
+    }));
 }
 
 function isExpandable(node: RepositoryDiffTreeProjectionNode): boolean {
