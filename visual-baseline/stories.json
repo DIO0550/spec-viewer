@@ -185,6 +185,81 @@
     "name": "Worktree Open"
   },
   {
+    "id": "diff-comments-statefulworkspace--all-unchanged-persistence",
+    "title": "Diff/Comments/StatefulWorkspace",
+    "name": "All Unchanged Persistence"
+  },
+  {
+    "id": "diff-comments-statefulworkspace--base-editor-hide-restore",
+    "title": "Diff/Comments/StatefulWorkspace",
+    "name": "Base Editor Hide Restore"
+  },
+  {
+    "id": "diff-comments-statefulworkspace--create-jump-refresh",
+    "title": "Diff/Comments/StatefulWorkspace",
+    "name": "Create Jump Refresh"
+  },
+  {
+    "id": "diff-comments-statefulworkspace--pending-identity-aba",
+    "title": "Diff/Comments/StatefulWorkspace",
+    "name": "Pending Identity ABA"
+  },
+  {
+    "id": "diff-comments-statefulworkspace--stale-reanchor-and-discard",
+    "title": "Diff/Comments/StatefulWorkspace",
+    "name": "Stale Reanchor And Discard"
+  },
+  {
+    "id": "diff-comments-viewerintegration--all-props",
+    "title": "Diff/Comments/ViewerIntegration",
+    "name": "All Props"
+  },
+  {
+    "id": "diff-comments-viewerintegration--converged-comments",
+    "title": "Diff/Comments/ViewerIntegration",
+    "name": "Converged Comments"
+  },
+  {
+    "id": "diff-comments-viewerintegration--default",
+    "title": "Diff/Comments/ViewerIntegration",
+    "name": "Default"
+  },
+  {
+    "id": "diff-comments-viewerintegration--edge-cases",
+    "title": "Diff/Comments/ViewerIntegration",
+    "name": "Edge Cases"
+  },
+  {
+    "id": "diff-comments-viewerintegration--editor-comments",
+    "title": "Diff/Comments/ViewerIntegration",
+    "name": "Editor Comments"
+  },
+  {
+    "id": "diff-comments-viewerintegration--large-editor",
+    "title": "Diff/Comments/ViewerIntegration",
+    "name": "Large Editor"
+  },
+  {
+    "id": "diff-comments-viewerintegration--large-split",
+    "title": "Diff/Comments/ViewerIntegration",
+    "name": "Large Split"
+  },
+  {
+    "id": "diff-comments-viewerintegration--large-unified",
+    "title": "Diff/Comments/ViewerIntegration",
+    "name": "Large Unified"
+  },
+  {
+    "id": "diff-comments-viewerintegration--split-comments",
+    "title": "Diff/Comments/ViewerIntegration",
+    "name": "Split Comments"
+  },
+  {
+    "id": "diff-comments-viewerintegration--unified-comments",
+    "title": "Diff/Comments/ViewerIntegration",
+    "name": "Unified Comments"
+  },
+  {
     "id": "features-comments-components-addcommentpopover--default",
     "title": "features/comments/components/AddCommentPopover",
     "name": "Default"
@@ -573,6 +648,126 @@
     "id": "features-diff-revisionselector--tag-selected",
     "title": "Features/Diff/RevisionSelector",
     "name": "Tag Selected"
+  },
+  {
+    "id": "features-diffcomments-components-diffcommentcomposer--all-props",
+    "title": "features/diffComments/components/DiffCommentComposer",
+    "name": "All Props"
+  },
+  {
+    "id": "features-diffcomments-components-diffcommentcomposer--committed-warnings",
+    "title": "features/diffComments/components/DiffCommentComposer",
+    "name": "Committed Warnings"
+  },
+  {
+    "id": "features-diffcomments-components-diffcommentcomposer--default",
+    "title": "features/diffComments/components/DiffCommentComposer",
+    "name": "Default"
+  },
+  {
+    "id": "features-diffcomments-components-diffcommentcomposer--durability-uncertain",
+    "title": "features/diffComments/components/DiffCommentComposer",
+    "name": "Durability Uncertain"
+  },
+  {
+    "id": "features-diffcomments-components-diffcommentcomposer--edge-cases",
+    "title": "features/diffComments/components/DiffCommentComposer",
+    "name": "Edge Cases"
+  },
+  {
+    "id": "features-diffcomments-components-diffcommentcomposer--pre-commit-failures",
+    "title": "features/diffComments/components/DiffCommentComposer",
+    "name": "Pre Commit Failures"
+  },
+  {
+    "id": "features-diffcomments-components-diffcommentcomposer--revision-conflict",
+    "title": "features/diffComments/components/DiffCommentComposer",
+    "name": "Revision Conflict"
+  },
+  {
+    "id": "features-diffcomments-components-diffcommentcomposer--revision-overflow",
+    "title": "features/diffComments/components/DiffCommentComposer",
+    "name": "Revision Overflow"
+  },
+  {
+    "id": "features-diffcomments-components-diffcommentcomposer--stale-target",
+    "title": "features/diffComments/components/DiffCommentComposer",
+    "name": "Stale Target"
+  },
+  {
+    "id": "features-diffcomments-components-difflinecommentcontrol--all-props",
+    "title": "features/diffComments/components/DiffLineCommentControl",
+    "name": "All Props"
+  },
+  {
+    "id": "features-diffcomments-components-difflinecommentcontrol--default",
+    "title": "features/diffComments/components/DiffLineCommentControl",
+    "name": "Default"
+  },
+  {
+    "id": "features-diffcomments-components-difflinecommentcontrol--edge-cases",
+    "title": "features/diffComments/components/DiffLineCommentControl",
+    "name": "Edge Cases"
+  },
+  {
+    "id": "features-diffcomments-components-diffreviewsidebar--all-props",
+    "title": "features/diffComments/components/DiffReviewSidebar",
+    "name": "All Props"
+  },
+  {
+    "id": "features-diffcomments-components-diffreviewsidebar--committed-warnings",
+    "title": "features/diffComments/components/DiffReviewSidebar",
+    "name": "Committed Warnings"
+  },
+  {
+    "id": "features-diffcomments-components-diffreviewsidebar--default",
+    "title": "features/diffComments/components/DiffReviewSidebar",
+    "name": "Default"
+  },
+  {
+    "id": "features-diffcomments-components-diffreviewsidebar--edge-cases",
+    "title": "features/diffComments/components/DiffReviewSidebar",
+    "name": "Edge Cases"
+  },
+  {
+    "id": "features-diffcomments-components-diffreviewsidebar--empty",
+    "title": "features/diffComments/components/DiffReviewSidebar",
+    "name": "Empty"
+  },
+  {
+    "id": "features-diffcomments-components-diffreviewsidebar--error",
+    "title": "features/diffComments/components/DiffReviewSidebar",
+    "name": "Error"
+  },
+  {
+    "id": "features-diffcomments-components-diffreviewsidebar--large-review-list",
+    "title": "features/diffComments/components/DiffReviewSidebar",
+    "name": "Large Review List"
+  },
+  {
+    "id": "features-diffcomments-components-diffreviewsidebar--loading",
+    "title": "features/diffComments/components/DiffReviewSidebar",
+    "name": "Loading"
+  },
+  {
+    "id": "features-diffcomments-components-diffreviewsidebar--resolution-states",
+    "title": "features/diffComments/components/DiffReviewSidebar",
+    "name": "Resolution States"
+  },
+  {
+    "id": "features-diffcomments-components-diffreviewsidebar--resolver-stopped",
+    "title": "features/diffComments/components/DiffReviewSidebar",
+    "name": "Resolver Stopped"
+  },
+  {
+    "id": "features-diffcomments-components-diffreviewsidebar--revision-conflict",
+    "title": "features/diffComments/components/DiffReviewSidebar",
+    "name": "Revision Conflict"
+  },
+  {
+    "id": "features-diffcomments-components-diffreviewsidebar--status-filters",
+    "title": "features/diffComments/components/DiffReviewSidebar",
+    "name": "Status Filters"
   },
   {
     "id": "features-repositorydiff-components-repositorydifffileheader--all-props",
