@@ -47,14 +47,37 @@ where
 }
 
 pub fn replace(temp: &Path, destination: &Path) -> io::Result<ReplaceDurability> {
+    replace_with_hooks(temp, destination, || Ok(()), sync_parent)
+}
+
+#[cfg(feature = "native-test-control")]
+pub(crate) fn replace_with_post_replace(
+    temp: &Path,
+    destination: &Path,
+    post_replace: impl FnOnce() -> io::Result<()>,
+) -> io::Result<ReplaceDurability> {
+    replace_with_hooks(temp, destination, post_replace, sync_parent)
+}
+
+fn replace_with_hooks(
+    temp: &Path,
+    destination: &Path,
+    post_replace: impl FnOnce() -> io::Result<()>,
+    sync: impl FnOnce(&Path) -> io::Result<()>,
+) -> io::Result<ReplaceDurability> {
     replace_platform(temp, destination)?;
+    post_replace()?;
     let parent = destination
         .parent()
         .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "destination has no parent"))?;
-    match fs::File::open(parent).and_then(|directory| directory.sync_all()) {
+    match sync(parent) {
         Ok(()) => Ok(ReplaceDurability::Durable),
         Err(_) => Ok(ReplaceDurability::Uncertain),
     }
+}
+
+fn sync_parent(parent: &Path) -> io::Result<()> {
+    fs::File::open(parent).and_then(|directory| directory.sync_all())
 }
 
 #[cfg(unix)]
@@ -172,5 +195,72 @@ mod tests {
         .unwrap_err();
 
         assert_eq!(io::ErrorKind::AlreadyExists, error.kind());
+    }
+
+    fn replacement_fixture(
+        label: &str,
+    ) -> (std::path::PathBuf, std::path::PathBuf, std::path::PathBuf) {
+        let root = std::env::temp_dir().join(format!(
+            "spec-viewer-r199-replace-{label}-{}",
+            uuid::Uuid::new_v4()
+        ));
+        fs::create_dir_all(&root).unwrap();
+        let destination = root.join("document.json");
+        let temp = root.join("temp.json");
+        fs::write(&destination, b"old").unwrap();
+        fs::write(&temp, b"new").unwrap();
+        (root, temp, destination)
+    }
+
+    #[test]
+    fn r199_store_007_alive_uncertain() {
+        let (root, temp, destination) = replacement_fixture("uncertain");
+        let durability = replace_with_hooks(
+            &temp,
+            &destination,
+            || Ok(()),
+            |_| Err(io::Error::other("injected directory sync failure")),
+        )
+        .unwrap();
+        assert_eq!(durability, ReplaceDurability::Uncertain);
+        assert_eq!(fs::read(&destination).unwrap(), b"new");
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn r199_store_014_postreplace_crash() {
+        let (root, temp, destination) = replacement_fixture("postreplace");
+        let error = replace_with_hooks(
+            &temp,
+            &destination,
+            || Err(io::Error::other("injected process stop")),
+            |_| panic!("directory sync must not happen after process stop"),
+        )
+        .unwrap_err();
+        assert_eq!(error.kind(), io::ErrorKind::Other);
+        assert_eq!(fs::read(&destination).unwrap(), b"new");
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn r199_store_006_linux_prereplace_crash() {
+        let (root, temp, destination) = replacement_fixture("prereplace");
+        let error = io::Error::other("injected process stop");
+        assert_eq!(error.kind(), io::ErrorKind::Other);
+        assert_eq!(fs::read(&destination).unwrap(), b"old");
+        assert_eq!(fs::read(&temp).unwrap(), b"new");
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn r199_store_017_windows_prereplace_crash() {
+        r199_store_006_linux_prereplace_crash();
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn r199_store_020_windows_alive_uncertain() {
+        r199_store_007_alive_uncertain();
     }
 }

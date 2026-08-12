@@ -18,6 +18,10 @@ repository = "https://github.com/DIO0550/spec-viewer"
 name = "spec_reviewer_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+[features]
+default = []
+native-test-control = []
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 

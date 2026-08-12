@@ -51,7 +51,9 @@ impl GitRunner {
         content: bool,
         stdout_limit: usize,
     ) -> Result<Vec<u8>, RepositoryPortError> {
-        let mut child = Command::new("git")
+        let mut command = Command::new("git");
+        isolate_git_environment(&mut command);
+        let mut child = command
             .arg("-C")
             .arg(cwd)
             .args(args)
@@ -143,6 +145,24 @@ impl GitRunner {
         Ok(stdout.0)
     }
 }
+
+fn isolate_git_environment(command: &mut Command) {
+    command
+        .env("GIT_CONFIG_NOSYSTEM", "1")
+        .env(
+            "GIT_CONFIG_GLOBAL",
+            if cfg!(windows) { "NUL" } else { "/dev/null" },
+        )
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .env("GCM_INTERACTIVE", "Never")
+        .env("LC_ALL", "C")
+        .env("LANG", "C")
+        .env("TZ", "UTC")
+        .env_remove("GIT_CONFIG_COUNT")
+        .env_remove("GIT_CONFIG_KEY_0")
+        .env_remove("GIT_CONFIG_VALUE_0");
+}
+
 fn sanitize_diagnostic(bytes: &[u8]) -> String {
     let mut sanitized = String::new();
     for character in String::from_utf8_lossy(bytes).chars() {
@@ -193,6 +213,31 @@ fn read_capped(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::ffi::OsStr;
+
+    #[test]
+    fn r199_git_001_env_isolation() {
+        let mut command = Command::new("git");
+        isolate_git_environment(&mut command);
+        let values = command
+            .get_envs()
+            .collect::<std::collections::BTreeMap<_, _>>();
+        assert_eq!(
+            values.get(OsStr::new("GIT_CONFIG_NOSYSTEM")),
+            Some(&Some(OsStr::new("1")))
+        );
+        assert_eq!(
+            values.get(OsStr::new("GIT_TERMINAL_PROMPT")),
+            Some(&Some(OsStr::new("0")))
+        );
+        assert_eq!(
+            values.get(OsStr::new("LC_ALL")),
+            Some(&Some(OsStr::new("C")))
+        );
+        assert_eq!(values.get(OsStr::new("TZ")), Some(&Some(OsStr::new("UTC"))));
+        assert_eq!(values.get(OsStr::new("GIT_CONFIG_COUNT")), Some(&None));
+    }
+
     #[test]
     fn diagnostics_escape_control_characters_and_are_bounded() {
         let input = format!("line\nsecret\0{}", "x".repeat(5000));

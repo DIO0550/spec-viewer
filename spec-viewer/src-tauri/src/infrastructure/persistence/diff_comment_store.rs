@@ -204,12 +204,29 @@ fn write_temp_and_replace(
     file.write_all(bytes).map_err(map_io)?;
     file.sync_all().map_err(map_io)?;
     drop(file);
+    #[cfg(feature = "native-test-control")]
+    super::native_test_control::wait_if_armed(
+        super::native_test_control::CrashPhase::PreReplace,
+        bytes,
+    )
+    .map_err(map_io)?;
     #[cfg(test)]
     if std::env::var_os("SPEC_VIEWER_DIFF_STORE_KILL_AFTER_TEMP_SYNC").is_some() {
         // Test-only crash point: replacement has not happened, so the old document must survive.
         std::process::exit(91);
     }
-    atomic_replace::replace(temp, destination).map_err(map_io)
+    #[cfg(feature = "native-test-control")]
+    let replace = || {
+        atomic_replace::replace_with_post_replace(temp, destination, || {
+            super::native_test_control::wait_if_armed(
+                super::native_test_control::CrashPhase::PostReplace,
+                bytes,
+            )
+        })
+    };
+    #[cfg(not(feature = "native-test-control"))]
+    let replace = || atomic_replace::replace(temp, destination);
+    replace().map_err(map_io)
 }
 
 #[cfg(unix)]
@@ -279,6 +296,139 @@ mod tests {
         )
         .unwrap();
         StoredDiffComment::new("c1".into(), "body".into(), false, Utc::now(), anchor).unwrap()
+    }
+
+    fn store_root(label: &str) -> std::path::PathBuf {
+        let root =
+            std::env::temp_dir().join(format!("spec-viewer-r199-{label}-{}", Uuid::new_v4()));
+        fs::create_dir_all(&root).unwrap();
+        root
+    }
+
+    fn commit_one(
+        store: &FilesystemDiffCommentStore,
+        id: &DiffReviewIdentity,
+    ) -> StoredMutationOutcome {
+        store
+            .mutate(id, DiffCommentRevision::ZERO, &|document, revision| {
+                document
+                    .with_comments(revision, vec![comment(id.clone())])
+                    .map_err(|_| DiffCommentRepositoryError::InvalidStore)
+            })
+            .unwrap()
+    }
+
+    #[test]
+    fn r199_store_001_revision_zero() {
+        let root = store_root("revision-zero");
+        assert_eq!(
+            FilesystemDiffCommentStore::new(root.clone())
+                .load(&identity())
+                .unwrap()
+                .revision(),
+            DiffCommentRevision::ZERO
+        );
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn r199_store_002_increment() {
+        let root = store_root("increment");
+        let store = FilesystemDiffCommentStore::new(root.clone());
+        let StoredMutationOutcome::Committed { document, .. } = commit_one(&store, &identity())
+        else {
+            panic!("first mutation must commit");
+        };
+        assert_eq!(document.revision().get(), 1);
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn r199_store_003_conflict() {
+        let root = store_root("conflict");
+        let store = FilesystemDiffCommentStore::new(root.clone());
+        commit_one(&store, &identity());
+        assert!(matches!(
+            store.mutate(&identity(), DiffCommentRevision::ZERO, &|_, _| unreachable!()).unwrap(),
+            StoredMutationOutcome::Conflict { latest_document } if latest_document.revision().get() == 1
+        ));
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn r199_store_004_overflow() {
+        let root = store_root("overflow");
+        let store = FilesystemDiffCommentStore::new(root.clone());
+        let id = identity();
+        let paths = store.paths(&id).unwrap();
+        let max = u64::MAX.to_string().parse::<DiffCommentRevision>().unwrap();
+        let document = StoredDiffCommentDocument::new(id.scope(), max, vec![]).unwrap();
+        fs::write(
+            paths.document(),
+            diff_comment_json::encode(&document).unwrap(),
+        )
+        .unwrap();
+        assert!(matches!(
+            store.mutate(&id, max, &|_, _| unreachable!()).unwrap(),
+            StoredMutationOutcome::RevisionOverflow { current_document } if current_document.revision() == max
+        ));
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn r199_store_010_worktree_isolation() {
+        let root = store_root("isolation");
+        let first = identity();
+        let second = DiffReviewIdentity::new(
+            first.repository_id().clone(),
+            WorktreeStorageId::parse(format!("rw1_{}", "9".repeat(64))).unwrap(),
+            first.base_sha().clone(),
+            first.current_snapshot_id().clone(),
+        );
+        let store = FilesystemDiffCommentStore::new(root.clone());
+        commit_one(&store, &first);
+        assert_eq!(store.load(&first).unwrap().comments().len(), 1);
+        assert!(store.load(&second).unwrap().comments().is_empty());
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn r199_store_012_envelope_mismatch() {
+        let root = store_root("envelope-mismatch");
+        let store = FilesystemDiffCommentStore::new(root.clone());
+        let stored = identity();
+        let expected = DiffReviewIdentity::new(
+            RepositoryId::parse(format!("rr1_{}", "8".repeat(64))).unwrap(),
+            stored.worktree_id().clone(),
+            stored.base_sha().clone(),
+            stored.current_snapshot_id().clone(),
+        );
+        let paths = store.paths(&expected).unwrap();
+        let document = StoredDiffCommentDocument::empty(stored.scope());
+        fs::write(
+            paths.document(),
+            diff_comment_json::encode(&document).unwrap(),
+        )
+        .unwrap();
+        assert!(matches!(
+            store.load(&expected),
+            Err(DiffCommentRepositoryError::InvalidStore)
+        ));
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn r199_store_013_runtime_not_stored() {
+        let document = StoredDiffCommentDocument::new(
+            identity().scope(),
+            DiffCommentRevision::ZERO,
+            vec![comment(identity())],
+        )
+        .unwrap();
+        let value: serde_json::Value =
+            serde_json::from_slice(&diff_comment_json::encode(&document).unwrap()).unwrap();
+        assert!(value["comments"][0].get("anchorResolution").is_none());
+        assert!(value.get("resolutionWarnings").is_none());
     }
 
     #[test]
@@ -494,5 +644,58 @@ mod tests {
         assert_eq!(reopened.revision().get(), 1);
         assert_eq!(reopened.comments()[0].body(), "body");
         let _ = fs::remove_dir_all(root);
+    }
+
+    fn assert_diff_and_spec_bytes_are_isolated() {
+        let root = store_root("spec-diff-isolation");
+        let spec_path = root.join("comments.v2.json");
+        let spec_bytes = br#"{"version":2,"comments":[]}"#;
+        fs::write(&spec_path, spec_bytes).unwrap();
+        let store = FilesystemDiffCommentStore::new(root.clone());
+        let id = identity();
+        commit_one(&store, &id);
+        assert_eq!(fs::read(&spec_path).unwrap(), spec_bytes);
+
+        let paths = store.paths(&id).unwrap();
+        let diff_before = fs::read(paths.document()).unwrap();
+        fs::write(
+            &spec_path,
+            br#"{"version":2,"comments":[],"extension":true}"#,
+        )
+        .unwrap();
+        assert_eq!(fs::read(paths.document()).unwrap(), diff_before);
+        assert_eq!(
+            FilesystemDiffCommentStore::new(root.clone())
+                .load(&id)
+                .unwrap()
+                .comments()
+                .len(),
+            1
+        );
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn r199_store_008_linux_diff_preserves_spec() {
+        assert_diff_and_spec_bytes_are_isolated();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn r199_store_009_linux_spec_preserves_diff() {
+        assert_diff_and_spec_bytes_are_isolated();
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn r199_store_018_windows_diff_preserves_spec() {
+        assert_diff_and_spec_bytes_are_isolated();
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn r199_store_019_windows_spec_preserves_diff() {
+        assert_diff_and_spec_bytes_are_isolated();
     }
 }

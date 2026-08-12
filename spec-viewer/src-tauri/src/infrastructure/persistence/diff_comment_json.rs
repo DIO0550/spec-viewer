@@ -425,4 +425,19 @@ mod tests {
             Value::String(format!("rr1_{}", "9".repeat(64)));
         assert!(decode(&serde_json::to_vec(&value).unwrap(), &refreshed_identity()).is_err());
     }
+
+    #[test]
+    fn r199_store_011_invalid_revision() {
+        for revision in ["00", "01", "-1", "+1", "18446744073709551616"] {
+            let bytes = format!(
+                r#"{{"version":1,"repositoryId":"{}","worktreeId":"{}","revision":"{revision}","comments":[]}}"#,
+                identity().repository_id().as_str(),
+                identity().worktree_id().as_str()
+            );
+            assert!(
+                decode(bytes.as_bytes(), &identity()).is_err(),
+                "accepted {revision}"
+            );
+        }
+    }
 }

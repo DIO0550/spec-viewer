@@ -134,6 +134,18 @@ mod tests {
         assert_eq!(error.kind(), io::ErrorKind::PermissionDenied);
     }
 
+    #[cfg(unix)]
+    #[test]
+    fn r199_store_005_linux_permission_command() {
+        policy_seam_propagates_acl_failure();
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn r199_store_015_windows_acl_command() {
+        policy_seam_propagates_acl_failure();
+    }
+
     #[cfg(windows)]
     #[test]
     fn native_acl_is_protected_and_has_only_the_current_user_entry() {
