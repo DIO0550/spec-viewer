@@ -208,7 +208,11 @@ test("actual Appでconvergence pickerがfilter/searchを解除しcardを選択�
     page.getByText("条件に一致するコメントはありません"),
   ).toBeVisible();
 
-  await page.getByRole("button", { name: "コメント2件を選択" }).click();
+  await page
+    .getByRole("button", {
+      name: "implementation-plan.md current 2行目のコメント2件を選択",
+    })
+    .click();
   await expect(
     page.getByRole("menuitem", { name: "converged first" }),
   ).toBeFocused();
@@ -295,7 +299,9 @@ test("actual AppでAll unchanged current lineをsave reload jumpする", async (
     "true",
   );
   await expect(
-    page.getByRole("button", { name: "コメント1件を表示" }),
+    page.getByRole("button", {
+      name: "notes.md current 2行目のコメント1件を表示",
+    }),
   ).toHaveAttribute("aria-current", "true");
 });
 
@@ -360,7 +366,9 @@ test("actual Appでrelocatedだけjump可能、staleは非jumpでexport操作を
     })
     .click();
   await expect(
-    page.getByRole("button", { name: "コメント1件を表示" }),
+    page.getByRole("button", {
+      name: "implementation-plan.md current 2行目のコメント1件を表示",
+    }),
   ).toBeFocused();
   await expect(
     page.getByRole("button", {
@@ -385,7 +393,9 @@ test("actual Appでfoldedかつwindow外のtargetを展開してfocusする", as
     .click();
 
   await expect(
-    page.getByRole("button", { name: "コメント1件を表示" }),
+    page.getByRole("button", {
+      name: "implementation-plan.md current 150行目のコメント1件を表示",
+    }),
   ).toBeFocused();
   await expect(page.getByRole("row", { name: /省略/ })).toHaveCount(0);
 });

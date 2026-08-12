@@ -56,7 +56,9 @@ test("occupied targetはindicatorを表示し追加controlを出さない", () =
   });
   const view = renderViewer("unified", controller);
 
-  expect(findButton(view, "コメント1件を表示")).not.toBeNull();
+  expect(
+    findButton(view, "implementation-plan.md current 2行目のコメント1件を表示"),
+  ).not.toBeNull();
   expect(
     Array.from(view.querySelectorAll("button")).some(
       (button) =>

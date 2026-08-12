@@ -95,7 +95,7 @@ export function DiffLineCommentControl(
       <button
         type="button"
         className="diff-line-comment-control diff-line-comment-control--indicator"
-        aria-label="コメント1件を表示"
+        aria-label={`${label}のコメント1件を表示`}
         aria-current={
           firstComment.id === props.activeCommentId ? "true" : undefined
         }
@@ -112,7 +112,7 @@ export function DiffLineCommentControl(
         ref={triggerRef}
         type="button"
         className="diff-line-comment-control diff-line-comment-control--indicator"
-        aria-label={`コメント${orderedComments.length}件を選択`}
+        aria-label={`${label}のコメント${orderedComments.length}件を選択`}
         aria-expanded={isPickerOpen}
         aria-controls={`${createControlId(props.target.key)}-picker`}
         aria-haspopup="menu"

@@ -41,7 +41,9 @@ test("既存commentがある行は追加を隠してindicatorからcardを選択
   });
 
   expect(view.textContent).not.toContain("コメントを追加");
-  act(() => findButton(view, "コメント1件を表示").click());
+  act(() =>
+    findButton(view, "src/file.ts current 4行目のコメント1件を表示").click(),
+  );
   expect(onSelectComment).toHaveBeenCalledWith("one");
 });
 
@@ -56,7 +58,9 @@ test("収束したcommentはcreatedAtとID順のpickerで選べる", () => {
     onSelectComment,
   });
 
-  act(() => findButton(view, "コメント3件を選択").click());
+  act(() =>
+    findButton(view, "src/file.ts current 4行目のコメント3件を選択").click(),
+  );
   const options = Array.from(
     view.querySelectorAll<HTMLButtonElement>("[role='menuitem']"),
   );
@@ -77,7 +81,10 @@ test("収束pickerはArrowで巡回しEscapeで閉じてtriggerへfocusを戻す
     ],
     activeCommentId: "b",
   });
-  const trigger = findButton(view, "コメント2件を選択");
+  const trigger = findButton(
+    view,
+    "src/file.ts current 4行目のコメント2件を選択",
+  );
 
   act(() => trigger.click());
   const options = Array.from(
