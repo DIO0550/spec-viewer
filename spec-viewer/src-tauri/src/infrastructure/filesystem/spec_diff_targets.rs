@@ -166,6 +166,10 @@ impl ResolveSpecDiffTargets for FilesystemSpecDiffTargetResolver {
         let nodes = FilesystemSpecTreeScanner::new()
             .scan(&layout, &config)
             .map_err(|_| SpecDiffTargetResolutionError::SpecTreeScan)?;
+        // Candidate paths use the configured workspace spelling. Keep the boundary
+        // comparison in that same lexical namespace: Windows canonicalization can
+        // expand a short path into an extended (`\\?\`) path.
+        let configured_root = Self::absolute_lexical_path(Path::new(layout.root().as_str()))?;
         let root = fs::canonicalize(layout.root().as_str())
             .map_err(|_| SpecDiffTargetResolutionError::Io)?;
         let primary_source_group = match layout.kind() {
@@ -173,7 +177,13 @@ impl ResolveSpecDiffTargets for FilesystemSpecDiffTargetResolver {
             WorkspaceKind::PluginWorktree => ".specs",
         };
         let mut targets = Vec::new();
-        self.collect_targets(&nodes, primary_source_group, &layout, &root, &mut targets)?;
+        self.collect_targets(
+            &nodes,
+            primary_source_group,
+            &layout,
+            &configured_root,
+            &mut targets,
+        )?;
         let worktree = WorktreeId::new(Self::path_text(&root)?)
             .map_err(|_| SpecDiffTargetResolutionError::Io)?;
 
@@ -273,10 +283,10 @@ mod tests {
 
     #[test]
     fn repository_path_is_slash_separated_and_relative() {
-        let root = Path::new("/repo");
+        let root = std::env::temp_dir().join("spec-viewer-repository-path-test");
         let path = FilesystemSpecDiffTargetResolver::repository_relative_path(
-            root,
-            Path::new("/repo/specs/001/tasks.md"),
+            &root,
+            &root.join("specs/001/tasks.md"),
         )
         .unwrap();
         assert_eq!(path.as_str(), "specs/001/tasks.md");
