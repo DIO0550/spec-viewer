@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 
 import { buildEvidence } from "../../../scripts/generate-review-evidence.mjs";
+import type { ReviewAcceptanceLeaf } from "./review-phase-1";
 
 const leaf = {
   id: "R199-UNIT-001",
@@ -10,7 +11,7 @@ const leaf = {
   targets: [
     { os: "ubuntu-24.04", ciJob: "frontend-unit", artifact: "frontend-junit" },
   ],
-};
+} satisfies ReviewAcceptanceLeaf;
 
 it("evidence aggregation accepts exactly one successful result per leaf target", () => {
   expect(

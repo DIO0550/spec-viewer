@@ -79,7 +79,7 @@ export function SpecTree({
   const [presentation, setPresentation] = useState<SpecTreePresentationState>(
     () => createSpecTreePresentationState(state.workspacePath, 0),
   );
-  const rowRefs = useRef(new Map<string, HTMLButtonElement>());
+  const rowRefs = useRef(new Map<string, HTMLDivElement>());
 
   useEffect(() => {
     if (state.status === "loading" || state.status === "idle") {
@@ -304,11 +304,11 @@ type SpecTreeItemProps = Readonly<{
    */
   onToggle: (node: SpecNode) => void;
   /**
-   * Registers or clears the row button element used for focus management.
+   * Registers or clears the row element used for focus management.
    * @param key - The identity key of the row.
-   * @param row - The row's button element, or null when unmounting.
+   * @param row - The row element, or null when unmounting.
    */
-  registerRow: (key: string, row: HTMLButtonElement | null) => void;
+  registerRow: (key: string, row: HTMLDivElement | null) => void;
 }>;
 
 /**
@@ -368,12 +368,11 @@ function SpecTreeItem(props: SpecTreeItemProps) {
         className="spec-tree__row"
         style={{ paddingInlineStart: indentation }}
       >
-        <button
+        <div
           ref={(row) => {
             registerRow(key, row);
           }}
           className="spec-tree__item"
-          type="button"
           role="treeitem"
           aria-level={depth + 1}
           aria-expanded={hasChildren ? isExpanded : undefined}
@@ -384,7 +383,7 @@ function SpecTreeItem(props: SpecTreeItemProps) {
               ? 0
               : -1
           }
-          disabled={isActionDisabled}
+          aria-disabled={isActionDisabled || undefined}
           data-node-key={key}
           data-node-kind={node.kind}
           onClick={activateNode}
@@ -443,28 +442,30 @@ function SpecTreeItem(props: SpecTreeItemProps) {
           <span className="spec-tree__file-count">
             {SpecNodeDomain.count(node)}
           </span>
-        </button>
-        {canArchive ? (
-          <button
-            className="icon-button spec-tree__archive"
-            type="button"
-            role="treeitem"
-            aria-level={depth + 1}
-            aria-label={node.label + uiText.specTree.archiveSuffix}
-            title={uiText.specTree.archive}
-            disabled={isActionDisabled}
-            data-archiving={isArchiving ? "true" : "false"}
-            onClick={() => {
-              if (!isActionDisabled) {
-                onArchiveSpec?.(node.id);
-              }
-            }}
-          >
-            <Trash2 aria-hidden="true" size={14} />
-          </button>
-        ) : (
-          <span className="spec-tree__archive-spacer" aria-hidden="true" />
-        )}
+          {canArchive ? (
+            <button
+              className="icon-button spec-tree__archive"
+              type="button"
+              aria-label={node.label + uiText.specTree.archiveSuffix}
+              title={uiText.specTree.archive}
+              disabled={isActionDisabled}
+              data-archiving={isArchiving ? "true" : "false"}
+              onKeyDown={(event) => {
+                event.stopPropagation();
+              }}
+              onClick={(event) => {
+                event.stopPropagation();
+                if (!isActionDisabled) {
+                  onArchiveSpec?.(node.id);
+                }
+              }}
+            >
+              <Trash2 aria-hidden="true" size={14} />
+            </button>
+          ) : (
+            <span className="spec-tree__archive-spacer" aria-hidden="true" />
+          )}
+        </div>
       </div>
       {hasFailure ? (
         <div className="spec-tree__inline-error" role="alert">
@@ -533,7 +534,7 @@ type TreeItemKeyDownOptions = Readonly<{
 
 /** Handles activation, expansion, and roving focus keyboard commands. */
 function handleTreeItemKeyDown(
-  event: KeyboardEvent<HTMLButtonElement>,
+  event: KeyboardEvent<HTMLDivElement>,
   options: TreeItemKeyDownOptions,
 ): void {
   if (event.key === "Enter" || event.key === " ") {
@@ -565,7 +566,7 @@ function handleTreeItemKeyDown(
 
   const tree = event.currentTarget.closest('[role="tree"]');
   const items = Array.from(
-    tree?.querySelectorAll<HTMLButtonElement>(".spec-tree__item") ?? [],
+    tree?.querySelectorAll<HTMLDivElement>(".spec-tree__item") ?? [],
   );
   const nextItem = items[nextIndex];
 
@@ -577,11 +578,11 @@ function handleTreeItemKeyDown(
 
 /** Returns the next visible tree item index for navigation keys. */
 function getNextTreeItemIndex(
-  event: KeyboardEvent<HTMLButtonElement>,
+  event: KeyboardEvent<HTMLDivElement>,
 ): number | null {
   const tree = event.currentTarget.closest('[role="tree"]');
   const items = Array.from(
-    tree?.querySelectorAll<HTMLButtonElement>(".spec-tree__item") ?? [],
+    tree?.querySelectorAll<HTMLDivElement>(".spec-tree__item") ?? [],
   );
   const currentIndex = items.indexOf(event.currentTarget);
 
@@ -612,7 +613,7 @@ function getNextTreeItemIndex(
 
 /** Returns the first visible child index, or null for a leaf. */
 function findFirstChildTreeItemIndex(
-  items: readonly HTMLButtonElement[],
+  items: readonly HTMLDivElement[],
   currentIndex: number,
 ): number | null {
   const nextIndex = currentIndex + 1;
@@ -628,7 +629,7 @@ function findFirstChildTreeItemIndex(
 
 /** Returns the closest visible parent index, or null at level one. */
 function findParentTreeItemIndex(
-  items: readonly HTMLButtonElement[],
+  items: readonly HTMLDivElement[],
   currentIndex: number,
 ): number | null {
   const currentLevel = readTreeItemLevel(items[currentIndex]);
@@ -668,10 +669,10 @@ function findPathById(
 
 /**
  * Reads the ARIA tree level with a safe root fallback.
- * @param item - The tree item button element, or undefined when out of range.
+ * @param item - The tree item element, or undefined when out of range.
  * @returns The item's aria-level, or 1 when missing or non-numeric.
  */
-function readTreeItemLevel(item: HTMLButtonElement | undefined): number {
+function readTreeItemLevel(item: HTMLDivElement | undefined): number {
   if (item === undefined) {
     return 1;
   }

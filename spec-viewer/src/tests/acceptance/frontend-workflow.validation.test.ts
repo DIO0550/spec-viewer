@@ -1,12 +1,15 @@
+// @vitest-environment node
+
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { expect, it } from "vitest";
 
 const workflow = readFileSync(
-  resolve("../.github/workflows/frontend.yml"),
+  new URL("../../../../.github/workflows/frontend.yml", import.meta.url),
   "utf8",
 );
-const packageJson = JSON.parse(readFileSync(resolve("package.json"), "utf8"));
+const packageJson = JSON.parse(
+  readFileSync(new URL("../../../package.json", import.meta.url), "utf8"),
+);
 
 it("frontend workflow exposes typed acceptance job and artifact IDs", () => {
   for (const value of [

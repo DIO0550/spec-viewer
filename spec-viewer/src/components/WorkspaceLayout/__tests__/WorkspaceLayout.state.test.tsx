@@ -644,7 +644,7 @@ test("SpecTreeはspec選択イベントを発火する", () => {
   );
   const button = result.container.querySelector(
     ".spec-tree__item",
-  ) as HTMLButtonElement;
+  ) as HTMLElement;
 
   act(() => {
     button.click();
@@ -674,7 +674,7 @@ test("SpecTreeはloading中に描画済みspec選択を発火しない", () => {
     button.click();
   });
 
-  expect(button.disabled).toBe(true);
+  expect(button.getAttribute("aria-disabled")).toBe("true");
   expect(onSelectSpec).not.toHaveBeenCalled();
   result.unmount();
 });
@@ -754,7 +754,7 @@ test("SpecTreeはarchive中にreloadとspec選択とarchiveを発火しない", 
   ) as HTMLButtonElement;
   const specButton = result.container.querySelector(
     ".spec-tree__item",
-  ) as HTMLButtonElement;
+  ) as HTMLElement;
   const archiveButton = result.container.querySelector(
     '[aria-label="Phase 1 Viewerをアーカイブへ移動"]',
   ) as HTMLButtonElement;
@@ -766,7 +766,7 @@ test("SpecTreeはarchive中にreloadとspec選択とarchiveを発火しない", 
   });
 
   expect(refreshButton.disabled).toBe(true);
-  expect(specButton.disabled).toBe(true);
+  expect(specButton.getAttribute("aria-disabled")).toBe("true");
   expect(archiveButton.disabled).toBe(true);
   expect(onReload).not.toHaveBeenCalled();
   expect(onSelectSpec).not.toHaveBeenCalled();
@@ -793,7 +793,7 @@ test("SpecTreeは単一loading中にreloadとspec選択とarchiveを発火しな
   ) as HTMLButtonElement;
   const specButton = result.container.querySelector(
     ".spec-tree__item",
-  ) as HTMLButtonElement;
+  ) as HTMLElement;
   const archiveButton = result.container.querySelector(
     '[aria-label="Phase 1 Viewerをアーカイブへ移動"]',
   ) as HTMLButtonElement;
@@ -805,7 +805,7 @@ test("SpecTreeは単一loading中にreloadとspec選択とarchiveを発火しな
   });
 
   expect(refreshButton.disabled).toBe(true);
-  expect(specButton.disabled).toBe(true);
+  expect(specButton.getAttribute("aria-disabled")).toBe("true");
   expect(archiveButton.disabled).toBe(true);
   expect(onReload).not.toHaveBeenCalled();
   expect(onSelectSpec).not.toHaveBeenCalled();

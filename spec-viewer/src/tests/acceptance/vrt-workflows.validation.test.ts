@@ -1,19 +1,31 @@
+// @vitest-environment node
+
 import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { expect, it } from "vitest";
 
 const candidate = readFileSync(
-  resolve("../.github/workflows/storybook-visual-candidate.yml"),
+  new URL(
+    "../../../../.github/workflows/storybook-visual-candidate.yml",
+    import.meta.url,
+  ),
   "utf8",
 );
 const trusted = readFileSync(
-  resolve("../.github/workflows/storybook-visual-approval.yml"),
+  new URL(
+    "../../../../.github/workflows/storybook-visual-approval.yml",
+    import.meta.url,
+  ),
   "utf8",
 );
 
 it("legacy workflow that executes PR code with write permissions is removed", () => {
   expect(
-    existsSync(resolve("../.github/workflows/storybook-visual-regression.yml")),
+    existsSync(
+      new URL(
+        "../../../../.github/workflows/storybook-visual-regression.yml",
+        import.meta.url,
+      ),
+    ),
   ).toBe(false);
 });
 

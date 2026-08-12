@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import {
   expectNoSeriousAccessibilityViolations,
@@ -15,7 +15,7 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
-async function createSpecComment(page: import("/test").Page): Promise<void> {
+async function createSpecComment(page: Page): Promise<void> {
   await page.getByRole("button", { name: "コメント追加" }).first().focus();
   await page.keyboard.press("Enter");
   const composer = page.getByRole("textbox", { name: "Review" });
@@ -65,9 +65,8 @@ test("[R199-ARCH-002] successful archive moves spec under Archive", async ({
 }) => {
   await openWorkspace(page, "/workspace/worktree-a");
   await page
-    .getByRole("treeitem", { name: /198-diff-commentsをアーカイブへ移動/ })
-    .focus();
-  await page.keyboard.press("Enter");
+    .getByRole("button", { name: /198-diff-commentsをアーカイブへ移動/ })
+    .press("Enter");
   await page.getByRole("treeitem", { name: /^Archive/ }).focus();
   await page.keyboard.press("ArrowRight");
   await expect(
@@ -81,9 +80,8 @@ test("[R199-ARCH-002] successful archive moves spec under Archive", async ({
 test("[R199-ARCH-004] reload retains archived placement", async ({ page }) => {
   await openWorkspace(page, "/workspace/worktree-a");
   await page
-    .getByRole("treeitem", { name: /198-diff-commentsをアーカイブへ移動/ })
-    .focus();
-  await page.keyboard.press("Enter");
+    .getByRole("button", { name: /198-diff-commentsをアーカイブへ移動/ })
+    .press("Enter");
   await page.reload();
   await openWorkspace(page, "/workspace/worktree-a");
   await page.getByRole("treeitem", { name: /^Archive/ }).focus();

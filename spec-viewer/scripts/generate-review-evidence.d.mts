@@ -1,4 +1,4 @@
-import type { AcceptanceLeaf } from "../src/tests/acceptance/review-phase-1";
+import type { ReviewAcceptanceLeaf } from "../src/tests/acceptance/review-phase-1";
 type Result = Readonly<{
   leafId: string;
   os: string;
@@ -7,7 +7,7 @@ type Result = Readonly<{
   status: string;
 }>;
 export function buildEvidence(
-  manifest: readonly AcceptanceLeaf[],
+  manifest: readonly ReviewAcceptanceLeaf[],
   results: readonly Result[],
 ): Readonly<{
   generatedAt: string;
