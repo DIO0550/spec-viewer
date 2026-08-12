@@ -339,3 +339,84 @@ test("conflictのlatest revisionがu64上限ならdraft再送をcommand境界で
   expect(save).toHaveBeenCalledTimes(1);
   hook.unmount();
 });
+
+test("draftの新規保存と本文更新はtrim済みbodyをwireへ送る", async () => {
+  const save = vi.fn<DiffCommentCommands["save"]>().mockResolvedValue({
+    kind: "committed",
+    document: createDocument(identityA, "1"),
+    revision: "1",
+    resolutionWarnings: [],
+    durability: "durable",
+  });
+  const update = vi.fn<DiffCommentCommands["update"]>().mockResolvedValue({
+    kind: "committed",
+    document: createDocument(identityA, "2"),
+    revision: "2",
+    resolutionWarnings: [],
+    durability: "durable",
+  });
+  const commands: DiffCommentCommands = {
+    load: vi.fn(() => Promise.resolve(createDocument(identityA, "0"))),
+    save,
+    update,
+  };
+  const hook = renderHook({ identity: identityA, commands });
+  await flush();
+
+  act(() => {
+    hook.current().createDraft({
+      target: { side: "current", newPath: "src/main.ts", line: 1 },
+      body: "  create body  ",
+    });
+  });
+  await act(async () => {
+    await hook.current().saveDraft();
+  });
+  act(() => {
+    hook.current().createDraft({
+      target: { side: "current", newPath: "src/main.ts", line: 1 },
+      commentId: "comment-1",
+      body: "  edit body  ",
+    });
+  });
+  await act(async () => {
+    await hook.current().saveDraft();
+  });
+
+  expect(save).toHaveBeenCalledWith(
+    expect.objectContaining({ body: "create body" }),
+  );
+  expect(update).toHaveBeenCalledWith(
+    expect.objectContaining({ body: "edit body" }),
+  );
+  hook.unmount();
+});
+
+test("Review cardの本文更新はtrim済みbodyをwireへ送る", async () => {
+  const update = vi.fn<DiffCommentCommands["update"]>().mockResolvedValue({
+    kind: "committed",
+    document: createDocument(identityA, "1"),
+    revision: "1",
+    resolutionWarnings: [],
+    durability: "durable",
+  });
+  const commands: DiffCommentCommands = {
+    load: vi.fn(() => Promise.resolve(createDocument(identityA, "0"))),
+    save: vi.fn(),
+    update,
+  };
+  const hook = renderHook({ identity: identityA, commands });
+  await flush();
+
+  await act(async () => {
+    await hook.current().updateComment({
+      commentId: "comment-1",
+      body: "  card body  ",
+    });
+  });
+
+  expect(update).toHaveBeenCalledWith(
+    expect.objectContaining({ body: "card body" }),
+  );
+  hook.unmount();
+});

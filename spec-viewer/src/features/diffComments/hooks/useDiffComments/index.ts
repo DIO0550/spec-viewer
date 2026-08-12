@@ -399,12 +399,13 @@ export function useDiffComments({
     }
     const session = sessionsRef.current[activeKey];
     const draft = session?.draft;
+    const normalizedBody = draft?.body.trim() ?? "";
     if (
       session === undefined ||
       draft === null ||
       session.writeBlockReason !== null ||
       !draft.canSubmit ||
-      draft.body.trim().length === 0
+      normalizedBody.length === 0
     ) {
       return false;
     }
@@ -415,7 +416,7 @@ export function useDiffComments({
           identity,
           expectedRevision: session.revision,
           commentId: draft.commentId as string,
-          body: draft.body,
+          body: normalizedBody,
         }),
       );
     }
@@ -425,7 +426,7 @@ export function useDiffComments({
         identity,
         expectedRevision: session.revision,
         target: draft.target,
-        body: draft.body,
+        body: normalizedBody,
       }),
     );
   }, [activeKey, commands, identity, settle]);
@@ -439,12 +440,25 @@ export function useDiffComments({
       if (session === undefined || session.writeBlockReason !== null) {
         return false;
       }
-      retryActionsRef.current.set(activeKey, { kind: "update", input });
+      const normalizedInput =
+        input.body === undefined
+          ? input
+          : { ...input, body: input.body.trim() };
+      if (
+        normalizedInput.body !== undefined &&
+        normalizedInput.body.length === 0
+      ) {
+        return false;
+      }
+      retryActionsRef.current.set(activeKey, {
+        kind: "update",
+        input: normalizedInput,
+      });
       return settle(identity, "update_diff_comment", () =>
         commands.update({
           identity,
           expectedRevision: session.revision,
-          ...input,
+          ...normalizedInput,
         }),
       );
     },
