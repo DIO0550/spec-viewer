@@ -1,5 +1,5 @@
 {
-  "reportVersion": "e0dc30cd5dd6201dc852b05eab45b064320f99a4",
+  "reportVersion": "0202d0e3e5fac92ad48667d4513cb50d0cf11f6b",
   "maxDiffRatio": 0.002,
   "changed": 32,
   "new": 39,
@@ -2926,8 +2926,8 @@
       "name": "Success Reveal",
       "status": "passed",
       "reason": "within-threshold",
-      "diffPixels": 1407,
-      "diffRatio": 0.0015,
+      "diffPixels": 331,
+      "diffRatio": 0.0004,
       "hasExpected": true,
       "hasActual": true,
       "hasDiff": true
