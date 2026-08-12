@@ -21,6 +21,9 @@
     "test": "vitest",
     "test:run": "vitest run --passWithNoTests",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:storybook": "playwright test --config playwright.storybook.config.ts",
+    "test:e2e:install": "playwright install chromium",
     "preview": "vite preview",
     "tauri": "tauri",
     "package": "tauri build --ci",
@@ -52,7 +55,9 @@
     "tailwindcss": "^4.2.4"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@biomejs/biome": "^2.4.13",
+    "@playwright/test": "1.62.1",
     "@storybook/addon-a11y": "^10.3.6",
     "@storybook/addon-themes": "^10.3.6",
     "@storybook/react-vite": "^10.3.6",
@@ -63,13 +68,13 @@
     "@vitejs/plugin-react": "^6.0.1",
     "@vitest/coverage-v8": "^4.1.5",
     "happy-dom": "^20.9.0",
+    "odiff-bin": "4.5.0",
     "oxlint": "^1.62.0",
     "oxlint-tsgolint": "^0.22.1",
     "storybook": "^10.3.6",
     "typescript": "~5.8.3",
     "vite": "^8.0.10",
-    "vitest": "^4.1.5",
-    "odiff-bin": "4.5.0"
+    "vitest": "^4.1.5"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

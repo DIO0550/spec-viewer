@@ -31,8 +31,8 @@
   --color-border-hover-soft: #bfdbfe;
   --color-text: #1c1917;
   --color-text-body: #57534e;
-  --color-text-muted: #a8a29e;
-  --color-text-subtle: #a8a29e;
+  --color-text-muted: #57534e;
+  --color-text-subtle: #57534e;
   --color-text-inverse: #ffffff;
   --color-accent: #2563eb;
   --color-accent-hover: #1d4ed8;
@@ -200,9 +200,7 @@ textarea:disabled {
   color: var(--color-text);
   white-space: nowrap;
   transition:
-    background-color 120ms ease,
     border-color 120ms ease,
-    color 120ms ease,
     box-shadow 120ms ease;
 }
 
@@ -3709,8 +3707,7 @@ textarea:disabled {
   padding: 0;
 }
 
-.app-shell__pathbar .workspace-toolbar__brand,
-.app-shell__pathbar .workspace-toolbar__theme {
+.app-shell__pathbar .workspace-toolbar__brand {
   display: none;
 }
 

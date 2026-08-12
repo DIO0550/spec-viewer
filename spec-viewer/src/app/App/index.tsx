@@ -4,10 +4,12 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
 import "../App.css";
+import "@/styles/diff-comments.css";
 import type { SpecViewResetKeys } from "@/app/App/hooks/types";
 import { useCommentSelection } from "@/app/App/hooks/useCommentSelection";
 import { useGuardedSpecActions } from "@/app/App/hooks/useGuardedSpecActions";
@@ -44,6 +46,15 @@ import {
   ViewModeToolbar,
 } from "@/features/diff";
 import {
+  type DiffReviewIdentity,
+  useDiffComments,
+} from "@/features/diffComments";
+import { DiffReviewPanel } from "@/features/diffComments/components/DiffReviewPanel";
+import {
+  createDiffLineCommentsController,
+  groupCommentsByResolvedTarget,
+} from "@/features/diffComments/components/presentation";
+import {
   ThemeProvider,
   useLeftNavigationPreference,
   useResizableLeftNavigation,
@@ -59,9 +70,9 @@ import {
   RepositoryDiffFileHeader,
   RepositoryDiffSummary,
   RepositoryDiffTree,
+  type RepositoryDiffTreeAvailability,
   RepositoryFileTabs,
   summarizeFileDiff,
-  type RepositoryDiffTreeAvailability,
   toDiffViewerFileDiff,
   useRepositoryDiffNavigationState,
 } from "@/features/repositoryDiff";
@@ -95,12 +106,21 @@ import {
   type WorkspaceWorktreesLoadState,
   WorktreeTree,
 } from "@/features/workspace";
+import { getDiffReviewIdentity } from "@/lib/api/tauri";
 
 const WorktreesLoadState: WorkspaceWorktreesLoadState = {
   status: "unavailable",
   reason: "data-source-not-connected",
 };
 
+type RepositoryCommentJump = Readonly<{
+  selectionPath: string;
+  key: string;
+  sidePath: string;
+  side: "base" | "current";
+  line: number;
+  requestId: number;
+}>;
 /**
  * Application root that wires the theme, workspace and selection providers.
  *
@@ -183,6 +203,41 @@ function SpecViewAppContent(): ReactElement {
     repositoryDiff.state.status !== "unavailable";
   const isRepositoryDiffView =
     workspaceNavigation.state.mode === "diff" && repositoryMayOwnDiff;
+  const loadedRepositoryDiffIdentity =
+    useMemo<DiffReviewIdentity | null>(() => {
+      if (!isRepositoryDiffView || repositoryDiff.state.overview === null) {
+        return null;
+      }
+      return getDiffReviewIdentity(repositoryDiff.state.overview);
+    }, [isRepositoryDiffView, repositoryDiff.state.overview]);
+  const repositoryDiffIdentityCache = useRef<Readonly<{
+    workspaceRoot: string;
+    identity: DiffReviewIdentity;
+  }> | null>(null);
+  if (activeWorkspaceRoot === null || !isRepositoryDiffView) {
+    repositoryDiffIdentityCache.current = null;
+  } else if (loadedRepositoryDiffIdentity !== null) {
+    repositoryDiffIdentityCache.current = {
+      workspaceRoot: activeWorkspaceRoot,
+      identity: loadedRepositoryDiffIdentity,
+    };
+  }
+  const repositoryDiffIdentity =
+    loadedRepositoryDiffIdentity ??
+    (repositoryDiffIdentityCache.current?.workspaceRoot === activeWorkspaceRoot
+      ? repositoryDiffIdentityCache.current.identity
+      : null);
+  const diffComments = useDiffComments({ identity: repositoryDiffIdentity });
+  const [diffCommentOrigin, setDiffCommentOrigin] =
+    useState<HTMLButtonElement | null>(null);
+  const [repositoryCommentJump, setRepositoryCommentJump] =
+    useState<RepositoryCommentJump | null>(null);
+  useEffect(() => {
+    if (repositoryDiffIdentity === null) {
+      setDiffCommentOrigin(null);
+      setRepositoryCommentJump(null);
+    }
+  }, [repositoryDiffIdentity]);
   const isCurrentViewLoading = specSelectors.isLoading;
   const documentReadiness = useDocumentReadiness(specState.documentState);
   const commentScope = useMemo(
@@ -466,6 +521,62 @@ function SpecViewAppContent(): ReactElement {
           repositoryFileProjection.review,
           repositoryFileProjection.selection,
         );
+  const diffCommentsByTarget = useMemo(
+    () => groupCommentsByResolvedTarget(diffComments.session?.comments ?? []),
+    [diffComments.session?.comments],
+  );
+  const diffLineComments = createDiffLineCommentsController({
+    state: diffComments,
+    origin: diffCommentOrigin,
+    onOriginChange: setDiffCommentOrigin,
+    onRevealComment: sidebarPreference.openSidebar,
+    commentsByTarget: diffCommentsByTarget,
+  });
+  const jumpToRepositoryComment = useCallback(
+    (commentId: string): void => {
+      const comment = diffComments.session?.comments.find(
+        (candidate) => candidate.id === commentId,
+      );
+      if (comment === undefined) {
+        return;
+      }
+      const resolution = comment.anchorResolution;
+      if (resolution.status !== "exact" && resolution.status !== "relocated") {
+        return;
+      }
+      const targetNode = findRepositoryTreeNode(
+        repositoryAllTreeNodes,
+        resolution.selectionPath,
+      );
+      repositoryNavigationActions.openPath(resolution.selectionPath);
+      if (
+        (resolution.side === "base" &&
+          repositoryNavigationEntry.viewerMode === "editor") ||
+        (resolution.side === "current" &&
+          targetNode?.kind === "file" &&
+          targetNode.change === null &&
+          repositoryNavigationEntry.viewerMode !== "editor")
+      ) {
+        repositoryNavigationActions.changeViewerMode(
+          resolution.side === "base" ? "unified" : "editor",
+        );
+      }
+      setRepositoryCommentJump((current) => ({
+        key: `${resolution.side}:${resolution.sidePath}:${resolution.line}`,
+        selectionPath: resolution.selectionPath,
+        sidePath: resolution.sidePath,
+        side: resolution.side,
+        line: resolution.line,
+        requestId: (current?.requestId ?? 0) + 1,
+      }));
+    },
+    [
+      diffComments.session?.comments,
+      repositoryNavigationActions,
+      repositoryNavigationEntry.viewerMode,
+      repositoryAllTreeNodes,
+    ],
+  );
   const repositoryActiveChange = useMemo(() => {
     const overview = repositoryDiff.state.overview;
     const activePath = repositoryNavigationEntry.activePath;
@@ -569,6 +680,15 @@ function SpecViewAppContent(): ReactElement {
                 changeId,
               );
             }}
+            commentJumpTarget={
+              repositoryCommentJump?.selectionPath ===
+              repositoryNavigationEntry.activePath
+                ? repositoryCommentJump
+                : null
+            }
+            lineComments={
+              repositoryDiffIdentity === null ? undefined : diffLineComments
+            }
           />
         ) : (
           <DiffViewer
@@ -589,6 +709,15 @@ function SpecViewAppContent(): ReactElement {
                 changeId,
               );
             }}
+            commentJumpTarget={
+              repositoryCommentJump?.selectionPath ===
+              repositoryNavigationEntry.activePath
+                ? repositoryCommentJump
+                : null
+            }
+            lineComments={
+              repositoryDiffIdentity === null ? undefined : diffLineComments
+            }
           />
         )}
       </section>
@@ -945,6 +1074,13 @@ function SpecViewAppContent(): ReactElement {
               }}
             />
           </WorkspaceLayout.Comments>
+        ) : isRepositoryDiffView && repositoryDiffIdentity !== null ? (
+          <WorkspaceLayout.Comments>
+            <DiffReviewPanel
+              state={diffComments}
+              onJump={jumpToRepositoryComment}
+            />
+          </WorkspaceLayout.Comments>
         ) : null}
       </SidebarLayout>
       <WorkspaceDropOverlay
@@ -1076,6 +1212,25 @@ function collectRepositoryTreePaths(
   };
   visit(nodes);
   return { visiblePaths, directoryPaths };
+}
+
+function findRepositoryTreeNode(
+  nodes: readonly RepositoryDiffTreeProjectionNode[],
+  path: string,
+): RepositoryDiffTreeProjectionNode | null {
+  for (const node of nodes) {
+    if (node.path === path) {
+      return node;
+    }
+    if (node.children.items.length === 0) {
+      continue;
+    }
+    const child = findRepositoryTreeNode(node.children.items, path);
+    if (child !== null) {
+      return child;
+    }
+  }
+  return null;
 }
 
 function createRepositoryDiffWorkspaceState(

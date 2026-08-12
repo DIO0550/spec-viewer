@@ -1,0 +1,132 @@
+.diff-line-comment-slot {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: flex-start;
+  min-width: 1.5rem;
+}
+
+.diff-line-comment-control {
+  display: inline-grid;
+  width: 1.35rem;
+  height: 1.35rem;
+  padding: 0;
+  place-items: center;
+  border: 1px solid var(--color-border, #64748b);
+  border-radius: 999px;
+  background: var(--color-surface, #fff);
+  color: var(--color-text, #111827);
+  cursor: pointer;
+}
+
+.diff-line-comment-control--add {
+  opacity: 0;
+}
+
+.diff-viewer__cell:hover .diff-line-comment-control--add,
+.current-file-viewer__row:hover .diff-line-comment-control--add,
+.diff-line-comment-control--add:focus-visible {
+  opacity: 1;
+}
+
+.diff-line-comment-control[aria-current="true"] {
+  outline: 2px solid var(--color-accent, #2563eb);
+  outline-offset: 2px;
+}
+
+.diff-comment-composer {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  min-width: min(28rem, 70vw);
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border, #64748b);
+  border-radius: 0.5rem;
+  background: var(--color-surface, #fff);
+  box-shadow: 0 0.5rem 1.25rem rgb(15 23 42 / 18%);
+}
+
+.diff-comment-composer textarea {
+  min-height: 5rem;
+  resize: vertical;
+}
+
+.diff-comment-composer__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.diff-line-comment-picker__menu {
+  position: absolute;
+  z-index: 3;
+  display: grid;
+  min-width: 12rem;
+  padding: 0.25rem;
+  border: 1px solid var(--color-border, #64748b);
+  background: var(--color-surface, #fff);
+}
+
+.diff-review-sidebar {
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
+  height: 100%;
+  overflow: auto;
+  padding: 0.75rem;
+}
+
+.diff-review-sidebar__header,
+.diff-review-sidebar__list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.diff-review-sidebar__list {
+  padding: 0;
+  list-style: none;
+}
+
+.diff-review-card {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border, #cbd5e1);
+  border-radius: 0.5rem;
+}
+
+.diff-review-card[aria-current="true"] {
+  border-color: var(--color-accent, #2563eb);
+  box-shadow: 0 0 0 1px var(--color-accent, #2563eb);
+}
+
+.diff-review-card__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.diff-review-sidebar__warnings {
+  padding: 0.5rem;
+  border-inline-start: 0.25rem solid #b45309;
+  background: #fffbeb;
+}
+
+.diff-comments-e2e {
+  display: grid;
+  height: 100vh;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.diff-comments-e2e > header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+}
+
+.diff-comments-e2e__workspace {
+  display: grid;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
+}
