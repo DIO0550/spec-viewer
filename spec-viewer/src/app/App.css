@@ -4091,10 +4091,6 @@ textarea:disabled {
   font-weight: 600;
 }
 
-.specs-workspace__viewer .markdown-comment-annotations {
-  display: none;
-}
-
 .diff-stat-group,
 .changes-tree__stats {
   font-size: 11px;

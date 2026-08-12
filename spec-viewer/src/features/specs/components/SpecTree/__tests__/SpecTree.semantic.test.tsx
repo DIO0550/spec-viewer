@@ -81,7 +81,7 @@ function renderTree(props: Partial<Parameters<typeof SpecTree>[0]> = {}) {
   };
 }
 
-test("SpecTreeはprimary implicit rootとsecondary headingを表示しArchiveを末尾でcollapsedにする", () => {
+test("[R199-SPEC-001] SpecTreeはprimary implicit rootとsecondary headingを表示しArchiveを末尾でcollapsedにする", () => {
   const result = renderTree();
   const rootItems = result.container.querySelectorAll(
     ".spec-tree > .spec-tree__list > .spec-tree__node > .spec-tree__row .spec-tree__item",
@@ -98,7 +98,7 @@ test("SpecTreeはprimary implicit rootとsecondary headingを表示しArchiveを
   result.unmount();
 });
 
-test("SpecTreeはArchive配下を展開してもarchive actionを表示しない", () => {
+test("[R199-SPEC-002] SpecTreeはArchive配下を展開してもarchive actionを表示しない", () => {
   const result = renderTree();
   const expand = result.container.querySelector(
     '[aria-label="Archiveを展開"]',

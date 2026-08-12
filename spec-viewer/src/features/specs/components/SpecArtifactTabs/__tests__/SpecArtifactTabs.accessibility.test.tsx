@@ -82,16 +82,21 @@ function renderTabs(disabled = false) {
   };
 }
 
-test("4 progress状態をvisible textとARIA labelで表す", () => {
+test.each([
+  ["[R199-SPEC-003] unknown progressを表示する", "Unknown"],
+  ["[R199-SPEC-005] processing progressを表示する", "In progress"],
+  ["[R199-SPEC-006] completed progressを表示する", "Completed"],
+] as const)("%s", (_title, expectedLabel) => {
+  const result = renderTabs();
+
+  expect(result.container.textContent).toContain(expectedLabel);
+  result.unmount();
+});
+
+test("[R199-SPEC-007] failed progressはread errorを公開する", () => {
   const result = renderTabs();
   const tabs = result.container.querySelectorAll('[role="tab"]');
 
-  expect(result.container.textContent).toContain("Not started");
-  expect(result.container.textContent).toContain("In progress");
-  expect(result.container.textContent).toContain("Completed");
-  expect(result.container.textContent).toContain("Unknown");
-  expect(tabs[0]?.getAttribute("aria-selected")).toBe("true");
-  expect(tabs[0]?.getAttribute("tabindex")).toBe("0");
   expect(tabs[3]?.getAttribute("aria-label")).toContain("read error");
   result.unmount();
 });

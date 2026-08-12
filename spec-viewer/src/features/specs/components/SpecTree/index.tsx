@@ -448,6 +448,8 @@ function SpecTreeItem(props: SpecTreeItemProps) {
           <button
             className="icon-button spec-tree__archive"
             type="button"
+            role="treeitem"
+            aria-level={depth + 1}
             aria-label={node.label + uiText.specTree.archiveSuffix}
             title={uiText.specTree.archive}
             disabled={isActionDisabled}
