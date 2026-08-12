@@ -103,7 +103,7 @@ test.each([
   expect(state.entriesByKey["worktree-a"]?.activePath).toBe(expected);
 });
 
-test("viewer modeとpath別jump targetをworktreeごとに復元する", () => {
+test("[R199-VIEW-004] viewer modeとpath別jump targetをworktreeごとに復元する", () => {
   let state = openPaths(["a.ts"]);
   state = reduceRepositoryDiffNavigationState(state, {
     type: "viewerModeChanged",
@@ -174,7 +174,7 @@ test("reconcileはrepository全体のvalid fileだけを残してfallbackする"
   expect(state.entriesByKey["worktree-a"]?.expandedPaths).toEqual(["vendor"]);
 });
 
-test("filter切替はopen tabsをpruneしない", () => {
+test("[R199-TREE-003] filter切替はopen tabsをpruneしない", () => {
   const opened = openPaths(["vendor/ignored.log"]);
   const state = reduceRepositoryDiffNavigationState(opened, {
     type: "filterChanged",

@@ -114,7 +114,7 @@ beforeEach(() => {
   commands.archiveSpec.mockReset();
 });
 
-test("workspace loadはtree後にfirst spec bundleを1回だけ読む", async () => {
+test("[R199-SPEC-008] workspace loadはtree後にfirst spec bundleを1回だけ読む", async () => {
   commands.listSpecs.mockResolvedValue(tree);
   commands.loadSpecBundle.mockResolvedValue(bundle);
   const result = renderSpecs();

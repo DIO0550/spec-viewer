@@ -62,7 +62,7 @@ test.each([
   result.unmount();
 });
 
-test("20,000行入力でも初期semantic rowを500以下にwindowingする", () => {
+test("[R199-PERF-002] 20,000行入力でも初期semantic rowを500以下にwindowingする", () => {
   const result = renderViewer(createLargeDiffViewerFixture());
 
   expect(

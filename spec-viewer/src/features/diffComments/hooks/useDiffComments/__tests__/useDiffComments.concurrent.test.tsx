@@ -76,7 +76,7 @@ async function flush(): Promise<void> {
   });
 }
 
-test("古いidentityのload responseは現在のsessionを上書きしない", async () => {
+test("[R199-ERR-003] 古いidentityのload responseは現在のsessionを上書きしない", async () => {
   const loadA = deferred<ReturnType<typeof createDocument>>();
   const commands: DiffCommentCommands = {
     load: vi.fn((request: LoadDiffCommentsRequest) => {

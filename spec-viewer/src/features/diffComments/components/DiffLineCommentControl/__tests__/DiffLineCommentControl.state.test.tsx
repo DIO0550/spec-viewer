@@ -10,7 +10,7 @@ afterEach(() => {
   containers.splice(0).forEach((container) => container.remove());
 });
 
-test("空き行はsideとpathとlineを読み上げる追加ボタンを表示する", () => {
+test("[R199-A11Y-002] 空き行はsideとpathとlineを読み上げる追加ボタンを表示する", () => {
   const onStartDraft = vi.fn();
   const view = renderControl({ onStartDraft });
   const addButton = findButton(

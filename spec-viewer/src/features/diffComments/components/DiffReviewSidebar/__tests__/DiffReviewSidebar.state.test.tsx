@@ -10,7 +10,7 @@ afterEach(() => {
   containers.splice(0).forEach((container) => container.remove());
 });
 
-test("Open Resolved Allの件数を表示してcontrolled filterを通知する", () => {
+test("[R199-REVIEW-006] Open Resolved Allの件数を表示してcontrolled filterを通知する", () => {
   const onFilterChange = vi.fn();
   const view = renderSidebar({ onFilterChange });
 
@@ -40,7 +40,7 @@ test("search inputをcontrolledに通知し一致するcardだけを表示する
   expect(onSearchChange).toHaveBeenCalledWith("next");
 });
 
-test("unavailableとstale cardは理由を表示してjumpを無効にする", () => {
+test("[R199-ANCHOR-003] unavailableとstale cardは理由を表示してjumpを無効にする", () => {
   const onJump = vi.fn();
   const view = renderSidebar({ filter: "all", onJump });
   const unavailableJump = findButton(view, "src/io.ts current 8行目へ移動");
@@ -83,7 +83,7 @@ test("comment cardはsemantic buttonで選択できaria-currentとfocusを持つ
   expect(onSelectComment).toHaveBeenCalledWith("open");
 });
 
-test("10k Review commentを最大100 cardにmaterializeし選択cardを含める", () => {
+test("[R199-PERF-003] 10k Review commentを最大100 cardにmaterializeし選択cardを含める", () => {
   const comments = Array.from({ length: 10_000 }, (_, index) => ({
     id: `comment-${index}`,
     body: `body-${index}`,
