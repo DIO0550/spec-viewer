@@ -471,6 +471,7 @@ mod tests {
     };
     use crate::infrastructure::filesystem::{safe_relative_spec_path, DiscoveredSpecArtifact};
 
+    #[cfg(unix)]
     const SPECS_DIR: &str = ".plugin-workspace/.specs";
 
     struct TestWorkspace {
