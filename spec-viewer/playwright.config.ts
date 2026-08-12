@@ -1,8 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
+import { appPlaywrightTestMatches } from "./playwright.test-matches";
 
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: "diff-comments.spec.ts",
+  testMatch: [...appPlaywrightTestMatches],
   outputDir: "./test-results/playwright",
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),

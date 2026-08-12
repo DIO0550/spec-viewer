@@ -1,0 +1,5 @@
+{
+  "command": "cargo test review_phase_1_fixture -- --exact",
+  "normalizerVersion": 1,
+  "rawHash": "sha256:generated-by-normalize-review-fixture"
+}

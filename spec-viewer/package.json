@@ -21,8 +21,12 @@
     "test": "vitest",
     "test:run": "vitest run --passWithNoTests",
     "test:coverage": "vitest run --coverage",
-    "test:e2e": "playwright test",
+    "test:e2e": "pnpm test:e2e:app",
+    "test:e2e:app": "playwright test --config playwright.config.ts",
     "test:e2e:storybook": "playwright test --config playwright.storybook.config.ts",
+    "test:e2e:native": "xvfb-run -a sh -c 'wdio run wdio.native.conf.ts && node scripts/run-native-crash-smoke.mjs'",
+    "test:acceptance:cargo": "node scripts/run-cargo-leaf.mjs",
+    "test:acceptance:evidence": "node scripts/generate-review-evidence.mjs",
     "test:e2e:install": "playwright install chromium",
     "preview": "vite preview",
     "tauri": "tauri",
@@ -67,6 +71,10 @@
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^6.0.1",
     "@vitest/coverage-v8": "^4.1.5",
+    "@wdio/cli": "^9.30.1",
+    "@wdio/local-runner": "^9.30.1",
+    "@wdio/mocha-framework": "^9.30.1",
+    "@wdio/spec-reporter": "^9.30.1",
     "happy-dom": "^20.9.0",
     "odiff-bin": "4.5.0",
     "oxlint": "^1.62.0",
@@ -74,7 +82,8 @@
     "storybook": "^10.3.6",
     "typescript": "~5.8.3",
     "vite": "^8.0.10",
-    "vitest": "^4.1.5"
+    "vitest": "^4.1.5",
+    "webdriverio": "^9.30.1"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

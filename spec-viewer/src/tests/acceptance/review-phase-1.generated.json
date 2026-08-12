@@ -1,0 +1,1718 @@
+[
+  {
+    "id": "R199-NAV-001",
+    "requirement": "workspace selection loads one worktree",
+    "runner": "Playwright",
+    "selector": "^\\\\[R199-NAV-001\\\\]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "app-review-e2e",
+        "artifact": "app-playwright"
+      }
+    ]
+  },
+  {
+    "id": "R199-NAV-002",
+    "requirement": "worktree A→B→A preserves isolated state",
+    "runner": "Playwright",
+    "selector": "^\\\\[R199-NAV-002\\\\]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "app-review-e2e",
+        "artifact": "app-playwright"
+      }
+    ]
+  },
+  {
+    "id": "R199-NAV-003",
+    "requirement": "Specs tab switches to Diff tab",
+    "runner": "Playwright",
+    "selector": "^\\\\[R199-NAV-003\\\\]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "app-review-e2e",
+        "artifact": "app-playwright"
+      }
+    ]
+  },
+  {
+    "id": "R199-SPEC-001",
+    "requirement": "implicit Specs root is projected",
+    "runner": "Vitest",
+    "selector": "[R199-SPEC-001]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "frontend-unit",
+        "artifact": "frontend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-SPEC-002",
+    "requirement": "archive node is projected",
+    "runner": "Vitest",
+    "selector": "[R199-SPEC-002]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "frontend-unit",
+        "artifact": "frontend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-SPEC-003",
+    "requirement": "unknown progress is exposed",
+    "runner": "Vitest",
+    "selector": "[R199-SPEC-003]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "frontend-unit",
+        "artifact": "frontend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-SPEC-005",
+    "requirement": "processing progress is exposed",
+    "runner": "Vitest",
+    "selector": "[R199-SPEC-005]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "frontend-unit",
+        "artifact": "frontend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-SPEC-006",
+    "requirement": "completed progress is exposed",
+    "runner": "Vitest",
+    "selector": "[R199-SPEC-006]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "frontend-unit",
+        "artifact": "frontend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-SPEC-007",
+    "requirement": "failed progress is exposed",
+    "runner": "Vitest",
+    "selector": "[R199-SPEC-007]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "frontend-unit",
+        "artifact": "frontend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-SPEC-008",
+    "requirement": "artifact count matches present documents",
+    "runner": "Vitest",
+    "selector": "[R199-SPEC-008]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "frontend-unit",
+        "artifact": "frontend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-SPEC-004",
+    "requirement": "multiple Markdown artifacts retain tabs",
+    "runner": "Playwright",
+    "selector": "^\\\\[R199-SPEC-004\\\\]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "app-review-e2e",
+        "artifact": "app-playwright"
+      }
+    ]
+  },
+  {
+    "id": "R199-ARCH-001",
+    "requirement": "archive action invokes archive command once",
+    "runner": "Vitest",
+    "selector": "[R199-ARCH-001]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "frontend-unit",
+        "artifact": "frontend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-ARCH-002",
+    "requirement": "successful archive moves spec under Archive",
+    "runner": "Playwright",
+    "selector": "^\\[R199-ARCH-002\\]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "app-review-e2e",
+        "artifact": "app-playwright"
+      }
+    ]
+  },
+  {
+    "id": "R199-ARCH-003",
+    "requirement": "archiving selected spec chooses deterministic fallback",
+    "runner": "Vitest",
+    "selector": "[R199-ARCH-003]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "frontend-unit",
+        "artifact": "frontend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-ARCH-004",
+    "requirement": "reload retains archived placement",
+    "runner": "Playwright",
+    "selector": "^\\[R199-ARCH-004\\]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "app-review-e2e",
+        "artifact": "app-playwright"
+      }
+    ]
+  },
+  {
+    "id": "R199-TREE-001",
+    "requirement": "Changed projects added status",
+    "runner": "Cargo suffix",
+    "selector": "r199_tree_001_added",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-TREE-007",
+    "requirement": "Changed projects modified status",
+    "runner": "Cargo suffix",
+    "selector": "r199_tree_007_modified",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-TREE-008",
+    "requirement": "Changed projects deleted status",
+    "runner": "Cargo suffix",
+    "selector": "r199_tree_008_deleted",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-TREE-009",
+    "requirement": "Changed projects untracked status",
+    "runner": "Cargo suffix",
+    "selector": "r199_tree_009_untracked",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-TREE-010",
+    "requirement": "All projects ignored status",
+    "runner": "Cargo suffix",
+    "selector": "r199_tree_010_ignored",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-TREE-011",
+    "requirement": "Changed projects binary status",
+    "runner": "Cargo suffix",
+    "selector": "r199_tree_011_binary",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-TREE-002",
+    "requirement": "All includes unchanged files",
+    "runner": "Playwright",
+    "selector": "^\\\\[R199-TREE-002\\\\]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "app-review-e2e",
+        "artifact": "app-playwright"
+      }
+    ]
+  },
+  {
+    "id": "R199-TREE-003",
+    "requirement": "All toggle does not reload snapshot",
+    "runner": "Vitest",
+    "selector": "[R199-TREE-003]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "frontend-unit",
+        "artifact": "frontend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-TREE-004",
+    "requirement": "ignored directory loads only on expansion",
+    "runner": "Vitest",
+    "selector": "[R199-TREE-004]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "frontend-unit",
+        "artifact": "frontend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-TREE-005",
+    "requirement": "`.git` is never traversed",
+    "runner": "Cargo suffix",
+    "selector": "r199_tree_005_git_boundary",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-TREE-006",
+    "requirement": "Changed excludes generated directory",
+    "runner": "Cargo suffix",
+    "selector": "r199_tree_006_generated_changed_excluded",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-TREE-013",
+    "requirement": "All includes generated directory as deferred",
+    "runner": "Cargo suffix",
+    "selector": "r199_tree_013_generated_all_deferred",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-TREE-014",
+    "requirement": "generated children load only after All expansion",
+    "runner": "Vitest",
+    "selector": "[R199-TREE-014]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "frontend-unit",
+        "artifact": "frontend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-GIT-010",
+    "requirement": "local main is selected before fallback",
+    "runner": "Cargo suffix",
+    "selector": "r199_git_010_main_priority",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-GIT-011",
+    "requirement": "local master is selected when main is absent",
+    "runner": "Cargo suffix",
+    "selector": "r199_git_011_master_fallback",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-GIT-012",
+    "requirement": "shallow missing merge-base is typed",
+    "runner": "Cargo suffix",
+    "selector": "r199_git_012_shallow",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-GIT-013",
+    "requirement": "detached HEAD state is typed",
+    "runner": "Cargo suffix",
+    "selector": "r199_git_013_detached",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-GIT-014",
+    "requirement": "Unicode repository path is preserved",
+    "runner": "Cargo suffix",
+    "selector": "r199_git_014_unicode",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-GIT-015",
+    "requirement": "rename retains old and new paths",
+    "runner": "Cargo suffix",
+    "selector": "r199_git_015_rename_paths",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-GIT-016",
+    "requirement": "large content is typed omitted",
+    "runner": "Cargo suffix",
+    "selector": "r199_git_016_large_omitted",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-GIT-018",
+    "requirement": "committed change enters snapshot",
+    "runner": "Cargo suffix",
+    "selector": "r199_git_018_committed",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-GIT-019",
+    "requirement": "staged change enters snapshot",
+    "runner": "Cargo suffix",
+    "selector": "r199_git_019_staged",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-GIT-020",
+    "requirement": "unstaged change enters snapshot",
+    "runner": "Cargo suffix",
+    "selector": "r199_git_020_unstaged",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-GIT-021",
+    "requirement": "committed staged unstaged combine once",
+    "runner": "Cargo suffix",
+    "selector": "r199_git_021_combined",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-GIT-022",
+    "requirement": "non-Spec text file is reviewable",
+    "runner": "Cargo suffix",
+    "selector": "r199_git_022_non_spec",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-GIT-001",
+    "requirement": "Git global config cannot alter base",
+    "runner": "Cargo suffix",
+    "selector": "r199_git_001_env_isolation",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-GIT-002",
+    "requirement": "symbolic remote HEAD selects its target",
+    "runner": "Cargo suffix",
+    "selector": "r199_git_002_symbolic_remote_head",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-GIT-017",
+    "requirement": "missing remote HEAD falls through priority",
+    "runner": "Cargo suffix",
+    "selector": "r199_git_017_missing_remote_head",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-GIT-003",
+    "requirement": "gh merge-base candidate is deterministic",
+    "runner": "Cargo suffix",
+    "selector": "r199_git_003_gh_merge_base",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-GIT-004",
+    "requirement": "override wins base selection",
+    "runner": "Cargo suffix",
+    "selector": "r199_git_004_override",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-GIT-005",
+    "requirement": "unborn HEAD is typed",
+    "runner": "Cargo suffix",
+    "selector": "r199_git_005_unborn",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-GIT-006",
+    "requirement": "non-UTF8 path is typed error",
+    "runner": "Cargo suffix",
+    "selector": "r199_git_006_non_utf8",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-GIT-007",
+    "requirement": "symlink escape is rejected",
+    "runner": "Cargo suffix",
+    "selector": "r199_git_007_symlink_escape",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-GIT-008",
+    "requirement": "junction escape is rejected",
+    "runner": "Cargo suffix",
+    "selector": "r199_git_008_junction_escape",
+    "targets": [
+      {
+        "os": "windows-latest",
+        "ciJob": "windows-review",
+        "artifact": "windows-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-GIT-009",
+    "requirement": "reparse point is not followed",
+    "runner": "Cargo suffix",
+    "selector": "r199_git_009_reparse_boundary",
+    "targets": [
+      {
+        "os": "windows-latest",
+        "ciJob": "windows-review",
+        "artifact": "windows-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-VIEW-004",
+    "requirement": "view mode is session-global across files",
+    "runner": "Vitest",
+    "selector": "[R199-VIEW-004]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "frontend-unit",
+        "artifact": "frontend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-VIEW-005",
+    "requirement": "base-resolution error remains actionable",
+    "runner": "Storybook",
+    "selector": "app-reviewregression--base-error",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "storybook-review-e2e",
+        "artifact": "storybook-playwright"
+      }
+    ]
+  },
+  {
+    "id": "R199-VIEW-001",
+    "requirement": "Unified retains active file tab",
+    "runner": "Playwright",
+    "selector": "^\\\\[R199-VIEW-001\\\\]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "app-review-e2e",
+        "artifact": "app-playwright"
+      }
+    ]
+  },
+  {
+    "id": "R199-VIEW-002",
+    "requirement": "Split retains active file tab",
+    "runner": "Playwright",
+    "selector": "^\\\\[R199-VIEW-002\\\\]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "app-review-e2e",
+        "artifact": "app-playwright"
+      }
+    ]
+  },
+  {
+    "id": "R199-VIEW-003",
+    "requirement": "Editor retains active file tab",
+    "runner": "Playwright",
+    "selector": "^\\\\[R199-VIEW-003\\\\]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "app-review-e2e",
+        "artifact": "app-playwright"
+      }
+    ]
+  },
+  {
+    "id": "R199-VIEW-006",
+    "requirement": "Changed All Unified Split Editor share snapshot identity",
+    "runner": "Vitest",
+    "selector": "[R199-VIEW-006]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "frontend-unit",
+        "artifact": "frontend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-REVIEW-001",
+    "requirement": "Spec section creates a comment",
+    "runner": "Playwright",
+    "selector": "^\\\\[R199-REVIEW-001\\\\]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "app-review-e2e",
+        "artifact": "app-playwright"
+      }
+    ]
+  },
+  {
+    "id": "R199-REVIEW-002",
+    "requirement": "Diff line creates a comment",
+    "runner": "Playwright",
+    "selector": "^\\\\[R199-REVIEW-002\\\\]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "app-review-e2e",
+        "artifact": "app-playwright"
+      }
+    ]
+  },
+  {
+    "id": "R199-REVIEW-006",
+    "requirement": "Open filter excludes resolved comments",
+    "runner": "Vitest",
+    "selector": "[R199-REVIEW-006]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "frontend-unit",
+        "artifact": "frontend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-REVIEW-003",
+    "requirement": "resolve changes status filter result",
+    "runner": "Playwright",
+    "selector": "^\\\\[R199-REVIEW-003\\\\]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "app-review-e2e",
+        "artifact": "app-playwright"
+      }
+    ]
+  },
+  {
+    "id": "R199-REVIEW-004",
+    "requirement": "card jump focuses line indicator",
+    "runner": "Playwright",
+    "selector": "^\\\\[R199-REVIEW-004\\\\]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "app-review-e2e",
+        "artifact": "app-playwright"
+      }
+    ]
+  },
+  {
+    "id": "R199-REVIEW-005",
+    "requirement": "line indicator selects Review card",
+    "runner": "Playwright",
+    "selector": "^\\\\[R199-REVIEW-005\\\\]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "app-review-e2e",
+        "artifact": "app-playwright"
+      }
+    ]
+  },
+  {
+    "id": "R199-REVIEW-007",
+    "requirement": "Spec Review card jump focuses anchored section",
+    "runner": "Playwright",
+    "selector": "^\\[R199-REVIEW-007\\]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "app-review-e2e",
+        "artifact": "app-playwright"
+      }
+    ]
+  },
+  {
+    "id": "R199-REVIEW-008",
+    "requirement": "Spec section indicator selects Review card",
+    "runner": "Playwright",
+    "selector": "^\\[R199-REVIEW-008\\]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "app-review-e2e",
+        "artifact": "app-playwright"
+      }
+    ]
+  },
+  {
+    "id": "R199-ANCHOR-001",
+    "requirement": "exact anchor retains side-path",
+    "runner": "Cargo suffix",
+    "selector": "r199_anchor_001_exact_side_path",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-ANCHOR-002",
+    "requirement": "relocated anchor retains side-path",
+    "runner": "Cargo suffix",
+    "selector": "r199_anchor_002_relocated_side_path",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-ANCHOR-003",
+    "requirement": "stale anchor cannot jump",
+    "runner": "Vitest",
+    "selector": "[R199-ANCHOR-003]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "frontend-unit",
+        "artifact": "frontend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-STORE-001",
+    "requirement": "missing document loads revision zero",
+    "runner": "Cargo suffix",
+    "selector": "r199_store_001_revision_zero",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-STORE-002",
+    "requirement": "successful mutation increments revision",
+    "runner": "Cargo suffix",
+    "selector": "r199_store_002_increment",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-STORE-003",
+    "requirement": "stale expected revision returns conflict",
+    "runner": "Cargo suffix",
+    "selector": "r199_store_003_conflict",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-STORE-004",
+    "requirement": "maximum revision returns overflow",
+    "runner": "Cargo suffix",
+    "selector": "r199_store_004_overflow",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-STORE-005",
+    "requirement": "Linux denied path returns typed command error",
+    "runner": "Cargo suffix",
+    "selector": "r199_store_005_linux_permission_command",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-STORE-015",
+    "requirement": "Windows ACL denial returns typed command error",
+    "runner": "Cargo suffix",
+    "selector": "r199_store_015_windows_acl_command",
+    "targets": [
+      {
+        "os": "windows-latest",
+        "ciJob": "windows-review",
+        "artifact": "windows-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-STORE-006",
+    "requirement": "Linux pre-replace crash preserves old bytes",
+    "runner": "Cargo suffix",
+    "selector": "r199_store_006_linux_prereplace_crash",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-STORE-017",
+    "requirement": "Windows pre-replace crash preserves old bytes",
+    "runner": "Cargo suffix",
+    "selector": "r199_store_017_windows_prereplace_crash",
+    "targets": [
+      {
+        "os": "windows-latest",
+        "ciJob": "windows-review",
+        "artifact": "windows-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-STORE-007",
+    "requirement": "alive process reports uncertain after directory sync failure",
+    "runner": "Cargo suffix",
+    "selector": "r199_store_007_alive_uncertain",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-STORE-014",
+    "requirement": "post-replace process crash restores new document",
+    "runner": "Cargo suffix",
+    "selector": "r199_store_014_postreplace_crash",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-STORE-020",
+    "requirement": "Windows alive process reports uncertain after sync failure",
+    "runner": "Cargo suffix",
+    "selector": "r199_store_020_windows_alive_uncertain",
+    "targets": [
+      {
+        "os": "windows-latest",
+        "ciJob": "windows-review",
+        "artifact": "windows-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-STORE-008",
+    "requirement": "Linux Diff mutation preserves Spec v2 bytes",
+    "runner": "Cargo suffix",
+    "selector": "r199_store_008_linux_diff_preserves_spec",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-STORE-018",
+    "requirement": "Windows Diff mutation preserves Spec v2 bytes",
+    "runner": "Cargo suffix",
+    "selector": "r199_store_018_windows_diff_preserves_spec",
+    "targets": [
+      {
+        "os": "windows-latest",
+        "ciJob": "windows-review",
+        "artifact": "windows-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-STORE-009",
+    "requirement": "Linux Spec mutation preserves Diff v1 bytes",
+    "runner": "Cargo suffix",
+    "selector": "r199_store_009_linux_spec_preserves_diff",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-STORE-019",
+    "requirement": "Windows Spec mutation preserves Diff v1 bytes",
+    "runner": "Cargo suffix",
+    "selector": "r199_store_019_windows_spec_preserves_diff",
+    "targets": [
+      {
+        "os": "windows-latest",
+        "ciJob": "windows-review",
+        "artifact": "windows-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-STORE-010",
+    "requirement": "worktrees use isolated documents",
+    "runner": "Cargo suffix",
+    "selector": "r199_store_010_worktree_isolation",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-STORE-011",
+    "requirement": "noncanonical revision is rejected",
+    "runner": "Cargo suffix",
+    "selector": "r199_store_011_invalid_revision",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-STORE-012",
+    "requirement": "envelope-anchor identity mismatch is rejected",
+    "runner": "Cargo suffix",
+    "selector": "r199_store_012_envelope_mismatch",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-STORE-013",
+    "requirement": "runtime resolution is absent from stored bytes",
+    "runner": "Cargo suffix",
+    "selector": "r199_store_013_runtime_not_stored",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "backend-check",
+        "artifact": "backend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-ERR-001",
+    "requirement": "unmanaged repository shows typed state",
+    "runner": "Storybook",
+    "selector": "app-reviewregression--unmanaged",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "storybook-review-e2e",
+        "artifact": "storybook-playwright"
+      }
+    ]
+  },
+  {
+    "id": "R199-ERR-002",
+    "requirement": "read denial shows retryable state",
+    "runner": "Storybook",
+    "selector": "app-reviewregression--read-denied",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "storybook-review-e2e",
+        "artifact": "storybook-playwright"
+      }
+    ]
+  },
+  {
+    "id": "R199-ERR-003",
+    "requirement": "stale response cannot replace current identity",
+    "runner": "Vitest",
+    "selector": "[R199-ERR-003]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "frontend-unit",
+        "artifact": "frontend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-ERR-004",
+    "requirement": "deleted active file selects fallback",
+    "runner": "Vitest",
+    "selector": "[R199-ERR-004]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "frontend-unit",
+        "artifact": "frontend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-A11Y-001",
+    "requirement": "keyboard jump moves focus to destination",
+    "runner": "Playwright",
+    "selector": "^\\\\[R199-A11Y-001\\\\]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "app-review-e2e",
+        "artifact": "app-playwright"
+      }
+    ]
+  },
+  {
+    "id": "R199-A11Y-002",
+    "requirement": "line control exposes side/path/line/action name",
+    "runner": "Vitest",
+    "selector": "[R199-A11Y-002]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "frontend-unit",
+        "artifact": "frontend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-A11Y-003",
+    "requirement": "dark review story has no serious axe violation",
+    "runner": "Playwright",
+    "selector": "^\\\\[R199-A11Y-003\\\\]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "storybook-review-e2e",
+        "artifact": "storybook-playwright"
+      }
+    ]
+  },
+  {
+    "id": "R199-A11Y-004",
+    "requirement": "narrow review story has no serious axe violation",
+    "runner": "Playwright",
+    "selector": "^\\\\[R199-A11Y-004\\\\]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "storybook-review-e2e",
+        "artifact": "storybook-playwright"
+      }
+    ]
+  },
+  {
+    "id": "R199-PERF-001",
+    "requirement": "large tree keeps rendered node cap",
+    "runner": "Vitest",
+    "selector": "[R199-PERF-001]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "frontend-unit",
+        "artifact": "frontend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-PERF-002",
+    "requirement": "large diff keeps rendered row cap",
+    "runner": "Vitest",
+    "selector": "[R199-PERF-002]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "frontend-unit",
+        "artifact": "frontend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-PERF-003",
+    "requirement": "10k Review keeps rendered card cap",
+    "runner": "Vitest",
+    "selector": "[R199-PERF-003]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "frontend-unit",
+        "artifact": "frontend-junit"
+      }
+    ]
+  },
+  {
+    "id": "R199-PERF-004",
+    "requirement": "off-window jump materializes focused target",
+    "runner": "Playwright",
+    "selector": "^\\\\[R199-PERF-004\\\\]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "app-review-e2e",
+        "artifact": "app-playwright"
+      }
+    ]
+  },
+  {
+    "id": "R199-NATIVE-001",
+    "requirement": "native app executes repository command",
+    "runner": "WebdriverIO",
+    "selector": "[R199-NATIVE-001]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "native-review-smoke",
+        "artifact": "native-smoke"
+      }
+    ]
+  },
+  {
+    "id": "R199-NATIVE-002",
+    "requirement": "native restart restores Diff comment",
+    "runner": "WebdriverIO",
+    "selector": "[R199-NATIVE-002]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "native-review-smoke",
+        "artifact": "native-smoke"
+      }
+    ]
+  },
+  {
+    "id": "R199-NATIVE-003",
+    "requirement": "native pre-replace crash keeps old document",
+    "runner": "WebdriverIO",
+    "selector": "[R199-NATIVE-003]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "native-review-smoke",
+        "artifact": "native-smoke"
+      }
+    ]
+  },
+  {
+    "id": "R199-NATIVE-004",
+    "requirement": "native post-replace crash restores new document",
+    "runner": "WebdriverIO",
+    "selector": "[R199-NATIVE-004]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "native-review-smoke",
+        "artifact": "native-smoke"
+      }
+    ]
+  },
+  {
+    "id": "R199-NATIVE-005",
+    "requirement": "normal release excludes native test control",
+    "runner": "Cargo suffix",
+    "selector": "r199_native_005_release_exclusion",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "native-review-smoke",
+        "artifact": "native-smoke"
+      }
+    ]
+  },
+  {
+    "id": "R199-NATIVE-006",
+    "requirement": "mutation remains pending after out-of-band ready",
+    "runner": "WebdriverIO",
+    "selector": "[R199-NATIVE-006]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "native-review-smoke",
+        "artifact": "native-smoke"
+      }
+    ]
+  },
+  {
+    "id": "R199-NATIVE-007",
+    "requirement": "wrong nonce ready signal is rejected",
+    "runner": "WebdriverIO",
+    "selector": "[R199-NATIVE-007]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "native-review-smoke",
+        "artifact": "native-smoke"
+      }
+    ]
+  },
+  {
+    "id": "R199-NATIVE-008",
+    "requirement": "crash control files are cleaned after restart",
+    "runner": "WebdriverIO",
+    "selector": "[R199-NATIVE-008]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "native-review-smoke",
+        "artifact": "native-smoke"
+      }
+    ]
+  },
+  {
+    "id": "R199-VRTCASE-001",
+    "requirement": "Specs hierarchy light desktop tuple matches baseline",
+    "runner": "VRT tuple",
+    "selector": "app-reviewregression--specs-hierarchy\\|light|1280x720",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "trusted-visual-approval",
+        "artifact": "visual-approval-evidence"
+      }
+    ]
+  },
+  {
+    "id": "R199-VRTCASE-002",
+    "requirement": "Archive light desktop tuple matches baseline",
+    "runner": "VRT tuple",
+    "selector": "app-reviewregression--archive|light|1280x720",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "trusted-visual-approval",
+        "artifact": "visual-approval-evidence"
+      }
+    ]
+  },
+  {
+    "id": "R199-VRTCASE-003",
+    "requirement": "progress states light desktop tuple matches baseline",
+    "runner": "VRT tuple",
+    "selector": "app-reviewregression--progress|light|1280x720",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "trusted-visual-approval",
+        "artifact": "visual-approval-evidence"
+      }
+    ]
+  },
+  {
+    "id": "R199-VRTCASE-004",
+    "requirement": "Changed tree light desktop tuple matches baseline",
+    "runner": "VRT tuple",
+    "selector": "app-reviewregression--changed-tree|light|1280x720",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "trusted-visual-approval",
+        "artifact": "visual-approval-evidence"
+      }
+    ]
+  },
+  {
+    "id": "R199-VRTCASE-005",
+    "requirement": "All lazy tree light narrow tuple matches baseline",
+    "runner": "VRT tuple",
+    "selector": "app-reviewregression--all-lazy|light|390x844",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "trusted-visual-approval",
+        "artifact": "visual-approval-evidence"
+      }
+    ]
+  },
+  {
+    "id": "R199-VRTCASE-006",
+    "requirement": "Unified light desktop tuple matches baseline",
+    "runner": "VRT tuple",
+    "selector": "app-reviewregression--unified|light|1280x720",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "trusted-visual-approval",
+        "artifact": "visual-approval-evidence"
+      }
+    ]
+  },
+  {
+    "id": "R199-VRTCASE-007",
+    "requirement": "Split dark desktop tuple matches baseline",
+    "runner": "VRT tuple",
+    "selector": "app-reviewregression--split|dark|1280x720",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "trusted-visual-approval",
+        "artifact": "visual-approval-evidence"
+      }
+    ]
+  },
+  {
+    "id": "R199-VRTCASE-008",
+    "requirement": "Editor dark narrow tuple matches baseline",
+    "runner": "VRT tuple",
+    "selector": "app-reviewregression--editor|dark|390x844",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "trusted-visual-approval",
+        "artifact": "visual-approval-evidence"
+      }
+    ]
+  },
+  {
+    "id": "R199-VRTCASE-009",
+    "requirement": "conflict composer light desktop tuple matches baseline",
+    "runner": "VRT tuple",
+    "selector": "app-reviewregression--conflict|light|1280x720",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "trusted-visual-approval",
+        "artifact": "visual-approval-evidence"
+      }
+    ]
+  },
+  {
+    "id": "R199-VRTCASE-010",
+    "requirement": "stale comment dark desktop tuple matches baseline",
+    "runner": "VRT tuple",
+    "selector": "app-reviewregression--stale|dark|1280x720",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "trusted-visual-approval",
+        "artifact": "visual-approval-evidence"
+      }
+    ]
+  },
+  {
+    "id": "R199-VRTCASE-011",
+    "requirement": "Review filters light desktop tuple matches baseline",
+    "runner": "VRT tuple",
+    "selector": "app-reviewregression--review-filters|light|1280x720",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "trusted-visual-approval",
+        "artifact": "visual-approval-evidence"
+      }
+    ]
+  },
+  {
+    "id": "R199-VRTCASE-012",
+    "requirement": "convergence picker dark desktop tuple matches baseline",
+    "runner": "VRT tuple",
+    "selector": "app-reviewregression--convergence|dark|1280x720",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "trusted-visual-approval",
+        "artifact": "visual-approval-evidence"
+      }
+    ]
+  },
+  {
+    "id": "R199-VRTCASE-013",
+    "requirement": "unmanaged repository light desktop tuple matches baseline",
+    "runner": "VRT tuple",
+    "selector": "app-reviewregression--unmanaged|light|1280x720",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "trusted-visual-approval",
+        "artifact": "visual-approval-evidence"
+      }
+    ]
+  },
+  {
+    "id": "R199-VRTCASE-014",
+    "requirement": "base error light desktop tuple matches baseline",
+    "runner": "VRT tuple",
+    "selector": "app-reviewregression--base-error|light|1280x720",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "trusted-visual-approval",
+        "artifact": "visual-approval-evidence"
+      }
+    ]
+  },
+  {
+    "id": "R199-VRTCASE-015",
+    "requirement": "read denial light desktop tuple matches baseline",
+    "runner": "VRT tuple",
+    "selector": "app-reviewregression--read-denied|light|1280x720",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "trusted-visual-approval",
+        "artifact": "visual-approval-evidence"
+      }
+    ]
+  },
+  {
+    "id": "R199-VRTCASE-016",
+    "requirement": "deleted file light desktop tuple matches baseline",
+    "runner": "VRT tuple",
+    "selector": "app-reviewregression--deleted-file|light|1280x720",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "trusted-visual-approval",
+        "artifact": "visual-approval-evidence"
+      }
+    ]
+  },
+  {
+    "id": "R199-VRTCASE-017",
+    "requirement": "required tuple expands to one candidate record",
+    "runner": "Node test",
+    "selector": "[R199-VRTCASE-017]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "visual-candidate",
+        "artifact": "visual-candidate"
+      }
+    ]
+  },
+  {
+    "id": "R199-VRTCASE-018",
+    "requirement": "required tuple expands to one final evidence record",
+    "runner": "Node test",
+    "selector": "[R199-VRTCASE-018]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "trusted-visual-approval",
+        "artifact": "visual-approval-evidence"
+      }
+    ]
+  },
+  {
+    "id": "R199-VRT-001",
+    "requirement": "exact tuple approval can green premerge",
+    "runner": "Node test",
+    "selector": "[R199-VRT-001]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "trusted-visual-approval",
+        "artifact": "visual-approval-evidence"
+      }
+    ]
+  },
+  {
+    "id": "R199-VRT-002",
+    "requirement": "stale head approval is rejected",
+    "runner": "Node test",
+    "selector": "[R199-VRT-002]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "trusted-visual-approval",
+        "artifact": "visual-approval-evidence"
+      }
+    ]
+  },
+  {
+    "id": "R199-VRT-003",
+    "requirement": "self approval is rejected",
+    "runner": "Node test",
+    "selector": "[R199-VRT-003]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "trusted-visual-approval",
+        "artifact": "visual-approval-evidence"
+      }
+    ]
+  },
+  {
+    "id": "R199-VRT-004",
+    "requirement": "third approval round is rejected",
+    "runner": "Node test",
+    "selector": "[R199-VRT-004]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "trusted-visual-approval",
+        "artifact": "visual-approval-evidence"
+      }
+    ]
+  },
+  {
+    "id": "R199-VRT-005",
+    "requirement": "candidate workflow has read-only permissions",
+    "runner": "workflow audit",
+    "selector": "[R199-VRT-005]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "visual-candidate",
+        "artifact": "visual-candidate"
+      }
+    ]
+  },
+  {
+    "id": "R199-VRT-006",
+    "requirement": "trusted validator is pinned to base branch",
+    "runner": "Node test",
+    "selector": "[R199-VRT-006]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "trusted-visual-approval",
+        "artifact": "visual-approval-evidence"
+      }
+    ]
+  },
+  {
+    "id": "R199-VRT-007",
+    "requirement": "trusted workflow never executes PR code",
+    "runner": "workflow audit",
+    "selector": "[R199-VRT-007]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "trusted-visual-approval",
+        "artifact": "visual-approval-evidence"
+      }
+    ]
+  },
+  {
+    "id": "R199-VRT-008",
+    "requirement": "authenticated comment body must match candidate tuple",
+    "runner": "Node test",
+    "selector": "[R199-VRT-008]",
+    "targets": [
+      {
+        "os": "ubuntu-24.04",
+        "ciJob": "trusted-visual-approval",
+        "artifact": "visual-approval-evidence"
+      }
+    ]
+  }
+]
