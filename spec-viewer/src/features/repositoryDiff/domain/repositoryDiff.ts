@@ -47,13 +47,17 @@ export type BaseResolution =
 export type RepositoryDiffFile = Readonly<{
   oldPath: string | null;
   newPath: string | null;
-  change: FileChangeStatus;
+  change: FileChangeStatus | null;
   entryKind: EntryKind;
   contentClassification: ContentClassification;
   similarity: number | null;
   oldMode: string | null;
   newMode: string | null;
 }>;
+
+export type RepositoryChangedFile = Readonly<
+  Omit<RepositoryDiffFile, "change"> & { change: FileChangeStatus }
+>;
 
 export type RepositoryTreeChildren =
   | Readonly<{
@@ -79,7 +83,7 @@ export type RepositoryDiffOverview = Readonly<{
   repositoryId: string | null;
   base: BaseResolution;
   currentSnapshotId: string | null;
-  changed: readonly RepositoryDiffFile[];
+  changed: readonly RepositoryChangedFile[];
   changedTree: readonly RepositoryTreeNode[];
   allRoot: readonly RepositoryTreeNode[];
   allPaths: readonly string[];

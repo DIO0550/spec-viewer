@@ -848,7 +848,7 @@ test("CommentSidebarはresolvedコメントのreopen操作を発火する", () =
   result.unmount();
 });
 
-test("CommentSidebarはコメント本文を編集して保存できる", () => {
+test("CommentSidebarはコメント本文を編集して保存できる", async () => {
   const onUpdateComment = vi.fn();
   const result = renderReadySidebar({ onUpdateComment });
   const editButton = result.container.querySelector(
@@ -872,7 +872,7 @@ test("CommentSidebarはコメント本文を編集して保存できる", () => 
     '[aria-label="保存 cmt_open"]',
   ) as HTMLButtonElement;
 
-  act(() => {
+  await act(async () => {
     saveButton.click();
   });
 

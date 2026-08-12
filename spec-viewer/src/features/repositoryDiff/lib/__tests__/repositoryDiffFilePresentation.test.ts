@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import type { FileDiff } from "@/features/diff/domain/fileDiff";
 import type {
-  RepositoryDiffFile,
+  RepositoryChangedFile,
   RepositoryDiffOverview,
   RepositoryDiffTreeProjectionNode,
 } from "@/features/repositoryDiff/domain/repositoryDiff";
@@ -14,10 +14,10 @@ import {
 } from "@/features/repositoryDiff/lib/repositoryDiffFilePresentation";
 
 const file = (
-  change: RepositoryDiffFile["change"],
+  change: RepositoryChangedFile["change"],
   oldPath: string | null,
   newPath: string | null,
-): RepositoryDiffFile => ({
+): RepositoryChangedFile => ({
   oldPath,
   newPath,
   change,

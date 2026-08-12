@@ -97,6 +97,34 @@ jobs:
           if-no-files-found: ignore
           retention-days: 1
 
+  windows-atomic-replace:
+    name: Windows atomic replace / child process
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: spec-viewer
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 1
+
+      - name: Install stable Rust and Windows target
+        shell: pwsh
+        run: |
+          rustup toolchain install stable --profile minimal --component clippy
+          rustup default stable
+          rustup target add x86_64-pc-windows-msvc
+
+      - name: Test Windows persistence and child-process paths
+        run: cargo test --manifest-path src-tauri/Cargo.toml --target x86_64-pc-windows-msvc --no-default-features
+
+      - name: Clippy Windows targets
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --target x86_64-pc-windows-msvc --all-targets -- -D warnings
+
   coverage-comment:
     name: post coverage comment
     needs: check

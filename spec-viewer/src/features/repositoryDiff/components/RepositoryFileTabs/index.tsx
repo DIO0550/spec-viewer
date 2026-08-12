@@ -122,47 +122,58 @@ export function RepositoryFileTabs(
   };
 
   return (
-    <div
-      ref={tablistRef}
-      className="repository-file-tabs"
-      role="tablist"
-      aria-label="開いている変更ファイル"
-      tabIndex={props.items.length === 0 ? 0 : -1}
-    >
-      {props.items.map((item, index) => {
-        const status = getFileChangePresentation(item.change);
-        const isActive = props.activePath === item.path;
-        return (
-          <div className="repository-file-tab-shell" key={item.path}>
-            <button
-              ref={(element) => {
-                if (element === null) {
-                  tabRefs.current.delete(item.path);
-                } else {
-                  tabRefs.current.set(item.path, element);
-                }
-              }}
-              id={createRepositoryFileTabId(item.path)}
-              className="repository-file-tab"
-              type="button"
-              role="tab"
-              aria-controls="repository-diff-panel"
-              aria-selected={isActive}
-              disabled={disabled}
-              tabIndex={rovingPath === item.path ? 0 : -1}
-              title={item.path}
-              onClick={() => props.onActivate(item.path)}
-              onKeyDown={(event) => handleKeyDown(event, index, item.path)}
-            >
-              <span
-                className="repository-file-tab__status"
-                aria-label={status.label}
-                data-change={item.change ?? "unchanged"}
+    <div className="repository-file-tabs">
+      <div
+        ref={tablistRef}
+        className="repository-file-tabs__tablist"
+        role="tablist"
+        aria-label="開いている変更ファイル"
+        tabIndex={props.items.length === 0 ? 0 : -1}
+      >
+        {props.items.map((item, index) => {
+          const status = getFileChangePresentation(item.change);
+          const isActive = props.activePath === item.path;
+          return (
+            <div className="repository-file-tab-shell" key={item.path}>
+              <button
+                ref={(element) => {
+                  if (element === null) {
+                    tabRefs.current.delete(item.path);
+                  } else {
+                    tabRefs.current.set(item.path, element);
+                  }
+                }}
+                id={createRepositoryFileTabId(item.path)}
+                className="repository-file-tab"
+                type="button"
+                role="tab"
+                aria-controls="repository-diff-panel"
+                aria-selected={isActive}
+                disabled={disabled}
+                tabIndex={rovingPath === item.path ? 0 : -1}
+                title={item.path}
+                onClick={() => props.onActivate(item.path)}
+                onKeyDown={(event) => handleKeyDown(event, index, item.path)}
               >
-                {status.token}
-              </span>
-              <span className="repository-file-tab__path">{item.path}</span>
-            </button>
+                <span
+                  className="repository-file-tab__status"
+                  aria-label={status.label}
+                  data-change={item.change ?? "unchanged"}
+                >
+                  {status.token}
+                </span>
+                <span className="repository-file-tab__path">{item.path}</span>
+              </button>
+            </div>
+          );
+        })}
+      </div>
+      <div
+        className="repository-file-tabs__close-actions"
+        aria-label="ファイルタブを閉じる"
+      >
+        {props.items.map((item) => (
+          <div className="repository-file-tab-close-shell" key={item.path}>
             <button
               className="repository-file-tab__close"
               type="button"
@@ -174,8 +185,8 @@ export function RepositoryFileTabs(
               ×
             </button>
           </div>
-        );
-      })}
+        ))}
+      </div>
     </div>
   );
 }

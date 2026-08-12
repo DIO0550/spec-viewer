@@ -6,6 +6,8 @@ use chrono::{DateTime, Utc};
 use thiserror::Error;
 
 use crate::domain::spec::{MarkdownBlock, MarkdownBlockType, SpecFileKey};
+pub mod diff;
+pub mod diff_repository;
 
 mod repository;
 

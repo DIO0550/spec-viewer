@@ -540,6 +540,38 @@ test.each(
   expect(decodeRepositoryFileReview(response)).toMatchObject(expected);
 });
 
+test("Allの未変更file reviewをproduction wire shapeからdecodeする", () => {
+  const response = {
+    ...fileReviewResponse(),
+    file: fileChange({
+      oldPath: null,
+      newPath: "docs/unchanged.md",
+      change: null,
+      entryKind: "regular",
+      contentClassification: "text",
+      similarity: null,
+      oldMode: null,
+      newMode: null,
+    }),
+    oldContent: {
+      state: "omitted",
+      text: null,
+      reason: "missingSide",
+      byteLength: null,
+    },
+    newContent: {
+      state: "available",
+      text: "unchanged current\n",
+      reason: null,
+      byteLength: null,
+    },
+    patch: { state: "available", text: "", reason: null, byteLength: null },
+    structuredDiff: { state: "available", hunks: [], reason: null },
+  };
+
+  expect(decodeRepositoryFileReview(response)).toMatchObject(response);
+});
+
 test("deleted review の old content と removed hunk をdecodeする", () => {
   const response = {
     ...fileReviewResponse(),

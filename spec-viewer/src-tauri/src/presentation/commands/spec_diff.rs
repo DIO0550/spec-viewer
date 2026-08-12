@@ -308,6 +308,7 @@ impl SpecDiffCommandErrorCode {
             RepositoryPortError::NotRepository => Self::NotRepository,
             RepositoryPortError::BareRepository => Self::BareRepository,
             RepositoryPortError::WorktreeUnavailable => Self::WorktreeUnavailable,
+            RepositoryPortError::IdentityMismatch => Self::WorktreeUnavailable,
             RepositoryPortError::CommonDirBoundaryEscape => Self::CommonDirBoundaryEscape,
             RepositoryPortError::GitUnavailable => Self::GitUnavailable,
             RepositoryPortError::GitTimedOut { .. } => Self::GitTimedOut,
@@ -323,6 +324,8 @@ impl SpecDiffCommandErrorCode {
             | RepositoryPortError::StaleCursor
             | RepositoryPortError::InvalidCursor => Self::StaleSnapshot,
             RepositoryPortError::EntryChangedDuringRead => Self::EntryChangedDuringRead,
+            RepositoryPortError::Cancelled => Self::EntryChangedDuringRead,
+            RepositoryPortError::ContentTooLarge => Self::GitOutputLimitExceeded,
             RepositoryPortError::PermissionDenied => Self::PermissionDenied,
             RepositoryPortError::Io => Self::Io,
         }

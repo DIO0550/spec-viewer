@@ -28,12 +28,20 @@ import {
   type HeightMeasurementCache,
   mergeMeasuredHeights,
 } from "@/features/diff/lib/editorWindowing";
+import {
+  DiffLineCommentSlot,
+  type DiffCommentJumpTarget,
+  type DiffLineCommentsController,
+} from "@/features/diffComments/components/DiffLineCommentSlot";
+import { focusCommentTarget } from "@/features/diffComments/components/commentNavigation";
 
 export type CurrentFileViewerProps = Readonly<{
   fileDiff: FileDiff;
   revisionKey?: string;
   activeChangeId?: string | null;
   onActiveChangeIdChange?: (changeId: string | null) => void;
+  lineComments?: DiffLineCommentsController;
+  commentJumpTarget?: DiffCommentJumpTarget | null;
 }>;
 
 type ScrollAnchor = Readonly<{
@@ -67,6 +75,8 @@ export function CurrentFileViewer(props: CurrentFileViewerProps): ReactElement {
     revisionKey = `${fileDiff.identity.sourceId}:${fileDiff.identity.path}`,
     activeChangeId = null,
     onActiveChangeIdChange = () => undefined,
+    lineComments,
+    commentJumpTarget,
   } = props;
   const model = useMemo(
     () => buildEditorViewModel(fileDiff),
@@ -156,6 +166,29 @@ export function CurrentFileViewer(props: CurrentFileViewerProps): ReactElement {
     [],
   );
 
+  useEffect(() => {
+    if (
+      commentJumpTarget === null ||
+      commentJumpTarget === undefined ||
+      commentJumpTarget.side !== "current"
+    ) {
+      return;
+    }
+    const targetIndex = rows.findIndex(
+      (row) =>
+        row.kind === "currentLine" &&
+        row.anchor.newPath === commentJumpTarget.sidePath &&
+        row.lineNumber === commentJumpTarget.line,
+    );
+    if (targetIndex < 0) {
+      return;
+    }
+    setProgrammaticScrollTop(offsets[targetIndex] ?? 0);
+    const frameId = requestAnimationFrame(() => {
+      focusCommentTarget(scrollSurfaceRef.current, commentJumpTarget.key);
+    });
+    return () => cancelAnimationFrame(frameId);
+  }, [commentJumpTarget?.requestId, offsets, rows, setProgrammaticScrollTop]);
   useEffect(() => {
     if (resolvedActiveChangeId !== activeChangeId) {
       onActiveChangeIdChange(resolvedActiveChangeId);
@@ -500,6 +533,9 @@ export function CurrentFileViewer(props: CurrentFileViewerProps): ReactElement {
             }
             onTogglePeek={togglePeek}
             onMeasure={measureRow}
+            lineComments={lineComments}
+            oldPath={fileDiff.review.file.oldPath}
+            newPath={fileDiff.review.file.newPath}
           />
         ))}
         <div
@@ -578,6 +614,9 @@ const EditorRowView = memo(function EditorRowView(
     onTogglePeek: (peekId: string) => void;
     controlledRowIds?: string;
     onMeasure: (rowId: string, element: HTMLDivElement | null) => void;
+    lineComments?: DiffLineCommentsController;
+    oldPath: string | null;
+    newPath: string | null;
   }>,
 ): ReactElement {
   const { row } = props;
@@ -607,6 +646,19 @@ const EditorRowView = memo(function EditorRowView(
         data-change-kind={row.gutterKind}
         data-active-change={isActive ? "true" : "false"}
       >
+        {props.lineComments === undefined ? null : (
+          <DiffLineCommentSlot
+            target={{
+              key: `current:${row.anchor.newPath}:${row.lineNumber}`,
+              side: "current",
+              sidePath: row.anchor.newPath,
+              oldPath: props.oldPath ?? undefined,
+              newPath: props.newPath ?? row.anchor.newPath,
+              line: row.lineNumber,
+            }}
+            controller={props.lineComments}
+          />
+        )}
         <span
           role="gridcell"
           className="current-file-viewer__gutter"

@@ -12,13 +12,25 @@
   display: flex;
   min-width: 0;
   min-height: 38px;
-  overflow-x: auto;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-panel);
 }
 
+.repository-file-tabs__tablist {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.repository-file-tabs__close-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  border-left: 1px solid var(--color-border);
+}
+
 .repository-file-tab-shell {
-  position: relative;
   display: flex;
   flex: 0 0 auto;
   min-width: 0;
@@ -83,10 +95,12 @@
   white-space: nowrap;
 }
 
+.repository-file-tab-close-shell {
+  display: grid;
+  place-items: center;
+}
+
 .repository-file-tab__close {
-  position: absolute;
-  top: 50%;
-  right: 6px;
   display: grid;
   width: 22px;
   height: 22px;
@@ -97,7 +111,6 @@
   border: 0;
   border-radius: 4px;
   cursor: pointer;
-  transform: translateY(-50%);
 }
 
 .repository-file-tab__close:hover {

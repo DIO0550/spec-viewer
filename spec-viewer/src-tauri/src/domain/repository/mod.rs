@@ -296,6 +296,8 @@ pub struct TreeNode {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RepositoryOverview {
     pub repository_id: RepositoryId,
+    pub diff_review_identity: Option<crate::domain::comment::diff::DiffReviewIdentity>,
+    pub display_worktree_label: String,
     pub base: BaseBranchResolution,
     pub base_source: Option<BaseResolutionSource>,
     pub current_snapshot_id: Option<SnapshotId>,
@@ -364,6 +366,56 @@ pub struct FileReview {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RepositoryFileMetadata {
+    pub(crate) old_path: Option<RepositoryRelativePath>,
+    pub(crate) new_path: Option<RepositoryRelativePath>,
+    pub(crate) change: Option<FileChangeKind>,
+    pub entry_kind: EntryKind,
+    pub content_classification: ContentClassification,
+    pub similarity: Option<u8>,
+    pub old_mode: Option<String>,
+    pub new_mode: Option<String>,
+}
+
+impl From<DiffFile> for RepositoryFileMetadata {
+    fn from(file: DiffFile) -> Self {
+        Self {
+            old_path: file.old_path,
+            new_path: file.new_path,
+            change: Some(file.change),
+            entry_kind: file.entry_kind,
+            content_classification: file.content_classification,
+            similarity: file.similarity,
+            old_mode: file.old_mode,
+            new_mode: file.new_mode,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RepositoryFileReview {
+    pub file: RepositoryFileMetadata,
+    pub old_content: ContentAvailability,
+    pub new_content: ContentAvailability,
+    pub structured_diff: StructuredDiff,
+    pub submodule: Option<SubmoduleState>,
+    pub patch: ContentAvailability,
+}
+
+impl From<FileReview> for RepositoryFileReview {
+    fn from(review: FileReview) -> Self {
+        Self {
+            file: review.file.into(),
+            old_content: review.old_content,
+            new_content: review.new_content,
+            structured_diff: review.structured_diff,
+            submodule: review.submodule,
+            patch: review.patch,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IgnoredPage {
     pub node_id: String,
     pub directory: RepositoryRelativePath,
@@ -394,6 +446,8 @@ pub enum RepositoryPortError {
     CommonDirBoundaryEscape,
     #[error("Git unavailable")]
     GitUnavailable,
+    #[error("repository identity mismatch")]
+    IdentityMismatch,
     #[error("Git timed out: {operation}")]
     GitTimedOut { operation: String },
     #[error("Git output limit exceeded: {stream}")]
@@ -424,6 +478,10 @@ pub enum RepositoryPortError {
     InvalidCursor,
     #[error("entry changed during read")]
     EntryChangedDuringRead,
+    #[error("operation cancelled")]
+    Cancelled,
+    #[error("content exceeds review limit")]
+    ContentTooLarge,
     #[error("permission denied")]
     PermissionDenied,
     #[error("I/O error")]
@@ -448,7 +506,7 @@ pub trait RepositoryPort {
         worktree: &crate::domain::workspace::WorktreeId,
         snapshot: &SnapshotId,
         path: &RepositoryRelativePath,
-    ) -> Result<FileReview, RepositoryPortError>;
+    ) -> Result<RepositoryFileReview, RepositoryPortError>;
 }
 
 pub trait WorkingTreeDiffPort {

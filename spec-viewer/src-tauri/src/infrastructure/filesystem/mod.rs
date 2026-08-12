@@ -413,7 +413,8 @@ pub fn archive_spec_directory(
             Ok(()) => {
                 let destination_node_id = destination_path
                     .strip_prefix(&archive_paths.source_root)
-                    .map(display_path)
+                    .map(relative_spec_path_components)
+                    .map(|components| components.join("/"))
                     .map_err(|_| SpecArchiveError::InvalidArchiveDestination {
                         path: display_path(&destination_path),
                     })?;

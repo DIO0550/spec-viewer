@@ -384,7 +384,8 @@ mod tests {
         // Even without a document, the failed artifact keeps the full resolved
         // path (spec directory + file name), not just the base file name.
         assert_ne!(broken.file_name, broken.path);
-        assert!(broken.path.ends_with("001-feature/broken.md"));
+        assert!(std::path::Path::new(&broken.path)
+            .ends_with(std::path::Path::new("001-feature").join("broken.md")));
         assert!(broken
             .path
             .starts_with(workspace.root.to_string_lossy().as_ref()));
