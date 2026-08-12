@@ -12,6 +12,7 @@ Completed task files are moved here from the active task groups.
 
 ## Completed Tasks
 
+- [Issue #198 Specs / Diff comment anchors and review navigation](./review/issue-198-diff-comments.md)
 - [Issue #197 Editor view and deleted / previous-content peek](./frontend/issue-197-editor-peek.md)
 - [Issue #201 Repository diff backend](./backend/issue-201-repository-diff.md)
 - [P1.1 Backend Module Skeleton](./phase-1-viewer/p1-01-backend-module-skeleton.md)

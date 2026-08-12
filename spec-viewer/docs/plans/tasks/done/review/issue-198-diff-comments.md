@@ -836,47 +836,47 @@ Playwright Test is mandatory for #198. The stateful App harness runs production 
 
 ## Acceptance criteria and evidence
 
-- [ ] Spec comments still use unchanged JSON v2, commands, hooks, export/MCP, delete, and anchor behavior, including unknown-field golden preservation.
+- [x] Spec comments still use unchanged JSON v2, commands, hooks, export/MCP, delete, and anchor behavior, including unknown-field golden preservation.
   - Evidence: existing suites plus Spec v2 golden read-update-write and Diff-write/Spec-read integration tests.
-- [ ] Wire/storage JSON uses canonical `worktreeId`; display label is separate/nonpersistent and adapter-only `storageFileKey` never crosses the boundary.
+- [x] Wire/storage JSON uses canonical `worktreeId`; display label is separate/nonpersistent and adapter-only `storageFileKey` never crosses the boundary.
   - Evidence: overview/command/JSON/key vectors, four-value mismatch, alias, linked-worktree, and exact-identity reattach tests.
-- [ ] Diff JSON v1 persists only ADR fields (`resolved`, createdAt; no status/updatedAt/runtime), rejects duplicate keys, and parses canonical checked u64 revisions.
+- [x] Diff JSON v1 persists only ADR fields (`resolved`, createdAt; no status/updatedAt/runtime), rejects duplicate keys, and parses canonical checked u64 revisions.
   - Evidence: custom decoder fixtures and strict round-trip/schema tests.
-- [ ] Structural decoders/constructors own side/path, safe-integer `NonZeroU32` line and u32 candidate count; create use case owns current status/full-content matrix; historical restore is structural only.
+- [x] Structural decoders/constructors own side/path, safe-integer `NonZeroU32` line and u32 candidate count; create use case owns current status/full-content matrix; historical restore is structural only.
   - Evidence: boundary/status/restore matrices in Rust and TypeScript.
-- [ ] Mutation outcomes are `committed(document/revision/warnings/durability)`, conflict, retryable storeBusy/io preCommitFailure, non-retryable permission/invalidStore, or non-retryable revisionOverflow with current document/revision; every post-replace result commits and is non-retryable.
+- [x] Mutation outcomes are `committed(document/revision/warnings/durability)`, conflict, retryable storeBusy/io preCommitFailure, non-retryable permission/invalidStore, or non-retryable revisionOverflow with current document/revision; every post-replace result commits and is non-retryable.
   - Evidence: injected replace/resolution/fsync outcomes, strict code/retryable union fixtures, and origin-session component/E2E assertions.
-- [ ] Revision overflow writes nothing, retains the draft, permanently disables submit for that identity, and reconciles canonical current data; the controlled textarea body remains selectable/copyable; no Diff export capability.
+- [x] Revision overflow writes nothing, retains the draft, permanently disables submit for that identity, and reconciles canonical current data; the controlled textarea body remains selectable/copyable; no Diff export capability.
   - Evidence: u64 max store/decoder/hook/story/E2E fixtures.
-- [ ] Persistent lock/storeBusy, lock-scoped bounded temp cleanup, permissions, Unix replace, and Windows first-create/ReplaceFile allowlist preserve exact commit classification.
+- [x] Persistent lock/storeBusy, lock-scoped bounded temp cleanup, permissions, Unix replace, and Windows first-create/ReplaceFile allowlist preserve exact commit classification.
   - Evidence: Linux/Windows child-process, kill-point, API-selection, old-intact, lock/temp tests.
-- [ ] Rust temp-repo save → service/store drop/recreate restores revision/comments and isolates linked/separate worktrees.
+- [x] Rust temp-repo save → service/store drop/recreate restores revision/comments and isolates linked/separate worktrees.
   - Evidence: process-restart integration fixture using real storage and Git common dir.
-- [ ] Storage accepts trusted canonical Git metadata only after common-dir/store-root symlink/reparse checks; anchors never form storage paths.
+- [x] Storage accepts trusted canonical Git metadata only after common-dir/store-root symlink/reparse checks; anchors never form storage paths.
   - Evidence: threat-boundary fixtures and generated-component assertions.
-- [ ] Creation and relocation candidates share canonical newline/full-hash/256-scalar projection, including equal-prefix >256 collision/unique cases.
+- [x] Creation and relocation candidates share canonical newline/full-hash/256-scalar projection, including equal-prefix >256 collision/unique cases.
   - Evidence: shared projector vectors and resolver tests.
-- [ ] Resolver returns every stored comment as exact/relocated/stale/unavailable; unavailable is runtime-only, reasoned, `canJump:false`, drives a non-jump Review warning, and warning summaries are derived without status duplication.
+- [x] Resolver returns every stored comment as exact/relocated/stale/unavailable; unavailable is runtime-only, reasoned, `canJump:false`, drives a non-jump Review warning, and warning summaries are derived without status duplication.
   - Evidence: Rust/domain/strict decoder/projection/story tests across IO, permission, repositoryChanged, budgetExceeded, and cancelled.
-- [ ] Resolver applies explicit 10k/unique/64MiB/2M-line/2048-Git ceilings plus injectable 200ms monotonic deadline/CancellationToken, checks every external load before/after, stops new work when observed, returns a deterministic unavailable suffix, and builds each side index once.
+- [x] Resolver applies explicit 10k/unique/64MiB/2M-line/2048-Git ceilings plus injectable 200ms monotonic deadline/CancellationToken, checks every external load before/after, stops new work when observed, returns a deterministic unavailable suffix, and builds each side index once.
   - Evidence: 10k-small, max+1 counters, fake-clock slow source, before/during cancellation, ordering/no-later-load assertions, and auxiliary benchmark artifacts.
-- [ ] Every real text repository file line is Phase 1 commentable: Unified/Split diff rows and Editor Changed or unchanged All full-content rows; bare/binary/large/synthetic remain excluded.
+- [x] Every real text repository file line is Phase 1 commentable: Unified/Split diff rows and Editor Changed or unchanged All full-content rows; bare/binary/large/synthetic remain excluded.
   - Evidence: create status matrix, Changed/All switch, unchanged save/reload/jump, and bare fixtures.
-- [ ] All three viewers implement inline mixed-height measurement/windowing and preserve scroll/focus/fold anchors within the 500-row/20k fixture budget.
+- [x] All three viewers implement inline mixed-height measurement/windowing and preserve scroll/focus/fold anchors within the 500-row/20k fixture budget.
   - Evidence: component measurement/DOM tests and large stories.
-- [ ] Full-identity+target origin sessions settle A saves into A while B is visible; refresh makes staleTarget; tab/mode hides/restores compatible drafts; committed closes/no-retry and noncommitted retains.
+- [x] Full-identity+target origin sessions settle A saves into A while B is visible; refresh makes staleTarget; tab/mode hides/restores compatible drafts; committed closes/no-retry and noncommitted retains.
   - Evidence: A→B→A, base/snapshot, re-anchor/discard, base→Editor→Unified hook/story/browser tests.
-- [ ] Phase 1 prevents a second comment on an occupied open or resolved line and supports no replies.
+- [x] Phase 1 prevents a second comment on an occupied open or resolved line and supports no replies.
   - Evidence: backend occupied-location test and disabled/absent UI action assertions.
-- [ ] Converged historical anchors show count and stable createdAt+ID picker with active card/indicator synchronization.
+- [x] Converged historical anchors show count and stable createdAt+ID picker with active card/indicator synchronization.
   - Evidence: resolver/component/story convergence fixtures.
-- [ ] Controlled Review filters/search/selection support indicator reveal (All + clear search + focus/aria-current) while card jumps preserve filters.
+- [x] Controlled Review filters/search/selection support indicator reveal (All + clear search + focus/aria-current) while card jumps preserve filters.
   - Evidence: CommentSidebar/state/App tests and automated E2E.
-- [ ] Runtime `selectionPath` opens tabs independently of tree filters while immutable `sidePath` labels base/current rename/copy anchors correctly.
+- [x] Runtime `selectionPath` opens tabs independently of tree filters while immutable `sidePath` labels base/current rename/copy anchors correctly.
   - Evidence: rename/copy × side × tree-filter App/browser matrix.
-- [ ] Stateful Playwright App harness uses production hook/gateway/strict decoder and only mocks invoke; full journey plus browser reload restoration and second-worktree isolation pass CI.
+- [x] Stateful Playwright App harness uses production hook/gateway/strict decoder and only mocks invoke; full journey plus browser reload restoration and second-worktree isolation pass CI.
   - Evidence: passing E2E job, harness-boundary assertion, trace/screenshots; Rust restart test supplies real persistence evidence.
-- [ ] Schema, storage, anchor resolution, keyboard, recovery, and Phase 1 limits are documented.
+- [x] Schema, storage, anchor resolution, keyboard, recovery, and Phase 1 limits are documented.
   - Evidence: design/user Docs review against final DTOs and fixtures.
 
 ## Quality gates
@@ -924,29 +924,40 @@ Open reviewer questions: **0**. All decisions below are closed and testable.
 
 ## Completion workflow
 
-- [ ] Mark this plan's implementation and acceptance checklists complete.
-- [ ] Add implementation commit / PR number to a completion note.
-- [ ] Move this file unchanged in name to `docs/plans/tasks/done/review/issue-198-diff-comments.md`.
-- [ ] Remove #198 from `docs/plans/tasks/review/README.md` and add the moved link to `docs/plans/tasks/done/README.md`.
+- [x] Mark this plan's implementation and acceptance checklists complete.
+- [x] Add implementation commit / PR number to a completion note.
+- [x] Move this file unchanged in name to `docs/plans/tasks/done/review/issue-198-diff-comments.md`.
+- [x] Remove #198 from `docs/plans/tasks/review/README.md` and add the moved link to `docs/plans/tasks/done/README.md`.
 
 ## Implementation checklist
 
-- [ ] Add overview-owned `DiffReviewIdentity` and enforce its four values in commands, hook generation, caches, and source lookups.
-- [ ] Keep ADR `worktreeId`, separate display DTO, and adapter-only length-framed `storageFileKey`; test reattach/isolation/nonpersistence.
-- [ ] Add structural line/candidate bounds, snapshot create status/full-content matrix, historical restore, duplicate-key/revision/schema validation, and shared candidate projector.
-- [ ] Add trusted roots, generated paths, persistent lock/storeBusy, permissions, and target-lock-held bounded orphan-temp cleanup.
-- [ ] Add Unix/Windows atomic replace with absent-only MoveFileEx, ReplaceFile allowlist, exhaustive literal-retryability mutation outcomes including overflow current data, child/kill tests, and Windows CI.
-- [ ] Preserve Spec JSON v2/commands/export/MCP and prove golden unknown-field behavior.
-- [ ] Add actual-store drop/recreate restart and worktree-isolation integration tests.
-- [ ] Add diff/full-current source, backend anchor derivation, structural budgets/counters, injectable monotonic deadline/CancellationToken checks, one per-side index, four resolution outcomes, deterministic stop suffixes, convergence, and occupancy.
-- [ ] Add use cases/Tauri DTOs for committed/conflict/retryability-discriminated preCommitFailure, per-comment unavailable, derived warnings/durability, and strict boundary decoding.
-- [ ] Replace frontend skeleton with ADR types, origin/staleTarget sessions, selectionPath/sidePath, and strict gateway decoder.
-- [ ] Add A→B→A settlement, refresh re-anchor/discard, mode hide/restore, committed no-retry, conflict retry, transient/permanent precommit behavior, and overflow submit-disable behavior where the controlled textarea body remains selectable/copyable and there is no Diff export capability.
-- [ ] Refactor CommentSidebar/Thread into controlled Review presentation while preserving every Spec capability.
-- [ ] Add Changed diff-row plus All unchanged Editor commentability and accessible composer/indicator behavior.
-- [ ] Add mixed-height/window/anchor preservation in Unified, Split, and Editor with fold/peek/composer/20k/500-row tests.
-- [ ] Add convergence picker, controlled reveal, and tree-independent selectionPath/sidePath navigation tests.
-- [ ] Update WorkspaceLayout, uiText, App state/stories/tests, CSS, and Diff Review wiring.
-- [ ] Add stateful-invoke production App Playwright reload/worktree-isolation journey plus Storybook/axe/themes and CI artifacts.
-- [ ] Complete 10k/budget/counter fixtures, auxiliary benchmark artifacts, security and full regression/review gates.
-- [ ] Update schema/identity/storage/recovery/navigation/user docs and pass all quality gates.
+- [x] Add overview-owned `DiffReviewIdentity` and enforce its four values in commands, hook generation, caches, and source lookups.
+- [x] Keep ADR `worktreeId`, separate display DTO, and adapter-only length-framed `storageFileKey`; test reattach/isolation/nonpersistence.
+- [x] Add structural line/candidate bounds, snapshot create status/full-content matrix, historical restore, duplicate-key/revision/schema validation, and shared candidate projector.
+- [x] Add trusted roots, generated paths, persistent lock/storeBusy, permissions, and target-lock-held bounded orphan-temp cleanup.
+- [x] Add Unix/Windows atomic replace with absent-only MoveFileEx, ReplaceFile allowlist, exhaustive literal-retryability mutation outcomes including overflow current data, child/kill tests, and Windows CI.
+- [x] Preserve Spec JSON v2/commands/export/MCP and prove golden unknown-field behavior.
+- [x] Add actual-store drop/recreate restart and worktree-isolation integration tests.
+- [x] Add diff/full-current source, backend anchor derivation, structural budgets/counters, injectable monotonic deadline/CancellationToken checks, one per-side index, four resolution outcomes, deterministic stop suffixes, convergence, and occupancy.
+- [x] Add use cases/Tauri DTOs for committed/conflict/retryability-discriminated preCommitFailure, per-comment unavailable, derived warnings/durability, and strict boundary decoding.
+- [x] Replace frontend skeleton with ADR types, origin/staleTarget sessions, selectionPath/sidePath, and strict gateway decoder.
+- [x] Add A→B→A settlement, refresh re-anchor/discard, mode hide/restore, committed no-retry, conflict retry, transient/permanent precommit behavior, and overflow submit-disable behavior where the controlled textarea body remains selectable/copyable and there is no Diff export capability.
+- [x] Refactor CommentSidebar/Thread into controlled Review presentation while preserving every Spec capability.
+- [x] Add Changed diff-row plus All unchanged Editor commentability and accessible composer/indicator behavior.
+- [x] Add mixed-height/window/anchor preservation in Unified, Split, and Editor with fold/peek/composer/20k/500-row tests.
+- [x] Add convergence picker, controlled reveal, and tree-independent selectionPath/sidePath navigation tests.
+- [x] Update WorkspaceLayout, uiText, App state/stories/tests, CSS, and Diff Review wiring.
+- [x] Add stateful-invoke production App Playwright reload/worktree-isolation journey plus Storybook/axe/themes and CI artifacts.
+- [x] Complete 10k/budget/counter fixtures, auxiliary benchmark artifacts, security and full regression/review gates.
+- [x] Update schema/identity/storage/recovery/navigation/user docs and pass all quality gates.
+
+## Completion note
+
+Implemented and published in Draft PR [#221](https://github.com/DIO0550/spec-viewer/pull/221):
+
+- `f66f6e1e` — Rust Diff comment domain, CAS persistence, snapshot resolver, commands, and backend CI.
+- `7865732f` — TypeScript identity session, strict decoder, gateway, and projection contracts.
+- `bd05d69a` — Inline UI, Review navigation, Storybook, App E2E, performance gates, and frontend CI.
+- `66c57bb1` — Contract documentation, user guidance, and implementation plan.
+
+All implementation and acceptance checklists are complete. Rust, frontend, production build, Storybook build, App E2E (13/13), and Storybook play/axe (7/7) gates passed before publication.
