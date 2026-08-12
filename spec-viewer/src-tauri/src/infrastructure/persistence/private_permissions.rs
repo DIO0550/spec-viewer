@@ -69,7 +69,9 @@ fn platform_enforce(path: &Path, _directory: bool) -> io::Result<()> {
         {
             return Err(io::Error::last_os_error());
         }
-        let sid = unsafe { ptr::read_unaligned(buffer.as_ptr().cast::<TOKEN_USER>()) }.User.Sid;
+        let sid = unsafe { ptr::read_unaligned(buffer.as_ptr().cast::<TOKEN_USER>()) }
+            .User
+            .Sid;
         let trustee = TRUSTEE_W {
             pMultipleTrustee: ptr::null_mut(),
             MultipleTrusteeOperation: 0,
