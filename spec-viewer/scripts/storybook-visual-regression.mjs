@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 import { spawn, spawnSync } from "node:child_process";
 import {
@@ -281,17 +282,34 @@ const capture = async (options) => {
         2,
       ),
     );
+    const cases = options.cases
+      ? JSON.parse(readFileSync(options.cases, "utf8"))
+      : stories.map(({ id }) => ({
+          leafId: null,
+          storyId: id,
+          theme: "light",
+          viewport: `${width}x${height}`,
+        }));
+    const storiesById = new Map(stories.map((story) => [story.id, story]));
     const unstable = [];
-    for (const story of stories) {
+    const candidates = [];
+    for (const visualCase of cases) {
+      const story = storiesById.get(visualCase.storyId);
+      if (!story)
+        throw new Error(`required story not found: ${visualCase.storyId}`);
+      const [caseWidth, caseHeight] = visualCase.viewport
+        .split("x")
+        .map(Number);
+      const theme = visualCase.theme === "dark" ? "Dark" : "Light";
       const target = await requestJson(
-        `http://127.0.0.1:9222/json/new?${encodeURIComponent(`${origin}/iframe.html?id=${story.id}`)}`,
+        `http://127.0.0.1:9222/json/new?${encodeURIComponent(`${origin}/iframe.html?id=${story.id}&viewMode=story&globals=theme:${theme}`)}`,
         { method: "PUT" },
       );
       const cdp = await openCdp(target.webSocketDebuggerUrl);
       await cdp.send("Page.enable");
       await cdp.send("Emulation.setDeviceMetricsOverride", {
-        width,
-        height,
+        width: caseWidth,
+        height: caseHeight,
         deviceScaleFactor: 1,
         mobile: false,
       });
@@ -323,13 +341,26 @@ const capture = async (options) => {
         screenshot = settledShot;
         unstable.push(story.id);
       }
-      writeFileSync(
-        join(out, `${story.id}.png`),
-        Buffer.from(screenshot.data, "base64"),
-      );
+      const bytes = Buffer.from(screenshot.data, "base64");
+      const filename = options.cases
+        ? `${story.id}--${visualCase.theme}--${visualCase.viewport}.png`
+        : `${story.id}.png`;
+      writeFileSync(join(out, filename), bytes);
+      candidates.push({
+        ...visualCase,
+        imageHash: `sha256:${createHash("sha256").update(bytes).digest("hex")}`,
+        headSha: options["head-sha"] ?? "local",
+        filename,
+      });
       cdp.close();
       await requestOk(`http://127.0.0.1:9222/json/close/${target.id}`);
       console.log(`captured ${story.id}${stable ? "" : " (never stabilized)"}`);
+    }
+    if (options.cases) {
+      writeFileSync(
+        join(out, "candidate.json"),
+        `${JSON.stringify(candidates, null, 2)}\n`,
+      );
     }
     if (unstable.length > 0) {
       // 撮影は続けるが、アニメーション等で揺れ続けるストーリーは差分の温床なので明示する。

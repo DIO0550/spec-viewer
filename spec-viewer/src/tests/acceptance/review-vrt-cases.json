@@ -1,0 +1,98 @@
+[
+  {
+    "leafId": "R199-VRTCASE-001",
+    "storyId": "app-reviewregression--specs-hierarchy",
+    "theme": "light",
+    "viewport": "1280x720"
+  },
+  {
+    "leafId": "R199-VRTCASE-002",
+    "storyId": "app-reviewregression--archive",
+    "theme": "light",
+    "viewport": "1280x720"
+  },
+  {
+    "leafId": "R199-VRTCASE-003",
+    "storyId": "app-reviewregression--progress",
+    "theme": "light",
+    "viewport": "1280x720"
+  },
+  {
+    "leafId": "R199-VRTCASE-004",
+    "storyId": "app-reviewregression--changed-tree",
+    "theme": "light",
+    "viewport": "1280x720"
+  },
+  {
+    "leafId": "R199-VRTCASE-005",
+    "storyId": "app-reviewregression--all-lazy",
+    "theme": "light",
+    "viewport": "390x844"
+  },
+  {
+    "leafId": "R199-VRTCASE-006",
+    "storyId": "app-reviewregression--unified",
+    "theme": "light",
+    "viewport": "1280x720"
+  },
+  {
+    "leafId": "R199-VRTCASE-007",
+    "storyId": "app-reviewregression--split",
+    "theme": "dark",
+    "viewport": "1280x720"
+  },
+  {
+    "leafId": "R199-VRTCASE-008",
+    "storyId": "app-reviewregression--editor",
+    "theme": "dark",
+    "viewport": "390x844"
+  },
+  {
+    "leafId": "R199-VRTCASE-009",
+    "storyId": "app-reviewregression--conflict",
+    "theme": "light",
+    "viewport": "1280x720"
+  },
+  {
+    "leafId": "R199-VRTCASE-010",
+    "storyId": "app-reviewregression--stale",
+    "theme": "dark",
+    "viewport": "1280x720"
+  },
+  {
+    "leafId": "R199-VRTCASE-011",
+    "storyId": "app-reviewregression--review-filters",
+    "theme": "light",
+    "viewport": "1280x720"
+  },
+  {
+    "leafId": "R199-VRTCASE-012",
+    "storyId": "app-reviewregression--convergence",
+    "theme": "dark",
+    "viewport": "1280x720"
+  },
+  {
+    "leafId": "R199-VRTCASE-013",
+    "storyId": "app-reviewregression--unmanaged",
+    "theme": "light",
+    "viewport": "1280x720"
+  },
+  {
+    "leafId": "R199-VRTCASE-014",
+    "storyId": "app-reviewregression--base-error",
+    "theme": "light",
+    "viewport": "1280x720"
+  },
+  {
+    "leafId": "R199-VRTCASE-015",
+    "storyId": "app-reviewregression--read-denied",
+    "theme": "light",
+    "viewport": "1280x720"
+  },
+  {
+    "leafId": "R199-VRTCASE-016",
+    "storyId": "app-reviewregression--deleted-file",
+    "theme": "light",
+    "viewport": "1280x720"
+  }
+]
