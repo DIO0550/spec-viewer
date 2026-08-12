@@ -1,6 +1,7 @@
 //! Use cases that coordinate domain logic and infrastructure.
 
 pub mod comments;
+pub mod diff_comments;
 pub mod repository_diff;
 pub mod spec_bundle;
 pub mod spec_diff;

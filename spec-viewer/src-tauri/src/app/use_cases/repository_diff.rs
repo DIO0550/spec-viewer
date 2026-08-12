@@ -1,7 +1,7 @@
 //! Repository diff orchestration and boundary validation.
 use crate::domain::{
     repository::{
-        FileReview, IgnoredPage, RepositoryOverview, RepositoryPort, RepositoryPortError,
+        IgnoredPage, RepositoryFileReview, RepositoryOverview, RepositoryPort, RepositoryPortError,
         RepositoryRelativePath, SnapshotId,
     },
     workspace::{ValidatedRefName, WorkspaceDomainError, WorktreeId},
@@ -66,7 +66,7 @@ impl<Port: RepositoryPort> RepositoryDiffUseCases<Port> {
         raw_worktree: &str,
         raw_snapshot: &str,
         raw_path: &str,
-    ) -> Result<FileReview, RepositoryUseCaseError> {
+    ) -> Result<RepositoryFileReview, RepositoryUseCaseError> {
         let worktree = WorktreeId::new(raw_worktree)?;
         let snapshot = SnapshotId::parse(raw_snapshot)
             .map_err(|_| RepositoryUseCaseError::InvalidRepositoryValue)?;
@@ -91,6 +91,8 @@ mod tests {
         ) -> Result<RepositoryOverview, RepositoryPortError> {
             Ok(RepositoryOverview {
                 repository_id: RepositoryId::parse(format!("rr1_{}", "0".repeat(64))).unwrap(),
+                diff_review_identity: None,
+                display_worktree_label: "/repo".into(),
                 base: BaseBranchResolution::NeedsSelection {
                     reason: BaseResolutionFailure::NotFound,
                     candidates: vec![],
@@ -124,7 +126,7 @@ mod tests {
             _: &WorktreeId,
             _: &SnapshotId,
             _: &RepositoryRelativePath,
-        ) -> Result<FileReview, RepositoryPortError> {
+        ) -> Result<RepositoryFileReview, RepositoryPortError> {
             Err(RepositoryPortError::StaleSnapshot)
         }
     }

@@ -1,5 +1,6 @@
 use super::GitRunner;
 use crate::domain::{
+    comment::diff::{DiffReviewIdentity, WorktreeStorageId},
     repository::*,
     workspace::{ValidatedRefName, WorktreeId},
 };
@@ -25,6 +26,7 @@ type AllPathSets = (
 struct RepositoryReviewContext {
     base: BaseBranchResolution,
     changed: Vec<DiffFile>,
+    all_paths: Vec<RepositoryRelativePath>,
     ignored_nodes: BTreeMap<String, RepositoryRelativePath>,
 }
 
@@ -40,11 +42,45 @@ struct WorkingTreeReviewContext {
 type WorkingTreeContextKey = (Vec<u8>, String, String);
 type WorkingTreeContextStore =
     Arc<Mutex<BTreeMap<WorkingTreeContextKey, WorkingTreeReviewContext>>>;
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DiffCommentResolutionContext {
+    root: PathBuf,
+    common_dir: PathBuf,
+    identity: DiffReviewIdentity,
+    changed: Vec<DiffFile>,
+    all_paths: Vec<RepositoryRelativePath>,
+}
+
+impl DiffCommentResolutionContext {
+    pub(crate) fn identity(&self) -> &DiffReviewIdentity {
+        &self.identity
+    }
+
+    pub(crate) fn common_dir(&self) -> &Path {
+        &self.common_dir
+    }
+}
+
+#[cfg(test)]
+impl DiffCommentResolutionContext {
+    pub(crate) fn empty(identity: DiffReviewIdentity) -> Self {
+        Self {
+            root: PathBuf::new(),
+            common_dir: PathBuf::new(),
+            identity,
+            changed: vec![],
+            all_paths: vec![],
+        }
+    }
+}
+
+type DiffWorktreeStore = Arc<Mutex<BTreeMap<String, DiffCommentResolutionContext>>>;
 
 #[derive(Debug, Clone, Default)]
 pub struct GitRepositoryAdapter {
     runner: GitRunner,
     contexts: ContextStore,
+    diff_worktrees: DiffWorktreeStore,
     working_tree_contexts: WorkingTreeContextStore,
 }
 impl GitRepositoryAdapter {
@@ -375,6 +411,7 @@ impl GitRepositoryAdapter {
         snapshot: &SnapshotId,
         base: BaseBranchResolution,
         changed: Vec<DiffFile>,
+        all_paths: Vec<RepositoryRelativePath>,
         ignored_directories: &[RepositoryRelativePath],
     ) -> Result<(), RepositoryPortError> {
         let key = Self::context_key(root, snapshot);
@@ -392,6 +429,7 @@ impl GitRepositoryAdapter {
             RepositoryReviewContext {
                 base,
                 changed,
+                all_paths,
                 ignored_nodes,
             },
         );
@@ -481,6 +519,327 @@ impl GitRepositoryAdapter {
             return Err(RepositoryPortError::CommonDirBoundaryEscape);
         }
         Ok((canonical_git_dir, canonical_common))
+    }
+
+    fn worktree_storage_id(&self, root: &Path) -> Result<WorktreeStorageId, RepositoryPortError> {
+        let (git_dir, common_dir) = self.git_directories(root)?;
+        Ok(WorktreeStorageId::from_canonical_bytes(
+            &canonical_path_bytes(&common_dir),
+            &canonical_path_bytes(&git_dir),
+        ))
+    }
+
+    fn remember_diff_worktree(
+        &self,
+        identity: DiffReviewIdentity,
+        root: &Path,
+        changed: Vec<DiffFile>,
+        all_paths: Vec<RepositoryRelativePath>,
+    ) -> Result<(), RepositoryPortError> {
+        let (_, common_dir) = self.git_directories(root)?;
+        let mut worktrees = self
+            .diff_worktrees
+            .lock()
+            .map_err(|_| RepositoryPortError::Io)?;
+        if worktrees.len() >= 64 && !worktrees.contains_key(identity.worktree_id().as_str()) {
+            worktrees.pop_first();
+        }
+        worktrees.insert(
+            identity.worktree_id().as_str().into(),
+            DiffCommentResolutionContext {
+                root: root.to_path_buf(),
+                common_dir,
+                identity,
+                changed,
+                all_paths,
+            },
+        );
+        Ok(())
+    }
+
+    pub fn diff_comment_resolution_context(
+        &self,
+        identity: &DiffReviewIdentity,
+    ) -> Result<DiffCommentResolutionContext, RepositoryPortError> {
+        let context = self
+            .diff_worktrees
+            .lock()
+            .map_err(|_| RepositoryPortError::Io)?
+            .get(identity.worktree_id().as_str())
+            .cloned()
+            .ok_or(RepositoryPortError::WorktreeUnavailable)?;
+        if &context.identity != identity {
+            return Err(
+                if context.identity.repository_id() != identity.repository_id() {
+                    RepositoryPortError::IdentityMismatch
+                } else if context.identity.base_sha() != identity.base_sha() {
+                    RepositoryPortError::StaleBase
+                } else {
+                    RepositoryPortError::StaleSnapshot
+                },
+            );
+        }
+        let root = &context.root;
+        if self.repository_id(root)? != *identity.repository_id()
+            || self.worktree_storage_id(root)? != *identity.worktree_id()
+        {
+            return Err(RepositoryPortError::IdentityMismatch);
+        }
+        if self.snapshot(root, identity.repository_id())? != *identity.current_snapshot_id() {
+            return Err(RepositoryPortError::StaleSnapshot);
+        }
+        Ok(context)
+    }
+
+    pub fn validate_diff_comment_target(
+        &self,
+        context: &DiffCommentResolutionContext,
+        target: &crate::domain::comment::diff::DiffAnchorTarget,
+    ) -> Result<(), RepositoryPortError> {
+        let exact = context.changed.iter().any(|file| {
+            file.old_path == target.old_path().cloned()
+                && file.new_path == target.new_path().cloned()
+                && matches!(
+                    (file.change, target.side()),
+                    (
+                        FileChangeKind::Added | FileChangeKind::Untracked,
+                        crate::domain::comment::diff::DiffSide::Current,
+                    ) | (
+                        FileChangeKind::Deleted,
+                        crate::domain::comment::diff::DiffSide::Base
+                    ) | (
+                        FileChangeKind::Modified | FileChangeKind::Renamed | FileChangeKind::Copied,
+                        _,
+                    )
+                )
+                && file.entry_kind == EntryKind::Regular
+                && file.content_classification == ContentClassification::Text
+        });
+        let unchanged_current = target.side() == crate::domain::comment::diff::DiffSide::Current
+            && target.old_path().is_none()
+            && context
+                .all_paths
+                .iter()
+                .any(|path| path == target.side_path())
+            && !context.changed.iter().any(|file| {
+                file.old_path.as_ref() == Some(target.side_path())
+                    || file.new_path.as_ref() == Some(target.side_path())
+            });
+        if exact || unchanged_current {
+            Ok(())
+        } else {
+            Err(RepositoryPortError::InvalidRepositoryPath)
+        }
+    }
+
+    pub fn resolve_diff_comment_target(
+        &self,
+        context: &DiffCommentResolutionContext,
+        historical: &crate::domain::comment::diff::DiffAnchorTarget,
+    ) -> Result<
+        crate::domain::comment::diff::DiffAnchorTarget,
+        crate::domain::comment::diff_repository::DiffCommentResolutionError,
+    > {
+        use crate::domain::comment::diff::{DiffAnchorTarget, DiffSide, StaleAnchorReason};
+        use crate::domain::comment::diff_repository::DiffCommentResolutionError;
+        let stale = |reason, candidate_count| DiffCommentResolutionError::Stale {
+            reason,
+            candidate_count,
+        };
+        let side_path = historical.side_path();
+        let direct_file = context.changed.iter().find(|file| match historical.side() {
+            DiffSide::Base => {
+                file.old_path.as_ref() == Some(side_path)
+                    && (file.new_path.as_ref() == Some(side_path)
+                        || file.change == FileChangeKind::Deleted)
+            }
+            DiffSide::Current => file.new_path.as_ref() == Some(side_path),
+        });
+        let removed_from_current = context.changed.iter().any(|file| {
+            file.old_path.as_ref() == Some(side_path)
+                && matches!(
+                    file.change,
+                    FileChangeKind::Deleted | FileChangeKind::Renamed
+                )
+        });
+        let direct_exists = match historical.side() {
+            DiffSide::Base => direct_file.is_some(),
+            DiffSide::Current => {
+                direct_file.is_some()
+                    || (context.all_paths.iter().any(|path| path == side_path)
+                        && !removed_from_current)
+            }
+        };
+        if direct_exists {
+            if let Some(file) = direct_file {
+                if file.entry_kind != EntryKind::Regular
+                    || file.change == FileChangeKind::TypeChanged
+                {
+                    return Err(stale(StaleAnchorReason::Unsupported, 0));
+                }
+                if file.content_classification == ContentClassification::Binary {
+                    return Err(stale(StaleAnchorReason::Binary, 0));
+                }
+            }
+            let new_path = if historical.side() == DiffSide::Current
+                || context.all_paths.iter().any(|path| path == side_path)
+            {
+                Some(side_path.clone())
+            } else {
+                None
+            };
+            return DiffAnchorTarget::new(
+                historical.side(),
+                (historical.side() == DiffSide::Base).then(|| side_path.clone()),
+                new_path,
+                historical.line(),
+            )
+            .map_err(|_| stale(StaleAnchorReason::PathMissing, 0));
+        }
+        let candidates = context
+            .changed
+            .iter()
+            .filter(|file| {
+                file.old_path.as_ref() == Some(side_path)
+                    || file.new_path.as_ref() == Some(side_path)
+                    || (historical.new_path().is_some()
+                        && file.new_path.as_ref() == historical.new_path())
+            })
+            .collect::<Vec<_>>();
+        if candidates.len() > 1 {
+            return Err(stale(
+                StaleAnchorReason::AmbiguousRename,
+                candidates.len().min(u32::MAX as usize) as u32,
+            ));
+        }
+        if let Some(file) = candidates.first() {
+            if file.entry_kind != EntryKind::Regular {
+                return Err(stale(StaleAnchorReason::Unsupported, 0));
+            }
+            if file.content_classification == ContentClassification::Binary {
+                return Err(stale(StaleAnchorReason::Binary, 0));
+            }
+            if file.change == FileChangeKind::TypeChanged {
+                return Err(stale(StaleAnchorReason::Unsupported, 0));
+            }
+            if historical.side() == DiffSide::Current && file.change == FileChangeKind::Deleted {
+                return Err(stale(StaleAnchorReason::Deleted, 0));
+            }
+            let mapped = DiffAnchorTarget::new(
+                historical.side(),
+                file.old_path.clone(),
+                file.new_path.clone(),
+                historical.line(),
+            )
+            .map_err(|_| stale(StaleAnchorReason::PathMissing, 0))?;
+            return Ok(mapped);
+        }
+        if historical.side() == DiffSide::Current
+            && context.all_paths.iter().any(|path| path == side_path)
+        {
+            return DiffAnchorTarget::new(
+                DiffSide::Current,
+                None,
+                Some(side_path.clone()),
+                historical.line(),
+            )
+            .map_err(|_| stale(StaleAnchorReason::PathMissing, 0));
+        }
+        Err(stale(StaleAnchorReason::PathMissing, 0))
+    }
+
+    pub fn load_diff_comment_source(
+        &self,
+        context: &DiffCommentResolutionContext,
+        side: crate::domain::comment::diff::DiffSide,
+        path: &RepositoryRelativePath,
+    ) -> Result<String, RepositoryPortError> {
+        self.load_diff_comment_source_with_after_read(context, side, path, || {})
+    }
+
+    fn load_diff_comment_source_with_after_read(
+        &self,
+        context: &DiffCommentResolutionContext,
+        side: crate::domain::comment::diff::DiffSide,
+        path: &RepositoryRelativePath,
+        after_read: impl FnOnce(),
+    ) -> Result<String, RepositoryPortError> {
+        let root = context.root.clone();
+        let identity = &context.identity;
+        let result = match side {
+            crate::domain::comment::diff::DiffSide::Base => {
+                let text = self.text(
+                    &root,
+                    "diff-comment-base-source",
+                    &[
+                        "show",
+                        &format!("{}:{}", identity.base_sha().as_str(), path.as_str()),
+                    ],
+                    true,
+                )?;
+                after_read();
+                if self.snapshot(&root, identity.repository_id())?
+                    != *identity.current_snapshot_id()
+                {
+                    return Err(RepositoryPortError::EntryChangedDuringRead);
+                }
+                Ok(text)
+            }
+            crate::domain::comment::diff::DiffSide::Current => {
+                let target = root.join(path.as_str());
+                ensure_parent_boundary(&root, &target)?;
+                let metadata =
+                    fs::symlink_metadata(&target).map_err(|error| match error.kind() {
+                        std::io::ErrorKind::PermissionDenied => {
+                            RepositoryPortError::PermissionDenied
+                        }
+                        std::io::ErrorKind::NotFound => RepositoryPortError::InvalidRepositoryPath,
+                        _ => RepositoryPortError::Io,
+                    })?;
+                if !metadata.is_file() || metadata.file_type().is_symlink() {
+                    return Err(RepositoryPortError::InvalidRepositoryPath);
+                }
+                if metadata.len() > CONTENT_LIMIT as u64 {
+                    return Err(RepositoryPortError::ContentTooLarge);
+                }
+                let canonical = fs::canonicalize(&target).map_err(map_filesystem_error)?;
+                if !canonical.starts_with(&root) {
+                    return Err(RepositoryPortError::InvalidRepositoryPath);
+                }
+                let mut bytes = Vec::with_capacity(metadata.len() as usize);
+                let mut file = fs::File::open(canonical).map_err(map_filesystem_error)?;
+                (&mut file)
+                    .take((CONTENT_LIMIT + 1) as u64)
+                    .read_to_end(&mut bytes)
+                    .map_err(|error| {
+                        if error.kind() == std::io::ErrorKind::PermissionDenied {
+                            RepositoryPortError::PermissionDenied
+                        } else {
+                            RepositoryPortError::Io
+                        }
+                    })?;
+                if bytes.len() > CONTENT_LIMIT {
+                    return Err(RepositoryPortError::ContentTooLarge);
+                }
+                if bytes.iter().take(8192).any(|byte| *byte == 0) {
+                    return Err(RepositoryPortError::InvalidRepositoryPath);
+                }
+                after_read();
+                let after = file.metadata().map_err(map_filesystem_error)?;
+                if metadata.len() != after.len()
+                    || metadata.modified().ok() != after.modified().ok()
+                {
+                    return Err(RepositoryPortError::EntryChangedDuringRead);
+                }
+                if self.snapshot(&root, identity.repository_id())?
+                    != *identity.current_snapshot_id()
+                {
+                    return Err(RepositoryPortError::EntryChangedDuringRead);
+                }
+                String::from_utf8(bytes).map_err(|_| RepositoryPortError::InvalidRepositoryPath)
+            }
+        }?;
+        Ok(result)
     }
 
     fn repository_id(&self, root: &Path) -> Result<RepositoryId, RepositoryPortError> {
@@ -1332,6 +1691,21 @@ impl GitRepositoryAdapter {
             })
     }
 }
+
+#[cfg(unix)]
+fn canonical_path_bytes(path: &Path) -> Vec<u8> {
+    use std::os::unix::ffi::OsStrExt;
+    path.as_os_str().as_bytes().to_vec()
+}
+
+#[cfg(windows)]
+fn canonical_path_bytes(path: &Path) -> Vec<u8> {
+    use std::os::windows::ffi::OsStrExt;
+    path.as_os_str()
+        .encode_wide()
+        .flat_map(u16::to_le_bytes)
+        .collect()
+}
 impl WorkingTreeDiffPort for GitRepositoryAdapter {
     fn list_comparison_revisions(
         &self,
@@ -1513,6 +1887,8 @@ impl RepositoryPort for GitRepositoryAdapter {
         else {
             return Ok(RepositoryOverview {
                 repository_id,
+                diff_review_identity: None,
+                display_worktree_label: root.to_string_lossy().into_owned(),
                 base,
                 base_source,
                 current_snapshot_id: None,
@@ -1543,15 +1919,31 @@ impl RepositoryPort for GitRepositoryAdapter {
         if self.snapshot(&root, &repository_id)? != snapshot {
             return Err(RepositoryPortError::EntryChangedDuringRead);
         }
+        let worktree_storage_id = self.worktree_storage_id(&root)?;
+        let diff_review_identity = DiffReviewIdentity::new(
+            repository_id.clone(),
+            worktree_storage_id,
+            merge_base_sha.clone(),
+            snapshot.clone(),
+        );
+        self.remember_diff_worktree(
+            diff_review_identity.clone(),
+            &root,
+            changed.clone(),
+            all_paths.clone(),
+        )?;
         self.remember_context(
             &root,
             &snapshot,
             base.clone(),
             changed.clone(),
+            all_paths.clone(),
             &ignored_directories,
         )?;
         Ok(RepositoryOverview {
             repository_id,
+            diff_review_identity: Some(diff_review_identity),
+            display_worktree_label: root.to_string_lossy().into_owned(),
             base,
             base_source,
             current_snapshot_id: Some(snapshot),
@@ -1706,21 +2098,21 @@ impl RepositoryPort for GitRepositoryAdapter {
         worktree: &WorktreeId,
         snapshot: &SnapshotId,
         path: &RepositoryRelativePath,
-    ) -> Result<FileReview, RepositoryPortError> {
+    ) -> Result<RepositoryFileReview, RepositoryPortError> {
         let root = self.root(worktree)?;
         let repository_id = self.repository_id(&root)?;
         if self.snapshot(&root, &repository_id)? != *snapshot {
             return Err(RepositoryPortError::StaleSnapshot);
         }
         let context = self.review_context(&root, snapshot)?;
-        let mut file = context
+        let file = context
             .changed
-            .into_iter()
+            .iter()
             .find(|file| {
                 file.new_path.as_ref() == Some(path) || file.old_path.as_ref() == Some(path)
             })
-            .ok_or(RepositoryPortError::InvalidRepositoryPath)?;
-        let (branch_ref, merge, expected_head) = match context.base {
+            .cloned();
+        let (branch_ref, merge, expected_head) = match context.base.clone() {
             BaseBranchResolution::Resolved {
                 branch_ref,
                 merge_base_sha,
@@ -1738,6 +2130,50 @@ impl RepositoryPort for GitRepositoryAdapter {
         if current_head != expected_head || current_merge.trim() != merge.as_str() {
             return Err(RepositoryPortError::StaleBase);
         }
+        let Some(mut file) = file else {
+            if !context.all_paths.iter().any(|candidate| candidate == path) {
+                return Err(RepositoryPortError::InvalidRepositoryPath);
+            }
+            let target = root.join(path.as_str());
+            ensure_parent_boundary(&root, &target)?;
+            let metadata = fs::symlink_metadata(&target).map_err(map_filesystem_error)?;
+            if !metadata.is_file() || metadata.file_type().is_symlink() {
+                return Err(RepositoryPortError::InvalidRepositoryPath);
+            }
+            let new_content = self.current_side(&root, Some(path), EntryKind::Regular)?;
+            let content_classification = match &new_content {
+                ContentAvailability::Available(_) => ContentClassification::Text,
+                ContentAvailability::Omitted {
+                    reason: OmissionReason::Binary,
+                    ..
+                } => ContentClassification::Binary,
+                ContentAvailability::Omitted { .. } => ContentClassification::Unknown,
+            };
+            let review = RepositoryFileReview {
+                file: RepositoryFileMetadata {
+                    old_path: None,
+                    new_path: Some(path.clone()),
+                    change: None,
+                    entry_kind: EntryKind::Regular,
+                    content_classification,
+                    similarity: None,
+                    old_mode: None,
+                    new_mode: None,
+                },
+                old_content: ContentAvailability::Omitted {
+                    reason: OmissionReason::MissingSide,
+                    byte_length: None,
+                },
+                new_content,
+                patch: ContentAvailability::Available(String::new()),
+                structured_diff: StructuredDiff::Available(vec![]),
+                submodule: None,
+            };
+            if self.snapshot(&root, &repository_id)? != *snapshot {
+                return Err(RepositoryPortError::EntryChangedDuringRead);
+            }
+            return Ok(review);
+        };
         if file.entry_kind == EntryKind::Submodule {
             let omitted = ContentAvailability::Omitted {
                 reason: OmissionReason::UnsupportedEntryKind,
@@ -1756,7 +2192,7 @@ impl RepositoryPort for GitRepositoryAdapter {
             if self.snapshot(&root, &repository_id)? != *snapshot {
                 return Err(RepositoryPortError::EntryChangedDuringRead);
             }
-            return Ok(review);
+            return Ok(review.into());
         }
         let old_content = self.base_side(&root, &merge, file.old_path.as_ref(), file.entry_kind)?;
         let new_content = self.current_side(&root, file.new_path.as_ref(), file.entry_kind)?;
@@ -1885,7 +2321,7 @@ impl RepositoryPort for GitRepositoryAdapter {
         if self.snapshot(&root, &repository_id)? != *snapshot {
             return Err(RepositoryPortError::EntryChangedDuringRead);
         }
-        Ok(review)
+        Ok(review.into())
     }
 }
 
@@ -2219,6 +2655,315 @@ fn map_filesystem_error(error: std::io::Error) -> RepositoryPortError {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn diff_comment_context_requires_full_identity_and_snapshot_file_matrix() {
+        use crate::domain::comment::diff::{DiffAnchorTarget, DiffSide};
+        use std::num::NonZeroU32;
+
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!(
+            "spec-viewer-comment-context-{}-{nonce}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&root).unwrap();
+        git(&root, &["init", "-b", "main"]);
+        git(&root, &["config", "user.name", "Spec Viewer"]);
+        git(&root, &["config", "user.email", "fixture.invalid"]);
+        write(&root, "changed.rs", "base\n");
+        write(&root, "unchanged.rs", "same\n");
+        write(&root, "old.rs", "renamed\n");
+        write(&root, "deleted.rs", "gone\n");
+        write(&root, "binary.dat", "text\n");
+        write(&root, "large.txt", "small\n");
+        write(&root, "copy-source.rs", &"copy source\n".repeat(20));
+        write(&root, "unsupported", "file\n");
+        git(&root, &["add", "."]);
+        git(&root, &["commit", "-m", "base"]);
+        git(&root, &["switch", "-c", "feature"]);
+        write(&root, "changed.rs", "current\n");
+        git(&root, &["mv", "old.rs", "new.rs"]);
+        fs::remove_file(root.join("deleted.rs")).unwrap();
+        fs::write(root.join("binary.dat"), b"binary\0value").unwrap();
+        fs::write(root.join("large.txt"), vec![b'x'; CONTENT_LIMIT + 1]).unwrap();
+        fs::copy(root.join("copy-source.rs"), root.join("copy-one.rs")).unwrap();
+        fs::copy(root.join("copy-source.rs"), root.join("copy-two.rs")).unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::symlink;
+            fs::remove_file(root.join("unsupported")).unwrap();
+            symlink("changed.rs", root.join("unsupported")).unwrap();
+        }
+
+        let adapter = GitRepositoryAdapter::default();
+        let worktree = WorktreeId::new(root.to_string_lossy()).unwrap();
+        let main = ValidatedRefName::parse("main").unwrap();
+        let overview = adapter.load_overview(&worktree, Some(&main)).unwrap();
+        let identity = overview.diff_review_identity.unwrap();
+        {
+            let mut contexts = adapter.diff_worktrees.lock().unwrap();
+            let context = contexts.get_mut(identity.worktree_id().as_str()).unwrap();
+            context.changed.retain(|file| {
+                !file
+                    .new_path
+                    .as_ref()
+                    .is_some_and(|path| matches!(path.as_str(), "copy-one.rs" | "copy-two.rs"))
+            });
+            for target in ["copy-one.rs", "copy-two.rs"] {
+                context.changed.push(
+                    DiffFile::new(
+                        Some(RepositoryRelativePath::parse("copy-source.rs").unwrap()),
+                        Some(RepositoryRelativePath::parse(target).unwrap()),
+                        FileChangeKind::Copied,
+                        EntryKind::Regular,
+                        ContentClassification::Text,
+                        Some(100),
+                        Some("100644".into()),
+                        Some("100644".into()),
+                    )
+                    .unwrap(),
+                );
+            }
+        }
+        let context = adapter.diff_comment_resolution_context(&identity).unwrap();
+        let unchanged = DiffAnchorTarget::new(
+            DiffSide::Current,
+            None,
+            Some(RepositoryRelativePath::parse("unchanged.rs").unwrap()),
+            NonZeroU32::new(1).unwrap(),
+        )
+        .unwrap();
+        assert!(adapter
+            .validate_diff_comment_target(&context, &unchanged)
+            .is_ok());
+        let arbitrary = DiffAnchorTarget::new(
+            DiffSide::Current,
+            None,
+            Some(RepositoryRelativePath::parse("missing.rs").unwrap()),
+            NonZeroU32::new(1).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            adapter.validate_diff_comment_target(&context, &arbitrary),
+            Err(RepositoryPortError::InvalidRepositoryPath)
+        );
+        let historical_rename = DiffAnchorTarget::new(
+            DiffSide::Current,
+            None,
+            Some(RepositoryRelativePath::parse("old.rs").unwrap()),
+            NonZeroU32::new(1).unwrap(),
+        )
+        .unwrap();
+        let relocated = adapter
+            .resolve_diff_comment_target(&context, &historical_rename)
+            .unwrap();
+        assert_eq!(relocated.selection_path().as_str(), "new.rs");
+        assert_eq!(relocated.side_path().as_str(), "new.rs");
+        let deleted = DiffAnchorTarget::new(
+            DiffSide::Current,
+            None,
+            Some(RepositoryRelativePath::parse("deleted.rs").unwrap()),
+            NonZeroU32::new(1).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            adapter.resolve_diff_comment_target(&context, &deleted),
+            Err(
+                crate::domain::comment::diff_repository::DiffCommentResolutionError::Stale {
+                    reason: crate::domain::comment::diff::StaleAnchorReason::Deleted,
+                    candidate_count: 0,
+                }
+            )
+        );
+        assert_eq!(
+            adapter.resolve_diff_comment_target(&context, &arbitrary),
+            Err(
+                crate::domain::comment::diff_repository::DiffCommentResolutionError::Stale {
+                    reason: crate::domain::comment::diff::StaleAnchorReason::PathMissing,
+                    candidate_count: 0,
+                }
+            )
+        );
+        let current_target = |path: &str| {
+            DiffAnchorTarget::new(
+                DiffSide::Current,
+                None,
+                Some(RepositoryRelativePath::parse(path).unwrap()),
+                NonZeroU32::new(1).unwrap(),
+            )
+            .unwrap()
+        };
+        assert_eq!(
+            adapter.resolve_diff_comment_target(&context, &current_target("binary.dat")),
+            Err(
+                crate::domain::comment::diff_repository::DiffCommentResolutionError::Stale {
+                    reason: crate::domain::comment::diff::StaleAnchorReason::Binary,
+                    candidate_count: 0,
+                }
+            )
+        );
+        #[cfg(unix)]
+        assert_eq!(
+            adapter.resolve_diff_comment_target(&context, &current_target("unsupported")),
+            Err(
+                crate::domain::comment::diff_repository::DiffCommentResolutionError::Stale {
+                    reason: crate::domain::comment::diff::StaleAnchorReason::Unsupported,
+                    candidate_count: 0,
+                }
+            )
+        );
+        assert_eq!(
+            adapter.resolve_diff_comment_target(&context, &current_target("copy-source.rs")),
+            Ok(current_target("copy-source.rs"))
+        );
+        let large = current_target("large.txt");
+        assert!(adapter
+            .resolve_diff_comment_target(&context, &large)
+            .is_ok());
+        assert_eq!(
+            adapter.load_diff_comment_source(&context, DiffSide::Current, large.side_path()),
+            Err(RepositoryPortError::ContentTooLarge)
+        );
+        let wrong_base = DiffReviewIdentity::new(
+            identity.repository_id().clone(),
+            identity.worktree_id().clone(),
+            CommitSha::parse("f".repeat(40)).unwrap(),
+            identity.current_snapshot_id().clone(),
+        );
+        assert_eq!(
+            adapter.diff_comment_resolution_context(&wrong_base),
+            Err(RepositoryPortError::StaleBase)
+        );
+        let wrong_repository = DiffReviewIdentity::new(
+            RepositoryId::parse(format!("rr1_{}", "f".repeat(64))).unwrap(),
+            identity.worktree_id().clone(),
+            identity.base_sha().clone(),
+            identity.current_snapshot_id().clone(),
+        );
+        assert_eq!(
+            adapter.diff_comment_resolution_context(&wrong_repository),
+            Err(RepositoryPortError::IdentityMismatch)
+        );
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn current_diff_comment_source_rejects_any_repository_snapshot_change_during_read() {
+        use crate::domain::comment::diff::DiffSide;
+
+        for change in ["other-file", "index", "head", "same-size-target"] {
+            let nonce = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos();
+            let root = std::env::temp_dir().join(format!(
+                "spec-viewer-comment-source-snapshot-{change}-{}-{nonce}",
+                std::process::id()
+            ));
+            fs::create_dir_all(&root).unwrap();
+            git(&root, &["init", "-b", "main"]);
+            git(&root, &["config", "user.name", "Spec Viewer"]);
+            git(&root, &["config", "user.email", "fixture.invalid"]);
+            write(&root, "target.rs", "aaaa\n");
+            write(&root, "other.rs", "before\n");
+            git(&root, &["add", "."]);
+            git(&root, &["commit", "-m", "base"]);
+
+            let adapter = GitRepositoryAdapter::default();
+            let worktree = WorktreeId::new(root.to_string_lossy()).unwrap();
+            let overview = adapter.load_overview(&worktree, None).unwrap();
+            let identity = overview.diff_review_identity.unwrap();
+            let context = adapter.diff_comment_resolution_context(&identity).unwrap();
+            let target = RepositoryRelativePath::parse("target.rs").unwrap();
+
+            let result = adapter.load_diff_comment_source_with_after_read(
+                &context,
+                DiffSide::Current,
+                &target,
+                || match change {
+                    "other-file" => write(&root, "other.rs", "after\n"),
+                    "index" => {
+                        write(&root, "other.rs", "staged\n");
+                        git(&root, &["add", "other.rs"]);
+                    }
+                    "head" => {
+                        write(&root, "other.rs", "commit\n");
+                        git(&root, &["add", "other.rs"]);
+                        git(&root, &["commit", "-m", "changed head"]);
+                    }
+                    "same-size-target" => write(&root, "target.rs", "bbbb\n"),
+                    _ => unreachable!(),
+                },
+            );
+
+            assert_eq!(result, Err(RepositoryPortError::EntryChangedDuringRead));
+            fs::remove_dir_all(root).unwrap();
+        }
+    }
+
+    #[test]
+    fn base_diff_comment_source_rejects_any_repository_snapshot_change_during_read() {
+        use crate::domain::comment::diff::DiffSide;
+
+        for change in ["other-file", "index", "head"] {
+            let nonce = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos();
+            let root = std::env::temp_dir().join(format!(
+                "spec-viewer-base-comment-source-snapshot-{change}-{}-{nonce}",
+                std::process::id()
+            ));
+            fs::create_dir_all(&root).unwrap();
+            git(&root, &["init", "-b", "main"]);
+            git(&root, &["config", "user.name", "Spec Viewer"]);
+            git(&root, &["config", "user.email", "fixture.invalid"]);
+            write(&root, "target.rs", "base\n");
+            write(&root, "other.rs", "before\n");
+            git(&root, &["add", "."]);
+            git(&root, &["commit", "-m", "base"]);
+            git(&root, &["switch", "-c", "feature"]);
+            write(&root, "target.rs", "current\n");
+
+            let adapter = GitRepositoryAdapter::default();
+            let worktree = WorktreeId::new(root.to_string_lossy()).unwrap();
+            let main = ValidatedRefName::parse("main").unwrap();
+            let overview = adapter.load_overview(&worktree, Some(&main)).unwrap();
+            let identity = overview.diff_review_identity.unwrap();
+            let context = adapter.diff_comment_resolution_context(&identity).unwrap();
+            let target = RepositoryRelativePath::parse("target.rs").unwrap();
+
+            assert_eq!(
+                adapter.load_diff_comment_source(&context, DiffSide::Base, &target),
+                Ok("base\n".into())
+            );
+
+            let result = adapter.load_diff_comment_source_with_after_read(
+                &context,
+                DiffSide::Base,
+                &target,
+                || match change {
+                    "other-file" => write(&root, "other.rs", "after\n"),
+                    "index" => {
+                        write(&root, "other.rs", "staged\n");
+                        git(&root, &["add", "other.rs"]);
+                    }
+                    "head" => {
+                        write(&root, "other.rs", "commit\n");
+                        git(&root, &["add", "other.rs"]);
+                        git(&root, &["commit", "-m", "changed head"]);
+                    }
+                    _ => unreachable!(),
+                },
+            );
+
+            assert_eq!(result, Err(RepositoryPortError::EntryChangedDuringRead));
+            fs::remove_dir_all(root).unwrap();
+        }
+    }
+
     #[test]
     fn working_tree_diff_covers_staged_deleted_renamed_empty_and_space_paths() {
         let nonce = SystemTime::now()
@@ -2882,6 +3627,7 @@ mod tests {
         write(&root, "committed.txt", "base\n");
         write(&root, "staged.txt", "base\n");
         write(&root, "unstaged.txt", "base\n");
+        write(&root, "unchanged.txt", "same first\nsame second\n");
         write(&root, ".gitignore", "generated/\nignored.log\n");
         git(&root, &["add", "."]);
         git(&root, &["commit", "-m", "base"]);
@@ -2911,6 +3657,15 @@ mod tests {
         let overview = adapter.load_overview(&worktree, Some(&base)).unwrap();
 
         assert!(overview.current_snapshot_id.is_some());
+        let identity = overview.diff_review_identity.as_ref().unwrap();
+        assert_eq!(identity.repository_id(), &overview.repository_id);
+        assert_eq!(
+            identity.current_snapshot_id(),
+            overview.current_snapshot_id.as_ref().unwrap()
+        );
+        assert!(identity.worktree_id().as_str().starts_with("rw1_"));
+        assert_eq!(overview.display_worktree_label, root.to_string_lossy());
+
         for expected in [
             "committed.txt",
             "staged.txt",
@@ -2986,11 +3741,48 @@ mod tests {
                 ContentAvailability::Available("/outside/repository".into())
             );
         }
+        let unchanged_path = RepositoryRelativePath::parse("unchanged.txt").unwrap();
+        assert!(!overview.changed.iter().any(|file| {
+            file.old_path.as_ref() == Some(&unchanged_path)
+                || file.new_path.as_ref() == Some(&unchanged_path)
+        }));
+        assert!(overview.all_paths.contains(&unchanged_path));
+        let unchanged_review = adapter
+            .load_file(&worktree, snapshot, &unchanged_path)
+            .unwrap();
+        assert_eq!(unchanged_review.file.old_path, None);
+        assert_eq!(unchanged_review.file.new_path, Some(unchanged_path));
+        assert_eq!(unchanged_review.file.change, None);
+        assert_eq!(unchanged_review.file.entry_kind, EntryKind::Regular);
+        assert_eq!(
+            unchanged_review.file.content_classification,
+            ContentClassification::Text
+        );
+        assert!(matches!(
+            unchanged_review.old_content,
+            ContentAvailability::Omitted {
+                reason: OmissionReason::MissingSide,
+                byte_length: None
+            }
+        ));
+        assert_eq!(
+            unchanged_review.new_content,
+            ContentAvailability::Available("same first\nsame second\n".into())
+        );
+        assert_eq!(
+            unchanged_review.patch,
+            ContentAvailability::Available(String::new())
+        );
+        assert_eq!(
+            unchanged_review.structured_diff,
+            StructuredDiff::Available(vec![])
+        );
+
         let committed_path = RepositoryRelativePath::parse("committed.txt").unwrap();
         let committed_review = adapter
             .load_file(&worktree, snapshot, &committed_path)
             .unwrap();
-        assert_eq!(committed_review.file.change, FileChangeKind::Modified);
+        assert_eq!(committed_review.file.change, Some(FileChangeKind::Modified));
         assert_eq!(
             committed_review.old_content,
             ContentAvailability::Available("base\n".into())
@@ -3022,7 +3814,7 @@ mod tests {
                     &RepositoryRelativePath::parse(path).unwrap(),
                 )
                 .unwrap();
-            assert_eq!(review.file.change, FileChangeKind::Modified);
+            assert_eq!(review.file.change, Some(FileChangeKind::Modified));
             assert_eq!(
                 review.old_content,
                 ContentAvailability::Available("base\n".into()),
@@ -3051,7 +3843,10 @@ mod tests {
         let untracked_review = adapter
             .load_file(&worktree, snapshot, &untracked_path)
             .unwrap();
-        assert_eq!(untracked_review.file.change, FileChangeKind::Untracked);
+        assert_eq!(
+            untracked_review.file.change,
+            Some(FileChangeKind::Untracked)
+        );
         assert!(matches!(
             untracked_review.old_content,
             ContentAvailability::Omitted {

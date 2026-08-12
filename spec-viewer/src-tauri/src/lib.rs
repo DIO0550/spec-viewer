@@ -4,11 +4,20 @@ pub mod domain;
 pub mod infrastructure;
 pub mod presentation;
 
+use app::use_cases::{
+    diff_comments::DiffCommentUseCases, repository_diff::RepositoryDiffUseCases,
+    spec_diff::SpecDiffUseCases, FilesystemAppUseCases,
+};
+use infrastructure::{
+    filesystem::FilesystemSpecDiffTargetResolver, git::GitRepositoryAdapter,
+    persistence::diff_comment_backend::FilesystemDiffCommentBackend,
+};
 use presentation::commands::{
     comments::{
         add_comment, delete_comment, export_comments, generate_llm_prompt, list_comments,
         reopen_comment, resolve_comment, update_comment,
     },
+    diff_comments::{load_diff_comments, save_diff_comment, update_diff_comment},
     repository::{load_repository_diff, load_repository_file, traverse_repository_ignored},
     spec_diff::{
         get_spec_file_diff, list_changed_spec_files, list_spec_diff_revisions,
@@ -21,6 +30,16 @@ use presentation::commands::{
 };
 use presentation::menu::build_application_menu;
 
+fn command_state() -> CommandState {
+    let git = GitRepositoryAdapter::default();
+    CommandState::new(
+        FilesystemAppUseCases::default(),
+        RepositoryDiffUseCases::new(git.clone()),
+        SpecDiffUseCases::new(FilesystemSpecDiffTargetResolver::new(), git.clone()),
+        DiffCommentUseCases::new(FilesystemDiffCommentBackend::new(git)),
+    )
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -28,7 +47,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
-        .manage(CommandState::default())
+        .manage(command_state())
         .invoke_handler(tauri::generate_handler![
             load_workspace,
             validate_workspace_directory,
@@ -49,6 +68,9 @@ pub fn run() {
             load_repository_diff,
             traverse_repository_ignored,
             load_repository_file,
+            load_diff_comments,
+            save_diff_comment,
+            update_diff_comment,
             list_changed_spec_files,
             get_spec_file_diff,
             list_spec_diff_revisions,

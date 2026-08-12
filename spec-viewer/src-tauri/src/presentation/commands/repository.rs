@@ -40,6 +40,7 @@ impl RepositoryCommandError {
             RepositoryPortError::NotRepository => "notRepository",
             RepositoryPortError::BareRepository => "bareRepository",
             RepositoryPortError::WorktreeUnavailable => "worktreeUnavailable",
+            RepositoryPortError::IdentityMismatch => "identityMismatch",
             RepositoryPortError::CommonDirBoundaryEscape => "commonDirBoundaryEscape",
             RepositoryPortError::GitUnavailable => "gitUnavailable",
             RepositoryPortError::GitTimedOut { .. } => "gitTimedOut",
@@ -55,6 +56,8 @@ impl RepositoryCommandError {
             RepositoryPortError::StaleCursor => "staleCursor",
             RepositoryPortError::InvalidCursor => "invalidCursor",
             RepositoryPortError::EntryChangedDuringRead => "entryChangedDuringRead",
+            RepositoryPortError::Cancelled => "cancelled",
+            RepositoryPortError::ContentTooLarge => "contentTooLarge",
             RepositoryPortError::PermissionDenied => "permissionDenied",
             RepositoryPortError::Io => "io",
         }
@@ -193,6 +196,53 @@ impl From<&DiffFile> for FileChangeResponse {
         }
     }
 }
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RepositoryFileChangeResponse {
+    pub old_path: Option<String>,
+    pub new_path: Option<String>,
+    pub change: Option<&'static str>,
+    pub entry_kind: &'static str,
+    pub content_classification: &'static str,
+    pub similarity: Option<u8>,
+    pub old_mode: Option<String>,
+    pub new_mode: Option<String>,
+}
+
+impl From<RepositoryFileMetadata> for RepositoryFileChangeResponse {
+    fn from(file: RepositoryFileMetadata) -> Self {
+        let change = file.change.map(|change| match change {
+            FileChangeKind::Added => "added",
+            FileChangeKind::Modified => "modified",
+            FileChangeKind::Deleted => "deleted",
+            FileChangeKind::Renamed => "renamed",
+            FileChangeKind::Copied => "copied",
+            FileChangeKind::TypeChanged => "typeChanged",
+            FileChangeKind::Untracked => "untracked",
+        });
+        Self {
+            old_path: file.old_path.map(|path| path.as_str().into()),
+            new_path: file.new_path.map(|path| path.as_str().into()),
+            change,
+            entry_kind: match file.entry_kind {
+                EntryKind::Regular => "regular",
+                EntryKind::Symlink => "symlink",
+                EntryKind::Submodule => "submodule",
+            },
+            content_classification: match file.content_classification {
+                ContentClassification::Text => "text",
+                ContentClassification::Binary => "binary",
+                ContentClassification::NotApplicable => "notApplicable",
+                ContentClassification::Unknown => "unknown",
+            },
+            similarity: file.similarity,
+            old_mode: file.old_mode,
+            new_mode: file.new_mode,
+        }
+    }
+}
+
 #[derive(Debug, Serialize)]
 #[serde(
     tag = "state",
@@ -251,9 +301,20 @@ impl From<TreeNode> for TreeNodeResponse {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct DiffReviewIdentityResponse {
+    pub repository_id: String,
+    pub worktree_id: String,
+    pub base_sha: String,
+    pub current_snapshot_id: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RepositoryOverviewResponse {
     pub repository_id: Option<String>,
     pub base: BaseResponse,
+    pub diff_review_identity: Option<DiffReviewIdentityResponse>,
+    pub display_worktree_label: Option<String>,
     pub current_snapshot_id: Option<String>,
     pub changed: Vec<FileChangeResponse>,
     pub changed_tree: Vec<TreeNodeResponse>,
@@ -265,10 +326,23 @@ pub struct RepositoryOverviewResponse {
 impl From<RepositoryOverview> for RepositoryOverviewResponse {
     fn from(value: RepositoryOverview) -> Self {
         let mut base = BaseResponse::from(&value.base);
+        let diff_review_identity =
+            value
+                .diff_review_identity
+                .as_ref()
+                .map(|identity| DiffReviewIdentityResponse {
+                    repository_id: identity.repository_id().as_str().into(),
+                    worktree_id: identity.worktree_id().as_str().into(),
+                    base_sha: identity.base_sha().as_str().into(),
+                    current_snapshot_id: identity.current_snapshot_id().as_str().into(),
+                });
+
         base.source = source(value.base_source);
         Self {
             repository_id: Some(value.repository_id.as_str().into()),
             base,
+            diff_review_identity,
+            display_worktree_label: Some(value.display_worktree_label),
             current_snapshot_id: value.current_snapshot_id.map(|v| v.as_str().into()),
             changed: value.changed.iter().map(Into::into).collect(),
             changed_tree: value.changed_tree.into_iter().map(Into::into).collect(),
@@ -422,6 +496,39 @@ impl From<FileReview> for FileReviewResponse {
         }
     }
 }
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RepositoryFileReviewResponse {
+    pub file: RepositoryFileChangeResponse,
+    pub old_content: ContentResponse,
+    pub new_content: ContentResponse,
+    pub patch: ContentResponse,
+    pub structured_diff: StructuredDiffResponse,
+    pub submodule: Option<SubmoduleStateResponse>,
+}
+
+impl From<RepositoryFileReview> for RepositoryFileReviewResponse {
+    fn from(value: RepositoryFileReview) -> Self {
+        Self {
+            file: value.file.into(),
+            old_content: value.old_content.into(),
+            new_content: value.new_content.into(),
+            patch: value.patch.into(),
+            structured_diff: value.structured_diff.into(),
+            submodule: value.submodule.map(|state| SubmoduleStateResponse {
+                base_gitlink_oid: state.base_gitlink_oid.map(|oid| oid.as_str().into()),
+                index_gitlink_oid: state.index_gitlink_oid.map(|oid| oid.as_str().into()),
+                worktree_head_oid: state.worktree_head_oid.map(|oid| oid.as_str().into()),
+                commit_changed: state.commit_changed,
+                tracked_changes: state.tracked_changes,
+                untracked_changes: state.untracked_changes,
+                uninitialized: state.uninitialized,
+            }),
+        }
+    }
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IgnoredPageResponse {
@@ -452,6 +559,8 @@ pub fn load_repository_diff(
         Err(RepositoryUseCaseError::InvalidOverride { override_ref }) => {
             Ok(RepositoryOverviewResponse {
                 repository_id: None,
+                diff_review_identity: None,
+                display_worktree_label: None,
                 base: BaseResponse {
                     state: "invalidOverride",
                     source: None,
@@ -494,7 +603,7 @@ pub fn traverse_repository_ignored(
 pub fn load_repository_file(
     state: State<'_, CommandState>,
     request: LoadRepositoryFileRequest,
-) -> Result<FileReviewResponse, RepositoryCommandError> {
+) -> Result<RepositoryFileReviewResponse, RepositoryCommandError> {
     state
         .repository_use_cases()
         .load_file(
@@ -560,6 +669,46 @@ mod tests {
         let diff_json = serde_json::to_value(diff).unwrap();
         assert_eq!(diff_json["state"], "available");
         assert_eq!(diff_json["hunks"][0]["lines"][0]["kind"], "noNewline");
+    }
+
+    #[test]
+    fn unchanged_repository_file_serializes_nullable_change_and_empty_diff() {
+        let response = RepositoryFileReviewResponse::from(RepositoryFileReview {
+            file: RepositoryFileMetadata {
+                old_path: None,
+                new_path: Some(RepositoryRelativePath::parse("src/stable.rs").unwrap()),
+                change: None,
+                entry_kind: EntryKind::Regular,
+                content_classification: ContentClassification::Text,
+                similarity: None,
+                old_mode: None,
+                new_mode: None,
+            },
+            old_content: ContentAvailability::Omitted {
+                reason: OmissionReason::MissingSide,
+                byte_length: None,
+            },
+            new_content: ContentAvailability::Available("one\ntwo\n".into()),
+            patch: ContentAvailability::Available(String::new()),
+            structured_diff: StructuredDiff::Available(vec![]),
+            submodule: None,
+        });
+        let json = serde_json::to_value(response).unwrap();
+
+        assert_eq!(json["file"]["oldPath"], serde_json::Value::Null);
+        assert_eq!(json["file"]["newPath"], "src/stable.rs");
+        assert_eq!(json["file"]["change"], serde_json::Value::Null);
+        assert_eq!(json["file"]["entryKind"], "regular");
+        assert_eq!(json["file"]["contentClassification"], "text");
+        assert_eq!(json["newContent"]["state"], "available");
+        assert_eq!(json["newContent"]["text"], "one\ntwo\n");
+        assert_eq!(json["oldContent"]["state"], "omitted");
+        assert_eq!(json["oldContent"]["reason"], "missingSide");
+        assert_eq!(json["patch"]["state"], "available");
+        assert_eq!(json["patch"]["text"], "");
+        assert_eq!(json["structuredDiff"]["state"], "available");
+        assert_eq!(json["structuredDiff"]["hunks"], serde_json::json!([]));
+        assert_eq!(json["submodule"], serde_json::Value::Null);
     }
 
     #[test]
