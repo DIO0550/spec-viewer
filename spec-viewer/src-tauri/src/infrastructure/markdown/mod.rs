@@ -521,6 +521,10 @@ mod tests {
         }
     }
 
+    fn has_path_suffix(path: &str, components: &[&str]) -> bool {
+        Path::new(path).ends_with(components.iter().collect::<PathBuf>())
+    }
+
     fn discovered_artifact(
         identity: SpecArtifactIdentity,
         file_name: &str,
@@ -617,7 +621,7 @@ mod tests {
             MarkdownReadResult::Found(document) => {
                 assert_eq!(SpecFileKey::Tasks, document.key());
                 assert_eq!(SpecDocumentFormat::Markdown, document.format());
-                assert!(document.path().ends_with("auth/tasks.md"));
+                assert!(has_path_suffix(document.path(), &["auth", "tasks.md"]));
                 assert_eq!("# Tasks\n\n- [ ] Review", document.contents());
                 assert_eq!(2, document.blocks().len());
                 assert_eq!(
@@ -659,7 +663,7 @@ mod tests {
         match result {
             MarkdownReadResult::Found(document) => {
                 assert_eq!(SpecDocumentFormat::Html, document.format());
-                assert!(document.path().ends_with("auth/tasks.html"));
+                assert!(has_path_suffix(document.path(), &["auth", "tasks.html"]));
                 assert_eq!("<h1>Tasks</h1><p>Review</p>", document.contents());
                 assert!(document.blocks().is_empty());
             }
@@ -685,7 +689,7 @@ mod tests {
         match result {
             MarkdownReadResult::Found(document) => {
                 assert_eq!(SpecDocumentFormat::Markdown, document.format());
-                assert!(document.path().ends_with("auth/tasks.md"));
+                assert!(has_path_suffix(document.path(), &["auth", "tasks.md"]));
                 assert_eq!("# Markdown", document.contents());
             }
             MarkdownReadResult::Missing(_) => panic!("expected markdown document"),
@@ -713,7 +717,10 @@ mod tests {
         match result {
             MarkdownReadResult::Found(document) => {
                 assert_eq!(SpecDocumentFormat::Html, document.format());
-                assert!(document.path().ends_with("auth/tech-reference.html"));
+                assert!(has_path_suffix(
+                    document.path(),
+                    &["auth", "tech-reference.html"]
+                ));
                 assert_eq!("<h1>Tech</h1>", document.contents());
                 assert!(document.blocks().is_empty());
             }
@@ -738,7 +745,10 @@ mod tests {
         match result {
             MarkdownReadResult::Found(document) => {
                 assert_eq!(SpecDocumentFormat::Markdown, document.format());
-                assert!(document.path().ends_with("auth/tech-reference.md"));
+                assert!(has_path_suffix(
+                    document.path(),
+                    &["auth", "tech-reference.md"]
+                ));
                 assert_eq!("# Tech", document.contents());
                 assert_eq!(1, document.blocks().len());
             }
@@ -770,7 +780,10 @@ mod tests {
         match result {
             MarkdownReadResult::Found(document) => {
                 assert_eq!(SpecDocumentFormat::Html, document.format());
-                assert!(document.path().ends_with("auth/requirements.html"));
+                assert!(has_path_suffix(
+                    document.path(),
+                    &["auth", "requirements.html"]
+                ));
                 assert_eq!("<h1>Requirements</h1>", document.contents());
                 assert!(document.blocks().is_empty());
             }
@@ -797,7 +810,10 @@ mod tests {
             MarkdownReadResult::Missing(missing) => {
                 assert_eq!(SpecFileKey::TechReference, missing.key());
                 assert_eq!(SpecDocumentFormat::Html, missing.format());
-                assert!(missing.path().ends_with("auth/tech-reference.html"));
+                assert!(has_path_suffix(
+                    missing.path(),
+                    &["auth", "tech-reference.html"]
+                ));
             }
         }
     }
@@ -830,7 +846,7 @@ mod tests {
         match result {
             MarkdownReadResult::Found(document) => {
                 assert_eq!(SpecDocumentFormat::Html, document.format());
-                assert!(document.path().ends_with("auth/guide.html"));
+                assert!(has_path_suffix(document.path(), &["auth", "guide.html"]));
                 assert_eq!("<h1>Guide HTML</h1>", document.contents());
             }
             MarkdownReadResult::Missing(_) => panic!("expected tech reference html document"),
@@ -859,7 +875,7 @@ mod tests {
         match result {
             MarkdownReadResult::Found(document) => {
                 assert_eq!(SpecDocumentFormat::Html, document.format());
-                assert!(document.path().ends_with("auth/preview.html"));
+                assert!(has_path_suffix(document.path(), &["auth", "preview.html"]));
                 assert!(document.blocks().is_empty());
             }
             MarkdownReadResult::Missing(_) => panic!("expected configured html document"),
@@ -884,7 +900,7 @@ mod tests {
 
         match result {
             MarkdownReadResult::Found(document) => {
-                assert!(document.path().ends_with("auth/todo.md"));
+                assert!(has_path_suffix(document.path(), &["auth", "todo.md"]));
                 assert_eq!("# Renamed Tasks", document.contents());
                 assert_eq!(1, document.blocks().len());
             }
@@ -934,7 +950,7 @@ mod tests {
             MarkdownReadResult::Missing(missing) => {
                 assert_eq!(SpecFileKey::Tasks, missing.key());
                 assert_eq!(SpecDocumentFormat::Markdown, missing.format());
-                assert!(missing.path().ends_with("auth/tasks.md"));
+                assert!(has_path_suffix(missing.path(), &["auth", "tasks.md"]));
             }
         }
     }
@@ -998,7 +1014,8 @@ mod tests {
 
         assert!(matches!(
             result,
-            Err(MarkdownReadError::PathEscapesWorkspace { path }) if path.ends_with("escaped/tasks.md")
+            Err(MarkdownReadError::PathEscapesWorkspace { path })
+                if has_path_suffix(&path, &["escaped", "tasks.md"])
         ));
     }
 
@@ -1031,7 +1048,8 @@ mod tests {
 
         assert!(matches!(
             result,
-            Err(MarkdownReadError::UnreadableFile { path, .. }) if path.ends_with("auth/tasks.md")
+            Err(MarkdownReadError::UnreadableFile { path, .. })
+                if has_path_suffix(&path, &["auth", "tasks.md"])
         ));
     }
 

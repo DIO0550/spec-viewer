@@ -3664,7 +3664,10 @@ mod tests {
             overview.current_snapshot_id.as_ref().unwrap()
         );
         assert!(identity.worktree_id().as_str().starts_with("rw1_"));
-        assert_eq!(overview.display_worktree_label, root.to_string_lossy());
+        assert_eq!(
+            overview.display_worktree_label,
+            fs::canonicalize(&root).unwrap().to_string_lossy()
+        );
 
         for expected in [
             "committed.txt",

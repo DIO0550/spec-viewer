@@ -291,9 +291,9 @@ mod tests {
             "tasks.md",
             "Zulu.md",
             "alpha.md",
-            "Alpha.md",
+            "Beta.md",
             "Ä-notes.md",
-            "ä-notes.md",
+            "Ö-notes.md",
         ] {
             directory.write_file(file_name);
         }
@@ -310,11 +310,11 @@ mod tests {
         assert_eq!(
             vec![
                 "tasks.md",
-                "Alpha.md",
                 "alpha.md",
+                "Beta.md",
                 "Zulu.md",
                 "Ä-notes.md",
-                "ä-notes.md",
+                "Ö-notes.md",
             ],
             artifacts
                 .iter()
@@ -323,7 +323,7 @@ mod tests {
         );
         assert!(matches!(
             artifacts[1].identity,
-            SpecArtifactIdentity::DirectMarkdown(ref file_name) if file_name == "Alpha.md"
+            SpecArtifactIdentity::DirectMarkdown(ref file_name) if file_name == "alpha.md"
         ));
     }
     #[cfg(unix)]
