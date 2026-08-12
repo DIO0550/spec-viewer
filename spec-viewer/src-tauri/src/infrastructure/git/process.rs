@@ -1,5 +1,7 @@
 use crate::domain::repository::RepositoryPortError;
 use std::{
+    collections::BTreeSet,
+    ffi::OsString,
     io::Read,
     path::Path,
     process::{Command, Stdio},
@@ -159,8 +161,28 @@ fn isolate_git_environment(command: &mut Command) {
         .env("LANG", "C")
         .env("TZ", "UTC")
         .env_remove("GIT_CONFIG_COUNT")
-        .env_remove("GIT_CONFIG_KEY_0")
-        .env_remove("GIT_CONFIG_VALUE_0");
+        .env_remove("GIT_CONFIG_PARAMETERS");
+
+    let injected_config_names = command
+        .get_envs()
+        .map(|(name, _)| name.to_os_string())
+        .chain(std::env::vars_os().map(|(name, _)| name))
+        .filter(|name| is_indexed_git_config_name(name))
+        .collect::<BTreeSet<OsString>>();
+    for name in injected_config_names {
+        command.env_remove(name);
+    }
+}
+
+fn is_indexed_git_config_name(name: &std::ffi::OsStr) -> bool {
+    let name = name.to_string_lossy();
+    ["GIT_CONFIG_KEY_", "GIT_CONFIG_VALUE_"]
+        .iter()
+        .any(|prefix| {
+            name.strip_prefix(prefix).is_some_and(|suffix| {
+                !suffix.is_empty() && suffix.bytes().all(|byte| byte.is_ascii_digit())
+            })
+        })
 }
 
 fn sanitize_diagnostic(bytes: &[u8]) -> String {
@@ -218,6 +240,11 @@ mod tests {
     #[test]
     fn r199_git_001_env_isolation() {
         let mut command = Command::new("git");
+        command
+            .env("GIT_CONFIG_COUNT", "8")
+            .env("GIT_CONFIG_KEY_7", "credential.helper")
+            .env("GIT_CONFIG_VALUE_7", "malicious")
+            .env("GIT_CONFIG_PARAMETERS", "'core.hooksPath'='/tmp/hooks'");
         isolate_git_environment(&mut command);
         let values = command
             .get_envs()
@@ -236,6 +263,9 @@ mod tests {
         );
         assert_eq!(values.get(OsStr::new("TZ")), Some(&Some(OsStr::new("UTC"))));
         assert_eq!(values.get(OsStr::new("GIT_CONFIG_COUNT")), Some(&None));
+        assert_eq!(values.get(OsStr::new("GIT_CONFIG_KEY_7")), Some(&None));
+        assert_eq!(values.get(OsStr::new("GIT_CONFIG_VALUE_7")), Some(&None));
+        assert_eq!(values.get(OsStr::new("GIT_CONFIG_PARAMETERS")), Some(&None));
     }
 
     #[test]
