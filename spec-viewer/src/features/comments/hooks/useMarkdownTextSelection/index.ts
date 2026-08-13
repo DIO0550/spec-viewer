@@ -62,19 +62,35 @@ export function useMarkdownTextSelection({
       }
     };
 
+    const updateSelectionDraftFromMouse = (event: MouseEvent): void => {
+      if (event.button !== 0) {
+        return;
+      }
+
+      updateSelectionDraft();
+    };
+
+    const updateSelectionDraftFromKeyboard = (event: KeyboardEvent): void => {
+      if (isCopyShortcut(event)) {
+        return;
+      }
+
+      updateSelectionDraft();
+    };
+
     document.addEventListener("selectionchange", clearInvalidSelectionDraft);
-    window.addEventListener("mouseup", updateSelectionDraft);
+    window.addEventListener("mouseup", updateSelectionDraftFromMouse);
     window.addEventListener("touchend", updateSelectionDraft);
-    window.addEventListener("keyup", updateSelectionDraft);
+    window.addEventListener("keyup", updateSelectionDraftFromKeyboard);
 
     return () => {
       document.removeEventListener(
         "selectionchange",
         clearInvalidSelectionDraft,
       );
-      window.removeEventListener("mouseup", updateSelectionDraft);
+      window.removeEventListener("mouseup", updateSelectionDraftFromMouse);
       window.removeEventListener("touchend", updateSelectionDraft);
-      window.removeEventListener("keyup", updateSelectionDraft);
+      window.removeEventListener("keyup", updateSelectionDraftFromKeyboard);
     };
   }, [fileKey, renderedRootRef]);
 
@@ -108,4 +124,9 @@ function containsSelectionNode(root: HTMLElement, node: Node): boolean {
   }
 
   return node.parentElement !== null && root.contains(node.parentElement);
+}
+
+/** @returns true when the keyboard event is a platform copy shortcut. */
+function isCopyShortcut(event: KeyboardEvent): boolean {
+  return (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "c";
 }
