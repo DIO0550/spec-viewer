@@ -4731,11 +4731,13 @@ mod tests {
         base_resolution_keeps_missing_detached_unborn_and_disconnected_states();
     }
 
+    #[cfg(unix)]
     #[test]
     fn r199_git_006_non_utf8() {
         non_utf8_repository_path_returns_typed_encoding_error();
     }
 
+    #[cfg(unix)]
     #[test]
     fn r199_git_007_symlink_escape() {
         intermediate_symlink_escape_is_rejected_before_content_read();
