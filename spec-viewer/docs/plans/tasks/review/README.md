@@ -4,4 +4,4 @@ Goal: connect the shared Review panel to Specs and repository Diff targets while
 
 ## Tasks
 
-- [Issue #199 Specs / Diff integrated review regression tests](./issue-199-review-regression-tests.md)
+No active review tasks.

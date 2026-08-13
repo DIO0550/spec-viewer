@@ -387,27 +387,27 @@ cargo clippy --manifest-path src-tauri/Cargo.toml --target x86_64-pc-windows-msv
 
 ## Definition of Done
 
-- [ ] Every leaf has one behavior and typed `targets[{os, ciJob, artifact}]`; slash/combined mappings are rejected.
-- [ ] Cargo suffix resolver finds exactly one fully-qualified test via `--list` and executes it with `--exact`.
-- [ ] `evidence.json` is Green for every required leaf; manual evidence cannot replace a missing target.
-- [ ] Archive command execution, tree move result, deterministic selection fallback, and reload placement are four independent Green leaves.
-- [ ] Spec Review card→anchored section and Spec indicator→Review card are independent focus/selection leaves.
-- [ ] `.git` alone is universally excluded; generated is Changed-excluded, All-deferred, and lazy-loaded after expansion.
-- [ ] committed, staged, unstaged, combined snapshot, non-Spec file, and shared identity across Changed/All/three views pass.
-- [ ] symbolic remote HEAD and missing remote HEAD fallback are independent Green leaves.
-- [ ] App/Storybook Playwright arrays are exact/disjoint and acceptance tests run under current `src` include.
-- [ ] Golden normalization preserves referential invariants; Git config/environment is isolated.
-- [ ] Windows junction/reparse fixtures require no privilege and never skip; setup failure fails CI.
-- [ ] Linux denied-path and Windows ACL denial pass through real command integration.
-- [ ] alive post-replace sync failure returns committed/uncertain; post-replace crash restores the new document; pre-replace crash preserves old bytes.
-- [ ] Spec v2 and Diff v1 byte noninterference passes both directions on both OS jobs.
-- [ ] `native-test-control` writes nonce-scoped ready files atomically out-of-band while mutation remains pending; harness validates signal, kills PID, restarts, and cleans every control artifact. No mutation response carries barrier readiness.
-- [ ] Test-control feature/command/path is absent from default/debug-without-feature/release/package builds.
-- [ ] Candidate VRT workflow is read-only. Trusted workflow runs base-pinned validator only, never PR code, and verifies authenticated actor/body/head/tuple/hash/ready.
-- [ ] Every required `review-vrt-cases.json` tuple has one VRTCASE leaf, one candidate PNG/hash record, and one final evidence record; 0/multiple/undeclared records fail.
-- [ ] Trusted VRT rejects self/stale/third-round approval and records validator base SHA plus evidence.
-- [ ] Storybook play/axe, theme/viewport VRT, deterministic performance, full frontend/backend/native/Windows gates pass.
-- [ ] Unsupported product behavior goes to #200; missing native/tooling capability keeps #199 blocked.
+- [x] Every leaf has one behavior and typed `targets[{os, ciJob, artifact}]`; slash/combined mappings are rejected.
+- [x] Cargo suffix resolver finds exactly one fully-qualified test via `--list` and executes it with `--exact`.
+- [x] `evidence.json` is Green for every required leaf; manual evidence cannot replace a missing target.
+- [x] Archive command execution, tree move result, deterministic selection fallback, and reload placement are four independent Green leaves.
+- [x] Spec Review card→anchored section and Spec indicator→Review card are independent focus/selection leaves.
+- [x] `.git` alone is universally excluded; generated is Changed-excluded, All-deferred, and lazy-loaded after expansion.
+- [x] committed, staged, unstaged, combined snapshot, non-Spec file, and shared identity across Changed/All/three views pass.
+- [x] symbolic remote HEAD and missing remote HEAD fallback are independent Green leaves.
+- [x] App/Storybook Playwright arrays are exact/disjoint and acceptance tests run under current `src` include.
+- [x] Golden normalization preserves referential invariants; Git config/environment is isolated.
+- [x] Windows junction/reparse fixtures require no privilege and never skip; setup failure fails CI.
+- [x] Linux denied-path and Windows ACL denial pass through real command integration.
+- [x] alive post-replace sync failure returns committed/uncertain; post-replace crash restores the new document; pre-replace crash preserves old bytes.
+- [x] Spec v2 and Diff v1 byte noninterference passes both directions on both OS jobs.
+- [x] `native-test-control` writes nonce-scoped ready files atomically out-of-band while mutation remains pending; harness validates signal, kills PID, restarts, and cleans every control artifact. No mutation response carries barrier readiness.
+- [x] Test-control feature/command/path is absent from default/debug-without-feature/release/package builds.
+- [x] Candidate VRT workflow is read-only. Trusted workflow runs base-pinned validator only, never PR code, and verifies authenticated actor/body/head/tuple/hash/ready.
+- [x] Every required `review-vrt-cases.json` tuple has one VRTCASE leaf, one candidate PNG/hash record, and one final evidence record; 0/multiple/undeclared records fail.
+- [x] Trusted VRT rejects self/stale/third-round approval and records validator base SHA plus evidence.
+- [x] Storybook play/axe, theme/viewport VRT, deterministic performance, full frontend/backend/native/Windows gates pass.
+- [x] Unsupported product behavior goes to #200; missing native/tooling capability keeps #199 blocked.
 
 ## Reviewer resolution table
 
@@ -435,3 +435,7 @@ cargo clippy --manifest-path src-tauri/Cargo.toml --target x86_64-pc-windows-msv
 ## Independent review guide
 
 Select any leaf ID and reproduce exactly its runner/selector. Confirm its OS job and named artifact in `evidence.json`. Reject composite leaves, non-exact Cargo execution, missing archive/reload or Spec reverse-jump evidence, same-call `barrierReached` response, mutation resolving before kill, non-atomic/unnamespaced ready signal, stale control files, test-control in release, VRT tuple without exactly one candidate/evidence record, candidate writes, trusted PR-code execution, unauthenticated/stale approval, inherited Git config, or one-way/non-byte persistence checks.
+
+## Completion note
+
+Completed in PR #222 (`feature/199-review-regression-tests`). Implementation and regression evidence landed in commits `9b883687` through `4e187040`; the final backend workflow/JUnit correction is `4e187040`. Frontend, Storybook, native Tauri, VRT candidate, Linux, and Windows gates are green. The trusted visual approval protocol is implemented and locally validated; this bootstrap PR intentionally accepts its default-branch check exception because the validator files are introduced by the PR itself. #200 and later PRs must require that trusted check.
