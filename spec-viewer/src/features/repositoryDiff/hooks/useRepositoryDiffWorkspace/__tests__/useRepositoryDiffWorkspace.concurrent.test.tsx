@@ -290,7 +290,7 @@ test("selectBaseOverrideは指定refでoverviewを再取得する", async () => 
   hook.unmount();
 });
 
-test("deferred ignored directoryはsnapshotとcursor identityでloadingからreadyになる", async () => {
+test("[R199-TREE-004] deferred ignored directoryはsnapshotとcursor identityでloadingからreadyになる", async () => {
   const deferredPage = createDeferred<IgnoredPage>();
   const api = createApi({
     traverseRepositoryIgnored: vi

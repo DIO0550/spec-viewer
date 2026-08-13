@@ -1182,7 +1182,7 @@ test("useSpecsはarchive後のreload中にworkspaceが変わったら古いselec
   result.unmount();
 });
 
-test("useSpecsはspecをアーカイブした後にtreeを再読み込みする", async () => {
+test("[R199-ARCH-001] useSpecsはspecをアーカイブした後にtreeを再読み込みする", async () => {
   const listSpecs = specCommandMocks.listSpecs.mockResolvedValue(populatedTree);
   specCommandMocks.readSpecFile.mockResolvedValue(loadedDocument);
   const archiveSpec = specCommandMocks.archiveSpec.mockResolvedValue({
@@ -1551,7 +1551,7 @@ test("useSpecsはarchive errorをreloadやselectionで保持し次のarchive開�
   result.unmount();
 });
 
-test("useSpecsはarchive後に選択中specが消えたらdefault openable specへfallbackする", async () => {
+test("[R199-ARCH-003] useSpecsはarchive後に選択中specが消えたらdefault openable specへfallbackする", async () => {
   const onSelectionChange = vi.fn();
   specCommandMocks.listSpecs
     .mockResolvedValueOnce(populatedTree)

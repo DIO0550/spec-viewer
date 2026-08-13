@@ -1,8 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
+import { storybookPlaywrightTestMatches } from "./playwright.test-matches";
 
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: "storybook-diff-comments.spec.ts",
+  testMatch: [...storybookPlaywrightTestMatches],
   outputDir: "./test-results/storybook-playwright",
   fullyParallel: false,
   reporter: "line",

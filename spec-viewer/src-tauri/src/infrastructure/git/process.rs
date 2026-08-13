@@ -1,5 +1,7 @@
 use crate::domain::repository::RepositoryPortError;
 use std::{
+    collections::BTreeSet,
+    ffi::OsString,
     io::Read,
     path::Path,
     process::{Command, Stdio},
@@ -51,7 +53,9 @@ impl GitRunner {
         content: bool,
         stdout_limit: usize,
     ) -> Result<Vec<u8>, RepositoryPortError> {
-        let mut child = Command::new("git")
+        let mut command = Command::new("git");
+        isolate_git_environment(&mut command);
+        let mut child = command
             .arg("-C")
             .arg(cwd)
             .args(args)
@@ -143,6 +147,44 @@ impl GitRunner {
         Ok(stdout.0)
     }
 }
+
+fn isolate_git_environment(command: &mut Command) {
+    command
+        .env("GIT_CONFIG_NOSYSTEM", "1")
+        .env(
+            "GIT_CONFIG_GLOBAL",
+            if cfg!(windows) { "NUL" } else { "/dev/null" },
+        )
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .env("GCM_INTERACTIVE", "Never")
+        .env("LC_ALL", "C")
+        .env("LANG", "C")
+        .env("TZ", "UTC")
+        .env_remove("GIT_CONFIG_COUNT")
+        .env_remove("GIT_CONFIG_PARAMETERS");
+
+    let injected_config_names = command
+        .get_envs()
+        .map(|(name, _)| name.to_os_string())
+        .chain(std::env::vars_os().map(|(name, _)| name))
+        .filter(|name| is_indexed_git_config_name(name))
+        .collect::<BTreeSet<OsString>>();
+    for name in injected_config_names {
+        command.env_remove(name);
+    }
+}
+
+fn is_indexed_git_config_name(name: &std::ffi::OsStr) -> bool {
+    let name = name.to_string_lossy();
+    ["GIT_CONFIG_KEY_", "GIT_CONFIG_VALUE_"]
+        .iter()
+        .any(|prefix| {
+            name.strip_prefix(prefix).is_some_and(|suffix| {
+                !suffix.is_empty() && suffix.bytes().all(|byte| byte.is_ascii_digit())
+            })
+        })
+}
+
 fn sanitize_diagnostic(bytes: &[u8]) -> String {
     let mut sanitized = String::new();
     for character in String::from_utf8_lossy(bytes).chars() {
@@ -193,6 +235,39 @@ fn read_capped(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::ffi::OsStr;
+
+    #[test]
+    fn r199_git_001_env_isolation() {
+        let mut command = Command::new("git");
+        command
+            .env("GIT_CONFIG_COUNT", "8")
+            .env("GIT_CONFIG_KEY_7", "credential.helper")
+            .env("GIT_CONFIG_VALUE_7", "malicious")
+            .env("GIT_CONFIG_PARAMETERS", "'core.hooksPath'='/tmp/hooks'");
+        isolate_git_environment(&mut command);
+        let values = command
+            .get_envs()
+            .collect::<std::collections::BTreeMap<_, _>>();
+        assert_eq!(
+            values.get(OsStr::new("GIT_CONFIG_NOSYSTEM")),
+            Some(&Some(OsStr::new("1")))
+        );
+        assert_eq!(
+            values.get(OsStr::new("GIT_TERMINAL_PROMPT")),
+            Some(&Some(OsStr::new("0")))
+        );
+        assert_eq!(
+            values.get(OsStr::new("LC_ALL")),
+            Some(&Some(OsStr::new("C")))
+        );
+        assert_eq!(values.get(OsStr::new("TZ")), Some(&Some(OsStr::new("UTC"))));
+        assert_eq!(values.get(OsStr::new("GIT_CONFIG_COUNT")), Some(&None));
+        assert_eq!(values.get(OsStr::new("GIT_CONFIG_KEY_7")), Some(&None));
+        assert_eq!(values.get(OsStr::new("GIT_CONFIG_VALUE_7")), Some(&None));
+        assert_eq!(values.get(OsStr::new("GIT_CONFIG_PARAMETERS")), Some(&None));
+    }
+
     #[test]
     fn diagnostics_escape_control_characters_and_are_bounded() {
         let input = format!("line\nsecret\0{}", "x".repeat(5000));

@@ -1381,6 +1381,7 @@ function createHighlightedBlockMetadata({
       highlight.rangeHighlights.length > 0 ? "range" : "block",
     "data-comment-highlight-state": highlight.state,
     "data-comment-ids": highlight.commentIds.join(" "),
+    tabIndex: -1,
   };
 
   return highlightedMetadata;

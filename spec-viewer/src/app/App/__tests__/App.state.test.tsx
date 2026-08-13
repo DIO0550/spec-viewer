@@ -78,7 +78,7 @@ test("worktree A/Bを往復してopen tabとactive detailを分離する", () =>
   view.unmount();
 });
 
-test("snapshotでactive fileが消失すると右→左fallbackをdetailへ反映する", () => {
+test("[R199-ERR-004] snapshotでactive fileが消失すると右→左fallbackをdetailへ反映する", () => {
   const view = renderRepositoryHarness();
 
   click(view.container, "a.tsを開く");
@@ -96,7 +96,7 @@ test("snapshotでactive fileが消失すると右→左fallbackをdetailへ反�
   view.unmount();
 });
 
-test("3 modeとtabを跨いでもpath別active changeを維持する", () => {
+test("[R199-VIEW-006] 3 modeとtabを跨いでもpath別active changeを維持する", () => {
   const view = renderRepositoryHarness();
 
   click(view.container, "a.tsを開く");

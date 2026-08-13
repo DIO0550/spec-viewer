@@ -177,4 +177,46 @@ mod tests {
         let _ = fs::remove_dir_all(common);
         let _ = fs::remove_dir_all(outside);
     }
+
+    #[cfg(windows)]
+    fn assert_windows_junction_boundary(label: &str) {
+        use std::process::Command;
+        let root =
+            std::env::temp_dir().join(format!("spec-viewer-r199-{label}-{}", uuid::Uuid::new_v4()));
+        let common = root.join("common");
+        let outside = root.join("outside");
+        fs::create_dir_all(&common).unwrap();
+        fs::create_dir_all(&outside).unwrap();
+        let link = common.join("spec-viewer");
+        let output = Command::new("cmd")
+            .args(["/C", "mklink", "/J"])
+            .arg(&link)
+            .arg(&outside)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "mklink /J failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let id = WorktreeStorageId::parse(format!("rw1_{}", "a".repeat(64))).unwrap();
+        assert_eq!(
+            DiffCommentPaths::create(&common, &id).unwrap_err().kind(),
+            io::ErrorKind::PermissionDenied
+        );
+        fs::remove_dir(&link).unwrap();
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn r199_git_008_junction_escape() {
+        assert_windows_junction_boundary("junction");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn r199_git_009_reparse_boundary() {
+        assert_windows_junction_boundary("reparse");
+    }
 }

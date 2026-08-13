@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 jobs:
-  check:
+  frontend-unit:
     name: lint / typecheck / test
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -46,7 +46,19 @@ jobs:
         run: pnpm exec oxlint
 
       - name: Test with coverage
-        run: pnpm vitest run --coverage --coverage.reporter=text --coverage.reporter=html --coverage.reporter=json-summary
+        run: >-
+          pnpm vitest run --coverage
+          --coverage.reporter=text --coverage.reporter=html --coverage.reporter=json-summary
+          --reporter=default --reporter=junit
+          --outputFile.junit=test-results/frontend-junit.xml
+
+      - name: Upload frontend leaf evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: frontend-junit
+          path: spec-viewer/test-results/frontend-junit.xml
+          if-no-files-found: error
 
       - name: Upload coverage artifact
         if: always()
@@ -57,9 +69,9 @@ jobs:
           if-no-files-found: ignore
           retention-days: 1
 
-  e2e:
-    name: Playwright Diff comments
-    needs: check
+  app-review-e2e:
+    name: App review Playwright
+    needs: frontend-unit
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
@@ -90,27 +102,103 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Run stateful production-boundary E2E
-        run: pnpm test:e2e
-
-      - name: Run Diff comment Storybook play and axe tests
-        run: pnpm test:e2e:storybook
+        run: pnpm test:e2e:app
 
       - name: Upload Playwright report and failure artifacts
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: diff-comments-playwright
+          name: app-playwright
           path: |
             spec-viewer/playwright-report/
             spec-viewer/test-results/playwright/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  storybook-review-e2e:
+    name: Storybook review play and axe
+    needs: frontend-unit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: spec-viewer
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 24
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.33.0 --activate
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Chromium and system dependencies
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run exact Storybook play and axe suite
+        run: pnpm test:e2e:storybook
+      - name: Upload Storybook Playwright evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: storybook-playwright
+          path: |
+            spec-viewer/playwright-report/
             spec-viewer/test-results/storybook-playwright/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  native-review-smoke:
+    name: Native Tauri review smoke
+    needs: frontend-unit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: spec-viewer
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 24
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.33.0 --activate
+      - name: Install native runtime dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb dbus-x11 webkit2gtk-driver libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+      - name: Install JavaScript dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install tauri-driver
+        run: cargo install tauri-driver --version 2.0.6 --locked
+      - name: Run mandatory native review smoke
+        run: pnpm test:e2e:native
+      - name: Upload native logs and screenshots
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: native-smoke
+          path: |
+            spec-viewer/test-results/native/
+            spec-viewer/src-tauri/target/native-*.log
           if-no-files-found: ignore
           retention-days: 7
 
   coverage-comment:
     name: post coverage comment
-    needs: check
-    if: always() && needs.check.result != 'cancelled'
+    needs: frontend-unit
+    if: always() && needs.frontend-unit.result != 'cancelled'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:

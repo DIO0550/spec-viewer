@@ -11,10 +11,10 @@ permissions:
   contents: read
 
 jobs:
-  check:
+  backend-check:
     name: fmt / clippy / coverage
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 40
     permissions:
       contents: read
     defaults:
@@ -45,7 +45,30 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: cargo clippy
-        run: cargo clippy --workspace --all-targets -- -D warnings
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+      - name: Install cargo-nextest
+        run: cargo install cargo-nextest --locked
+
+      - name: Run Rust acceptance tests with JUnit
+        run: |
+          mkdir -p .config
+          printf '%s\n' \
+            '[profile.ci]' \
+            'fail-fast = false' \
+            '[profile.ci.junit]' \
+            'path = "junit.xml"' \
+            > .config/nextest.toml
+          cargo nextest run --workspace --all-features --profile ci
+
+      - name: Upload backend JUnit
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: backend-junit
+          path: spec-viewer/src-tauri/target/nextest/ci/junit.xml
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Install cargo-llvm-cov
         run: cargo install cargo-llvm-cov --locked
@@ -97,10 +120,10 @@ jobs:
           if-no-files-found: ignore
           retention-days: 1
 
-  windows-atomic-replace:
-    name: Windows atomic replace / child process
+  windows-review:
+    name: Windows review regression
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     permissions:
       contents: read
     defaults:
@@ -119,16 +142,39 @@ jobs:
           rustup default stable
           rustup target add x86_64-pc-windows-msvc
 
-      - name: Test Windows persistence and child-process paths
-        run: cargo test --manifest-path src-tauri/Cargo.toml --target x86_64-pc-windows-msvc --no-default-features
+      - name: Install cargo-nextest
+        run: cargo install cargo-nextest --locked
+
+      - name: Configure JUnit
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force src-tauri/.config | Out-Null
+          @'
+          [profile.ci]
+          fail-fast = false
+          [profile.ci.junit]
+          path = "junit.xml"
+          '@ | Set-Content -Encoding utf8 src-tauri/.config/nextest.toml
+
+      - name: Test Windows review and persistence paths
+        run: cargo nextest run --manifest-path src-tauri/Cargo.toml --target x86_64-pc-windows-msvc --all-features --profile ci
+
+      - name: Upload Windows JUnit
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: windows-junit
+          path: spec-viewer/src-tauri/target/nextest/ci/junit.xml
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Clippy Windows targets
-        run: cargo clippy --manifest-path src-tauri/Cargo.toml --target x86_64-pc-windows-msvc --all-targets -- -D warnings
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --target x86_64-pc-windows-msvc --all-targets --all-features -- -D warnings
 
   coverage-comment:
     name: post coverage comment
-    needs: check
-    if: always() && needs.check.result != 'cancelled'
+    needs: backend-check
+    if: always() && needs.backend-check.result != 'cancelled'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:

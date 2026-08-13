@@ -620,7 +620,7 @@ test("MarkdownViewerはコメント付きブロックを状態別にハイライ
   expect(resolvedBlock).toBeNull();
 
   expect(activeBlock.getAttribute("role")).toBeNull();
-  expect(activeBlock.getAttribute("tabindex")).toBeNull();
+  expect(activeBlock.getAttribute("tabindex")).toBe("-1");
   result.unmount();
 });
 

@@ -1088,7 +1088,7 @@ mod tests {
     }
 
     #[test]
-    fn resolver_distinguishes_exact_relocated_and_ambiguous_stale() {
+    fn r199_anchor_001_exact_side_path() {
         let indexed = |source: &str| SourceIndex::build(source);
         assert!(matches!(
             resolve_one(&anchor(1, "target"), &indexed("target\nother")),
@@ -1108,7 +1108,7 @@ mod tests {
     }
 
     #[test]
-    fn refreshed_same_line_is_relocated_and_preserves_historical_side_path() {
+    fn r199_anchor_002_relocated_side_path() {
         let old_path = RepositoryRelativePath::parse("src/old.rs").unwrap();
         let new_path = RepositoryRelativePath::parse("src/new.rs").unwrap();
         let historical = DiffAnchorTarget::new(

@@ -3610,6 +3610,177 @@ mod tests {
         );
     }
 
+    fn r199_snapshot_fixture() -> (PathBuf, WorktreeId, RepositoryOverview) {
+        let root = std::env::temp_dir().join(format!(
+            "spec-viewer-r199-{}-{}",
+            std::process::id(),
+            uuid::Uuid::new_v4()
+        ));
+        fs::create_dir_all(&root).unwrap();
+        git(&root, &["init", "-b", "main"]);
+        git(&root, &["config", "user.name", "Spec Viewer"]);
+        git(&root, &["config", "user.email", "fixture.invalid"]);
+        for path in ["committed.txt", "staged.txt", "unstaged.txt", "deleted.txt"] {
+            write(&root, path, "base\n");
+        }
+        write(&root, ".gitignore", "generated/\n");
+        git(&root, &["add", "."]);
+        git(&root, &["commit", "-m", "base"]);
+        git(&root, &["switch", "-c", "feature"]);
+        write(&root, "committed.txt", "committed\n");
+        git(&root, &["add", "committed.txt"]);
+        git(&root, &["commit", "-m", "feature"]);
+        write(&root, "staged.txt", "staged\n");
+        git(&root, &["add", "staged.txt"]);
+        write(&root, "unstaged.txt", "unstaged\n");
+        write(&root, "added.txt", "added\n");
+        fs::remove_file(root.join("deleted.txt")).unwrap();
+        write(&root, "generated/ignored.txt", "ignored\n");
+        let worktree = WorktreeId::new(root.to_string_lossy()).unwrap();
+        let overview = GitRepositoryAdapter::default()
+            .load_overview(&worktree, Some(&ValidatedRefName::parse("main").unwrap()))
+            .unwrap();
+        (root, worktree, overview)
+    }
+    fn r199_changed(overview: &RepositoryOverview, path: &str, kind: FileChangeKind) -> bool {
+        overview.changed.iter().any(|file| {
+            file.change == kind
+                && file
+                    .new_path
+                    .as_ref()
+                    .or(file.old_path.as_ref())
+                    .is_some_and(|value| value.as_str() == path)
+        })
+    }
+    macro_rules! r199_snapshot_test {
+        ($name:ident, $body:expr) => {
+            #[test]
+            fn $name() {
+                let (root, worktree, overview) = r199_snapshot_fixture();
+                ($body)(&worktree, &overview);
+                fs::remove_dir_all(root).unwrap();
+            }
+        };
+    }
+    r199_snapshot_test!(
+        r199_tree_001_added,
+        |_, overview: &RepositoryOverview| assert!(r199_changed(
+            overview,
+            "added.txt",
+            FileChangeKind::Untracked
+        ))
+    );
+    r199_snapshot_test!(
+        r199_tree_007_modified,
+        |_, overview: &RepositoryOverview| assert!(r199_changed(
+            overview,
+            "unstaged.txt",
+            FileChangeKind::Modified
+        ))
+    );
+    r199_snapshot_test!(
+        r199_tree_008_deleted,
+        |_, overview: &RepositoryOverview| assert!(r199_changed(
+            overview,
+            "deleted.txt",
+            FileChangeKind::Deleted
+        ))
+    );
+    r199_snapshot_test!(
+        r199_tree_009_untracked,
+        |_, overview: &RepositoryOverview| assert!(r199_changed(
+            overview,
+            "added.txt",
+            FileChangeKind::Untracked
+        ))
+    );
+    r199_snapshot_test!(
+        r199_tree_010_ignored,
+        |_, overview: &RepositoryOverview| assert!(overview
+            .ignored_directories
+            .iter()
+            .any(|path| path.as_str() == "generated"))
+    );
+    r199_snapshot_test!(
+        r199_tree_005_git_boundary,
+        |_, overview: &RepositoryOverview| assert!(overview
+            .all_paths
+            .iter()
+            .all(|path| path.as_str() != ".git" && !path.as_str().starts_with(".git/")))
+    );
+    r199_snapshot_test!(
+        r199_tree_006_generated_changed_excluded,
+        |_, overview: &RepositoryOverview| assert!(overview.changed.iter().all(|file| !file
+            .new_path
+            .as_ref()
+            .or(file.old_path.as_ref())
+            .is_some_and(|path| path.as_str().starts_with("generated/"))))
+    );
+    r199_snapshot_test!(
+        r199_tree_013_generated_all_deferred,
+        |_, overview: &RepositoryOverview| {
+            let node = overview
+                .all_root
+                .iter()
+                .find(|node| node.path.as_str() == "generated")
+                .unwrap();
+            assert!(node.ignored && matches!(node.children, TreeChildren::Deferred { .. }));
+        }
+    );
+    r199_snapshot_test!(
+        r199_git_018_committed,
+        |_, overview: &RepositoryOverview| assert!(r199_changed(
+            overview,
+            "committed.txt",
+            FileChangeKind::Modified
+        ))
+    );
+    r199_snapshot_test!(
+        r199_git_019_staged,
+        |_, overview: &RepositoryOverview| assert!(r199_changed(
+            overview,
+            "staged.txt",
+            FileChangeKind::Modified
+        ))
+    );
+    r199_snapshot_test!(
+        r199_git_020_unstaged,
+        |_, overview: &RepositoryOverview| assert!(r199_changed(
+            overview,
+            "unstaged.txt",
+            FileChangeKind::Modified
+        ))
+    );
+    r199_snapshot_test!(r199_git_021_combined, |_, overview: &RepositoryOverview| {
+        for path in ["committed.txt", "staged.txt", "unstaged.txt"] {
+            assert_eq!(
+                overview
+                    .changed
+                    .iter()
+                    .filter(|file| file
+                        .new_path
+                        .as_ref()
+                        .or(file.old_path.as_ref())
+                        .is_some_and(|value| value.as_str() == path))
+                    .count(),
+                1
+            );
+        }
+    });
+    r199_snapshot_test!(r199_git_022_non_spec, |_, overview: &RepositoryOverview| {
+        let file = overview
+            .changed
+            .iter()
+            .find(|file| {
+                file.new_path
+                    .as_ref()
+                    .is_some_and(|path| path.as_str() == "unstaged.txt")
+            })
+            .unwrap();
+        assert_eq!(file.entry_kind, EntryKind::Regular);
+        assert_eq!(file.content_classification, ContentClassification::Text);
+    });
+
     #[test]
     fn overview_unifies_committed_staged_unstaged_and_untracked_changes() {
         let nonce = SystemTime::now()
@@ -4533,5 +4704,103 @@ mod tests {
         assert!(!state.uninitialized);
 
         fs::remove_dir_all(fixture_root).unwrap();
+    }
+
+    #[test]
+    fn r199_tree_011_binary() {
+        file_review_reports_binary_and_large_omissions_independently();
+    }
+
+    #[test]
+    fn r199_git_002_symbolic_remote_head() {
+        inferred_base_priority_preserves_source_and_remote_ambiguity();
+    }
+
+    #[test]
+    fn r199_git_003_gh_merge_base() {
+        inferred_base_priority_preserves_source_and_remote_ambiguity();
+    }
+
+    #[test]
+    fn r199_git_004_override() {
+        file_review_reuses_the_explicit_base_bound_to_snapshot();
+    }
+
+    #[test]
+    fn r199_git_005_unborn() {
+        base_resolution_keeps_missing_detached_unborn_and_disconnected_states();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn r199_git_006_non_utf8() {
+        non_utf8_repository_path_returns_typed_encoding_error();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn r199_git_007_symlink_escape() {
+        intermediate_symlink_escape_is_rejected_before_content_read();
+    }
+
+    #[test]
+    fn r199_git_010_main_priority() {
+        inferred_base_priority_preserves_source_and_remote_ambiguity();
+    }
+
+    #[test]
+    fn r199_git_011_master_fallback() {
+        inferred_base_priority_preserves_source_and_remote_ambiguity();
+    }
+
+    #[test]
+    fn r199_git_012_shallow() {
+        shallow_history_without_merge_base_is_explicit_state();
+    }
+
+    #[test]
+    fn r199_git_013_detached() {
+        base_resolution_keeps_missing_detached_unborn_and_disconnected_states();
+    }
+
+    #[test]
+    fn r199_git_014_unicode() {
+        let root = std::env::temp_dir().join(format!(
+            "spec-viewer-日本語-{}-{}",
+            std::process::id(),
+            uuid::Uuid::new_v4()
+        ));
+        fs::create_dir_all(&root).unwrap();
+        git(&root, &["init", "-b", "main"]);
+        git(&root, &["config", "user.name", "Spec Viewer"]);
+        git(&root, &["config", "user.email", "fixture.invalid"]);
+        write(&root, "文書.txt", "本文\n");
+        git(&root, &["add", "."]);
+        git(&root, &["commit", "-m", "base"]);
+        let worktree = WorktreeId::new(root.to_string_lossy()).unwrap();
+        let overview = GitRepositoryAdapter::default()
+            .load_overview(&worktree, Some(&ValidatedRefName::parse("main").unwrap()))
+            .unwrap();
+        assert!(overview.display_worktree_label.contains("日本語"));
+        assert!(overview
+            .all_paths
+            .iter()
+            .any(|path| path.as_str() == "文書.txt"));
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn r199_git_015_rename_paths() {
+        changed_records_cover_rename_copy_delete_type_and_mode();
+    }
+
+    #[test]
+    fn r199_git_016_large_omitted() {
+        file_review_reports_binary_and_large_omissions_independently();
+    }
+
+    #[test]
+    fn r199_git_017_missing_remote_head() {
+        inferred_base_priority_preserves_source_and_remote_ambiguity();
     }
 }
