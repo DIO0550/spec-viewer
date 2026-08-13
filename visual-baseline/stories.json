@@ -30,6 +30,86 @@
     "name": "Loading"
   },
   {
+    "id": "app-reviewregression--all-lazy",
+    "title": "App/ReviewRegression",
+    "name": "All Lazy"
+  },
+  {
+    "id": "app-reviewregression--archive",
+    "title": "App/ReviewRegression",
+    "name": "Archive"
+  },
+  {
+    "id": "app-reviewregression--base-error",
+    "title": "App/ReviewRegression",
+    "name": "Base Error"
+  },
+  {
+    "id": "app-reviewregression--changed-tree",
+    "title": "App/ReviewRegression",
+    "name": "Changed Tree"
+  },
+  {
+    "id": "app-reviewregression--conflict",
+    "title": "App/ReviewRegression",
+    "name": "Conflict"
+  },
+  {
+    "id": "app-reviewregression--convergence",
+    "title": "App/ReviewRegression",
+    "name": "Convergence"
+  },
+  {
+    "id": "app-reviewregression--deleted-file",
+    "title": "App/ReviewRegression",
+    "name": "Deleted File"
+  },
+  {
+    "id": "app-reviewregression--editor",
+    "title": "App/ReviewRegression",
+    "name": "Editor"
+  },
+  {
+    "id": "app-reviewregression--progress",
+    "title": "App/ReviewRegression",
+    "name": "Progress"
+  },
+  {
+    "id": "app-reviewregression--read-denied",
+    "title": "App/ReviewRegression",
+    "name": "Read Denied"
+  },
+  {
+    "id": "app-reviewregression--review-filters",
+    "title": "App/ReviewRegression",
+    "name": "Review Filters"
+  },
+  {
+    "id": "app-reviewregression--specs-hierarchy",
+    "title": "App/ReviewRegression",
+    "name": "Specs Hierarchy"
+  },
+  {
+    "id": "app-reviewregression--split",
+    "title": "App/ReviewRegression",
+    "name": "Split"
+  },
+  {
+    "id": "app-reviewregression--stale",
+    "title": "App/ReviewRegression",
+    "name": "Stale"
+  },
+  {
+    "id": "app-reviewregression--unified",
+    "title": "App/ReviewRegression",
+    "name": "Unified"
+  },
+  {
+    "id": "app-reviewregression--unmanaged",
+    "title": "App/ReviewRegression",
+    "name": "Unmanaged"
+  },
+  {
     "id": "components-commanderrordisplay--all-props",
     "title": "components/CommandErrorDisplay",
     "name": "All Props"
