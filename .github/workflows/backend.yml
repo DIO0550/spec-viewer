@@ -57,7 +57,7 @@ jobs:
             '[profile.ci]' \
             'fail-fast = false' \
             '[profile.ci.junit]' \
-            'path = "target/nextest/ci/junit.xml"' \
+            'path = "junit.xml"' \
             > .config/nextest.toml
           cargo nextest run --workspace --all-features --profile ci
 
@@ -153,7 +153,7 @@ jobs:
           [profile.ci]
           fail-fast = false
           [profile.ci.junit]
-          path = "target/nextest/ci/junit.xml"
+          path = "junit.xml"
           '@ | Set-Content -Encoding utf8 src-tauri/.config/nextest.toml
 
       - name: Test Windows review and persistence paths
