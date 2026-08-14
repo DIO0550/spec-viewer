@@ -1526,6 +1526,12 @@ test.each([
         metaKey,
       }),
     );
+    window.dispatchEvent(
+      new KeyboardEvent("keyup", {
+        key: ctrlKey ? "Control" : "Meta",
+        bubbles: true,
+      }),
+    );
   });
 
   expect(readySelection.toString()).toBe("paragraph");
