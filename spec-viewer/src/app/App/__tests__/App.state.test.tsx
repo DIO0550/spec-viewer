@@ -32,6 +32,10 @@ test("Appはworkspace未選択の初期状態を表示する", () => {
   expect(
     container.querySelector('aside[aria-label="コメントサイドバー"]'),
   ).not.toBeNull();
+  expect(
+    container.querySelector('input[aria-label="Filter worktrees"]'),
+  ).not.toBeNull();
+  expect(container.textContent).toContain("ROOT / WORKTREES 0");
   expect(container.textContent).toContain(
     "Worktree データはまだ利用できません",
   );
