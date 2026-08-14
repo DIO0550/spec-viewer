@@ -151,6 +151,10 @@ function SpecViewAppContent(): ReactElement {
   });
   const { activeWorkspaceRoot, isWorkspaceOpening } = workspaceLoader.state;
   const worktreesLoadState = useWorkspaceWorktrees(activeWorkspaceRoot);
+  const worktreeCount =
+    worktreesLoadState.status === "ready"
+      ? worktreesLoadState.data.worktrees.length
+      : 0;
   const workspaceNavigation = useWorkspaceNavigationState(worktreesLoadState);
 
   const leftNavigationPreference = useLeftNavigationPreference();
@@ -803,7 +807,7 @@ function SpecViewAppContent(): ReactElement {
               </label>
               <div className="worktree-navigation__header">
                 <span>
-                  ROOT / WORKTREES {workspaceNavigation.navigationNodes.length}
+                  ROOT / WORKTREES {worktreeCount}
                 </span>
                 <span aria-hidden="true">↻</span>
               </div>
