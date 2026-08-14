@@ -265,7 +265,10 @@ function WorkspaceLayoutWorktrees(
       aria-label={uiText.leftNavigation.list}
       aria-hidden={!layout.worktrees.isOpen}
     >
-      <div className="app-shell__worktrees-header">
+      <div
+        className="app-shell__worktrees-header"
+        data-header-suppressed={props.header === null ? "true" : undefined}
+      >
         {props.header === undefined ? <strong>Worktrees</strong> : props.header}
         <button
           ref={layout.worktreesCloseRef}
