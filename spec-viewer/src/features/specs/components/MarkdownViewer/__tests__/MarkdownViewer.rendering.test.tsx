@@ -1493,6 +1493,98 @@ test("MarkdownViewerはMarkdown内の選択から追加コメントを保存す�
   result.unmount();
 });
 
+test.each([
+  ["Ctrl+C", true, false],
+  ["Meta+C", false, true],
+] as const)("MarkdownViewerは%sで選択範囲をコメント草稿へ変換しない", (_label, ctrlKey, metaKey) => {
+  const result = renderViewer(
+    createReadyState("A paragraph with selectable text."),
+  );
+  const textNode = result.container.querySelector(
+    ".markdown-rendered p",
+  )?.firstChild;
+  expect(textNode).toBeInstanceOf(Text);
+
+  const range = document.createRange();
+  range.setStart(textNode as Text, 2);
+  range.setEnd(textNode as Text, 11);
+  const selection = document.getSelection();
+  expect(selection).not.toBeNull();
+
+  const readySelection = selection as Selection;
+  readySelection.removeAllRanges();
+  readySelection.addRange(range);
+
+  act(() => {
+    document.dispatchEvent(new Event("selectionchange"));
+    window.dispatchEvent(new Event("copy", { bubbles: true }));
+    window.dispatchEvent(
+      new KeyboardEvent("keyup", {
+        key: "c",
+        bubbles: true,
+        ctrlKey,
+        metaKey,
+      }),
+    );
+    window.dispatchEvent(
+      new KeyboardEvent("keyup", {
+        key: ctrlKey ? "Control" : "Meta",
+        bubbles: true,
+      }),
+    );
+  });
+
+  expect(readySelection.toString()).toBe("paragraph");
+  expect(
+    result.container.querySelector(".text-selection-comment-button"),
+  ).toBeNull();
+  expect(result.container.querySelector(".add-comment-popover")).toBeNull();
+  readySelection.removeAllRanges();
+  result.unmount();
+});
+
+test.each([
+  ["右クリック", { button: 2 }],
+  ["Ctrl+クリック", { button: 0, ctrlKey: true }],
+  ["Meta+クリック", { button: 0, metaKey: true }],
+] as const)("MarkdownViewerは%sのコピー準備でコメント草稿を開始しない", (_label, mouseEventOptions) => {
+  const result = renderViewer(
+    createReadyState("A paragraph with selectable text."),
+  );
+  const textNode = result.container.querySelector(
+    ".markdown-rendered p",
+  )?.firstChild;
+  expect(textNode).toBeInstanceOf(Text);
+
+  const range = document.createRange();
+  range.setStart(textNode as Text, 2);
+  range.setEnd(textNode as Text, 11);
+  const selection = document.getSelection();
+  expect(selection).not.toBeNull();
+
+  const readySelection = selection as Selection;
+  readySelection.removeAllRanges();
+  readySelection.addRange(range);
+
+  act(() => {
+    document.dispatchEvent(new Event("selectionchange"));
+    window.dispatchEvent(
+      new MouseEvent("mouseup", {
+        bubbles: true,
+        ...mouseEventOptions,
+      }),
+    );
+  });
+
+  expect(readySelection.toString()).toBe("paragraph");
+  expect(
+    result.container.querySelector(".text-selection-comment-button"),
+  ).toBeNull();
+  expect(result.container.querySelector(".add-comment-popover")).toBeNull();
+  readySelection.removeAllRanges();
+  result.unmount();
+});
+
 test("MarkdownViewerはコードブロック内の選択から追加コメントを保存する", async () => {
   const onAddComment = vi.fn().mockResolvedValue(true);
   const result = renderViewer(
