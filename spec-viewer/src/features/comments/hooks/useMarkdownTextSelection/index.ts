@@ -71,7 +71,7 @@ export function useMarkdownTextSelection({
     };
 
     const updateSelectionDraftFromKeyboard = (event: KeyboardEvent): void => {
-      if (isCopyShortcut(event)) {
+      if (isCopyShortcut(event) || isCopyShortcutModifierRelease(event)) {
         return;
       }
 
@@ -129,4 +129,11 @@ function containsSelectionNode(root: HTMLElement, node: Node): boolean {
 /** @returns true when the keyboard event is a platform copy shortcut. */
 function isCopyShortcut(event: KeyboardEvent): boolean {
   return (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "c";
+}
+
+/** @returns true when a platform copy modifier key is being released. */
+function isCopyShortcutModifierRelease(event: KeyboardEvent): boolean {
+  const key = event.key.toLowerCase();
+
+  return key === "control" || key === "meta";
 }
