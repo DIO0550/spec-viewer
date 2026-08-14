@@ -5,6 +5,7 @@ pub mod diff_comments;
 pub mod repository_diff;
 pub mod spec_bundle;
 pub mod spec_diff;
+pub mod worktrees;
 pub use spec_bundle::{
     LoadSpecBundleResult, SpecArtifactBundleItem, SpecArtifactError, SpecArtifactErrorCode,
 };

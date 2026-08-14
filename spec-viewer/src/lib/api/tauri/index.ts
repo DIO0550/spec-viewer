@@ -51,6 +51,19 @@ export {
   listSpecFileCommitHistory,
 } from "./listSpecFileCommitHistory";
 export { listSpecs } from "./listSpecs";
+export type {
+  ListWorktreesCommandContract,
+  ListWorktreesCommandErrorCode,
+  ListWorktreesCommandName,
+  ListWorktreesCommandRequest,
+  ListWorktreesCommandResponse,
+} from "./listWorktrees";
+export {
+  InvalidListWorktreesResponseError,
+  LIST_WORKTREES_COMMAND,
+  ListWorktreesCommandError,
+  listWorktrees,
+} from "./listWorktrees";
 export { loadWorkspace } from "./loadWorkspace";
 export type {
   LoadSpecBundleCommandContract,
