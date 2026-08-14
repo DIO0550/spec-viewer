@@ -82,6 +82,7 @@ fn parse_worktree_list(output: &[u8]) -> Result<Vec<GitWorktreeEntry>, Repositor
         std::str::from_utf8(output).map_err(|_| RepositoryPortError::UnsupportedPathEncoding)?;
     let mut entries = Vec::new();
     let mut current: Option<GitWorktreeEntry> = None;
+    let mut saw_bare = false;
 
     for raw_line in text.lines() {
         let line = raw_line.trim_end_matches('\r');
@@ -119,12 +120,16 @@ fn parse_worktree_list(output: &[u8]) -> Result<Vec<GitWorktreeEntry>, Repositor
         }
         if line == "bare" {
             entry.is_bare = true;
+            saw_bare = true;
         }
     }
 
     push_entry(&mut entries, current);
 
     if entries.is_empty() {
+        if saw_bare {
+            return Err(RepositoryPortError::BareRepository);
+        }
         return Err(invalid_worktree_output());
     }
 
@@ -159,6 +164,7 @@ fn prioritize_containing_worktree(cwd: &Path, entries: &mut [GitWorktreeEntry]) 
 #[cfg(test)]
 mod tests {
     use super::{parse_worktree_list, GitWorktreeEntry};
+    use crate::domain::repository::RepositoryPortError;
 
     #[test]
     fn parse_worktree_list_reads_branch_and_detached_records() {
@@ -171,6 +177,16 @@ mod tests {
         assert_eq!(Some("refs/heads/main"), entries[0].branch());
         assert_eq!("main", entries[0].display_name());
         assert_eq!("detached · bbbbbbb", entries[1].display_name());
+    }
+
+    #[test]
+    fn parse_worktree_list_returns_bare_repository_for_bare_record() {
+        let output = b"worktree /workspace/repository.git\nHEAD aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\nbare\n";
+
+        assert_eq!(
+            Err(RepositoryPortError::BareRepository),
+            parse_worktree_list(output),
+        );
     }
 
     #[test]
