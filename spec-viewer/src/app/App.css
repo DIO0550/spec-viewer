@@ -5077,16 +5077,6 @@ textarea:disabled {
   overflow: visible;
 }
 
-.app-shell__worktrees-header[data-header-suppressed="true"]
-  .app-shell__worktrees-close {
-  opacity: 0;
-}
-
-.app-shell__worktrees-header[data-header-suppressed="true"]
-  .app-shell__worktrees-close:focus-visible {
-  opacity: 1;
-}
-
 .left-navigation-panel {
   display: flex;
   height: 100%;
