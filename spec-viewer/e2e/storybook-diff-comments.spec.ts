@@ -1,6 +1,9 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
+const storyUrl = (storyId: string, globals = "a11y.manual:!true"): string =>
+  `/iframe.html?id=${storyId}&viewMode=story&globals=${globals}`;
+
 const statefulStoryIds = [
   "diff-comments-statefulworkspace--create-jump-refresh",
   "diff-comments-statefulworkspace--pending-identity-aba",
@@ -11,7 +14,7 @@ const statefulStoryIds = [
 
 for (const storyId of statefulStoryIds) {
   test(`${storyId} playとaxeが成功する`, async ({ page }) => {
-    await page.goto(`/iframe.html?id=${storyId}&viewMode=story`);
+    await page.goto(storyUrl(storyId));
     await expect(page.locator("#storybook-root")).not.toBeEmpty();
     await expect(page.locator("body")).not.toContainText(
       "This story failed to render",
@@ -32,7 +35,10 @@ test("stateful workspace storyはdark themeでもaxeが成功する", async ({
   page,
 }) => {
   await page.goto(
-    "/iframe.html?id=diff-comments-statefulworkspace--create-jump-refresh&viewMode=story&globals=theme:Dark",
+    storyUrl(
+      "diff-comments-statefulworkspace--create-jump-refresh",
+      "theme:Dark;a11y.manual:!true",
+    ),
   );
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   const results = await new AxeBuilder({ page }).analyze();

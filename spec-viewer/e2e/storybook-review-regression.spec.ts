@@ -39,7 +39,9 @@ for (const name of requiredStories) {
 test("[R199-A11Y-003] dark review story has no serious axe violation", async ({
   page,
 }) => {
-  await page.goto("/iframe.html?id=app-reviewregression--split&viewMode=story");
+  await page.goto(
+    "/iframe.html?id=app-reviewregression--split&viewMode=story&globals=a11y.manual:!true",
+  );
   const results = await new AxeBuilder({ page }).analyze();
   expect(
     results.violations.filter(
@@ -53,7 +55,7 @@ test("[R199-A11Y-004] narrow review story has no serious axe violation", async (
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(
-    "/iframe.html?id=app-reviewregression--all-lazy&viewMode=story",
+    "/iframe.html?id=app-reviewregression--all-lazy&viewMode=story&globals=a11y.manual:!true",
   );
   const results = await new AxeBuilder({ page }).analyze();
   expect(
