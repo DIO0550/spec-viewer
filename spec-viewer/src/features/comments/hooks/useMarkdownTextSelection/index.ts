@@ -63,7 +63,7 @@ export function useMarkdownTextSelection({
     };
 
     const updateSelectionDraftFromMouse = (event: MouseEvent): void => {
-      if (event.button !== 0) {
+      if (shouldIgnoreMouseSelectionDraft(event)) {
         return;
       }
 
@@ -136,4 +136,9 @@ function isCopyShortcutModifierRelease(event: KeyboardEvent): boolean {
   const key = event.key.toLowerCase();
 
   return key === "control" || key === "meta";
+}
+
+/** @returns true when mouseup represents a context-menu or modified click. */
+function shouldIgnoreMouseSelectionDraft(event: MouseEvent): boolean {
+  return event.button !== 0 || event.ctrlKey || event.metaKey;
 }
