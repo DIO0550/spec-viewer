@@ -1543,7 +1543,11 @@ test.each([
   result.unmount();
 });
 
-test("MarkdownViewerは右クリックのコピー準備でコメント草稿を開始しない", () => {
+test.each([
+  ["右クリック", { button: 2 }],
+  ["Ctrl+クリック", { button: 0, ctrlKey: true }],
+  ["Meta+クリック", { button: 0, metaKey: true }],
+] as const)("MarkdownViewerは%sのコピー準備でコメント草稿を開始しない", (_label, mouseEventOptions) => {
   const result = renderViewer(
     createReadyState("A paragraph with selectable text."),
   );
@@ -1567,7 +1571,7 @@ test("MarkdownViewerは右クリックのコピー準備でコメント草稿を
     window.dispatchEvent(
       new MouseEvent("mouseup", {
         bubbles: true,
-        button: 2,
+        ...mouseEventOptions,
       }),
     );
   });
