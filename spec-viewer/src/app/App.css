@@ -5167,10 +5167,6 @@ textarea:disabled {
     padding: 10px 16px;
   }
 
-  .app-shell__pathbar .workspace-toolbar__theme {
-    display: none;
-  }
-
   .app-shell__pathbar .button,
   .app-shell__pathbar .icon-button {
     height: 30px;
