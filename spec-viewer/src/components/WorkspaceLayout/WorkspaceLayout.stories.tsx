@@ -59,6 +59,28 @@ const storyWorktrees: readonly StoryWorktree[] = [
   { name: "archive", icon: "▱", changeCount: 12, isMuted: true },
 ];
 
+type StoryChangedFile = ComponentProps<
+  typeof ChangesNavigation
+>["items"][number];
+
+const worktreeChangedFiles: readonly StoryChangedFile[] = [
+  { id: "src/app/App.tsx", path: "src/app/App.tsx", change: "modified" },
+  {
+    id: "src/features/workspace/components/WorktreeTree/index.tsx",
+    path: "src/features/workspace/components/WorktreeTree/index.tsx",
+    change: "modified",
+  },
+  {
+    id: "src/features/workspace/hooks/useWorkspaceWorktrees/index.ts",
+    path: "src/features/workspace/hooks/useWorkspaceWorktrees/index.ts",
+    change: "added",
+  },
+  {
+    id: "docs/worktree-navigation.md",
+    path: "docs/worktree-navigation.md",
+    change: "untracked",
+  },
+];
 const sampleSpec: SpecNode = {
   id: "041-preview-task",
   label: "041-preview-task",
@@ -789,6 +811,37 @@ export const WorktreeDiff: Story = {
   },
 };
 
+export const WorktreeDiffWithFiles: Story = {
+  args: createShellArgs({
+    treeState: readyWorktreeTreeState,
+    documentState: readyWorktreeDocumentState,
+    selectedSpec: sampleSpec,
+    selectedFileKey: "impl",
+    workspaceInput: worktreeWorkspacePath,
+    workspaceStatusPath: worktreeWorkspacePath,
+    activeWorktreeName: worktreeName,
+    viewMode: "diff",
+    changedFiles: worktreeChangedFiles,
+  }),
+  /**
+   * Verifies that a populated worktree exposes its changed files and preview.
+   *
+   * @param canvasElement - Rendered Storybook canvas.
+   */
+  play: async ({ canvasElement }) => {
+    await verifyWorktreeOpenStory(canvasElement);
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByRole("navigation", { name: "変更ファイル" }),
+    ).toBeVisible();
+    await expect(
+      canvas.getByRole("button", { name: /src\/app\/App\.tsx/ }),
+    ).toHaveAttribute("aria-current", "page");
+    await expect(
+      canvas.getByRole("region", { name: "src/app/App.tsx の差分" }),
+    ).toBeVisible();
+  },
+};
 export const Archiving: Story = {
   args: createShellArgs({
     treeState: readyTreeState,
@@ -904,6 +957,7 @@ type ShellArgsOptions = Readonly<{
   archivingSpecId?: string | null;
   viewMode?: ViewMode;
   activeWorktreeName?: string | null;
+  changedFiles?: readonly StoryChangedFile[];
 }>;
 
 /** @returns WorkspaceLayout story args for a representative viewer state. */
@@ -919,16 +973,25 @@ function createShellArgs({
   archivingSpecId = null,
   viewMode = "specs",
   activeWorktreeName = null,
+  changedFiles = [],
 }: ShellArgsOptions): ComponentProps<typeof WorkspaceLayoutStory> {
   const selectedFile =
     selectedSpec?.files.find((file) => file.key === selectedFileKey) ?? null;
+  const selectedChangedFile = changedFiles[0] ?? null;
   let viewer: ReactNode;
 
   if (viewMode === "diff") {
     viewer = (
       <DiffWorkspace
-        selectedPath={null}
-        preview={null}
+        selectedPath={selectedChangedFile?.path ?? null}
+        preview={
+          selectedChangedFile === null ? null : (
+            <div className="story-diff-preview">
+              <strong>{selectedChangedFile.path}</strong>
+              <pre>{`@@ -16,6 +16,12 @@\n-const emptyState = true;\n+const emptyState = false;\n+const changedFiles = [\n+  "src/app/App.tsx",\n+  "src/features/workspace/components/WorktreeTree/index.tsx",\n+];`}</pre>
+            </div>
+          )
+        }
         availability={{ status: "ready" }}
       />
     );
@@ -994,9 +1057,11 @@ function createShellArgs({
       <ViewModeToolbar
         mode={viewMode}
         activeItemLabel={
-          selectedSpec !== null && selectedFile !== null
-            ? selectedSpec.label + " / " + selectedFile.fileName
-            : "ファイル未選択"
+          viewMode === "diff"
+            ? (selectedChangedFile?.path ?? "ファイル未選択")
+            : selectedSpec !== null && selectedFile !== null
+              ? selectedSpec.label + " / " + selectedFile.fileName
+              : "ファイル未選択"
         }
         onModeChange={fn()}
       />
@@ -1043,12 +1108,16 @@ function createShellArgs({
         />
       ) : (
         <ChangesNavigation
-          items={[]}
-          selectedId={null}
-          availability={{
-            status: "unavailable",
-            reason: "data-source-not-connected",
-          }}
+          items={changedFiles}
+          selectedId={selectedChangedFile?.id ?? null}
+          availability={
+            changedFiles.length === 0
+              ? {
+                  status: "unavailable",
+                  reason: "data-source-not-connected",
+                }
+              : { status: "ready" }
+          }
           onSelect={fn()}
         />
       ),
