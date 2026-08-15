@@ -96,10 +96,10 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set +e
-          pnpm visual:compare --
-            --actual ../visual-candidate
-            --expected ../visual-baseline
-            --out ../visual-report
+          pnpm visual:compare -- \
+            --actual ../visual-candidate \
+            --expected ../visual-baseline \
+            --out ../visual-report \
             --report-version "$HEAD_SHA"
           compare_status=$?
           set -e
