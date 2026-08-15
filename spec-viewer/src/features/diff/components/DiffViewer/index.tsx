@@ -749,15 +749,17 @@ function DiffCellView(
       role="gridcell"
       aria-label={getCellAccessibleLabel(cell, side)}
     >
-      {lineComments === undefined
-        ? null
-        : commentTargets.map((target) => (
-            <DiffLineCommentSlot
-              key={target.key}
-              target={target}
-              controller={lineComments}
-            />
-          ))}
+      <div className="diff-viewer__comment-lane">
+        {lineComments === undefined
+          ? null
+          : commentTargets.map((target) => (
+              <DiffLineCommentSlot
+                key={target.key}
+                target={target}
+                controller={lineComments}
+              />
+            ))}
+      </div>
       {side === "inline" ? (
         <>
           <span className="diff-viewer__line-number" aria-hidden="true">

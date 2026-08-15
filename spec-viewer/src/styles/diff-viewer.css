@@ -86,7 +86,8 @@
   min-width: 0;
   min-height: 0;
   flex: 1 1 auto;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: auto;
   background: var(--color-raised);
   font-family: var(--font-mono);
   font-size: 12px;
@@ -95,7 +96,8 @@
 
 .diff-viewer__row {
   box-sizing: border-box;
-  min-width: max-content;
+  width: max-content;
+  min-width: 100%;
   white-space: pre;
 }
 
@@ -110,14 +112,21 @@
 
 .diff-viewer__cell {
   display: grid;
-  grid-template-columns: 48px 20px minmax(max-content, 1fr);
+  grid-template-columns: 48px 48px 20px minmax(max-content, 1fr);
   min-height: 20px;
   border-bottom: 1px solid
     color-mix(in srgb, var(--color-border) 45%, transparent);
 }
 
 .diff-viewer__row--inline .diff-viewer__cell {
-  grid-template-columns: 48px 48px 20px minmax(max-content, 1fr);
+  grid-template-columns: 48px 48px 48px 20px minmax(max-content, 1fr);
+}
+
+.diff-viewer__comment-lane {
+  display: grid;
+  grid-template-columns: repeat(2, 24px);
+  min-width: 48px;
+  align-items: start;
 }
 
 .diff-viewer__row--split .diff-viewer__cell:first-child {
@@ -175,6 +184,11 @@
 }
 
 .diff-viewer__cell code {
+  display: block;
+  min-width: max-content;
+  overflow: visible;
+  overflow-wrap: normal;
+  word-break: normal;
   padding: 0 12px 0 8px;
   color: inherit;
   font: inherit;

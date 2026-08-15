@@ -3382,7 +3382,7 @@ textarea:disabled {
 .specs-workspace__document {
   display: grid;
   flex: 1 1 auto;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: 36px minmax(0, 1fr);
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -5280,4 +5280,37 @@ textarea:disabled {
 
 .left-navigation-panel > .story-worktree-tree input {
   flex: 0 0 auto;
+}
+.specs-workspace__document > .empty-state--inline {
+  display: flex;
+  min-width: 0;
+  min-height: 36px;
+  height: 36px;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--color-border);
+  padding: 0 14px;
+  color: var(--color-text-body);
+  background: var(--color-surface);
+  font-size: 12px;
+  text-align: left;
+}
+
+.specs-workspace__document > .empty-state--inline h2,
+.specs-workspace__document > .empty-state--inline p {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.specs-workspace__document > .empty-state--inline h2 {
+  flex: 0 1 auto;
+}
+
+.specs-workspace__document > .empty-state--inline p {
+  flex: 1 1 auto;
+  color: var(--color-text-muted);
 }
