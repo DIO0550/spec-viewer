@@ -26,6 +26,7 @@ use presentation::commands::{
     specs::{archive_spec, list_specs, load_spec_bundle, read_spec_file},
     watch::{start_spec_file_watch, stop_spec_file_watch},
     workspace::{load_workspace, validate_workspace_directory},
+    worktrees::list_worktrees,
     CommandState,
 };
 use presentation::menu::build_application_menu;
@@ -50,6 +51,7 @@ pub fn run() {
         .manage(command_state())
         .invoke_handler(tauri::generate_handler![
             load_workspace,
+            list_worktrees,
             validate_workspace_directory,
             list_specs,
             load_spec_bundle,

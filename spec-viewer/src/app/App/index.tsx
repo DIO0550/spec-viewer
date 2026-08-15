@@ -98,20 +98,15 @@ import {
   OpenWorkspaceEmptyState,
   useWorkspaceLoader,
   useWorkspaceNavigationState,
+  useWorkspaceWorktrees,
   useWorkspaceSidebarSectionPreference,
   WorkspaceDropOverlay,
   WorkspaceProvider,
   WorkspaceSidebarSection,
   WorkspaceToolbar,
-  type WorkspaceWorktreesLoadState,
   WorktreeTree,
 } from "@/features/workspace";
 import { getDiffReviewIdentity } from "@/lib/api/tauri";
-
-const WorktreesLoadState: WorkspaceWorktreesLoadState = {
-  status: "unavailable",
-  reason: "data-source-not-connected",
-};
 
 type RepositoryCommentJump = Readonly<{
   selectionPath: string;
@@ -150,12 +145,17 @@ function SpecViewAppContent(): ReactElement {
   const [dialogErrorMessage, setDialogErrorMessage] = useState<string | null>(
     null,
   );
-  const workspaceNavigation = useWorkspaceNavigationState(WorktreesLoadState);
   // workspace を開く知識は feature に集約済み — App は onError を渡して呼ぶだけ。
   const workspaceLoader = useWorkspaceLoader({
     onError: setDialogErrorMessage,
   });
   const { activeWorkspaceRoot, isWorkspaceOpening } = workspaceLoader.state;
+  const worktreesLoadState = useWorkspaceWorktrees(activeWorkspaceRoot);
+  const worktreeCount =
+    worktreesLoadState.status === "ready"
+      ? worktreesLoadState.data.worktrees.length
+      : 0;
+  const workspaceNavigation = useWorkspaceNavigationState(worktreesLoadState);
 
   const leftNavigationPreference = useLeftNavigationPreference();
   const workspaceSidebarSectionPreference =
@@ -797,6 +797,21 @@ function SpecViewAppContent(): ReactElement {
         </WorkspaceLayout.Toolbar>
         <WorkspaceLayout.Worktrees header={null}>
           <div className="left-navigation-panel">
+            <div className="worktree-navigation__controls">
+              <label className="worktree-navigation__filter">
+                <input
+                  aria-label="Filter worktrees"
+                  placeholder="Filter worktrees..."
+                  type="search"
+                />
+              </label>
+              <div className="worktree-navigation__header">
+                <span>
+                  ROOT / WORKTREES {worktreeCount}
+                </span>
+                <span aria-hidden="true">↻</span>
+              </div>
+            </div>
             <WorktreeTree
               nodes={workspaceNavigation.navigationNodes}
               selectedWorktreeId={workspaceNavigation.state.activeWorktreeId}

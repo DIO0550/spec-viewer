@@ -63,7 +63,7 @@ const meta = {
   component: SpecArtifactTabs,
   decorators: [
     (Story) => (
-      <div style={{ maxWidth: 880 }}>
+      <div style={{ width: "100%" }}>
         <Story />
       </div>
     ),

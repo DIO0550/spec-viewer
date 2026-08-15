@@ -15,10 +15,12 @@ import {
 import { CommentId } from "@/features/comments/domain/commentId";
 import {
   ChangesNavigation,
+  DiffViewer,
   DiffWorkspace,
   type ViewMode,
   ViewModeToolbar,
 } from "@/features/diff";
+import { createDiffViewerFixture } from "@/features/diff/components/DiffViewer/testFixtures";
 import { ThemeProvider } from "@/features/preferences";
 import type {
   MarkdownBlockMetadata,
@@ -59,6 +61,49 @@ const storyWorktrees: readonly StoryWorktree[] = [
   { name: "archive", icon: "▱", changeCount: 12, isMuted: true },
 ];
 
+type StoryChangedFile = ComponentProps<
+  typeof ChangesNavigation
+>["items"][number];
+
+const worktreeChangedFiles: readonly StoryChangedFile[] = [
+  { id: "src/app/App.tsx", path: "src/app/App.tsx", change: "modified" },
+  {
+    id: "src/features/workspace/components/WorktreeTree/index.tsx",
+    path: "src/features/workspace/components/WorktreeTree/index.tsx",
+    change: "modified",
+  },
+  {
+    id: "src/features/workspace/hooks/useWorkspaceWorktrees/index.ts",
+    path: "src/features/workspace/hooks/useWorkspaceWorktrees/index.ts",
+    change: "added",
+  },
+  {
+    id: "docs/worktree-navigation.md",
+    path: "docs/worktree-navigation.md",
+    change: "untracked",
+  },
+];
+
+const worktreeDiffFile = createDiffViewerFixture({
+  fileKey: "src/app/App.tsx",
+  oldPath: "src/app/App.tsx",
+  newPath: "src/app/App.tsx",
+  lines: [
+    {
+      kind: "context",
+      text: 'import { WorkspaceLayout } from "@/components/WorkspaceLayout";',
+    },
+    { kind: "removed", text: "const emptyState = true;" },
+    { kind: "added", text: "const emptyState = false;" },
+    { kind: "context", text: "const changedFiles = [" },
+    { kind: "removed", text: '  "src/app/App.tsx",' },
+    {
+      kind: "added",
+      text: '  "src/features/workspace/components/WorktreeTree/index.tsx",',
+    },
+    { kind: "context", text: "];" },
+  ],
+});
 const sampleSpec: SpecNode = {
   id: "041-preview-task",
   label: "041-preview-task",
@@ -789,6 +834,53 @@ export const WorktreeDiff: Story = {
   },
 };
 
+export const WorktreeDiffWithFiles: Story = {
+  args: createShellArgs({
+    treeState: readyWorktreeTreeState,
+    documentState: readyWorktreeDocumentState,
+    selectedSpec: sampleSpec,
+    selectedFileKey: "impl",
+    workspaceInput: worktreeWorkspacePath,
+    workspaceStatusPath: worktreeWorkspacePath,
+    activeWorktreeName: worktreeName,
+    viewMode: "diff",
+    changedFiles: worktreeChangedFiles,
+  }),
+  /**
+   * Verifies that a populated worktree exposes its changed files and preview.
+   *
+   * @param canvasElement - Rendered Storybook canvas.
+   */
+  play: async ({ canvasElement }) => {
+    await verifyWorktreeOpenStory(canvasElement);
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByRole("navigation", { name: "変更ファイル" }),
+    ).toBeVisible();
+    await expect(
+      canvas.getByRole("button", { name: /src\/app\/App\.tsx/ }),
+    ).toHaveAttribute("aria-current", "page");
+    await expect(
+      canvas.getByRole("region", { name: "src/app/App.tsx の差分" }),
+    ).toBeVisible();
+    await expect(
+      canvasElement.querySelector('.diff-viewer__cell[data-kind="added"]'),
+    ).not.toBeNull();
+    await expect(
+      canvasElement.querySelector('.diff-viewer__cell[data-kind="removed"]'),
+    ).not.toBeNull();
+    await expect(
+      canvasElement.querySelectorAll(".diff-viewer__line-number").length,
+    ).toBeGreaterThan(0);
+    const markers = Array.from(
+      canvasElement.querySelectorAll(".diff-viewer__marker"),
+      (marker) => marker.textContent,
+    );
+    await expect(markers.includes(" ")).toBe(true);
+    await expect(markers.includes("+")).toBe(true);
+    await expect(markers.includes("-")).toBe(true);
+  },
+};
 export const Archiving: Story = {
   args: createShellArgs({
     treeState: readyTreeState,
@@ -904,6 +996,7 @@ type ShellArgsOptions = Readonly<{
   archivingSpecId?: string | null;
   viewMode?: ViewMode;
   activeWorktreeName?: string | null;
+  changedFiles?: readonly StoryChangedFile[];
 }>;
 
 /** @returns WorkspaceLayout story args for a representative viewer state. */
@@ -919,16 +1012,27 @@ function createShellArgs({
   archivingSpecId = null,
   viewMode = "specs",
   activeWorktreeName = null,
+  changedFiles = [],
 }: ShellArgsOptions): ComponentProps<typeof WorkspaceLayoutStory> {
   const selectedFile =
     selectedSpec?.files.find((file) => file.key === selectedFileKey) ?? null;
+  const selectedChangedFile = changedFiles[0] ?? null;
   let viewer: ReactNode;
 
   if (viewMode === "diff") {
     viewer = (
       <DiffWorkspace
-        selectedPath={null}
-        preview={null}
+        selectedPath={selectedChangedFile?.path ?? null}
+        preview={
+          selectedChangedFile === null ? null : (
+            <DiffViewer
+              fileDiff={worktreeDiffFile}
+              mode="unified"
+              activeChangeId={null}
+              onActiveChangeIdChange={fn()}
+            />
+          )
+        }
         availability={{ status: "ready" }}
       />
     );
@@ -994,9 +1098,11 @@ function createShellArgs({
       <ViewModeToolbar
         mode={viewMode}
         activeItemLabel={
-          selectedSpec !== null && selectedFile !== null
-            ? selectedSpec.label + " / " + selectedFile.fileName
-            : "ファイル未選択"
+          viewMode === "diff"
+            ? (selectedChangedFile?.path ?? "ファイル未選択")
+            : selectedSpec !== null && selectedFile !== null
+              ? selectedSpec.label + " / " + selectedFile.fileName
+              : "ファイル未選択"
         }
         onModeChange={fn()}
       />
@@ -1043,12 +1149,16 @@ function createShellArgs({
         />
       ) : (
         <ChangesNavigation
-          items={[]}
-          selectedId={null}
-          availability={{
-            status: "unavailable",
-            reason: "data-source-not-connected",
-          }}
+          items={changedFiles}
+          selectedId={selectedChangedFile?.id ?? null}
+          availability={
+            changedFiles.length === 0
+              ? {
+                  status: "unavailable",
+                  reason: "data-source-not-connected",
+                }
+              : { status: "ready" }
+          }
           onSelect={fn()}
         />
       ),

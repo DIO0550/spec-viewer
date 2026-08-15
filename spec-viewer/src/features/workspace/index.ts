@@ -15,6 +15,7 @@ export type {
   WorkspaceWorktrees,
 } from "@/features/workspace/domain/worktree";
 export { useWorkspaceNavigationState } from "@/features/workspace/hooks/useWorkspaceNavigationState";
+export { useWorkspaceWorktrees } from "@/features/workspace/hooks/useWorkspaceWorktrees";
 export { projectWorktreeTree } from "@/features/workspace/lib/projectWorktreeTree";
 export {
   listWorktreeIdsDepthFirst,

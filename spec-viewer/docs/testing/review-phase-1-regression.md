@@ -28,6 +28,8 @@ The required Ubuntu job installs WebKitWebDriver, Xvfb, and tauri-driver, then b
 
 `review-vrt-cases.json` is the required tuple allowlist. Capture emits exactly one PNG/hash/head record for every `(leafId, storyId, theme, viewport)` tuple. Candidate execution is read-only. Approval validation must execute only the default-branch validator and authenticate actor permission, exact body, current head, tuple, image hash, ready state, and approval round. Self, stale, malformed, or third-round approvals fail. Main baselines change only after merge.
 
+The PR Storybook Preview workflow also captures the PR and its base commit with the same tuple allowlist, generates the visual regression HTML report, and publishes it at `pr-vrt/pr-{number}/` on GitHub Pages. The PR preview comment links to this report so reviewers can inspect Current, Expected, Diff, 2up, Slide, Blend, and Toggle views before posting authenticated approval. This report is review evidence; it does not replace the trusted approval check.
+
 Issue #199 is the one-time bootstrap that places the trusted workflow and validator on the default branch. GitHub does not start a newly introduced `workflow_run` workflow from PR code, so #199 uses independent review of the read-only candidate artifact, local 16-tuple capture, and workflow/protocol audits; the trusted check becomes required beginning with the next PR and this exception must not be reused.
 
 Artifacts are named `frontend-junit`, `app-playwright`, `storybook-playwright`, `native-smoke`, `visual-candidate`, and `visual-approval-evidence`, matching the acceptance manifest. This document is the testing handoff for Issue #200; it does not broaden product behavior or replace any automated leaf with manual evidence.

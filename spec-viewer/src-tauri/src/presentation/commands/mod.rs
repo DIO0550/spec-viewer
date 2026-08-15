@@ -7,6 +7,7 @@ pub mod spec_diff;
 pub mod specs;
 pub mod watch;
 pub mod workspace;
+pub mod worktrees;
 
 use std::{
     collections::BTreeMap,
@@ -17,7 +18,7 @@ use crate::app::{
     services::file_watching::FileWatchManager,
     use_cases::{
         diff_comments::DiffCommentUseCases, repository_diff::RepositoryDiffUseCases,
-        spec_diff::SpecDiffUseCases, FilesystemAppUseCases,
+        spec_diff::SpecDiffUseCases, worktrees::WorkspaceWorktreeUseCases, FilesystemAppUseCases,
     },
 };
 use crate::domain::comment::diff::{CancellationToken, DiffReviewIdentity};
@@ -43,6 +44,7 @@ pub struct CommandState {
     repository_use_cases: RepositoryDiffUseCases<GitRepositoryAdapter>,
     spec_diff_use_cases: FilesystemSpecDiffUseCases,
     diff_comment_use_cases: FilesystemDiffCommentUseCases,
+    worktree_use_cases: WorkspaceWorktreeUseCases,
     diff_comment_loads: Arc<Mutex<DiffCommentLoadRegistry>>,
 }
 
@@ -58,6 +60,7 @@ impl CommandState {
             file_watch_manager: Arc::new(FileWatchManager::new()),
             repository_use_cases,
             diff_comment_use_cases,
+            worktree_use_cases: WorkspaceWorktreeUseCases::default(),
             diff_comment_loads: Arc::new(Mutex::new(DiffCommentLoadRegistry::default())),
             spec_diff_use_cases,
         }
@@ -77,6 +80,10 @@ impl CommandState {
 
     pub fn diff_comment_use_cases(&self) -> &FilesystemDiffCommentUseCases {
         &self.diff_comment_use_cases
+    }
+
+    pub fn worktree_use_cases(&self) -> &WorkspaceWorktreeUseCases {
+        &self.worktree_use_cases
     }
 
     pub fn begin_diff_comment_load(&self, identity: &DiffReviewIdentity) -> CancellationToken {

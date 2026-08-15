@@ -3,11 +3,13 @@ import { expect, test, vi } from "vitest";
 
 import {
   archiveSpec,
+  listWorktrees,
   listSpecs,
   loadWorkspace,
   readSpecFile,
   validateWorkspaceDirectory,
 } from "@/lib/api/tauri";
+import { InvalidListWorktreesResponseError } from "@/lib/api/tauri/listWorktrees";
 import { ArchiveSpecCommandError } from "@/lib/api/tauri/archiveSpec";
 import { ListSpecsCommandError } from "@/lib/api/tauri/listSpecs";
 import { LoadWorkspaceCommandError } from "@/lib/api/tauri/loadWorkspace";
@@ -219,4 +221,52 @@ test("ArchiveSpecCommandError.fromUnknownは正規化済みunknownエラーのme
   expect(ArchiveSpecCommandError.fromUnknown(normalizedError)).toEqual(
     normalizedError,
   );
+});
+test("listWorktreesはlist_worktreesへworkspacePathを渡してWorktreeへ変換する", async () => {
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue({
+    workspaceId: "/workspace/spec-reviewer",
+    worktrees: [
+      {
+        id: "/workspace/spec-reviewer",
+        name: "feature/review",
+        categoryPath: [],
+      },
+    ],
+  });
+
+  const result = await listWorktrees("/workspace/spec-reviewer");
+
+  expect(result).toEqual({
+    workspaceId: "/workspace/spec-reviewer",
+    worktrees: [
+      {
+        id: "/workspace/spec-reviewer",
+        name: "feature/review",
+        categoryPath: [],
+        specs: [],
+        changedFiles: [],
+      },
+    ],
+  });
+  expect(invokeMock).toHaveBeenCalledWith("list_worktrees", {
+    request: { workspacePath: "/workspace/spec-reviewer" },
+  });
+});
+test("listWorktreesは不正なレスポンスを拒否する", async () => {
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue({
+    workspaceId: "/workspace/spec-reviewer",
+    worktrees: [
+      {
+        id: "/workspace/spec-reviewer",
+        name: "feature/review",
+        categoryPath: "invalid",
+      },
+    ],
+  });
+
+  await expect(
+    listWorktrees("/workspace/spec-reviewer"),
+  ).rejects.toBeInstanceOf(InvalidListWorktreesResponseError);
 });

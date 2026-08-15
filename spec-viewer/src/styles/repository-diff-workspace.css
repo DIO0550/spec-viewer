@@ -132,6 +132,7 @@
 
 .repository-diff-file-header__path {
   overflow: hidden;
+  color: var(--color-text);
   font-family: var(--font-mono);
   font-weight: 600;
   text-overflow: ellipsis;

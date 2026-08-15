@@ -65,6 +65,11 @@ test("headerがnullでも既定ラベルを抑止して閉じるボタンを保�
   expect(
     container.querySelector('[aria-label="仕様一覧を閉じる"]'),
   ).not.toBeNull();
+  expect(
+    container.querySelector(
+      '.app-shell__worktrees-header[data-header-suppressed="true"]',
+    ),
+  ).not.toBeNull();
 
   act(() => {
     root.unmount();
