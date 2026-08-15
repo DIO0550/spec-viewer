@@ -260,6 +260,11 @@
     "name": "Worktree Diff"
   },
   {
+    "id": "components-workspacelayout--worktree-diff-with-files",
+    "title": "components/WorkspaceLayout",
+    "name": "Worktree Diff With Files"
+  },
+  {
     "id": "components-workspacelayout--worktree-open",
     "title": "components/WorkspaceLayout",
     "name": "Worktree Open"
