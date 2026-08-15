@@ -74,7 +74,8 @@ impl DiffCommentResolutionContext {
     }
 }
 
-type DiffWorktreeStore = Arc<Mutex<BTreeMap<String, DiffCommentResolutionContext>>>;
+type DiffWorktreeKey = (String, String, String, String);
+type DiffWorktreeStore = Arc<Mutex<BTreeMap<DiffWorktreeKey, DiffCommentResolutionContext>>>;
 
 #[derive(Debug, Clone, Default)]
 pub struct GitRepositoryAdapter {
@@ -529,6 +530,15 @@ impl GitRepositoryAdapter {
         ))
     }
 
+    fn diff_worktree_key(identity: &DiffReviewIdentity) -> DiffWorktreeKey {
+        (
+            identity.repository_id().as_str().to_owned(),
+            identity.worktree_id().as_str().to_owned(),
+            identity.base_sha().as_str().to_owned(),
+            identity.current_snapshot_id().as_str().to_owned(),
+        )
+    }
+
     fn remember_diff_worktree(
         &self,
         identity: DiffReviewIdentity,
@@ -541,11 +551,12 @@ impl GitRepositoryAdapter {
             .diff_worktrees
             .lock()
             .map_err(|_| RepositoryPortError::Io)?;
-        if worktrees.len() >= 64 && !worktrees.contains_key(identity.worktree_id().as_str()) {
+        let key = Self::diff_worktree_key(&identity);
+        if worktrees.len() >= 64 && !worktrees.contains_key(&key) {
             worktrees.pop_first();
         }
         worktrees.insert(
-            identity.worktree_id().as_str().into(),
+            key,
             DiffCommentResolutionContext {
                 root: root.to_path_buf(),
                 common_dir,
@@ -561,12 +572,29 @@ impl GitRepositoryAdapter {
         &self,
         identity: &DiffReviewIdentity,
     ) -> Result<DiffCommentResolutionContext, RepositoryPortError> {
-        let context = self
+        let worktrees = self
             .diff_worktrees
             .lock()
-            .map_err(|_| RepositoryPortError::Io)?
-            .get(identity.worktree_id().as_str())
+            .map_err(|_| RepositoryPortError::Io)?;
+        let context = worktrees
+            .get(&Self::diff_worktree_key(identity))
             .cloned()
+            .or_else(|| {
+                worktrees
+                    .values()
+                    .find(|candidate| {
+                        candidate.identity.repository_id() == identity.repository_id()
+                            && candidate.identity.worktree_id() == identity.worktree_id()
+                            && candidate.identity.base_sha() == identity.base_sha()
+                    })
+                    .cloned()
+            })
+            .or_else(|| {
+                worktrees
+                    .values()
+                    .find(|candidate| candidate.identity.worktree_id() == identity.worktree_id())
+                    .cloned()
+            })
             .ok_or(RepositoryPortError::WorktreeUnavailable)?;
         if &context.identity != identity {
             return Err(
@@ -1826,6 +1854,26 @@ impl WorkingTreeDiffPort for GitRepositoryAdapter {
         if self.snapshot(&root, &repository_id)? != snapshot {
             return Err(RepositoryPortError::EntryChangedDuringRead);
         }
+        let worktree_storage_id = self.worktree_storage_id(&root)?;
+        let diff_review_identity = DiffReviewIdentity::new(
+            repository_id,
+            worktree_storage_id,
+            resolved_base.clone(),
+            snapshot.clone(),
+        );
+        let all_paths = changed
+            .iter()
+            .flat_map(|file| [file.old_path.clone(), file.new_path.clone()])
+            .flatten()
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect();
+        self.remember_diff_worktree(
+            diff_review_identity.clone(),
+            &root,
+            changed.clone(),
+            all_paths,
+        )?;
         self.remember_working_tree_context(
             &root,
             &snapshot,
@@ -1833,6 +1881,7 @@ impl WorkingTreeDiffPort for GitRepositoryAdapter {
             changed.clone(),
         )?;
         Ok(WorkingTreeDiffOverview {
+            diff_review_identity,
             resolved_base_sha: resolved_base,
             current_snapshot_id: snapshot,
             changed,
@@ -2704,7 +2753,8 @@ mod tests {
         let identity = overview.diff_review_identity.unwrap();
         {
             let mut contexts = adapter.diff_worktrees.lock().unwrap();
-            let context = contexts.get_mut(identity.worktree_id().as_str()).unwrap();
+            let key = GitRepositoryAdapter::diff_worktree_key(&identity);
+            let context = contexts.get_mut(&key).unwrap();
             context.changed.retain(|file| {
                 !file
                     .new_path

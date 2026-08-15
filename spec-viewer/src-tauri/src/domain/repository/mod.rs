@@ -425,6 +425,7 @@ pub struct IgnoredPage {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkingTreeDiffOverview {
+    pub diff_review_identity: crate::domain::comment::diff::DiffReviewIdentity,
     pub resolved_base_sha: CommitSha,
     pub current_snapshot_id: SnapshotId,
     pub changed: Vec<DiffFile>,
@@ -578,7 +579,18 @@ mod tests {
     fn working_tree_overview_requires_head_snapshot_and_changes() {
         let head_sha = CommitSha::parse("a".repeat(40)).unwrap();
         let snapshot = SnapshotId::parse(format!("rs1_{}", "b".repeat(64))).unwrap();
+        let identity = crate::domain::comment::diff::DiffReviewIdentity::new(
+            RepositoryId::parse(format!("rr1_{}", "c".repeat(64))).unwrap(),
+            crate::domain::comment::diff::WorktreeStorageId::parse(format!(
+                "rw1_{}",
+                "d".repeat(64)
+            ))
+            .unwrap(),
+            head_sha.clone(),
+            snapshot.clone(),
+        );
         let overview = WorkingTreeDiffOverview {
+            diff_review_identity: identity,
             resolved_base_sha: head_sha.clone(),
             current_snapshot_id: snapshot.clone(),
             changed: vec![],
