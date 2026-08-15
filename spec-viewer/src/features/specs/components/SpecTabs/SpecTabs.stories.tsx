@@ -44,7 +44,7 @@ const meta: Meta<typeof SpecTabs> = {
   component: SpecTabs,
   decorators: [
     (Story) => (
-      <div style={{ maxWidth: 760 }}>
+      <div style={{ width: "100%" }}>
         <Story />
       </div>
     ),
