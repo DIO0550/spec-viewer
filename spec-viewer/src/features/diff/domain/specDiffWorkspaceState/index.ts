@@ -1,3 +1,4 @@
+import type { DiffReviewIdentity } from "@/features/diffComments";
 import { DiffAvailability } from "@/features/diff/domain/diffAvailability";
 import type {
   FileChangeStatus,
@@ -61,6 +62,7 @@ export function projectSpecChangeBadges(
 export type SpecChangeOverview = Readonly<{
   resolvedBaseSha: string;
   currentSnapshotId: string;
+  diffReviewIdentity: DiffReviewIdentity | null;
   files: readonly SpecChange[];
 }>;
 

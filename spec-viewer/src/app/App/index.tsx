@@ -54,6 +54,10 @@ import {
   createDiffLineCommentsController,
   groupCommentsByResolvedTarget,
 } from "@/features/diffComments/components/presentation";
+import type {
+  DiffCommentJumpTarget,
+  DiffLineCommentsController,
+} from "@/features/diffComments/components/DiffLineCommentSlot";
 import {
   ThemeProvider,
   useLeftNavigationPreference,
@@ -108,7 +112,7 @@ import {
 } from "@/features/workspace";
 import { getDiffReviewIdentity } from "@/lib/api/tauri";
 
-type RepositoryCommentJump = Readonly<{
+type DiffCommentJump = Readonly<{
   selectionPath: string;
   key: string;
   sidePath: string;
@@ -227,17 +231,32 @@ function SpecViewAppContent(): ReactElement {
     (repositoryDiffIdentityCache.current?.workspaceRoot === activeWorkspaceRoot
       ? repositoryDiffIdentityCache.current.identity
       : null);
-  const diffComments = useDiffComments({ identity: repositoryDiffIdentity });
+  const specDiffIdentity = useMemo<DiffReviewIdentity | null>(() => {
+    if (
+      workspaceNavigation.state.mode !== "diff" ||
+      isRepositoryDiffView ||
+      specDiff.state.status !== "ready"
+    ) {
+      return null;
+    }
+    return specDiff.state.overview.diffReviewIdentity ?? null;
+  }, [isRepositoryDiffView, specDiff.state, workspaceNavigation.state.mode]);
+  const activeDiffReviewIdentity = isRepositoryDiffView
+    ? repositoryDiffIdentity
+    : specDiffIdentity;
+  const diffComments = useDiffComments({
+    identity: activeDiffReviewIdentity,
+  });
   const [diffCommentOrigin, setDiffCommentOrigin] =
     useState<HTMLButtonElement | null>(null);
-  const [repositoryCommentJump, setRepositoryCommentJump] =
-    useState<RepositoryCommentJump | null>(null);
+  const [diffCommentJump, setDiffCommentJump] =
+    useState<DiffCommentJump | null>(null);
   useEffect(() => {
-    if (repositoryDiffIdentity === null) {
+    if (activeDiffReviewIdentity === null) {
       setDiffCommentOrigin(null);
-      setRepositoryCommentJump(null);
+      setDiffCommentJump(null);
     }
-  }, [repositoryDiffIdentity]);
+  }, [activeDiffReviewIdentity]);
   const isCurrentViewLoading = specSelectors.isLoading;
   const documentReadiness = useDocumentReadiness(specState.documentState);
   const commentScope = useMemo(
@@ -532,7 +551,7 @@ function SpecViewAppContent(): ReactElement {
     onRevealComment: sidebarPreference.openSidebar,
     commentsByTarget: diffCommentsByTarget,
   });
-  const jumpToRepositoryComment = useCallback(
+  const jumpToDiffComment = useCallback(
     (commentId: string): void => {
       const comment = diffComments.session?.comments.find(
         (candidate) => candidate.id === commentId,
@@ -542,6 +561,38 @@ function SpecViewAppContent(): ReactElement {
       }
       const resolution = comment.anchorResolution;
       if (resolution.status !== "exact" && resolution.status !== "relocated") {
+        return;
+      }
+      if (!isRepositoryDiffView) {
+        if (specDiff.state.status !== "ready") {
+          return;
+        }
+        const change = specDiff.state.overview.files.find((candidate) => {
+          const paths = [
+            candidate.targetPath,
+            candidate.oldPath,
+            candidate.newPath,
+          ];
+          return (
+            paths.includes(resolution.selectionPath) ||
+            paths.includes(resolution.sidePath)
+          );
+        });
+        if (change === undefined) {
+          return;
+        }
+        guardedSpecActions.selectSpecFileFromChanges(
+          change.specId,
+          change.fileKey,
+        );
+        setDiffCommentJump((current) => ({
+          key: `${resolution.side}:${resolution.sidePath}:${resolution.line}`,
+          selectionPath: resolution.selectionPath,
+          sidePath: resolution.sidePath,
+          side: resolution.side,
+          line: resolution.line,
+          requestId: (current?.requestId ?? 0) + 1,
+        }));
         return;
       }
       const targetNode = findRepositoryTreeNode(
@@ -561,7 +612,7 @@ function SpecViewAppContent(): ReactElement {
           resolution.side === "base" ? "unified" : "editor",
         );
       }
-      setRepositoryCommentJump((current) => ({
+      setDiffCommentJump((current) => ({
         key: `${resolution.side}:${resolution.sidePath}:${resolution.line}`,
         selectionPath: resolution.selectionPath,
         sidePath: resolution.sidePath,
@@ -572,9 +623,12 @@ function SpecViewAppContent(): ReactElement {
     },
     [
       diffComments.session?.comments,
+      guardedSpecActions,
+      isRepositoryDiffView,
       repositoryNavigationActions,
       repositoryNavigationEntry.viewerMode,
       repositoryAllTreeNodes,
+      specDiff.state,
     ],
   );
   const repositoryActiveChange = useMemo(() => {
@@ -681,9 +735,9 @@ function SpecViewAppContent(): ReactElement {
               );
             }}
             commentJumpTarget={
-              repositoryCommentJump?.selectionPath ===
+              diffCommentJump?.selectionPath ===
               repositoryNavigationEntry.activePath
-                ? repositoryCommentJump
+                ? diffCommentJump
                 : null
             }
             lineComments={
@@ -710,9 +764,9 @@ function SpecViewAppContent(): ReactElement {
               );
             }}
             commentJumpTarget={
-              repositoryCommentJump?.selectionPath ===
+              diffCommentJump?.selectionPath ===
               repositoryNavigationEntry.activePath
-                ? repositoryCommentJump
+                ? diffCommentJump
                 : null
             }
             lineComments={
@@ -735,6 +789,8 @@ function SpecViewAppContent(): ReactElement {
         specState.selection.fileKey,
         currentSpecChange?.targetPath ?? null,
         specDiff.refresh,
+        activeDiffReviewIdentity === null ? undefined : diffLineComments,
+        diffCommentJump,
       );
 
   return (
@@ -1089,12 +1145,10 @@ function SpecViewAppContent(): ReactElement {
               }}
             />
           </WorkspaceLayout.Comments>
-        ) : isRepositoryDiffView && repositoryDiffIdentity !== null ? (
+        ) : workspaceNavigation.state.mode === "diff" &&
+          activeDiffReviewIdentity !== null ? (
           <WorkspaceLayout.Comments>
-            <DiffReviewPanel
-              state={diffComments}
-              onJump={jumpToRepositoryComment}
-            />
+            <DiffReviewPanel state={diffComments} onJump={jumpToDiffComment} />
           </WorkspaceLayout.Comments>
         ) : null}
       </SidebarLayout>
@@ -1116,6 +1170,8 @@ function SpecViewAppContent(): ReactElement {
  * @param selectedFileKey - Key of the currently selected file, or `null`.
  * @param selectedPath - Target path of the currently selected change, or `null`.
  * @param onRetry - Callback to retry loading after a failure.
+ * @param lineComments - Optional line-comment controller for the preview.
+ * @param commentJumpTarget - Optional resolved comment location to reveal.
  * @returns The `DiffWorkspace` view state matching the current selection and load state.
  */
 function createDiffWorkspaceState(
@@ -1125,6 +1181,10 @@ function createDiffWorkspaceState(
   selectedPath: string | null,
   /** Retries loading the diff after a failure. */
   onRetry: () => Promise<boolean>,
+  /** Renders line-comment controls when the active diff has a review identity. */
+  lineComments: DiffLineCommentsController | undefined,
+  /** Reveals a selected sidebar comment in the diff preview. */
+  commentJumpTarget: DiffCommentJumpTarget | null,
 ): DiffWorkspaceState {
   if (selectedSpecId === null || selectedFileKey === null) {
     return { status: "noSelection" };
@@ -1159,13 +1219,19 @@ function createDiffWorkspaceState(
           state.detail.value.identity.path
         }
         fileDiff={state.detail.value}
+        lineComments={lineComments}
+        commentJumpTarget={commentJumpTarget}
       />
     ),
   };
 }
 
 function SpecDiffViewerPreview(
-  props: Readonly<{ fileDiff: FileDiff }>,
+  props: Readonly<{
+    fileDiff: FileDiff;
+    lineComments?: DiffLineCommentsController;
+    commentJumpTarget?: DiffCommentJumpTarget | null;
+  }>,
 ): ReactElement {
   const [activeChangeId, setActiveChangeId] = useState<string | null>(null);
   return (
@@ -1174,6 +1240,8 @@ function SpecDiffViewerPreview(
       mode="unified"
       activeChangeId={activeChangeId}
       onActiveChangeIdChange={setActiveChangeId}
+      lineComments={props.lineComments}
+      commentJumpTarget={props.commentJumpTarget}
     />
   );
 }
