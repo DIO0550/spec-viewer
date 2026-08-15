@@ -186,7 +186,7 @@ remain the compatibility authority.
 
 ### Identity and presentation DTOs
 
-Repository overview is the only source of the complete `DiffReviewIdentity`:
+Repository and Spec Diff overviews are sources of the complete `DiffReviewIdentity`:
 
 ```ts
 type DiffReviewIdentity = {
