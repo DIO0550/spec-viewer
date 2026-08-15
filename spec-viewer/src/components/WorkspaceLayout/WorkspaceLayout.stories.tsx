@@ -15,10 +15,12 @@ import {
 import { CommentId } from "@/features/comments/domain/commentId";
 import {
   ChangesNavigation,
+  DiffViewer,
   DiffWorkspace,
   type ViewMode,
   ViewModeToolbar,
 } from "@/features/diff";
+import { createDiffViewerFixture } from "@/features/diff/components/DiffViewer/testFixtures";
 import { ThemeProvider } from "@/features/preferences";
 import type {
   MarkdownBlockMetadata,
@@ -81,6 +83,27 @@ const worktreeChangedFiles: readonly StoryChangedFile[] = [
     change: "untracked",
   },
 ];
+
+const worktreeDiffFile = createDiffViewerFixture({
+  fileKey: "src/app/App.tsx",
+  oldPath: "src/app/App.tsx",
+  newPath: "src/app/App.tsx",
+  lines: [
+    {
+      kind: "context",
+      text: 'import { WorkspaceLayout } from "@/components/WorkspaceLayout";',
+    },
+    { kind: "removed", text: "const emptyState = true;" },
+    { kind: "added", text: "const emptyState = false;" },
+    { kind: "context", text: "const changedFiles = [" },
+    { kind: "removed", text: '  "src/app/App.tsx",' },
+    {
+      kind: "added",
+      text: '  "src/features/workspace/components/WorktreeTree/index.tsx",',
+    },
+    { kind: "context", text: "];" },
+  ],
+});
 const sampleSpec: SpecNode = {
   id: "041-preview-task",
   label: "041-preview-task",
@@ -840,6 +863,22 @@ export const WorktreeDiffWithFiles: Story = {
     await expect(
       canvas.getByRole("region", { name: "src/app/App.tsx の差分" }),
     ).toBeVisible();
+    await expect(
+      canvasElement.querySelector('.diff-viewer__cell[data-kind="added"]'),
+    ).not.toBeNull();
+    await expect(
+      canvasElement.querySelector('.diff-viewer__cell[data-kind="removed"]'),
+    ).not.toBeNull();
+    await expect(
+      canvasElement.querySelectorAll(".diff-viewer__line-number").length,
+    ).toBeGreaterThan(0);
+    const markers = Array.from(
+      canvasElement.querySelectorAll(".diff-viewer__marker"),
+      (marker) => marker.textContent,
+    );
+    await expect(markers.includes(" ")).toBe(true);
+    await expect(markers.includes("+")).toBe(true);
+    await expect(markers.includes("-")).toBe(true);
   },
 };
 export const Archiving: Story = {
@@ -986,10 +1025,12 @@ function createShellArgs({
         selectedPath={selectedChangedFile?.path ?? null}
         preview={
           selectedChangedFile === null ? null : (
-            <div className="story-diff-preview">
-              <strong>{selectedChangedFile.path}</strong>
-              <pre>{`@@ -16,6 +16,12 @@\n-const emptyState = true;\n+const emptyState = false;\n+const changedFiles = [\n+  "src/app/App.tsx",\n+  "src/features/workspace/components/WorktreeTree/index.tsx",\n+];`}</pre>
-            </div>
+            <DiffViewer
+              fileDiff={worktreeDiffFile}
+              mode="unified"
+              activeChangeId={null}
+              onActiveChangeIdChange={fn()}
+            />
           )
         }
         availability={{ status: "ready" }}
