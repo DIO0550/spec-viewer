@@ -3413,10 +3413,19 @@ textarea:disabled {
 }
 
 .specs-workspace__viewer > .markdown-viewer {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   height: 100%;
   min-height: 0;
   overflow: auto;
+}
+
+.specs-workspace__viewer > .markdown-viewer--center {
+  display: grid;
+  flex: 1 1 0;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  place-items: center;
 }
 
 .specs-workspace__viewer > .markdown-viewer--html {
@@ -3424,7 +3433,9 @@ textarea:disabled {
 }
 
 .specs-workspace__viewer > .markdown-viewer__status {
-  flex: 1 1 auto;
+  display: grid;
+  flex: 1 1 0;
+  height: 100%;
   min-height: 0;
   overflow: auto;
 }
@@ -3436,8 +3447,8 @@ textarea:disabled {
   height: 100%;
   min-width: 0;
   min-height: 0;
-  color: #1c1917;
-  background: #ffffff;
+  color: var(--color-text);
+  background: var(--color-raised);
 }
 
 .diff-workspace__content {
@@ -3580,7 +3591,7 @@ textarea:disabled {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  background: #ffffff;
+  background: var(--color-raised);
 }
 
 .branch-badge {

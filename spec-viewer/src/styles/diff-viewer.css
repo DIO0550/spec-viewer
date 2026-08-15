@@ -1,11 +1,12 @@
 :root {
-  --diff-added-bg: #eaf7ee;
-  --diff-added-emphasis: #b7e4c7;
-  --diff-removed-bg: #fff0f0;
-  --diff-removed-emphasis: #f4b8b8;
-  --diff-gutter-bg: #f5f5f4;
-  --diff-hunk-bg: #eff6ff;
-  --diff-active-border: var(--color-accent);
+  --diff-added-bg: #e6ffec;
+  --diff-added-emphasis: #aceebb;
+  --diff-removed-bg: #ffebe9;
+  --diff-removed-emphasis: #ff8182;
+  --diff-gutter-bg: #f6f8fa;
+  --diff-hunk-bg: #ddf4ff;
+  --diff-active-border: #0969da;
+  --diff-file-header-bg: #f6f8fa;
 }
 
 :root[data-theme="dark"] {
@@ -15,23 +16,34 @@
   --diff-removed-emphasis: #6a303b;
   --diff-gutter-bg: #1d2028;
   --diff-hunk-bg: #202847;
+  --diff-active-border: #58a6ff;
+  --diff-file-header-bg: #161b22;
 }
 
 .diff-viewer {
   display: flex;
+  flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
   height: 100%;
   flex-direction: column;
   color: var(--color-text);
-  background: var(--color-panel);
-  border: 1px solid var(--color-border);
+  background: var(--color-raised);
+  border: 0;
+  overflow: hidden;
 }
 
 .diff-viewer__navigation {
   display: inline-flex;
   align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 34px;
+  min-height: 34px;
   gap: 2px;
+  padding: 0 12px;
+  color: var(--color-text-muted);
+  background: var(--diff-file-header-bg);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .diff-viewer__navigation button,
@@ -73,8 +85,9 @@
 .diff-viewer__scroll-surface {
   min-width: 0;
   min-height: 0;
-  flex: 1;
+  flex: 1 1 auto;
   overflow: auto;
+  background: var(--color-raised);
   font-family: var(--font-mono);
   font-size: 12px;
   line-height: 20px;
@@ -117,6 +130,26 @@
 
 .diff-viewer__cell[data-kind="removed"] {
   background: var(--diff-removed-bg);
+}
+
+.diff-viewer__cell[data-kind="added"] .diff-viewer__line-number {
+  color: var(--color-success);
+  background: var(--diff-added-emphasis);
+}
+
+.diff-viewer__cell[data-kind="removed"] .diff-viewer__line-number {
+  color: var(--color-danger);
+  background: var(--diff-removed-emphasis);
+}
+
+.diff-viewer__cell[data-kind="added"] .diff-viewer__marker {
+  color: var(--color-success);
+  background: var(--diff-added-emphasis);
+}
+
+.diff-viewer__cell[data-kind="removed"] .diff-viewer__marker {
+  color: var(--color-danger);
+  background: var(--diff-removed-emphasis);
 }
 
 .diff-viewer__cell--spacer {

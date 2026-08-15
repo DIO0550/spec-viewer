@@ -2,18 +2,27 @@
 
 .repository-diff-panel {
   display: flex;
+  flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
   height: 100%;
   flex-direction: column;
+  overflow: hidden;
+  background: var(--color-raised);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 6px;
+  box-sizing: border-box;
 }
 
 .repository-file-tabs {
   display: flex;
+  flex: 0 0 38px;
   min-width: 0;
   min-height: 38px;
+  height: 38px;
+  overflow: hidden;
   border-bottom: 1px solid var(--color-border);
-  background: var(--color-panel);
+  background: var(--diff-file-header-bg);
 }
 
 .repository-file-tabs__tablist {
@@ -40,10 +49,11 @@
 .repository-file-tab {
   display: flex;
   align-items: center;
+  min-height: 38px;
   min-width: 0;
   max-width: 320px;
   gap: 7px;
-  padding: 7px 32px 7px 11px;
+  padding: 0 32px 0 12px;
   color: var(--color-text-body);
   background: transparent;
   border: 0;
@@ -120,13 +130,14 @@
 
 .repository-diff-file-header {
   display: grid;
+  flex: 0 0 auto;
   grid-template-columns: minmax(0, 1fr) auto auto auto auto;
   align-items: center;
-  min-height: 42px;
-  gap: 10px;
-  padding: 7px 14px;
+  min-height: 44px;
+  gap: 8px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--color-border);
-  background: var(--color-panel);
+  background: var(--diff-file-header-bg);
   font-size: 12px;
 }
 
@@ -144,6 +155,32 @@
 .repository-diff-file-header__summary {
   color: var(--color-text-body);
   white-space: nowrap;
+}
+
+.repository-diff-file-header__revision {
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.repository-diff-file-header__status {
+  font-weight: 600;
+}
+
+.repository-diff-file-header__status[data-change="added"],
+.repository-diff-file-header__status[data-change="untracked"] {
+  color: var(--color-success, #15803d);
+}
+
+.repository-diff-file-header__status[data-change="deleted"] {
+  color: var(--color-danger, #b91c1c);
+}
+
+.repository-diff-file-header__status[data-change="modified"],
+.repository-diff-file-header__status[data-change="renamed"],
+.repository-diff-file-header__status[data-change="copied"],
+.repository-diff-file-header__status[data-change="typeChanged"] {
+  color: var(--color-warning, #b45309);
 }
 
 .repository-diff-file-header__summary strong:first-child {
@@ -228,8 +265,8 @@
 
 .diff-viewer > .diff-viewer__navigation {
   justify-content: flex-end;
-  min-height: 36px;
-  padding: 0 10px;
+  min-height: 34px;
+  padding: 0 12px;
   border-bottom: 1px solid var(--color-border);
 }
 
