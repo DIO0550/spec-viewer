@@ -32,6 +32,9 @@ test("ready diffはpath・change navigation・行番号・markerを描画する"
   expect(
     result.container.querySelector(".diff-viewer__scroll-surface"),
   ).not.toBeNull();
+  expect(
+    result.container.querySelector(".diff-viewer__comment-lane"),
+  ).not.toBeNull();
   result.unmount();
 });
 

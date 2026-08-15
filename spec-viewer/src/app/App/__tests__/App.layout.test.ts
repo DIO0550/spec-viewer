@@ -33,6 +33,14 @@ function readCssRule(filePath: string, selector: string): string {
 test("Specs表示はModeNavigationと本文をそれぞれのスクロール領域に収める", () => {
   const contentRule = readCssRule(appCssFilePath, ".app-shell__content");
   const specsRule = readCssRule(appCssFilePath, ".specs-workspace");
+  const documentRule = readCssRule(
+    appCssFilePath,
+    ".specs-workspace__document",
+  );
+  const initialFileRule = readCssRule(
+    appCssFilePath,
+    ".specs-workspace__document > .empty-state--inline",
+  );
   const viewerRule = readCssRule(appCssFilePath, ".specs-workspace__viewer");
   const markdownRule = readCssRule(
     appCssFilePath,
@@ -51,6 +59,9 @@ test("Specs表示はModeNavigationと本文をそれぞれのスクロール領�
   expect(contentRule).toContain("overflow: hidden;");
   expect(specsRule).toContain("display: flex;");
   expect(specsRule).toContain("flex-direction: column;");
+  expect(documentRule).toContain("grid-template-rows: 36px minmax(0, 1fr);");
+  expect(initialFileRule).toContain("height: 36px;");
+  expect(initialFileRule).toContain("overflow: hidden;");
   expect(viewerRule).toContain("display: flex;");
   expect(viewerRule).toContain("overflow: hidden;");
   expect(statusRule).toContain("flex: 1 1 0;");
@@ -113,4 +124,36 @@ test("DiffはGitHub風のファイル枠と行番号付き配色を持つ", () =
   expect(removedLineNumberRule).toContain(
     "background: var(--diff-removed-emphasis);",
   );
+});
+
+test("Diffコードは行番号と同じ行を保ち、長い行を横スクロールする", () => {
+  const scrollSurfaceRule = readCssRule(
+    diffViewerCssFilePath,
+    ".diff-viewer__scroll-surface",
+  );
+  const cellRule = readCssRule(diffViewerCssFilePath, ".diff-viewer__cell");
+  const inlineCellRule = readCssRule(
+    diffViewerCssFilePath,
+    ".diff-viewer__row--inline .diff-viewer__cell",
+  );
+  const commentLaneRule = readCssRule(
+    diffViewerCssFilePath,
+    ".diff-viewer__comment-lane",
+  );
+  const codeRule = readCssRule(
+    diffViewerCssFilePath,
+    ".diff-viewer__cell code",
+  );
+
+  expect(scrollSurfaceRule).toContain("overflow-x: auto;");
+  expect(scrollSurfaceRule).toContain("overflow-y: auto;");
+  expect(cellRule).toContain("grid-template-columns: 48px 48px 20px");
+  expect(inlineCellRule).toContain(
+    "grid-template-columns: 48px 48px 48px 20px",
+  );
+  expect(commentLaneRule).toContain("min-width: 48px;");
+  expect(codeRule).toContain("display: block;");
+  expect(codeRule).toContain("min-width: max-content;");
+  expect(codeRule).toContain("overflow-wrap: normal;");
+  expect(codeRule).toContain("white-space: pre;");
 });
