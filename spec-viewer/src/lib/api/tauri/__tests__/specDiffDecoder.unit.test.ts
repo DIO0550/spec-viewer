@@ -16,6 +16,22 @@ test("decodeChangedSpecFilesは最小の変更一覧responseをdecodeする", ()
   expect(decodeChangedSpecFiles(response)).toEqual(response);
 });
 
+test("decodeChangedSpecFilesはDiffコメント用identityをoverviewへ保持する", () => {
+  const response = {
+    ...createMinimalListResponse(),
+    diffReviewIdentity: {
+      repositoryId: `rr1_${"a".repeat(64)}`,
+      worktreeId: `rw1_${"b".repeat(64)}`,
+      baseSha: "c".repeat(40),
+      currentSnapshotId: `rs1_${"d".repeat(64)}`,
+    },
+  };
+
+  expect(decodeChangedSpecFiles(response).diffReviewIdentity).toEqual(
+    response.diffReviewIdentity,
+  );
+});
+
 test("decodeSpecFileDiffはtext contentと空hunksとnull submoduleをdecodeする", () => {
   const response = createMinimalDetailResponse();
 

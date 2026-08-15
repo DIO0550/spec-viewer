@@ -30,6 +30,12 @@ const unchangedResponse: ListChangedSpecFilesCommandResponse = {
 const changedResponse: ListChangedSpecFilesCommandResponse = {
   currentSnapshotId: "snapshot-2",
   resolvedBaseSha: "a".repeat(40),
+  diffReviewIdentity: {
+    repositoryId: `rr1_${"b".repeat(64)}`,
+    worktreeId: `rw1_${"c".repeat(64)}`,
+    baseSha: "a".repeat(40),
+    currentSnapshotId: `rs1_${"d".repeat(64)}`,
+  },
   files: [
     {
       specId: "079-issue-168",
