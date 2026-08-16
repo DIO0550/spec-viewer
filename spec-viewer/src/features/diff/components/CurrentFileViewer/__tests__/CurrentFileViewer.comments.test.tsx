@@ -25,6 +25,19 @@ test("Editorはunchangedを含む全current行をコメント対象にする", (
   ).not.toBeNull();
 });
 
+test("Editorはコメント列用modifierを付けてコード行を4列で描画する", () => {
+  const view = renderViewer(
+    createDiffViewerFixture({ newContent: "first\nsecond" }),
+  );
+
+  expect(
+    view.querySelector(".current-file-viewer--with-comments"),
+  ).not.toBeNull();
+  expect(
+    view.querySelector('[data-row-kind="current-line"]')?.children,
+  ).toHaveLength(4);
+});
+
 test("Editorはdeletion peek summaryとbase peek行をコメント対象にしない", () => {
   const view = renderViewer(
     createDiffViewerFixture({

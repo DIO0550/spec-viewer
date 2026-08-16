@@ -17,7 +17,8 @@ const cssFilePath = resolve(
 function readCssRule(selector: string): string {
   const css = readFileSync(cssFilePath, "utf8");
   const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = css.match(new RegExp(`${escapedSelector}\\s*{(?<body>[^}]*)}`));
+  const selectorPattern = escapedSelector.replace(/\s+/g, "\\s+");
+  const match = css.match(new RegExp(`${selectorPattern}\\s*{(?<body>[^}]*)}`));
 
   return match?.groups?.body ?? "";
 }
@@ -27,12 +28,18 @@ test("Editor windowing surfaceは後続base ruleより高いmodifier scopeを持
     ".current-file-viewer.current-file-viewer--editor",
   );
   const rowRule = readCssRule(
-    ".current-file-viewer--editor .current-file-viewer__row",
+    '.current-file-viewer--editor .current-file-viewer__row[data-row-kind="current-line"]',
+  );
+  const commentsRowRule = readCssRule(
+    '.current-file-viewer--editor.current-file-viewer--with-comments .current-file-viewer__row[data-row-kind="current-line"]',
   );
 
   expect(viewerRule).toContain("display: flex;");
   expect(viewerRule).toContain("overflow: hidden;");
   expect(rowRule).toContain("grid-template-columns: 4px 52px max-content;");
+  expect(commentsRowRule).toContain(
+    "grid-template-columns: 1.5rem 4px 52px max-content;",
+  );
 });
 
 test("Editorコード行は折り返さず横スクロール可能な幅を持つ", () => {
