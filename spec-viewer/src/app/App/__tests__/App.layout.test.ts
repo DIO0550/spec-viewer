@@ -37,6 +37,7 @@ test("Specs表示はModeNavigationと本文をそれぞれのスクロール領�
     appCssFilePath,
     ".specs-workspace__document",
   );
+  const specTabsRule = readCssRule(appCssFilePath, ".spec-tabs");
   const initialFileRule = readCssRule(
     appCssFilePath,
     ".specs-workspace__document > .empty-state--inline",
@@ -67,11 +68,15 @@ test("Specs表示はModeNavigationと本文をそれぞれのスクロール領�
   expect(contentRule).toContain("overflow: hidden;");
   expect(specsRule).toContain("display: flex;");
   expect(specsRule).toContain("flex-direction: column;");
-  expect(documentRule).toContain("grid-template-rows: 44px minmax(0, 1fr);");
-  expect(initialFileRule).toContain("height: 44px;");
+  expect(documentRule).toContain("grid-template-rows: 38px minmax(0, 1fr);");
+  expect(initialFileRule).toContain("height: 38px;");
   expect(initialFileRule).toContain("overflow: hidden;");
-  expect(tabsRule).toContain("min-height: 44px;");
-  expect(tabRule).toContain("min-height: 44px;");
+  expect(specTabsRule).toContain("overflow-x: auto;");
+  expect(specTabsRule).toContain("overflow-y: hidden;");
+  expect(specTabsRule).toContain("scrollbar-width: none;");
+  expect(specTabsRule).toContain("scrollbar-gutter: auto;");
+  expect(tabsRule).toContain("min-height: 38px;");
+  expect(tabRule).toContain("min-height: 38px;");
   expect(viewerRule).toContain("display: flex;");
   expect(viewerRule).toContain("overflow: hidden;");
   expect(statusRule).toContain("flex: 1 1 0;");
@@ -113,6 +118,14 @@ test("DiffはGitHub風のファイル枠と行番号付き配色を持つ", () =
     repositoryDiffCssFilePath,
     ".repository-diff-file-header",
   );
+  const fileTabsRule = readCssRule(
+    repositoryDiffCssFilePath,
+    ".repository-file-tabs",
+  );
+  const fileTablistRule = readCssRule(
+    repositoryDiffCssFilePath,
+    ".repository-file-tabs__tablist",
+  );
   const diffViewerRule = readCssRule(diffViewerCssFilePath, ".diff-viewer");
   const addedLineNumberRule = readCssRule(
     diffViewerCssFilePath,
@@ -125,6 +138,10 @@ test("DiffはGitHub風のファイル枠と行番号付き配色を持つ", () =
 
   expect(panelRule).toContain("overflow: hidden;");
   expect(panelRule).toContain("border-radius: 6px;");
+  expect(fileTabsRule).toContain("height: 38px;");
+  expect(fileTablistRule).toContain("overflow-x: auto;");
+  expect(fileTablistRule).toContain("overflow-y: hidden;");
+  expect(fileTablistRule).toContain("scrollbar-width: none;");
   expect(fileHeaderRule).toContain("min-height: 44px;");
   expect(fileHeaderRule).toContain("background: var(--diff-file-header-bg);");
   expect(diffViewerRule).toContain("overflow: hidden;");
