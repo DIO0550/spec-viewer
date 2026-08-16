@@ -94,8 +94,11 @@
 }
 
 .current-file-viewer__code {
+  display: block;
   min-width: max-content;
+  overflow: visible;
   overflow-wrap: normal;
+  word-break: normal;
   white-space: pre;
 }
 
