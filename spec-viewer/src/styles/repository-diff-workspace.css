@@ -30,6 +30,9 @@
   flex: 1 1 auto;
   min-width: 0;
   overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .repository-file-tabs__close-actions {
@@ -278,4 +281,8 @@
   .repository-diff-file-header__revision {
     display: none;
   }
+}
+
+.repository-file-tabs__tablist::-webkit-scrollbar {
+  display: none;
 }
