@@ -34,3 +34,14 @@ test("Editor windowing surfaceは後続base ruleより高いmodifier scopeを持
   expect(viewerRule).toContain("overflow: hidden;");
   expect(rowRule).toContain("grid-template-columns: 4px 52px max-content;");
 });
+
+test("Editorコード行は折り返さず横スクロール可能な幅を持つ", () => {
+  const codeRule = readCssRule(".current-file-viewer__code");
+
+  expect(codeRule).toContain("display: block;");
+  expect(codeRule).toContain("min-width: max-content;");
+  expect(codeRule).toContain("overflow: visible;");
+  expect(codeRule).toContain("overflow-wrap: normal;");
+  expect(codeRule).toContain("word-break: normal;");
+  expect(codeRule).toContain("white-space: pre;");
+});
