@@ -42,6 +42,14 @@ test("Specs表示はModeNavigationと本文をそれぞれのスクロール領�
     ".specs-workspace__document > .empty-state--inline",
   );
   const viewerRule = readCssRule(appCssFilePath, ".specs-workspace__viewer");
+  const tabsRule = readCssRule(
+    appCssFilePath,
+    ".specs-workspace__document > .spec-tabs",
+  );
+  const tabRule = readCssRule(
+    appCssFilePath,
+    ".specs-workspace__document > .spec-tabs .spec-tabs__tab",
+  );
   const markdownRule = readCssRule(
     appCssFilePath,
     ".specs-workspace__viewer > .markdown-viewer",
@@ -59,9 +67,11 @@ test("Specs表示はModeNavigationと本文をそれぞれのスクロール領�
   expect(contentRule).toContain("overflow: hidden;");
   expect(specsRule).toContain("display: flex;");
   expect(specsRule).toContain("flex-direction: column;");
-  expect(documentRule).toContain("grid-template-rows: 36px minmax(0, 1fr);");
-  expect(initialFileRule).toContain("height: 36px;");
+  expect(documentRule).toContain("grid-template-rows: 44px minmax(0, 1fr);");
+  expect(initialFileRule).toContain("height: 44px;");
   expect(initialFileRule).toContain("overflow: hidden;");
+  expect(tabsRule).toContain("min-height: 44px;");
+  expect(tabRule).toContain("min-height: 44px;");
   expect(viewerRule).toContain("display: flex;");
   expect(viewerRule).toContain("overflow: hidden;");
   expect(statusRule).toContain("flex: 1 1 0;");
