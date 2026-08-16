@@ -61,10 +61,15 @@
   pointer-events: none;
 }
 
-.current-file-viewer--editor .current-file-viewer__row {
+.current-file-viewer--editor
+  .current-file-viewer__row[data-row-kind="current-line"] {
   grid-template-columns: 4px 52px max-content;
   width: max-content;
   min-width: 100%;
+}
+.current-file-viewer--editor.current-file-viewer--with-comments
+  .current-file-viewer__row[data-row-kind="current-line"] {
+  grid-template-columns: 1.5rem 4px 52px max-content;
 }
 
 .current-file-viewer__gutter {

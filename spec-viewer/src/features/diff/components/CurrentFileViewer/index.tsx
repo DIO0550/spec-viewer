@@ -153,6 +153,10 @@ export function CurrentFileViewer(props: CurrentFileViewerProps): ReactElement {
     fileDiff.review.file.newPath ??
     fileDiff.review.file.oldPath ??
     fileDiff.identity.path;
+  const viewerClassName =
+    lineComments === undefined
+      ? "current-file-viewer current-file-viewer--editor"
+      : "current-file-viewer current-file-viewer--editor current-file-viewer--with-comments";
 
   /** Synchronizes React windowing state with a programmatic DOM scroll. */
   const setProgrammaticScrollTop = useCallback(
@@ -485,7 +489,7 @@ export function CurrentFileViewer(props: CurrentFileViewerProps): ReactElement {
 
   return (
     <section
-      className="current-file-viewer current-file-viewer--editor"
+      className={viewerClassName}
       aria-label={`${filePath} のcurrent内容`}
     >
       {model.state === "degraded" ? (
