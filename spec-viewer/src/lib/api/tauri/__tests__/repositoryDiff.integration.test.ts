@@ -66,7 +66,6 @@ const fileReviewResponse = (): Record<string, unknown> => ({
     reason: null,
     byteLength: null,
   },
-  patch: { state: "available", text: "patch", reason: null, byteLength: null },
   structuredDiff: { state: "available", hunks: [], reason: null },
   submodule: null,
 });
