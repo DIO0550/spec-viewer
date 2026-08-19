@@ -5,6 +5,8 @@ export type PerformancePhase =
   | "document.render"
   | "document.firstReadable"
   | "comments.list"
+  | "repository.overview"
+  | "repository.file"
   | "watcher.invalidate";
 
 export type PerformanceMetadata = Record<

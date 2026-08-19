@@ -1,4 +1,6 @@
-use super::GitRunner;
+use super::{
+    selected_path_fingerprint, GitObjectBatch, GitObjectRead, GitRunner, RepositoryWatchRegistry,
+};
 use crate::domain::{
     comment::diff::{DiffReviewIdentity, WorktreeStorageId},
     repository::*,
@@ -80,8 +82,10 @@ type DiffWorktreeStore = Arc<Mutex<BTreeMap<DiffWorktreeKey, DiffCommentResoluti
 #[derive(Debug, Clone, Default)]
 pub struct GitRepositoryAdapter {
     runner: GitRunner,
+    object_batch: GitObjectBatch,
     contexts: ContextStore,
     diff_worktrees: DiffWorktreeStore,
+    repository_watches: RepositoryWatchRegistry,
     working_tree_contexts: WorkingTreeContextStore,
 }
 impl GitRepositoryAdapter {
@@ -1115,15 +1119,21 @@ impl GitRepositoryAdapter {
         )?;
         frame(&mut hasher, &head_bytes);
         frame(&mut hasher, &index_bytes);
-        let tracked =
-            self.runner
-                .run(root, "snapshot-tracked", &["ls-files", "-c", "-z"], false)?;
-        let mut tracked_paths = tracked
+        // HEAD and the index already identify every clean/staged blob. Reading only
+        // worktree-divergent paths keeps snapshot validation proportional to the
+        // review changes instead of the complete repository size.
+        let modified = self.runner.run(
+            root,
+            "snapshot-modified",
+            &["diff-files", "--name-only", "-z", "--"],
+            false,
+        )?;
+        let mut modified_paths = modified
             .split(|byte| *byte == 0)
             .filter(|path| !path.is_empty())
             .collect::<Vec<_>>();
-        tracked_paths.sort_unstable();
-        for raw_path in tracked_paths {
+        modified_paths.sort_unstable();
+        for raw_path in modified_paths {
             let path = Self::path(raw_path)?;
             frame(&mut hasher, raw_path);
             let target = root.join(path.as_str());
@@ -1199,10 +1209,10 @@ impl GitRepositoryAdapter {
                 hasher.update([3]);
             }
         }
-        let final_tracked = self.runner.run(
+        let final_modified = self.runner.run(
             root,
-            "snapshot-tracked-recheck",
-            &["ls-files", "-c", "-z"],
+            "snapshot-modified-recheck",
+            &["diff-files", "--name-only", "-z", "--"],
             false,
         )?;
         let final_untracked = self.runner.run(
@@ -1225,7 +1235,7 @@ impl GitRepositoryAdapter {
         )?;
         if final_head != head_bytes
             || final_index != index_bytes
-            || final_tracked != tracked
+            || final_modified != modified
             || final_untracked != untracked
         {
             return Err(RepositoryPortError::EntryChangedDuringRead);
@@ -1268,7 +1278,6 @@ impl GitRepositoryAdapter {
                 "-z",
                 "-M50%",
                 "-C50%",
-                "--find-copies-harder",
                 "-l1000",
                 merge.as_str(),
             ],
@@ -1509,34 +1518,13 @@ impl GitRepositoryAdapter {
             });
         };
         let object = format!("{}:{}", merge.as_str(), path.as_str());
-        let size = self
-            .text(
-                root,
-                "base-content-size",
-                &["cat-file", "-s", &object],
-                false,
-            )?
-            .trim()
-            .parse::<u64>()
-            .map_err(|_| RepositoryPortError::GitFailed {
-                operation: "base-content-size".into(),
-                code: None,
-                stderr: "Git returned an invalid object size".into(),
-            })?;
-        if size > CONTENT_LIMIT as u64 {
-            return Ok(ContentAvailability::Omitted {
+        match self.object_batch.read(root, &object, CONTENT_LIMIT)? {
+            GitObjectRead::TooLarge(size) => Ok(ContentAvailability::Omitted {
                 reason: OmissionReason::LargeFile,
                 byte_length: Some(size),
-            });
+            }),
+            GitObjectRead::Available(bytes) => Ok(Self::side_for_entry(Some(bytes), kind)),
         }
-        let bytes = self.runner.run_with_stdout_limit(
-            root,
-            "base-content",
-            &["show", &object],
-            true,
-            CONTENT_LIMIT,
-        )?;
-        Ok(Self::side_for_entry(Some(bytes), kind))
     }
 
     fn current_side(
@@ -1949,6 +1937,9 @@ impl RepositoryPort for GitRepositoryAdapter {
                 ignored_directories: vec![],
             });
         };
+        let (git_dir, common_dir) = self.git_directories(&root)?;
+        let watch_paths = [git_dir, common_dir];
+        let initial_watch_generation = self.repository_watches.generation(&root, &watch_paths);
         let snapshot = self.snapshot(&root, &repository_id)?;
         let changed = self.changes(&root, merge_base_sha)?;
         let (all_paths, ignored_directories, ignored_entries) = self.all_paths(&root, &changed)?;
@@ -1965,7 +1956,15 @@ impl RepositoryPort for GitRepositoryAdapter {
         if current_head != *head_sha || current_merge.trim() != merge_base_sha.as_str() {
             return Err(RepositoryPortError::StaleBase);
         }
-        if self.snapshot(&root, &repository_id)? != snapshot {
+        let repository_changed = match initial_watch_generation {
+            Some(initial) => self
+                .repository_watches
+                .generation(&root, &watch_paths)
+                .map(|current| current != initial)
+                .unwrap_or(true),
+            None => self.snapshot(&root, &repository_id)? != snapshot,
+        };
+        if repository_changed {
             return Err(RepositoryPortError::EntryChangedDuringRead);
         }
         let worktree_storage_id = self.worktree_storage_id(&root)?;
@@ -2149,11 +2148,8 @@ impl RepositoryPort for GitRepositoryAdapter {
         path: &RepositoryRelativePath,
     ) -> Result<RepositoryFileReview, RepositoryPortError> {
         let root = self.root(worktree)?;
-        let repository_id = self.repository_id(&root)?;
-        if self.snapshot(&root, &repository_id)? != *snapshot {
-            return Err(RepositoryPortError::StaleSnapshot);
-        }
         let context = self.review_context(&root, snapshot)?;
+        let initial_path_fingerprint = selected_path_fingerprint(&self.runner, &root, path)?;
         let file = context
             .changed
             .iter()
@@ -2218,7 +2214,7 @@ impl RepositoryPort for GitRepositoryAdapter {
                 structured_diff: StructuredDiff::Available(vec![]),
                 submodule: None,
             };
-            if self.snapshot(&root, &repository_id)? != *snapshot {
+            if selected_path_fingerprint(&self.runner, &root, path)? != initial_path_fingerprint {
                 return Err(RepositoryPortError::EntryChangedDuringRead);
             }
             return Ok(review);
@@ -2238,7 +2234,7 @@ impl RepositoryPort for GitRepositoryAdapter {
                 },
                 submodule: Some(self.submodule_state(&root, &merge, path)),
             };
-            if self.snapshot(&root, &repository_id)? != *snapshot {
+            if selected_path_fingerprint(&self.runner, &root, path)? != initial_path_fingerprint {
                 return Err(RepositoryPortError::EntryChangedDuringRead);
             }
             return Ok(review.into());
@@ -2367,7 +2363,7 @@ impl RepositoryPort for GitRepositoryAdapter {
             structured_diff,
             submodule: None,
         };
-        if self.snapshot(&root, &repository_id)? != *snapshot {
+        if selected_path_fingerprint(&self.runner, &root, path)? != initial_path_fingerprint {
             return Err(RepositoryPortError::EntryChangedDuringRead);
         }
         Ok(review.into())
@@ -4480,7 +4476,7 @@ mod tests {
     }
 
     #[test]
-    fn changed_records_cover_rename_copy_delete_type_and_mode() {
+    fn changed_records_keep_rename_but_defer_expensive_copy_detection() {
         let nonce = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
@@ -4536,19 +4532,17 @@ mod tests {
             "rename-new.txt"
         );
         assert_eq!(renamed.similarity, Some(100));
-        let copied = overview
+        let copied_target = overview
             .changed
             .iter()
-            .find(|file| file.change == FileChangeKind::Copied)
+            .find(|file| {
+                file.new_path
+                    .as_ref()
+                    .is_some_and(|path| path.as_str() == "copy-target.txt")
+            })
             .unwrap();
-        assert_eq!(
-            copied.old_path.as_ref().unwrap().as_str(),
-            "copy-source.txt"
-        );
-        assert_eq!(
-            copied.new_path.as_ref().unwrap().as_str(),
-            "copy-target.txt"
-        );
+        assert_eq!(copied_target.change, FileChangeKind::Added);
+        assert_eq!(copied_target.old_path, None);
         assert!(overview.changed.iter().any(|file| {
             file.change == FileChangeKind::Deleted
                 && file
@@ -4841,7 +4835,7 @@ mod tests {
 
     #[test]
     fn r199_git_015_rename_paths() {
-        changed_records_cover_rename_copy_delete_type_and_mode();
+        changed_records_keep_rename_but_defer_expensive_copy_detection();
     }
 
     #[test]
