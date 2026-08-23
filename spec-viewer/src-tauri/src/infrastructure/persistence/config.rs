@@ -528,6 +528,18 @@ mod tests {
     }
 
     #[test]
+    fn raw_spec_override_node_kind_preserves_unknown_string_for_typed_conversion() {
+        let raw: RawSpecOverrideNodeKind =
+            serde_json::from_str(r#""archive""#).expect("raw string should deserialize");
+
+        assert_eq!(
+            SpecOverrideNodeKind::try_from(raw),
+            Err("archive".to_string())
+        );
+        assert!(serde_json::from_str::<RawSpecOverrideNodeKind>("1").is_err());
+    }
+
+    #[test]
     fn config_loader_reads_explicit_spec_node_kind_override() {
         let workspace = TestWorkspace::new("node-kind-spec");
         workspace.write_config(
@@ -541,7 +553,7 @@ mod tests {
             .expect("override should load")
             .expect("override should exist");
 
-        assert_eq!(Some(SpecNodeKind::Spec), spec_override.node_kind());
+        assert_eq!(Some(SpecOverrideNodeKind::Spec), spec_override.node_kind());
     }
 
     #[test]
@@ -558,7 +570,10 @@ mod tests {
             .expect("override should load")
             .expect("override should exist");
 
-        assert_eq!(Some(SpecNodeKind::Category), spec_override.node_kind());
+        assert_eq!(
+            Some(SpecOverrideNodeKind::Category),
+            spec_override.node_kind()
+        );
     }
 
     #[test]
@@ -580,20 +595,44 @@ mod tests {
     }
 
     #[test]
-    fn config_loader_rejects_node_kind_in_workspace_config() {
-        let workspace = TestWorkspace::new("workspace-node-kind");
+    fn config_loader_classifies_non_string_node_kind_as_malformed_json() {
+        let workspace = TestWorkspace::new("non-string-node-kind");
         workspace.write_config(
-            PLUGIN_WORKSPACE_CONFIG_FILE,
-            r#"{ "nodeKind": "category" }"#,
+            ".plugin-workspace/.specs/auth/.spec-reviewer/config.json",
+            r#"{ "nodeKind": 1 }"#,
         );
-        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
+        let spec_directory = workspace.spec_directory(".plugin-workspace/.specs/auth");
 
-        let result = WorkspaceConfigLoader::new().load(&layout);
+        let result =
+            WorkspaceConfigLoader::new().load_spec_override_from_directory(&spec_directory);
 
         assert!(matches!(
             result,
-            Err(ConfigLoadError::UnexpectedNodeKind { .. })
+            Err(ConfigLoadError::MalformedJson { path, .. })
+                if path.ends_with(SPEC_OVERRIDE_CONFIG_FILE)
         ));
+    }
+
+    #[test]
+    fn config_loader_rejects_node_kind_in_workspace_config() {
+        for (name, node_kind) in [
+            ("workspace-category-node-kind", "category"),
+            ("workspace-unknown-node-kind", "archive"),
+        ] {
+            let workspace = TestWorkspace::new(name);
+            workspace.write_config(
+                PLUGIN_WORKSPACE_CONFIG_FILE,
+                &format!(r#"{{ "nodeKind": "{node_kind}" }}"#),
+            );
+            let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
+
+            let result = WorkspaceConfigLoader::new().load(&layout);
+
+            assert!(matches!(
+                result,
+                Err(ConfigLoadError::UnexpectedNodeKind { .. })
+            ));
+        }
     }
 
     #[test]

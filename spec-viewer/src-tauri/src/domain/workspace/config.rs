@@ -555,4 +555,17 @@ mod tests {
 
         assert_eq!("implementation-plan.md", file.file_name());
     }
+
+    #[test]
+    fn spec_override_node_kind_is_a_closed_spec_category_subset() {
+        for (override_kind, node_kind) in [
+            (SpecOverrideNodeKind::Spec, SpecNodeKind::Spec),
+            (SpecOverrideNodeKind::Category, SpecNodeKind::Category),
+        ] {
+            assert_eq!(SpecNodeKind::from(override_kind), node_kind);
+            let config = SpecConfigOverride::with_node_kind(vec![], Some(override_kind))
+                .expect("override kind should be valid");
+            assert_eq!(config.node_kind(), Some(override_kind));
+        }
+    }
 }

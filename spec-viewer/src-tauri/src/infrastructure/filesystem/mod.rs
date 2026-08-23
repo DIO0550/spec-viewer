@@ -1477,6 +1477,25 @@ mod tests {
     }
 
     #[test]
+    fn effective_directory_config_preserves_override_subset_before_projection() {
+        let workspace = TestWorkspace::new("override-subset-projection");
+        workspace.write_file(
+            ".plugin-workspace/.specs/category/.spec-reviewer/config.json",
+            r#"{ "nodeKind": "category" }"#,
+        );
+        let directory = workspace.root().join(".plugin-workspace/.specs/category");
+        let config = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
+
+        let effective = effective_directory_config(&directory, &config)
+            .expect("override config should be projected");
+
+        assert_eq!(
+            Some(crate::domain::workspace::SpecOverrideNodeKind::Category),
+            effective.node_kind
+        );
+    }
+
+    #[test]
     fn spec_tree_scanner_prefers_explicit_node_kind_marker() {
         let workspace = TestWorkspace::new("semantic-marker");
         workspace.write_file(
