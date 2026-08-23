@@ -126,13 +126,14 @@ impl DiffCommentBackendPort for FilesystemDiffCommentBackend {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::repository::StdioStream;
 
     #[test]
     fn oversized_current_and_base_sources_are_semantic_unsupported() {
         for error in [
             RepositoryPortError::ContentTooLarge,
             RepositoryPortError::GitOutputLimitExceeded {
-                stream: "stdout".into(),
+                stream: StdioStream::Stdout,
             },
         ] {
             assert_eq!(

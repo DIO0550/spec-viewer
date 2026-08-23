@@ -562,6 +562,20 @@ pub trait WorkingTreeDiffPort {
 #[cfg(test)]
 mod tests {
     use crate::domain::workspace::ValidatedRefName;
+    #[test]
+    fn stdio_stream_tokens_and_error_display_match_the_wire_contract() {
+        for (stream, expected) in [
+            (StdioStream::Stdout, "stdout"),
+            (StdioStream::Stderr, "stderr"),
+        ] {
+            assert_eq!(stream.as_str(), expected);
+            assert_eq!(stream.to_string(), expected);
+            assert_eq!(
+                RepositoryPortError::GitOutputLimitExceeded { stream }.to_string(),
+                format!("Git output limit exceeded: {expected}")
+            );
+        }
+    }
 
     #[test]
     fn comparison_revision_accepts_head_commit_and_canonical_local_refs() {

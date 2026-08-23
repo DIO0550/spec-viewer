@@ -431,6 +431,124 @@ mod tests {
         assert_eq!(p.stdout_limit, 32 * 1024 * 1024);
         assert_eq!(p.stderr_limit, 1024 * 1024);
     }
+    #[test]
+    fn operation_tokens_match_every_legacy_diagnostic_label() {
+        for (operation, expected) in [
+            (GitOperation::AllFiles, "all-files"),
+            (GitOperation::BaseGitlink, "base-gitlink"),
+            (GitOperation::BaseModes, "base-modes"),
+            (GitOperation::BranchRemote, "branch-remote"),
+            (GitOperation::ChangedFiles, "changed-files"),
+            (
+                GitOperation::CheckIgnoredDirectory,
+                "check-ignored-directory",
+            ),
+            (GitOperation::CommonDir, "common-dir"),
+            (
+                GitOperation::ComparisonRevisionCommit,
+                "comparison-revision-commit",
+            ),
+            (
+                GitOperation::ComparisonRevisionExists,
+                "comparison-revision-exists",
+            ),
+            (GitOperation::ComparisonRevisions, "comparison-revisions"),
+            (GitOperation::CurrentBranch, "current-branch"),
+            (
+                GitOperation::DiffCommentBaseSource,
+                "diff-comment-base-source",
+            ),
+            (GitOperation::FilePatch, "file-patch"),
+            (GitOperation::FileReviewMergeBase, "file-review-merge-base"),
+            (GitOperation::GhMergeBase, "gh-merge-base"),
+            (GitOperation::GitDir, "git-dir"),
+            (GitOperation::Head, "head"),
+            (GitOperation::IgnoredRoots, "ignored-roots"),
+            (GitOperation::IndexGitlink, "index-gitlink"),
+            (GitOperation::IndexModes, "index-modes"),
+            (GitOperation::IsBare, "is-bare"),
+            (GitOperation::MergeBase, "merge-base"),
+            (GitOperation::MergeBaseOutput, "merge-base-output"),
+            (GitOperation::ReadStderr, "read-stderr"),
+            (GitOperation::ReadStdout, "read-stdout"),
+            (GitOperation::RemoteHeads, "remote-heads"),
+            (GitOperation::RepositoryRoot, "repository-root"),
+            (GitOperation::SelectedPathIndex, "selected-path-index"),
+            (
+                GitOperation::SelectedSubmoduleHead,
+                "selected-submodule-head",
+            ),
+            (
+                GitOperation::SelectedSubmoduleStatus,
+                "selected-submodule-status",
+            ),
+            (GitOperation::Shallow, "shallow"),
+            (GitOperation::SnapshotHead, "snapshot-head"),
+            (GitOperation::SnapshotHeadRecheck, "snapshot-head-recheck"),
+            (GitOperation::SnapshotIndex, "snapshot-index"),
+            (GitOperation::SnapshotIndexRecheck, "snapshot-index-recheck"),
+            (GitOperation::SnapshotModified, "snapshot-modified"),
+            (
+                GitOperation::SnapshotModifiedRecheck,
+                "snapshot-modified-recheck",
+            ),
+            (
+                GitOperation::SnapshotSubmoduleHead,
+                "snapshot-submodule-head",
+            ),
+            (
+                GitOperation::SnapshotSubmoduleStatus,
+                "snapshot-submodule-status",
+            ),
+            (GitOperation::SnapshotUntracked, "snapshot-untracked"),
+            (
+                GitOperation::SnapshotUntrackedRecheck,
+                "snapshot-untracked-recheck",
+            ),
+            (GitOperation::SpecFileHistory, "spec-file-history"),
+            (GitOperation::SubmoduleHead, "submodule-head"),
+            (GitOperation::SubmoduleStatus, "submodule-status"),
+            (GitOperation::Untracked, "untracked"),
+            (GitOperation::VerifyMergeBase, "verify-merge-base"),
+            (GitOperation::VerifyRef, "verify-ref"),
+            (
+                GitOperation::WorkingTreeFilePatch,
+                "working-tree-file-patch",
+            ),
+            (GitOperation::WorkingTreeHead, "working-tree-head"),
+            (
+                GitOperation::WorkingTreeHeadReference,
+                "working-tree-head-reference",
+            ),
+            (
+                GitOperation::WorkingTreeSymbolicHead,
+                "working-tree-symbolic-head",
+            ),
+            (GitOperation::WorktreeList, "worktree-list"),
+            (GitOperation::TimeoutTest, "timeout-test"),
+            (GitOperation::BoundedOutputTest, "bounded-output-test"),
+        ] {
+            assert_eq!(operation.as_str(), expected);
+        }
+    }
+
+    #[test]
+    fn command_kind_selects_the_existing_timeout_policy() {
+        let policy = GitCommandPolicy {
+            metadata_timeout: Duration::from_secs(11),
+            content_timeout: Duration::from_secs(29),
+            ..GitCommandPolicy::default()
+        };
+
+        assert_eq!(
+            GitCommandKind::Metadata.timeout(&policy),
+            Duration::from_secs(11)
+        );
+        assert_eq!(
+            GitCommandKind::Content.timeout(&policy),
+            Duration::from_secs(29)
+        );
+    }
 
     #[cfg(unix)]
     #[test]
@@ -444,9 +562,9 @@ mod tests {
         let error = runner
             .run(
                 Path::new(env!("CARGO_MANIFEST_DIR")),
-                "timeout-test",
+                GitOperation::TimeoutTest,
                 &["-c", "alias.pause=!sleep 0.2", "pause"],
-                false,
+                GitCommandKind::Metadata,
             )
             .unwrap_err();
         assert_eq!(
@@ -468,15 +586,15 @@ mod tests {
         let error = runner
             .run(
                 Path::new(env!("CARGO_MANIFEST_DIR")),
-                "bounded-output-test",
+                GitOperation::BoundedOutputTest,
                 &["rev-parse", "--show-toplevel"],
-                false,
+                GitCommandKind::Metadata,
             )
             .unwrap_err();
         assert_eq!(
             error,
             RepositoryPortError::GitOutputLimitExceeded {
-                stream: "stdout".into()
+                stream: StdioStream::Stdout
             }
         );
     }
