@@ -1,29 +1,29 @@
 # Spec Viewer Review
 
-Claude Code plugin that applies unresolved review comments created on repository Diffs in spec-viewer.
+spec-viewerのリポジトリDiffに付けた未解決レビューコメントを、現在のワークツリーへ反映するClaude Codeプラグインです。
 
-The plugin provides the `/spec-viewer-review:fix-diff-comments` skill. Pass one or more comment IDs to limit the repair, or omit arguments to process every unresolved comment in the current worktree.
+`/spec-viewer-review:fix-diff-comments` スキルを提供します。コメントIDを渡すと対象を限定でき、省略すると現在のworktreeにある未解決コメントをすべて処理します。
 
-The skill reads spec-viewer Diff comment JSON directly, applies valid unresolved instructions to source files, and runs repository checks. It does not require a helper runtime or modify the comment document; comment resolution remains in spec-viewer.
+スキルはspec-viewerのDiffコメントJSONを直接読み、妥当な指示をソースコードへ反映してリポジトリの検証を実行します。補助ランタイムは不要で、コメント文書自体は変更しません。コメントの解決操作はspec-viewer側で行います。
 
-## Local development
+## ローカル開発
 
-From the repository root:
+リポジトリルートで実行します。
 
 ```bash
 claude --plugin-dir ./plugins/spec-viewer-review
 ```
 
-## Marketplace installation
+## Marketplaceからインストール
 
-For the current checkout, add the repository root as a local marketplace:
+現在のcheckoutをローカルmarketplaceとして追加する場合:
 
 ```text
 /plugin marketplace add .
 /plugin install spec-viewer-review@spec-viewer-tools
 ```
 
-After publishing the repository, add it from GitHub:
+リポジトリ公開後にGitHubから追加する場合:
 
 ```text
 /plugin marketplace add DIO0550/spec-viewer
