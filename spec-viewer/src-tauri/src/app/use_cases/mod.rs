@@ -8,6 +8,7 @@ pub mod spec_diff;
 pub mod worktrees;
 pub use spec_bundle::{
     LoadSpecBundleResult, SpecArtifactBundleItem, SpecArtifactError, SpecArtifactErrorCode,
+    SpecArtifactOutcome,
 };
 
 use std::path::Path;

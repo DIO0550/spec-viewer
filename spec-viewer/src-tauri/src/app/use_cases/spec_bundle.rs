@@ -6,9 +6,9 @@ use crate::{
         LoadWorkspaceResult,
     },
     domain::spec::{
-        artifact_progress, progress_without_tasks, ArtifactEvaluation, ArtifactEvaluationError,
-        ArtifactPresence, SpecArtifactFact, SpecArtifactIdentity, SpecDocumentFormat, SpecFileKey,
-        SpecProgress,
+        artifact_progress, progress_without_tasks, ArtifactConfiguration, ArtifactEvaluation,
+        ArtifactEvaluationError, ArtifactPresence, SpecArtifactFact, SpecArtifactIdentity,
+        SpecDocumentFormat, SpecFileKey, SpecProgress,
     },
     infrastructure::{
         filesystem::{discover_spec_artifacts, spec_directory_path, DiscoveredSpecArtifact},
@@ -40,6 +40,12 @@ pub struct SpecArtifactError {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SpecArtifactOutcome {
+    Loaded(AppMarkdownDocument),
+    Failed(SpecArtifactError),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpecArtifactBundleItem {
     pub identity: SpecArtifactIdentity,
     pub file_key: Option<SpecFileKey>,
@@ -51,8 +57,7 @@ pub struct SpecArtifactBundleItem {
     /// [`AppMarkdownDocument::path`], preserved even when the document fails to
     /// load so the presentation layer can expose a stable path in both cases.
     pub path: String,
-    pub document: Option<AppMarkdownDocument>,
-    pub error: Option<SpecArtifactError>,
+    pub outcome: SpecArtifactOutcome,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -98,8 +103,7 @@ impl FilesystemAppUseCases {
                     .unwrap_or_else(|| {
                         SpecArtifactFact::new(
                             SpecArtifactIdentity::Standard(mapping.key()),
-                            true,
-                            mapping.key() == SpecFileKey::Tasks,
+                            ArtifactConfiguration::Configured,
                             ArtifactPresence::Missing,
                             ArtifactEvaluation::Empty,
                         )
@@ -126,7 +130,6 @@ impl FilesystemAppUseCases {
         spec_directory: &std::path::Path,
         artifact: &DiscoveredSpecArtifact,
     ) -> (SpecArtifactBundleItem, SpecArtifactFact) {
-        let is_tasks = artifact.file_key == Some(SpecFileKey::Tasks);
         // Resolve the path the same way `read_artifact` does so failed reads keep
         // the identical representation returned by `document.path()` on success.
         let path = spec_directory
@@ -134,21 +137,24 @@ impl FilesystemAppUseCases {
             .to_string_lossy()
             .into_owned();
         let read_result = self.markdown_reader.read_artifact(spec_directory, artifact);
-        let (evaluation, document, error) = match read_result {
+        let (evaluation, outcome) = match read_result {
             Ok(document) => {
-                let evaluation = evaluate_document(&document, is_tasks);
-                (evaluation, Some(document.into()), None)
+                let evaluation = evaluate_document(&document);
+                (evaluation, SpecArtifactOutcome::Loaded(document.into()))
             }
-            Err(error) => (
-                ArtifactEvaluation::Error(evaluation_error(&error)),
-                None,
-                Some(public_artifact_error(&error)),
-            ),
+            Err(error) => {
+                let evaluation = ArtifactEvaluation::Error(evaluation_error(&error));
+                let outcome = SpecArtifactOutcome::Failed(public_artifact_error(&error));
+                (evaluation, outcome)
+            }
         };
         let fact = SpecArtifactFact::new(
             artifact.identity.clone(),
-            artifact.file_key.is_some(),
-            is_tasks,
+            if artifact.file_key.is_some() {
+                ArtifactConfiguration::Configured
+            } else {
+                ArtifactConfiguration::Discovered
+            },
             ArtifactPresence::Present,
             evaluation,
         );
@@ -163,20 +169,19 @@ impl FilesystemAppUseCases {
                 format: artifact.format,
                 progress,
                 path,
-                document,
-                error,
+                outcome,
             },
             fact,
         )
     }
 }
 
-fn evaluate_document(document: &MarkdownDocument, is_tasks: bool) -> ArtifactEvaluation {
+fn evaluate_document(document: &MarkdownDocument) -> ArtifactEvaluation {
     if document.contents().trim().is_empty() {
         return ArtifactEvaluation::Empty;
     }
 
-    if !is_tasks {
+    if !document.identity().is_tasks() {
         return ArtifactEvaluation::NonEmpty { task_counts: None };
     }
 

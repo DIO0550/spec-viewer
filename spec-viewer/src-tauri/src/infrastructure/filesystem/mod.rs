@@ -17,10 +17,10 @@ use thiserror::Error;
 
 use crate::domain::{
     spec::{
-        artifact_progress, progress_without_tasks, ArtifactEvaluation, ArtifactEvaluationError,
-        ArtifactPresence, SpecArtifactFact, SpecArtifactIdentity, SpecDocumentFormat,
-        SpecDomainError, SpecFile, SpecFileKey, SpecFileStatus, SpecNode, SpecNodeIdentity,
-        SpecNodeKind, SpecProgress,
+        artifact_progress, progress_without_tasks, ArtifactConfiguration, ArtifactEvaluation,
+        ArtifactEvaluationError, ArtifactPresence, SpecArtifactFact, SpecArtifactIdentity,
+        SpecDocumentFormat, SpecDomainError, SpecFile, SpecFileKey, SpecFileStatus, SpecNode,
+        SpecNodeIdentity, SpecNodeKind, SpecProgress,
     },
     workspace::{
         SpecOverrideNodeKind, WorkspaceConfig, WorkspaceDomainError, WorkspaceKind,
@@ -997,7 +997,7 @@ fn calculate_spec_progress(
     let reader = FilesystemMarkdownReader::new();
     if let Some(tasks_artifact) = artifacts
         .iter()
-        .find(|artifact| artifact.file_key == Some(SpecFileKey::Tasks))
+        .find(|artifact| artifact.identity.is_tasks())
     {
         let evaluation = match reader.read_artifact_contents(directory, tasks_artifact) {
             Ok(contents) if contents.trim().is_empty() => ArtifactEvaluation::Empty,
@@ -1011,8 +1011,7 @@ fn calculate_spec_progress(
         };
         let tasks_fact = SpecArtifactFact::new(
             SpecArtifactIdentity::Standard(SpecFileKey::Tasks),
-            true,
-            true,
+            ArtifactConfiguration::Configured,
             ArtifactPresence::Present,
             evaluation,
         );
@@ -1024,22 +1023,20 @@ fn calculate_spec_progress(
         .iter()
         .map(|mapping| {
             let identity = SpecArtifactIdentity::Standard(mapping.key());
-            let is_tasks = mapping.key() == SpecFileKey::Tasks;
             let Some(artifact) = artifacts
                 .iter()
                 .find(|artifact| artifact.identity == identity)
             else {
                 return SpecArtifactFact::new(
                     identity,
-                    true,
-                    is_tasks,
+                    ArtifactConfiguration::Configured,
                     ArtifactPresence::Missing,
                     ArtifactEvaluation::Empty,
                 );
             };
             let evaluation = match reader.read_artifact_contents(directory, artifact) {
                 Ok(contents) if contents.trim().is_empty() => ArtifactEvaluation::Empty,
-                Ok(contents) if is_tasks => match count_task_markers(&contents) {
+                Ok(contents) if identity.is_tasks() => match count_task_markers(&contents) {
                     Ok(task_counts) => ArtifactEvaluation::NonEmpty {
                         task_counts: Some(task_counts),
                     },
@@ -1051,8 +1048,7 @@ fn calculate_spec_progress(
 
             SpecArtifactFact::new(
                 identity,
-                true,
-                is_tasks,
+                ArtifactConfiguration::Configured,
                 ArtifactPresence::Present,
                 evaluation,
             )

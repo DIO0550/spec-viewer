@@ -10,7 +10,7 @@ use crate::{
     app::use_cases::{
         AppMarkdownDocument, AppMissingMarkdownFile, AppUseCaseError, ArchiveSpecResult,
         LoadSpecBundleResult, LoadWorkspaceResult, ReadSpecFileResult, SpecArtifactBundleItem,
-        SpecArtifactError,
+        SpecArtifactError, SpecArtifactOutcome,
     },
     domain::spec::{
         MarkdownBlock, MarkdownBlockSourceRange, SpecArtifactIdentity, SpecDocumentFormat,
@@ -492,19 +492,23 @@ impl From<SpecArtifactBundleItem> for SpecArtifactResponse {
             format,
             progress,
             path,
-            document,
-            error,
+            outcome,
         } = item;
-        let (contents, blocks) = match document {
-            Some(document) => (
+        let (contents, blocks, error) = match outcome {
+            SpecArtifactOutcome::Loaded(document) => (
                 Some(document.contents().to_string()),
                 document
                     .blocks()
                     .iter()
                     .map(MarkdownBlockResponse::from)
                     .collect(),
+                None,
             ),
-            None => (None, Vec::new()),
+            SpecArtifactOutcome::Failed(error) => (
+                None,
+                Vec::new(),
+                Some(SpecArtifactErrorResponse::from(error)),
+            ),
         };
 
         Self {
@@ -517,7 +521,7 @@ impl From<SpecArtifactBundleItem> for SpecArtifactResponse {
             path,
             contents,
             blocks,
-            error: error.map(SpecArtifactErrorResponse::from),
+            error,
         }
     }
 }
