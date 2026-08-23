@@ -15,7 +15,7 @@ use crate::domain::{
     comment::{
         diff::{
             canonical_lines, line_hash, truncate_context, CancellationToken, DiffAnchorResolution,
-            DiffAnchorTarget, DiffCommentError, DiffCommentRevision, DiffLineAnchor,
+            DiffAnchorTarget, DiffCommentError, DiffCommentRevision, DiffLineAnchor, DiffLineHash,
             DiffReviewIdentity, ResolutionWarning, ResolutionWarningCode, ResolvedDiffComment,
             ResolvedDiffComments, StaleAnchorReason, StoredDiffComment, StoredDiffCommentDocument,
             UnavailableReason,
@@ -116,7 +116,7 @@ impl ResolutionClock for SystemResolutionClock {
 #[derive(Debug)]
 struct SourceIndex {
     lines: Vec<String>,
-    by_hash: HashMap<String, Vec<usize>>,
+    by_hash: HashMap<DiffLineHash, Vec<usize>>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -134,7 +134,7 @@ impl SourceIndex {
             .into_iter()
             .map(ToOwned::to_owned)
             .collect::<Vec<_>>();
-        let mut by_hash = HashMap::<String, Vec<usize>>::new();
+        let mut by_hash = HashMap::<DiffLineHash, Vec<usize>>::new();
         for (index, line) in lines.iter().enumerate() {
             by_hash.entry(line_hash(line)).or_default().push(index);
         }
@@ -604,7 +604,7 @@ fn resolve_one_for_target(
     if identity_matches
         && lines
             .get(original)
-            .is_some_and(|line| line_hash(line) == anchor.line_hash())
+            .is_some_and(|line| anchor.line_hash() == &line_hash(line))
     {
         return DiffAnchorResolution::Exact {
             selection_path: runtime_target.selection_path().clone(),
@@ -721,7 +721,7 @@ mod tests {
 
     use super::*;
     use crate::domain::{
-        comment::diff::{DiffSide, WorktreeStorageId},
+        comment::diff::{DiffAnchorPaths, DiffSide, WorktreeStorageId},
         repository::{CommitSha, RepositoryId, RepositoryRelativePath, SnapshotId},
     };
     use crate::infrastructure::{
@@ -740,12 +740,12 @@ mod tests {
 
     fn anchor(line: u32, text: &str) -> DiffLineAnchor {
         let target = DiffAnchorTarget::new(
-            DiffSide::Current,
-            None,
-            Some(RepositoryRelativePath::parse("src/lib.rs").unwrap()),
+            DiffAnchorPaths::Current {
+                new_path: RepositoryRelativePath::parse("src/lib.rs").unwrap(),
+                old_path: None,
+            },
             NonZeroU32::new(line).unwrap(),
-        )
-        .unwrap();
+        );
         DiffLineAnchor::new(
             identity(),
             target,
@@ -1105,12 +1105,12 @@ mod tests {
         let old_path = RepositoryRelativePath::parse("src/old.rs").unwrap();
         let new_path = RepositoryRelativePath::parse("src/new.rs").unwrap();
         let historical = DiffAnchorTarget::new(
-            DiffSide::Base,
-            Some(old_path.clone()),
-            Some(old_path.clone()),
+            DiffAnchorPaths::Base {
+                old_path: old_path.clone(),
+                new_path: Some(old_path.clone()),
+            },
             NonZeroU32::new(1).unwrap(),
-        )
-        .unwrap();
+        );
         let stored = DiffLineAnchor::new(
             identity(),
             historical,
@@ -1121,12 +1121,12 @@ mod tests {
         )
         .unwrap();
         let runtime = DiffAnchorTarget::new(
-            DiffSide::Base,
-            Some(old_path.clone()),
-            Some(new_path.clone()),
+            DiffAnchorPaths::Base {
+                old_path: old_path.clone(),
+                new_path: Some(new_path.clone()),
+            },
             NonZeroU32::new(1).unwrap(),
-        )
-        .unwrap();
+        );
         assert!(matches!(
             resolve_one_for_target(&stored, &runtime, &SourceIndex::build("target"), false),
             DiffAnchorResolution::Relocated {
@@ -1164,7 +1164,7 @@ mod tests {
         let selected = DiffLineAnchor::new(
             identity(),
             selected.target().clone(),
-            selected.line_hash().to_owned(),
+            selected.line_hash().clone(),
             truncate_context(&repeated),
             vec!["before-a".into()],
             vec!["before-b".into()],

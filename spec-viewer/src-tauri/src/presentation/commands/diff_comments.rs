@@ -12,9 +12,10 @@ use crate::{
     },
     domain::{
         comment::diff::{
-            CancellationToken, DiffAnchorResolution, DiffAnchorTarget, DiffCommentRevision,
-            DiffReviewIdentity, DiffSide, ResolutionWarningCode, ResolvedDiffComment,
-            ResolvedDiffComments, StaleAnchorReason, UnavailableReason, WorktreeStorageId,
+            CancellationToken, DiffAnchorPaths, DiffAnchorResolution, DiffAnchorTarget,
+            DiffCommentRevision, DiffReviewIdentity, DiffSide, ResolutionWarningCode,
+            ResolvedDiffComment, ResolvedDiffComments, StaleAnchorReason, UnavailableReason,
+            WorktreeStorageId,
         },
         repository::{CommitSha, RepositoryId, RepositoryRelativePath, SnapshotId},
     },
@@ -137,7 +138,7 @@ enum DiffSideRequest {
 impl TryFrom<DiffAnchorTargetRequest> for DiffAnchorTarget {
     type Error = DiffCommentCommandError;
     fn try_from(value: DiffAnchorTargetRequest) -> Result<Self, Self::Error> {
-        DiffAnchorTarget::new_range(
+        let paths = DiffAnchorPaths::new(
             match value.side {
                 DiffSideRequest::Base => DiffSide::Base,
                 DiffSideRequest::Current => DiffSide::Current,
@@ -152,6 +153,10 @@ impl TryFrom<DiffAnchorTargetRequest> for DiffAnchorTarget {
                 .map(RepositoryRelativePath::parse)
                 .transpose()
                 .map_err(invalid)?,
+        )
+        .map_err(invalid)?;
+        DiffAnchorTarget::new_range(
+            paths,
             NonZeroU32::new(value.line).ok_or_else(|| DiffCommentCommandError::invalid("line"))?,
             value
                 .end_line
@@ -405,7 +410,7 @@ impl From<&ResolvedDiffComment> for ResolvedDiffCommentResponse {
                 new_path: target.new_path().map(|path| path.as_str().into()),
                 line: target.line().get(),
                 end_line: target.end_line().map(NonZeroU32::get),
-                line_hash: anchor.line_hash().into(),
+                line_hash: anchor.line_hash().as_str().into(),
                 snippet: anchor.snippet().into(),
                 context_before: anchor.context_before().to_vec(),
                 context_after: anchor.context_after().to_vec(),
@@ -647,6 +652,87 @@ mod tests {
             reply_body: reply_body.map(str::to_owned),
             deleted,
         }
+    }
+
+    #[test]
+    fn target_request_preserves_wire_shape_and_rejects_invalid_side_paths() {
+        let valid: DiffAnchorTargetRequest = serde_json::from_value(serde_json::json!({
+            "side": "current",
+            "oldPath": "src/old.rs",
+            "newPath": "src/new.rs",
+            "line": 4,
+            "endLine": 7
+        }))
+        .unwrap();
+        let target = DiffAnchorTarget::try_from(valid).unwrap();
+        assert_eq!(target.side(), DiffSide::Current);
+        assert_eq!(target.old_path().unwrap().as_str(), "src/old.rs");
+        assert_eq!(target.new_path().unwrap().as_str(), "src/new.rs");
+        assert_eq!(target.line().get(), 4);
+        assert_eq!(target.end_line().unwrap().get(), 7);
+
+        let invalid: DiffAnchorTargetRequest = serde_json::from_value(serde_json::json!({
+            "side": "base",
+            "oldPath": null,
+            "newPath": "src/new.rs",
+            "line": 1
+        }))
+        .unwrap();
+        let error = DiffAnchorTarget::try_from(invalid).unwrap_err();
+        assert_eq!(error.code, "invalidRequest");
+        assert_eq!(error.message, "The Diff comment request is invalid.");
+    }
+
+    #[test]
+    fn anchor_response_preserves_existing_wire_fields() {
+        let identity = DiffReviewIdentity::try_from(identity_request()).unwrap();
+        let new_path = RepositoryRelativePath::parse("src/lib.rs").unwrap();
+        let target = DiffAnchorTarget::new(
+            DiffAnchorPaths::Current {
+                new_path: new_path.clone(),
+                old_path: None,
+            },
+            NonZeroU32::new(2).unwrap(),
+        );
+        let line_hash = crate::domain::comment::diff::line_hash("line");
+        let expected_line_hash = line_hash.as_str().to_owned();
+        let anchor = crate::domain::comment::diff::DiffLineAnchor::new(
+            identity,
+            target,
+            line_hash,
+            "line".into(),
+            vec!["before".into()],
+            vec!["after".into()],
+        )
+        .unwrap();
+        let comment = crate::domain::comment::diff::StoredDiffComment::new(
+            "c1".into(),
+            "body".into(),
+            false,
+            chrono::Utc::now(),
+            anchor,
+        )
+        .unwrap();
+        let resolved = ResolvedDiffComment {
+            comment,
+            anchor_resolution: DiffAnchorResolution::Exact {
+                selection_path: new_path.clone(),
+                side_path: new_path,
+                side: DiffSide::Current,
+                line: NonZeroU32::new(2).unwrap(),
+            },
+        };
+
+        let value = serde_json::to_value(ResolvedDiffCommentResponse::from(&resolved)).unwrap();
+        let anchor = &value["anchor"];
+        assert_eq!(anchor["side"], "current");
+        assert_eq!(anchor["newPath"], "src/lib.rs");
+        assert!(anchor.get("oldPath").is_none());
+        assert_eq!(anchor["line"], 2);
+        assert_eq!(anchor["lineHash"], expected_line_hash);
+        assert_eq!(anchor["snippet"], "line");
+        assert_eq!(anchor["contextBefore"], serde_json::json!(["before"]));
+        assert_eq!(anchor["contextAfter"], serde_json::json!(["after"]));
     }
 
     #[test]
