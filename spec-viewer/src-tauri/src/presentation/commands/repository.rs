@@ -71,6 +71,46 @@ impl From<EntryKind> for EntryKindResponseToken {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub enum GitFileModeResponseToken {
+    #[serde(rename = "100644")]
+    Regular,
+    #[serde(rename = "100755")]
+    Executable,
+    #[serde(rename = "120000")]
+    Symlink,
+    #[serde(rename = "160000")]
+    Submodule,
+    #[serde(rename = "040000")]
+    Directory,
+}
+
+impl From<GitFileMode> for GitFileModeResponseToken {
+    fn from(value: GitFileMode) -> Self {
+        match value {
+            GitFileMode::Regular => Self::Regular,
+            GitFileMode::Executable => Self::Executable,
+            GitFileMode::Symlink => Self::Symlink,
+            GitFileMode::Submodule => Self::Submodule,
+            GitFileMode::Directory => Self::Directory,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum RepositoryWarningResponseToken {
+    SimilarityDetectionLimit,
+}
+
+impl From<RepositoryWarning> for RepositoryWarningResponseToken {
+    fn from(value: RepositoryWarning) -> Self {
+        match value {
+            RepositoryWarning::SimilarityDetectionLimit => Self::SimilarityDetectionLimit,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ContentClassificationResponseToken {
     Text,
@@ -303,8 +343,8 @@ pub struct FileChangeResponse {
     pub entry_kind: EntryKindResponseToken,
     pub content_classification: ContentClassificationResponseToken,
     pub similarity: Option<u8>,
-    pub old_mode: Option<String>,
-    pub new_mode: Option<String>,
+    pub old_mode: Option<GitFileModeResponseToken>,
+    pub new_mode: Option<GitFileModeResponseToken>,
 }
 impl From<&DiffFile> for FileChangeResponse {
     fn from(file: &DiffFile) -> Self {
@@ -315,8 +355,8 @@ impl From<&DiffFile> for FileChangeResponse {
             entry_kind: file.entry_kind.into(),
             content_classification: file.content_classification.into(),
             similarity: file.similarity,
-            old_mode: file.old_mode.clone(),
-            new_mode: file.new_mode.clone(),
+            old_mode: file.old_mode.map(Into::into),
+            new_mode: file.new_mode.map(Into::into),
         }
     }
 }
@@ -330,8 +370,8 @@ pub struct RepositoryFileChangeResponse {
     pub entry_kind: EntryKindResponseToken,
     pub content_classification: ContentClassificationResponseToken,
     pub similarity: Option<u8>,
-    pub old_mode: Option<String>,
-    pub new_mode: Option<String>,
+    pub old_mode: Option<GitFileModeResponseToken>,
+    pub new_mode: Option<GitFileModeResponseToken>,
 }
 
 impl From<RepositoryFileMetadata> for RepositoryFileChangeResponse {
@@ -344,8 +384,8 @@ impl From<RepositoryFileMetadata> for RepositoryFileChangeResponse {
             entry_kind: file.entry_kind.into(),
             content_classification: file.content_classification.into(),
             similarity: file.similarity,
-            old_mode: file.old_mode,
-            new_mode: file.new_mode,
+            old_mode: file.old_mode.map(Into::into),
+            new_mode: file.new_mode.map(Into::into),
         }
     }
 }
@@ -416,7 +456,7 @@ pub struct RepositoryOverviewResponse {
     pub all_root: Vec<TreeNodeResponse>,
     pub all: Vec<String>,
     pub ignored_directories: Vec<String>,
-    pub warnings: Vec<String>,
+    pub warnings: Vec<RepositoryWarningResponseToken>,
 }
 impl From<RepositoryOverview> for RepositoryOverviewResponse {
     fn from(value: RepositoryOverview) -> Self {
@@ -448,7 +488,7 @@ impl From<RepositoryOverview> for RepositoryOverviewResponse {
                 .iter()
                 .map(|path| path.as_str().into())
                 .collect(),
-            warnings: value.warnings,
+            warnings: value.warnings.into_iter().map(Into::into).collect(),
         }
     }
 }
@@ -722,6 +762,10 @@ mod tests {
         ] {
             assert_wire_token(EntryKindResponseToken::from(value), expected);
         }
+        assert_wire_token(
+            RepositoryWarningResponseToken::from(RepositoryWarning::SimilarityDetectionLimit),
+            "similarityDetectionLimit",
+        );
         for (value, expected) in [
             (ContentClassification::Text, "text"),
             (ContentClassification::Binary, "binary"),
@@ -747,6 +791,52 @@ mod tests {
         ] {
             assert_wire_token(DiffLineKindResponseToken::from(value), expected);
         }
+    }
+
+    #[test]
+    fn repository_modes_preserve_exact_git_wire_tokens() {
+        for (mode, expected) in [
+            (GitFileMode::Regular, "100644"),
+            (GitFileMode::Executable, "100755"),
+            (GitFileMode::Symlink, "120000"),
+            (GitFileMode::Submodule, "160000"),
+        ] {
+            let response = FileChangeResponse::from(
+                &DiffFile::new(
+                    Some(RepositoryRelativePath::parse("mode.txt").unwrap()),
+                    Some(RepositoryRelativePath::parse("mode.txt").unwrap()),
+                    FileChangeKind::Modified,
+                    mode.entry_kind().unwrap(),
+                    ContentClassification::Text,
+                    None,
+                    Some(mode),
+                    Some(mode),
+                )
+                .unwrap(),
+            );
+            let json = serde_json::to_value(response).unwrap();
+            assert_eq!(json["oldMode"], expected);
+            assert_eq!(json["newMode"], expected);
+
+            let metadata = RepositoryFileChangeResponse::from(RepositoryFileMetadata {
+                old_path: Some(RepositoryRelativePath::parse("mode.txt").unwrap()),
+                new_path: Some(RepositoryRelativePath::parse("mode.txt").unwrap()),
+                change: Some(FileChangeKind::Modified),
+                entry_kind: mode.entry_kind().unwrap(),
+                content_classification: ContentClassification::Text,
+                similarity: None,
+                old_mode: Some(mode),
+                new_mode: Some(mode),
+            });
+            let metadata_json = serde_json::to_value(metadata).unwrap();
+            assert_eq!(metadata_json["oldMode"], expected);
+            assert_eq!(metadata_json["newMode"], expected);
+        }
+
+        assert_wire_token(
+            GitFileModeResponseToken::from(GitFileMode::Directory),
+            "040000",
+        );
     }
 
     #[test]
@@ -901,6 +991,21 @@ mod tests {
             RepositoryUseCaseError::Port(RepositoryPortError::StaleSnapshot).into();
         assert_eq!(error.code, "staleSnapshot");
     }
+
+    #[test]
+    fn invalid_git_mode_preserves_repository_error_wire_contract() {
+        let error: RepositoryCommandError =
+            RepositoryUseCaseError::Port(RepositoryPortError::InvalidRepositoryPath).into();
+
+        assert_eq!(
+            serde_json::to_value(error).unwrap(),
+            serde_json::json!({
+                "code": "invalidRepositoryPath",
+                "message": "invalid repository path"
+            })
+        );
+    }
+
     #[test]
     fn git_errors_preserve_frontend_codes_and_messages() {
         for (port_error, expected_code, expected_message) in [

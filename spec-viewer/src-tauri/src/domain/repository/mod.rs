@@ -1,4 +1,5 @@
 //! Repository-wide Git comparison concepts.
+use chrono::{DateTime, FixedOffset};
 use thiserror::Error;
 
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
@@ -129,7 +130,7 @@ pub struct RevisionOption {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpecFileCommit {
     pub commit: CommitSha,
-    pub committed_at: String,
+    pub committed_at: DateTime<FixedOffset>,
     pub message: String,
 }
 
@@ -182,6 +183,32 @@ pub enum EntryKind {
     Symlink,
     Submodule,
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GitFileMode {
+    Regular,
+    Executable,
+    Symlink,
+    Submodule,
+    Directory,
+}
+
+impl GitFileMode {
+    pub const fn entry_kind(self) -> Option<EntryKind> {
+        match self {
+            Self::Regular | Self::Executable => Some(EntryKind::Regular),
+            Self::Symlink => Some(EntryKind::Symlink),
+            Self::Submodule => Some(EntryKind::Submodule),
+            Self::Directory => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RepositoryWarning {
+    SimilarityDetectionLimit,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ContentClassification {
     Text,
@@ -218,8 +245,8 @@ pub struct DiffFile {
     pub(crate) entry_kind: EntryKind,
     pub(crate) content_classification: ContentClassification,
     pub(crate) similarity: Option<u8>,
-    pub(crate) old_mode: Option<String>,
-    pub(crate) new_mode: Option<String>,
+    pub(crate) old_mode: Option<GitFileMode>,
+    pub(crate) new_mode: Option<GitFileMode>,
 }
 
 impl DiffFile {
@@ -231,8 +258,8 @@ impl DiffFile {
         entry_kind: EntryKind,
         content_classification: ContentClassification,
         similarity: Option<u8>,
-        old_mode: Option<String>,
-        new_mode: Option<String>,
+        old_mode: Option<GitFileMode>,
+        new_mode: Option<GitFileMode>,
     ) -> Result<Self, RepositoryError> {
         let sides_valid = match change {
             FileChangeKind::Added | FileChangeKind::Untracked => {
@@ -252,7 +279,13 @@ impl DiffFile {
             }
             _ => similarity.is_none(),
         };
-        if !sides_valid || !similarity_valid {
+        let modes_supported =
+            old_mode != Some(GitFileMode::Directory) && new_mode != Some(GitFileMode::Directory);
+        let entry_kind_matches_mode = match new_mode.or(old_mode) {
+            Some(mode) => mode.entry_kind() == Some(entry_kind),
+            None => true,
+        };
+        if !sides_valid || !similarity_valid || !modes_supported || !entry_kind_matches_mode {
             return Err(RepositoryError::InvalidValue(
                 "invalid diff file state".into(),
             ));
@@ -306,7 +339,7 @@ pub struct RepositoryOverview {
     pub all_root: Vec<TreeNode>,
     pub all_paths: Vec<RepositoryRelativePath>,
     pub ignored_directories: Vec<RepositoryRelativePath>,
-    pub warnings: Vec<String>,
+    pub warnings: Vec<RepositoryWarning>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -373,8 +406,8 @@ pub struct RepositoryFileMetadata {
     pub entry_kind: EntryKind,
     pub content_classification: ContentClassification,
     pub similarity: Option<u8>,
-    pub old_mode: Option<String>,
-    pub new_mode: Option<String>,
+    pub old_mode: Option<GitFileMode>,
+    pub new_mode: Option<GitFileMode>,
 }
 
 impl From<DiffFile> for RepositoryFileMetadata {
@@ -562,6 +595,20 @@ pub trait WorkingTreeDiffPort {
 #[cfg(test)]
 mod tests {
     use crate::domain::workspace::ValidatedRefName;
+
+    #[test]
+    fn git_file_modes_derive_entry_kinds_exhaustively() {
+        for (mode, expected) in [
+            (GitFileMode::Regular, Some(EntryKind::Regular)),
+            (GitFileMode::Executable, Some(EntryKind::Regular)),
+            (GitFileMode::Symlink, Some(EntryKind::Symlink)),
+            (GitFileMode::Submodule, Some(EntryKind::Submodule)),
+            (GitFileMode::Directory, None),
+        ] {
+            assert_eq!(mode.entry_kind(), expected);
+        }
+    }
+
     #[test]
     fn stdio_stream_tokens_and_error_display_match_the_wire_contract() {
         for (stream, expected) in [
@@ -683,6 +730,58 @@ mod tests {
             Some(90)
         )
         .is_err());
+    }
+
+    #[test]
+    fn diff_file_rejects_directory_and_mode_entry_kind_mismatches() {
+        let path = || RepositoryRelativePath::parse("mode.txt").unwrap();
+        let invalid_states = [
+            (
+                EntryKind::Regular,
+                Some(GitFileMode::Regular),
+                Some(GitFileMode::Submodule),
+            ),
+            (
+                EntryKind::Symlink,
+                Some(GitFileMode::Regular),
+                Some(GitFileMode::Regular),
+            ),
+            (
+                EntryKind::Regular,
+                Some(GitFileMode::Directory),
+                Some(GitFileMode::Directory),
+            ),
+        ];
+
+        for (entry_kind, old_mode, new_mode) in invalid_states {
+            assert_eq!(
+                DiffFile::new(
+                    Some(path()),
+                    Some(path()),
+                    FileChangeKind::Modified,
+                    entry_kind,
+                    ContentClassification::Text,
+                    None,
+                    old_mode,
+                    new_mode,
+                ),
+                Err(RepositoryError::InvalidValue(
+                    "invalid diff file state".into()
+                ))
+            );
+        }
+
+        assert!(DiffFile::new(
+            Some(path()),
+            Some(path()),
+            FileChangeKind::Modified,
+            EntryKind::Regular,
+            ContentClassification::Text,
+            None,
+            Some(GitFileMode::Regular),
+            Some(GitFileMode::Executable),
+        )
+        .is_ok());
     }
 
     #[test]

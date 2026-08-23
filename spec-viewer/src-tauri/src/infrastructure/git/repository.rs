@@ -7,6 +7,7 @@ use crate::domain::{
     repository::*,
     workspace::{ValidatedRefName, WorktreeId},
 };
+use chrono::DateTime;
 use sha2::{Digest, Sha256};
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -1401,26 +1402,22 @@ impl GitRepositoryAdapter {
                 .old_path
                 .as_ref()
                 .and_then(|path| base_modes.get(path.as_str()))
-                .cloned();
+                .copied();
             let mut new_mode = file
                 .new_path
                 .as_ref()
                 .and_then(|path| index_modes.get(path.as_str()))
-                .cloned();
+                .copied();
             if new_mode.is_none() {
                 if let Some(path) = file.new_path.as_ref() {
                     if fs::symlink_metadata(root.join(path.as_str()))
                         .is_ok_and(|metadata| metadata.file_type().is_symlink())
                     {
-                        new_mode = Some("120000".into());
+                        new_mode = Some(GitFileMode::Symlink);
                     }
                 }
             }
-            file.entry_kind = match new_mode.as_deref().or(old_mode.as_deref()) {
-                Some("160000") => EntryKind::Submodule,
-                Some("120000") => EntryKind::Symlink,
-                _ => EntryKind::Regular,
-            };
+            file.entry_kind = entry_kind_for_modes(old_mode, new_mode)?;
             if old_mode != new_mode {
                 file.old_mode = old_mode;
                 file.new_mode = new_mode;
@@ -1813,29 +1810,7 @@ impl WorkingTreeDiffPort for GitRepositoryAdapter {
             ],
             GitCommandKind::Metadata,
         )?;
-        let mut items = output
-            .split(|byte| *byte == 10)
-            .filter(|line| !line.is_empty())
-            .map(|line| {
-                let fields = line.splitn(3, |byte| *byte == 0).collect::<Vec<_>>();
-                if fields.len() != 3 || fields[1].is_empty() {
-                    return Err(RepositoryPortError::InvalidHistoryOutput);
-                }
-                let sha = std::str::from_utf8(fields[0])
-                    .map_err(|_| RepositoryPortError::InvalidHistoryOutput)?;
-                let committed_at = std::str::from_utf8(fields[1])
-                    .map_err(|_| RepositoryPortError::InvalidHistoryOutput)?;
-                Ok(SpecFileCommit {
-                    commit: CommitSha::parse(sha)
-                        .map_err(|_| RepositoryPortError::InvalidHistoryOutput)?,
-                    committed_at: committed_at.to_string(),
-                    message: String::from_utf8_lossy(fields[2]).into_owned(),
-                })
-            })
-            .collect::<Result<Vec<_>, RepositoryPortError>>()?;
-        let truncated = items.len() > limit;
-        items.truncate(limit);
-        Ok(SpecFileHistory { items, truncated })
+        parse_file_history(&output, limit)
     }
 
     fn load_working_tree_overview(
@@ -2487,7 +2462,7 @@ fn finish_tree_node(node: MutableTreeNode) -> Result<TreeNode, RepositoryPortErr
     })
 }
 
-fn similarity_warnings(files: &[DiffFile]) -> Vec<String> {
+fn similarity_warnings(files: &[DiffFile]) -> Vec<RepositoryWarning> {
     let candidates = files
         .iter()
         .filter(|file| {
@@ -2498,7 +2473,7 @@ fn similarity_warnings(files: &[DiffFile]) -> Vec<String> {
         })
         .count();
     if candidates > 1000 {
-        vec!["similarityDetectionLimit".into()]
+        vec![RepositoryWarning::SimilarityDetectionLimit]
     } else {
         vec![]
     }
@@ -2602,7 +2577,67 @@ fn parse_ignored_cursor(
         .map_err(|_| RepositoryPortError::InvalidCursor)
 }
 
-fn parse_mode_map(bytes: &[u8]) -> Result<BTreeMap<String, String>, RepositoryPortError> {
+fn parse_file_history(bytes: &[u8], limit: usize) -> Result<SpecFileHistory, RepositoryPortError> {
+    let mut items = bytes
+        .split(|byte| *byte == 10)
+        .filter(|line| !line.is_empty())
+        .map(|line| {
+            let fields = line.splitn(3, |byte| *byte == 0).collect::<Vec<_>>();
+            if fields.len() != 3 || fields[1].is_empty() {
+                return Err(RepositoryPortError::InvalidHistoryOutput);
+            }
+            let sha = std::str::from_utf8(fields[0])
+                .map_err(|_| RepositoryPortError::InvalidHistoryOutput)?;
+            let committed_at = std::str::from_utf8(fields[1])
+                .map_err(|_| RepositoryPortError::InvalidHistoryOutput)?;
+            let committed_at = DateTime::parse_from_rfc3339(committed_at)
+                .map_err(|_| RepositoryPortError::InvalidHistoryOutput)?;
+            Ok(SpecFileCommit {
+                commit: CommitSha::parse(sha)
+                    .map_err(|_| RepositoryPortError::InvalidHistoryOutput)?,
+                committed_at,
+                message: String::from_utf8_lossy(fields[2]).into_owned(),
+            })
+        })
+        .collect::<Result<Vec<_>, RepositoryPortError>>()?;
+    let truncated = items.len() > limit;
+    items.truncate(limit);
+    Ok(SpecFileHistory { items, truncated })
+}
+
+fn parse_git_file_mode(value: &str) -> Result<GitFileMode, RepositoryPortError> {
+    if value.len() != 6 || !value.bytes().all(|byte| byte.is_ascii_digit()) {
+        return Err(RepositoryPortError::InvalidRepositoryPath);
+    }
+    match value
+        .parse::<u32>()
+        .map_err(|_| RepositoryPortError::InvalidRepositoryPath)?
+    {
+        100_644 => Ok(GitFileMode::Regular),
+        100_755 => Ok(GitFileMode::Executable),
+        120_000 => Ok(GitFileMode::Symlink),
+        160_000 => Ok(GitFileMode::Submodule),
+        40_000 => Ok(GitFileMode::Directory),
+        _ => Err(RepositoryPortError::InvalidRepositoryPath),
+    }
+}
+
+fn entry_kind_for_modes(
+    old_mode: Option<GitFileMode>,
+    new_mode: Option<GitFileMode>,
+) -> Result<EntryKind, RepositoryPortError> {
+    if old_mode == Some(GitFileMode::Directory) || new_mode == Some(GitFileMode::Directory) {
+        return Err(RepositoryPortError::InvalidRepositoryPath);
+    }
+    match new_mode.or(old_mode) {
+        Some(mode) => mode
+            .entry_kind()
+            .ok_or(RepositoryPortError::InvalidRepositoryPath),
+        None => Ok(EntryKind::Regular),
+    }
+}
+
+fn parse_mode_map(bytes: &[u8]) -> Result<BTreeMap<String, GitFileMode>, RepositoryPortError> {
     let mut modes = BTreeMap::new();
     for record in bytes
         .split(|byte| *byte == 0)
@@ -2623,7 +2658,7 @@ fn parse_mode_map(bytes: &[u8]) -> Result<BTreeMap<String, String>, RepositoryPo
             .map_err(|_| RepositoryPortError::UnsupportedPathEncoding)?;
         let path = RepositoryRelativePath::parse(value)
             .map_err(|_| RepositoryPortError::InvalidRepositoryPath)?;
-        modes.insert(path.as_str().to_string(), mode.to_string());
+        modes.insert(path.as_str().to_string(), parse_git_file_mode(mode)?);
     }
     Ok(modes)
 }
@@ -2719,6 +2754,54 @@ fn map_filesystem_error(error: std::io::Error) -> RepositoryPortError {
 #[cfg(test)]
 mod tests {
     #[test]
+    fn git_mode_parser_accepts_only_canonical_modes() {
+        let modes = parse_mode_map(
+            b"100644 blob a\tregular\0\
+100755 blob b\texecutable\0\
+120000 blob c\tsymlink\0\
+160000 commit d\tsubmodule\0\
+040000 tree e\tdirectory\0",
+        )
+        .unwrap();
+
+        assert_eq!(modes["regular"], GitFileMode::Regular);
+        assert_eq!(modes["executable"], GitFileMode::Executable);
+        assert_eq!(modes["symlink"], GitFileMode::Symlink);
+        assert_eq!(modes["submodule"], GitFileMode::Submodule);
+        assert_eq!(modes["directory"], GitFileMode::Directory);
+        assert_eq!(
+            parse_mode_map(b"100600 blob a\tunsupported\0"),
+            Err(RepositoryPortError::InvalidRepositoryPath)
+        );
+        assert_eq!(
+            entry_kind_for_modes(None, Some(GitFileMode::Directory)),
+            Err(RepositoryPortError::InvalidRepositoryPath)
+        );
+        assert_eq!(
+            entry_kind_for_modes(Some(GitFileMode::Regular), Some(GitFileMode::Submodule)),
+            Ok(EntryKind::Submodule)
+        );
+    }
+
+    #[test]
+    fn file_history_parser_types_timestamps_and_rejects_invalid_values() {
+        let sha = "a".repeat(40);
+        let timestamp = "2026-08-23T12:34:56+09:30";
+        let valid = format!("{sha}\0{timestamp}\0message\n");
+        let history = parse_file_history(valid.as_bytes(), 50).unwrap();
+        assert_eq!(
+            history.items[0].committed_at.to_rfc3339(),
+            "2026-08-23T12:34:56+09:30"
+        );
+
+        let invalid = format!("{sha}\0not-a-timestamp\0message\n");
+        assert_eq!(
+            parse_file_history(invalid.as_bytes(), 50),
+            Err(RepositoryPortError::InvalidHistoryOutput)
+        );
+    }
+
+    #[test]
     fn diff_comment_context_requires_full_identity_and_snapshot_file_matrix() {
         use crate::domain::comment::diff::{DiffAnchorPaths, DiffAnchorTarget, DiffSide};
         use std::num::NonZeroU32;
@@ -2784,8 +2867,8 @@ mod tests {
                         EntryKind::Regular,
                         ContentClassification::Text,
                         Some(100),
-                        Some("100644".into()),
-                        Some("100644".into()),
+                        Some(GitFileMode::Regular),
+                        Some(GitFileMode::Regular),
                     )
                     .unwrap(),
                 );
@@ -3600,12 +3683,12 @@ mod tests {
             content_classification: ContentClassification::Text,
             similarity: None,
             old_mode: None,
-            new_mode: Some("100644".into()),
+            new_mode: Some(GitFileMode::Regular),
         };
         assert!(similarity_warnings(&vec![candidate.clone(); 1000]).is_empty());
         assert_eq!(
             similarity_warnings(&vec![candidate; 1001]),
-            vec!["similarityDetectionLimit"]
+            vec![RepositoryWarning::SimilarityDetectionLimit]
         );
     }
 
@@ -4590,8 +4673,8 @@ mod tests {
                         .is_some_and(|path| path.as_str() == "mode-only.sh")
                 })
                 .unwrap();
-            assert_eq!(mode.old_mode.as_deref(), Some("100644"));
-            assert_eq!(mode.new_mode.as_deref(), Some("100755"));
+            assert_eq!(mode.old_mode, Some(GitFileMode::Regular));
+            assert_eq!(mode.new_mode, Some(GitFileMode::Executable));
         }
         let review = adapter
             .load_file(
