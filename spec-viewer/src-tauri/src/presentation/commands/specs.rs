@@ -10,7 +10,7 @@ use crate::{
     app::use_cases::{
         AppMarkdownDocument, AppMissingMarkdownFile, AppUseCaseError, ArchiveSpecResult,
         LoadSpecBundleResult, LoadWorkspaceResult, ReadSpecFileResult, SpecArtifactBundleItem,
-        SpecArtifactError,
+        SpecArtifactError, SpecArtifactOutcome,
     },
     domain::spec::{
         MarkdownBlock, MarkdownBlockSourceRange, SpecArtifactIdentity, SpecDocumentFormat,
@@ -492,19 +492,23 @@ impl From<SpecArtifactBundleItem> for SpecArtifactResponse {
             format,
             progress,
             path,
-            document,
-            error,
+            outcome,
         } = item;
-        let (contents, blocks) = match document {
-            Some(document) => (
+        let (contents, blocks, error) = match outcome {
+            SpecArtifactOutcome::Loaded(document) => (
                 Some(document.contents().to_string()),
                 document
                     .blocks()
                     .iter()
                     .map(MarkdownBlockResponse::from)
                     .collect(),
+                None,
             ),
-            None => (None, Vec::new()),
+            SpecArtifactOutcome::Failed(error) => (
+                None,
+                Vec::new(),
+                Some(SpecArtifactErrorResponse::from(error)),
+            ),
         };
 
         Self {
@@ -517,7 +521,7 @@ impl From<SpecArtifactBundleItem> for SpecArtifactResponse {
             path,
             contents,
             blocks,
-            error: error.map(SpecArtifactErrorResponse::from),
+            error,
         }
     }
 }
@@ -593,8 +597,13 @@ impl From<ArchiveSpecResult> for ArchiveSpecResponse {
 
 impl From<AppMarkdownDocument> for ReadSpecFileResponse {
     fn from(document: AppMarkdownDocument) -> Self {
+        let key = match document.identity() {
+            SpecArtifactIdentity::Standard(key) => key.as_str().to_string(),
+            SpecArtifactIdentity::DirectMarkdown(file_name) => file_name.clone(),
+        };
+
         Self {
-            key: document.key().as_str().to_string(),
+            key,
             format: format_label(document.format()).to_string(),
             path: document.path().to_string(),
             contents: Some(document.contents().to_string()),
@@ -751,15 +760,13 @@ mod tests {
                     format: SpecDocumentFormat::Markdown,
                     progress: SpecProgress::Completed,
                     path: "/workspace/001-feature/tasks.md".to_string(),
-                    document: Some(AppMarkdownDocument::with_artifact(
+                    outcome: SpecArtifactOutcome::Loaded(AppMarkdownDocument::with_artifact(
                         SpecArtifactIdentity::Standard(SpecFileKey::Tasks),
-                        Some(SpecFileKey::Tasks),
                         SpecDocumentFormat::Markdown,
                         "/workspace/001-feature/tasks.md",
                         "- [x] Done",
                         Vec::new(),
                     )),
-                    error: None,
                 },
                 SpecArtifactBundleItem {
                     identity: SpecArtifactIdentity::direct_markdown("notes.md")
@@ -770,8 +777,7 @@ mod tests {
                     format: SpecDocumentFormat::Markdown,
                     progress: SpecProgress::Unknown,
                     path: "/workspace/001-feature/notes.md".to_string(),
-                    document: None,
-                    error: Some(SpecArtifactError {
+                    outcome: SpecArtifactOutcome::Failed(SpecArtifactError {
                         code: SpecArtifactErrorCode::MarkdownRead,
                         message: "This artifact could not be read.".to_string(),
                     }),
@@ -782,31 +788,47 @@ mod tests {
         let response = SpecBundleResponse::from(result);
         let value = serde_json::to_value(response).expect("bundle response should serialize");
 
-        assert_eq!("001-feature", value["specId"]);
-        assert_eq!("completed", value["progress"]);
-        assert_eq!("standard", value["artifacts"][0]["identity"]["kind"]);
-        assert_eq!("tasks", value["artifacts"][0]["identity"]["fileKey"]);
-        assert_eq!("tasks", value["artifacts"][0]["fileKey"]);
-        assert_eq!("- [x] Done", value["artifacts"][0]["contents"]);
         assert_eq!(
-            "/workspace/001-feature/tasks.md",
-            value["artifacts"][0]["path"]
-        );
-        assert_eq!("directMarkdown", value["artifacts"][1]["identity"]["kind"]);
-        assert_eq!("notes.md", value["artifacts"][1]["identity"]["fileName"]);
-        assert!(value["artifacts"][1]["fileKey"].is_null());
-        assert!(value["artifacts"][1]["contents"].is_null());
-        // A failed read still exposes the full resolved path (matching the
-        // success-case `document.path()` format), not just the base file name.
-        assert_eq!(
-            "/workspace/001-feature/notes.md",
-            value["artifacts"][1]["path"]
-        );
-        assert_eq!(0, value["artifacts"][1]["blocks"].as_array().unwrap().len());
-        assert_eq!("markdownRead", value["artifacts"][1]["error"]["code"]);
-        assert_eq!(
-            "This artifact could not be read.",
-            value["artifacts"][1]["error"]["message"],
+            serde_json::json!({
+                "specId": "001-feature",
+                "progress": "completed",
+                "artifacts": [
+                    {
+                        "identity": {
+                            "kind": "standard",
+                            "fileKey": "tasks"
+                        },
+                        "fileKey": "tasks",
+                        "fileName": "tasks.md",
+                        "label": "Tasks",
+                        "format": "markdown",
+                        "progress": "completed",
+                        "path": "/workspace/001-feature/tasks.md",
+                        "contents": "- [x] Done",
+                        "blocks": [],
+                        "error": null
+                    },
+                    {
+                        "identity": {
+                            "kind": "directMarkdown",
+                            "fileName": "notes.md"
+                        },
+                        "fileKey": null,
+                        "fileName": "notes.md",
+                        "label": "notes.md",
+                        "format": "markdown",
+                        "progress": "unknown",
+                        "path": "/workspace/001-feature/notes.md",
+                        "contents": null,
+                        "blocks": [],
+                        "error": {
+                            "code": "markdownRead",
+                            "message": "This artifact could not be read."
+                        }
+                    }
+                ]
+            }),
+            value,
         );
     }
     #[test]
@@ -846,6 +868,28 @@ mod tests {
             }),
             response.blocks()[0].source_range()
         );
+        assert_eq!(
+            serde_json::json!({
+                "key": "tasks",
+                "format": "markdown",
+                "path": "/workspace/auth/tasks.md",
+                "contents": "# Tasks",
+                "missing": false,
+                "blocks": [
+                    {
+                        "blockType": "heading",
+                        "blockIndex": 0,
+                        "textHash": "sha256:abc12345",
+                        "textSnippet": "Tasks",
+                        "sourceRange": {
+                            "startByteOffset": 0,
+                            "endByteOffset": 7
+                        }
+                    }
+                ]
+            }),
+            serde_json::to_value(&response).expect("found response should serialize"),
+        );
     }
 
     #[test]
@@ -863,6 +907,17 @@ mod tests {
         assert_eq!(None, response.contents());
         assert!(response.missing());
         assert!(response.blocks().is_empty());
+        assert_eq!(
+            serde_json::json!({
+                "key": "requirements",
+                "format": "markdown",
+                "path": "/workspace/auth/requirements.html",
+                "contents": null,
+                "missing": true,
+                "blocks": []
+            }),
+            serde_json::to_value(&response).expect("missing response should serialize"),
+        );
     }
 
     #[test]

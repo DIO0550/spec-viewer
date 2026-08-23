@@ -3,7 +3,10 @@
 mod artifact;
 mod progress;
 
-pub use artifact::{ArtifactEvaluation, ArtifactPresence, SpecArtifactFact, SpecArtifactIdentity};
+pub use artifact::{
+    ArtifactConfiguration, ArtifactEvaluation, ArtifactPresence, SpecArtifactFact,
+    SpecArtifactIdentity,
+};
 pub use progress::{
     artifact_progress, progress_for_present_tasks, progress_without_tasks, ArtifactEvaluationError,
     SpecProgress, TaskCounts,

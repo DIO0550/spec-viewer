@@ -7,6 +7,12 @@ pub enum SpecArtifactIdentity {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ArtifactConfiguration {
+    Configured,
+    Discovered,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ArtifactPresence {
     Present,
     Missing,
@@ -22,8 +28,7 @@ pub enum ArtifactEvaluation {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpecArtifactFact {
     identity: SpecArtifactIdentity,
-    configured: bool,
-    is_tasks: bool,
+    configuration: ArtifactConfiguration,
     presence: ArtifactPresence,
     evaluation: ArtifactEvaluation,
 }
@@ -31,15 +36,13 @@ pub struct SpecArtifactFact {
 impl SpecArtifactFact {
     pub fn new(
         identity: SpecArtifactIdentity,
-        configured: bool,
-        is_tasks: bool,
+        configuration: ArtifactConfiguration,
         presence: ArtifactPresence,
         evaluation: ArtifactEvaluation,
     ) -> Self {
         Self {
             identity,
-            configured,
-            is_tasks,
+            configuration,
             presence,
             evaluation,
         }
@@ -49,12 +52,16 @@ impl SpecArtifactFact {
         &self.identity
     }
 
+    pub fn configuration(&self) -> ArtifactConfiguration {
+        self.configuration
+    }
+
     pub fn is_tasks(&self) -> bool {
-        self.is_tasks
+        self.identity.is_tasks()
     }
 
     pub fn is_configured_non_task(&self) -> bool {
-        self.configured && !self.is_tasks
+        self.configuration == ArtifactConfiguration::Configured && !self.is_tasks()
     }
 
     pub fn presence(&self) -> ArtifactPresence {
@@ -82,6 +89,10 @@ impl SpecArtifactIdentity {
             Self::Standard(key) => Some(*key),
             Self::DirectMarkdown(_) => None,
         }
+    }
+
+    pub fn is_tasks(&self) -> bool {
+        matches!(self, Self::Standard(SpecFileKey::Tasks))
     }
 
     pub fn stable_id(&self) -> String {
@@ -130,5 +141,48 @@ mod tests {
                 SpecArtifactIdentity::direct_markdown(invalid_name),
             );
         }
+    }
+
+    #[test]
+    fn artifact_fact_uses_closed_configuration_and_derives_tasks_from_identity() {
+        let tasks = SpecArtifactFact::new(
+            SpecArtifactIdentity::Standard(SpecFileKey::Tasks),
+            ArtifactConfiguration::Configured,
+            ArtifactPresence::Present,
+            ArtifactEvaluation::NonEmpty {
+                task_counts: Some(TaskCounts::new(1, 1).expect("task counts should be valid")),
+            },
+        );
+        let implementation = SpecArtifactFact::new(
+            SpecArtifactIdentity::Standard(SpecFileKey::Impl),
+            ArtifactConfiguration::Configured,
+            ArtifactPresence::Present,
+            ArtifactEvaluation::NonEmpty { task_counts: None },
+        );
+        let discovered = SpecArtifactFact::new(
+            SpecArtifactIdentity::direct_markdown("notes.md")
+                .expect("direct Markdown name should be valid"),
+            ArtifactConfiguration::Discovered,
+            ArtifactPresence::Present,
+            ArtifactEvaluation::NonEmpty { task_counts: None },
+        );
+
+        assert_eq!(ArtifactConfiguration::Configured, tasks.configuration());
+        assert!(tasks.is_tasks());
+        assert!(!tasks.is_configured_non_task());
+
+        assert_eq!(
+            ArtifactConfiguration::Configured,
+            implementation.configuration()
+        );
+        assert!(!implementation.is_tasks());
+        assert!(implementation.is_configured_non_task());
+
+        assert_eq!(
+            ArtifactConfiguration::Discovered,
+            discovered.configuration()
+        );
+        assert!(!discovered.is_tasks());
+        assert!(!discovered.is_configured_non_task());
     }
 }

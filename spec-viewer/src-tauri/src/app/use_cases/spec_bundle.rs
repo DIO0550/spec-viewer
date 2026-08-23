@@ -6,9 +6,9 @@ use crate::{
         LoadWorkspaceResult,
     },
     domain::spec::{
-        artifact_progress, progress_without_tasks, ArtifactEvaluation, ArtifactEvaluationError,
-        ArtifactPresence, SpecArtifactFact, SpecArtifactIdentity, SpecDocumentFormat, SpecFileKey,
-        SpecProgress,
+        artifact_progress, progress_without_tasks, ArtifactConfiguration, ArtifactEvaluation,
+        ArtifactEvaluationError, ArtifactPresence, SpecArtifactFact, SpecArtifactIdentity,
+        SpecDocumentFormat, SpecFileKey, SpecProgress,
     },
     infrastructure::{
         filesystem::{discover_spec_artifacts, spec_directory_path, DiscoveredSpecArtifact},
@@ -40,6 +40,12 @@ pub struct SpecArtifactError {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SpecArtifactOutcome {
+    Loaded(AppMarkdownDocument),
+    Failed(SpecArtifactError),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpecArtifactBundleItem {
     pub identity: SpecArtifactIdentity,
     pub file_key: Option<SpecFileKey>,
@@ -51,8 +57,7 @@ pub struct SpecArtifactBundleItem {
     /// [`AppMarkdownDocument::path`], preserved even when the document fails to
     /// load so the presentation layer can expose a stable path in both cases.
     pub path: String,
-    pub document: Option<AppMarkdownDocument>,
-    pub error: Option<SpecArtifactError>,
+    pub outcome: SpecArtifactOutcome,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -98,8 +103,7 @@ impl FilesystemAppUseCases {
                     .unwrap_or_else(|| {
                         SpecArtifactFact::new(
                             SpecArtifactIdentity::Standard(mapping.key()),
-                            true,
-                            mapping.key() == SpecFileKey::Tasks,
+                            ArtifactConfiguration::Configured,
                             ArtifactPresence::Missing,
                             ArtifactEvaluation::Empty,
                         )
@@ -126,7 +130,6 @@ impl FilesystemAppUseCases {
         spec_directory: &std::path::Path,
         artifact: &DiscoveredSpecArtifact,
     ) -> (SpecArtifactBundleItem, SpecArtifactFact) {
-        let is_tasks = artifact.file_key == Some(SpecFileKey::Tasks);
         // Resolve the path the same way `read_artifact` does so failed reads keep
         // the identical representation returned by `document.path()` on success.
         let path = spec_directory
@@ -134,21 +137,24 @@ impl FilesystemAppUseCases {
             .to_string_lossy()
             .into_owned();
         let read_result = self.markdown_reader.read_artifact(spec_directory, artifact);
-        let (evaluation, document, error) = match read_result {
+        let (evaluation, outcome) = match read_result {
             Ok(document) => {
-                let evaluation = evaluate_document(&document, is_tasks);
-                (evaluation, Some(document.into()), None)
+                let evaluation = evaluate_document(&document);
+                (evaluation, SpecArtifactOutcome::Loaded(document.into()))
             }
-            Err(error) => (
-                ArtifactEvaluation::Error(evaluation_error(&error)),
-                None,
-                Some(public_artifact_error(&error)),
-            ),
+            Err(error) => {
+                let evaluation = ArtifactEvaluation::Error(evaluation_error(&error));
+                let outcome = SpecArtifactOutcome::Failed(public_artifact_error(&error));
+                (evaluation, outcome)
+            }
         };
         let fact = SpecArtifactFact::new(
             artifact.identity.clone(),
-            artifact.file_key.is_some(),
-            is_tasks,
+            if artifact.file_key.is_some() {
+                ArtifactConfiguration::Configured
+            } else {
+                ArtifactConfiguration::Discovered
+            },
             ArtifactPresence::Present,
             evaluation,
         );
@@ -163,20 +169,19 @@ impl FilesystemAppUseCases {
                 format: artifact.format,
                 progress,
                 path,
-                document,
-                error,
+                outcome,
             },
             fact,
         )
     }
 }
 
-fn evaluate_document(document: &MarkdownDocument, is_tasks: bool) -> ArtifactEvaluation {
+fn evaluate_document(document: &MarkdownDocument) -> ArtifactEvaluation {
     if document.contents().trim().is_empty() {
         return ArtifactEvaluation::Empty;
     }
 
-    if !is_tasks {
+    if !document.identity().is_tasks() {
         return ArtifactEvaluation::NonEmpty { task_counts: None };
     }
 
@@ -325,15 +330,15 @@ mod tests {
                 .map(|artifact| artifact.identity.clone())
                 .collect::<Vec<_>>(),
         );
-        assert!(result.artifacts.iter().all(|artifact| {
-            artifact.document.as_ref().is_some_and(|document| {
-                !document.contents().is_empty() && !document.blocks().is_empty()
-            })
-        }));
         assert!(result
             .artifacts
             .iter()
-            .all(|artifact| artifact.error.is_none()));
+            .all(|artifact| match &artifact.outcome {
+                SpecArtifactOutcome::Loaded(document) => {
+                    !document.contents().is_empty() && !document.blocks().is_empty()
+                }
+                SpecArtifactOutcome::Failed(_) => false,
+            }));
         let tree = use_cases
             .list_specs(&loaded)
             .expect("tree should use the same progress policy");
@@ -372,15 +377,16 @@ mod tests {
         assert_eq!(SpecProgress::Completed, result.progress);
         assert_eq!(2, result.artifacts.len());
         let ok_artifact = &result.artifacts[0];
-        assert!(ok_artifact.document.is_some());
+        let SpecArtifactOutcome::Loaded(document) = &ok_artifact.outcome else {
+            panic!("tasks artifact should load");
+        };
         // The success case keeps the path field aligned with `document.path()`.
-        assert_eq!(
-            ok_artifact.document.as_ref().unwrap().path(),
-            ok_artifact.path,
-        );
+        assert_eq!(document.path(), ok_artifact.path);
         let broken = &result.artifacts[1];
         assert_eq!(SpecProgress::Unknown, broken.progress);
-        assert!(broken.document.is_none());
+        let SpecArtifactOutcome::Failed(error) = &broken.outcome else {
+            panic!("broken artifact should fail");
+        };
         // Even without a document, the failed artifact keeps the full resolved
         // path (spec directory + file name), not just the base file name.
         assert_ne!(broken.file_name, broken.path);
@@ -389,10 +395,6 @@ mod tests {
         assert!(broken
             .path
             .starts_with(workspace.root.to_string_lossy().as_ref()));
-        let error = broken
-            .error
-            .as_ref()
-            .expect("broken artifact needs metadata");
         assert_eq!(SpecArtifactErrorCode::MarkdownRead, error.code);
         assert_eq!("This artifact could not be read.", error.message);
         assert!(!error
