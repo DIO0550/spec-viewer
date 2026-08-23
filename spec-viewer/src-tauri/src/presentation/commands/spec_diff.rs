@@ -8,6 +8,7 @@ use crate::{
         ChangedSpecFile, ChangedSpecFiles, SpecDiffUseCaseError, SpecFileDiff,
     },
     domain::{
+        comment::diff::DiffReviewIdentity,
         repository::{
             CommitSha, ComparisonRevision, FileChangeKind, RepositoryPortError, RevisionOption,
             SpecFileCommit, SpecFileHistory,
@@ -196,7 +197,28 @@ impl From<ChangedSpecFile> for ChangedSpecFileResponse {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct DiffReviewIdentityResponse {
+    repository_id: String,
+    worktree_id: String,
+    base_sha: String,
+    current_snapshot_id: String,
+}
+
+impl From<&DiffReviewIdentity> for DiffReviewIdentityResponse {
+    fn from(value: &DiffReviewIdentity) -> Self {
+        Self {
+            repository_id: value.repository_id().as_str().to_string(),
+            worktree_id: value.worktree_id().as_str().to_string(),
+            base_sha: value.base_sha().as_str().to_string(),
+            current_snapshot_id: value.current_snapshot_id().as_str().to_string(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ChangedSpecFilesResponse {
+    diff_review_identity: DiffReviewIdentityResponse,
     resolved_base_sha: String,
     current_snapshot_id: String,
     files: Vec<ChangedSpecFileResponse>,
@@ -205,6 +227,7 @@ pub struct ChangedSpecFilesResponse {
 impl From<ChangedSpecFiles> for ChangedSpecFilesResponse {
     fn from(value: ChangedSpecFiles) -> Self {
         Self {
+            diff_review_identity: (&value.diff_review_identity).into(),
             resolved_base_sha: value.resolved_base_sha.as_str().to_string(),
             current_snapshot_id: value.current_snapshot_id.as_str().to_string(),
             files: value.files.into_iter().map(Into::into).collect(),
@@ -525,6 +548,36 @@ mod tests {
         assert_eq!(json["targetPath"], "specs/001/tasks.md");
     }
 
+    #[test]
+    fn changed_files_response_exposes_diff_review_identity() {
+        let resolved_base_sha = CommitSha::parse("a".repeat(40)).unwrap();
+        let current_snapshot_id =
+            crate::domain::repository::SnapshotId::parse(format!("rs1_{}", "b".repeat(64)))
+                .unwrap();
+        let identity = DiffReviewIdentity::new(
+            crate::domain::repository::RepositoryId::parse(format!("rr1_{}", "c".repeat(64)))
+                .unwrap(),
+            crate::domain::comment::diff::WorktreeStorageId::parse(format!(
+                "rw1_{}",
+                "d".repeat(64)
+            ))
+            .unwrap(),
+            resolved_base_sha.clone(),
+            current_snapshot_id.clone(),
+        );
+        let response = ChangedSpecFilesResponse::from(ChangedSpecFiles {
+            diff_review_identity: identity,
+            resolved_base_sha,
+            current_snapshot_id,
+            files: vec![],
+        });
+
+        let json = serde_json::to_value(response).unwrap();
+        assert_eq!(
+            json["diffReviewIdentity"]["repositoryId"],
+            format!("rr1_{}", "c".repeat(64))
+        );
+    }
     #[test]
     fn unborn_head_maps_to_typed_command_error() {
         let error = SpecDiffCommandError::from(SpecDiffUseCaseError::Repository(

@@ -23,10 +23,18 @@ test("actual Appでworkspace tree tab mode Reviewを通して作成・resolve・
   await composer.fill("Review from actual App");
   await composer.press("Control+Enter");
 
-  await expect(page.getByText("Review from actual App")).toBeVisible();
-  await page.getByRole("button", { name: /^Resolve comment-/ }).click();
-  await page.getByRole("button", { name: /^Resolved 1$/ }).click();
-  await expect(page.getByText("Review from actual App")).toBeVisible();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("Review from actual App"),
+  ).toBeVisible();
+  await expect(page.locator(".diff-inline-comment-thread")).toContainText(
+    "Review from actual App",
+  );
+  await page.getByRole("button", { name: /^解決 comment-/ }).click();
+  await page.getByRole("button", { name: /^解決済み 1$/ }).click();
+  await page.getByRole("button", { name: /^コメントを展開 comment-/ }).click();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("Review from actual App"),
+  ).toBeVisible();
 
   await page.getByRole("radio", { name: "Editor" }).click();
   await page.getByRole("button", { name: /2行目へ移動/ }).click();
@@ -53,22 +61,65 @@ test("actual AppでCAS conflict draftを保持しreloadとA-B-Aでidentityを分
   await expect(page.getByRole("alert")).toContainText("競合");
   await expect(composer).toHaveValue("Conflict-safe draft");
   await composer.press("Control+Enter");
-  await expect(page.getByText("Conflict-safe draft")).toBeVisible();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("Conflict-safe draft"),
+  ).toBeVisible();
 
   await openWorkspace(page, "/workspace/worktree-b");
   await openRepositoryFile(page);
-  await expect(page.getByText("Conflict-safe draft")).toBeHidden();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("Conflict-safe draft"),
+  ).toBeHidden();
   await openWorkspace(page, "/workspace/worktree-a");
   await openRepositoryFile(page);
-  await expect(page.getByText("Conflict-safe draft")).toBeVisible();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("Conflict-safe draft"),
+  ).toBeVisible();
 
   await page.reload();
   await openWorkspace(page, "/workspace/worktree-a");
   await openRepositoryFile(page);
-  await expect(page.getByText("Conflict-safe draft")).toBeVisible();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("Conflict-safe draft"),
+  ).toBeVisible();
 });
 
-test("actual AppでstaleTarget・overflow・indicator-card・keyboard/themeを表現する", async ({
+test("actual Appでstale保存後に本文を保持して最新snapshotへ自動再保存する", async ({
+  page,
+}) => {
+  await openRepositoryFile(page);
+  await page.evaluate(() =>
+    localStorage.setItem("e2e-stale-save-once", "true"),
+  );
+  await openComposer(page, "current", 2);
+  const composer = page.getByRole("textbox", { name: /2行目へのコメント/ });
+  await composer.fill("Retry after snapshot refresh");
+  await composer.press("Control+Enter");
+
+  await expect(
+    page
+      .locator(".diff-review-sidebar")
+      .getByText("Retry after snapshot refresh"),
+  ).toBeVisible();
+  await expect(composer).toBeHidden();
+});
+
+test("actual Appでactive change未選択のEditorは先頭から表示する", async ({
+  page,
+}) => {
+  await openRepositoryFile(page);
+  await page.getByRole("radio", { name: "Editor" }).click();
+
+  await expect
+    .poll(() =>
+      page
+        .locator(".current-file-viewer__scroll-surface")
+        .evaluate((element) => element.scrollTop),
+    )
+    .toBe(0);
+});
+
+test("actual AppでstaleTarget・overflow・indicator-card・keyboardを表現する", async ({
   page,
 }) => {
   await openRepositoryFile(page);
@@ -95,9 +146,6 @@ test("actual AppでstaleTarget・overflow・indicator-card・keyboard/themeを�
   await expect(page.getByRole("alert")).toContainText("revision上限");
   await page.getByRole("button", { name: "キャンセル" }).click();
 
-  await page.getByLabel("テーマモード").selectOption("dark");
-  await expectNoSeriousAccessibilityViolations(page);
-  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.getByRole("radio", { name: "Unified" }).press("ArrowRight");
   await expect(page.getByRole("radio", { name: "Split" })).toBeFocused();
 });
@@ -158,13 +206,19 @@ test("actual Appでpending A-B-A settlementをorigin identityへ隔離する", a
 
   await openWorkspace(page, "/workspace/worktree-b");
   await openRepositoryFile(page);
-  await expect(page.getByText("pending A only")).toBeHidden();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("pending A only"),
+  ).toBeHidden();
   await page.waitForTimeout(350);
-  await expect(page.getByText("pending A only")).toBeHidden();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("pending A only"),
+  ).toBeHidden();
 
   await openWorkspace(page, "/workspace/worktree-a");
   await openRepositoryFile(page);
-  await expect(page.getByText("pending A only")).toBeVisible();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("pending A only"),
+  ).toBeVisible();
 });
 
 test("actual Appでpermission recoveryとcommitted uncertaintyを区別する", async ({
@@ -183,9 +237,9 @@ test("actual Appでpermission recoveryとcommitted uncertaintyを区別する", 
   await expect(page.getByRole("alert")).toContainText("権限");
   await expect(page.getByRole("button", { name: "保存を再試行" })).toBeHidden();
   await page.getByRole("button", { name: "キャンセル" }).click();
-  await page.getByRole("button", { name: "Diff commentsを再読み込み" }).click();
+  await page.getByRole("button", { name: "コメントを再読み込み" }).click();
   await expect(
-    page.getByRole("button", { name: "Diff commentsを再読み込み" }),
+    page.getByRole("button", { name: "コメントを再読み込み" }),
   ).toBeEnabled();
 
   await page.evaluate(() => localStorage.setItem("e2e-uncertain-once", "true"));
@@ -195,7 +249,9 @@ test("actual Appでpermission recoveryとcommitted uncertaintyを区別する", 
   });
   await uncertainComposer.fill("committed uncertain");
   await uncertainComposer.press("Control+Enter");
-  await expect(page.getByText("committed uncertain")).toBeVisible();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("committed uncertain"),
+  ).toBeVisible();
   await expect(page.getByText(/永続化の確認が不確実/)).toBeVisible();
   await expect(uncertainComposer).toBeHidden();
   await expect(page.getByRole("button", { name: "保存を再試行" })).toBeHidden();
@@ -208,7 +264,7 @@ test("actual Appでconvergence pickerがfilter/searchを解除しcardを選択�
   await page.reload();
   await openWorkspace(page, "/workspace/worktree-a");
   await openRepositoryFile(page);
-  await page.getByRole("button", { name: "Resolved 1" }).click();
+  await page.getByRole("button", { name: "解決済み 1" }).click();
   const search = page.getByRole("searchbox", { name: "コメントを検索" });
   await search.fill("no-match");
   await expect(
@@ -224,7 +280,7 @@ test("actual Appでconvergence pickerがfilter/searchを解除しcardを選択�
     page.getByRole("menuitem", { name: "converged first" }),
   ).toBeFocused();
   await page.getByRole("menuitem", { name: "converged second" }).click();
-  await expect(page.getByRole("button", { name: "All 2" })).toHaveAttribute(
+  await expect(page.getByRole("button", { name: "すべて 3" })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
@@ -291,13 +347,17 @@ test("actual AppでAll unchanged current lineをsave reload jumpする", async (
   const composer = page.getByRole("textbox", { name: /2行目へのコメント/ });
   await composer.fill("unchanged All persisted");
   await composer.press("Control+Enter");
-  await expect(page.getByText("unchanged All persisted")).toBeVisible();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("unchanged All persisted"),
+  ).toBeVisible();
 
   await page.reload();
   await openWorkspace(page, "/workspace/worktree-a");
   await page.getByRole("tab", { name: "Diff" }).click();
   await page.getByRole("tab", { name: "All" }).click();
-  await expect(page.getByText("unchanged All persisted")).toBeVisible();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("unchanged All persisted"),
+  ).toBeVisible();
   await page
     .getByRole("button", { name: /notes\.md current 2行目へ移動/ })
     .click();
@@ -336,7 +396,9 @@ test("actual AppでstoreBusyとioはdraftを保持してretryできinvalidStore�
     ).toBeVisible();
     await page.getByRole("button", { name: "保存を再試行" }).click();
     await expect(
-      page.getByText(`${scenario.failure} retry body`),
+      page
+        .locator(".diff-review-sidebar")
+        .getByText(`${scenario.failure} retry body`),
     ).toBeVisible();
   }
 
@@ -366,7 +428,9 @@ test("actual Appでrelocatedだけjump可能、staleは非jumpでexport操作を
   await openWorkspace(page, "/workspace/worktree-a");
   await openRepositoryFile(page);
 
-  await expect(page.getByText("relocated body")).toBeVisible();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("relocated body"),
+  ).toBeVisible();
   await page
     .getByRole("button", {
       name: /implementation-plan\.md current 2行目へ移動/,
@@ -417,4 +481,24 @@ test("actual Appでsnapshot stale draftをdiscardできる", async ({ page }) =>
   await expect(page.getByRole("button", { name: "保存" })).toBeDisabled();
   await page.getByRole("button", { name: "キャンセル" }).click();
   await expect(composer).toBeHidden();
+});
+test("actual AppでDiffコメントを確認後に削除する", async ({ page }) => {
+  await openRepositoryFile(page);
+  await openComposer(page, "current", 2);
+  const composer = page.getByRole("textbox", { name: /2行目へのコメント/ });
+  await composer.fill("delete this comment");
+  await composer.press("Control+Enter");
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("delete this comment"),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: /^削除 comment-/ }).click();
+  await page
+    .getByRole("button", { name: /^コメント削除を確定 comment-/ })
+    .click();
+
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("delete this comment"),
+  ).toBeHidden();
+  await expect(page.locator("article[data-comment-id]")).toHaveCount(0);
 });

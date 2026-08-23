@@ -1,3 +1,4 @@
+import { RefreshCw } from "lucide-react";
 import {
   type ReactElement,
   type ReactNode,
@@ -9,19 +10,22 @@ import {
 } from "react";
 
 import "../App.css";
-import "@/styles/diff-comments.css";
 import type { SpecViewResetKeys } from "@/app/App/hooks/types";
 import { useCommentSelection } from "@/app/App/hooks/useCommentSelection";
 import { useGuardedSpecActions } from "@/app/App/hooks/useGuardedSpecActions";
 import { useSpecViewKeyboardNavigation } from "@/app/App/hooks/useSpecViewKeyboardNavigation";
 import { useViewRefresh } from "@/app/App/hooks/useViewRefresh";
+import {
+  resolveRepositoryDiffWorkspacePath,
+  resolveSpecDiffWorkspacePath,
+} from "@/app/App/resolveDiffWorkspaceLoadPaths";
 import { SpecViewCommentSidebar } from "@/app/App/SpecViewCommentSidebar";
 import { useDocumentReadiness } from "@/app/App/useDocumentReadiness";
 import {
   SpecViewSelectionProvider,
   useSpecViewSelection,
 } from "@/app/context/specViewSelection";
-import { WorkspaceLayout } from "@/components";
+import { ErrorBoundary, WorkspaceLayout } from "@/components";
 import { WorkspacePath } from "@/domains/workspacePath";
 import {
   CommentOperationFailedState,
@@ -49,6 +53,10 @@ import {
   type DiffReviewIdentity,
   useDiffComments,
 } from "@/features/diffComments";
+import type {
+  DiffCommentJumpTarget,
+  DiffLineCommentsController,
+} from "@/features/diffComments/components/DiffLineCommentSlot";
 import { DiffReviewPanel } from "@/features/diffComments/components/DiffReviewPanel";
 import {
   createDiffLineCommentsController,
@@ -57,18 +65,17 @@ import {
 import {
   ThemeProvider,
   useLeftNavigationPreference,
+  useViewerFontSizePreference,
   useResizableLeftNavigation,
 } from "@/features/preferences";
 import {
   collectValidRepositoryFilePaths,
   createRepositoryFileTabId,
-  deriveRepositoryDiffSummary,
   findRepositoryDiffFile,
   formatRevisionIdentifier,
   projectFileReview,
   projectRepositoryDiffTree,
   RepositoryDiffFileHeader,
-  RepositoryDiffSummary,
   RepositoryDiffTree,
   type RepositoryDiffTreeAvailability,
   RepositoryFileTabs,
@@ -98,17 +105,18 @@ import {
   OpenWorkspaceEmptyState,
   useWorkspaceLoader,
   useWorkspaceNavigationState,
-  useWorkspaceWorktrees,
   useWorkspaceSidebarSectionPreference,
+  useWorkspaceWorktrees,
   WorkspaceDropOverlay,
   WorkspaceProvider,
   WorkspaceSidebarSection,
   WorkspaceToolbar,
   WorktreeTree,
 } from "@/features/workspace";
+import { resolveActiveWorktreePath } from "@/features/workspace/lib/resolveActiveWorktreePath";
 import { getDiffReviewIdentity } from "@/lib/api/tauri";
 
-type RepositoryCommentJump = Readonly<{
+type DiffCommentJump = Readonly<{
   selectionPath: string;
   key: string;
   sidePath: string;
@@ -123,7 +131,7 @@ type RepositoryCommentJump = Readonly<{
  */
 function App(): ReactElement {
   return (
-    <ThemeProvider>
+    <ThemeProvider fixedTheme="light">
       <WorkspaceProvider>
         <SidebarPreferenceProvider>
           <SpecViewSelectionProvider>
@@ -150,14 +158,20 @@ function SpecViewAppContent(): ReactElement {
     onError: setDialogErrorMessage,
   });
   const { activeWorkspaceRoot, isWorkspaceOpening } = workspaceLoader.state;
-  const worktreesLoadState = useWorkspaceWorktrees(activeWorkspaceRoot);
+  const workspaceWorktrees = useWorkspaceWorktrees(activeWorkspaceRoot);
+  const worktreesLoadState = workspaceWorktrees.state;
   const worktreeCount =
     worktreesLoadState.status === "ready"
       ? worktreesLoadState.data.worktrees.length
       : 0;
   const workspaceNavigation = useWorkspaceNavigationState(worktreesLoadState);
+  const activeSpecWorkspacePath = resolveActiveWorktreePath(
+    activeWorkspaceRoot,
+    workspaceNavigation.state.activeWorktreeId,
+  );
 
   const leftNavigationPreference = useLeftNavigationPreference();
+  const viewerFontSizePreference = useViewerFontSizePreference();
   const workspaceSidebarSectionPreference =
     useWorkspaceSidebarSectionPreference();
   const resizableLeftNavigation = useResizableLeftNavigation();
@@ -177,25 +191,34 @@ function SpecViewAppContent(): ReactElement {
     [selectSpecView],
   );
   const specs = useSpecs({
-    workspacePath: activeWorkspaceRoot,
+    workspacePath: activeSpecWorkspacePath,
     onSelectionChange: selectCurrentSpecView,
   });
   const specState = specs.state;
   const specActions = specs.actions;
   const specSelectors = specs.selectors;
-  const specDiff = useSpecDiffWorkspace({
-    workspacePath: activeWorkspaceRoot,
-    selection: specState.selection,
-  });
   const repositoryNavigation = useRepositoryDiffNavigationState({
     workspaceId: activeWorkspaceRoot,
     worktreeId: activeWorkspaceRoot,
   });
   const repositoryNavigationEntry = repositoryNavigation.entry;
   const repositoryNavigationActions = repositoryNavigation.actions;
+  const repositoryDiffWorkspacePath = resolveRepositoryDiffWorkspacePath(
+    workspaceNavigation.state.mode,
+    activeWorkspaceRoot,
+  );
   const repositoryDiff = useRepositoryDiffWorkspace({
-    workspacePath: activeWorkspaceRoot,
-    worktreeId: activeWorkspaceRoot,
+    workspacePath: repositoryDiffWorkspacePath,
+    worktreeId: repositoryDiffWorkspacePath,
+  });
+  const specDiffWorkspacePath = resolveSpecDiffWorkspacePath({
+    mode: workspaceNavigation.state.mode,
+    activeSpecWorkspacePath,
+    repositoryStatus: repositoryDiff.state.status,
+  });
+  const specDiff = useSpecDiffWorkspace({
+    workspacePath: specDiffWorkspacePath,
+    selection: specState.selection,
   });
   const repositoryMayOwnDiff =
     activeWorkspaceRoot !== null &&
@@ -227,23 +250,46 @@ function SpecViewAppContent(): ReactElement {
     (repositoryDiffIdentityCache.current?.workspaceRoot === activeWorkspaceRoot
       ? repositoryDiffIdentityCache.current.identity
       : null);
-  const diffComments = useDiffComments({ identity: repositoryDiffIdentity });
+  const specDiffIdentity = useMemo<DiffReviewIdentity | null>(() => {
+    if (
+      workspaceNavigation.state.mode !== "diff" ||
+      isRepositoryDiffView ||
+      specDiff.state.status !== "ready"
+    ) {
+      return null;
+    }
+    return specDiff.state.overview.diffReviewIdentity ?? null;
+  }, [isRepositoryDiffView, specDiff.state, workspaceNavigation.state.mode]);
+  const activeDiffReviewIdentity = isRepositoryDiffView
+    ? repositoryDiffIdentity
+    : specDiffIdentity;
+  const refreshActiveDiffIdentity = useCallback((): void => {
+    if (isRepositoryDiffView) {
+      void repositoryDiff.refresh();
+      return;
+    }
+    void specDiff.refresh();
+  }, [isRepositoryDiffView, repositoryDiff.refresh, specDiff.refresh]);
+  const diffComments = useDiffComments({
+    identity: activeDiffReviewIdentity,
+    onIdentityInvalidated: refreshActiveDiffIdentity,
+  });
   const [diffCommentOrigin, setDiffCommentOrigin] =
     useState<HTMLButtonElement | null>(null);
-  const [repositoryCommentJump, setRepositoryCommentJump] =
-    useState<RepositoryCommentJump | null>(null);
+  const [diffCommentJump, setDiffCommentJump] =
+    useState<DiffCommentJump | null>(null);
   useEffect(() => {
-    if (repositoryDiffIdentity === null) {
+    if (activeDiffReviewIdentity === null) {
       setDiffCommentOrigin(null);
-      setRepositoryCommentJump(null);
+      setDiffCommentJump(null);
     }
-  }, [repositoryDiffIdentity]);
+  }, [activeDiffReviewIdentity]);
   const isCurrentViewLoading = specSelectors.isLoading;
   const documentReadiness = useDocumentReadiness(specState.documentState);
   const commentScope = useMemo(
     () =>
       CommentScope.create({
-        workspacePath: activeWorkspaceRoot,
+        workspacePath: activeSpecWorkspacePath,
         specId: specState.selection.specId,
         fileKey:
           documentReadiness.isHtmlDocument ||
@@ -256,7 +302,7 @@ function SpecViewAppContent(): ReactElement {
       documentReadiness.isHtmlDocument,
       specState.selection.fileKey,
       specState.selection.specId,
-      activeWorkspaceRoot,
+      activeSpecWorkspacePath,
     ],
   );
   const comments = useComments({
@@ -266,7 +312,7 @@ function SpecViewAppContent(): ReactElement {
   });
 
   const resetKeys: SpecViewResetKeys = {
-    workspaceRoot: activeWorkspaceRoot,
+    workspaceRoot: activeSpecWorkspacePath,
     specId: specState.selection.specId,
     fileKey: specState.selection.fileKey,
   };
@@ -297,7 +343,7 @@ function SpecViewAppContent(): ReactElement {
       document: specActions.reloadDocument,
       specs: specActions.reloadSpecs,
       comments: comments.reloadComments,
-      diff: specDiff.refresh,
+      diff: specDiffWorkspacePath === null ? undefined : specDiff.refresh,
       repositoryInvalidate: repositoryDiff.invalidate,
       repository: repositoryDiff.refresh,
     },
@@ -325,22 +371,6 @@ function SpecViewAppContent(): ReactElement {
     setDialogErrorMessage(null);
   }, [resetKeys.fileKey, resetKeys.specId, resetKeys.workspaceRoot]);
 
-  useEffect(() => {
-    if (
-      workspaceNavigation.state.mode === "diff" &&
-      (specDiff.state.status === "idle" ||
-        specDiff.state.status === "unavailable") &&
-      !repositoryMayOwnDiff
-    ) {
-      workspaceNavigation.actions.changeMode("specs");
-    }
-  }, [
-    repositoryMayOwnDiff,
-    specDiff.state.status,
-    workspaceNavigation.actions.changeMode,
-    workspaceNavigation.state.mode,
-  ]);
-
   // resetWorkspace のドメイン横断副作用を明示的な合成で維持する。
   /** Clears the active comment and resets the workspace. */
   const resetWorkspace = (): void => {
@@ -367,7 +397,7 @@ function SpecViewAppContent(): ReactElement {
     "update",
   );
   const isCommentScopeReady =
-    activeWorkspaceRoot !== null &&
+    activeSpecWorkspacePath !== null &&
     resetKeys.specId !== null &&
     resetKeys.fileKey !== null &&
     documentReadiness.isDocumentReadable;
@@ -436,12 +466,6 @@ function SpecViewAppContent(): ReactElement {
     repositoryNavigationEntry.filter === "changed"
       ? repositoryChangedTreeNodes
       : repositoryAllTreeNodes;
-  const repositorySummary = useMemo(() => {
-    const overview = repositoryDiff.state.overview;
-    return overview === null
-      ? null
-      : deriveRepositoryDiffSummary(overview, repositoryNavigationEntry.filter);
-  }, [repositoryDiff.state.overview, repositoryNavigationEntry.filter]);
   const repositoryAllTreePaths = useMemo(
     () => collectRepositoryTreePaths(repositoryAllTreeNodes),
     [repositoryAllTreeNodes],
@@ -522,8 +546,12 @@ function SpecViewAppContent(): ReactElement {
           repositoryFileProjection.selection,
         );
   const diffCommentsByTarget = useMemo(
-    () => groupCommentsByResolvedTarget(diffComments.session?.comments ?? []),
-    [diffComments.session?.comments],
+    () =>
+      groupCommentsByResolvedTarget(
+        diffComments.session?.comments ?? [],
+        diffComments.session?.identity,
+      ),
+    [diffComments.session?.comments, diffComments.session?.identity],
   );
   const diffLineComments = createDiffLineCommentsController({
     state: diffComments,
@@ -532,7 +560,7 @@ function SpecViewAppContent(): ReactElement {
     onRevealComment: sidebarPreference.openSidebar,
     commentsByTarget: diffCommentsByTarget,
   });
-  const jumpToRepositoryComment = useCallback(
+  const jumpToDiffComment = useCallback(
     (commentId: string): void => {
       const comment = diffComments.session?.comments.find(
         (candidate) => candidate.id === commentId,
@@ -542,6 +570,38 @@ function SpecViewAppContent(): ReactElement {
       }
       const resolution = comment.anchorResolution;
       if (resolution.status !== "exact" && resolution.status !== "relocated") {
+        return;
+      }
+      if (!isRepositoryDiffView) {
+        if (specDiff.state.status !== "ready") {
+          return;
+        }
+        const change = specDiff.state.overview.files.find((candidate) => {
+          const paths = [
+            candidate.targetPath,
+            candidate.oldPath,
+            candidate.newPath,
+          ];
+          return (
+            paths.includes(resolution.selectionPath) ||
+            paths.includes(resolution.sidePath)
+          );
+        });
+        if (change === undefined) {
+          return;
+        }
+        guardedSpecActions.selectSpecFileFromChanges(
+          change.specId,
+          change.fileKey,
+        );
+        setDiffCommentJump((current) => ({
+          key: `${resolution.side}:${resolution.sidePath}:${resolution.line}`,
+          selectionPath: resolution.selectionPath,
+          sidePath: resolution.sidePath,
+          side: resolution.side,
+          line: resolution.line,
+          requestId: (current?.requestId ?? 0) + 1,
+        }));
         return;
       }
       const targetNode = findRepositoryTreeNode(
@@ -561,7 +621,7 @@ function SpecViewAppContent(): ReactElement {
           resolution.side === "base" ? "unified" : "editor",
         );
       }
-      setRepositoryCommentJump((current) => ({
+      setDiffCommentJump((current) => ({
         key: `${resolution.side}:${resolution.sidePath}:${resolution.line}`,
         selectionPath: resolution.selectionPath,
         sidePath: resolution.sidePath,
@@ -572,9 +632,12 @@ function SpecViewAppContent(): ReactElement {
     },
     [
       diffComments.session?.comments,
+      guardedSpecActions,
+      isRepositoryDiffView,
       repositoryNavigationActions,
       repositoryNavigationEntry.viewerMode,
       repositoryAllTreeNodes,
+      specDiff.state,
     ],
   );
   const repositoryActiveChange = useMemo(() => {
@@ -623,26 +686,28 @@ function SpecViewAppContent(): ReactElement {
           status: "unavailable",
           reason: "ワークスペースを選択するとDiffを利用できます",
         } as const)
-      : isRepositoryDiffView
-        ? repositoryDiff.state.status === "loading" ||
-          repositoryDiff.state.status === "idle"
-          ? ({
-              status: "unavailable",
-              reason: "Repository diffを読み込んでいます",
-            } as const)
-          : ({ status: "ready" } as const)
-        : specDiff.state.status === "idle" ||
-            specDiff.state.status === "loading"
-          ? ({
-              status: "unavailable",
-              reason: "Diff情報を読み込んでいます",
-            } as const)
-          : specDiff.state.status === "unavailable"
+      : workspaceNavigation.state.mode !== "diff"
+        ? ({ status: "ready" } as const)
+        : isRepositoryDiffView
+          ? repositoryDiff.state.status === "loading" ||
+            repositoryDiff.state.status === "idle"
             ? ({
                 status: "unavailable",
-                reason: specDiff.state.reason,
+                reason: "変更ファイルを読み込んでいます",
               } as const)
-            : ({ status: "ready" } as const);
+            : ({ status: "ready" } as const)
+          : specDiff.state.status === "idle" ||
+              specDiff.state.status === "loading"
+            ? ({
+                status: "unavailable",
+                reason: "Diff情報を読み込んでいます",
+              } as const)
+            : specDiff.state.status === "unavailable"
+              ? ({
+                  status: "unavailable",
+                  reason: specDiff.state.reason,
+                } as const)
+              : ({ status: "ready" } as const);
   const repositoryPanel =
     repositoryNavigationEntry.activePath === null ||
     repositoryFileDiff === null ? null : (
@@ -681,9 +746,9 @@ function SpecViewAppContent(): ReactElement {
               );
             }}
             commentJumpTarget={
-              repositoryCommentJump?.selectionPath ===
+              diffCommentJump?.selectionPath ===
               repositoryNavigationEntry.activePath
-                ? repositoryCommentJump
+                ? diffCommentJump
                 : null
             }
             lineComments={
@@ -710,9 +775,9 @@ function SpecViewAppContent(): ReactElement {
               );
             }}
             commentJumpTarget={
-              repositoryCommentJump?.selectionPath ===
+              diffCommentJump?.selectionPath ===
               repositoryNavigationEntry.activePath
-                ? repositoryCommentJump
+                ? diffCommentJump
                 : null
             }
             lineComments={
@@ -735,6 +800,8 @@ function SpecViewAppContent(): ReactElement {
         specState.selection.fileKey,
         currentSpecChange?.targetPath ?? null,
         specDiff.refresh,
+        activeDiffReviewIdentity === null ? undefined : diffLineComments,
+        diffCommentJump,
       );
 
   return (
@@ -759,6 +826,8 @@ function SpecViewAppContent(): ReactElement {
             errorMessage={toolbarErrorMessage}
             canRefresh={canRefresh}
             onInputChange={workspaceLoader.actions.setWorkspaceInput}
+            viewerFontSize={viewerFontSizePreference.viewerFontSize}
+            onViewerFontSizeChange={viewerFontSizePreference.setViewerFontSize}
             onBrowse={() => {
               void workspaceLoader.actions.browseWorkspace();
             }}
@@ -806,10 +875,17 @@ function SpecViewAppContent(): ReactElement {
                 />
               </label>
               <div className="worktree-navigation__header">
-                <span>
-                  ROOT / WORKTREES {worktreeCount}
-                </span>
-                <span aria-hidden="true">↻</span>
+                <span>ROOT / WORKTREES {worktreeCount}</span>
+                <button
+                  className="icon-button worktree-navigation__refresh"
+                  type="button"
+                  aria-label="Worktree一覧を再読み込み"
+                  title="Worktree一覧を再読み込み"
+                  disabled={activeWorkspaceRoot === null}
+                  onClick={workspaceWorktrees.refresh}
+                >
+                  <RefreshCw aria-hidden="true" size={12} />
+                </button>
               </div>
             </div>
             <WorktreeTree
@@ -869,7 +945,7 @@ function SpecViewAppContent(): ReactElement {
               <div
                 className="repository-diff-navigation__filters"
                 role="tablist"
-                aria-label="Repository diff filter"
+                aria-label="変更ファイルの絞り込み"
               >
                 <button
                   className="repository-diff-navigation__filter"
@@ -894,9 +970,6 @@ function SpecViewAppContent(): ReactElement {
                   All
                 </button>
               </div>
-              {repositorySummary === null ? null : (
-                <RepositoryDiffSummary summary={repositorySummary} />
-              )}
               <RepositoryDiffTree
                 filter={repositoryNavigationEntry.filter}
                 nodes={repositoryTreeNodes}
@@ -1036,34 +1109,39 @@ function SpecViewAppContent(): ReactElement {
                       }
                     />
                   ) : (
-                    <SpecArtifactViewer
-                      bundleState={specState.bundleState}
-                      artifact={specSelectors.selectedArtifact}
-                      workspacePath={activeWorkspaceRoot}
-                      selectedSpecLabel={
-                        specSelectors.selectedSpec?.label ?? null
-                      }
-                      comments={comments.comments}
-                      activeCommentId={commentSelection.activeCommentId}
-                      isAddingComment={isAddingComment}
-                      addCommentErrorMessage={addCommentErrorMessage}
-                      isUpdatingComment={isUpdatingComment}
-                      operationState={comments.operationState}
-                      isCommentScopeReady={isCommentScopeReady}
-                      onReload={guardedSpecActions.reloadDocumentFromViewer}
-                      onAddComment={commentSelection.addComment}
-                      onUpdateComment={commentSelection.updateComment}
-                      onResolveComment={commentSelection.resolveInlineComment}
-                      onReopenComment={commentSelection.reopenInlineComment}
-                      onDeleteComment={commentSelection.deleteInlineComment}
-                      onSelectComment={commentSelection.selectComment}
-                      onAnchorDisplayStatesChange={
-                        commentSelection.updateCommentAnchorDisplayStates
-                      }
-                      onFirstReadable={
-                        documentReadiness.markCurrentDocumentReadable
-                      }
-                    />
+                    <ErrorBoundary
+                      key={`${specState.selection.specId ?? "no-spec"}:${specSelectors.selectedArtifact?.path ?? "no-artifact"}`}
+                      variant="dialog"
+                    >
+                      <SpecArtifactViewer
+                        bundleState={specState.bundleState}
+                        artifact={specSelectors.selectedArtifact}
+                        workspacePath={activeSpecWorkspacePath}
+                        selectedSpecLabel={
+                          specSelectors.selectedSpec?.label ?? null
+                        }
+                        comments={comments.comments}
+                        activeCommentId={commentSelection.activeCommentId}
+                        isAddingComment={isAddingComment}
+                        addCommentErrorMessage={addCommentErrorMessage}
+                        isUpdatingComment={isUpdatingComment}
+                        operationState={comments.operationState}
+                        isCommentScopeReady={isCommentScopeReady}
+                        onReload={guardedSpecActions.reloadDocumentFromViewer}
+                        onAddComment={commentSelection.addComment}
+                        onUpdateComment={commentSelection.updateComment}
+                        onResolveComment={commentSelection.resolveInlineComment}
+                        onReopenComment={commentSelection.reopenInlineComment}
+                        onDeleteComment={commentSelection.deleteInlineComment}
+                        onSelectComment={commentSelection.selectComment}
+                        onAnchorDisplayStatesChange={
+                          commentSelection.updateCommentAnchorDisplayStates
+                        }
+                        onFirstReadable={
+                          documentReadiness.markCurrentDocumentReadable
+                        }
+                      />
+                    </ErrorBoundary>
                   )}
                 </div>
               </section>
@@ -1089,12 +1167,10 @@ function SpecViewAppContent(): ReactElement {
               }}
             />
           </WorkspaceLayout.Comments>
-        ) : isRepositoryDiffView && repositoryDiffIdentity !== null ? (
+        ) : workspaceNavigation.state.mode === "diff" &&
+          activeDiffReviewIdentity !== null ? (
           <WorkspaceLayout.Comments>
-            <DiffReviewPanel
-              state={diffComments}
-              onJump={jumpToRepositoryComment}
-            />
+            <DiffReviewPanel state={diffComments} onJump={jumpToDiffComment} />
           </WorkspaceLayout.Comments>
         ) : null}
       </SidebarLayout>
@@ -1116,6 +1192,8 @@ function SpecViewAppContent(): ReactElement {
  * @param selectedFileKey - Key of the currently selected file, or `null`.
  * @param selectedPath - Target path of the currently selected change, or `null`.
  * @param onRetry - Callback to retry loading after a failure.
+ * @param lineComments - Optional line-comment controller for the preview.
+ * @param commentJumpTarget - Optional resolved comment location to reveal.
  * @returns The `DiffWorkspace` view state matching the current selection and load state.
  */
 function createDiffWorkspaceState(
@@ -1125,6 +1203,10 @@ function createDiffWorkspaceState(
   selectedPath: string | null,
   /** Retries loading the diff after a failure. */
   onRetry: () => Promise<boolean>,
+  /** Renders line-comment controls when the active diff has a review identity. */
+  lineComments: DiffLineCommentsController | undefined,
+  /** Reveals a selected sidebar comment in the diff preview. */
+  commentJumpTarget: DiffCommentJumpTarget | null,
 ): DiffWorkspaceState {
   if (selectedSpecId === null || selectedFileKey === null) {
     return { status: "noSelection" };
@@ -1159,13 +1241,19 @@ function createDiffWorkspaceState(
           state.detail.value.identity.path
         }
         fileDiff={state.detail.value}
+        lineComments={lineComments}
+        commentJumpTarget={commentJumpTarget}
       />
     ),
   };
 }
 
 function SpecDiffViewerPreview(
-  props: Readonly<{ fileDiff: FileDiff }>,
+  props: Readonly<{
+    fileDiff: FileDiff;
+    lineComments?: DiffLineCommentsController;
+    commentJumpTarget?: DiffCommentJumpTarget | null;
+  }>,
 ): ReactElement {
   const [activeChangeId, setActiveChangeId] = useState<string | null>(null);
   return (
@@ -1174,6 +1262,8 @@ function SpecDiffViewerPreview(
       mode="unified"
       activeChangeId={activeChangeId}
       onActiveChangeIdChange={setActiveChangeId}
+      lineComments={props.lineComments}
+      commentJumpTarget={props.commentJumpTarget}
     />
   );
 }
@@ -1200,7 +1290,7 @@ function createRepositoryDiffTreeAvailability(
   if (state.status === "unavailable" || state.status === "failed") {
     return {
       status: "error",
-      message: state.error?.message ?? "Repository diff の取得に失敗しました。",
+      message: state.error?.message ?? "差分の取得に失敗しました。",
     };
   }
   return nodeCount === 0 ? { status: "empty" } : { status: "ready" };
@@ -1274,7 +1364,7 @@ function createRepositoryDiffWorkspaceState(
   if (state.status === "unavailable" || state.status === "failed") {
     return {
       status: "failed",
-      message: state.error?.message ?? "Repository diff は利用できません。",
+      message: state.error?.message ?? "差分は利用できません。",
       onRetry,
     };
   }

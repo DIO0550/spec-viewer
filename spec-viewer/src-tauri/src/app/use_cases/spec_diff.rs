@@ -96,6 +96,7 @@ pub struct ChangedSpecFile {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChangedSpecFiles {
+    pub diff_review_identity: crate::domain::comment::diff::DiffReviewIdentity,
     pub resolved_base_sha: CommitSha,
     pub current_snapshot_id: SnapshotId,
     pub files: Vec<ChangedSpecFile>,
@@ -179,6 +180,7 @@ where
             .map_err(|_| SpecDiffUseCaseError::ConflictingRenameTargets)?;
 
         Ok(ChangedSpecFiles {
+            diff_review_identity: overview.diff_review_identity,
             resolved_base_sha: overview.resolved_base_sha,
             current_snapshot_id: overview.current_snapshot_id,
             files,

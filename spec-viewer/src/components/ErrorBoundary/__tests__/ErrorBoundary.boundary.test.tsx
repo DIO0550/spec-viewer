@@ -44,6 +44,43 @@ function StablePanel(): ReactNode {
   return <p>Recovered viewer</p>;
 }
 
+test("dialog表示の描画エラーは周辺操作を残し閉じられる", () => {
+  const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+  const result = renderComponent(
+    <div>
+      <button type="button">Diffへ切り替え</button>
+      <ErrorBoundary variant="dialog">
+        <ThrowingPanel />
+      </ErrorBoundary>
+    </div>,
+  );
+
+  expect(result.container.querySelector("[role=alertdialog]")).not.toBeNull();
+  expect(
+    result.container.querySelector("[aria-label=描画エラーダイアログを閉じる]"),
+  ).not.toBeNull();
+  expect(document.activeElement?.getAttribute("aria-label")).toBe(
+    "描画エラーダイアログを閉じる",
+  );
+  expect(result.container.textContent).toContain("Diffへ切り替え");
+
+  act(() => {
+    result.container
+      .querySelector<HTMLButtonElement>(
+        "[aria-label=描画エラーダイアログを閉じる]",
+      )
+      ?.click();
+  });
+
+  expect(result.container.querySelector("[role=alertdialog]")).toBeNull();
+  expect(result.container.textContent).toContain(
+    "レビュー本文を表示できません",
+  );
+  expect(result.container.textContent).toContain("Diffへ切り替え");
+  result.unmount();
+  consoleError.mockRestore();
+});
+
 test("ErrorBoundaryは子コンポーネントの例外を復旧操作付きで表示する", () => {
   const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
   const result = renderComponent(

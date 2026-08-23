@@ -30,7 +30,7 @@ export type EditorCurrentLine = Readonly<{
   changeId: string | null;
   commentability: "current";
   anchor: CurrentLineAnchor;
-  estimatedHeight: 22;
+  estimatedHeight: 20;
 }>;
 
 export type EditorPeek = Readonly<{
@@ -299,7 +299,7 @@ function createCurrentLines(
         line: lineNumber,
         lineText: text,
       },
-      estimatedHeight: 22,
+      estimatedHeight: 20,
     };
   });
 }

@@ -20,7 +20,7 @@ export function createAnnotationRow(
     id: `hunk-${input.hunkIndex}-annotation-${input.lineIndex}`,
     side: resolveAnnotationSide(input.previousKind),
     text: input.text,
-    estimatedHeight: 28,
+    estimatedHeight: 30,
   };
 }
 

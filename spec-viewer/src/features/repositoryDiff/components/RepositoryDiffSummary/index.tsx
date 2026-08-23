@@ -22,10 +22,7 @@ export function RepositoryDiffSummary(
   );
 
   return (
-    <section
-      className="repository-diff-summary"
-      aria-label="Repository diff summary"
-    >
+    <section className="repository-diff-summary" aria-label="差分サマリー">
       <div className="repository-diff-summary__headline">
         <span>{filterLabel(summary.filter)}</span>
         <strong>{summary.totalPaths} paths</strong>

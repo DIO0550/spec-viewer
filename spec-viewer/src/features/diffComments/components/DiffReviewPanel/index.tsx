@@ -53,6 +53,10 @@ export function DiffReviewPanel(props: DiffReviewPanelProps): ReactElement {
         props.state.selectComment(commentId);
         return props.state.updateComment({ commentId, body });
       }}
+      onReply={(commentId, replyBody) => {
+        props.state.selectComment(commentId);
+        return props.state.updateComment({ commentId, replyBody });
+      }}
       mutatingCommentId={mutatingCommentId}
       mutationDisabledReason={mutationDisabledReason}
       onResolve={(commentId) => {
@@ -62,6 +66,10 @@ export function DiffReviewPanel(props: DiffReviewPanelProps): ReactElement {
       onReopen={(commentId) => {
         props.state.selectComment(commentId);
         void props.state.updateComment({ commentId, resolved: false });
+      }}
+      onDelete={(commentId) => {
+        props.state.selectComment(commentId);
+        void props.state.updateComment({ commentId, deleted: true });
       }}
     />
   );

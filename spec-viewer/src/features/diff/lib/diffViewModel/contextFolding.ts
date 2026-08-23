@@ -69,7 +69,7 @@ function foldContextRun(
     id: `${hunkId}-context-${contextRadius}-${rows.length - contextRadius - 1}`,
     omittedLineCount: expandableRows.length,
     expandableRows,
-    estimatedHeight: 28,
+    estimatedHeight: 30,
   };
 
   return [...firstRows, gap, ...lastRows];

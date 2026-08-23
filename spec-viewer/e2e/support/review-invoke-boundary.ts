@@ -47,7 +47,7 @@ export async function seedConvergedComments(page: Page): Promise<void> {
         version: 1,
         repositoryId,
         worktreeId,
-        revision: "2",
+        revision: "3",
         comments: [
           createComment(
             "converged-a",
@@ -58,8 +58,14 @@ export async function seedConvergedComments(page: Page): Promise<void> {
           createComment(
             "converged-b",
             "converged second",
-            true,
+            false,
             "2026-08-11T00:00:01Z",
+          ),
+          createComment(
+            "converged-c",
+            "converged resolved",
+            true,
+            "2026-08-11T00:00:02Z",
           ),
         ],
         resolutionWarnings: [],
@@ -600,6 +606,14 @@ export async function installStatefulInvokeBoundary(page: Page): Promise<void> {
             localStorage.removeItem("e2e-delay-save-once");
             await new Promise((resolve) => setTimeout(resolve, 250));
           }
+          if (localStorage.getItem("e2e-stale-save-once") === "true") {
+            localStorage.removeItem("e2e-stale-save-once");
+            localStorage.setItem("e2e-new-snapshot", "true");
+            throw {
+              code: "staleSnapshot",
+              message: "stale snapshot",
+            };
+          }
           if (localStorage.getItem("e2e-permission-once") === "true") {
             localStorage.removeItem("e2e-permission-once");
             return {
@@ -686,19 +700,24 @@ export async function installStatefulInvokeBoundary(page: Page): Promise<void> {
           const next: Document = {
             ...current,
             revision,
-            comments: current.comments.map((comment) =>
-              comment.id === request.commentId
-                ? {
-                    ...comment,
-                    ...(request.body === undefined
-                      ? {}
-                      : { body: request.body }),
-                    ...(request.resolved === undefined
-                      ? {}
-                      : { resolved: request.resolved }),
-                  }
-                : comment,
-            ),
+            comments: current.comments
+              .filter(
+                (comment) =>
+                  request.deleted !== true || comment.id !== request.commentId,
+              )
+              .map((comment) =>
+                comment.id === request.commentId
+                  ? {
+                      ...comment,
+                      ...(request.body === undefined
+                        ? {}
+                        : { body: request.body }),
+                      ...(request.resolved === undefined
+                        ? {}
+                        : { resolved: request.resolved }),
+                    }
+                  : comment,
+              ),
           };
           persist(next);
           return committed(next);

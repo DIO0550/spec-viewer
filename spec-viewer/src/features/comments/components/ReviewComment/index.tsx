@@ -1,3 +1,4 @@
+import { ChevronDown, ChevronRight } from "lucide-react";
 import {
   type FormEvent,
   type KeyboardEvent,
@@ -41,6 +42,7 @@ export type ReviewCommentProps = Readonly<{
   selectClassName?: string;
   anchorDetails?: ReactNode;
   footer?: ReactNode;
+  isCollapsible?: boolean;
   showJump?: boolean;
   labels?: Partial<ReviewCommentLabels>;
   onSelectionKeyDown?: (event: KeyboardEvent<HTMLButtonElement>) => void;
@@ -77,7 +79,12 @@ export function ReviewComment(props: ReviewCommentProps): ReactElement {
     null,
   );
   const [isSubmittingEdit, setSubmittingEdit] = useState(false);
+  const [isCollapsed, setCollapsed] = useState(
+    props.isCollapsible === true && comment.status === "resolved",
+  );
   const editorRef = useRef<HTMLTextAreaElement>(null);
+  const previousStatusRef = useRef(comment.status);
+  const contentId = `review-comment-content-${toHtmlId(comment.id)}`;
 
   useEffect(() => {
     if (!isEditing) {
@@ -90,6 +97,15 @@ export function ReviewComment(props: ReviewCommentProps): ReactElement {
       editorRef.current?.focus({ preventScroll: true });
     }
   }, [isEditing, isSubmittingEdit]);
+
+  useEffect(() => {
+    const previousStatus = previousStatusRef.current;
+    previousStatusRef.current = comment.status;
+    if (props.isCollapsible !== true || previousStatus === comment.status) {
+      return;
+    }
+    setCollapsed(comment.status === "resolved");
+  }, [comment.status, props.isCollapsible]);
 
   const submitEdit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -125,7 +141,7 @@ export function ReviewComment(props: ReviewCommentProps): ReactElement {
       data-comment-id={comment.id}
       aria-current={props.isSelected ? "true" : undefined}
     >
-      <header>
+      <header className="review-comment__header">
         <button
           ref={props.selectionRef}
           type="button"
@@ -139,130 +155,172 @@ export function ReviewComment(props: ReviewCommentProps): ReactElement {
           onClick={() => props.onSelect(comment.id)}
           onKeyDown={props.onSelectionKeyDown}
         >
-          <strong>{comment.title}</strong>
-          <span>{comment.status === "open" ? "Open" : "Resolved"}</span>
+          <strong className="review-comment__title">{comment.title}</strong>
+          <span className="review-comment__status" data-status={comment.status}>
+            {comment.status === "open" ? "未解決" : "解決済み"}
+          </span>
         </button>
+        {props.isCollapsible === true ? (
+          <button
+            type="button"
+            className="review-comment__toggle"
+            aria-label={`${isCollapsed ? "コメントを展開" : "コメントを折りたたむ"} ${comment.id}`}
+            aria-expanded={!isCollapsed}
+            aria-controls={contentId}
+            onClick={() => setCollapsed((current) => !current)}
+          >
+            {isCollapsed ? (
+              <ChevronRight aria-hidden="true" size={18} />
+            ) : (
+              <ChevronDown aria-hidden="true" size={18} />
+            )}
+          </button>
+        ) : null}
       </header>
-      {props.anchorDetails}
-      {isEditing ? (
-        <form onSubmit={submitEdit}>
-          <label>
-            コメント本文
-            <textarea
-              aria-label={`コメント本文 ${comment.id}`}
-              ref={editorRef}
-              value={draftBody}
+      <div
+        id={contentId}
+        className="review-comment__content"
+        hidden={props.isCollapsible === true && isCollapsed}
+      >
+        {props.anchorDetails}
+        {isEditing ? (
+          <form className="review-comment__edit" onSubmit={submitEdit}>
+            <label>
+              コメント本文
+              <textarea
+                aria-label={`コメント本文 ${comment.id}`}
+                ref={editorRef}
+                value={draftBody}
+                disabled={props.isMutating || isSubmittingEdit}
+                onInput={(event) => setDraftBody(event.currentTarget.value)}
+              />
+            </label>
+            {validationMessage === null ? null : (
+              <p role="alert">{validationMessage}</p>
+            )}
+            <button
+              type="submit"
+              aria-label={`${labels.save} ${comment.id}`}
               disabled={props.isMutating || isSubmittingEdit}
-              onInput={(event) => setDraftBody(event.currentTarget.value)}
-            />
-          </label>
-          {validationMessage === null ? null : (
-            <p role="alert">{validationMessage}</p>
-          )}
-          <button
-            type="submit"
-            aria-label={`${labels.save} ${comment.id}`}
-            disabled={props.isMutating || isSubmittingEdit}
-          >
-            {labels.save}
-          </button>
-          <button
-            type="button"
-            aria-label={`${labels.cancel} ${comment.id}`}
-            disabled={props.isMutating || isSubmittingEdit}
-            onClick={() => setEditing(false)}
-          >
-            {labels.cancel}
-          </button>
-        </form>
-      ) : (
-        <p>
-          <HighlightedText
-            text={comment.body}
-            searchQuery={props.searchQuery ?? ""}
-          />
-        </p>
-      )}
-      {props.anchorDetails === undefined ? (
-        <blockquote>{comment.snippet}</blockquote>
-      ) : null}
-      {comment.resolutionLabel.length === 0 ? null : (
-        <p>{comment.resolutionLabel}</p>
-      )}
-      <div className="diff-review-card__actions">
-        {props.showJump === false ? null : (
-          <button
-            type="button"
-            aria-label={`${String(comment.title)}へ移動`}
-            disabled={!comment.canJump}
-            onClick={() => {
-              props.onSelect(comment.id);
-              props.onJump(comment.id);
-            }}
-          >
-            行へ移動
-          </button>
-        )}
-        <button
-          type="button"
-          aria-label={`${labels.edit} ${comment.id}`}
-          disabled={props.isMutating || isEditing}
-          onClick={() => setEditing(true)}
-        >
-          編集
-        </button>
-        {comment.status === "open" ? (
-          <button
-            type="button"
-            aria-label={`${labels.resolve} ${comment.id}`}
-            disabled={props.isMutating}
-            onClick={() => props.onResolve(comment.id)}
-          >
-            {labels.resolve}
-          </button>
+            >
+              {labels.save}
+            </button>
+            <button
+              type="button"
+              aria-label={`${labels.cancel} ${comment.id}`}
+              disabled={props.isMutating || isSubmittingEdit}
+              onClick={() => setEditing(false)}
+            >
+              {labels.cancel}
+            </button>
+          </form>
         ) : (
-          <button
-            type="button"
-            aria-label={`${labels.reopen} ${comment.id}`}
-            disabled={props.isMutating}
-            onClick={() => props.onReopen(comment.id)}
-          >
-            {labels.reopen}
-          </button>
+          <p className="review-comment__body">
+            <HighlightedText
+              text={comment.body}
+              searchQuery={props.searchQuery ?? ""}
+            />
+          </p>
         )}
-        {props.onDelete === undefined ? null : (
-          <button
-            type="button"
-            aria-label={`${labels.delete} ${comment.id}`}
-            disabled={props.isMutating || isConfirmingDelete}
-            onClick={() => {
-              setEditing(false);
-              setConfirmingDelete(true);
-            }}
-          >
-            {labels.delete}
-          </button>
+        {props.anchorDetails === undefined ? (
+          <blockquote className="review-comment__snippet">
+            {comment.snippet}
+          </blockquote>
+        ) : null}
+        {comment.resolutionLabel.length === 0 ? null : (
+          <p className="review-comment__resolution">
+            {comment.resolutionLabel}
+          </p>
         )}
+        {isConfirmingDelete ? null : (
+          <div className="diff-review-card__actions">
+            {props.showJump === false ? null : (
+              <button
+                type="button"
+                aria-label={`${String(comment.title)}へ移動`}
+                disabled={!comment.canJump}
+                onClick={() => {
+                  props.onSelect(comment.id);
+                  props.onJump(comment.id);
+                }}
+              >
+                行へ移動
+              </button>
+            )}
+            <button
+              type="button"
+              aria-label={`${labels.edit} ${comment.id}`}
+              disabled={props.isMutating || isEditing}
+              onClick={() => setEditing(true)}
+            >
+              編集
+            </button>
+            {comment.status === "open" ? (
+              <button
+                type="button"
+                aria-label={`${labels.resolve} ${comment.id}`}
+                disabled={props.isMutating}
+                onClick={() => props.onResolve(comment.id)}
+              >
+                {labels.resolve}
+              </button>
+            ) : (
+              <button
+                type="button"
+                aria-label={`${labels.reopen} ${comment.id}`}
+                disabled={props.isMutating}
+                onClick={() => props.onReopen(comment.id)}
+              >
+                {labels.reopen}
+              </button>
+            )}
+            {props.onDelete === undefined ? null : (
+              <button
+                type="button"
+                aria-label={`${labels.delete} ${comment.id}`}
+                disabled={props.isMutating || isConfirmingDelete}
+                onClick={() => {
+                  setEditing(false);
+                  setConfirmingDelete(true);
+                }}
+              >
+                {labels.delete}
+              </button>
+            )}
+          </div>
+        )}
+        {isConfirmingDelete && props.onDelete !== undefined ? (
+          <div className="review-comment__delete-confirmation" role="alert">
+            <p>{labels.confirmDelete}</p>
+            <button
+              type="button"
+              aria-label={`削除をキャンセル ${comment.id}`}
+              className="review-comment__delete-cancel"
+              disabled={props.isMutating}
+              onClick={() => setConfirmingDelete(false)}
+            >
+              {labels.cancel}
+            </button>
+            <button
+              className="review-comment__delete-confirm"
+              type="button"
+              aria-label={`${labels.confirmDeleteAction} ${comment.id}`}
+              disabled={props.isMutating}
+              onClick={() => props.onDelete?.(comment.id)}
+            >
+              {labels.delete}
+            </button>
+          </div>
+        ) : null}
+        {props.footer}
       </div>
-      {isConfirmingDelete && props.onDelete !== undefined ? (
-        <div role="alert">
-          <p>{labels.confirmDelete}</p>
-          <button
-            type="button"
-            aria-label={`${labels.confirmDeleteAction} ${comment.id}`}
-            disabled={props.isMutating}
-            onClick={() => props.onDelete?.(comment.id)}
-          >
-            {labels.delete}
-          </button>
-          <button type="button" onClick={() => setConfirmingDelete(false)}>
-            {labels.cancel}
-          </button>
-        </div>
-      ) : null}
-      {props.footer}
     </article>
   );
+}
+
+/** Converts an opaque comment id into a stable HTML id fragment. */
+function toHtmlId(commentId: string): string {
+  return encodeURIComponent(commentId);
 }
 
 function HighlightedText(

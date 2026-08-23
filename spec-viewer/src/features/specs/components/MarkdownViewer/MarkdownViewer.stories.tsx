@@ -218,6 +218,49 @@ const commentCardComments: readonly Comment[] = [
   },
 ];
 
+const mermaidContents = [
+  "# Review flow",
+  "",
+  "```mermaid",
+  "flowchart LR",
+  "  Draft[Draft spec] --> Review{Review}",
+  "  Review -->|Approve| Done[Ready to implement]",
+  "  Review -->|Request changes| Draft",
+  "```",
+].join("\n");
+
+const mermaidState: SpecDocumentState = {
+  status: "ready",
+  workspacePath,
+  specId: "mermaid-preview",
+  fileKey: "tasks",
+  document: {
+    key: "tasks",
+    path: "/workspace/spec-reviewer/docs/plans/mermaid-preview.md",
+    contents: mermaidContents,
+    missing: false,
+    blocks: [
+      {
+        blockType: "heading",
+        blockIndex: 0,
+        textHash: createTextHash("Review flow"),
+        textSnippet: "Review flow",
+        sourceRange: null,
+      },
+      {
+        blockType: "code_block",
+        blockIndex: 1,
+        textHash: createTextHash(
+          "flowchart LR\n  Draft[Draft spec] --> Review{Review}\n  Review -->|Approve| Done[Ready to implement]\n  Review -->|Request changes| Draft",
+        ),
+        textSnippet: "flowchart LR Draft spec Review Ready to implement",
+        sourceRange: null,
+      },
+    ],
+  },
+  error: null,
+};
+
 const meta: Meta<typeof MarkdownViewer> = {
   component: MarkdownViewer,
   args: {
@@ -247,6 +290,15 @@ export const ExistingCommentCards: Story = {
   args: {
     comments: commentCardComments,
     activeCommentId: commentId("cmt_active_selection"),
+  },
+};
+export const MermaidDiagram: Story = {
+  args: {
+    state: mermaidState,
+    selectedSpecLabel: "Diagram preview",
+    selectedFileLabel: "Review flow",
+    comments: [],
+    activeCommentId: null,
   },
 };
 

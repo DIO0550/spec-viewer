@@ -7,7 +7,8 @@ use tauri::State;
 
 use crate::{
     app::use_cases::diff_comments::{
-        DiffCommentMutationOutcome, DiffCommentUseCaseError, PreCommitFailureCode,
+        DiffCommentMutationOutcome, DiffCommentUpdate, DiffCommentUseCaseError,
+        PreCommitFailureCode,
     },
     domain::{
         comment::diff::{
@@ -65,6 +66,9 @@ pub struct UpdateDiffCommentRequest {
     comment_id: String,
     body: Option<String>,
     resolved: Option<bool>,
+    reply_body: Option<String>,
+    #[serde(default)]
+    deleted: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -74,6 +78,8 @@ pub struct DiffAnchorTargetRequest {
     old_path: Option<String>,
     new_path: Option<String>,
     line: u32,
+    #[serde(default)]
+    end_line: Option<u32>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -86,7 +92,7 @@ enum DiffSideRequest {
 impl TryFrom<DiffAnchorTargetRequest> for DiffAnchorTarget {
     type Error = DiffCommentCommandError;
     fn try_from(value: DiffAnchorTargetRequest) -> Result<Self, Self::Error> {
-        DiffAnchorTarget::new(
+        DiffAnchorTarget::new_range(
             match value.side {
                 DiffSideRequest::Base => DiffSide::Base,
                 DiffSideRequest::Current => DiffSide::Current,
@@ -102,6 +108,12 @@ impl TryFrom<DiffAnchorTargetRequest> for DiffAnchorTarget {
                 .transpose()
                 .map_err(invalid)?,
             NonZeroU32::new(value.line).ok_or_else(|| DiffCommentCommandError::invalid("line"))?,
+            value
+                .end_line
+                .map(|line| {
+                    NonZeroU32::new(line).ok_or_else(|| DiffCommentCommandError::invalid("endLine"))
+                })
+                .transpose()?,
         )
         .map_err(invalid)
     }
@@ -198,8 +210,17 @@ pub struct ResolvedDiffCommentResponse {
     body: String,
     resolved: bool,
     created_at: String,
+    replies: Vec<DiffCommentReplyResponse>,
     anchor: DiffLineAnchorResponse,
     anchor_resolution: DiffAnchorResolutionResponse,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DiffCommentReplyResponse {
+    id: String,
+    body: String,
+    created_at: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -215,6 +236,8 @@ pub struct DiffLineAnchorResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     new_path: Option<String>,
     line: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    end_line: Option<u32>,
     line_hash: String,
     snippet: String,
     context_before: Vec<String>,
@@ -318,6 +341,15 @@ impl From<&ResolvedDiffComment> for ResolvedDiffCommentResponse {
             body: comment.body().into(),
             resolved: comment.resolved(),
             created_at: comment.created_at().to_rfc3339(),
+            replies: comment
+                .replies()
+                .iter()
+                .map(|reply| DiffCommentReplyResponse {
+                    id: reply.id().into(),
+                    body: reply.body().into(),
+                    created_at: reply.created_at().to_rfc3339(),
+                })
+                .collect(),
             anchor: DiffLineAnchorResponse {
                 repository_id: anchor.identity().repository_id().as_str().into(),
                 worktree_id: anchor.identity().worktree_id().as_str().into(),
@@ -327,6 +359,7 @@ impl From<&ResolvedDiffComment> for ResolvedDiffCommentResponse {
                 old_path: target.old_path().map(|path| path.as_str().into()),
                 new_path: target.new_path().map(|path| path.as_str().into()),
                 line: target.line().get(),
+                end_line: target.end_line().map(NonZeroU32::get),
                 line_hash: anchor.line_hash().into(),
                 snippet: anchor.snippet().into(),
                 context_before: anchor.context_before().to_vec(),
@@ -534,9 +567,13 @@ pub fn update_diff_comment(
         .update(
             &identity,
             revision,
-            &request.comment_id,
-            request.body,
-            request.resolved,
+            DiffCommentUpdate::new(
+                request.comment_id,
+                request.body,
+                request.resolved,
+                request.reply_body,
+                request.deleted,
+            ),
             &CancellationToken::default(),
         )
         .map(Into::into)

@@ -503,7 +503,6 @@ pub struct RepositoryFileReviewResponse {
     pub file: RepositoryFileChangeResponse,
     pub old_content: ContentResponse,
     pub new_content: ContentResponse,
-    pub patch: ContentResponse,
     pub structured_diff: StructuredDiffResponse,
     pub submodule: Option<SubmoduleStateResponse>,
 }
@@ -514,7 +513,6 @@ impl From<RepositoryFileReview> for RepositoryFileReviewResponse {
             file: value.file.into(),
             old_content: value.old_content.into(),
             new_content: value.new_content.into(),
-            patch: value.patch.into(),
             structured_diff: value.structured_diff.into(),
             submodule: value.submodule.map(|state| SubmoduleStateResponse {
                 base_gitlink_oid: state.base_gitlink_oid.map(|oid| oid.as_str().into()),
@@ -546,7 +544,7 @@ impl From<IgnoredPage> for IgnoredPageResponse {
     }
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn load_repository_diff(
     state: State<'_, CommandState>,
     request: LoadRepositoryDiffRequest,
@@ -583,7 +581,7 @@ pub fn load_repository_diff(
         Err(error) => Err(error.into()),
     }
 }
-#[tauri::command]
+#[tauri::command(async)]
 pub fn traverse_repository_ignored(
     state: State<'_, CommandState>,
     request: TraverseIgnoredRequest,
@@ -599,7 +597,7 @@ pub fn traverse_repository_ignored(
         .map(Into::into)
         .map_err(Into::into)
 }
-#[tauri::command]
+#[tauri::command(async)]
 pub fn load_repository_file(
     state: State<'_, CommandState>,
     request: LoadRepositoryFileRequest,
@@ -704,8 +702,7 @@ mod tests {
         assert_eq!(json["newContent"]["text"], "one\ntwo\n");
         assert_eq!(json["oldContent"]["state"], "omitted");
         assert_eq!(json["oldContent"]["reason"], "missingSide");
-        assert_eq!(json["patch"]["state"], "available");
-        assert_eq!(json["patch"]["text"], "");
+        assert!(json.get("patch").is_none());
         assert_eq!(json["structuredDiff"]["state"], "available");
         assert_eq!(json["structuredDiff"]["hunks"], serde_json::json!([]));
         assert_eq!(json["submodule"], serde_json::Value::Null);

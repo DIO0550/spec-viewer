@@ -80,7 +80,7 @@ function createHunkRow(hunkIndex: number, header: string): DiffViewRow {
     kind: "hunk",
     id: `hunk-${hunkIndex}`,
     header,
-    estimatedHeight: 28,
+    estimatedHeight: 30,
   };
 }
 
@@ -107,7 +107,7 @@ function createInlineRow(
     inline: cell,
     old: input.line.kind === "added" ? null : cell,
     next: input.line.kind === "removed" ? null : cell,
-    estimatedHeight: 20,
+    estimatedHeight: 22,
   };
 }
 

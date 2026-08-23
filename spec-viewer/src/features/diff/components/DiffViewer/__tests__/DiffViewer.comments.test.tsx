@@ -9,7 +9,9 @@ import type { DiffLineCommentsController } from "@/features/diffComments/compone
 const containers: HTMLElement[] = [];
 
 afterEach(() => {
-  containers.splice(0).forEach((container) => container.remove());
+  containers.splice(0).forEach((container) => {
+    container.remove();
+  });
 });
 
 test("Unifiedはremovedをbase addedをcurrent contextを両sideのtargetにする", () => {
@@ -46,7 +48,7 @@ test("Splitはspacerを除外して左右の実在行だけtargetにする", () 
   ).toBeNull();
 });
 
-test("occupied targetはindicatorを表示し追加controlを出さない", () => {
+test("occupied targetはindicatorと同一行への追加controlを両方表示する", () => {
   const controller = createController({
     commentsByTarget: {
       "current:implementation-plan.md:2": [
@@ -60,12 +62,16 @@ test("occupied targetはindicatorを表示し追加controlを出さない", () =
     findButton(view, "implementation-plan.md current 2行目のコメント1件を表示"),
   ).not.toBeNull();
   expect(
-    Array.from(view.querySelectorAll("button")).some(
-      (button) =>
-        button.getAttribute("aria-label") ===
-        "implementation-plan.md current 2行目にコメントを追加",
-    ),
-  ).toBe(false);
+    findButton(view, "implementation-plan.md current 2行目にコメントを追加"),
+  ).not.toBeNull();
+  expect(
+    view.querySelector(".diff-inline-comment-thread")?.textContent,
+  ).toContain("Open");
+  expect(
+    view
+      .querySelector(".diff-inline-comment-thread")
+      ?.parentElement?.classList.contains("diff-viewer__cell"),
+  ).toBe(true);
 });
 
 function renderViewer(

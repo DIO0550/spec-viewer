@@ -61,6 +61,19 @@ type RenderResult = Readonly<{
   unmount: () => void;
 }>;
 
+/** Updates a textarea through the same native input path React observes. */
+function inputTextarea(textarea: HTMLTextAreaElement, value: string): void {
+  const setter = Object.getOwnPropertyDescriptor(
+    HTMLTextAreaElement.prototype,
+    "value",
+  )?.set;
+  if (setter === undefined) {
+    throw new Error("textarea value setter not found");
+  }
+  setter.call(textarea, value);
+  textarea.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
 function renderComponent(component: ReactNode): RenderResult {
   const container = document.createElement("div");
   document.body.append(container);
@@ -1461,8 +1474,7 @@ test("MarkdownViewerはMarkdown内の選択から追加コメントを保存す�
     "textarea",
   ) as HTMLTextAreaElement;
   act(() => {
-    textarea.value = " Please clarify this. ";
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    inputTextarea(textarea, " Please clarify this. ");
   });
 
   await act(async () => {
@@ -1635,8 +1647,7 @@ test("MarkdownViewerはコードブロック内の選択から追加コメント
     "textarea",
   ) as HTMLTextAreaElement;
   act(() => {
-    textarea.value = " Keep this example selectable. ";
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    inputTextarea(textarea, " Keep this example selectable. ");
   });
 
   await act(async () => {
@@ -1736,8 +1747,7 @@ test("MarkdownViewerはMarkdownブロックのコメントボタンから追加�
     "textarea",
   ) as HTMLTextAreaElement;
   act(() => {
-    textarea.value = " ブロック全体にコメントします。 ";
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    inputTextarea(textarea, " ブロック全体にコメントします。 ");
   });
 
   await act(async () => {
@@ -1780,8 +1790,7 @@ test("MarkdownViewerは別ブロックのコメントdraftへ切り替えると�
     ".add-comment-popover textarea",
   ) as HTMLTextAreaElement;
   act(() => {
-    firstTextarea.value = "   ";
-    firstTextarea.dispatchEvent(new Event("input", { bubbles: true }));
+    inputTextarea(firstTextarea, "   ");
   });
 
   await act(async () => {
@@ -1946,5 +1955,28 @@ test("MarkdownViewerはerror状態で再読み込みイベントを発火する"
 
   expect(result.container.textContent).toContain("Markdownを読み込めません");
   expect(onReload).toHaveBeenCalledTimes(1);
+  result.unmount();
+});
+
+test("MarkdownViewerはmermaidコードブロックをコメント可能な図として表示する", () => {
+  const mermaidMarkdown = [
+    "```mermaid",
+    "flowchart LR",
+    "  Source --> Review",
+    "```",
+  ].join("\n");
+  const result = renderViewer(createReadyState(mermaidMarkdown));
+  const diagramBlock = result.container.querySelector(
+    '[data-block-type="code"]',
+  );
+
+  expect(diagramBlock?.classList.contains("markdown-rendered__mermaid")).toBe(
+    true,
+  );
+  expect(diagramBlock?.getAttribute("data-block-index")).toBe("0");
+  expect(
+    diagramBlock?.querySelector('figure[aria-label="Mermaid図"]'),
+  ).not.toBeNull();
+  expect(diagramBlock?.querySelector("pre code")).toBeNull();
   result.unmount();
 });

@@ -43,7 +43,7 @@ test("利用不可のDiff tabは理由を公開しclickとkeyboard選択を無�
   container.remove();
 });
 
-test("選択中のDiffが利用不可になった場合はSpecs tabだけを選択可能にする", () => {
+test("選択中のDiffが一時的に利用不可になってもDiff tabの選択を維持する", () => {
   const container = document.createElement("div");
   document.body.append(container);
   const root = createRoot(container);
@@ -65,11 +65,11 @@ test("選択中のDiffが利用不可になった場合はSpecs tabだけを選�
   const tabs = container.querySelectorAll<HTMLButtonElement>('[role="tab"]');
   const specsTab = tabs[0]!;
   const diffTab = tabs[1]!;
-  expect(specsTab.getAttribute("aria-selected")).toBe("true");
-  expect(specsTab.tabIndex).toBe(0);
-  expect(diffTab.getAttribute("aria-selected")).toBe("false");
+  expect(specsTab.getAttribute("aria-selected")).toBe("false");
+  expect(specsTab.tabIndex).toBe(-1);
+  expect(diffTab.getAttribute("aria-selected")).toBe("true");
   expect(diffTab.getAttribute("aria-disabled")).toBe("true");
-  expect(diffTab.tabIndex).toBe(-1);
+  expect(diffTab.tabIndex).toBe(0);
 
   act(() => root.unmount());
   container.remove();

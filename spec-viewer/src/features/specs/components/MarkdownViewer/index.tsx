@@ -64,6 +64,7 @@ import {
 import type {
   MarkdownBlockMetadata,
   MarkdownBlockType,
+  SpecFileKey,
 } from "@/features/specs/types/spec";
 import {
   createHtmlSearchIndex,
@@ -71,6 +72,7 @@ import {
 } from "@/lib/htmlDocumentSearch";
 import { recordPerformancePoint } from "@/lib/performance";
 import { uiText } from "@/utils/uiText";
+import { MermaidDiagram } from "../MermaidDiagram";
 import { HtmlDocument } from "./HtmlDocument";
 import {
   clampHtmlZoomPercent,
@@ -282,10 +284,6 @@ export function MarkdownViewer({
       ? state.correlationId
       : undefined;
   const firstReadableResetKeyRef = useRef<string | null>(null);
-  const { selectionDraft, clearSelectionDraft } = useMarkdownTextSelection({
-    renderedRootRef,
-    fileKey: selectionFileKey,
-  });
   const visibleViewerComments = useMemo(
     () => comments.filter(isVisibleInMarkdownViewer),
     [comments],
@@ -412,7 +410,6 @@ export function MarkdownViewer({
 
   const requestCommentEdit = (draft: CommentEditDraft): void => {
     setActiveAnchorDraft(null);
-    clearSelectionDraft();
     clearBrowserSelection();
     setActiveEditDraft(draft);
   };
@@ -436,7 +433,6 @@ export function MarkdownViewer({
     }
 
     setActiveAnchorDraft(draft);
-    clearSelectionDraft();
     clearBrowserSelection();
   };
 
@@ -654,12 +650,10 @@ export function MarkdownViewer({
           />
           {commentsEnabled ? (
             <>
-              <TextSelectionCommentButton
-                draft={selectionDraft}
-                onCreateDraft={(draft) => {
-                  setActiveAnchorDraft(draft);
-                  clearSelectionDraft();
-                }}
+              <MarkdownTextSelectionControl
+                renderedRootRef={renderedRootRef}
+                fileKey={selectionFileKey}
+                onCreateDraft={setActiveAnchorDraft}
               />
               <CommentAnchorDraftPopover
                 draft={activeAnchorDraft}
@@ -1680,6 +1674,22 @@ function createMarkdownComponents({
     pre: ({ node: _node, children, ...props }) => {
       const block = blockIndexer.next("code");
 
+      const mermaidSource = extractMermaidSource(children);
+
+      if (mermaidSource !== null) {
+        return (
+          <MarkdownCommentableBlock
+            commentAnnotations={block.commentAnnotations}
+            onCreateBlockDraft={onCreateBlockDraft}
+            onSelectComment={onSelectComment}
+            onRequestCommentEdit={onRequestCommentEdit}
+          >
+            <div className="markdown-rendered__mermaid" {...block.metadata}>
+              <MermaidDiagram source={mermaidSource} />
+            </div>
+          </MarkdownCommentableBlock>
+        );
+      }
       return (
         <MarkdownCommentableBlock
           commentAnnotations={block.commentAnnotations}
@@ -2081,6 +2091,51 @@ function renderRangeHighlightedNode(
 }
 
 /** @returns True when a Markdown descendant should keep its code styling intact. */
+type MarkdownCodeElementProps = Readonly<{
+  children?: ReactNode;
+  className?: string;
+}>;
+
+/** @returns Mermaid source for a fenced `mermaid` block, otherwise null. */
+function extractMermaidSource(children: ReactNode): string | null {
+  const childNodes = Array.isArray(children) ? children : [children];
+
+  if (childNodes.length !== 1) {
+    return null;
+  }
+
+  const codeElement = childNodes[0];
+
+  if (!isValidElement<MarkdownCodeElementProps>(codeElement)) {
+    return null;
+  }
+
+  const languageClasses = codeElement.props.className?.split(/\s+/) ?? [];
+
+  if (!languageClasses.includes("language-mermaid")) {
+    return null;
+  }
+
+  return readReactNodeText(codeElement.props.children).trimEnd();
+}
+
+/** @returns Concatenated text content from a React node tree. */
+function readReactNodeText(node: ReactNode): string {
+  if (typeof node === "string" || typeof node === "number") {
+    return String(node);
+  }
+
+  if (Array.isArray(node)) {
+    return node.map(readReactNodeText).join("");
+  }
+
+  if (!isValidElement<{ children?: ReactNode }>(node)) {
+    return "";
+  }
+
+  return readReactNodeText(node.props.children);
+}
+
 function isCodeElement(
   element: ReactElement<{ children?: ReactNode }>,
 ): boolean {
@@ -2265,6 +2320,37 @@ function CommentRangeHighlightSpan({
     >
       {children}
     </span>
+  );
+}
+
+type MarkdownTextSelectionControlProps = Readonly<{
+  renderedRootRef: RefObject<HTMLElement | null>;
+  fileKey: SpecFileKey | null;
+  onCreateDraft: (draft: CommentAnchorDraft) => void;
+}>;
+
+/**
+ * Keeps selection-only state outside MarkdownDocument so showing the action
+ * cannot replace the DOM nodes that own the browser selection.
+ */
+function MarkdownTextSelectionControl({
+  renderedRootRef,
+  fileKey,
+  onCreateDraft,
+}: MarkdownTextSelectionControlProps) {
+  const { selectionDraft, clearSelectionDraft } = useMarkdownTextSelection({
+    renderedRootRef,
+    fileKey,
+  });
+
+  return (
+    <TextSelectionCommentButton
+      draft={selectionDraft}
+      onCreateDraft={(draft) => {
+        onCreateDraft(draft);
+        clearSelectionDraft();
+      }}
+    />
   );
 }
 

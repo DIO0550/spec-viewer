@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { RefreshCw } from "lucide-react";
 import {
   type ComponentProps,
   type ReactElement,
@@ -1204,7 +1205,15 @@ function StoryWorktreeTree({
       <input aria-label="Filter worktrees" placeholder="Filter worktrees..." />
       <div className="story-worktree-tree__header">
         <span>ROOT / WORKTREES {storyWorktrees.length}</span>
-        <span aria-hidden="true">↻</span>
+        <button
+          className="icon-button worktree-navigation__refresh"
+          type="button"
+          aria-label="Worktree一覧を再読み込み"
+          title="Worktree一覧を再読み込み"
+          onClick={fn()}
+        >
+          <RefreshCw aria-hidden="true" size={12} />
+        </button>
       </div>
       <WorktreeTree
         nodes={storyWorktrees.map((worktree) => ({

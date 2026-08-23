@@ -1,6 +1,8 @@
-# Repository Diff comments
+# Diff comments
 
-Repository Diff comments are worktree-wide review notes anchored to one real text line in a specific base/current snapshot. They are separate from Spec comments and do not change Spec export, MCP, LLM, or JSON v2 behavior.
+Repository Diff と Spec Diff のコメントは、特定の base/current snapshot の実在する差分行に紐づく worktree-wide review note です。Spec Diff は Repository Diff を利用できないフォールバック表示でも同じコメント経路を使います。Spec comments とは分離され、Spec export、MCP、LLM、JSON v2 の挙動は変更しません。
+
+Spec Diff の比較元を変更すると identity が切り替わり、コメントはその base/current snapshot に対して再解決されます。Diff Review パネルと行ジャンプは両方の Diff 表示で利用できます。
 
 ## Commentable lines
 
@@ -26,7 +28,7 @@ Only one composer is active in a repository workspace. Switching tabs or modes k
 The composer remains editable when a target is stale or the document revision has overflowed, but button and keyboard submission are disabled. Permission/invalid-store failures block every create, body update, resolve, reopen, and re-anchor mutation for that repository/worktree document; cancelling or opening a new draft cannot bypass the block. The retained body remains copyable, transient failures expose retry, and an uncertain durability result asks the reviewer to reload before repeating a mutation.
 ## Review panel and navigation
 
-Review is visible in Repository Diff mode and is controlled by Open, Resolved, All, and search state. Activating a line indicator forces All, clears search, selects the card, and keeps the draft. Selecting a card alone preserves filters; “行へ移動” opens `selectionPath`, uses `sidePath` for the semantic anchor, materializes the windowed line, and focuses its indicator/control. A base jump from Editor switches to Unified.
+Review is visible in Repository Diff mode and Spec Diff fallback mode, and is controlled by Open, Resolved, All, and search state. Activating a line indicator forces All, clears search, selects the card, and keeps the draft. Selecting a card alone preserves filters; “行へ移動” opens `selectionPath`, uses `sidePath` for the semantic anchor, materializes the windowed line, and focuses its indicator/control. A base jump from Editor switches to Unified.
 
 Resolution labels mean:
 

@@ -136,7 +136,9 @@ test("[R199-REVIEW-002] Diff line creates a comment", async ({ page }) => {
   const composer = page.getByRole("textbox", { name: /2行目へのコメント/ });
   await composer.fill("Diff review");
   await composer.press("Control+Enter");
-  await expect(page.getByText("Diff review")).toBeVisible();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("Diff review"),
+  ).toBeVisible();
 });
 
 test("[R199-REVIEW-003] resolve changes status filter result", async ({
@@ -148,9 +150,17 @@ test("[R199-REVIEW-003] resolve changes status filter result", async ({
   const composer = page.getByRole("textbox", { name: /2行目へのコメント/ });
   await composer.fill("Resolve me");
   await composer.press("Control+Enter");
-  await page.getByRole("button", { name: /^Resolve comment-/ }).click();
-  await page.getByRole("button", { name: /^Resolved 1$/ }).click();
-  await expect(page.getByText("Resolve me")).toBeVisible();
+  const lineComment = page.getByRole("button", {
+    name: /2行目のコメント1件を表示/,
+  });
+  await expect(lineComment).toBeVisible();
+  await page.getByRole("button", { name: /^解決 comment-/ }).click();
+  await expect(lineComment).toBeHidden();
+  await page.getByRole("button", { name: /^解決済み 1$/ }).click();
+  await page.getByRole("button", { name: /^コメントを展開 comment-/ }).click();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("Resolve me"),
+  ).toBeVisible();
 });
 
 test("[R199-REVIEW-004] card jump focuses line indicator", async ({ page }) => {
@@ -218,11 +228,10 @@ test("[R199-A11Y-001] keyboard jump moves focus to destination", async ({
   await expect(page.getByRole("radio", { name: "Split" })).toBeFocused();
 });
 
-test("[R199-A11Y-003] dark review has no serious axe violation", async ({
+test("[R199-A11Y-003] review has no serious axe violation", async ({
   page,
 }) => {
   await openWorkspace(page, "/workspace/worktree-a");
-  await page.getByLabel("テーマモード").selectOption("dark");
   await expectNoSeriousAccessibilityViolations(page);
 });
 

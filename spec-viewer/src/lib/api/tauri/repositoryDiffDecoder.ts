@@ -824,16 +824,25 @@ const decodeReview = (
   raw: unknown,
 ): RepositoryFileReview => {
   const record = decodeRecord(value, path, raw);
+  const structuredDiff = decodeStructuredDiff(
+    record.structuredDiff,
+    path + ".structuredDiff",
+    raw,
+  );
   return {
     file: decodeFileChange(record.file, path + ".file", raw, true),
     oldContent: decodeContent(record.oldContent, path + ".oldContent", raw),
     newContent: decodeContent(record.newContent, path + ".newContent", raw),
-    patch: decodeContent(record.patch, path + ".patch", raw),
-    structuredDiff: decodeStructuredDiff(
-      record.structuredDiff,
-      path + ".structuredDiff",
-      raw,
-    ),
+    patch:
+      structuredDiff.state === "omitted"
+        ? {
+            state: "omitted",
+            text: null,
+            reason: structuredDiff.reason,
+            byteLength: null,
+          }
+        : { state: "available", text: "", reason: null, byteLength: null },
+    structuredDiff,
     submodule: decodeSubmodule(record.submodule, path + ".submodule", raw),
   };
 };

@@ -29,9 +29,16 @@ test("ready diffはpath・change navigation・行番号・markerを描画する"
   expect(result.container.querySelector('[role="radiogroup"]')).toBeNull();
   expect(result.container.textContent).toContain("-");
   expect(result.container.textContent).toContain("+");
+  const scrollSurface = result.container.querySelector(
+    ".diff-viewer__scroll-surface",
+  );
+  const endSpacer = result.container.querySelector(".diff-viewer__end-spacer");
+  expect(scrollSurface).not.toBeNull();
+  expect(endSpacer?.parentElement).toBe(scrollSurface);
+  expect(scrollSurface?.lastElementChild).toBe(endSpacer);
   expect(
-    result.container.querySelector(".diff-viewer__scroll-surface"),
-  ).not.toBeNull();
+    result.container.querySelector(".diff-viewer__comment-lane"),
+  ).toBeNull();
   result.unmount();
 });
 

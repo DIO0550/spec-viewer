@@ -35,7 +35,7 @@ test("RepositoryDiffSummaryはAllのlogical totalとchanged subsetを表示す�
 
   expect(
     result.container.querySelector("section")?.getAttribute("aria-label"),
-  ).toBe("Repository diff summary");
+  ).toBe("差分サマリー");
   expect(result.container.textContent).toContain("全ファイル");
   expect(result.container.textContent).toContain("12 paths");
   expect(result.container.textContent).toContain("4");

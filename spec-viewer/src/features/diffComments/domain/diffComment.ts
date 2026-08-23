@@ -14,6 +14,7 @@ export type DiffCommentDocumentScope = Readonly<
 type DiffAnchorCommon = Readonly<
   DiffReviewIdentity & {
     line: number;
+    endLine?: number;
     lineHash: string;
     snippet: string;
     contextBefore: readonly string[];
@@ -45,12 +46,14 @@ export type DiffAnchorTarget =
       oldPath: string;
       newPath?: string;
       line: number;
+      endLine?: number;
     }>
   | Readonly<{
       side: "current";
       newPath: string;
       oldPath?: string;
       line: number;
+      endLine?: number;
     }>;
 
 export type StaleAnchorReason =
@@ -89,12 +92,19 @@ export type DiffAnchorResolution =
       canJump: false;
     }>;
 
+export type DiffCommentReply = Readonly<{
+  id: string;
+  body: string;
+  createdAt: string;
+}>;
+
 export type StoredDiffComment = Readonly<{
   id: string;
   body: string;
   resolved: boolean;
   createdAt: string;
   anchor: DiffLineAnchor;
+  replies?: readonly DiffCommentReply[];
 }>;
 
 export type ResolvedDiffComment = Readonly<

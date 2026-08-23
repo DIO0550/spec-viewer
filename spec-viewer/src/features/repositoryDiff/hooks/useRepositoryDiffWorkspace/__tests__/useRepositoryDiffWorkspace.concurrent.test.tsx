@@ -224,6 +224,23 @@ test("selection変更はoverviewを再取得せず同じsnapshotのdetailだけ�
   hook.unmount();
 });
 
+test("同じsnapshotで開いたfileへ戻るとdetailを再取得しない", async () => {
+  const api = createApi();
+  const hook = renderHook(options(api));
+  await flush();
+
+  await act(async () => {
+    await hook.current().selectPath("src/a.ts");
+    await hook.current().selectPath("src/b.ts");
+    await hook.current().selectPath("src/a.ts");
+  });
+
+  expect(api.loadRepositoryFile).toHaveBeenCalledTimes(2);
+  expect(hook.current().selection?.path).toBe("src/a.ts");
+  expect(hook.current().state.detail.status).toBe("ready");
+  hook.unmount();
+});
+
 test("stale detailはoverviewを一度だけ再取得して新snapshotのdetailを採用する", async () => {
   const api = createApi({
     loadRepositoryDiff: vi

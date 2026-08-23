@@ -134,7 +134,11 @@ export function RepositoryFileTabs(
           const status = getFileChangePresentation(item.change);
           const isActive = props.activePath === item.path;
           return (
-            <div className="repository-file-tab-shell" key={item.path}>
+            <div
+              className="repository-file-tab-shell"
+              key={item.path}
+              role="presentation"
+            >
               <button
                 ref={(element) => {
                   if (element === null) {
@@ -152,7 +156,16 @@ export function RepositoryFileTabs(
                 disabled={disabled}
                 tabIndex={rovingPath === item.path ? 0 : -1}
                 title={item.path}
-                onClick={() => props.onActivate(item.path)}
+                onClick={(event) => {
+                  const clickedCloseAffordance =
+                    event.target instanceof Element &&
+                    event.target.closest(".repository-file-tab__close") !== null;
+                  if (clickedCloseAffordance) {
+                    close(item.path);
+                    return;
+                  }
+                  props.onActivate(item.path);
+                }}
                 onKeyDown={(event) => handleKeyDown(event, index, item.path)}
               >
                 <span
@@ -163,29 +176,15 @@ export function RepositoryFileTabs(
                   {status.token}
                 </span>
                 <span className="repository-file-tab__path">{item.path}</span>
+                <span
+                  className="repository-file-tab__close"
+                  aria-hidden="true"
+                  title={`${item.path}を閉じる`}
+                />
               </button>
             </div>
           );
         })}
-      </div>
-      <div
-        className="repository-file-tabs__close-actions"
-        aria-label="ファイルタブを閉じる"
-      >
-        {props.items.map((item) => (
-          <div className="repository-file-tab-close-shell" key={item.path}>
-            <button
-              className="repository-file-tab__close"
-              type="button"
-              aria-label={`${item.path}を閉じる`}
-              disabled={disabled}
-              tabIndex={-1}
-              onClick={() => close(item.path)}
-            >
-              ×
-            </button>
-          </div>
-        ))}
       </div>
     </div>
   );

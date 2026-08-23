@@ -52,4 +52,4 @@ detail data、base、snapshot IDはtab stateへ複製せず、snapshot-safe Repo
 
 ## Diff comments
 
-行コメント、Review navigation、keyboard、storage/recoveryの詳細は [Repository Diff comments](./diff-comments.md) を参照してください。
+行コメント、Review navigation、keyboard、storage/recoveryの詳細は [Diff comments](./diff-comments.md) を参照してください。

@@ -1,6 +1,7 @@
 import type {
-  DiffAnchorTarget,
   DiffAnchorResolution,
+  DiffAnchorTarget,
+  DiffReviewIdentity,
   ResolvedDiffComment,
   UseDiffCommentsResult,
 } from "@/features/diffComments";
@@ -35,7 +36,7 @@ export function createDiffLineCommentsController(
   return {
     commentsByTarget:
       options.commentsByTarget ??
-      groupCommentsByResolvedTarget(session?.comments ?? []),
+      groupCommentsByResolvedTarget(session?.comments ?? [], session?.identity),
     activeCommentId: session?.selectedCommentId ?? null,
     draft:
       draft === null
@@ -94,6 +95,7 @@ export function toDiffReviewComments(
     locationLabel: formatLocation(comment),
     snippet: comment.anchor.snippet,
     resolution: toDiffReviewResolution(comment.anchorResolution),
+    replies: comment.replies ?? [],
   }));
 }
 
@@ -128,6 +130,7 @@ export function toAnchorTarget(
       oldPath: target.oldPath ?? target.sidePath,
       newPath: target.newPath,
       line: target.line,
+      ...(target.endLine === undefined ? {} : { endLine: target.endLine }),
     };
   }
   return {
@@ -135,38 +138,83 @@ export function toAnchorTarget(
     oldPath: target.oldPath,
     newPath: target.newPath ?? target.sidePath,
     line: target.line,
+    ...(target.endLine === undefined ? {} : { endLine: target.endLine }),
   };
 }
 
 export function groupCommentsByResolvedTarget(
   comments: readonly ResolvedDiffComment[],
+  currentIdentity?: DiffReviewIdentity,
 ): Readonly<Record<string, readonly DiffLineCommentSummary[] | undefined>> {
   const groups: Record<string, DiffLineCommentSummary[]> = {};
   for (const comment of comments) {
-    const resolution = comment.anchorResolution;
-    if (resolution.status !== "exact" && resolution.status !== "relocated") {
+    if (comment.resolved) {
       continue;
     }
-    const key = `${resolution.side}:${resolution.sidePath}:${resolution.line}`;
+    const target = resolveVisibleCommentTarget(comment, currentIdentity);
+    if (target === null) {
+      continue;
+    }
+    const rangeLength =
+      (comment.anchor.endLine ?? comment.anchor.line) - comment.anchor.line;
+    const displayLine = target.line + Math.max(0, rangeLength);
+    const key = `${target.side}:${target.sidePath}:${displayLine}`;
     const summary = {
       id: comment.id,
       createdAt: comment.createdAt,
       label: comment.body,
     };
-    (groups[key] ??= []).push(summary);
+    const group = groups[key] ?? [];
+    group.push(summary);
+    groups[key] = group;
   }
   return groups;
+}
+
+/** Keeps a just-saved comment on its original line while resolution is temporarily unavailable. */
+function resolveVisibleCommentTarget(
+  comment: ResolvedDiffComment,
+  currentIdentity: DiffReviewIdentity | undefined,
+): Readonly<{
+  side: "base" | "current";
+  sidePath: string;
+  line: number;
+}> | null {
+  const resolution = comment.anchorResolution;
+  if (resolution.status === "exact" || resolution.status === "relocated") {
+    return resolution;
+  }
+
+  if (
+    currentIdentity === undefined ||
+    comment.anchor.repositoryId !== currentIdentity.repositoryId ||
+    comment.anchor.worktreeId !== currentIdentity.worktreeId ||
+    comment.anchor.baseSha !== currentIdentity.baseSha ||
+    comment.anchor.currentSnapshotId !== currentIdentity.currentSnapshotId
+  ) {
+    return null;
+  }
+
+  return {
+    side: comment.anchor.side,
+    sidePath:
+      comment.anchor.side === "base"
+        ? comment.anchor.oldPath
+        : comment.anchor.newPath,
+    line: comment.anchor.line,
+  };
 }
 
 function toLineTarget(target: DiffAnchorTarget): DiffLineCommentTarget {
   const sidePath = target.side === "base" ? target.oldPath : target.newPath;
   return {
-    key: `${target.side}:${sidePath}:${target.line}`,
+    key: `${target.side}:${sidePath}:${target.endLine ?? target.line}`,
     side: target.side,
     sidePath,
     oldPath: target.oldPath,
     newPath: target.newPath,
     line: target.line,
+    ...(target.endLine === undefined ? {} : { endLine: target.endLine }),
   };
 }
 
@@ -175,7 +223,12 @@ function formatLocation(comment: ResolvedDiffComment): string {
     comment.anchor.side === "base"
       ? comment.anchor.oldPath
       : comment.anchor.newPath;
-  return `${path} ${comment.anchor.side} ${comment.anchor.line}行目`;
+  const endLine = comment.anchor.endLine ?? comment.anchor.line;
+  const lineLabel =
+    endLine === comment.anchor.line
+      ? `${comment.anchor.line}行目`
+      : `${comment.anchor.line}–${endLine}行目`;
+  return `${path} ${comment.anchor.side} ${lineLabel}`;
 }
 
 function getMutationStatus(state: string): string | null {

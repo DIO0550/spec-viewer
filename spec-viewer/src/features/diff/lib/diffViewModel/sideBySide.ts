@@ -162,7 +162,7 @@ function createHunkRow(hunkIndex: number, header: string): DiffViewRow {
     kind: "hunk",
     id: `hunk-${hunkIndex}`,
     header,
-    estimatedHeight: 28,
+    estimatedHeight: 30,
   };
 }
 
@@ -187,7 +187,7 @@ function createContentRow(
     inline: null,
     old: input.old,
     next: input.next,
-    estimatedHeight: 20,
+    estimatedHeight: 22,
   };
 }
 

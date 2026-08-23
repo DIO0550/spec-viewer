@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import type { WorkspaceWorktrees } from "@/features/workspace/domain/worktree";
 import { listWorktrees } from "@/lib/api/tauri";
@@ -15,6 +15,11 @@ type WorkspaceWorktreesRequestState = Readonly<{
   source: WorkspaceWorktreesLoadState;
 }>;
 
+export type UseWorkspaceWorktreesResult = Readonly<{
+  state: WorkspaceWorktreesLoadState;
+  refresh: () => void;
+}>;
+
 const initialRequestState: WorkspaceWorktreesRequestState = {
   workspacePath: null,
   source: unavailableState,
@@ -28,9 +33,13 @@ const initialRequestState: WorkspaceWorktreesRequestState = {
  */
 export function useWorkspaceWorktrees(
   workspacePath: string | null,
-): WorkspaceWorktreesLoadState {
+): UseWorkspaceWorktreesResult {
   const [requestState, setRequestState] =
     useState<WorkspaceWorktreesRequestState>(initialRequestState);
+  const [requestVersion, setRequestVersion] = useState(0);
+  const refresh = useCallback((): void => {
+    setRequestVersion((current) => current + 1);
+  }, []);
 
   useEffect(() => {
     if (workspacePath === null) {
@@ -42,10 +51,11 @@ export function useWorkspaceWorktrees(
     }
 
     let isCurrent = true;
-    setRequestState({
-      workspacePath,
-      source: unavailableState,
-    });
+    setRequestState((current) =>
+      current.workspacePath === workspacePath
+        ? current
+        : { workspacePath, source: unavailableState },
+    );
 
     void listWorktrees(workspacePath).then(
       (data: WorkspaceWorktrees) => {
@@ -73,11 +83,12 @@ export function useWorkspaceWorktrees(
     return () => {
       isCurrent = false;
     };
-  }, [workspacePath]);
+  }, [requestVersion, workspacePath]);
 
-  if (requestState.workspacePath !== workspacePath) {
-    return unavailableState;
-  }
+  const state =
+    requestState.workspacePath === workspacePath
+      ? requestState.source
+      : unavailableState;
 
-  return requestState.source;
+  return { state, refresh };
 }

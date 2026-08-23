@@ -35,6 +35,8 @@ export type UpdateDiffCommentRequest = Readonly<{
   commentId: string;
   body?: string;
   resolved?: boolean;
+  replyBody?: string;
+  deleted?: boolean;
 }>;
 export type DiffCommentBackendErrorCode =
   | "invalidRequest"

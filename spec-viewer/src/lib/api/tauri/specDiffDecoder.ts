@@ -1,3 +1,4 @@
+import type { DiffReviewIdentity } from "@/features/diffComments";
 import { deriveDiffAvailability } from "@/features/diff/domain/fileDiff";
 import {
   type DiffLineSource,
@@ -12,6 +13,7 @@ import {
 } from "@/features/diff/domain/fileDiff";
 
 import { isRecord } from "./isRecord";
+import { decodeDiffReviewIdentity } from "./diffCommentDecoder";
 
 export type ChangedSpecFile = Readonly<{
   specId: string;
@@ -25,6 +27,7 @@ export type ChangedSpecFile = Readonly<{
 export type ChangedSpecFiles = Readonly<{
   resolvedBaseSha: string;
   currentSnapshotId: string;
+  diffReviewIdentity?: DiffReviewIdentity;
   files: readonly ChangedSpecFile[];
 }>;
 
@@ -505,6 +508,16 @@ export function decodeChangedSpecFiles(value: unknown): ChangedSpecFiles {
     throw invalid("files", "an array", "received a non-array value", value);
   }
 
+  const diffReviewIdentity =
+    record.diffReviewIdentity === undefined ||
+    record.diffReviewIdentity === null
+      ? undefined
+      : decodeDiffReviewIdentity(
+          record.diffReviewIdentity,
+          "diffReviewIdentity",
+          value,
+        );
+
   return {
     resolvedBaseSha: decodeGitObjectId(
       record.resolvedBaseSha,
@@ -516,6 +529,7 @@ export function decodeChangedSpecFiles(value: unknown): ChangedSpecFiles {
       "currentSnapshotId",
       value,
     ),
+    ...(diffReviewIdentity === undefined ? {} : { diffReviewIdentity }),
     files: record.files.map((candidate, index) => {
       const file = decodeRecord(candidate, `files[${index}]`, value);
 

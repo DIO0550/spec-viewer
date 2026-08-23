@@ -67,12 +67,18 @@ export function DiffLineCommentSlot(
       : (slotRef.current?.querySelector<HTMLButtonElement>(
           ".diff-line-comment-control",
         ) ?? null);
+  const draftLineLabel =
+    draft?.target.endLine === undefined ||
+    draft.target.endLine === draft.target.line
+      ? `${draft?.target.line ?? props.target.line}行目`
+      : `${draft.target.line}–${draft.target.endLine}行目`;
 
   return (
     <div
       ref={slotRef}
       className="diff-line-comment-slot"
       data-comment-target-key={props.target.key}
+      data-draft-active={isActiveDraft ? "true" : undefined}
     >
       <DiffLineCommentControl
         target={props.target}
@@ -84,7 +90,7 @@ export function DiffLineCommentSlot(
       {isActiveDraft && draft !== null ? (
         <DiffCommentComposer
           id={`diff-comment-composer-${createControlId(props.target.key)}`}
-          label={`${props.target.sidePath} ${props.target.side} ${props.target.line}行目へのコメント`}
+          label={`${props.target.sidePath} ${props.target.side} ${draftLineLabel}へのコメント`}
           body={draft.body}
           isSaving={draft.isSaving}
           origin={mountedOrigin}
@@ -110,7 +116,7 @@ export function DiffLineCommentSlot(
           onReanchor={
             draft.canReanchor === true &&
             props.controller.onReanchorDraft !== undefined
-              ? () => props.controller.onReanchorDraft?.(props.target)
+              ? () => props.controller.onReanchorDraft?.(draft.target)
               : undefined
           }
           onSubmit={(body) =>
@@ -122,6 +128,79 @@ export function DiffLineCommentSlot(
   );
 }
 
+/**
+ * Renders unresolved comments as a persistent thread below their Diff line.
+ *
+ * @param props - Semantic target and workspace-wide controlled comment state.
+ * @returns The unresolved thread, or null when the line has no open comments.
+ */
+export function DiffInlineCommentThread(
+  props: Readonly<{
+    target: DiffLineCommentTarget;
+    controller: DiffLineCommentsController;
+  }>,
+): ReactElement | null {
+  const comments = props.controller.commentsByTarget[props.target.key] ?? [];
+  if (comments.length === 0) {
+    return null;
+  }
+
+  return (
+    <ol
+      className="diff-inline-comment-thread"
+      aria-label={`${props.target.sidePath} ${props.target.line}行目の未解決コメント`}
+    >
+      {comments.map((comment) => (
+        <li key={comment.id}>
+          <button
+            type="button"
+            className="diff-inline-comment-thread__comment"
+            aria-current={
+              comment.id === props.controller.activeCommentId
+                ? "true"
+                : undefined
+            }
+            onClick={() => props.controller.onSelectComment(comment.id)}
+          >
+            <span className="diff-inline-comment-thread__header">
+              <span
+                className="diff-inline-comment-thread__avatar"
+                aria-hidden="true"
+              >
+                R
+              </span>
+              <strong>Review</strong>
+              <time dateTime={comment.createdAt}>
+                {formatCommentTimestamp(comment.createdAt)}
+              </time>
+            </span>
+            <span className="diff-inline-comment-thread__body">
+              {comment.label}
+            </span>
+            <span className="diff-inline-comment-thread__footer">
+              スレッドを表示
+            </span>
+          </button>
+        </li>
+      ))}
+    </ol>
+  );
+}
+/**
+ * @param createdAt - Persisted ISO comment timestamp.
+ * @returns A compact locale timestamp for the inline thread header.
+ */
+function formatCommentTimestamp(createdAt: string): string {
+  const timestamp = new Date(createdAt);
+  if (Number.isNaN(timestamp.getTime())) {
+    return createdAt;
+  }
+
+  return new Intl.DateTimeFormat("ja-JP", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(timestamp);
+}
 /** Produces a document-safe ID from an opaque semantic target key. */
 function createControlId(targetKey: string): string {
   return targetKey.replace(/[^a-zA-Z0-9_-]/g, "-");

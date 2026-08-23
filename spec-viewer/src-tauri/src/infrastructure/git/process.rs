@@ -148,7 +148,7 @@ impl GitRunner {
     }
 }
 
-fn isolate_git_environment(command: &mut Command) {
+pub(super) fn isolate_git_environment(command: &mut Command) {
     command
         .env("GIT_CONFIG_NOSYSTEM", "1")
         .env(
@@ -157,6 +157,8 @@ fn isolate_git_environment(command: &mut Command) {
         )
         .env("GIT_TERMINAL_PROMPT", "0")
         .env("GCM_INTERACTIVE", "Never")
+        .env("GIT_OPTIONAL_LOCKS", "0")
+        .env("GIT_PAGER", "cat")
         .env("LC_ALL", "C")
         .env("LANG", "C")
         .env("TZ", "UTC")
@@ -256,6 +258,14 @@ mod tests {
         assert_eq!(
             values.get(OsStr::new("GIT_TERMINAL_PROMPT")),
             Some(&Some(OsStr::new("0")))
+        );
+        assert_eq!(
+            values.get(OsStr::new("GIT_OPTIONAL_LOCKS")),
+            Some(&Some(OsStr::new("0")))
+        );
+        assert_eq!(
+            values.get(OsStr::new("GIT_PAGER")),
+            Some(&Some(OsStr::new("cat")))
         );
         assert_eq!(
             values.get(OsStr::new("LC_ALL")),

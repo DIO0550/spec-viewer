@@ -37,7 +37,7 @@ export type DiffViewRow =
       kind: "hunk";
       id: string;
       header: string;
-      estimatedHeight: 28;
+      estimatedHeight: 30;
     }>
   | Readonly<{
       kind: "content";
@@ -46,21 +46,21 @@ export type DiffViewRow =
       inline: DiffCell | null;
       old: DiffCell | null;
       next: DiffCell | null;
-      estimatedHeight: 20;
+      estimatedHeight: 22;
     }>
   | Readonly<{
       kind: "annotation";
       id: string;
       side: "old" | "new" | "both";
       text: string;
-      estimatedHeight: 28;
+      estimatedHeight: 30;
     }>
   | Readonly<{
       kind: "gap";
       id: string;
       omittedLineCount: number;
       expandableRows: readonly DiffViewRow[] | null;
-      estimatedHeight: 28;
+      estimatedHeight: 30;
     }>;
 
 export type DiffViewModel = Readonly<{

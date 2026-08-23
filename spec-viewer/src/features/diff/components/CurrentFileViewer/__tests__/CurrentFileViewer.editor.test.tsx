@@ -1,34 +1,52 @@
-import { act } from "react";
+import { act, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
 import { CurrentFileViewer } from "@/features/diff/components/CurrentFileViewer";
 import { createDiffViewerFixture } from "@/features/diff/components/DiffViewer/testFixtures";
+import type {
+  DiffLineCommentDraft,
+  DiffLineCommentsController,
+} from "@/features/diffComments/components/DiffLineCommentSlot";
 
-test("replacementをmodified gutterで示しprevious peekを展開する", () => {
+const EditorRowHeight = 20;
+const CommentComposerRowHeight = 120;
+const CommentComposerExpansion = CommentComposerRowHeight - EditorRowHeight;
+const ViewportAnchorInset = 5;
+
+test("Editorは変更前行とannotationを表示せずcurrent行だけを表示する", () => {
   const fileDiff = createReplacementFixture();
   const view = renderViewer(fileDiff, "hunk-0-change-0");
 
   const modified = view.container.querySelector(
     '[data-change-kind="modified"]',
   );
-  const button = view.container.querySelector<HTMLButtonElement>(
-    '[aria-expanded="false"]',
-  );
   expect(modified?.getAttribute("data-commentable")).toBe("true");
   expect(modified?.textContent).toContain("2new");
-  expect(button?.textContent).toContain("変更前 1行");
-  act(() => button?.click());
-  expect(view.container.textContent).toContain("変更前 2 old");
+  expect(view.container.textContent).not.toContain("変更前");
+  expect(view.container.textContent).not.toContain("old");
+  expect(view.container.textContent).not.toContain("No newline at end of file");
   expect(
-    view.container
-      .querySelector('[data-row-kind="peek-line"]')
-      ?.getAttribute("data-commentable"),
-  ).toBe("false");
+    view.container.querySelector('[data-row-kind="peek-summary"]'),
+  ).toBeNull();
+  expect(
+    view.container.querySelector('[data-row-kind="peek-line"]'),
+  ).toBeNull();
+  expect(
+    view.container.querySelector('[data-row-kind="annotation"]'),
+  ).toBeNull();
+  const scrollSurface = view.container.querySelector(
+    ".current-file-viewer__scroll-surface",
+  );
+  const endSpacer = view.container.querySelector(
+    ".current-file-viewer__end-spacer",
+  );
+  expect(endSpacer?.parentElement).toBe(scrollSurface);
+  expect(scrollSurface?.lastElementChild).toBe(endSpacer);
   view.unmount();
 });
 
-test("deleted fileはwhole-file peekだけを非comment対象で表示する", () => {
+test("deleted fileは変更前全文を表示せずcurrent側なしを示す", () => {
   const fileDiff = createDiffViewerFixture({
     status: "deleted",
     oldContent: "first\nsecond",
@@ -54,12 +72,16 @@ test("deleted fileはwhole-file peekだけを非comment対象で表示する", (
   });
   const view = renderViewer(fileDiff, null);
 
-  expect(view.container.textContent).toContain("2行削除");
-  expect(view.container.querySelector('[data-commentable="true"]')).toBeNull();
+  expect(view.container.textContent).toContain("current側の内容がありません");
+  expect(view.container.textContent).not.toContain("first");
+  expect(view.container.textContent).not.toContain("second");
+  expect(
+    view.container.querySelector('[data-row-kind="peek-summary"]'),
+  ).toBeNull();
   view.unmount();
 });
 
-test("削除のみのactive changeはtargetのpeek summaryを強調する", () => {
+test("削除のみのchangeでもEditorはcurrent行だけを表示する", () => {
   const fileDiff = createDiffViewerFixture({
     oldContent: "before\ndeleted\nafter",
     newContent: "before\nafter",
@@ -90,12 +112,12 @@ test("削除のみのactive changeはtargetのpeek summaryを強調する", () =
     ],
   });
   const view = renderViewer(fileDiff, "hunk-0-change-0");
-  const activeRow = view.container.querySelector<HTMLElement>(
-    '[data-active-change="true"]',
-  );
-
-  expect(activeRow?.dataset.rowKind).toBe("peek-summary");
-  expect(activeRow?.textContent).toContain("1行削除");
+  expect(view.container.textContent).toContain("1before");
+  expect(view.container.textContent).toContain("2after");
+  expect(view.container.textContent).not.toContain("deleted");
+  expect(
+    view.container.querySelector('[data-row-kind="peek-summary"]'),
+  ).toBeNull();
   view.unmount();
 });
 
@@ -200,28 +222,41 @@ test("次の変更はcontrolled cross-view IDを通知する", () => {
   view.unmount();
 });
 
-test("revisionKey変更時だけ展開済みpeekをresetする", () => {
-  const fileDiff = createReplacementFixture();
-  const view = renderViewer(fileDiff, null);
-  act(() =>
-    view.container
-      .querySelector<HTMLButtonElement>('[aria-expanded="false"]')
-      ?.click(),
+test("active change未選択でEditorを開くと先頭位置を維持する", () => {
+  const onChange = vi.fn();
+  const view = renderViewer(
+    createTwoReplacementFixture(),
+    null,
+    "revision-1",
+    onChange,
   );
-  expect(view.container.querySelector('[aria-expanded="true"]')).not.toBeNull();
-
-  view.rerender(fileDiff, "revision-1");
-  expect(view.container.querySelector('[aria-expanded="true"]')).not.toBeNull();
   const scrollSurface = view.container.querySelector<HTMLDivElement>(
     ".current-file-viewer__scroll-surface",
   );
+
+  expect(scrollSurface?.scrollTop).toBe(0);
+  expect(onChange).not.toHaveBeenCalled();
+  expect(
+    view.container.querySelector('[data-active-change="true"]'),
+  ).toBeNull();
+  view.unmount();
+});
+
+test("revisionKey変更時はscroll位置をresetしcurrent行だけを表示し続ける", () => {
+  const fileDiff = createReplacementFixture();
+  const view = renderViewer(fileDiff, null);
+  const scrollSurface = view.container.querySelector<HTMLDivElement>(
+    ".current-file-viewer__scroll-surface",
+  );
+
+  expect(view.container.textContent).not.toContain("変更前");
   expect(scrollSurface).not.toBeNull();
   scrollSurface!.scrollTop = 125;
   view.rerender(fileDiff, "revision-2");
-  expect(
-    view.container.querySelector('[aria-expanded="false"]'),
-  ).not.toBeNull();
+
   expect(scrollSurface?.scrollTop).toBe(0);
+  expect(view.container.textContent).toContain("2new");
+  expect(view.container.textContent).not.toContain("変更前");
   view.unmount();
 });
 
@@ -258,45 +293,124 @@ test("長大な1行をwrapせず1 semantic rowとして表示する", () => {
   view.unmount();
 });
 
-test("展開済みpeek controlは実際のpeek rowだけを参照する", () => {
+test("Editorの全rowはcurrent lineとして公開する", () => {
   const view = renderViewer(createReplacementFixture(), null);
-  const button = view.container.querySelector<HTMLButtonElement>(
-    '[aria-expanded="false"]',
-  );
-
-  expect(button?.hasAttribute("aria-controls")).toBe(false);
-  act(() => button?.click());
-  const controlledIds = button?.getAttribute("aria-controls")?.split(" ") ?? [];
-  const controlledRows = controlledIds.map((id) =>
-    view.container.querySelector<HTMLElement>(`#${id}`),
-  );
-
-  expect(controlledIds.length).toBeGreaterThan(0);
-  expect(
-    controlledRows.every((row) => row?.dataset.rowKind === "peek-line"),
-  ).toBe(true);
-  expect(
-    controlledRows.every(
-      (row) => row?.dataset.peekId === "hunk-0-change-0-peek",
-    ),
-  ).toBe(true);
-  expect(view.container.querySelector('[aria-hidden="true"][id]')).toBeNull();
   const rows = view.container.querySelectorAll<HTMLElement>('[role="row"]');
-  expect(rows.length).toBeGreaterThan(0);
+
+  expect(rows).toHaveLength(3);
   for (const row of rows) {
-    expect(row.querySelector(':scope > [role="gridcell"]')).not.toBeNull();
+    expect(row.dataset.rowKind).toBe("current-line");
+    expect(row.dataset.commentable).toBe("true");
   }
 
   view.unmount();
 });
 
-test("20,000行far targetの前100行が22pxから20pxへ実測されてもviewport位置を保つ", () => {
+test("同一revisionのfileDiff再生成を伴うコメント追加でも手動scroll位置を保つ", () => {
+  const animationFrames = installAnimationFrameHarness();
+  const getRect = vi
+    .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+    .mockImplementation(function getCommentRowRect(this: HTMLElement) {
+      const height = this.querySelector(".diff-comment-composer")
+        ? CommentComposerRowHeight
+        : EditorRowHeight;
+      return { height } as DOMRect;
+    });
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  act(() => {
+    root.render(<EditorCommentScrollHarness />);
+  });
+  act(() => {
+    animationFrames.flush();
+  });
+  const scrollSurface = container.querySelector<HTMLDivElement>(
+    ".current-file-viewer__scroll-surface",
+  );
+  const initialScrollTop = EditorRowHeight * 2 + ViewportAnchorInset;
+  scrollSurface!.scrollTop = initialScrollTop;
+  const addComment = container.querySelector<HTMLButtonElement>(
+    '[aria-label="implementation-plan.md current 3行目にコメントを追加"]',
+  );
+
+  act(() => {
+    addComment?.click();
+  });
+  act(() => {
+    animationFrames.flush();
+  });
+
+  expect(container.querySelector(".diff-comment-composer")).not.toBeNull();
+  expect(scrollSurface?.scrollTop).toBe(initialScrollTop);
+  act(() => root.unmount());
+  getRect.mockRestore();
+  animationFrames.restore();
+});
+
+test.each([
+  ["viewport anchorより前", 1, CommentComposerExpansion],
+  ["viewport anchorと同じ位置", 3, 0],
+  ["viewport anchorより後", 4, 0],
+] as const)("%sでコメント入力欄を開閉しても表示位置を保つ", (_position, draftLine, expectedOpenDelta) => {
+  const animationFrames = installAnimationFrameHarness();
+  const getRect = vi
+    .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+    .mockImplementation(function getCommentRowRect(this: HTMLElement) {
+      const height = this.querySelector(".diff-comment-composer")
+        ? CommentComposerRowHeight
+        : EditorRowHeight;
+      return { height } as DOMRect;
+    });
+  const fileDiff = createDiffViewerFixture({
+    newContent: "first\nsecond\nthird\nfourth",
+    lines: [],
+  });
+  const view = renderViewer(
+    fileDiff,
+    null,
+    "revision-1",
+    vi.fn(),
+    createLineCommentsController(),
+  );
+  act(() => {
+    animationFrames.flush();
+  });
+  const scrollSurface = view.container.querySelector<HTMLDivElement>(
+    ".current-file-viewer__scroll-surface",
+  );
+  const initialScrollTop = EditorRowHeight * 2 + ViewportAnchorInset;
+  scrollSurface!.scrollTop = initialScrollTop;
+
+  view.rerender(
+    fileDiff,
+    "revision-1",
+    null,
+    createLineCommentsController(draftLine),
+  );
+  expect(view.container.querySelector(".diff-comment-composer")).not.toBeNull();
+  act(() => {
+    animationFrames.flush();
+  });
+  expect(scrollSurface?.scrollTop).toBe(initialScrollTop + expectedOpenDelta);
+
+  view.rerender(fileDiff, "revision-1", null, createLineCommentsController());
+  act(() => {
+    animationFrames.flush();
+  });
+  expect(scrollSurface?.scrollTop).toBe(initialScrollTop);
+
+  view.unmount();
+  getRect.mockRestore();
+  animationFrames.restore();
+});
+
+test("20,000行far targetの前100行が20pxから18pxへ実測されてもviewport位置を保つ", () => {
   const animationFrames = installAnimationFrameHarness();
   const getRect = vi
     .spyOn(HTMLElement.prototype, "getBoundingClientRect")
     .mockImplementation(function getMeasuredRowRect(this: HTMLElement) {
       const rowIndex = Number(this.getAttribute("aria-rowindex"));
-      const height = rowIndex < 14_900 ? 22 : 20;
+      const height = rowIndex < 14_900 ? 20 : 18;
       return { height } as DOMRect;
     });
   const view = renderViewer(createFarTargetFixture(), "hunk-0-change-0");
@@ -327,40 +441,6 @@ test("20,000行far targetの前100行が22pxから20pxへ実測されてもviewp
   animationFrames.restore();
 });
 
-test("active changeより前のpeek開閉はtargetのviewport位置を保つ", () => {
-  const view = renderViewer(createTwoReplacementFixture(), "hunk-0-change-1");
-  const scrollSurface = view.container.querySelector<HTMLDivElement>(
-    ".current-file-viewer__scroll-surface",
-  );
-  const firstPeek = view.container.querySelector<HTMLButtonElement>(
-    '[aria-expanded="false"]',
-  );
-  const initialScrollTop = scrollSurface?.scrollTop ?? 0;
-
-  act(() => firstPeek?.click());
-  expect(scrollSurface?.scrollTop).toBe(initialScrollTop + 22);
-  act(() => firstPeek?.click());
-  expect(scrollSurface?.scrollTop).toBe(initialScrollTop);
-  view.unmount();
-});
-
-test("active change自身のprevious peek開閉はsame semantic targetのviewport位置を保つ", () => {
-  const view = renderViewer(createReplacementFixture(), "hunk-0-change-0");
-  const scrollSurface = view.container.querySelector<HTMLDivElement>(
-    ".current-file-viewer__scroll-surface",
-  );
-  const previousPeek = view.container.querySelector<HTMLButtonElement>(
-    '[aria-expanded="false"]',
-  );
-  const initialScrollTop = scrollSurface?.scrollTop ?? 0;
-
-  act(() => previousPeek?.click());
-  expect(scrollSurface?.scrollTop).toBe(initialScrollTop + 22);
-  act(() => previousPeek?.click());
-  expect(scrollSurface?.scrollTop).toBe(initialScrollTop);
-  view.unmount();
-});
-
 test("1MiB行はaria-labelへ全文複製せずcodeを一度だけ公開する", () => {
   const longLine = "x".repeat(1024 * 1024);
   const view = renderViewer(
@@ -380,29 +460,11 @@ test("1MiB行はaria-labelへ全文複製せずcodeを一度だけ公開する",
   view.unmount();
 });
 
-test("manual scroll後のsame-change previous peek開閉はtarget viewport位置だけを補正する", () => {
-  const view = renderViewer(createReplacementFixture(), "hunk-0-change-0");
-  const scrollSurface = view.container.querySelector<HTMLDivElement>(
-    ".current-file-viewer__scroll-surface",
-  );
-  const button = view.container.querySelector<HTMLButtonElement>(
-    '[aria-expanded="false"]',
-  );
-
-  expect(scrollSurface).not.toBeNull();
-  scrollSurface!.scrollTop = 240;
-  act(() => button?.click());
-  expect(scrollSurface?.scrollTop).toBe(262);
-  act(() => button?.click());
-  expect(scrollSurface?.scrollTop).toBe(240);
-  view.unmount();
-});
-
 test("初回mountのrow測定RAFはrevision resetでcancelされずtarget offsetを実測補正する", () => {
   const animationFrames = installAnimationFrameHarness();
   const getRect = vi
     .spyOn(HTMLElement.prototype, "getBoundingClientRect")
-    .mockReturnValue({ height: 20 } as DOMRect);
+    .mockReturnValue({ height: 18 } as DOMRect);
   const view = renderViewer(createReplacementFixture(), "hunk-0-change-0");
   const scrollSurface = view.container.querySelector<HTMLDivElement>(
     ".current-file-viewer__scroll-surface",
@@ -414,7 +476,7 @@ test("初回mountのrow測定RAFはrevision resetでcancelされずtarget offset
     animationFrames.flush();
   });
 
-  expect(scrollSurface?.scrollTop).toBe(estimatedScrollTop - 14);
+  expect(scrollSurface?.scrollTop).toBe(estimatedScrollTop - 2);
   view.unmount();
   getRect.mockRestore();
   animationFrames.restore();
@@ -444,13 +506,13 @@ test("revisionKey変更後は同じrow IDを再測定し新しい高さでtarget
   expect(animationFrames.cancelledFrameCount()).toBe(0);
 
   view.rerender(fileDiff, "revision-2", "hunk-0-change-1");
-  expect(scrollSurface?.scrollTop).toBe(130);
+  expect(scrollSurface?.scrollTop).toBe(60);
 
   act(() => {
     animationFrames.flush();
   });
 
-  expect(scrollSurface?.scrollTop).toBe(90);
+  expect(scrollSurface?.scrollTop).toBe(54);
   view.unmount();
   getRect.mockRestore();
   animationFrames.restore();
@@ -491,6 +553,12 @@ function createReplacementFixture(oldContent = "before\nold\nafter") {
             newLineNumber: null,
           },
           { kind: "added", text: "new", oldLineNumber: null, newLineNumber: 2 },
+          {
+            kind: "noNewline",
+            text: "\\ No newline at end of file",
+            oldLineNumber: null,
+            newLineNumber: null,
+          },
           {
             kind: "context",
             text: "after",
@@ -587,6 +655,7 @@ function renderViewer(
   activeChangeId: string | null,
   initialRevisionKey = "revision-1",
   onActiveChangeIdChange = vi.fn(),
+  initialLineComments?: DiffLineCommentsController,
 ) {
   const container = document.createElement("div");
   const root = createRoot(container);
@@ -594,6 +663,7 @@ function renderViewer(
     nextFileDiff = fileDiff,
     revisionKey = initialRevisionKey,
     nextActiveChangeId = activeChangeId,
+    nextLineComments = initialLineComments,
   ) => {
     act(() =>
       root.render(
@@ -602,6 +672,7 @@ function renderViewer(
           revisionKey={revisionKey}
           activeChangeId={nextActiveChangeId}
           onActiveChangeIdChange={onActiveChangeIdChange}
+          lineComments={nextLineComments}
         />,
       ),
     );
@@ -611,6 +682,65 @@ function renderViewer(
     container,
     rerender: render,
     unmount: () => act(() => root.unmount()),
+  };
+}
+
+function EditorCommentScrollHarness() {
+  const [draft, setDraft] = useState<DiffLineCommentDraft | null>(null);
+  const controller: DiffLineCommentsController = {
+    commentsByTarget: {},
+    activeCommentId: null,
+    draft,
+    onStartDraft: (target, origin) => {
+      setDraft({
+        target,
+        body: "",
+        isSaving: false,
+        origin,
+      });
+    },
+    onDraftBodyChange: () => undefined,
+    onCancelDraft: () => setDraft(null),
+    onSubmitDraft: () => undefined,
+    onSelectComment: () => undefined,
+  };
+  return (
+    <CurrentFileViewer
+      fileDiff={createTwoReplacementFixture()}
+      revisionKey="revision-1"
+      activeChangeId="hunk-0-change-0"
+      onActiveChangeIdChange={() => undefined}
+      lineComments={controller}
+    />
+  );
+}
+
+function createLineCommentsController(
+  draftLine?: number,
+): DiffLineCommentsController {
+  const draft: DiffLineCommentDraft | null =
+    draftLine === undefined
+      ? null
+      : {
+          target: {
+            key: "current:implementation-plan.md:" + draftLine,
+            side: "current",
+            sidePath: "implementation-plan.md",
+            line: draftLine,
+          },
+          body: "draft",
+          isSaving: false,
+          origin: null,
+        };
+  return {
+    commentsByTarget: {},
+    activeCommentId: null,
+    draft,
+    onStartDraft: vi.fn(),
+    onDraftBodyChange: vi.fn(),
+    onCancelDraft: vi.fn(),
+    onSubmitDraft: vi.fn(),
+    onSelectComment: vi.fn(),
   };
 }
 

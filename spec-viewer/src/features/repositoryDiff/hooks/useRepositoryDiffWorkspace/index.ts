@@ -27,6 +27,10 @@ import {
   type TraverseRepositoryIgnoredRequest,
   traverseRepositoryIgnored,
 } from "@/lib/api/tauri";
+import {
+  createPerformanceCorrelationId,
+  startPerformanceSpan,
+} from "@/lib/performance";
 
 export type RepositoryDiffWorkspaceApi = Readonly<{
   loadRepositoryDiff: (
@@ -101,6 +105,44 @@ const STALE_DETAIL_ERROR_CODES = new Set([
   "entryChangedDuringRead",
   "headChangedDuringRead",
 ]);
+const DETAIL_CACHE_LIMIT = 8;
+
+/**
+ * @param worktreeId - Active worktree identity.
+ * @param snapshotId - Immutable repository snapshot identity.
+ * @param path - Repository-relative file path.
+ * @returns A collision-safe key for one file detail response.
+ */
+function createDetailCacheKey(
+  worktreeId: string,
+  snapshotId: string,
+  path: string,
+): string {
+  return JSON.stringify([worktreeId, snapshotId, path]);
+}
+
+/**
+ * Stores a detail as most recently used while keeping the cache bounded.
+ *
+ * @param cache - Hook-local detail cache.
+ * @param key - Snapshot-scoped detail key.
+ * @param review - Successfully decoded file review.
+ */
+function rememberDetail(
+  cache: Map<string, RepositoryFileReview>,
+  key: string,
+  review: RepositoryFileReview,
+): void {
+  cache.delete(key);
+  cache.set(key, review);
+  if (cache.size <= DETAIL_CACHE_LIMIT) {
+    return;
+  }
+  const oldestKey = cache.keys().next().value;
+  if (oldestKey !== undefined) {
+    cache.delete(oldestKey);
+  }
+}
 
 /**
  * Input accepted by the workspace selection boundary.
@@ -162,6 +204,7 @@ export function useRepositoryDiffWorkspace({
   const cycleIdRef = useRef(0);
   const requestGenerationRef = useRef(0);
   const detailGenerationRef = useRef(0);
+  const detailCacheRef = useRef(new Map<string, RepositoryFileReview>());
   const ignoredPageGenerationRef = useRef(new Map<string, number>());
   const refreshDrainRef = useRef<Promise<boolean> | null>(null);
   const refreshPendingRef = useRef(false);
@@ -201,6 +244,7 @@ export function useRepositoryDiffWorkspace({
   const invalidate = useCallback((): void => {
     requestGenerationRef.current += 1;
     detailGenerationRef.current += 1;
+    detailCacheRef.current.clear();
     clearQueuedIgnoredRequests();
     ignoredPageGenerationRef.current.clear();
     dispatch({ type: "reset" });
@@ -240,22 +284,41 @@ export function useRepositoryDiffWorkspace({
         detailGeneration,
       };
       dispatch({ type: "detailRequested", identity });
+      const detailCacheKey = createDetailCacheKey(
+        detailSelection.worktreeId,
+        snapshotId,
+        detailSelection.path,
+      );
+      const cachedReview = detailCacheRef.current.get(detailCacheKey);
+      if (cachedReview !== undefined) {
+        rememberDetail(detailCacheRef.current, detailCacheKey, cachedReview);
+        dispatch({ type: "detailSucceeded", identity, review: cachedReview });
+        return true;
+      }
 
+      const endFileSpan = startPerformanceSpan(
+        createPerformanceCorrelationId("repository-file"),
+        "repository.file",
+        { path: detailSelection.path, cacheHit: false },
+      );
       try {
         const review = await api.loadRepositoryFile({
           worktreeId: request.worktreeId,
           currentSnapshotId: snapshotId,
           path: detailSelection.path,
         });
+        endFileSpan({ outcome: "success" });
         if (
           !isActive(request) ||
           detailGenerationRef.current !== detailGeneration
         ) {
           return false;
         }
+        rememberDetail(detailCacheRef.current, detailCacheKey, review);
         dispatch({ type: "detailSucceeded", identity, review });
         return true;
       } catch (error) {
+        endFileSpan({ outcome: "failed" });
         const failure = normalizeRepositoryDiffFileFailure(error);
         if (
           !isActive(request) ||
@@ -286,6 +349,7 @@ export function useRepositoryDiffWorkspace({
       }
 
       detailGenerationRef.current += 1;
+      detailCacheRef.current.clear();
       clearQueuedIgnoredRequests();
       ignoredPageGenerationRef.current.clear();
       const requestGeneration = requestGenerationRef.current + 1;
@@ -299,10 +363,19 @@ export function useRepositoryDiffWorkspace({
       };
       dispatch({ type: "overviewRequested", request });
 
+      const endOverviewSpan = startPerformanceSpan(
+        createPerformanceCorrelationId("repository-overview"),
+        "repository.overview",
+        { worktreeId: request.worktreeId },
+      );
       try {
         const overview = await api.loadRepositoryDiff(
           createOverviewRequest(request),
         );
+        endOverviewSpan({
+          outcome: "success",
+          changedPaths: overview.changed.length,
+        });
         if (!isActive(request)) {
           return false;
         }
@@ -315,6 +388,7 @@ export function useRepositoryDiffWorkspace({
           () => executeOverview(cycleId, false),
         );
       } catch (error) {
+        endOverviewSpan({ outcome: "failed" });
         const failure = normalizeRepositoryDiffOverviewFailure(error);
         if (!isActive(request)) {
           return false;

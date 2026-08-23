@@ -25,7 +25,20 @@ test("Editorはunchangedを含む全current行をコメント対象にする", (
   ).not.toBeNull();
 });
 
-test("Editorはdeletion peek summaryとbase peek行をコメント対象にしない", () => {
+test("Editorはコメント列用modifierを付けてコード行を4列で描画する", () => {
+  const view = renderViewer(
+    createDiffViewerFixture({ newContent: "first\nsecond" }),
+  );
+
+  expect(
+    view.querySelector(".current-file-viewer--with-comments"),
+  ).not.toBeNull();
+  expect(
+    view.querySelector('[data-row-kind="current-line"]')?.children,
+  ).toHaveLength(4);
+});
+
+test("Editorはdeleted fileの変更前行を表示せずコメント対象も作らない", () => {
   const view = renderViewer(
     createDiffViewerFixture({
       status: "deleted",
@@ -46,7 +59,8 @@ test("Editorはdeletion peek summaryとbase peek行をコメント対象にし�
     }),
   );
 
-  expect(view.textContent).toContain("1行削除");
+  expect(view.textContent).toContain("current側の内容がありません。");
+  expect(view.textContent).not.toContain("old");
   expect(view.querySelector(".diff-line-comment-control")).toBeNull();
 });
 

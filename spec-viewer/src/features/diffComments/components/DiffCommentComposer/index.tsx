@@ -1,10 +1,6 @@
-import {
-  type FormEvent,
-  type KeyboardEvent,
-  type ReactElement,
-  useEffect,
-  useRef,
-} from "react";
+import type { ReactElement } from "react";
+
+import { CommentComposer } from "@/features/comments/components/CommentComposer";
 
 export type DiffCommentDisabledReason =
   | "staleTarget"
@@ -33,112 +29,100 @@ export type DiffCommentComposerProps = Readonly<{
 }>;
 
 /**
- * Renders the controlled inline Diff comment editor.
+ * Adapts Diff-specific draft and recovery state to the shared comment form.
  *
- * @param props - Draft text, mutation state, focus origin, and controlled actions.
- * @returns An accessible multiline form with keyboard submit and cancel behavior.
+ * @param props - Diff draft text, mutation state, focus origin, and actions.
+ * @returns The shared comment form with Diff-specific recovery messages.
  */
 export function DiffCommentComposer(
   props: DiffCommentComposerProps,
 ): ReactElement {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const trimmedBody = props.body.trim();
   const isSubmitDisabled =
-    props.isSaving || props.canSubmit === false || trimmedBody.length === 0;
+    props.isSaving ||
+    props.canSubmit === false ||
+    props.body.trim().length === 0;
   const disabledMessage = getDisabledMessage(props.disabledReason);
-
-  useEffect(() => {
-    textareaRef.current?.focus({ preventScroll: true });
-  }, []);
-
-  const submit = (): void => {
-    if (isSubmitDisabled) {
-      return;
-    }
-    props.onSubmit(trimmedBody);
-  };
-
-  const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
-    event.preventDefault();
-    submit();
-  };
-
-  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>): void => {
-    if (event.nativeEvent.isComposing) {
-      return;
-    }
-    if (event.key === "Escape") {
-      event.preventDefault();
-      event.stopPropagation();
-      props.onCancel();
-      props.origin?.focus({ preventScroll: true });
-      return;
-    }
-    if (event.key !== "Enter" || (!event.ctrlKey && !event.metaKey)) {
-      return;
-    }
-    event.preventDefault();
-    submit();
-  };
+  const hasError =
+    (props.errorMessage !== null && props.errorMessage !== undefined) ||
+    disabledMessage !== null;
 
   return (
-    <form
+    <CommentComposer
+      id={props.id}
       className="diff-comment-composer"
-      aria-label={props.label}
-      onSubmit={handleSubmit}
+      label={props.label}
+      body={props.body}
+      hint="CtrlまたはCommand+Enterで保存、Escでキャンセル"
+      isSaving={props.isSaving}
+      isSubmitDisabled={isSubmitDisabled}
+      hasError={hasError}
+      focusTarget={props.origin}
+      additionalActions={
+        <>
+          {props.onReanchor === undefined ? null : (
+            <button
+              className="button button--secondary"
+              type="button"
+              onClick={props.onReanchor}
+            >
+              再アンカー
+            </button>
+          )}
+          {props.onRetry === undefined ? null : (
+            <button
+              className="button button--secondary"
+              type="button"
+              onClick={props.onRetry}
+            >
+              保存を再試行
+            </button>
+          )}
+        </>
+      }
+      onBodyChange={props.onBodyChange}
+      onCancel={props.onCancel}
+      onSubmit={props.onSubmit}
     >
-      <label htmlFor={props.id}>{props.label}</label>
-      <textarea
-        ref={textareaRef}
-        id={props.id}
-        value={props.body}
-        disabled={props.isSaving}
-        aria-invalid={props.errorMessage === null ? undefined : true}
-        aria-describedby={`${props.id}-hint`}
-        onChange={(event) => props.onBodyChange(event.currentTarget.value)}
-        onKeyDown={handleKeyDown}
-      />
-      <p id={`${props.id}-hint`} className="diff-comment-composer__hint">
-        CtrlまたはCommand+Enterで保存、Escでキャンセル
-      </p>
       {props.isDurabilityUncertain === true ? (
-        <p role="status" aria-live="polite">
+        <p
+          className="comment-composer__status"
+          role="status"
+          aria-live="polite"
+        >
           保存結果を確認できません。再読み込みして確認してください。
         </p>
       ) : null}
       {props.statusMessage === null ||
       props.statusMessage === undefined ? null : (
-        <p role="status" aria-live="polite">
+        <p
+          className="comment-composer__status"
+          role="status"
+          aria-live="polite"
+        >
           {props.statusMessage}
         </p>
       )}
       {props.errorMessage === null ||
       props.errorMessage === undefined ? null : (
-        <p role="alert">{props.errorMessage}</p>
+        <p className="comment-composer__error" role="alert">
+          {props.errorMessage}
+        </p>
       )}
-      {disabledMessage === null ? null : <p role="alert">{disabledMessage}</p>}
-      <div className="diff-comment-composer__actions">
-        <button type="button" onClick={props.onCancel}>
-          キャンセル
-        </button>
-        {props.onReanchor === undefined ? null : (
-          <button type="button" onClick={props.onReanchor}>
-            再アンカー
-          </button>
-        )}
-        {props.onRetry === undefined ? null : (
-          <button type="button" onClick={props.onRetry}>
-            保存を再試行
-          </button>
-        )}
-        <button type="submit" disabled={isSubmitDisabled}>
-          {props.isSaving ? "保存中" : "保存"}
-        </button>
-      </div>
-    </form>
+      {disabledMessage === null ? null : (
+        <p className="comment-composer__error" role="alert">
+          {disabledMessage}
+        </p>
+      )}
+    </CommentComposer>
   );
 }
 
+/**
+ * Maps a disabled Diff mutation reason to user-facing guidance.
+ *
+ * @param reason - The optional reason preventing comment submission.
+ * @returns Guidance for the reason, or null when submission is not disabled.
+ */
 function getDisabledMessage(
   reason: DiffCommentDisabledReason | null | undefined,
 ): string | null {

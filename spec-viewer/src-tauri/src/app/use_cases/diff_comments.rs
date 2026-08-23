@@ -65,6 +65,33 @@ pub enum DiffCommentMutationOutcome {
     },
 }
 
+#[derive(Debug, Clone)]
+pub struct DiffCommentUpdate {
+    comment_id: String,
+    body: Option<String>,
+    resolved: Option<bool>,
+    reply_body: Option<String>,
+    deleted: bool,
+}
+
+impl DiffCommentUpdate {
+    pub fn new(
+        comment_id: String,
+        body: Option<String>,
+        resolved: Option<bool>,
+        reply_body: Option<String>,
+        deleted: bool,
+    ) -> Self {
+        Self {
+            comment_id,
+            body,
+            resolved,
+            reply_body,
+            deleted,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PreCommitFailureCode {
     RevisionOverflow,
@@ -175,40 +202,6 @@ impl<B: DiffCommentBackendPort> DiffCommentUseCases<B> {
         let outcome =
             self.backend
                 .mutate_document(&context, expected_revision, &|document, revision| {
-                    let existing = self.resolve(identity, &context, document.clone(), cancellation);
-                    let requested_key = (
-                        comment.anchor().target().side_path(),
-                        comment.anchor().target().side(),
-                        comment.anchor().target().line(),
-                    );
-                    if existing.comments.iter().any(|existing| {
-                        matches!(
-                            existing.anchor_resolution,
-                            DiffAnchorResolution::Unavailable { .. }
-                        )
-                    }) {
-                        return Err(DiffCommentRepositoryError::Io);
-                    }
-                    let occupied = existing.comments.iter().any(|existing| {
-                        match &existing.anchor_resolution {
-                            DiffAnchorResolution::Exact {
-                                side_path,
-                                side,
-                                line,
-                                ..
-                            }
-                            | DiffAnchorResolution::Relocated {
-                                side_path,
-                                side,
-                                line,
-                                ..
-                            } => (side_path, *side, *line) == requested_key,
-                            _ => false,
-                        }
-                    });
-                    if occupied {
-                        return Err(DiffCommentRepositoryError::LineAlreadyCommented);
-                    }
                     let mut comments = document.comments().to_vec();
                     comments.push(comment.clone());
                     document
@@ -222,16 +215,25 @@ impl<B: DiffCommentBackendPort> DiffCommentUseCases<B> {
         &self,
         identity: &DiffReviewIdentity,
         expected_revision: DiffCommentRevision,
-        comment_id: &str,
-        body: Option<String>,
-        resolved: Option<bool>,
+        update: DiffCommentUpdate,
         cancellation: &CancellationToken,
     ) -> Result<DiffCommentMutationOutcome, DiffCommentUseCaseError> {
         let context = self.backend.resolution_context(identity, cancellation)?;
-        if body.is_none() && resolved.is_none() {
+        if !update.deleted
+            && update.body.is_none()
+            && update.resolved.is_none()
+            && update.reply_body.is_none()
+        {
             return Err(DiffCommentUseCaseError::InvalidRequest("empty update"));
         }
-        let id = comment_id.to_owned();
+        if update.deleted
+            && (update.body.is_some() || update.resolved.is_some() || update.reply_body.is_some())
+        {
+            return Err(DiffCommentUseCaseError::InvalidRequest("mixed delete"));
+        }
+        if update.reply_body.is_some() && (update.body.is_some() || update.resolved.is_some()) {
+            return Err(DiffCommentUseCaseError::InvalidRequest("mixed reply"));
+        }
         let outcome =
             self.backend
                 .mutate_document(&context, expected_revision, &|document, revision| {
@@ -239,14 +241,29 @@ impl<B: DiffCommentBackendPort> DiffCommentUseCases<B> {
                     let comments = document
                         .comments()
                         .iter()
-                        .map(|comment| {
-                            if comment.id() == id {
-                                found = true;
-                                comment
-                                    .update(body.clone(), resolved)
-                                    .map_err(|_| DiffCommentRepositoryError::InvalidStore)
+                        .filter_map(|comment| {
+                            if comment.id() != update.comment_id {
+                                return Some(Ok(comment.clone()));
+                            }
+                            found = true;
+                            if update.deleted {
+                                None
+                            } else if let Some(reply_body) = &update.reply_body {
+                                Some(
+                                    comment
+                                        .add_reply(
+                                            Uuid::new_v4().to_string(),
+                                            reply_body.clone(),
+                                            Utc::now(),
+                                        )
+                                        .map_err(|_| DiffCommentRepositoryError::InvalidStore),
+                                )
                             } else {
-                                Ok(comment.clone())
+                                Some(
+                                    comment
+                                        .update(update.body.clone(), update.resolved)
+                                        .map_err(|_| DiffCommentRepositoryError::InvalidStore),
+                                )
                             }
                         })
                         .collect::<Result<Vec<_>, _>>()?;
@@ -274,9 +291,15 @@ impl<B: DiffCommentBackendPort> DiffCommentUseCases<B> {
             .map_err(map_resolution_use_case)?;
         let lines = canonical_lines(&source);
         let index = target.line().get() as usize - 1;
+        let end_index = target.range_end_line().get() as usize - 1;
         let line = lines
             .get(index)
             .ok_or(DiffCommentUseCaseError::InvalidRequest("line out of range"))?;
+        if end_index >= lines.len() {
+            return Err(DiffCommentUseCaseError::InvalidRequest(
+                "end line out of range",
+            ));
+        }
         let before = lines[index.saturating_sub(3)..index]
             .iter()
             .map(|line| truncate_context(line))
@@ -789,11 +812,6 @@ mod tests {
             }
         }
 
-        fn cancelling_after_first_source(mut self) -> Self {
-            self.cancel_after_first_source = true;
-            self
-        }
-
         fn advancing_deadline_on_document_load(mut self, advanced: Arc<AtomicBool>) -> Self {
             self.advance_deadline_on_document_load = Some(advanced);
             self
@@ -934,6 +952,45 @@ mod tests {
         assert!(!PreCommitFailureCode::Permission.retryable());
         assert!(!PreCommitFailureCode::RevisionOverflow.retryable());
     }
+    #[test]
+    fn update_deletes_existing_comment() {
+        let backend = FakeBackend::new(document(), None);
+        let outcome = DiffCommentUseCases::new(backend)
+            .update(
+                &identity(),
+                DiffCommentRevision::ZERO,
+                DiffCommentUpdate::new("c1".into(), None, None, None, true),
+                &CancellationToken::default(),
+            )
+            .unwrap();
+
+        let DiffCommentMutationOutcome::Committed { document, .. } = outcome else {
+            panic!("delete must commit");
+        };
+        assert!(document.comments.is_empty());
+    }
+
+    #[test]
+    fn update_adds_reply_without_replacing_comment_body() {
+        let backend = FakeBackend::new(document(), None);
+        let outcome = DiffCommentUseCases::new(backend)
+            .update(
+                &identity(),
+                DiffCommentRevision::ZERO,
+                DiffCommentUpdate::new("c1".into(), None, None, Some("follow up".into()), false),
+                &CancellationToken::default(),
+            )
+            .unwrap();
+
+        let DiffCommentMutationOutcome::Committed { document, .. } = outcome else {
+            panic!("reply must commit");
+        };
+        assert_eq!(document.comments[0].comment.body(), "body");
+        assert_eq!(
+            document.comments[0].comment.replies()[0].body(),
+            "follow up"
+        );
+    }
 
     #[test]
     fn load_obtains_one_context_and_returns_io_as_unavailable() {
@@ -977,70 +1034,9 @@ mod tests {
     }
 
     #[test]
-    fn save_fails_closed_when_occupancy_resolution_is_unavailable() {
-        let backend = FakeBackend::new(document(), Some(1));
-        let target = anchor(1, "line").target().clone();
-        let outcome = DiffCommentUseCases::new(backend.clone())
-            .save(
-                &identity(),
-                DiffCommentRevision::ZERO,
-                target,
-                "new body".into(),
-                &CancellationToken::default(),
-            )
-            .unwrap();
-        assert!(matches!(
-            outcome,
-            DiffCommentMutationOutcome::PreCommitFailure {
-                code: PreCommitFailureCode::Io,
-                current_document: None,
-            }
-        ));
-        assert_eq!(backend.context_calls.load(Ordering::SeqCst), 1);
-        assert_eq!(backend.source_calls.load(Ordering::SeqCst), 2);
-        assert_eq!(
-            *backend.last_mutation_error.lock().unwrap(),
-            Some("failed-closed")
-        );
-    }
-
-    #[test]
-    fn save_fails_closed_when_occupancy_resolution_is_cancelled() {
-        let backend = FakeBackend::new(document(), None).cancelling_after_first_source();
-        let cancellation = CancellationToken::default();
-        let outcome = DiffCommentUseCases::new(backend.clone())
-            .save(
-                &identity(),
-                DiffCommentRevision::ZERO,
-                anchor(1, "line").target().clone(),
-                "new body".into(),
-                &cancellation,
-            )
-            .unwrap();
-        assert!(cancellation.is_cancelled());
-        assert!(matches!(
-            outcome,
-            DiffCommentMutationOutcome::PreCommitFailure {
-                code: PreCommitFailureCode::Io,
-                current_document: None,
-            }
-        ));
-        assert_eq!(backend.context_calls.load(Ordering::SeqCst), 1);
-        assert_eq!(backend.source_calls.load(Ordering::SeqCst), 1);
-        assert_eq!(
-            *backend.last_mutation_error.lock().unwrap(),
-            Some("failed-closed")
-        );
-    }
-
-    #[test]
-    fn save_fails_closed_when_occupancy_resolution_exceeds_deadline_budget() {
+    fn open_comment_does_not_block_another_comment_on_the_same_line() {
         let backend = FakeBackend::new(document(), None);
-        let clock = Arc::new(StepClock {
-            start: Instant::now(),
-            calls: AtomicUsize::new(0),
-        });
-        let outcome = DiffCommentUseCases::with_clock(backend.clone(), clock)
+        let outcome = DiffCommentUseCases::new(backend)
             .save(
                 &identity(),
                 DiffCommentRevision::ZERO,
@@ -1049,42 +1045,28 @@ mod tests {
                 &CancellationToken::default(),
             )
             .unwrap();
-        assert!(matches!(
-            outcome,
-            DiffCommentMutationOutcome::PreCommitFailure {
-                code: PreCommitFailureCode::Io,
-                current_document: None,
-            }
-        ));
-        assert_eq!(backend.context_calls.load(Ordering::SeqCst), 1);
-        assert_eq!(backend.source_calls.load(Ordering::SeqCst), 1);
-        assert_eq!(
-            *backend.last_mutation_error.lock().unwrap(),
-            Some("failed-closed")
-        );
+        let DiffCommentMutationOutcome::Committed { document, .. } = outcome else {
+            panic!("second comment must commit");
+        };
+        assert_eq!(document.comments.len(), 2);
     }
 
     #[test]
-    fn resolved_comment_still_occupies_its_runtime_location() {
-        let resolved_comment = document().comments()[0].update(None, Some(true)).unwrap();
-        let resolved_document = StoredDiffCommentDocument::new(
-            identity().scope(),
-            DiffCommentRevision::ZERO,
-            vec![resolved_comment],
-        )
-        .unwrap();
-        let backend = FakeBackend::new(resolved_document, None);
-        let result = DiffCommentUseCases::new(backend).save(
-            &identity(),
-            DiffCommentRevision::ZERO,
-            anchor(1, "line").target().clone(),
-            "new body".into(),
-            &CancellationToken::default(),
-        );
-        assert!(matches!(
-            result,
-            Err(DiffCommentUseCaseError::LineAlreadyCommented)
-        ));
+    fn unavailable_existing_comment_does_not_block_another_comment() {
+        let backend = FakeBackend::new(document(), Some(1));
+        let outcome = DiffCommentUseCases::new(backend)
+            .save(
+                &identity(),
+                DiffCommentRevision::ZERO,
+                anchor(1, "line").target().clone(),
+                "new body".into(),
+                &CancellationToken::default(),
+            )
+            .unwrap();
+        let DiffCommentMutationOutcome::Committed { document, .. } = outcome else {
+            panic!("comment must commit without resolving existing anchors");
+        };
+        assert_eq!(document.comments.len(), 2);
     }
 
     #[test]

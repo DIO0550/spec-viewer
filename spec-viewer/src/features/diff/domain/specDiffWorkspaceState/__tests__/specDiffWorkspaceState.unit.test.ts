@@ -89,6 +89,7 @@ test("Spec diff stateはoverview成功でreadyへ遷移する", () => {
   const overview: SpecChangeOverview = {
     currentSnapshotId: "rs1_snapshot",
     resolvedBaseSha: "a".repeat(40),
+    diffReviewIdentity: null,
     files: [],
   };
   const loading = reduceSpecDiffWorkspaceState(
@@ -204,6 +205,7 @@ test("Spec diff stateは選択中logical fileが変更一覧にあればdetail l
     overview: {
       currentSnapshotId: "rs1_snapshot",
       resolvedBaseSha: "a".repeat(40),
+      diffReviewIdentity: null,
       files: [change],
     },
     selection: { specId: change.specId, fileKey: "tasks" },
@@ -235,6 +237,7 @@ test("Spec diff stateは古いrequest generationのoverview結果を無視する
     overview: {
       currentSnapshotId: "stale",
       resolvedBaseSha: "a".repeat(40),
+      diffReviewIdentity: null,
       files: [],
     },
     selection: { specId: "079-issue-168", fileKey: "tasks" },

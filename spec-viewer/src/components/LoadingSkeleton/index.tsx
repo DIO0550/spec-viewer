@@ -2,6 +2,7 @@ type Props = Readonly<{
   label: string;
   rows: readonly SkeletonRow[];
   className?: string;
+  showLabel?: boolean;
 }>;
 
 type SkeletonRow = Readonly<{
@@ -13,7 +14,12 @@ type SkeletonRow = Readonly<{
  * @param props - Component props: label, rows and optional className.
  * @returns A stable loading placeholder with an accessible status label.
  */
-export function LoadingSkeleton({ label, rows, className }: Props) {
+export function LoadingSkeleton({
+  label,
+  rows,
+  className,
+  showLabel = true,
+}: Props) {
   const classNames =
     className === undefined
       ? "loading-skeleton"
@@ -21,7 +27,9 @@ export function LoadingSkeleton({ label, rows, className }: Props) {
 
   return (
     <div className={classNames} aria-label={label} role="status">
-      <span className="loading-skeleton__label">{label}</span>
+      {showLabel ? (
+        <span className="loading-skeleton__label">{label}</span>
+      ) : null}
       <div className="loading-skeleton__rows" aria-hidden="true">
         {rows.map((row, index) => (
           <span

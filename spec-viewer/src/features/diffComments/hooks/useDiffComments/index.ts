@@ -27,11 +27,19 @@ export type CreateDiffCommentDraftInput = Readonly<{
 
 export type UpdateDiffCommentInput =
   | Readonly<{ commentId: string; body: string; resolved?: boolean }>
-  | Readonly<{ commentId: string; body?: string; resolved: boolean }>;
+  | Readonly<{ commentId: string; body?: string; resolved: boolean }>
+  | Readonly<{ commentId: string; replyBody: string }>
+  | Readonly<{
+      commentId: string;
+      deleted: true;
+      body?: never;
+      resolved?: never;
+    }>;
 
 export type UseDiffCommentsOptions = Readonly<{
   identity: DiffReviewIdentity | null;
   commands?: DiffCommentCommands;
+  onIdentityInvalidated?: () => void;
 }>;
 
 export type UseDiffCommentsResult = Readonly<{
@@ -106,6 +114,15 @@ function normalizeCommandError(
   };
 }
 
+/** @returns Whether retrying requires a freshly loaded Diff identity. */
+function invalidatesDiffIdentity(error: DiffCommentCommandError): boolean {
+  return (
+    error.code === "identityMismatch" ||
+    error.code === "staleBase" ||
+    error.code === "staleSnapshot"
+  );
+}
+
 /** @returns Whether a comment is visible for controlled filter/search state. */
 function isVisibleComment(
   comment: ResolvedDiffComment,
@@ -127,7 +144,8 @@ function isVisibleComment(
     comment.anchor.side === "base"
       ? comment.anchor.oldPath
       : comment.anchor.newPath;
-  return `${comment.body}\n${path}\n${comment.anchor.snippet}`
+  const replies = (comment.replies ?? []).map((reply) => reply.body).join("\n");
+  return `${comment.body}\n${replies}\n${path}\n${comment.anchor.snippet}`
     .toLocaleLowerCase()
     .includes(normalizedSearch);
 }
@@ -136,6 +154,7 @@ function isVisibleComment(
 export function useDiffComments({
   identity: inputIdentity,
   commands = defaultCommands,
+  onIdentityInvalidated,
 }: UseDiffCommentsOptions): UseDiffCommentsResult {
   const repositoryId = inputIdentity?.repositoryId ?? null;
   const worktreeId = inputIdentity?.worktreeId ?? null;
@@ -158,6 +177,8 @@ export function useDiffComments({
   const previousIdentityRef = useRef<DiffReviewIdentity | null>(null);
   const loadGenerationRef = useRef(new Map<string, number>());
   const retryActionsRef = useRef(new Map<string, RetryAction>());
+  const identityRecoveryKeysRef = useRef(new Set<string>());
+  const automaticRetryKeysRef = useRef(new Set<string>());
   const mutationGenerationRef = useRef(new Map<string, number>());
   const mutationInFlightRef = useRef(new Set<string>());
   const [errors, setErrors] = useState<ErrorMap>({});
@@ -251,6 +272,21 @@ export function useDiffComments({
         );
       }
     }
+    const previousKey =
+      previousIdentity === null
+        ? null
+        : diffCommentIdentityKey(previousIdentity);
+    const shouldRecoverDraft =
+      previousKey !== null &&
+      identityRecoveryKeysRef.current.delete(previousKey);
+    if (shouldRecoverDraft && previousKey !== null) {
+      const retryAction = retryActionsRef.current.get(previousKey);
+      if (retryAction !== undefined) {
+        retryActionsRef.current.delete(previousKey);
+        retryActionsRef.current.set(key, retryAction);
+        automaticRetryKeysRef.current.add(key);
+      }
+    }
 
     setSessions((current) => {
       if (current[key] !== undefined) {
@@ -261,11 +297,22 @@ export function useDiffComments({
         previousIdentity.repositoryId === identity.repositoryId &&
         previousIdentity.worktreeId === identity.worktreeId
       ) {
-        const previous = current[diffCommentIdentityKey(previousIdentity)];
+        const previous =
+          previousKey === null ? undefined : current[previousKey];
         if (previous !== undefined) {
+          const switched = DiffCommentSessionState.switchIdentity(
+            previous,
+            identity,
+          );
           return {
             ...current,
-            [key]: DiffCommentSessionState.switchIdentity(previous, identity),
+            [key]:
+              shouldRecoverDraft && previous.draft !== null
+                ? DiffCommentSessionState.reduce(switched, {
+                    type: "draftReanchored",
+                    target: previous.draft.target,
+                  })
+                : switched,
           };
         }
       }
@@ -379,10 +426,18 @@ export function useDiffComments({
         if (mutationGenerationRef.current.get(originKey) !== generation) {
           return false;
         }
-        setErrorFor(originKey, normalizeCommandError(command, caught));
+        const normalizedError = normalizeCommandError(command, caught);
+        setErrorFor(originKey, normalizedError);
         dispatchTo(originKey, originIdentity, {
           type: "mutationTransportFailed",
         });
+        if (
+          invalidatesDiffIdentity(normalizedError) &&
+          onIdentityInvalidated !== undefined
+        ) {
+          identityRecoveryKeysRef.current.add(originKey);
+          onIdentityInvalidated();
+        }
         return false;
       } finally {
         if (mutationGenerationRef.current.get(originKey) === generation) {
@@ -390,7 +445,7 @@ export function useDiffComments({
         }
       }
     },
-    [dispatchTo, setErrorFor],
+    [dispatchTo, onIdentityInvalidated, setErrorFor],
   );
 
   const saveDraft = useCallback(async (): Promise<boolean> => {
@@ -440,14 +495,19 @@ export function useDiffComments({
       if (session === undefined || session.writeBlockReason !== null) {
         return false;
       }
-      const normalizedInput =
-        input.body === undefined
-          ? input
-          : { ...input, body: input.body.trim() };
-      if (
-        normalizedInput.body !== undefined &&
-        normalizedInput.body.length === 0
-      ) {
+      const normalizedInput: UpdateDiffCommentInput =
+        "body" in input && input.body !== undefined
+          ? { ...input, body: input.body.trim() }
+          : "replyBody" in input
+            ? { ...input, replyBody: input.replyBody.trim() }
+            : input;
+      const normalizedBody =
+        "body" in normalizedInput
+          ? normalizedInput.body
+          : "replyBody" in normalizedInput
+            ? normalizedInput.replyBody
+            : undefined;
+      if (normalizedBody !== undefined && normalizedBody.length === 0) {
         return false;
       }
       retryActionsRef.current.set(activeKey, {
@@ -464,6 +524,25 @@ export function useDiffComments({
     },
     [activeKey, commands, identity, settle],
   );
+
+  useEffect(() => {
+    if (
+      activeKey === null ||
+      activeSession?.loadState !== "ready" ||
+      !automaticRetryKeysRef.current.delete(activeKey)
+    ) {
+      return;
+    }
+    const retryAction = retryActionsRef.current.get(activeKey);
+    if (retryAction === undefined) {
+      return;
+    }
+    if (retryAction.kind === "draft") {
+      void saveDraft();
+      return;
+    }
+    void updateComment(retryAction.input);
+  }, [activeKey, activeSession?.loadState, saveDraft, updateComment]);
 
   const comments = useMemo(() => {
     if (activeSession === null) {

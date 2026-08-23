@@ -162,6 +162,7 @@ export function toSpecChangeOverview(
   return {
     resolvedBaseSha: response.resolvedBaseSha,
     currentSnapshotId: response.currentSnapshotId,
+    diffReviewIdentity: response.diffReviewIdentity ?? null,
     files: response.files.map((file) => ({ ...file })),
   };
 }
