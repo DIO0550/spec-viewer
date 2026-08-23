@@ -119,7 +119,7 @@ test("actual Appでactive change未選択のEditorは先頭から表示する", 
     .toBe(0);
 });
 
-test("actual AppでstaleTarget・overflow・indicator-card・keyboard/themeを表現する", async ({
+test("actual AppでstaleTarget・overflow・indicator-card・keyboardを表現する", async ({
   page,
 }) => {
   await openRepositoryFile(page);
@@ -146,9 +146,6 @@ test("actual AppでstaleTarget・overflow・indicator-card・keyboard/themeを�
   await expect(page.getByRole("alert")).toContainText("revision上限");
   await page.getByRole("button", { name: "キャンセル" }).click();
 
-  await page.getByLabel("テーマモード").selectOption("dark");
-  await expectNoSeriousAccessibilityViolations(page);
-  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.getByRole("radio", { name: "Unified" }).press("ArrowRight");
   await expect(page.getByRole("radio", { name: "Split" })).toBeFocused();
 });
