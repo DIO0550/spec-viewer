@@ -239,7 +239,7 @@ test("RepositoryDiffTreeはfailed childのretryとnextCursorのload moreを通�
 });
 
 test.each([
-  [{ status: "loading" } as const, "Repository diffを読み込んでいます。"],
+  [{ status: "loading" } as const, "変更ファイルを読み込んでいます。"],
   [{ status: "empty" } as const, "変更ファイルはありません。"],
   [{ status: "error", message: "overview failed" } as const, "overview failed"],
   [{ status: "stale", message: "stale snapshot" } as const, "stale snapshot"],
@@ -251,7 +251,11 @@ test.each([
     onRetry,
   });
 
-  expect(result.container.textContent).toContain(message);
+  const accessibleStatus =
+    result.container
+      .querySelector('[role="status"]')
+      ?.getAttribute("aria-label") ?? result.container.textContent;
+  expect(accessibleStatus).toContain(message);
   if (availability.status === "error" || availability.status === "stale") {
     const retry = result.container.querySelector("button");
     act(() => {
@@ -259,6 +263,17 @@ test.each([
     });
     expect(onRetry).toHaveBeenCalledTimes(1);
   }
+  result.unmount();
+});
+test("RepositoryDiffTreeはloading中にツリー行のskeletonを表示する", () => {
+  const result = renderTree({
+    nodes: [],
+    availability: { status: "loading" },
+  });
+
+  expect(
+    result.container.querySelectorAll(".loading-skeleton__bar").length,
+  ).toBeGreaterThan(0);
   result.unmount();
 });
 

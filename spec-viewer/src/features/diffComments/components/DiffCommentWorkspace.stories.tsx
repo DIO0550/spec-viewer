@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
+import { useState } from "react";
 
 import { CurrentFileViewer } from "@/features/diff/components/CurrentFileViewer";
 import { DiffViewer } from "@/features/diff/components/DiffViewer";
@@ -7,7 +8,10 @@ import {
   createDiffViewerFixture,
   createLargeDiffViewerFixture,
 } from "@/features/diff/components/DiffViewer/testFixtures";
-import type { DiffLineCommentsController } from "@/features/diffComments/components/DiffLineCommentSlot";
+import type {
+  DiffLineCommentDraft,
+  DiffLineCommentsController,
+} from "@/features/diffComments/components/DiffLineCommentSlot";
 
 type ViewerCommentsStoryProps = Readonly<{
   mode: "unified" | "split" | "editor";
@@ -76,15 +80,38 @@ export const LargeEditor: Story = {
 };
 
 function ViewerCommentsStory(props: ViewerCommentsStoryProps) {
+  const [interactiveDraft, setInteractiveDraft] =
+    useState<DiffLineCommentDraft | null>(null);
   const fileDiff = props.large
     ? createLargeDiffViewerFixture()
     : createDiffViewerFixture({
         oldContent: "first\nold\nlast",
         newContent: "first\ncurrent\nlast",
       });
-  const controller = createController(props.state);
+  const baseController = createController(props.state, interactiveDraft);
+  const controller: DiffLineCommentsController = {
+    ...baseController,
+    onStartDraft: (target, origin) => {
+      setInteractiveDraft({
+        target,
+        body: "",
+        isSaving: false,
+        origin,
+      });
+    },
+    onDraftBodyChange: (body) => {
+      setInteractiveDraft((current) =>
+        current === null ? current : { ...current, body },
+      );
+    },
+    onCancelDraft: () => setInteractiveDraft(null),
+  };
   return props.mode === "editor" ? (
-    <CurrentFileViewer fileDiff={fileDiff} lineComments={controller} />
+    <CurrentFileViewer
+      fileDiff={fileDiff}
+      activeChangeId="hunk-0-change-0"
+      lineComments={controller}
+    />
   ) : (
     <DiffViewer
       fileDiff={fileDiff}
@@ -98,6 +125,7 @@ function ViewerCommentsStory(props: ViewerCommentsStoryProps) {
 
 function createController(
   state: ViewerCommentsStoryProps["state"],
+  interactiveDraft: DiffLineCommentDraft | null,
 ): DiffLineCommentsController {
   const target = {
     key: "current:implementation-plan.md:2",
@@ -105,6 +133,15 @@ function createController(
     sidePath: "implementation-plan.md",
     line: 2,
   };
+  let draft = interactiveDraft;
+  if (draft === null && state === "composer") {
+    draft = {
+      target,
+      body: "Keyboard-accessible inline review",
+      isSaving: false,
+      origin: null,
+    };
+  }
   return {
     commentsByTarget:
       state === "converged"
@@ -124,15 +161,7 @@ function createController(
           }
         : {},
     activeCommentId: state === "converged" ? "second" : null,
-    draft:
-      state === "composer"
-        ? {
-            target,
-            body: "Keyboard-accessible inline review",
-            isSaving: false,
-            origin: null,
-          }
-        : null,
+    draft,
     onStartDraft: () => undefined,
     onDraftBodyChange: () => undefined,
     onCancelDraft: () => undefined,

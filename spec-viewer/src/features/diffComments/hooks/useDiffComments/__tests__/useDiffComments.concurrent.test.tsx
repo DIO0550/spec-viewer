@@ -1,16 +1,15 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-
+import {
+  type UseDiffCommentsOptions,
+  useDiffComments,
+} from "@/features/diffComments";
 import type {
   DiffCommentCommands,
   LoadDiffCommentsRequest,
   SaveDiffCommentRequest,
 } from "@/lib/api/tauri";
-import {
-  type UseDiffCommentsOptions,
-  useDiffComments,
-} from "@/features/diffComments";
 
 const actEnvironment = globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean };
 actEnvironment.IS_REACT_ACT_ENVIRONMENT = true;
@@ -24,6 +23,10 @@ const identityA = {
 const identityB = {
   ...identityA,
   worktreeId: `rw1_${"e".repeat(64)}`,
+} as const;
+const refreshedIdentityA = {
+  ...identityA,
+  currentSnapshotId: `rs1_${"f".repeat(64)}`,
 } as const;
 
 function createDocument(identity: typeof identityA, revision: string) {
@@ -418,5 +421,180 @@ test("Review cardの本文更新はtrim済みbodyをwireへ送る", async () => 
   expect(update).toHaveBeenCalledWith(
     expect.objectContaining({ body: "card body" }),
   );
+  hook.unmount();
+});
+
+test("保存時のstaleSnapshot更新後はdraftを同じtargetで再試行できる", async () => {
+  const onIdentityInvalidated = vi.fn();
+  const commands: DiffCommentCommands = {
+    load: vi.fn(() => Promise.resolve(createDocument(identityA, "0"))),
+    save: vi.fn(() =>
+      Promise.reject({
+        command: "save_diff_comment",
+        code: "staleSnapshot",
+        message: "stale snapshot",
+        raw: null,
+      }),
+    ),
+    update: vi.fn(),
+  };
+  const hook = renderHook({
+    identity: identityA,
+    commands,
+    onIdentityInvalidated,
+  });
+  await flush();
+  act(() => {
+    hook.current().createDraft({
+      target: { side: "current", newPath: "src/main.ts", line: 1 },
+      body: "keep this comment",
+    });
+  });
+
+  await act(async () => {
+    await hook.current().saveDraft();
+  });
+
+  expect(onIdentityInvalidated).toHaveBeenCalledTimes(1);
+  expect(hook.current().session?.draft?.body).toBe("keep this comment");
+  expect(hook.current().error?.code).toBe("staleSnapshot");
+
+  hook.rerender({
+    identity: refreshedIdentityA,
+    commands,
+    onIdentityInvalidated,
+  });
+  await flush();
+
+  expect(hook.current().session?.draft).toMatchObject({
+    state: "active",
+    body: "keep this comment",
+    canSubmit: true,
+    disabledReason: null,
+  });
+  hook.unmount();
+});
+
+test("保存時のstaleSnapshot更新後は最新identityでdraftを自動再送する", async () => {
+  const onIdentityInvalidated = vi.fn();
+  const save = vi
+    .fn<DiffCommentCommands["save"]>()
+    .mockRejectedValueOnce({
+      command: "save_diff_comment",
+      code: "staleSnapshot",
+      message: "stale snapshot",
+      raw: null,
+    })
+    .mockResolvedValueOnce({
+      kind: "committed",
+      document: createDocument(refreshedIdentityA, "1"),
+      revision: "1",
+      resolutionWarnings: [],
+      durability: "durable",
+    });
+  const commands: DiffCommentCommands = {
+    load: vi.fn((request) =>
+      Promise.resolve(createDocument(request.identity, "0")),
+    ),
+    save,
+    update: vi.fn(),
+  };
+  const hook = renderHook({
+    identity: identityA,
+    commands,
+    onIdentityInvalidated,
+  });
+  await flush();
+  act(() => {
+    hook.current().createDraft({
+      target: { side: "current", newPath: "src/main.ts", line: 1 },
+      body: "save after refresh",
+    });
+  });
+
+  await act(async () => {
+    await hook.current().saveDraft();
+  });
+  hook.rerender({
+    identity: refreshedIdentityA,
+    commands,
+    onIdentityInvalidated,
+  });
+  await flush();
+  await flush();
+
+  expect(save).toHaveBeenCalledTimes(2);
+  expect(save).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      identity: refreshedIdentityA,
+      expectedRevision: "0",
+      body: "save after refresh",
+    }),
+  );
+  expect(hook.current().session?.draft).toBeNull();
+  expect(hook.current().session?.revision).toBe("1");
+  hook.unmount();
+});
+test("返信本文をtrimして現在revisionと共にwireへ送る", async () => {
+  const update = vi.fn<DiffCommentCommands["update"]>().mockResolvedValue({
+    kind: "committed",
+    document: createDocument(identityA, "1"),
+    revision: "1",
+    resolutionWarnings: [],
+    durability: "durable",
+  });
+  const commands: DiffCommentCommands = {
+    load: vi.fn(() => Promise.resolve(createDocument(identityA, "0"))),
+    save: vi.fn(),
+    update,
+  };
+  const hook = renderHook({ identity: identityA, commands });
+  await flush();
+
+  await act(async () => {
+    await hook.current().updateComment({
+      commentId: "comment-1",
+      replyBody: "  follow up  ",
+    });
+  });
+
+  expect(update).toHaveBeenCalledWith({
+    identity: identityA,
+    expectedRevision: "0",
+    commentId: "comment-1",
+    replyBody: "follow up",
+  });
+  hook.unmount();
+});
+
+test("コメント削除はdeletedフラグと現在revisionをwireへ送る", async () => {
+  const update = vi.fn<DiffCommentCommands["update"]>().mockResolvedValue({
+    kind: "committed",
+    document: createDocument(identityA, "1"),
+    revision: "1",
+    resolutionWarnings: [],
+    durability: "durable",
+  });
+  const commands: DiffCommentCommands = {
+    load: vi.fn(() => Promise.resolve(createDocument(identityA, "0"))),
+    save: vi.fn(),
+    update,
+  };
+  const hook = renderHook({ identity: identityA, commands });
+  await flush();
+
+  await act(async () => {
+    await hook.current().updateComment({
+      commentId: "comment-1",
+      deleted: true,
+    });
+  });
+
+  expect(update).toHaveBeenCalledWith({
+    identity: identityA,
+    expectedRevision: "0",
+    commentId: "comment-1",
+    deleted: true,
+  });
   hook.unmount();
 });

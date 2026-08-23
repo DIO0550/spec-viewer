@@ -1275,7 +1275,7 @@ test("WorkspaceToolbarはrefresh不可ならcurrent view refreshを発火しな�
   result.unmount();
 });
 
-test("WorkspaceToolbarはtheme mode変更をContext経由でdocumentへ反映する", () => {
+test("WorkspaceToolbarはtheme切り替えUIを表示しない", () => {
   const result = renderComponent(
     <WorkspaceToolbar
       workspacePath={workspacePath}
@@ -1291,17 +1291,10 @@ test("WorkspaceToolbarはtheme mode変更をContext経由でdocumentへ反映す
       onReset={vi.fn()}
     />,
   );
-  const themeSelect = result.container.querySelector(
-    "#theme-mode",
-  ) as HTMLSelectElement;
 
-  act(() => {
-    themeSelect.value = "dark";
-    themeSelect.dispatchEvent(new Event("change", { bubbles: true }));
-  });
-
-  expect(document.documentElement.dataset.theme).toBe("dark");
-  expect(document.documentElement.dataset.themeMode).toBe("dark");
+  expect(result.container.querySelector("#theme-mode")).toBeNull();
+  expect(result.container.textContent).not.toContain("ライト");
+  expect(result.container.textContent).not.toContain("ダーク");
   result.unmount();
 });
 
@@ -1344,5 +1337,37 @@ test("MarkdownViewerはMarkdownをHTMLとして表示する", () => {
       '[aria-label="レンダリング済みMarkdownドキュメント"]',
     )?.textContent,
   ).toContain("Layout components");
+  result.unmount();
+});
+
+test("WorkspaceToolbarは本文フォントサイズ設定を通知する", () => {
+  const onViewerFontSizeChange = vi.fn();
+  const result = renderComponent(
+    <WorkspaceToolbar
+      workspacePath={workspacePath}
+      inputValue={workspacePath}
+      isLoading={false}
+      isBrowsing={false}
+      errorMessage={null}
+      canRefresh={true}
+      viewerFontSize="medium"
+      onViewerFontSizeChange={onViewerFontSizeChange}
+      onInputChange={vi.fn()}
+      onBrowse={vi.fn()}
+      onLoad={vi.fn()}
+      onRefresh={vi.fn()}
+      onReset={vi.fn()}
+    />,
+  );
+  const select = result.container.querySelector(
+    '[aria-label="本文の文字サイズ"]',
+  ) as HTMLSelectElement;
+
+  act(() => {
+    select.value = "large";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+
+  expect(onViewerFontSizeChange).toHaveBeenCalledWith("large");
   result.unmount();
 });

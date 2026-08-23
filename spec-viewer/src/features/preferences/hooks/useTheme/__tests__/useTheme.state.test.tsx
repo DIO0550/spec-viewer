@@ -172,6 +172,27 @@ test("useThemeは保存済みdark preferenceを初期値にする", () => {
   result.unmount();
 });
 
+test("ThemeProviderはfixedTheme指定時に保存済みdark preferenceよりlightを優先する", () => {
+  resetThemeEnvironment(false);
+  window.localStorage.setItem("spec-reviewer.theme-mode", "dark");
+  const FixedLightThemeProvider = (
+    props: Readonly<{ children: ReactNode }>,
+  ): ReactElement => (
+    <ThemeProvider fixedTheme="light">{props.children}</ThemeProvider>
+  );
+
+  const result = renderHook(() => useTheme(), {
+    wrapper: FixedLightThemeProvider,
+  });
+
+  expect(result.current.themeMode).toBe("light");
+  expect(result.current.resolvedTheme).toBe("light");
+  expect(document.documentElement.dataset.theme).toBe("light");
+  expect(document.documentElement.dataset.themeMode).toBe("light");
+  expect(document.documentElement.style.colorScheme).toBe("light");
+  result.unmount();
+});
+
 test("useThemeは無効な保存値をsystemへfallbackする", () => {
   resetThemeEnvironment(false);
   window.localStorage.setItem("spec-reviewer.theme-mode", "blue");

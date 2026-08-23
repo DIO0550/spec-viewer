@@ -148,8 +148,13 @@ test("[R199-REVIEW-003] resolve changes status filter result", async ({
   const composer = page.getByRole("textbox", { name: /2行目へのコメント/ });
   await composer.fill("Resolve me");
   await composer.press("Control+Enter");
-  await page.getByRole("button", { name: /^Resolve comment-/ }).click();
-  await page.getByRole("button", { name: /^Resolved 1$/ }).click();
+  const lineComment = page.getByRole("button", {
+    name: /2行目のコメント1件を表示/,
+  });
+  await expect(lineComment).toBeVisible();
+  await page.getByRole("button", { name: /^解決 comment-/ }).click();
+  await expect(lineComment).toBeHidden();
+  await page.getByRole("button", { name: /^解決済み 1$/ }).click();
   await expect(page.getByText("Resolve me")).toBeVisible();
 });
 

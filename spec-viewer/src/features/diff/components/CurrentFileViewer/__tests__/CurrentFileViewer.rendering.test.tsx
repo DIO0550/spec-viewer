@@ -38,7 +38,7 @@ test("availableな空文字は空のファイルと表示する", () => {
   view.unmount();
 });
 
-test("deletedはold contentをwhole-file deletion peekとして表示する", () => {
+test("deletedはold contentを表示せずcurrent側なしを示す", () => {
   const view = renderViewer(
     createDiffViewerFixture({
       status: "deleted",
@@ -59,7 +59,8 @@ test("deletedはold contentをwhole-file deletion peekとして表示する", ()
     }),
   );
 
-  expect(view.container.textContent).toContain("1行削除");
+  expect(view.container.textContent).toContain("current側の内容がありません。");
+  expect(view.container.textContent).not.toContain("old");
   view.unmount();
 });
 

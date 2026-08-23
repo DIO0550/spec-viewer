@@ -82,6 +82,31 @@ test("status文字付きARIA tabsと単一panel参照を描画する", () => {
   view.unmount();
 });
 
+test("close buttonは対応するファイルtab内の右端に配置する", () => {
+  const view = renderTabs();
+  const shells = Array.from(
+    view.container.querySelectorAll<HTMLElement>(".repository-file-tab-shell"),
+  );
+
+  expect(shells).toHaveLength(items.length);
+  expect(
+    shells.map((shell) => ({
+      closeButtonCount: shell.querySelectorAll(".repository-file-tab__close")
+        .length,
+      tabCount: shell.querySelectorAll('[role="tab"]').length,
+    })),
+  ).toEqual(
+    items.map(() => ({
+      closeButtonCount: 1,
+      tabCount: 1,
+    })),
+  );
+  expect(
+    view.container.querySelector(".repository-file-tabs__close-actions"),
+  ).toBeNull();
+  view.unmount();
+});
+
 test.each([
   ["ArrowRight", "src/c.ts"],
   ["ArrowLeft", "src/a.ts"],

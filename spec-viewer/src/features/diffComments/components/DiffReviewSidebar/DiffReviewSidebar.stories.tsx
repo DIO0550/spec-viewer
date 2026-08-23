@@ -14,6 +14,13 @@ const meta = {
         locationLabel: "src/parser.ts current 42行目",
         snippet: "return parse(value);",
         resolution: { status: "exact" },
+        replies: [
+          {
+            id: "reply-1",
+            body: "確認しました。nullのときは早期returnにします。",
+            createdAt: "2026-08-21T00:00:00Z",
+          },
+        ],
       },
       {
         id: "stale",
@@ -34,7 +41,10 @@ const meta = {
     onSelectComment: fn(),
     onJump: fn(),
     onResolve: fn(),
+    onReply: fn(),
     onReopen: fn(),
+    onDelete: fn(),
+    onReload: fn(),
   },
   argTypes: {
     onFilterChange: { control: false },
@@ -42,7 +52,10 @@ const meta = {
     onSelectComment: { control: false },
     onJump: { control: false },
     onResolve: { control: false },
+    onReply: { control: false },
     onReopen: { control: false },
+    onDelete: { control: false },
+    onReload: { control: false },
   },
 } satisfies Meta<typeof DiffReviewSidebar>;
 
@@ -78,6 +91,7 @@ export const Loading: Story = {
 
 export const Empty: Story = EdgeCases;
 
+// biome-ignore lint/suspicious/noShadowRestrictedNames: Storybookの標準状態名としてErrorを使用する。
 export const Error: Story = {
   args: { loadState: "error" },
 };
@@ -92,8 +106,14 @@ export const StatusFilters: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
-      canvas.getByRole("button", { name: "Resolved 1" }),
+      canvas.getByRole("button", { name: "解決済み 1" }),
     ).toHaveAttribute("aria-pressed", "true");
+    await expect(
+      canvas.getByText("削除理由を文書化してください"),
+    ).not.toBeVisible();
+    await userEvent.click(
+      canvas.getByRole("button", { name: "コメントを展開 stale" }),
+    );
     await expect(
       canvas.getByText("削除理由を文書化してください"),
     ).toBeVisible();

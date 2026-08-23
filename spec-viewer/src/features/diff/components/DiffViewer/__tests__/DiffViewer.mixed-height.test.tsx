@@ -14,7 +14,7 @@ import type {
 } from "@/features/diffComments/components/DiffLineCommentSlot";
 import type { DiffLineCommentTarget } from "@/features/diffComments/components/DiffLineCommentControl";
 
-const RowHeight = 20;
+const RowHeight = 22;
 const ComposerRowHeight = 120;
 const mountedRoots: Root[] = [];
 const mountedContainers: HTMLDivElement[] = [];
@@ -28,10 +28,10 @@ afterEach(() => {
 });
 
 test.each([
-  ["unified", "before", "current:implementation-plan.md:1", 100],
+  ["unified", "before", "current:implementation-plan.md:1", 98],
   ["unified", "self", "current:implementation-plan.md:3", 0],
   ["unified", "after", "current:implementation-plan.md:4", 0],
-  ["split", "before", "current:implementation-plan.md:1", 100],
+  ["split", "before", "current:implementation-plan.md:1", 98],
   ["split", "self", "current:implementation-plan.md:3", 0],
   ["split", "after", "current:implementation-plan.md:4", 0],
 ] satisfies readonly [
@@ -95,6 +95,24 @@ test("modeとrevision切替はmeasurement cacheとscroll anchorをresetする", 
   expect(surface.scrollTop).toBe(0);
 });
 
+test("同じDiff内容でコメント状態だけ更新してもscroll位置を維持する", () => {
+  const animationFrames = installMeasuredLayout();
+  const fileDiff = createDiffViewerFixture();
+  const view = renderViewer("unified", createController(), fileDiff);
+  flushAnimationFrames(animationFrames);
+  const surface = getScrollSurface(view.container);
+  surface.scrollTop = 75;
+  surface.dispatchEvent(new Event("scroll", { bubbles: true }));
+  flushAnimationFrames(animationFrames);
+
+  view.render("unified", createController(), {
+    ...fileDiff,
+    review: { ...fileDiff.review },
+  });
+  flushAnimationFrames(animationFrames);
+
+  expect(surface.scrollTop).toBeGreaterThan(0);
+});
 test("20,000行でもDOM capを守りvisible row測定を1 frameへbatchする", () => {
   const animationFrames = installMeasuredLayout();
   const view = renderViewer(

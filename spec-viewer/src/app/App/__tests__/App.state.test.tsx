@@ -36,6 +36,11 @@ test("Appはworkspace未選択の初期状態を表示する", () => {
     container.querySelector('input[aria-label="Filter worktrees"]'),
   ).not.toBeNull();
   expect(container.textContent).toContain("ROOT / WORKTREES 0");
+  const reloadWorktreesButton = container.querySelector<HTMLButtonElement>(
+    '[aria-label="Worktree一覧を再読み込み"]',
+  );
+  expect(reloadWorktreesButton?.disabled).toBe(true);
+  expect(container.querySelector('[aria-label="差分サマリー"]')).toBeNull();
   expect(container.textContent).toContain(
     "Worktree データはまだ利用できません",
   );

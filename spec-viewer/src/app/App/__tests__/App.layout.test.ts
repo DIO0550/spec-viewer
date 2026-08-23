@@ -110,6 +110,7 @@ test("Diff表示はファイルタブとプレビューを縦方向に積む", (
 });
 
 test("DiffはGitHub風のファイル枠と行番号付き配色を持つ", () => {
+  const rootRule = readCssRule(diffViewerCssFilePath, ":root");
   const panelRule = readCssRule(
     repositoryDiffCssFilePath,
     ".repository-diff-panel",
@@ -135,6 +136,14 @@ test("DiffはGitHub風のファイル枠と行番号付き配色を持つ", () =
     diffViewerCssFilePath,
     '.diff-viewer__cell[data-kind="removed"] .diff-viewer__line-number',
   );
+  const addedMarkerRule = readCssRule(
+    diffViewerCssFilePath,
+    '.diff-viewer__cell[data-kind="added"] .diff-viewer__marker',
+  );
+  const addedWordRule = readCssRule(
+    diffViewerCssFilePath,
+    '[data-segment-kind="added"]',
+  );
 
   expect(panelRule).toContain("overflow: hidden;");
   expect(panelRule).toContain("border-radius: 6px;");
@@ -146,11 +155,18 @@ test("DiffはGitHub風のファイル枠と行番号付き配色を持つ", () =
   expect(fileHeaderRule).toContain("background: var(--diff-file-header-bg);");
   expect(diffViewerRule).toContain("overflow: hidden;");
   expect(addedLineNumberRule).toContain(
-    "background: var(--diff-added-emphasis);",
+    "background: var(--diff-added-number-bg);",
   );
   expect(removedLineNumberRule).toContain(
-    "background: var(--diff-removed-emphasis);",
+    "background: var(--diff-removed-number-bg);",
   );
+  expect(rootRule).toContain("--diff-added-line-bg: #e6ffec;");
+  expect(rootRule).toContain("--diff-added-number-bg: #ccffd8;");
+  expect(rootRule).toContain("--diff-added-word-bg: #abf2bc;");
+  expect(rootRule).toContain("--diff-removed-line-bg: #ffebe9;");
+  expect(rootRule).toContain("--diff-removed-number-bg: #ffd7d5;");
+  expect(addedMarkerRule).toContain("background: var(--diff-added-line-bg);");
+  expect(addedWordRule).toContain("background: var(--diff-added-word-bg);");
 });
 
 test("Diffコードは行番号と同じ行を保ち、長い行を横スクロールする", () => {
@@ -171,16 +187,108 @@ test("Diffコードは行番号と同じ行を保ち、長い行を横スクロ�
     diffViewerCssFilePath,
     ".diff-viewer__cell code",
   );
+  const endSpacerRule = readCssRule(
+    diffViewerCssFilePath,
+    ".diff-viewer__end-spacer",
+  );
 
   expect(scrollSurfaceRule).toContain("overflow-x: auto;");
   expect(scrollSurfaceRule).toContain("overflow-y: auto;");
-  expect(cellRule).toContain("grid-template-columns: 48px 48px 20px");
-  expect(inlineCellRule).toContain(
-    "grid-template-columns: 48px 48px 48px 20px",
+  expect(scrollSurfaceRule).toContain(
+    "font-size: var(--viewer-font-size, 16px);",
   );
-  expect(commentLaneRule).toContain("min-width: 48px;");
+  expect(scrollSurfaceRule).toContain(
+    "line-height: var(--viewer-line-height, 26px);",
+  );
+  expect(cellRule).toContain("grid-template-columns: 48px 20px");
+  expect(cellRule).toContain("min-height: var(--viewer-line-height, 26px);");
+  expect(inlineCellRule).toContain("grid-template-columns: 48px 48px 20px");
+  expect(commentLaneRule).toContain("min-width: 112px;");
   expect(codeRule).toContain("display: block;");
   expect(codeRule).toContain("min-width: max-content;");
   expect(codeRule).toContain("overflow-wrap: normal;");
   expect(codeRule).toContain("white-space: pre;");
+  expect(endSpacerRule).toContain(
+    "height: calc(100% - var(--viewer-line-height, 26px));",
+  );
+  expect(endSpacerRule).toContain(
+    "min-height: calc(100% - var(--viewer-line-height, 26px));",
+  );
+});
+
+test("Diff表示切替はデザイン同様のsegmented controlとして描画する", () => {
+  const controlsRule = readCssRule(
+    repositoryDiffCssFilePath,
+    ".diff-view-mode-controls",
+  );
+  const buttonRule = readCssRule(
+    repositoryDiffCssFilePath,
+    ".diff-view-mode-controls__button",
+  );
+  const adjacentButtonRule = readCssRule(
+    repositoryDiffCssFilePath,
+    ".diff-view-mode-controls__button + .diff-view-mode-controls__button",
+  );
+
+  expect(controlsRule).toContain("border: 1px solid var(--diff-border);");
+  expect(controlsRule).toContain("border-radius: 6px;");
+  expect(controlsRule).toContain("overflow: hidden;");
+  expect(buttonRule).toContain("padding: 4px 14px;");
+  expect(buttonRule).toContain("border: 0;");
+  expect(adjacentButtonRule).toContain(
+    "border-left: 1px solid var(--diff-border);",
+  );
+});
+
+test("サイドバー開閉ボタンはパネル端のヘッダー位置に揃える", () => {
+  const commentsCloseRule = readCssRule(
+    appCssFilePath,
+    ".app-shell__comments-close",
+  );
+  const worktreesCloseRule = readCssRule(
+    appCssFilePath,
+    ".app-shell__worktrees-close",
+  );
+  const currentWorkspaceRule = readCssRule(
+    appCssFilePath,
+    ".workspace-sidebar-section__current",
+  );
+  const worktreesOpenRule = readCssRule(
+    appCssFilePath,
+    ".app-shell__worktrees-open",
+  );
+  const commentsOpenRule = readCssRule(
+    appCssFilePath,
+    ".app-shell__comments-open",
+  );
+
+  expect(commentsCloseRule).toContain("right: 12px;");
+  expect(worktreesCloseRule).toContain("top: 20px;");
+  expect(worktreesCloseRule).toContain("right: 18px;");
+  expect(currentWorkspaceRule).toContain("padding-right: 46px;");
+  expect(worktreesOpenRule).toContain("align-self: center;");
+  expect(commentsOpenRule).toContain("align-self: center;");
+});
+
+test("主要なファイル名とworktree名を14pxで読みやすく表示する", () => {
+  const activeItemRule = readCssRule(
+    appCssFilePath,
+    ".view-mode-toolbar__item",
+  );
+  const specFileRule = readCssRule(appCssFilePath, ".spec-tree__item-label");
+  const diffTreeRule = readCssRule(
+    appCssFilePath,
+    ".repository-diff-tree__name",
+  );
+  const worktreeRule = readCssRule(appCssFilePath, ".worktree-tree__label");
+  const diffTabRule = readCssRule(
+    repositoryDiffCssFilePath,
+    ".repository-file-tab__path",
+  );
+
+  expect(activeItemRule).toContain("font-size: 14px;");
+  expect(specFileRule).toContain("font-size: 14px;");
+  expect(diffTreeRule).toContain("font-size: 14px;");
+  expect(worktreeRule).toContain("font-size: 14px;");
+  expect(diffTabRule).toContain("font-size: 14px;");
 });

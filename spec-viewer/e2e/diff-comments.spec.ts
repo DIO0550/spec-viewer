@@ -23,10 +23,18 @@ test("actual Appでworkspace tree tab mode Reviewを通して作成・resolve・
   await composer.fill("Review from actual App");
   await composer.press("Control+Enter");
 
-  await expect(page.getByText("Review from actual App")).toBeVisible();
-  await page.getByRole("button", { name: /^Resolve comment-/ }).click();
-  await page.getByRole("button", { name: /^Resolved 1$/ }).click();
-  await expect(page.getByText("Review from actual App")).toBeVisible();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("Review from actual App"),
+  ).toBeVisible();
+  await expect(page.locator(".diff-inline-comment-thread")).toContainText(
+    "Review from actual App",
+  );
+  await page.getByRole("button", { name: /^解決 comment-/ }).click();
+  await page.getByRole("button", { name: /^解決済み 1$/ }).click();
+  await page.getByRole("button", { name: /^コメントを展開 comment-/ }).click();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("Review from actual App"),
+  ).toBeVisible();
 
   await page.getByRole("radio", { name: "Editor" }).click();
   await page.getByRole("button", { name: /2行目へ移動/ }).click();
@@ -66,6 +74,39 @@ test("actual AppでCAS conflict draftを保持しreloadとA-B-Aでidentityを分
   await openWorkspace(page, "/workspace/worktree-a");
   await openRepositoryFile(page);
   await expect(page.getByText("Conflict-safe draft")).toBeVisible();
+});
+
+test("actual Appでstale保存後に本文を保持して最新snapshotへ再保存できる", async ({
+  page,
+}) => {
+  await openRepositoryFile(page);
+  await page.evaluate(() =>
+    localStorage.setItem("e2e-stale-save-once", "true"),
+  );
+  await openComposer(page, "current", 2);
+  const composer = page.getByRole("textbox", { name: /2行目へのコメント/ });
+  await composer.fill("Retry after snapshot refresh");
+  await composer.press("Control+Enter");
+
+  await expect(composer).toHaveValue("Retry after snapshot refresh");
+  await expect(page.getByRole("button", { name: "保存" })).toBeEnabled();
+  await composer.press("Control+Enter");
+  await expect(page.getByText("Retry after snapshot refresh")).toBeVisible();
+});
+
+test("actual Appでactive change未選択のEditorは先頭から表示する", async ({
+  page,
+}) => {
+  await openRepositoryFile(page);
+  await page.getByRole("radio", { name: "Editor" }).click();
+
+  await expect
+    .poll(() =>
+      page
+        .locator(".current-file-viewer__scroll-surface")
+        .evaluate((element) => element.scrollTop),
+    )
+    .toBe(0);
 });
 
 test("actual AppでstaleTarget・overflow・indicator-card・keyboard/themeを表現する", async ({
@@ -208,7 +249,7 @@ test("actual Appでconvergence pickerがfilter/searchを解除しcardを選択�
   await page.reload();
   await openWorkspace(page, "/workspace/worktree-a");
   await openRepositoryFile(page);
-  await page.getByRole("button", { name: "Resolved 1" }).click();
+  await page.getByRole("button", { name: "解決済み 1" }).click();
   const search = page.getByRole("searchbox", { name: "コメントを検索" });
   await search.fill("no-match");
   await expect(
@@ -224,7 +265,7 @@ test("actual Appでconvergence pickerがfilter/searchを解除しcardを選択�
     page.getByRole("menuitem", { name: "converged first" }),
   ).toBeFocused();
   await page.getByRole("menuitem", { name: "converged second" }).click();
-  await expect(page.getByRole("button", { name: "All 2" })).toHaveAttribute(
+  await expect(page.getByRole("button", { name: "すべて 3" })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
@@ -417,4 +458,20 @@ test("actual Appでsnapshot stale draftをdiscardできる", async ({ page }) =>
   await expect(page.getByRole("button", { name: "保存" })).toBeDisabled();
   await page.getByRole("button", { name: "キャンセル" }).click();
   await expect(composer).toBeHidden();
+});
+test("actual AppでDiffコメントを確認後に削除する", async ({ page }) => {
+  await openRepositoryFile(page);
+  await openComposer(page, "current", 2);
+  const composer = page.getByRole("textbox", { name: /2行目へのコメント/ });
+  await composer.fill("delete this comment");
+  await composer.press("Control+Enter");
+  await expect(page.getByText("delete this comment")).toBeVisible();
+
+  await page.getByRole("button", { name: /^削除 comment-/ }).click();
+  await page
+    .getByRole("button", { name: /^コメント削除を確定 comment-/ })
+    .click();
+
+  await expect(page.getByText("delete this comment")).toBeHidden();
+  await expect(page.locator("article[data-comment-id]")).toHaveCount(0);
 });

@@ -52,6 +52,62 @@ test("Diff comment documentの2値scopeとhistorical anchorをdecodeする", () 
   expect(decodeDiffCommentDocument(document)).toEqual(document);
 });
 
+test("返信配列を厳密にdecodeする", () => {
+  const replies = [
+    { id: "reply-1", body: "確認しました", createdAt: "2026-08-21T00:00:00Z" },
+  ];
+  const candidate = {
+    ...document,
+    comments: [{ ...comment, replies }],
+  };
+
+  expect(decodeDiffCommentDocument(candidate).comments[0]?.replies).toEqual(
+    replies,
+  );
+});
+
+test("不正な返信fieldを拒否する", () => {
+  expect(() =>
+    decodeDiffCommentDocument({
+      ...document,
+      comments: [
+        {
+          ...comment,
+          replies: [
+            {
+              id: "reply-1",
+              body: "確認しました",
+              createdAt: "invalid",
+              extra: true,
+            },
+          ],
+        },
+      ],
+    }),
+  ).toThrow(InvalidDiffCommentResponseError);
+});
+
+test("複数行anchorのendLineをdecodeする", () => {
+  const rangedAnchor = { ...anchor, endLine: 7 };
+  const candidate = {
+    ...document,
+    comments: [{ ...comment, anchor: rangedAnchor }],
+  };
+
+  expect(decodeDiffCommentDocument(candidate).comments[0]?.anchor).toEqual(
+    rangedAnchor,
+  );
+});
+
+test("anchorのendLineが開始行より前なら拒否する", () => {
+  expect(() =>
+    decodeDiffCommentDocument({
+      ...document,
+      comments: [{ ...comment, anchor: { ...anchor, endLine: 2 } }],
+    }),
+  ).toThrow(InvalidDiffCommentResponseError);
+});
+
 test("historical anchorのbaseとsnapshotが現在document scopeと独立していてもdecodeする", () => {
   const historicalAnchor = {
     ...anchor,

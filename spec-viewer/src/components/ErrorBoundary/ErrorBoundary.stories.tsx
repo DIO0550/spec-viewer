@@ -27,6 +27,7 @@ const meta: Meta<typeof ErrorBoundary> = {
   },
   argTypes: {
     children: { control: false },
+    variant: { control: "inline-radio", options: ["page", "dialog"] },
   },
 };
 
@@ -40,6 +41,24 @@ export const Error: Story = {
   args: {
     children: <ThrowingChild />,
   },
+};
+
+export const DialogError: Story = {
+  args: {
+    children: <ThrowingChild />,
+    variant: "dialog",
+  },
+  decorators: [
+    (Story) => (
+      <div
+        className="specs-workspace__viewer"
+        style={{ minHeight: 320, position: "relative" }}
+      >
+        <button type="button">Diffへ切り替え</button>
+        <Story />
+      </div>
+    ),
+  ],
 };
 
 export const EdgeCases: Story = {

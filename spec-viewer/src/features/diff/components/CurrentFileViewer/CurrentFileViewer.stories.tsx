@@ -194,16 +194,20 @@ export const LargeLineCount: Story = {
   },
 };
 
-export const KeyboardPeek: Story = {
+export const CurrentContentOnly: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const button = canvas.getByRole("button", { name: "変更前 1行" });
-    button.focus();
-    await userEvent.keyboard("{Enter}");
-    const peekLine = canvasElement.querySelector('[data-row-kind="peek-line"]');
-    await expect(button).toHaveAttribute("aria-expanded", "true");
-    await expect(peekLine).toHaveTextContent("const mode = 'legacy';");
-    await expect(peekLine).toHaveAttribute("data-commentable", "false");
+    await expect(
+      canvas.getByText("const mode = 'editor';"),
+    ).toBeInTheDocument();
+    await expect(canvasElement).not.toHaveTextContent("変更前");
+    await expect(canvasElement).not.toHaveTextContent("legacy");
+    await expect(canvasElement).not.toHaveTextContent(
+      "No newline at end of file",
+    );
+    await expect(
+      canvasElement.querySelector('[data-row-kind="peek-line"]'),
+    ).toBeNull();
   },
 };
 
@@ -246,13 +250,9 @@ export const WorkspaceRefreshAndMode: Story = {
   render: () => <WorkspaceRefreshModeFixture />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const peek = canvas.getByRole("button", { name: "変更前 1行" });
-    await userEvent.click(peek);
-    await expect(peek).toHaveAttribute("aria-expanded", "true");
+    await expect(canvasElement).not.toHaveTextContent("変更前");
     await userEvent.click(canvas.getByRole("button", { name: "Refresh" }));
-    await expect(
-      canvas.getByRole("button", { name: "変更前 1行" }),
-    ).toHaveAttribute("aria-expanded", "false");
+    await expect(canvasElement).not.toHaveTextContent("変更前");
     await userEvent.click(canvas.getByRole("button", { name: "Unified" }));
     await expect(canvas.getByLabelText(/の差分$/)).toBeInTheDocument();
     await userEvent.click(canvas.getByRole("button", { name: "Editor" }));

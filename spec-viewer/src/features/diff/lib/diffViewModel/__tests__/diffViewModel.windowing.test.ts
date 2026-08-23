@@ -41,7 +41,7 @@ test("viewportHeightが0なら800px fallbackでwindowを計算する", () => {
   });
 
   expect(visibleWindow.startIndex).toBe(0);
-  expect(visibleWindow.endIndex).toBe(140);
+  expect(visibleWindow.endIndex).toBe(137);
 });
 
 function createContentRows(count: number): readonly DiffViewRow[] {
@@ -52,6 +52,6 @@ function createContentRows(count: number): readonly DiffViewRow[] {
     inline: null,
     old: null,
     next: null,
-    estimatedHeight: 20 as const,
+    estimatedHeight: 22 as const,
   }));
 }

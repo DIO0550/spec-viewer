@@ -19,9 +19,9 @@ test.each([
   );
 });
 
-test("content=20px・hunk/gap/annotation=28pxのprefix offsetsを返す", () => {
+test("content=22px・hunk/gap/annotation=30pxのprefix offsetsを返す", () => {
   const rows: readonly DiffViewRow[] = [
-    { kind: "hunk", id: "hunk", header: "@@", estimatedHeight: 28 },
+    { kind: "hunk", id: "hunk", header: "@@", estimatedHeight: 30 },
     {
       kind: "content",
       id: "content",
@@ -29,23 +29,23 @@ test("content=20px・hunk/gap/annotation=28pxのprefix offsetsを返す", () => 
       inline: null,
       old: null,
       next: null,
-      estimatedHeight: 20,
+      estimatedHeight: 22,
     },
     {
       kind: "gap",
       id: "gap",
       omittedLineCount: 4,
       expandableRows: null,
-      estimatedHeight: 28,
+      estimatedHeight: 30,
     },
     {
       kind: "annotation",
       id: "annotation",
       side: "both",
       text: "note",
-      estimatedHeight: 28,
+      estimatedHeight: 30,
     },
   ];
 
-  expect(calculateRowOffsets(rows)).toEqual([0, 28, 48, 76, 104]);
+  expect(calculateRowOffsets(rows)).toEqual([0, 30, 52, 82, 112]);
 });

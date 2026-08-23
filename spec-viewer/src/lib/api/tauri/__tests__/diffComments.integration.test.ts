@@ -86,3 +86,42 @@ test("updateDiffCommentはcomment IDと部分更新を送る", async () => {
   await expect(updateDiffComment(request)).resolves.toEqual(response);
   expect(invokeMock).toHaveBeenCalledWith("update_diff_comment", { request });
 });
+test("updateDiffCommentは返信本文を送る", async () => {
+  const response = {
+    kind: "preCommitFailure",
+    code: "storeBusy",
+    retryable: true,
+  } as const;
+  const request = {
+    identity,
+    expectedRevision: "1",
+    commentId: "cmt_1",
+    replyBody: "follow up",
+  };
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue(response);
+
+  await expect(updateDiffComment(request)).resolves.toEqual(response);
+  expect(invokeMock).toHaveBeenCalledWith("update_diff_comment", { request });
+});
+
+test("updateDiffCommentは削除フラグを送る", async () => {
+  const response = {
+    kind: "committed",
+    document: { ...document, revision: "2" },
+    revision: "2",
+    resolutionWarnings: [],
+    durability: "durable",
+  } as const;
+  const request = {
+    identity,
+    expectedRevision: "1",
+    commentId: "cmt_1",
+    deleted: true,
+  };
+  invokeMock.mockReset();
+  invokeMock.mockResolvedValue(response);
+
+  await expect(updateDiffComment(request)).resolves.toEqual(response);
+  expect(invokeMock).toHaveBeenCalledWith("update_diff_comment", { request });
+});

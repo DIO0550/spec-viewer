@@ -39,6 +39,13 @@ export const DiffIntegration: Story = {
       "aria-disabled",
       "true",
     );
-    await expect(canvas.getByLabelText("テーマモード")).toBeInTheDocument();
+    await expect(
+      canvas.getByRole("button", { name: "Worktree一覧を再読み込み" }),
+    ).toBeDisabled();
+    await expect(canvas.queryByLabelText("テーマモード")).toBeNull();
+    await expect(document.documentElement).toHaveAttribute(
+      "data-theme",
+      "light",
+    );
   },
 };

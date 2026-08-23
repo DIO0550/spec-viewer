@@ -66,7 +66,7 @@ test("useWorkspaceWorktreesはworkspace未選択時にデータソース未接�
 
   const result = renderHook(null);
 
-  expect(result.current()).toEqual({
+  expect(result.current().state).toEqual({
     status: "unavailable",
     reason: "data-source-not-connected",
   });
@@ -84,8 +84,41 @@ test("useWorkspaceWorktreesは取得成功後にreadyを返す", async () => {
     await Promise.resolve();
   });
 
-  expect(result.current()).toEqual({ status: "ready", data: loadedWorktrees });
+  expect(result.current().state).toEqual({
+    status: "ready",
+    data: loadedWorktrees,
+  });
   expect(listWorktreesMock).toHaveBeenCalledWith("/workspace/spec-reviewer");
+  result.unmount();
+});
+
+test("useWorkspaceWorktreesはrefreshで現在のworkspaceを再取得する", async () => {
+  listWorktreesMock.mockReset();
+  const refreshedWorktrees = { ...loadedWorktrees, worktrees: [] };
+  listWorktreesMock
+    .mockResolvedValueOnce(loadedWorktrees)
+    .mockResolvedValueOnce(refreshedWorktrees);
+  const result = renderHook("/workspace/spec-reviewer");
+
+  await act(async () => {
+    await Promise.resolve();
+  });
+  act(() => {
+    result.current().refresh();
+  });
+  expect(result.current().state).toEqual({
+    status: "ready",
+    data: loadedWorktrees,
+  });
+  await act(async () => {
+    await Promise.resolve();
+  });
+
+  expect(listWorktreesMock).toHaveBeenCalledTimes(2);
+  expect(result.current().state).toEqual({
+    status: "ready",
+    data: refreshedWorktrees,
+  });
   result.unmount();
 });
 
@@ -99,7 +132,7 @@ test("useWorkspaceWorktreesは取得失敗後にデータソース未接続を�
     await Promise.resolve();
   });
 
-  expect(result.current()).toEqual({
+  expect(result.current().state).toEqual({
     status: "unavailable",
     reason: "data-source-not-connected",
   });

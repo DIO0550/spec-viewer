@@ -38,7 +38,7 @@ test("Editorはコメント列用modifierを付けてコード行を4列で描�
   ).toHaveLength(4);
 });
 
-test("Editorはdeletion peek summaryとbase peek行をコメント対象にしない", () => {
+test("Editorはdeleted fileの変更前行を表示せずコメント対象も作らない", () => {
   const view = renderViewer(
     createDiffViewerFixture({
       status: "deleted",
@@ -59,7 +59,8 @@ test("Editorはdeletion peek summaryとbase peek行をコメント対象にし�
     }),
   );
 
-  expect(view.textContent).toContain("1行削除");
+  expect(view.textContent).toContain("current側の内容がありません。");
+  expect(view.textContent).not.toContain("old");
   expect(view.querySelector(".diff-line-comment-control")).toBeNull();
 });
 
