@@ -140,6 +140,7 @@ pub struct DiffAnchorTarget {
     old_path: Option<RepositoryRelativePath>,
     new_path: Option<RepositoryRelativePath>,
     line: NonZeroU32,
+    end_line: Option<NonZeroU32>,
 }
 
 impl DiffAnchorTarget {
@@ -149,6 +150,16 @@ impl DiffAnchorTarget {
         new_path: Option<RepositoryRelativePath>,
         line: NonZeroU32,
     ) -> Result<Self, DiffCommentError> {
+        Self::new_range(side, old_path, new_path, line, None)
+    }
+
+    pub fn new_range(
+        side: DiffSide,
+        old_path: Option<RepositoryRelativePath>,
+        new_path: Option<RepositoryRelativePath>,
+        line: NonZeroU32,
+        end_line: Option<NonZeroU32>,
+    ) -> Result<Self, DiffCommentError> {
         let valid = match side {
             DiffSide::Base => old_path.is_some(),
             DiffSide::Current => new_path.is_some(),
@@ -156,11 +167,15 @@ impl DiffAnchorTarget {
         if !valid {
             return Err(DiffCommentError::InvalidValue("sidePath"));
         }
+        if end_line.is_some_and(|end| end < line) {
+            return Err(DiffCommentError::InvalidValue("endLine"));
+        }
         Ok(Self {
             side,
             old_path,
             new_path,
             line,
+            end_line: end_line.filter(|end| *end != line),
         })
     }
 
@@ -175,6 +190,12 @@ impl DiffAnchorTarget {
     }
     pub fn line(&self) -> NonZeroU32 {
         self.line
+    }
+    pub fn end_line(&self) -> Option<NonZeroU32> {
+        self.end_line
+    }
+    pub fn range_end_line(&self) -> NonZeroU32 {
+        self.end_line.unwrap_or(self.line)
     }
     pub fn side_path(&self) -> &RepositoryRelativePath {
         match self.side {
@@ -299,12 +320,46 @@ impl std::fmt::Display for DiffCommentRevision {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DiffCommentReply {
+    id: CommentId,
+    body: String,
+    created_at: DateTime<Utc>,
+}
+
+impl DiffCommentReply {
+    pub fn new(
+        id: String,
+        body: String,
+        created_at: DateTime<Utc>,
+    ) -> Result<Self, DiffCommentError> {
+        let id = CommentId::parse(id)?;
+        validate_body(&body)?;
+        Ok(Self {
+            id,
+            body,
+            created_at,
+        })
+    }
+
+    pub fn id(&self) -> &str {
+        self.id.as_str()
+    }
+    pub fn body(&self) -> &str {
+        &self.body
+    }
+    pub fn created_at(&self) -> DateTime<Utc> {
+        self.created_at
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StoredDiffComment {
     id: CommentId,
     body: String,
     resolved: bool,
     created_at: DateTime<Utc>,
     anchor: DiffLineAnchor,
+    replies: Vec<DiffCommentReply>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -331,9 +386,25 @@ impl StoredDiffComment {
         created_at: DateTime<Utc>,
         anchor: DiffLineAnchor,
     ) -> Result<Self, DiffCommentError> {
+        Self::new_with_replies(id, body, resolved, created_at, anchor, vec![])
+    }
+
+    pub fn new_with_replies(
+        id: String,
+        body: String,
+        resolved: bool,
+        created_at: DateTime<Utc>,
+        anchor: DiffLineAnchor,
+        replies: Vec<DiffCommentReply>,
+    ) -> Result<Self, DiffCommentError> {
         let id = CommentId::parse(id)?;
-        if body.trim().is_empty() || body.len() > MAX_COMMENT_BODY_BYTES {
-            return Err(DiffCommentError::InvalidValue("body"));
+        validate_body(&body)?;
+        let mut reply_ids = std::collections::HashSet::new();
+        if replies
+            .iter()
+            .any(|reply| !reply_ids.insert(reply.id.clone()))
+        {
+            return Err(DiffCommentError::InvalidValue("duplicateReplyId"));
         }
         Ok(Self {
             id,
@@ -341,6 +412,7 @@ impl StoredDiffComment {
             resolved,
             created_at,
             anchor,
+            replies,
         })
     }
 
@@ -359,19 +431,47 @@ impl StoredDiffComment {
     pub fn anchor(&self) -> &DiffLineAnchor {
         &self.anchor
     }
+    pub fn replies(&self) -> &[DiffCommentReply] {
+        &self.replies
+    }
+    pub fn add_reply(
+        &self,
+        id: String,
+        body: String,
+        created_at: DateTime<Utc>,
+    ) -> Result<Self, DiffCommentError> {
+        let mut replies = self.replies.clone();
+        replies.push(DiffCommentReply::new(id, body, created_at)?);
+        Self::new_with_replies(
+            self.id.0.clone(),
+            self.body.clone(),
+            self.resolved,
+            self.created_at,
+            self.anchor.clone(),
+            replies,
+        )
+    }
     pub fn update(
         &self,
         body: Option<String>,
         resolved: Option<bool>,
     ) -> Result<Self, DiffCommentError> {
-        Self::new(
+        Self::new_with_replies(
             self.id.0.clone(),
             body.unwrap_or_else(|| self.body.clone()),
             resolved.unwrap_or(self.resolved),
             self.created_at,
             self.anchor.clone(),
+            self.replies.clone(),
         )
     }
+}
+
+fn validate_body(body: &str) -> Result<(), DiffCommentError> {
+    if body.trim().is_empty() || body.len() > MAX_COMMENT_BODY_BYTES {
+        return Err(DiffCommentError::InvalidValue("body"));
+    }
+    Ok(())
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -603,6 +703,29 @@ mod tests {
             line,
         )
         .is_ok());
+    }
+
+    #[test]
+    fn anchor_ranges_are_ordered_and_keep_their_end_line() {
+        let path = RepositoryRelativePath::parse("src/lib.rs").unwrap();
+        let target = DiffAnchorTarget::new_range(
+            DiffSide::Current,
+            None,
+            Some(path.clone()),
+            NonZeroU32::new(4).unwrap(),
+            Some(NonZeroU32::new(7).unwrap()),
+        )
+        .unwrap();
+        assert_eq!(target.range_end_line(), NonZeroU32::new(7).unwrap());
+
+        assert!(DiffAnchorTarget::new_range(
+            DiffSide::Current,
+            None,
+            Some(path),
+            NonZeroU32::new(7).unwrap(),
+            Some(NonZeroU32::new(4).unwrap()),
+        )
+        .is_err());
     }
 
     #[test]

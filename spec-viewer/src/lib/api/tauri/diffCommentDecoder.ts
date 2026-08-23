@@ -1,11 +1,12 @@
 import type {
   DiffAnchorResolution,
   DiffCommentMutationOutcome,
+  DiffCommentReply,
   DiffLineAnchor,
   DiffReviewIdentity,
+  ResolutionWarning,
   ResolvedDiffComment,
   ResolvedDiffComments,
-  ResolutionWarning,
 } from "@/features/diffComments";
 import { isCanonicalDiffCommentRevision } from "@/features/diffComments";
 
@@ -318,6 +319,7 @@ function decodeAnchor(
     "oldPath",
     "newPath",
     "line",
+    "endLine",
     "lineHash",
     "snippet",
     "contextBefore",
@@ -328,9 +330,18 @@ function decodeAnchor(
     "base",
     "current",
   ] as const);
+  const line = positiveLine(decoded.line, `${path}.line`, raw);
+  const endLine =
+    decoded.endLine === undefined
+      ? undefined
+      : positiveLine(decoded.endLine, `${path}.endLine`, raw);
+  if (endLine !== undefined && endLine < line) {
+    return fail(`${path}.endLine`, "greater than or equal to line", raw);
+  }
   const common = {
     ...identity,
-    line: positiveLine(decoded.line, `${path}.line`, raw),
+    line,
+    ...(endLine === undefined ? {} : { endLine }),
     lineHash: canonicalString(
       decoded.lineHash,
       `${path}.lineHash`,
@@ -442,6 +453,24 @@ function decodeResolution(
   };
 }
 
+/** @returns A strict persisted reply. */
+function decodeReply(
+  value: unknown,
+  path: string,
+  raw: unknown,
+): DiffCommentReply {
+  const decoded = exactRecord(value, path, raw, ["id", "body", "createdAt"]);
+  const createdAt = nonEmptyString(decoded.createdAt, `${path}.createdAt`, raw);
+  if (!Number.isFinite(Date.parse(createdAt))) {
+    return fail(`${path}.createdAt`, "an RFC3339 timestamp", raw);
+  }
+  return {
+    id: nonEmptyString(decoded.id, `${path}.id`, raw),
+    body: nonEmptyString(decoded.body, `${path}.body`, raw),
+    createdAt,
+  };
+}
+
 /** @returns A runtime comment preserving its stored fields. */
 function decodeComment(
   value: unknown,
@@ -453,6 +482,7 @@ function decodeComment(
     "body",
     "resolved",
     "createdAt",
+    "replies",
     "anchor",
     "anchorResolution",
   ]);
@@ -461,11 +491,21 @@ function decodeComment(
     return fail(`${path}.createdAt`, "an RFC3339 timestamp", raw);
   }
 
+  const replies = decoded.replies;
   return {
     id: nonEmptyString(decoded.id, `${path}.id`, raw),
     body: nonEmptyString(decoded.body, `${path}.body`, raw),
     resolved: boolean(decoded.resolved, `${path}.resolved`, raw),
     createdAt,
+    ...(replies === undefined
+      ? {}
+      : {
+          replies: Array.isArray(replies)
+            ? replies.map((reply, index) =>
+                decodeReply(reply, `${path}.replies[${index}]`, raw),
+              )
+            : fail(`${path}.replies`, "an array", raw),
+        }),
     anchor: decodeAnchor(decoded.anchor, `${path}.anchor`, raw),
     anchorResolution: decodeResolution(
       decoded.anchorResolution,

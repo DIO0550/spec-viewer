@@ -12,8 +12,9 @@ use thiserror::Error;
 
 use crate::domain::{
     comment::diff::{
-        DiffAnchorTarget, DiffCommentRevision, DiffLineAnchor, DiffReviewIdentity, DiffSide,
-        StoredDiffComment, StoredDiffCommentDocument, WorktreeStorageId,
+        DiffAnchorTarget, DiffCommentReply, DiffCommentRevision, DiffLineAnchor,
+        DiffReviewIdentity, DiffSide, StoredDiffComment, StoredDiffCommentDocument,
+        WorktreeStorageId,
     },
     repository::{CommitSha, RepositoryId, RepositoryRelativePath, SnapshotId},
 };
@@ -47,7 +48,17 @@ struct CommentDto {
     body: String,
     resolved: bool,
     created_at: DateTime<Utc>,
+    #[serde(default)]
+    replies: Vec<ReplyDto>,
     anchor: AnchorDto,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ReplyDto {
+    id: String,
+    body: String,
+    created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -63,6 +74,8 @@ struct AnchorDto {
     #[serde(skip_serializing_if = "Option::is_none")]
     new_path: Option<String>,
     line: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    end_line: Option<u32>,
     line_hash: String,
     snippet: String,
     context_before: Vec<String>,
@@ -142,6 +155,15 @@ impl From<&StoredDiffComment> for CommentDto {
             body: comment.body().into(),
             resolved: comment.resolved(),
             created_at: comment.created_at(),
+            replies: comment
+                .replies()
+                .iter()
+                .map(|reply| ReplyDto {
+                    id: reply.id().into(),
+                    body: reply.body().into(),
+                    created_at: reply.created_at(),
+                })
+                .collect(),
             anchor: AnchorDto {
                 repository_id: anchor.identity().repository_id().as_str().into(),
                 worktree_id: anchor.identity().worktree_id().as_str().into(),
@@ -154,6 +176,7 @@ impl From<&StoredDiffComment> for CommentDto {
                 old_path: target.old_path().map(|path| path.as_str().into()),
                 new_path: target.new_path().map(|path| path.as_str().into()),
                 line: target.line().get(),
+                end_line: target.end_line().map(NonZeroU32::get),
                 line_hash: anchor.line_hash().into(),
                 snippet: anchor.snippet().into(),
                 context_before: anchor.context_before().to_vec(),
@@ -183,7 +206,7 @@ impl CommentDto {
                 "anchor identity mismatch".into(),
             ));
         }
-        let target = DiffAnchorTarget::new(
+        let target = DiffAnchorTarget::new_range(
             match self.anchor.side {
                 SideDto::Base => DiffSide::Base,
                 SideDto::Current => DiffSide::Current,
@@ -200,6 +223,14 @@ impl CommentDto {
                 .map_err(|error| DiffCommentJsonError::Invalid(error.to_string()))?,
             NonZeroU32::new(self.anchor.line)
                 .ok_or_else(|| DiffCommentJsonError::Invalid("line must be non-zero".into()))?,
+            self.anchor
+                .end_line
+                .map(|line| {
+                    NonZeroU32::new(line).ok_or_else(|| {
+                        DiffCommentJsonError::Invalid("endLine must be non-zero".into())
+                    })
+                })
+                .transpose()?,
         )
         .map_err(|error| DiffCommentJsonError::Invalid(error.to_string()))?;
         let anchor = DiffLineAnchor::new(
@@ -211,8 +242,21 @@ impl CommentDto {
             self.anchor.context_after,
         )
         .map_err(|error| DiffCommentJsonError::Invalid(error.to_string()))?;
-        StoredDiffComment::new(self.id, self.body, self.resolved, self.created_at, anchor)
-            .map_err(|error| DiffCommentJsonError::Invalid(error.to_string()))
+        let replies = self
+            .replies
+            .into_iter()
+            .map(|reply| DiffCommentReply::new(reply.id, reply.body, reply.created_at))
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|error| DiffCommentJsonError::Invalid(error.to_string()))?;
+        StoredDiffComment::new_with_replies(
+            self.id,
+            self.body,
+            self.resolved,
+            self.created_at,
+            anchor,
+            replies,
+        )
+        .map_err(|error| DiffCommentJsonError::Invalid(error.to_string()))
     }
 }
 
@@ -407,6 +451,57 @@ mod tests {
     }
 
     #[test]
+    fn line_ranges_round_trip_and_legacy_anchors_remain_single_line() {
+        let target = DiffAnchorTarget::new_range(
+            DiffSide::Current,
+            None,
+            Some(RepositoryRelativePath::parse("src/lib.rs").unwrap()),
+            NonZeroU32::new(1).unwrap(),
+            Some(NonZeroU32::new(3).unwrap()),
+        )
+        .unwrap();
+        let anchor = DiffLineAnchor::new(
+            identity(),
+            target,
+            crate::domain::comment::diff::line_hash("line"),
+            "line".into(),
+            vec![],
+            vec![],
+        )
+        .unwrap();
+        let comment =
+            StoredDiffComment::new("range".into(), "body".into(), false, Utc::now(), anchor)
+                .unwrap();
+        let document = StoredDiffCommentDocument::new(
+            identity().scope(),
+            DiffCommentRevision::ZERO,
+            vec![comment],
+        )
+        .unwrap();
+
+        let encoded = encode(&document).unwrap();
+        let decoded = decode(&encoded, &identity()).unwrap();
+        assert_eq!(
+            decoded.comments()[0].anchor().target().range_end_line(),
+            NonZeroU32::new(3).unwrap()
+        );
+
+        let mut legacy: Value = serde_json::from_slice(&encoded).unwrap();
+        legacy["comments"][0]["anchor"]
+            .as_object_mut()
+            .unwrap()
+            .remove("endLine");
+        let decoded_legacy = decode(&serde_json::to_vec(&legacy).unwrap(), &identity()).unwrap();
+        assert_eq!(
+            decoded_legacy.comments()[0]
+                .anchor()
+                .target()
+                .range_end_line(),
+            NonZeroU32::new(1).unwrap()
+        );
+    }
+
+    #[test]
     fn refreshed_base_and_snapshot_accept_historical_anchor_in_same_scope() {
         let decoded = decode(
             &encode(&historical_document()).unwrap(),
@@ -424,6 +519,31 @@ mod tests {
         value["comments"][0]["anchor"]["repositoryId"] =
             Value::String(format!("rr1_{}", "9".repeat(64)));
         assert!(decode(&serde_json::to_vec(&value).unwrap(), &refreshed_identity()).is_err());
+    }
+
+    #[test]
+    fn replies_round_trip_and_legacy_documents_default_to_empty() {
+        let historical = historical_document();
+        let comment = historical.comments()[0]
+            .add_reply("reply-1".into(), "follow up".into(), Utc::now())
+            .unwrap();
+        let document = StoredDiffCommentDocument::new(
+            identity().scope(),
+            DiffCommentRevision::ZERO,
+            vec![comment],
+        )
+        .unwrap();
+        let encoded = encode(&document).unwrap();
+        let decoded = decode(&encoded, &identity()).unwrap();
+        assert_eq!(decoded.comments()[0].replies()[0].body(), "follow up");
+
+        let mut legacy: Value = serde_json::from_slice(&encoded).unwrap();
+        legacy["comments"][0]
+            .as_object_mut()
+            .unwrap()
+            .remove("replies");
+        let decoded_legacy = decode(&serde_json::to_vec(&legacy).unwrap(), &identity()).unwrap();
+        assert!(decoded_legacy.comments()[0].replies().is_empty());
     }
 
     #[test]

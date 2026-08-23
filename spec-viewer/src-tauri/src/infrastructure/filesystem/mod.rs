@@ -997,6 +997,30 @@ fn calculate_spec_progress(
         }
     })?;
     let reader = FilesystemMarkdownReader::new();
+    if let Some(tasks_artifact) = artifacts
+        .iter()
+        .find(|artifact| artifact.file_key == Some(SpecFileKey::Tasks))
+    {
+        let evaluation = match reader.read_artifact_contents(directory, tasks_artifact) {
+            Ok(contents) if contents.trim().is_empty() => ArtifactEvaluation::Empty,
+            Ok(contents) => match count_task_markers(&contents) {
+                Ok(task_counts) => ArtifactEvaluation::NonEmpty {
+                    task_counts: Some(task_counts),
+                },
+                Err(_) => ArtifactEvaluation::Error(ArtifactEvaluationError::Parse),
+            },
+            Err(_) => ArtifactEvaluation::Error(ArtifactEvaluationError::Read),
+        };
+        let tasks_fact = SpecArtifactFact::new(
+            SpecArtifactIdentity::Standard(SpecFileKey::Tasks),
+            true,
+            true,
+            ArtifactPresence::Present,
+            evaluation,
+        );
+        return Ok(artifact_progress(&tasks_fact));
+    }
+
     let facts = config
         .files()
         .iter()
@@ -1036,13 +1060,6 @@ fn calculate_spec_progress(
             )
         })
         .collect::<Vec<_>>();
-
-    if let Some(tasks) = facts
-        .iter()
-        .find(|fact| fact.is_tasks() && fact.presence() == ArtifactPresence::Present)
-    {
-        return Ok(artifact_progress(tasks));
-    }
 
     Ok(progress_without_tasks(&facts))
 }
