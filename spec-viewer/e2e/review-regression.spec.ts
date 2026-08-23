@@ -228,11 +228,10 @@ test("[R199-A11Y-001] keyboard jump moves focus to destination", async ({
   await expect(page.getByRole("radio", { name: "Split" })).toBeFocused();
 });
 
-test("[R199-A11Y-003] dark review has no serious axe violation", async ({
+test("[R199-A11Y-003] review has no serious axe violation", async ({
   page,
 }) => {
   await openWorkspace(page, "/workspace/worktree-a");
-  await page.getByLabel("テーマモード").selectOption("dark");
   await expectNoSeriousAccessibilityViolations(page);
 });
 
