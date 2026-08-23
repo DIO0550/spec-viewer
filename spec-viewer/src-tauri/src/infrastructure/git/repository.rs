@@ -2224,6 +2224,7 @@ impl RepositoryPort for GitRepositoryAdapter {
                 reason: OmissionReason::UnsupportedEntryKind,
                 byte_length: None,
             };
+            let submodule = self.submodule_state(&root, &merge, path);
             let review = FileReview {
                 file,
                 old_content: omitted.clone(),
@@ -2232,9 +2233,9 @@ impl RepositoryPort for GitRepositoryAdapter {
                 structured_diff: StructuredDiff::Omitted {
                     reason: OmissionReason::UnsupportedEntryKind,
                 },
-                submodule: Some(self.submodule_state(&root, &merge, path)),
+                submodule: Some(submodule.clone()),
             };
-            if selected_path_fingerprint(&self.runner, &root, path)? != initial_path_fingerprint {
+            if self.submodule_state(&root, &merge, path) != submodule {
                 return Err(RepositoryPortError::EntryChangedDuringRead);
             }
             return Ok(review.into());
