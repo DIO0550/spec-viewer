@@ -150,8 +150,8 @@ test("Diff行の未解決コメントを常時見えるマーカーで表示す�
     "src/parser.ts current 42行目・未解決コメント1件",
   );
   await expect(marker).toHaveCSS("min-width", "32px");
-  await expect(marker).toHaveCSS("height", "26px");
-  await expect(marker.locator("svg")).toHaveAttribute("width", "14");
+  await expect(marker).toHaveCSS("height", "30px");
+  await expect(marker.locator("svg")).toHaveAttribute("width", "13");
 });
 
 test("未解決コメント本文はDiff行に残り16pxで表示する", async ({ page }) => {
