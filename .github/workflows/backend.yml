@@ -71,6 +71,7 @@ jobs:
           retention-days: 7
 
       - name: Install cargo-llvm-cov
+        if: always()
         run: cargo install cargo-llvm-cov --locked
 
       - name: Generate coverage
