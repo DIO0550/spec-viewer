@@ -1,15 +1,5 @@
 # DiffコメントJSON形式
 
-## 保存場所
-
-リポジトリDiffコメントはGit共通ディレクトリ配下に保存される。
-
-```text
-<git-common-dir>/spec-viewer/diff-comments/df1_*.v1.json
-```
-
-`<git-common-dir>` は `git rev-parse --git-common-dir` で取得する。コメント文書はspec-viewerが管理するため、読み取り専用として扱う。
-
 ## 文書形式
 
 ```json
