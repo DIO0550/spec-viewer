@@ -330,15 +330,15 @@ mod tests {
                 .map(|artifact| artifact.identity.clone())
                 .collect::<Vec<_>>(),
         );
-        assert!(result.artifacts.iter().all(|artifact| {
-            artifact.document.as_ref().is_some_and(|document| {
-                !document.contents().is_empty() && !document.blocks().is_empty()
-            })
-        }));
         assert!(result
             .artifacts
             .iter()
-            .all(|artifact| artifact.error.is_none()));
+            .all(|artifact| match &artifact.outcome {
+                SpecArtifactOutcome::Loaded(document) => {
+                    !document.contents().is_empty() && !document.blocks().is_empty()
+                }
+                SpecArtifactOutcome::Failed(_) => false,
+            }));
         let tree = use_cases
             .list_specs(&loaded)
             .expect("tree should use the same progress policy");
@@ -377,15 +377,16 @@ mod tests {
         assert_eq!(SpecProgress::Completed, result.progress);
         assert_eq!(2, result.artifacts.len());
         let ok_artifact = &result.artifacts[0];
-        assert!(ok_artifact.document.is_some());
+        let SpecArtifactOutcome::Loaded(document) = &ok_artifact.outcome else {
+            panic!("tasks artifact should load");
+        };
         // The success case keeps the path field aligned with `document.path()`.
-        assert_eq!(
-            ok_artifact.document.as_ref().unwrap().path(),
-            ok_artifact.path,
-        );
+        assert_eq!(document.path(), ok_artifact.path);
         let broken = &result.artifacts[1];
         assert_eq!(SpecProgress::Unknown, broken.progress);
-        assert!(broken.document.is_none());
+        let SpecArtifactOutcome::Failed(error) = &broken.outcome else {
+            panic!("broken artifact should fail");
+        };
         // Even without a document, the failed artifact keeps the full resolved
         // path (spec directory + file name), not just the base file name.
         assert_ne!(broken.file_name, broken.path);
@@ -394,10 +395,6 @@ mod tests {
         assert!(broken
             .path
             .starts_with(workspace.root.to_string_lossy().as_ref()));
-        let error = broken
-            .error
-            .as_ref()
-            .expect("broken artifact needs metadata");
         assert_eq!(SpecArtifactErrorCode::MarkdownRead, error.code);
         assert_eq!("This artifact could not be read.", error.message);
         assert!(!error

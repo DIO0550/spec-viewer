@@ -336,6 +336,33 @@ mod tests {
     }
 
     #[test]
+    fn cached_document_round_trip_preserves_artifact_identity() {
+        let identity = crate::domain::spec::SpecArtifactIdentity::direct_markdown("notes.md")
+            .expect("direct artifact identity should be valid");
+        let document = MarkdownDocument::new_artifact(
+            identity.clone(),
+            SpecDocumentFormat::Markdown,
+            "/workspace/auth/notes.md",
+            "# Notes",
+            Vec::new(),
+        );
+        let cached = CachedMarkdownDocument::from_document(
+            document,
+            FileStamp {
+                modified: UNIX_EPOCH,
+                size_bytes: 7,
+            },
+            1,
+        );
+
+        let restored = cached.into_document();
+
+        assert_eq!(&identity, restored.identity());
+        assert_eq!(None, restored.file_key());
+        assert_eq!("# Notes", restored.contents());
+    }
+
+    #[test]
     fn cache_returns_fresh_document_when_mtime_and_size_match() {
         let workspace = TestWorkspace::new("hit");
         workspace.write(".plugin-workspace/.specs/auth/tasks.md", "# Tasks");

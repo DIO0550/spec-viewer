@@ -126,7 +126,8 @@ pub fn progress_without_tasks(facts: &[super::SpecArtifactFact]) -> SpecProgress
 mod tests {
     use super::*;
     use crate::domain::spec::{
-        ArtifactEvaluation, ArtifactPresence, SpecArtifactFact, SpecArtifactIdentity, SpecFileKey,
+        ArtifactConfiguration, ArtifactEvaluation, ArtifactPresence, SpecArtifactFact,
+        SpecArtifactIdentity, SpecFileKey,
     };
 
     #[test]
@@ -199,8 +200,7 @@ mod tests {
     ) -> SpecArtifactFact {
         SpecArtifactFact::new(
             SpecArtifactIdentity::Standard(SpecFileKey::Impl),
-            true,
-            false,
+            ArtifactConfiguration::Configured,
             presence,
             evaluation,
         )
@@ -238,8 +238,7 @@ mod tests {
                     SpecArtifactFact::new(
                         SpecArtifactIdentity::direct_markdown("notes.md")
                             .expect("direct Markdown name should be valid"),
-                        false,
-                        false,
+                        ArtifactConfiguration::Discovered,
                         ArtifactPresence::Present,
                         ArtifactEvaluation::Error(ArtifactEvaluationError::Read),
                     ),

@@ -610,7 +610,7 @@ mod tests {
 
         match result {
             MarkdownReadResult::Found(document) => {
-                assert_eq!(SpecFileKey::Tasks, document.key());
+                assert_eq!(Some(SpecFileKey::Tasks), document.file_key());
                 assert_eq!(SpecDocumentFormat::Markdown, document.format());
                 assert!(has_path_suffix(document.path(), &["auth", "tasks.md"]));
                 assert_eq!("# Tasks\n\n- [ ] Review", document.contents());

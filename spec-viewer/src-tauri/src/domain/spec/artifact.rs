@@ -142,4 +142,47 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn artifact_fact_uses_closed_configuration_and_derives_tasks_from_identity() {
+        let tasks = SpecArtifactFact::new(
+            SpecArtifactIdentity::Standard(SpecFileKey::Tasks),
+            ArtifactConfiguration::Configured,
+            ArtifactPresence::Present,
+            ArtifactEvaluation::NonEmpty {
+                task_counts: Some(TaskCounts::new(1, 1).expect("task counts should be valid")),
+            },
+        );
+        let implementation = SpecArtifactFact::new(
+            SpecArtifactIdentity::Standard(SpecFileKey::Impl),
+            ArtifactConfiguration::Configured,
+            ArtifactPresence::Present,
+            ArtifactEvaluation::NonEmpty { task_counts: None },
+        );
+        let discovered = SpecArtifactFact::new(
+            SpecArtifactIdentity::direct_markdown("notes.md")
+                .expect("direct Markdown name should be valid"),
+            ArtifactConfiguration::Discovered,
+            ArtifactPresence::Present,
+            ArtifactEvaluation::NonEmpty { task_counts: None },
+        );
+
+        assert_eq!(ArtifactConfiguration::Configured, tasks.configuration());
+        assert!(tasks.is_tasks());
+        assert!(!tasks.is_configured_non_task());
+
+        assert_eq!(
+            ArtifactConfiguration::Configured,
+            implementation.configuration()
+        );
+        assert!(!implementation.is_tasks());
+        assert!(implementation.is_configured_non_task());
+
+        assert_eq!(
+            ArtifactConfiguration::Discovered,
+            discovered.configuration()
+        );
+        assert!(!discovered.is_tasks());
+        assert!(!discovered.is_configured_non_task());
+    }
 }
