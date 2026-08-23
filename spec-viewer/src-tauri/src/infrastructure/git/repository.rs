@@ -1656,6 +1656,23 @@ impl GitRepositoryAdapter {
         }
     }
 
+    fn stable_submodule_state(
+        &self,
+        root: &Path,
+        merge: &CommitSha,
+        path: &RepositoryRelativePath,
+    ) -> Result<SubmoduleState, RepositoryPortError> {
+        let mut previous = self.submodule_state(root, merge, path);
+        for _ in 0..2 {
+            let current = self.submodule_state(root, merge, path);
+            if current == previous {
+                return Ok(current);
+            }
+            previous = current;
+        }
+        Err(RepositoryPortError::EntryChangedDuringRead)
+    }
+
     fn side_for_entry(bytes: Option<Vec<u8>>, kind: EntryKind) -> ContentAvailability {
         if kind != EntryKind::Symlink {
             return Self::side(bytes);
@@ -2224,7 +2241,7 @@ impl RepositoryPort for GitRepositoryAdapter {
                 reason: OmissionReason::UnsupportedEntryKind,
                 byte_length: None,
             };
-            let submodule = self.submodule_state(&root, &merge, path);
+            let submodule = self.stable_submodule_state(&root, &merge, path)?;
             let review = FileReview {
                 file,
                 old_content: omitted.clone(),
@@ -2233,11 +2250,8 @@ impl RepositoryPort for GitRepositoryAdapter {
                 structured_diff: StructuredDiff::Omitted {
                     reason: OmissionReason::UnsupportedEntryKind,
                 },
-                submodule: Some(submodule.clone()),
+                submodule: Some(submodule),
             };
-            if self.submodule_state(&root, &merge, path) != submodule {
-                return Err(RepositoryPortError::EntryChangedDuringRead);
-            }
             return Ok(review.into());
         }
         let old_content = self.base_side(&root, &merge, file.old_path.as_ref(), file.entry_kind)?;
