@@ -84,6 +84,27 @@ fn frame_submodule_state(hasher: &mut Sha256, head: &[u8], status: &[u8]) {
     }
 }
 
+fn frame_file(hasher: &mut Sha256, path: &Path) -> Result<(), RepositoryPortError> {
+    let mut file = fs::File::open(path).map_err(map_filesystem_error)?;
+    let mut buffer = [0_u8; 64 * 1024];
+    loop {
+        let read = file.read(&mut buffer).map_err(map_filesystem_error)?;
+        if read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..read]);
+    }
+    Ok(())
+}
+
+fn map_filesystem_error(error: std::io::Error) -> RepositoryPortError {
+    if error.kind() == std::io::ErrorKind::PermissionDenied {
+        RepositoryPortError::PermissionDenied
+    } else {
+        RepositoryPortError::EntryChangedDuringRead
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -104,26 +125,5 @@ mod tests {
         );
 
         assert_eq!(left.finalize(), right.finalize());
-    }
-}
-
-fn frame_file(hasher: &mut Sha256, path: &Path) -> Result<(), RepositoryPortError> {
-    let mut file = fs::File::open(path).map_err(map_filesystem_error)?;
-    let mut buffer = [0_u8; 64 * 1024];
-    loop {
-        let read = file.read(&mut buffer).map_err(map_filesystem_error)?;
-        if read == 0 {
-            break;
-        }
-        hasher.update(&buffer[..read]);
-    }
-    Ok(())
-}
-
-fn map_filesystem_error(error: std::io::Error) -> RepositoryPortError {
-    if error.kind() == std::io::ErrorKind::PermissionDenied {
-        RepositoryPortError::PermissionDenied
-    } else {
-        RepositoryPortError::EntryChangedDuringRead
     }
 }
