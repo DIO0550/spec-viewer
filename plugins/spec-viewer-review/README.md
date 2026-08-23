@@ -2,7 +2,7 @@
 
 spec-viewerのリポジトリDiffに付けた未解決レビューコメントを、現在のワークツリーへ反映するClaude Codeプラグインです。
 
-`/spec-viewer-review:fix-diff-comments` スキルを提供します。コメントIDを渡すと対象を限定でき、省略すると現在のworktreeにある未解決コメントをすべて処理します。
+`/spec-viewer-review:fix-diff-comments` スキルを提供します。現在のworktreeにある未解決コメントを読み、AIが対象箇所と修正要否を自動で判断します。
 
 スキルはspec-viewerのDiffコメントJSONを直接読み、妥当な指示をソースコードへ反映してリポジトリの検証を実行します。補助ランタイムは不要で、コメント文書自体は変更しません。コメントの解決操作はspec-viewer側で行います。
 
