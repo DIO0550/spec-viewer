@@ -56,8 +56,7 @@ pub fn selected_path_fingerprint(
                     false,
                 )
                 .unwrap_or_default();
-            frame(&mut hasher, &head);
-            frame(&mut hasher, &status);
+            frame_submodule_state(&mut hasher, &head, &status);
         }
         Ok(_) => return Err(RepositoryPortError::InvalidRepositoryPath),
     }
@@ -67,6 +66,45 @@ pub fn selected_path_fingerprint(
 fn frame(hasher: &mut Sha256, bytes: &[u8]) {
     hasher.update((bytes.len() as u64).to_le_bytes());
     hasher.update(bytes);
+}
+
+fn frame_submodule_state(hasher: &mut Sha256, head: &[u8], status: &[u8]) {
+    let head = head.strip_suffix(b"\n").unwrap_or(head);
+    let head = head.strip_suffix(b"\r").unwrap_or(head);
+    frame(hasher, head);
+
+    let mut records = status
+        .split(|byte| *byte == 0)
+        .filter(|record| !record.is_empty())
+        .collect::<Vec<_>>();
+    records.sort_unstable();
+    frame(hasher, &(records.len() as u64).to_le_bytes());
+    for record in records {
+        frame(hasher, record);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn submodule_state_fingerprint_ignores_status_record_order() {
+        let mut left = Sha256::new();
+        frame_submodule_state(
+            &mut left,
+            b"0123456789abcdef\n",
+            b" M tracked.txt\0?? untracked.txt\0",
+        );
+        let mut right = Sha256::new();
+        frame_submodule_state(
+            &mut right,
+            b"0123456789abcdef\r\n",
+            b"?? untracked.txt\0 M tracked.txt\0",
+        );
+
+        assert_eq!(left.finalize(), right.finalize());
+    }
 }
 
 fn frame_file(hasher: &mut Sha256, path: &Path) -> Result<(), RepositoryPortError> {
