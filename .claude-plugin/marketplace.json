@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "spec-viewer-tools",
+  "description": "Claude Code plugins for spec-viewer review workflows",
+  "owner": {
+    "name": "DIO0550"
+  },
+  "plugins": [
+    {
+      "name": "spec-viewer-review",
+      "source": "./plugins/spec-viewer-review",
+      "description": "Fix unresolved review comments attached to repository diffs in spec-viewer",
+      "category": "development",
+      "tags": [
+        "code-review",
+        "diff",
+        "spec-viewer"
+      ]
+    }
+  ]
+}

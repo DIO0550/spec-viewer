@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "spec-viewer-review",
+  "displayName": "Spec Viewer Review",
+  "version": "0.1.0",
+  "description": "Fix unresolved review comments attached to repository diffs in spec-viewer",
+  "author": {
+    "name": "DIO0550"
+  },
+  "repository": "https://github.com/DIO0550/spec-viewer",
+  "license": "MIT",
+  "keywords": [
+    "code-review",
+    "diff",
+    "spec-viewer"
+  ]
+}
