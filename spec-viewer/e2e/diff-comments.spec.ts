@@ -84,7 +84,7 @@ test("actual AppでCAS conflict draftを保持しreloadとA-B-Aでidentityを分
   ).toBeVisible();
 });
 
-test("actual Appでstale保存後に本文を保持して最新snapshotへ再保存できる", async ({
+test("actual Appでstale保存後に本文を保持して最新snapshotへ自動再保存する", async ({
   page,
 }) => {
   await openRepositoryFile(page);
@@ -96,14 +96,12 @@ test("actual Appでstale保存後に本文を保持して最新snapshotへ再保
   await composer.fill("Retry after snapshot refresh");
   await composer.press("Control+Enter");
 
-  await expect(composer).toHaveValue("Retry after snapshot refresh");
-  await expect(page.getByRole("button", { name: "保存" })).toBeEnabled();
-  await composer.press("Control+Enter");
   await expect(
     page
       .locator(".diff-review-sidebar")
       .getByText("Retry after snapshot refresh"),
   ).toBeVisible();
+  await expect(composer).toBeHidden();
 });
 
 test("actual Appでactive change未選択のEditorは先頭から表示する", async ({
