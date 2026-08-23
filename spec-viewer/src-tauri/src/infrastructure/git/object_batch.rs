@@ -150,7 +150,7 @@ impl GitObjectBatch {
         #[cfg(windows)]
         {
             let mut session = BatchSession::spawn(root)?;
-            return self.read_from_session(&mut session, object, content_limit);
+            self.read_from_session(&mut session, object, content_limit)
         }
         #[cfg(not(windows))]
         {
