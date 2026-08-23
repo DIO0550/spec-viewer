@@ -431,6 +431,27 @@ pub struct WorkingTreeDiffOverview {
     pub changed: Vec<DiffFile>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StdioStream {
+    Stdout,
+    Stderr,
+}
+
+impl StdioStream {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Stdout => "stdout",
+            Self::Stderr => "stderr",
+        }
+    }
+}
+
+impl std::fmt::Display for StdioStream {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 pub enum RepositoryPortError {
     #[error("repository HEAD does not exist")]
@@ -452,7 +473,7 @@ pub enum RepositoryPortError {
     #[error("Git timed out: {operation}")]
     GitTimedOut { operation: String },
     #[error("Git output limit exceeded: {stream}")]
-    GitOutputLimitExceeded { stream: String },
+    GitOutputLimitExceeded { stream: StdioStream },
     #[error("Git failed: {operation}")]
     GitFailed {
         operation: String,

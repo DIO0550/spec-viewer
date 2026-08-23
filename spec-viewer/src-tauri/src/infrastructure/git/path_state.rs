@@ -1,4 +1,4 @@
-use super::GitRunner;
+use super::{GitCommandKind, GitOperation, GitRunner};
 use crate::domain::repository::{RepositoryPortError, RepositoryRelativePath};
 use sha2::{Digest, Sha256};
 use std::{fs, io::Read, path::Path};
@@ -13,9 +13,9 @@ pub fn selected_path_fingerprint(
     frame(&mut hasher, path.as_str().as_bytes());
     let index = runner.run(
         root,
-        "selected-path-index",
+        GitOperation::SelectedPathIndex,
         &["ls-files", "--stage", "-z", "--", path.as_str()],
-        false,
+        GitCommandKind::Metadata,
     )?;
     frame(&mut hasher, &index);
     let target = root.join(path.as_str());
@@ -43,17 +43,17 @@ pub fn selected_path_fingerprint(
             let head = runner
                 .run(
                     &target,
-                    "selected-submodule-head",
+                    GitOperation::SelectedSubmoduleHead,
                     &["rev-parse", "HEAD"],
-                    false,
+                    GitCommandKind::Metadata,
                 )
                 .unwrap_or_default();
             let status = runner
                 .run(
                     &target,
-                    "selected-submodule-status",
+                    GitOperation::SelectedSubmoduleStatus,
                     &["status", "--porcelain=v1", "-z", "--untracked-files=all"],
-                    false,
+                    GitCommandKind::Metadata,
                 )
                 .unwrap_or_default();
             frame_submodule_state(&mut hasher, &head, &status);
