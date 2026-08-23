@@ -747,31 +747,70 @@ mod tests {
     }
 
     #[test]
-    fn anchors_require_the_discriminated_side_path() {
-        let line = NonZeroU32::new(1).unwrap();
-        assert!(DiffAnchorTarget::new(
+    fn anchor_paths_encode_the_required_path_for_each_side() {
+        let old_path = RepositoryRelativePath::parse("old.rs").unwrap();
+        let new_path = RepositoryRelativePath::parse("new.rs").unwrap();
+
+        assert_eq!(
+            DiffAnchorPaths::new(DiffSide::Base, None, Some(new_path.clone())),
+            Err(DiffCommentError::InvalidValue("sidePath"))
+        );
+        assert_eq!(
+            DiffAnchorPaths::new(DiffSide::Current, Some(old_path.clone()), None),
+            Err(DiffCommentError::InvalidValue("sidePath"))
+        );
+
+        let base = DiffAnchorPaths::new(
             DiffSide::Base,
-            None,
-            Some(RepositoryRelativePath::parse("a").unwrap()),
-            line,
+            Some(old_path.clone()),
+            Some(new_path.clone()),
         )
-        .is_err());
-        assert!(DiffAnchorTarget::new(
-            DiffSide::Current,
-            None,
-            Some(RepositoryRelativePath::parse("a").unwrap()),
-            line,
-        )
-        .is_ok());
+        .unwrap();
+        assert_eq!(base.side(), DiffSide::Base);
+        assert_eq!(base.side_path(), &old_path);
+        assert_eq!(base.selection_path(), &new_path);
+        let base_without_new =
+            DiffAnchorPaths::new(DiffSide::Base, Some(old_path.clone()), None).unwrap();
+        assert_eq!(base_without_new.side(), DiffSide::Base);
+        assert_eq!(base_without_new.side_path(), &old_path);
+        assert_eq!(base_without_new.selection_path(), &old_path);
+        assert_eq!(base_without_new.new_path(), None);
+
+        let current =
+            DiffAnchorPaths::new(DiffSide::Current, Some(old_path), Some(new_path.clone()))
+                .unwrap();
+        assert_eq!(current.side(), DiffSide::Current);
+        assert_eq!(current.side_path(), &new_path);
+        assert_eq!(current.selection_path(), &new_path);
     }
 
+    #[test]
+    fn diff_line_hash_accepts_only_canonical_sha256_values() {
+        let valid = format!("sha256:{}", "a".repeat(64));
+        assert_eq!(DiffLineHash::parse(valid.clone()).unwrap().as_str(), valid);
+
+        for invalid in [
+            "".to_owned(),
+            "sha256:".to_owned(),
+            format!("sha256:{}", "a".repeat(63)),
+            format!("sha256:{}", "A".repeat(64)),
+            format!("md5:{}", "a".repeat(64)),
+        ] {
+            assert_eq!(
+                DiffLineHash::parse(invalid.clone()),
+                Err(DiffCommentError::InvalidValue("lineHash")),
+                "accepted {invalid}"
+            );
+        }
+    }
     #[test]
     fn anchor_ranges_are_ordered_and_keep_their_end_line() {
         let path = RepositoryRelativePath::parse("src/lib.rs").unwrap();
         let target = DiffAnchorTarget::new_range(
-            DiffSide::Current,
-            None,
-            Some(path.clone()),
+            DiffAnchorPaths::Current {
+                new_path: path.clone(),
+                old_path: None,
+            },
             NonZeroU32::new(4).unwrap(),
             Some(NonZeroU32::new(7).unwrap()),
         )
@@ -779,9 +818,10 @@ mod tests {
         assert_eq!(target.range_end_line(), NonZeroU32::new(7).unwrap());
 
         assert!(DiffAnchorTarget::new_range(
-            DiffSide::Current,
-            None,
-            Some(path),
+            DiffAnchorPaths::Current {
+                new_path: path,
+                old_path: None,
+            },
             NonZeroU32::new(7).unwrap(),
             Some(NonZeroU32::new(4).unwrap()),
         )
@@ -793,30 +833,33 @@ mod tests {
         let old = RepositoryRelativePath::parse("old/name.rs").unwrap();
         let new = RepositoryRelativePath::parse("new/name.rs").unwrap();
         let line = NonZeroU32::new(7).unwrap();
-        let base =
-            DiffAnchorTarget::new(DiffSide::Base, Some(old.clone()), Some(new.clone()), line)
-                .unwrap();
+        let base = DiffAnchorTarget::new(
+            DiffAnchorPaths::Base {
+                old_path: old.clone(),
+                new_path: Some(new.clone()),
+            },
+            line,
+        );
         assert_eq!(base.selection_path(), &new);
         assert_eq!(base.side_path(), &old);
         let current = DiffAnchorTarget::new(
-            DiffSide::Current,
-            Some(old.clone()),
-            Some(new.clone()),
+            DiffAnchorPaths::Current {
+                new_path: new.clone(),
+                old_path: Some(old),
+            },
             line,
-        )
-        .unwrap();
+        );
         assert_eq!(current.selection_path(), &new);
         assert_eq!(current.side_path(), &new);
 
-        let copy_source = RepositoryRelativePath::parse("copy/source.rs").unwrap();
         let copy_target = RepositoryRelativePath::parse("copy/target.rs").unwrap();
         let copied = DiffAnchorTarget::new(
-            DiffSide::Current,
-            Some(copy_source),
-            Some(copy_target.clone()),
+            DiffAnchorPaths::Current {
+                new_path: copy_target.clone(),
+                old_path: Some(RepositoryRelativePath::parse("copy/source.rs").unwrap()),
+            },
             line,
-        )
-        .unwrap();
+        );
         assert_eq!(copied.selection_path(), &copy_target);
         assert_eq!(copied.side_path(), &copy_target);
     }

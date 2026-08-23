@@ -2707,7 +2707,7 @@ fn map_filesystem_error(error: std::io::Error) -> RepositoryPortError {
 mod tests {
     #[test]
     fn diff_comment_context_requires_full_identity_and_snapshot_file_matrix() {
-        use crate::domain::comment::diff::{DiffAnchorTarget, DiffSide};
+        use crate::domain::comment::diff::{DiffAnchorPaths, DiffAnchorTarget, DiffSide};
         use std::num::NonZeroU32;
 
         let nonce = SystemTime::now()
@@ -2780,45 +2780,45 @@ mod tests {
         }
         let context = adapter.diff_comment_resolution_context(&identity).unwrap();
         let unchanged = DiffAnchorTarget::new(
-            DiffSide::Current,
-            None,
-            Some(RepositoryRelativePath::parse("unchanged.rs").unwrap()),
+            DiffAnchorPaths::Current {
+                new_path: RepositoryRelativePath::parse("unchanged.rs").unwrap(),
+                old_path: None,
+            },
             NonZeroU32::new(1).unwrap(),
-        )
-        .unwrap();
+        );
         assert!(adapter
             .validate_diff_comment_target(&context, &unchanged)
             .is_ok());
         let arbitrary = DiffAnchorTarget::new(
-            DiffSide::Current,
-            None,
-            Some(RepositoryRelativePath::parse("missing.rs").unwrap()),
+            DiffAnchorPaths::Current {
+                new_path: RepositoryRelativePath::parse("missing.rs").unwrap(),
+                old_path: None,
+            },
             NonZeroU32::new(1).unwrap(),
-        )
-        .unwrap();
+        );
         assert_eq!(
             adapter.validate_diff_comment_target(&context, &arbitrary),
             Err(RepositoryPortError::InvalidRepositoryPath)
         );
         let historical_rename = DiffAnchorTarget::new(
-            DiffSide::Current,
-            None,
-            Some(RepositoryRelativePath::parse("old.rs").unwrap()),
+            DiffAnchorPaths::Current {
+                new_path: RepositoryRelativePath::parse("old.rs").unwrap(),
+                old_path: None,
+            },
             NonZeroU32::new(1).unwrap(),
-        )
-        .unwrap();
+        );
         let relocated = adapter
             .resolve_diff_comment_target(&context, &historical_rename)
             .unwrap();
         assert_eq!(relocated.selection_path().as_str(), "new.rs");
         assert_eq!(relocated.side_path().as_str(), "new.rs");
         let deleted = DiffAnchorTarget::new(
-            DiffSide::Current,
-            None,
-            Some(RepositoryRelativePath::parse("deleted.rs").unwrap()),
+            DiffAnchorPaths::Current {
+                new_path: RepositoryRelativePath::parse("deleted.rs").unwrap(),
+                old_path: None,
+            },
             NonZeroU32::new(1).unwrap(),
-        )
-        .unwrap();
+        );
         assert_eq!(
             adapter.resolve_diff_comment_target(&context, &deleted),
             Err(
@@ -2839,12 +2839,12 @@ mod tests {
         );
         let current_target = |path: &str| {
             DiffAnchorTarget::new(
-                DiffSide::Current,
-                None,
-                Some(RepositoryRelativePath::parse(path).unwrap()),
+                DiffAnchorPaths::Current {
+                    new_path: RepositoryRelativePath::parse(path).unwrap(),
+                    old_path: None,
+                },
                 NonZeroU32::new(1).unwrap(),
             )
-            .unwrap()
         };
         assert_eq!(
             adapter.resolve_diff_comment_target(&context, &current_target("binary.dat")),

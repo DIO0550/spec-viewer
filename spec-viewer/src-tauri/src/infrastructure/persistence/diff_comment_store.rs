@@ -253,7 +253,7 @@ mod tests {
     use super::*;
     use crate::domain::{
         comment::diff::{
-            line_hash, DiffAnchorTarget, DiffLineAnchor, DiffReviewIdentity, DiffSide,
+            line_hash, DiffAnchorPaths, DiffAnchorTarget, DiffLineAnchor, DiffReviewIdentity,
             StoredDiffComment, WorktreeStorageId,
         },
         repository::{CommitSha, RepositoryId, RepositoryRelativePath, SnapshotId},
@@ -280,12 +280,12 @@ mod tests {
 
     fn comment(identity: DiffReviewIdentity) -> StoredDiffComment {
         let target = DiffAnchorTarget::new(
-            DiffSide::Current,
-            None,
-            Some(RepositoryRelativePath::parse("src/lib.rs").unwrap()),
+            DiffAnchorPaths::Current {
+                new_path: RepositoryRelativePath::parse("src/lib.rs").unwrap(),
+                old_path: None,
+            },
             NonZeroU32::new(1).unwrap(),
-        )
-        .unwrap();
+        );
         let anchor = DiffLineAnchor::new(
             identity,
             target,

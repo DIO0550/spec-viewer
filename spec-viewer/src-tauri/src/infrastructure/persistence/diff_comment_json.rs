@@ -391,12 +391,12 @@ mod tests {
 
     fn historical_document() -> StoredDiffCommentDocument {
         let target = DiffAnchorTarget::new(
-            DiffSide::Current,
-            None,
-            Some(RepositoryRelativePath::parse("src/lib.rs").unwrap()),
+            DiffAnchorPaths::Current {
+                new_path: RepositoryRelativePath::parse("src/lib.rs").unwrap(),
+                old_path: None,
+            },
             NonZeroU32::new(1).unwrap(),
-        )
-        .unwrap();
+        );
         let anchor = DiffLineAnchor::new(
             identity(),
             target,
@@ -416,6 +416,49 @@ mod tests {
         .unwrap();
         StoredDiffCommentDocument::new(identity().scope(), DiffCommentRevision::ZERO, vec![comment])
             .unwrap()
+    }
+    #[test]
+    fn base_anchor_without_new_path_keeps_json_shape_and_selection_fallback() {
+        let old_path = RepositoryRelativePath::parse("src/old.rs").unwrap();
+        let target = DiffAnchorTarget::new(
+            DiffAnchorPaths::Base {
+                old_path: old_path.clone(),
+                new_path: None,
+            },
+            NonZeroU32::new(2).unwrap(),
+        );
+        let anchor = DiffLineAnchor::new(
+            identity(),
+            target,
+            crate::domain::comment::diff::line_hash("base line"),
+            "base line".into(),
+            vec![],
+            vec![],
+        )
+        .unwrap();
+        let comment =
+            StoredDiffComment::new("base-only".into(), "body".into(), false, Utc::now(), anchor)
+                .unwrap();
+        let document = StoredDiffCommentDocument::new(
+            identity().scope(),
+            DiffCommentRevision::ZERO,
+            vec![comment],
+        )
+        .unwrap();
+
+        let encoded = encode(&document).unwrap();
+        let value: Value = serde_json::from_slice(&encoded).unwrap();
+        let encoded_anchor = &value["comments"][0]["anchor"];
+        assert_eq!(encoded_anchor["side"], "base");
+        assert_eq!(encoded_anchor["oldPath"], "src/old.rs");
+        assert!(encoded_anchor.get("newPath").is_none());
+
+        let decoded = decode(&encoded, &identity()).unwrap();
+        let decoded_target = decoded.comments()[0].anchor().target();
+        assert_eq!(decoded_target.side(), DiffSide::Base);
+        assert_eq!(decoded_target.new_path(), None);
+        assert_eq!(decoded_target.side_path(), &old_path);
+        assert_eq!(decoded_target.selection_path(), &old_path);
     }
 
     #[test]
@@ -459,9 +502,10 @@ mod tests {
     #[test]
     fn line_ranges_round_trip_and_legacy_anchors_remain_single_line() {
         let target = DiffAnchorTarget::new_range(
-            DiffSide::Current,
-            None,
-            Some(RepositoryRelativePath::parse("src/lib.rs").unwrap()),
+            DiffAnchorPaths::Current {
+                new_path: RepositoryRelativePath::parse("src/lib.rs").unwrap(),
+                old_path: None,
+            },
             NonZeroU32::new(1).unwrap(),
             Some(NonZeroU32::new(3).unwrap()),
         )
@@ -550,6 +594,36 @@ mod tests {
             .remove("replies");
         let decoded_legacy = decode(&serde_json::to_vec(&legacy).unwrap(), &identity()).unwrap();
         assert!(decoded_legacy.comments()[0].replies().is_empty());
+    }
+
+    #[test]
+    fn invalid_side_path_combination_is_rejected_as_typed_error() {
+        let mut value: Value =
+            serde_json::from_slice(&encode(&historical_document()).unwrap()).unwrap();
+        value["comments"][0]["anchor"]["side"] = Value::String("base".into());
+        value["comments"][0]["anchor"]
+            .as_object_mut()
+            .unwrap()
+            .remove("oldPath");
+
+        let error = decode(&serde_json::to_vec(&value).unwrap(), &identity()).unwrap_err();
+        assert!(matches!(
+            error,
+            DiffCommentJsonError::Invalid(message) if message.contains("sidePath")
+        ));
+    }
+
+    #[test]
+    fn invalid_line_hash_is_rejected_as_typed_error() {
+        let mut value: Value =
+            serde_json::from_slice(&encode(&historical_document()).unwrap()).unwrap();
+        value["comments"][0]["anchor"]["lineHash"] = Value::String("sha256:not-a-hash".into());
+
+        let error = decode(&serde_json::to_vec(&value).unwrap(), &identity()).unwrap_err();
+        assert!(matches!(
+            error,
+            DiffCommentJsonError::Invalid(message) if message.contains("lineHash")
+        ));
     }
 
     #[test]

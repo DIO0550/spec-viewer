@@ -721,7 +721,7 @@ mod tests {
 
     use super::*;
     use crate::domain::{
-        comment::diff::{DiffSide, WorktreeStorageId},
+        comment::diff::{DiffAnchorPaths, DiffSide, WorktreeStorageId},
         repository::{CommitSha, RepositoryId, RepositoryRelativePath, SnapshotId},
     };
     use crate::infrastructure::{
@@ -740,12 +740,12 @@ mod tests {
 
     fn anchor(line: u32, text: &str) -> DiffLineAnchor {
         let target = DiffAnchorTarget::new(
-            DiffSide::Current,
-            None,
-            Some(RepositoryRelativePath::parse("src/lib.rs").unwrap()),
+            DiffAnchorPaths::Current {
+                new_path: RepositoryRelativePath::parse("src/lib.rs").unwrap(),
+                old_path: None,
+            },
             NonZeroU32::new(line).unwrap(),
-        )
-        .unwrap();
+        );
         DiffLineAnchor::new(
             identity(),
             target,
@@ -1105,12 +1105,12 @@ mod tests {
         let old_path = RepositoryRelativePath::parse("src/old.rs").unwrap();
         let new_path = RepositoryRelativePath::parse("src/new.rs").unwrap();
         let historical = DiffAnchorTarget::new(
-            DiffSide::Base,
-            Some(old_path.clone()),
-            Some(old_path.clone()),
+            DiffAnchorPaths::Base {
+                old_path: old_path.clone(),
+                new_path: Some(old_path.clone()),
+            },
             NonZeroU32::new(1).unwrap(),
-        )
-        .unwrap();
+        );
         let stored = DiffLineAnchor::new(
             identity(),
             historical,
@@ -1121,12 +1121,12 @@ mod tests {
         )
         .unwrap();
         let runtime = DiffAnchorTarget::new(
-            DiffSide::Base,
-            Some(old_path.clone()),
-            Some(new_path.clone()),
+            DiffAnchorPaths::Base {
+                old_path: old_path.clone(),
+                new_path: Some(new_path.clone()),
+            },
             NonZeroU32::new(1).unwrap(),
-        )
-        .unwrap();
+        );
         assert!(matches!(
             resolve_one_for_target(&stored, &runtime, &SourceIndex::build("target"), false),
             DiffAnchorResolution::Relocated {
@@ -1164,7 +1164,7 @@ mod tests {
         let selected = DiffLineAnchor::new(
             identity(),
             selected.target().clone(),
-            selected.line_hash().to_owned(),
+            selected.line_hash().clone(),
             truncate_context(&repeated),
             vec!["before-a".into()],
             vec!["before-b".into()],
