@@ -193,10 +193,25 @@ impl WorkspaceConfig {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SpecOverrideNodeKind {
+    Spec,
+    Category,
+}
+
+impl From<SpecOverrideNodeKind> for SpecNodeKind {
+    fn from(value: SpecOverrideNodeKind) -> Self {
+        match value {
+            SpecOverrideNodeKind::Spec => Self::Spec,
+            SpecOverrideNodeKind::Category => Self::Category,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpecConfigOverride {
     config: WorkspaceConfig,
-    node_kind: Option<SpecNodeKind>,
+    node_kind: Option<SpecOverrideNodeKind>,
 }
 
 impl SpecConfigOverride {
@@ -206,7 +221,7 @@ impl SpecConfigOverride {
 
     pub fn with_node_kind(
         files: Vec<WorkspaceFileMapping>,
-        node_kind: Option<SpecNodeKind>,
+        node_kind: Option<SpecOverrideNodeKind>,
     ) -> Result<Self, WorkspaceConfigError> {
         Ok(Self {
             config: WorkspaceConfig::new(files)?,
@@ -218,7 +233,7 @@ impl SpecConfigOverride {
         &self.config
     }
 
-    pub fn node_kind(&self) -> Option<SpecNodeKind> {
+    pub fn node_kind(&self) -> Option<SpecOverrideNodeKind> {
         self.node_kind
     }
 }
@@ -539,5 +554,18 @@ mod tests {
             .expect("impl mapping should exist");
 
         assert_eq!("implementation-plan.md", file.file_name());
+    }
+
+    #[test]
+    fn spec_override_node_kind_is_a_closed_spec_category_subset() {
+        for (override_kind, node_kind) in [
+            (SpecOverrideNodeKind::Spec, SpecNodeKind::Spec),
+            (SpecOverrideNodeKind::Category, SpecNodeKind::Category),
+        ] {
+            assert_eq!(SpecNodeKind::from(override_kind), node_kind);
+            let config = SpecConfigOverride::with_node_kind(vec![], Some(override_kind))
+                .expect("override kind should be valid");
+            assert_eq!(config.node_kind(), Some(override_kind));
+        }
     }
 }
