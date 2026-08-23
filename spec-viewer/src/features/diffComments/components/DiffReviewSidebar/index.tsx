@@ -1,6 +1,15 @@
-import { type ReactElement, useEffect, useMemo, useRef } from "react";
+import { RefreshCw } from "lucide-react";
+import {
+  type FormEvent,
+  type ReactElement,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { ReviewComment } from "@/features/comments/components/ReviewComment";
+import type { DiffCommentReply } from "@/features/diffComments";
 
 export type DiffReviewFilter = "open" | "resolved" | "all";
 
@@ -22,6 +31,7 @@ export type DiffReviewComment = Readonly<{
   locationLabel: string;
   snippet: string;
   resolution: DiffReviewResolution;
+  replies?: readonly DiffCommentReply[];
 }>;
 
 export type DiffReviewSidebarProps = Readonly<{
@@ -39,6 +49,10 @@ export type DiffReviewSidebarProps = Readonly<{
     commentId: string,
     body: string,
   ) => boolean | void | Promise<boolean | void>;
+  onReply?: (
+    commentId: string,
+    body: string,
+  ) => boolean | void | Promise<boolean | void>;
   mutatingCommentId?: string | null;
   mutationDisabledReason?:
     | "revisionOverflow"
@@ -48,13 +62,19 @@ export type DiffReviewSidebarProps = Readonly<{
   onJump: (commentId: string) => void;
   onResolve: (commentId: string) => void;
   onReopen: (commentId: string) => void;
+  onDelete?: (commentId: string) => void;
 }>;
 
 const FilterLabels = {
-  open: "Open",
-  resolved: "Resolved",
-  all: "All",
+  open: "未解決",
+  resolved: "解決済み",
+  all: "すべて",
 } as const satisfies Record<DiffReviewFilter, string>;
+
+const DiffReviewLabels = {
+  resolve: "解決",
+  reopen: "再開",
+} as const;
 
 /**
  * Renders the controlled worktree-wide Diff Review list.
@@ -77,7 +97,9 @@ export function DiffReviewSidebar(props: DiffReviewSidebarProps): ReactElement {
   const commentList = useMemo(
     () =>
       visibleComments.length === 0 ? (
-        <p role="status">条件に一致するコメントはありません</p>
+        <p className="diff-review-sidebar__empty" role="status">
+          条件に一致するコメントはありません
+        </p>
       ) : (
         <ol className="diff-review-sidebar__list">
           {materializedComments.map((comment) => (
@@ -98,6 +120,8 @@ export function DiffReviewSidebar(props: DiffReviewSidebarProps): ReactElement {
                   (props.mutationDisabledReason !== null &&
                     props.mutationDisabledReason !== undefined)
                 }
+                labels={DiffReviewLabels}
+                isCollapsible
                 searchQuery={props.search}
                 selectionLabel={`${comment.locationLabel}のコメントを選択`}
                 selectionRef={(element) => {
@@ -107,10 +131,23 @@ export function DiffReviewSidebar(props: DiffReviewSidebarProps): ReactElement {
                     selectRefs.current.set(comment.id, element);
                   }
                 }}
+                footer={
+                  <DiffCommentReplies
+                    commentId={comment.id}
+                    replies={comment.replies ?? []}
+                    isMutating={
+                      comment.id === props.mutatingCommentId ||
+                      (props.mutationDisabledReason !== null &&
+                        props.mutationDisabledReason !== undefined)
+                    }
+                    onReply={props.onReply}
+                  />
+                }
                 onSelect={props.onSelectComment}
                 onUpdate={props.onUpdate ?? (() => undefined)}
                 onResolve={props.onResolve}
                 onReopen={props.onReopen}
+                onDelete={props.onDelete}
                 onJump={(commentId) => {
                   suppressSelectionFocusRef.current = true;
                   props.onJump(commentId);
@@ -125,7 +162,9 @@ export function DiffReviewSidebar(props: DiffReviewSidebarProps): ReactElement {
       props.mutatingCommentId,
       props.mutationDisabledReason,
       props.onJump,
+      props.onReply,
       props.onReopen,
+      props.onDelete,
       props.onResolve,
       props.onSelectComment,
       props.onUpdate,
@@ -162,32 +201,47 @@ export function DiffReviewSidebar(props: DiffReviewSidebarProps): ReactElement {
       data-disabled-reason={props.mutationDisabledReason ?? undefined}
     >
       <header className="diff-review-sidebar__header">
-        <h2>Review</h2>
-        <div role="group" aria-label="コメント状態">
-          {(["open", "resolved", "all"] as const).map((filter) => (
-            <button
-              key={filter}
-              type="button"
-              aria-pressed={props.filter === filter}
-              onClick={() => props.onFilterChange(filter)}
-            >
-              {FilterLabels[filter]} {counts[filter]}
-            </button>
-          ))}
+        <div className="diff-review-sidebar__title">
+          <h2>コメント</h2>
+          <span className="diff-review-sidebar__summary">{counts.all}件</span>
         </div>
-        <label>
-          コメントを検索
-          <input
-            type="search"
-            value={props.search}
-            onInput={(event) => props.onSearchChange(event.currentTarget.value)}
-          />
-        </label>
-        {props.onReload === undefined ? null : (
-          <button type="button" onClick={props.onReload}>
-            Diff commentsを再読み込み
-          </button>
-        )}
+        <div className="diff-review-sidebar__controls">
+          <fieldset className="diff-review-sidebar__filters">
+            <legend className="visually-hidden">コメント状態</legend>
+            {(["open", "resolved", "all"] as const).map((filter) => (
+              <button
+                key={filter}
+                type="button"
+                aria-pressed={props.filter === filter}
+                onClick={() => props.onFilterChange(filter)}
+              >
+                {FilterLabels[filter]} {counts[filter]}
+              </button>
+            ))}
+          </fieldset>
+          <label className="diff-review-sidebar__search">
+            <span className="visually-hidden">コメントを検索</span>
+            <input
+              type="search"
+              placeholder="コメントを検索"
+              value={props.search}
+              onInput={(event) =>
+                props.onSearchChange(event.currentTarget.value)
+              }
+            />
+          </label>
+          {props.onReload === undefined ? null : (
+            <button
+              type="button"
+              className="icon-button diff-review-sidebar__reload"
+              aria-label="コメントを再読み込み"
+              title="コメントを再読み込み"
+              onClick={props.onReload}
+            >
+              <RefreshCw aria-hidden="true" size={15} />
+            </button>
+          )}
+        </div>
       </header>
       {props.warnings.length === 0 ? null : (
         <div className="diff-review-sidebar__warnings" role="status">
@@ -275,4 +329,92 @@ function getResolutionLabel(resolution: DiffReviewResolution): string {
     return `一時的に利用できません: ${resolution.reason}`;
   }
   return "現在の行";
+}
+
+type DiffCommentRepliesProps = Readonly<{
+  commentId: string;
+  replies: readonly DiffCommentReply[];
+  isMutating: boolean;
+  onReply?: (
+    commentId: string,
+    body: string,
+  ) => boolean | void | Promise<boolean | void>;
+}>;
+
+/** Renders persisted replies and a conflict-safe reply composer. */
+function DiffCommentReplies(props: DiffCommentRepliesProps): ReactElement {
+  const [draft, setDraft] = useState("");
+  const [isSubmitting, setSubmitting] = useState(false);
+  const editorRef = useRef<HTMLTextAreaElement>(null);
+  const normalizedDraft = draft.trim();
+
+  const submit = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    if (
+      props.onReply === undefined ||
+      normalizedDraft.length === 0 ||
+      isSubmitting
+    ) {
+      return;
+    }
+    setSubmitting(true);
+    void Promise.resolve(props.onReply(props.commentId, normalizedDraft)).then(
+      (isCommitted) => {
+        setSubmitting(false);
+        if (isCommitted === false) {
+          editorRef.current?.focus({ preventScroll: true });
+          return;
+        }
+        setDraft("");
+      },
+      () => {
+        setSubmitting(false);
+        editorRef.current?.focus({ preventScroll: true });
+      },
+    );
+  };
+
+  return (
+    <section
+      className="diff-comment-replies"
+      aria-label={`返信 ${props.commentId}`}
+    >
+      {props.replies.length === 0 ? null : (
+        <ol className="diff-comment-replies__list">
+          {props.replies.map((reply) => (
+            <li key={reply.id} className="diff-comment-replies__item">
+              <p>{reply.body}</p>
+              <time dateTime={reply.createdAt}>
+                {new Date(reply.createdAt).toLocaleString()}
+              </time>
+            </li>
+          ))}
+        </ol>
+      )}
+      {props.onReply === undefined ? null : (
+        <form className="diff-comment-replies__form" onSubmit={submit}>
+          <label>
+            <span className="visually-hidden">返信</span>
+            <textarea
+              ref={editorRef}
+              aria-label={`返信本文 ${props.commentId}`}
+              placeholder="返信を追加"
+              value={draft}
+              disabled={props.isMutating || isSubmitting}
+              onInput={(event) => setDraft(event.currentTarget.value)}
+            />
+          </label>
+          <button
+            type="submit"
+            aria-label={`返信を送信 ${props.commentId}`}
+            disabled={
+              props.isMutating || isSubmitting || normalizedDraft.length === 0
+            }
+          >
+            返信
+          </button>
+        </form>
+      )}
+    </section>
+  );
 }

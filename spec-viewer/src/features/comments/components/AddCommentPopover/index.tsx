@@ -1,13 +1,7 @@
-import { LoaderCircle, MessageSquarePlus, Send, X } from "lucide-react";
-import {
-  type CSSProperties,
-  type FormEvent,
-  useEffect,
-  useId,
-  useReducer,
-  useRef,
-  useState,
-} from "react";
+import { MessageSquarePlus, X } from "lucide-react";
+import { type CSSProperties, useId, useReducer, useState } from "react";
+
+import { CommentComposer } from "@/features/comments/components/CommentComposer";
 import { CommentPopover } from "@/features/comments/components/CommentPopover";
 import {
   CommentBody,
@@ -60,7 +54,13 @@ function createCommentBodyFormState(): CommentBodyFormState {
   return { body: CommentBody.create(), error: null };
 }
 
-/** @returns Next add-comment body form state for the requested action. */
+/**
+ * Reduces one Spec comment body action into the next validation state.
+ *
+ * @param state - Current controlled body and validation state.
+ * @param action - Body update or submission-attempt action.
+ * @returns The next immutable form state.
+ */
 function reduceCommentBodyForm(
   state: CommentBodyFormState,
   action: CommentBodyFormAction,
@@ -78,7 +78,12 @@ function reduceCommentBodyForm(
   };
 }
 
-/** @returns A floating form for saving a comment from a Markdown selection. */
+/**
+ * Renders the Spec adapter around the shared controlled comment form.
+ *
+ * @param props - Spec selection, mutation state, and comment actions.
+ * @returns A floating comment popover anchored to the Markdown selection.
+ */
 export function AddCommentPopover({
   draft,
   style,
@@ -90,9 +95,6 @@ export function AddCommentPopover({
 }: Props) {
   const titleId = useId();
   const textareaId = useId();
-  const hintId = useId();
-  const errorId = useId();
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [commentBodyFormState, dispatchCommentBodyForm] = useReducer(
     reduceCommentBodyForm,
     undefined,
@@ -110,12 +112,6 @@ export function AddCommentPopover({
     formatCommentBodyValidationError(commentBodyFormState.error) ??
     submitErrorMessage ??
     errorMessage;
-  const describedBy =
-    visibleErrorMessage === null ? hintId : `${hintId} ${errorId}`;
-
-  useEffect(() => {
-    textareaRef.current?.focus();
-  }, []);
 
   const submitComment = async (): Promise<void> => {
     if (!isScopeReady) {
@@ -140,26 +136,6 @@ export function AddCommentPopover({
     }
   };
 
-  const submitForm = (event: FormEvent<HTMLFormElement>): void => {
-    event.preventDefault();
-    void submitComment();
-  };
-
-  const handleTextareaKeyDown = createShortcutKeyHandler<HTMLTextAreaElement>({
-    shortcuts: [
-      {
-        key: "Enter",
-        modifiers: ["ctrlOrMeta"],
-        allowsAdditionalModifiers: true,
-        isEnabled: !isSaving,
-        preventDefault: true,
-        onMatch: () => {
-          void submitComment();
-        },
-      },
-    ],
-  });
-
   const handleDialogKeyDown = createShortcutKeyHandler<HTMLElement>({
     shortcuts: [
       {
@@ -167,9 +143,7 @@ export function AddCommentPopover({
         allowsAdditionalModifiers: true,
         isEnabled: !isSaving,
         preventDefault: true,
-        onMatch: () => {
-          onCancel();
-        },
+        onMatch: onCancel,
       },
     ],
   });
@@ -204,76 +178,47 @@ export function AddCommentPopover({
           <X aria-hidden="true" size={14} />
         </button>
       </header>
-      <form className="add-comment-popover__form" onSubmit={submitForm}>
-        <div className="add-comment-popover__body">
-          <blockquote>{draft.anchor.textSnippet}</blockquote>
-          <label className="add-comment-popover__label" htmlFor={textareaId}>
-            {uiText.sidebar.comments}
-          </label>
-          <textarea
-            id={textareaId}
-            ref={textareaRef}
-            value={commentBodyFormState.body.value}
-            rows={4}
-            aria-describedby={describedBy}
-            aria-invalid={visibleErrorMessage !== null}
-            placeholder="レビューコメントを書く..."
-            onInput={(event) => {
-              dispatchCommentBodyForm({
-                type: "body_updated",
-                value: event.currentTarget.value,
-              });
-              setSubmitErrorMessage(null);
-            }}
-            onKeyDown={handleTextareaKeyDown}
-            disabled={isSaving}
-          />
-          <p id={hintId} className="add-comment-popover__hint">
+      <CommentComposer
+        id={textareaId}
+        className="add-comment-popover__form"
+        label={uiText.sidebar.comments}
+        body={commentBodyFormState.body.value}
+        hint={
+          <>
             {formatDraftBlockType(draft.anchor.blockType)}
             {uiText.commentThread.block} {draft.anchor.blockIndex + 1},{" "}
             {uiText.commentThread.chars} {draft.anchor.charRange.start}-
             {draft.anchor.charRange.end}
+          </>
+        }
+        isSaving={isSaving}
+        isSubmitDisabled={isSubmitDisabled}
+        isCancelDisabled={isSaving}
+        hasError={visibleErrorMessage !== null}
+        leadingContent={<blockquote>{draft.anchor.textSnippet}</blockquote>}
+        onBodyChange={(body) => {
+          dispatchCommentBodyForm({ type: "body_updated", value: body });
+          setSubmitErrorMessage(null);
+        }}
+        onCancel={onCancel}
+        onSubmit={() => void submitComment()}
+        onSubmitBlocked={() =>
+          dispatchCommentBodyForm({ type: "submit_attempted" })
+        }
+      >
+        {visibleErrorMessage === null ? null : (
+          <p className="comment-composer__error" role="alert">
+            {visibleErrorMessage}
           </p>
-          {visibleErrorMessage === null ? null : (
-            <p id={errorId} className="add-comment-popover__error" role="alert">
-              {visibleErrorMessage}
-            </p>
-          )}
-        </div>
-        <div className="add-comment-popover__actions">
-          <button
-            className="button button--secondary"
-            type="button"
-            onClick={onCancel}
-            disabled={isSaving}
-          >
-            {uiText.commentThread.cancel}
-          </button>
-          <button
-            className="button button--primary"
-            type="submit"
-            disabled={isSubmitDisabled}
-          >
-            {isSaving ? (
-              <LoaderCircle
-                className="add-comment-popover__saving-icon"
-                aria-hidden="true"
-                size={15}
-              />
-            ) : (
-              <Send aria-hidden="true" size={15} />
-            )}
-            {uiText.commentThread.save}
-          </button>
-        </div>
-      </form>
+        )}
+      </CommentComposer>
     </CommentPopover>
   );
 }
 
 /**
  * @param blockType - The raw block type identifier to format.
- * @returns Human-readable block type text for the anchor preview.
+ * @returns Human-readable block type text.
  */
 function formatDraftBlockType(blockType: string): string {
   return blockType.replace(/_/g, " ");

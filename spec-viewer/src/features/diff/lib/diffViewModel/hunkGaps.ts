@@ -114,7 +114,7 @@ function createHunkGap(
     id: `hunk-gap-${input.hunkIndex - 1}-${input.hunkIndex}`,
     omittedLineCount: Math.max(oldGapCount, newGapCount),
     expandableRows,
-    estimatedHeight: 28,
+    estimatedHeight: 30,
   };
 }
 
@@ -176,7 +176,7 @@ function createExpandableRows(
       inline: input.mode === "inline" ? cell : null,
       old: cell,
       next: cell,
-      estimatedHeight: 20,
+      estimatedHeight: 22,
     };
   });
 }

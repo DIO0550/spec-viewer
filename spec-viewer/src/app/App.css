@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "highlight.js/styles/github-dark.css";
+@import "../styles/diff-comments.css";
 @import "../styles/diff-viewer.css";
 @import "../styles/revision-selector.css";
 @import "../styles/repository-diff-workspace.css";
@@ -14,6 +15,8 @@
   --font-mono:
     "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono",
     ui-monospace, monospace;
+  --viewer-font-size: 16px;
+  --viewer-line-height: 26px;
   --color-canvas: #fafaf9;
   --color-canvas-bottom: #f5f5f4;
   --color-wallpaper-warm: #f5f5f4;
@@ -82,6 +85,15 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
+}
+:root[data-viewer-font-size="small"] {
+  --viewer-font-size: 14px;
+  --viewer-line-height: 24px;
+}
+
+:root[data-viewer-font-size="large"] {
+  --viewer-font-size: 18px;
+  --viewer-line-height: 30px;
 }
 
 :root[data-theme="dark"] {
@@ -512,6 +524,7 @@ textarea:disabled {
 .app-shell__comments-close {
   position: sticky;
   top: 10px;
+  right: 12px;
   z-index: 3;
   display: flex;
   margin: 10px 10px -44px auto;
@@ -536,6 +549,10 @@ textarea:disabled {
 }
 
 .app-shell__comments-open {
+  width: 32px;
+  height: 32px;
+  align-self: center;
+  margin: 0 8px;
   background: var(--color-control);
 }
 
@@ -638,6 +655,7 @@ textarea:disabled {
 
 .workspace-toolbar__field input:focus-visible,
 .workspace-toolbar__theme select:focus-visible,
+.workspace-toolbar__font-size select:focus-visible,
 .markdown-document-search__field input:focus-visible,
 .button:focus-visible,
 .icon-button:focus-visible,
@@ -651,6 +669,7 @@ textarea:disabled {
 .comment-sidebar__search-field input:focus-visible,
 .comment-thread__select:focus-visible,
 .comment-thread__editor textarea:focus-visible,
+.comment-composer textarea:focus-visible,
 .add-comment-popover textarea:focus-visible,
 .markdown-comment-annotation__toggle:focus-visible,
 .markdown-comment-annotation__select:focus-visible,
@@ -658,6 +677,29 @@ textarea:disabled {
 .markdown-rendered a:focus-visible {
   outline: 2px solid var(--color-accent-ring);
   outline-offset: 2px;
+}
+.workspace-toolbar__font-size {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 0 8px;
+  color: var(--color-text-muted);
+  background: var(--color-control);
+}
+
+.workspace-toolbar__font-size span {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.workspace-toolbar__font-size select {
+  border: 0;
+  color: var(--color-text);
+  background: transparent;
+  font: inherit;
 }
 
 .workspace-toolbar__actions {
@@ -855,6 +897,7 @@ textarea:disabled {
   border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 11px 12px;
+  padding-right: 46px;
   background: color-mix(in srgb, var(--color-raised) 90%, transparent);
 }
 
@@ -1736,6 +1779,7 @@ textarea:disabled {
 
 .spec-tree__item-label {
   min-width: 0;
+  font-size: 14px;
   overflow: hidden;
   line-height: 1.25;
   text-overflow: ellipsis;
@@ -2449,6 +2493,55 @@ textarea:disabled {
   overflow-wrap: normal;
 }
 
+.markdown-rendered__mermaid {
+  max-width: 100%;
+}
+
+.mermaid-diagram {
+  min-height: 160px;
+  margin: 1rem 0;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  padding: 1rem;
+  overflow: auto;
+  background: var(--color-raised);
+}
+
+.mermaid-diagram__canvas {
+  display: grid;
+  min-width: max-content;
+  place-items: center;
+}
+
+.mermaid-diagram__canvas svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.mermaid-diagram__status {
+  display: grid;
+  min-height: 128px;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  place-items: center;
+}
+
+.mermaid-diagram--error {
+  min-height: 0;
+  border-color: var(--color-danger-border);
+}
+
+.mermaid-diagram__error {
+  margin-bottom: 0.75rem;
+  color: var(--color-danger);
+  font-weight: 700;
+}
+
+.mermaid-diagram--error pre {
+  margin: 0;
+}
+
 .markdown-rendered__table-scroll {
   max-width: 100%;
   overflow-x: auto;
@@ -2596,6 +2689,7 @@ textarea:disabled {
 }
 
 .add-comment-popover__title,
+.comment-composer__label,
 .add-comment-popover__label {
   position: absolute;
   width: 1px;
@@ -2634,6 +2728,7 @@ textarea:disabled {
   min-height: 0;
 }
 
+.comment-composer__body,
 .add-comment-popover__body {
   display: grid;
   gap: 10px;
@@ -2642,6 +2737,7 @@ textarea:disabled {
   padding: 0 14px 14px;
 }
 
+.comment-composer textarea,
 .add-comment-popover textarea {
   width: 100%;
   min-height: 96px;
@@ -2656,23 +2752,30 @@ textarea:disabled {
   line-height: 1.5;
 }
 
+.comment-composer textarea:focus,
 .add-comment-popover textarea:focus {
   border-color: var(--color-accent);
   outline: none;
   box-shadow: 0 0 0 2px var(--color-focus-glow);
 }
 
+.comment-composer__hint,
 .add-comment-popover__hint,
+.comment-composer__status,
+.comment-composer__error,
 .add-comment-popover__error {
   margin: 0;
   font-size: 0.72rem;
   line-height: 1.35;
 }
 
+.comment-composer__hint,
+.comment-composer__status,
 .add-comment-popover__hint {
   color: var(--color-text-subtle);
 }
 
+.comment-composer__error,
 .add-comment-popover__error {
   color: var(--color-danger);
   font-weight: 750;
@@ -2717,6 +2820,7 @@ textarea:disabled {
   font-weight: 750;
 }
 
+.comment-composer__actions,
 .add-comment-popover__actions {
   display: flex;
   flex-wrap: wrap;
@@ -2727,6 +2831,7 @@ textarea:disabled {
   background: color-mix(in srgb, var(--color-panel) 72%, transparent);
 }
 
+.comment-composer__actions .button,
 .add-comment-popover__actions .button {
   min-height: 34px;
   padding: 0 14px;
@@ -2734,6 +2839,7 @@ textarea:disabled {
   font-weight: 750;
 }
 
+.comment-composer__actions .button--primary:disabled,
 .add-comment-popover__actions .button--primary:disabled {
   border-color: var(--color-border-strong);
   color: var(--color-text-muted);
@@ -2741,6 +2847,7 @@ textarea:disabled {
   opacity: 1;
 }
 
+.comment-composer__saving-icon,
 .add-comment-popover__saving-icon {
   animation: viewer-spin 900ms linear infinite;
 }
@@ -2970,6 +3077,86 @@ textarea:disabled {
   color: var(--color-danger);
   background: var(--color-danger-soft);
   white-space: pre-wrap;
+}
+
+.review-render-error__backdrop {
+  position: absolute;
+  z-index: 20;
+  display: grid;
+  inset: 0;
+  place-items: center;
+  padding: 24px;
+  background: rgb(15 23 42 / 38%);
+}
+
+.review-render-error__dialog {
+  display: grid;
+  width: min(560px, 100%);
+  max-height: 100%;
+  gap: 14px;
+  overflow: auto;
+  border: 1px solid var(--color-danger-border);
+  border-radius: 10px;
+  padding: 18px;
+  color: var(--color-text);
+  background: var(--color-raised);
+  box-shadow: 0 18px 48px rgb(15 23 42 / 24%);
+}
+
+.review-render-error__header,
+.review-render-error__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.review-render-error__header h2,
+.review-render-error__dialog p,
+.review-render-error--dismissed p {
+  margin: 0;
+}
+
+.review-render-error__close {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 6px;
+  color: var(--color-text-muted);
+  background: transparent;
+  font-size: 20px;
+  place-items: center;
+}
+
+.review-render-error__close:hover {
+  color: var(--color-text);
+  background: var(--color-control-hover);
+}
+
+.review-render-error__dialog pre {
+  overflow: auto;
+  margin: 0;
+  border: 1px solid var(--color-danger-border);
+  border-radius: 7px;
+  padding: 10px;
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
+  white-space: pre-wrap;
+}
+
+.review-render-error__actions {
+  justify-content: flex-end;
+}
+
+.review-render-error--dismissed {
+  display: grid;
+  flex: 1 1 0;
+  place-content: center;
+  justify-items: center;
+  gap: 12px;
+  min-height: 0;
+  color: var(--color-text-muted);
 }
 
 @keyframes loading-skeleton-shimmer {
@@ -3407,6 +3594,7 @@ textarea:disabled {
 }
 
 .specs-workspace__viewer {
+  position: relative;
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
@@ -3849,6 +4037,7 @@ textarea:disabled {
   border: 1px solid var(--color-border);
   border-radius: 6px;
   padding: 8px 10px;
+  padding-right: 46px;
   background: var(--color-raised);
 }
 
@@ -4119,8 +4308,14 @@ textarea:disabled {
   padding: 28px 44px 60px;
   color: var(--color-text);
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: var(--viewer-font-size);
   line-height: 1.7;
+  user-select: text;
+  cursor: text;
+}
+
+.specs-workspace__viewer .markdown-rendered :where(p, li, td, th, pre, code) {
+  user-select: text;
 }
 
 .specs-workspace__viewer .markdown-rendered h1 {
@@ -4176,7 +4371,7 @@ textarea:disabled {
   position: absolute;
   z-index: 5;
   top: 8px;
-  right: 48px;
+  right: 12px;
   display: flex;
   margin: 0;
   background: var(--color-control);
@@ -4498,6 +4693,10 @@ textarea:disabled {
 
 .app-shell__worktrees-open {
   grid-column: 1;
+  width: 32px;
+  height: 32px;
+  align-self: center;
+  margin: 0 8px;
 }
 
 .app-shell__toolbar-content > .view-mode-toolbar {
@@ -4510,6 +4709,10 @@ textarea:disabled {
 
 .app-shell__comments-open {
   grid-column: 3;
+  width: 32px;
+  height: 32px;
+  align-self: center;
+  margin: 0 8px;
 }
 
 .app-shell__worktrees {
@@ -4537,9 +4740,15 @@ textarea:disabled {
 
 .app-shell__worktrees-close {
   position: absolute;
-  top: 8px;
-  right: 10px;
+  top: 20px;
+  right: 18px;
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  min-height: 24px;
   flex: 0 0 auto;
+  border-color: transparent;
+  background: transparent;
 }
 
 .app-shell__mode-navigation {
@@ -4678,6 +4887,7 @@ textarea:disabled {
 }
 .worktree-tree__label {
   min-width: 0;
+  font-size: 14px;
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -4720,6 +4930,7 @@ textarea:disabled {
 .view-mode-toolbar__item {
   overflow: hidden;
   color: var(--color-text-muted);
+  font-size: 14px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -5083,6 +5294,7 @@ textarea:disabled {
 
 .repository-diff-tree__name {
   color: var(--color-text);
+  font-size: 14px;
 }
 
 .repository-diff-tree__path {
@@ -5093,6 +5305,11 @@ textarea:disabled {
 .repository-diff-tree__group {
   margin-inline-start: 8px;
   border-inline-start: 1px solid var(--color-border);
+}
+
+.repository-diff-tree__skeleton {
+  width: 100%;
+  padding: 10px 8px;
 }
 
 .repository-diff-tree__status,
@@ -5209,6 +5426,16 @@ textarea:disabled {
   color: var(--color-text-muted);
   font-size: 11px;
   letter-spacing: 0.08em;
+}
+
+.worktree-navigation__refresh {
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  min-height: 24px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
 }
 
 .left-navigation-panel > .worktree-tree {

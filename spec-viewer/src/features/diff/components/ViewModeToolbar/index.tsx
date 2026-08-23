@@ -44,7 +44,7 @@ export function ViewModeToolbar(props: ViewModeToolbarProps): ReactElement {
 
   const isModeAvailable = (candidate: ViewMode): boolean =>
     candidate === "specs" || diffAvailability.status === "ready";
-  const selectedMode = isModeAvailable(mode) ? mode : "specs";
+  const selectedMode = mode;
 
   const selectMode = (nextMode: ViewMode): void => {
     if (!isModeAvailable(nextMode) || nextMode === mode) {

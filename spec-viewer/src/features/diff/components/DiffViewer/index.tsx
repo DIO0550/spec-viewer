@@ -33,6 +33,7 @@ import {
 } from "@/features/diff/lib/editorWindowing";
 import type { DiffLineCommentTarget } from "@/features/diffComments/components/DiffLineCommentControl";
 import {
+  DiffInlineCommentThread,
   DiffLineCommentSlot,
   type DiffCommentJumpTarget,
   type DiffLineCommentsController,
@@ -148,12 +149,7 @@ export function DiffViewer(props: DiffViewerProps): ReactElement {
     if (scrollSurfaceRef.current !== null) {
       scrollSurfaceRef.current.scrollTop = 0;
     }
-  }, [
-    fileDiff.identity.sourceId,
-    fileDiff.identity.path,
-    fileDiff.review,
-    projectionMode,
-  ]);
+  }, [fileDiff.identity.sourceId, fileDiff.identity.path, projectionMode]);
 
   useEffect(() => {
     return () => {
@@ -470,6 +466,7 @@ export function DiffViewer(props: DiffViewerProps): ReactElement {
           style={{ height: renderedBottomSpacerHeight }}
           aria-hidden="true"
         />
+        <div className="diff-viewer__end-spacer" aria-hidden="true" />
       </div>
     </section>
   );
@@ -607,7 +604,7 @@ function areDiffRowPropsEqual(
   next: DiffRowProps,
 ): boolean {
   if (
-    previous.row !== next.row ||
+    !haveEqualDiffRows(previous.row, next.row) ||
     previous.mode !== next.mode ||
     previous.oldPath !== next.oldPath ||
     previous.newPath !== next.newPath ||
@@ -619,6 +616,97 @@ function areDiffRowPropsEqual(
     return false;
   }
   return haveEqualCommentState(previous, next);
+}
+
+/**
+ * Compares immutable Diff rows by rendered content when a parent recreates
+ * an equivalent FileDiff object.
+ *
+ * @param previous - Previously rendered row.
+ * @param next - Candidate row for the next render.
+ * @returns Whether both rows produce the same visual output.
+ */
+function haveEqualDiffRows(previous: DiffViewRow, next: DiffViewRow): boolean {
+  if (previous === next) {
+    return true;
+  }
+  if (previous.kind !== next.kind || previous.id !== next.id) {
+    return false;
+  }
+  if (previous.kind === "hunk" && next.kind === "hunk") {
+    return previous.header === next.header;
+  }
+  if (previous.kind === "annotation" && next.kind === "annotation") {
+    return previous.side === next.side && previous.text === next.text;
+  }
+  if (previous.kind === "gap" && next.kind === "gap") {
+    return (
+      previous.omittedLineCount === next.omittedLineCount &&
+      haveEqualExpandableRows(previous.expandableRows, next.expandableRows)
+    );
+  }
+  if (previous.kind === "content" && next.kind === "content") {
+    return (
+      previous.changeId === next.changeId &&
+      haveEqualDiffCells(previous.inline, next.inline) &&
+      haveEqualDiffCells(previous.old, next.old) &&
+      haveEqualDiffCells(previous.next, next.next)
+    );
+  }
+  return false;
+}
+
+/**
+ * @param previous - Previous optional expanded rows.
+ * @param next - Next optional expanded rows.
+ * @returns Whether both expanded row collections are render-equivalent.
+ */
+function haveEqualExpandableRows(
+  previous: readonly DiffViewRow[] | null,
+  next: readonly DiffViewRow[] | null,
+): boolean {
+  if (previous === next) {
+    return true;
+  }
+  if (previous === null || next === null || previous.length !== next.length) {
+    return false;
+  }
+  return previous.every((row, index) => {
+    const candidate = next[index];
+    return candidate !== undefined && haveEqualDiffRows(row, candidate);
+  });
+}
+
+/**
+ * @param previous - Previous optional Diff cell.
+ * @param next - Next optional Diff cell.
+ * @returns Whether both cells contain the same line and segments.
+ */
+function haveEqualDiffCells(
+  previous: DiffCell | null,
+  next: DiffCell | null,
+): boolean {
+  if (previous === next) {
+    return true;
+  }
+  if (previous === null || next === null) {
+    return false;
+  }
+  return (
+    previous.line.kind === next.line.kind &&
+    previous.line.text === next.line.text &&
+    previous.line.oldLineNumber === next.line.oldLineNumber &&
+    previous.line.newLineNumber === next.line.newLineNumber &&
+    previous.segments.length === next.segments.length &&
+    previous.segments.every((segment, index) => {
+      const candidate = next.segments[index];
+      return (
+        candidate !== undefined &&
+        candidate.kind === segment.kind &&
+        candidate.text === segment.text
+      );
+    })
+  );
 }
 
 function isActiveRow(row: DiffViewRow, activeChangeId: string | null): boolean {
@@ -741,25 +829,51 @@ function DiffCellView(
 
   const marker = getLineMarker(cell.line.kind);
   const commentTargets = getCommentTargets(cell, side, oldPath, newPath);
+  const baseTarget = commentTargets.find((target) => target.side === "base");
+  const currentTarget = commentTargets.find(
+    (target) => target.side === "current",
+  );
+  const activeRange = lineComments?.draft?.target;
+  const isRangeSelected = commentTargets.some(
+    (target) =>
+      activeRange !== undefined &&
+      activeRange.endLine !== undefined &&
+      target.side === activeRange.side &&
+      target.sidePath === activeRange.sidePath &&
+      target.line >= activeRange.line &&
+      target.line <= activeRange.endLine,
+  );
   return (
     <div
-      className="diff-viewer__cell"
+      className={
+        lineComments === undefined
+          ? "diff-viewer__cell"
+          : "diff-viewer__cell diff-viewer__cell--with-comments"
+      }
       data-kind={cell.line.kind}
       data-side={side}
+      data-diff-comment-line-container={
+        commentTargets.length === 0 ? undefined : "true"
+      }
+      data-diff-comment-base-path={baseTarget?.sidePath}
+      data-diff-comment-base-line={baseTarget?.line}
+      data-diff-comment-current-path={currentTarget?.sidePath}
+      data-diff-comment-current-line={currentTarget?.line}
+      data-diff-comment-range-selected={isRangeSelected ? "true" : undefined}
       role="gridcell"
       aria-label={getCellAccessibleLabel(cell, side)}
     >
-      <div className="diff-viewer__comment-lane">
-        {lineComments === undefined
-          ? null
-          : commentTargets.map((target) => (
-              <DiffLineCommentSlot
-                key={target.key}
-                target={target}
-                controller={lineComments}
-              />
-            ))}
-      </div>
+      {lineComments === undefined ? null : (
+        <div className="diff-viewer__comment-lane">
+          {commentTargets.map((target) => (
+            <DiffLineCommentSlot
+              key={target.key}
+              target={target}
+              controller={lineComments}
+            />
+          ))}
+        </div>
+      )}
       {side === "inline" ? (
         <>
           <span className="diff-viewer__line-number" aria-hidden="true">
@@ -780,6 +894,15 @@ function DiffCellView(
         {marker}
       </span>
       <code aria-hidden="true">{renderSegments(cell.segments)}</code>
+      {lineComments === undefined
+        ? null
+        : commentTargets.map((target) => (
+            <DiffInlineCommentThread
+              key={`thread-${target.key}`}
+              target={target}
+              controller={lineComments}
+            />
+          ))}
     </div>
   );
 }

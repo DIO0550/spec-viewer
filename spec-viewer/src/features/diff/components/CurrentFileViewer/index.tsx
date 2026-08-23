@@ -18,8 +18,7 @@ import {
 } from "@/features/diff/lib/diffViewModel";
 import {
   buildEditorViewModel,
-  type EditorRow,
-  materializeEditorRows,
+  type EditorCurrentLine,
 } from "@/features/diff/lib/editorViewModel";
 import {
   calculateMixedHeightOffsets,
@@ -29,6 +28,7 @@ import {
   mergeMeasuredHeights,
 } from "@/features/diff/lib/editorWindowing";
 import {
+  DiffInlineCommentThread,
   DiffLineCommentSlot,
   type DiffCommentJumpTarget,
   type DiffLineCommentsController,
@@ -47,9 +47,6 @@ export type CurrentFileViewerProps = Readonly<{
 type ScrollAnchor = Readonly<{
   targetId: string;
   revisionKey: string;
-  previousTargetOffset: number;
-  viewportOffset: number;
-  shouldContinueThroughMeasurement: boolean;
 }>;
 
 const CurrentContentMessages = {
@@ -64,7 +61,7 @@ const OverscanRows = 100;
 const SemanticRowHardCap = 500;
 
 /**
- * Displays the current snapshot with validated gutters and non-commentable base peeks.
+ * Displays only the current snapshot with validated change gutters.
  *
  * @param props - Diff input, revision-local reset key, and controlled cross-view change ID.
  * @returns Accessible bounded editor rows or a safe availability state.
@@ -87,9 +84,6 @@ export function CurrentFileViewer(props: CurrentFileViewerProps): ReactElement {
       fileDiff.availability,
     ],
   );
-  const [expandedPeekIds, setExpandedPeekIds] = useState<ReadonlySet<string>>(
-    () => new Set(),
-  );
   const [measurements, setMeasurements] = useState<HeightMeasurementCache>(() =>
     createMeasurementCache(),
   );
@@ -109,19 +103,11 @@ export function CurrentFileViewer(props: CurrentFileViewerProps): ReactElement {
   } | null>(null);
   const measurementsRef = useRef(measurements);
   const measurementAnchorRef = useRef<ScrollAnchor | null>(null);
-  const viewportAnchorRef = useRef<ScrollAnchor | null>(null);
   const programmaticScrollTopRef = useRef<number | null>(null);
   const revisionKeyRef = useRef(revisionKey);
   measurementsRef.current = measurements;
   revisionKeyRef.current = revisionKey;
-  const expandedPeekIdsRef = useRef(expandedPeekIds);
-  const changeTargetIdsRef = useRef(model.changeTargetIds);
-  const rows = useMemo(
-    () => materializeEditorRows(model, expandedPeekIds),
-    [expandedPeekIds, model],
-  );
-  expandedPeekIdsRef.current = expandedPeekIds;
-  changeTargetIdsRef.current = model.changeTargetIds;
+  const rows = model.currentLines;
   const offsets = useMemo(
     () => calculateMixedHeightOffsets(rows, measurements),
     [measurements, rows],
@@ -130,13 +116,11 @@ export function CurrentFileViewer(props: CurrentFileViewerProps): ReactElement {
   const offsetsRef = useRef(offsets);
   rowsRef.current = rows;
   offsetsRef.current = offsets;
-  const resolvedActiveChangeIdRef = useRef<string | null>(null);
 
   const resolvedActiveChangeId =
     activeChangeId !== null && model.orderedChangeIds.includes(activeChangeId)
       ? activeChangeId
-      : (model.orderedChangeIds[0] ?? null);
-  resolvedActiveChangeIdRef.current = resolvedActiveChangeId;
+      : null;
   const visibleWindow = calculateVisibleWindow({
     offsets,
     scrollTop,
@@ -148,7 +132,6 @@ export function CurrentFileViewer(props: CurrentFileViewerProps): ReactElement {
     visibleWindow.startIndex,
     visibleWindow.endIndex,
   );
-  const visiblePeekControls = createVisiblePeekControls(visibleRows);
   const filePath =
     fileDiff.review.file.newPath ??
     fileDiff.review.file.oldPath ??
@@ -208,7 +191,6 @@ export function CurrentFileViewer(props: CurrentFileViewerProps): ReactElement {
       changeId: resolvedActiveChangeId,
     };
     previousRevisionKeyRef.current = revisionKey;
-    setExpandedPeekIds(new Set());
     pendingMeasurementsRef.current = {};
     if (pendingMeasurementFrameRef.current !== null) {
       cancelAnimationFrame(pendingMeasurementFrameRef.current);
@@ -217,7 +199,6 @@ export function CurrentFileViewer(props: CurrentFileViewerProps): ReactElement {
     const emptyMeasurements = createMeasurementCache();
     measurementsRef.current = emptyMeasurements;
     measurementAnchorRef.current = null;
-    viewportAnchorRef.current = null;
     setMeasurements(emptyMeasurements);
     setMeasurementRevisionKey(revisionKey);
     setProgrammaticScrollTop(0);
@@ -239,7 +220,10 @@ export function CurrentFileViewer(props: CurrentFileViewerProps): ReactElement {
     if (resolvedActiveChangeId === null) {
       return;
     }
-    const targetId = model.changeTargetIds[resolvedActiveChangeId];
+    const targetId = findCurrentChangeTargetId(
+      rowsRef.current,
+      resolvedActiveChangeId,
+    );
     if (targetId === undefined) {
       return;
     }
@@ -254,18 +238,10 @@ export function CurrentFileViewer(props: CurrentFileViewerProps): ReactElement {
     measurementAnchorRef.current = {
       targetId,
       revisionKey,
-      previousTargetOffset: targetOffset,
-      viewportOffset: 0,
-      shouldContinueThroughMeasurement: false,
     };
     setProgrammaticScrollTop(targetOffset);
     setPendingFocusId(targetId);
-  }, [
-    model.changeTargetIds,
-    resolvedActiveChangeId,
-    revisionKey,
-    setProgrammaticScrollTop,
-  ]);
+  }, [resolvedActiveChangeId, revisionKey, setProgrammaticScrollTop]);
 
   useEffect(() => {
     if (pendingFocusId === null) {
@@ -279,83 +255,6 @@ export function CurrentFileViewer(props: CurrentFileViewerProps): ReactElement {
     setPendingFocusId(null);
   }, [pendingFocusId, visibleRows]);
 
-  /** Toggles local expansion without changing semantic identities. */
-  const togglePeek = useCallback((peekId: string): void => {
-    const currentRows = rowsRef.current;
-    const activeChange = resolvedActiveChangeIdRef.current;
-    const targetId =
-      activeChange === null
-        ? undefined
-        : changeTargetIdsRef.current[activeChange];
-    const peekIndex = currentRows.findIndex(
-      (row) => row.kind === "peekSummary" && row.peek.id === peekId,
-    );
-    const targetIndex =
-      targetId === undefined
-        ? -1
-        : currentRows.findIndex((row) => row.id === targetId);
-    const peekRow = currentRows[peekIndex];
-    const isPeekBeforeTarget =
-      peekRow?.kind === "peekSummary" && peekIndex < targetIndex;
-
-    if (targetId !== undefined && isPeekBeforeTarget) {
-      const targetOffset = getSemanticTargetOffset(
-        currentRows,
-        offsetsRef.current,
-        targetId,
-      );
-      const surface = scrollSurfaceRef.current;
-      if (targetOffset !== null && surface !== null) {
-        viewportAnchorRef.current = {
-          targetId,
-          revisionKey: revisionKeyRef.current,
-          previousTargetOffset: targetOffset,
-          viewportOffset: targetOffset - surface.scrollTop,
-          shouldContinueThroughMeasurement:
-            !expandedPeekIdsRef.current.has(peekId),
-        };
-      }
-    }
-
-    setExpandedPeekIds((current) => {
-      const next = new Set(current);
-      if (next.has(peekId)) {
-        next.delete(peekId);
-      } else {
-        next.add(peekId);
-      }
-      return next;
-    });
-  }, []);
-
-  useLayoutEffect(() => {
-    const anchor = viewportAnchorRef.current;
-    if (anchor === null || anchor.revisionKey !== revisionKey) {
-      return;
-    }
-    const targetOffset = getSemanticTargetOffset(
-      rows,
-      offsets,
-      anchor.targetId,
-    );
-    if (targetOffset === null) {
-      viewportAnchorRef.current = null;
-      return;
-    }
-    const nextScrollTop = targetOffset - anchor.viewportOffset;
-    if (targetOffset !== anchor.previousTargetOffset) {
-      setProgrammaticScrollTop(nextScrollTop);
-    }
-    viewportAnchorRef.current = null;
-    if (anchor.shouldContinueThroughMeasurement) {
-      measurementAnchorRef.current = {
-        ...anchor,
-        previousTargetOffset: targetOffset,
-        shouldContinueThroughMeasurement: false,
-      };
-    }
-  }, [offsets, revisionKey, rows, setProgrammaticScrollTop]);
-
   /** Batches browser scroll events to one render per animation frame. */
   const handleScroll = useCallback((event: UIEvent<HTMLDivElement>): void => {
     const element = event.currentTarget;
@@ -363,7 +262,6 @@ export function CurrentFileViewer(props: CurrentFileViewerProps): ReactElement {
       programmaticScrollTopRef.current = null;
     } else {
       measurementAnchorRef.current = null;
-      viewportAnchorRef.current = null;
     }
 
     if (pendingFrameRef.current !== null) {
@@ -398,7 +296,7 @@ export function CurrentFileViewer(props: CurrentFileViewerProps): ReactElement {
         pendingMeasurementFrameRef.current = null;
 
         const anchor = measurementAnchorRef.current;
-        if (nextMeasurements !== currentMeasurements && anchor !== null) {
+        if (nextMeasurements !== currentMeasurements) {
           const currentRows = rowsRef.current;
           const previousOffsets = calculateMixedHeightOffsets(
             currentRows,
@@ -408,26 +306,38 @@ export function CurrentFileViewer(props: CurrentFileViewerProps): ReactElement {
             currentRows,
             nextMeasurements,
           );
-          const previousTargetOffset = getSemanticTargetOffset(
-            currentRows,
-            previousOffsets,
-            anchor.targetId,
-          );
-          const nextTargetOffset = getSemanticTargetOffset(
-            currentRows,
-            nextOffsets,
-            anchor.targetId,
-          );
           const surface = scrollSurfaceRef.current;
-          const canAdjust =
-            anchor.revisionKey === revisionKeyRef.current &&
-            previousTargetOffset !== null &&
-            nextTargetOffset !== null &&
-            surface !== null;
-          if (canAdjust) {
-            setProgrammaticScrollTop(
-              surface.scrollTop + nextTargetOffset - previousTargetOffset,
-            );
+          if (surface !== null) {
+            let anchorTargetId: string | null = null;
+            if (
+              anchor !== null &&
+              anchor.revisionKey === revisionKeyRef.current
+            ) {
+              anchorTargetId = anchor.targetId;
+            } else {
+              anchorTargetId = findViewportAnchorRowId(
+                currentRows,
+                previousOffsets,
+                surface.scrollTop,
+              );
+            }
+            if (anchorTargetId !== null) {
+              const previousTargetOffset = getSemanticTargetOffset(
+                currentRows,
+                previousOffsets,
+                anchorTargetId,
+              );
+              const nextTargetOffset = getSemanticTargetOffset(
+                currentRows,
+                nextOffsets,
+                anchorTargetId,
+              );
+              if (previousTargetOffset !== null && nextTargetOffset !== null) {
+                setProgrammaticScrollTop(
+                  surface.scrollTop + nextTargetOffset - previousTargetOffset,
+                );
+              }
+            }
           }
         }
         if (anchor !== null && collected[anchor.targetId] !== undefined) {
@@ -459,6 +369,14 @@ export function CurrentFileViewer(props: CurrentFileViewerProps): ReactElement {
       <ViewerState
         filePath={filePath}
         message={CurrentContentMessages[reason]}
+      />
+    );
+  }
+  if (fileDiff.review.file.change === "deleted") {
+    return (
+      <ViewerState
+        filePath={filePath}
+        message={CurrentContentMessages.missingSide}
       />
     );
   }
@@ -530,12 +448,7 @@ export function CurrentFileViewer(props: CurrentFileViewerProps): ReactElement {
             key={`${measurementRevisionKey}:${row.id}`}
             row={row}
             rowIndex={visibleWindow.startIndex + visibleIndex + 1}
-            expandedPeekIds={expandedPeekIds}
             activeChangeId={resolvedActiveChangeId}
-            controlledRowIds={
-              visiblePeekControls[row.kind === "peekSummary" ? row.peek.id : ""]
-            }
-            onTogglePeek={togglePeek}
             onMeasure={measureRow}
             lineComments={lineComments}
             oldPath={fileDiff.review.file.oldPath}
@@ -547,6 +460,7 @@ export function CurrentFileViewer(props: CurrentFileViewerProps): ReactElement {
           style={{ height: visibleWindow.bottomSpacerHeight }}
           aria-hidden="true"
         />
+        <div className="current-file-viewer__end-spacer" aria-hidden="true" />
       </div>
     </section>
   );
@@ -611,12 +525,9 @@ function ChangeNavigation(
 /** Renders one semantic editor row with explicit commentability. */
 const EditorRowView = memo(function EditorRowView(
   props: Readonly<{
-    row: EditorRow;
+    row: EditorCurrentLine;
     rowIndex: number;
-    expandedPeekIds: ReadonlySet<string>;
     activeChangeId: string | null;
-    onTogglePeek: (peekId: string) => void;
-    controlledRowIds?: string;
     onMeasure: (rowId: string, element: HTMLDivElement | null) => void;
     lineComments?: DiffLineCommentsController;
     oldPath: string | null;
@@ -624,152 +535,100 @@ const EditorRowView = memo(function EditorRowView(
   }>,
 ): ReactElement {
   const { row } = props;
-  const measureRef = useCallback(
-    (element: HTMLDivElement | null): void => {
-      props.onMeasure(row.id, element);
-    },
-    [props.onMeasure, row.id],
-  );
+  const rowElementRef = useRef<HTMLDivElement>(null);
+  const commentTargetKey =
+    "current:" + row.anchor.newPath + ":" + row.lineNumber;
+  const commentTarget = {
+    key: commentTargetKey,
+    side: "current" as const,
+    sidePath: row.anchor.newPath,
+    oldPath: props.oldPath ?? undefined,
+    newPath: props.newPath ?? row.anchor.newPath,
+    line: row.lineNumber,
+  };
+  const activeRange = props.lineComments?.draft?.target;
+  const isRangeSelected =
+    activeRange !== undefined &&
+    activeRange.endLine !== undefined &&
+    activeRange.side === "current" &&
+    activeRange.sidePath === commentTarget.sidePath &&
+    commentTarget.line >= activeRange.line &&
+    commentTarget.line <= activeRange.endLine;
+  const activeDraft =
+    props.lineComments?.draft?.target.key === commentTargetKey
+      ? props.lineComments.draft
+      : null;
+  useLayoutEffect(() => {
+    props.onMeasure(row.id, rowElementRef.current);
+  }, [activeDraft, props.onMeasure, row.id]);
   const commonProps = {
     id: createDomRowId(row.id),
     role: "row",
     "aria-rowindex": props.rowIndex,
     "data-commentable": row.commentability === "current" ? "true" : "false",
-    ref: measureRef,
+    ref: rowElementRef,
     tabIndex: -1,
   } as const;
 
-  if (row.kind === "currentLine") {
-    const isActive =
-      row.changeId !== null && row.changeId === props.activeChangeId;
-    return (
-      <div
-        {...commonProps}
-        className="current-file-viewer__row"
-        data-row-kind="current-line"
-        data-change-kind={row.gutterKind}
-        data-active-change={isActive ? "true" : "false"}
-      >
-        {props.lineComments === undefined ? null : (
-          <DiffLineCommentSlot
-            target={{
-              key: `current:${row.anchor.newPath}:${row.lineNumber}`,
-              side: "current",
-              sidePath: row.anchor.newPath,
-              oldPath: props.oldPath ?? undefined,
-              newPath: props.newPath ?? row.anchor.newPath,
-              line: row.lineNumber,
-            }}
-            controller={props.lineComments}
-          />
-        )}
-        <span
-          role="gridcell"
-          className="current-file-viewer__gutter"
-          aria-label={getGutterLabel(row.gutterKind)}
-        />
-        <span
-          role="gridcell"
-          className="current-file-viewer__line-number"
-          aria-label={`${row.lineNumber}行目`}
-        >
-          <span aria-hidden="true">{row.lineNumber}</span>
-        </span>
-        <code role="gridcell" className="current-file-viewer__code">
-          {row.text || " "}
-        </code>
-      </div>
-    );
-  }
-
-  if (row.kind === "peekSummary") {
-    const isActive = row.peek.changeId === props.activeChangeId;
-    const expanded = props.expandedPeekIds.has(row.peek.id);
-    const label =
-      row.peek.kind === "previous"
-        ? `変更前 ${row.peek.oldLines.length}行`
-        : `${row.peek.oldLines.length}行削除`;
-    return (
-      <div
-        {...commonProps}
-        className="current-file-viewer__row current-file-viewer__peek-summary"
-        data-row-kind="peek-summary"
-        data-active-change={isActive ? "true" : "false"}
-      >
-        <span role="gridcell">
-          <button
-            type="button"
-            aria-expanded={expanded}
-            aria-controls={expanded ? props.controlledRowIds : undefined}
-            onClick={() => props.onTogglePeek(row.peek.id)}
-          >
-            {label}
-          </button>
-        </span>
-      </div>
-    );
-  }
-
-  if (row.kind === "peekLine") {
-    const label = row.peekKind === "previous" ? "変更前" : "削除済み";
-    return (
-      <div
-        {...commonProps}
-        data-peek-id={row.peekId}
-        className="current-file-viewer__row current-file-viewer__peek-line"
-        data-row-kind="peek-line"
-      >
-        <span
-          role="gridcell"
-          className="current-file-viewer__line-number"
-          aria-label={`${label} ${row.oldLineNumber}行目`}
-        >
-          <span aria-hidden="true">{row.oldLineNumber}</span>
-        </span>
-        <code role="gridcell" className="current-file-viewer__code">
-          <span className="current-file-viewer__peek-prefix">
-            {label} {row.oldLineNumber}{" "}
-          </span>
-          {row.text || " "}
-        </code>
-      </div>
-    );
-  }
-
+  const isActive =
+    row.changeId !== null && row.changeId === props.activeChangeId;
   return (
     <div
       {...commonProps}
-      data-peek-id={row.peekId}
-      className="current-file-viewer__row current-file-viewer__annotation"
-      data-row-kind="annotation"
-      aria-label={`base note: ${row.text}`}
+      className="current-file-viewer__row"
+      data-row-kind="current-line"
+      data-change-kind={row.gutterKind}
+      data-active-change={isActive ? "true" : "false"}
+      data-diff-comment-line-container="true"
+      data-diff-comment-current-path={commentTarget.sidePath}
+      data-diff-comment-current-line={commentTarget.line}
+      data-diff-comment-range-selected={isRangeSelected ? "true" : undefined}
     >
-      <span role="gridcell">{row.text}</span>
+      {props.lineComments === undefined ? null : (
+        <DiffLineCommentSlot
+          target={commentTarget}
+          controller={props.lineComments}
+        />
+      )}
+      <span
+        role="gridcell"
+        className="current-file-viewer__gutter"
+        aria-label={getGutterLabel(row.gutterKind)}
+      />
+      <span
+        role="gridcell"
+        className="current-file-viewer__line-number"
+        aria-label={`${row.lineNumber}行目`}
+      >
+        <span aria-hidden="true">{row.lineNumber}</span>
+      </span>
+      <code role="gridcell" className="current-file-viewer__code">
+        {row.text || " "}
+      </code>
+      {props.lineComments === undefined ? null : (
+        <DiffInlineCommentThread
+          target={commentTarget}
+          controller={props.lineComments}
+        />
+      )}
     </div>
   );
 });
 
 /**
- * Groups IDs of actual rendered peek rows for an ARIA controls relationship.
+ * Finds the current line that represents a logical change.
  *
- * @param rows - Windowed rows currently present in the DOM.
- * @returns Space-separated DOM row IDs keyed by their peek identity.
+ * @param lines - Current-only Editor rows.
+ * @param changeId - Logical change selected across viewers.
+ * @returns The current row ID, or undefined for deletion-only changes.
  */
-function createVisiblePeekControls(
-  rows: readonly EditorRow[],
-): Readonly<Record<string, string>> {
-  const controls: Record<string, string> = {};
-  for (const row of rows) {
-    if (row.kind !== "peekLine" && row.kind !== "annotation") {
-      continue;
-    }
-    const rowId = createDomRowId(row.id);
-    const previousIds = controls[row.peekId];
-    controls[row.peekId] =
-      previousIds === undefined ? rowId : `${previousIds} ${rowId}`;
-  }
-  return controls;
+function findCurrentChangeTargetId(
+  lines: readonly EditorCurrentLine[],
+  changeId: string,
+): string | undefined {
+  return lines.find((line) => line.changeId === changeId)?.id;
 }
+
 /** Returns a non-color-only label for a current gutter kind. */
 function getGutterLabel(kind: "unchanged" | "added" | "modified"): string {
   if (kind === "added") {
@@ -779,6 +638,29 @@ function getGutterLabel(kind: "unchanged" | "added" | "modified"): string {
     return "変更";
   }
   return "変更なし";
+}
+
+/**
+ * Resolves the row currently anchoring the top of the Editor viewport.
+ *
+ * @param rows - Ordered current-only Editor rows.
+ * @param offsets - Prefix offsets calculated from the previous measurements.
+ * @param scrollTop - Current vertical scroll position.
+ * @returns Stable row ID at the viewport top, or null when no row exists.
+ */
+function findViewportAnchorRowId(
+  rows: readonly EditorCurrentLine[],
+  offsets: readonly number[],
+  scrollTop: number,
+): string | null {
+  let anchorIndex = 0;
+  while (
+    anchorIndex + 1 < rows.length &&
+    (offsets[anchorIndex + 1] ?? 0) <= scrollTop
+  ) {
+    anchorIndex += 1;
+  }
+  return rows[anchorIndex]?.id ?? null;
 }
 
 /** Converts a semantic projection ID to a document-safe row ID. */

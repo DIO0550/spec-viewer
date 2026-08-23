@@ -1,7 +1,7 @@
-import { FolderOpen, RefreshCw, RotateCcw, SunMoon } from "lucide-react";
+import { FolderOpen, RefreshCw, RotateCcw } from "lucide-react";
 
-import { useTheme } from "@/features/preferences";
-import { ThemeMode } from "@/features/preferences/domain/theme";
+import type { ViewerFontSize } from "@/features/preferences";
+
 import { uiText } from "@/utils/uiText";
 
 type Props = Readonly<{
@@ -9,6 +9,9 @@ type Props = Readonly<{
   inputValue: string;
   isLoading: boolean;
   isBrowsing: boolean;
+  viewerFontSize?: ViewerFontSize;
+  /** @param value - Spec、Diff、Editorへ適用する本文フォントサイズ。 */
+  onViewerFontSizeChange?: (value: ViewerFontSize) => void;
   errorMessage: string | null;
   canRefresh: boolean;
   /** @param nextValue - 変更後のワークスペースパス入力値。 */
@@ -26,6 +29,8 @@ type Props = Readonly<{
 /** @returns Workspace path controls and current workspace status. */
 export function WorkspaceToolbar({
   workspacePath,
+  viewerFontSize,
+  onViewerFontSizeChange,
   inputValue,
   isLoading,
   isBrowsing,
@@ -37,7 +42,6 @@ export function WorkspaceToolbar({
   onRefresh,
   onReset,
 }: Props) {
-  const { themeMode, setThemeMode } = useTheme();
   const isBusy = isLoading || isBrowsing;
 
   return (
@@ -74,22 +78,6 @@ export function WorkspaceToolbar({
         />
       </label>
       <div className="workspace-toolbar__actions">
-        <label className="workspace-toolbar__theme" htmlFor="theme-mode">
-          <SunMoon aria-hidden="true" size={16} />
-          <span>{uiText.workspace.theme}</span>
-          <select
-            id="theme-mode"
-            value={themeMode}
-            aria-label={uiText.workspace.themeMode}
-            onChange={(event) => {
-              setThemeMode(ThemeMode.parse(event.currentTarget.value));
-            }}
-          >
-            <option value="system">{uiText.workspace.system}</option>
-            <option value="light">{uiText.workspace.light}</option>
-            <option value="dark">{uiText.workspace.dark}</option>
-          </select>
-        </label>
         <button
           className="button button--primary workspace-toolbar__open-button"
           type="button"
@@ -101,6 +89,25 @@ export function WorkspaceToolbar({
           <FolderOpen aria-hidden="true" size={15} />
           {isBrowsing ? uiText.workspace.opening : "開く"}
         </button>
+        {viewerFontSize !== undefined &&
+        onViewerFontSizeChange !== undefined ? (
+          <label className="workspace-toolbar__font-size">
+            <span aria-hidden="true">Aa</span>
+            <select
+              aria-label="本文の文字サイズ"
+              value={viewerFontSize}
+              onChange={(event) => {
+                onViewerFontSizeChange(
+                  event.currentTarget.value as ViewerFontSize,
+                );
+              }}
+            >
+              <option value="small">小</option>
+              <option value="medium">標準</option>
+              <option value="large">大</option>
+            </select>
+          </label>
+        ) : null}
         <button
           className="icon-button"
           type="button"

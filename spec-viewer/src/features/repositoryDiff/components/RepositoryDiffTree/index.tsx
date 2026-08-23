@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { LoadingSkeleton } from "@/components";
 
 import { getFileChangePresentation } from "@/features/diff/lib/fileChangePresentation";
 import type {
@@ -42,6 +43,13 @@ type VisibleNode = Readonly<{
 const TREE_ITEM_INDENT = 10;
 const TREE_ITEM_INDENT_STEP = 16;
 const MAX_RENDERED_TREE_ITEMS = 500;
+const REPOSITORY_TREE_SKELETON_ROWS = [
+  { width: "long" },
+  { width: "medium" },
+  { width: "full" },
+  { width: "short" },
+  { width: "long" },
+] as const;
 
 /** Displays the controlled repository tree and its safe async states. */
 export function RepositoryDiffTree(
@@ -185,13 +193,12 @@ export function RepositoryDiffTree(
 
   if (availability.status === "loading") {
     return (
-      <p
-        className="repository-diff-tree__status"
-        role="status"
-        aria-live="polite"
-      >
-        Repository diffを読み込んでいます。
-      </p>
+      <LoadingSkeleton
+        className="repository-diff-tree__skeleton"
+        label="変更ファイルを読み込んでいます。"
+        rows={REPOSITORY_TREE_SKELETON_ROWS}
+        showLabel={false}
+      />
     );
   }
 
