@@ -10,15 +10,18 @@ use crate::{
     domain::{
         comment::diff::DiffReviewIdentity,
         repository::{
-            CommitSha, ComparisonRevision, FileChangeKind, RepositoryPortError, RevisionOption,
-            SpecFileCommit, SpecFileHistory,
+            CommitSha, ComparisonRevision, RepositoryPortError, RevisionOption, SpecFileCommit,
+            SpecFileHistory,
         },
         workspace::ValidatedRefName,
     },
     infrastructure::filesystem::SpecDiffTargetResolutionError,
 };
 
-use super::{repository::FileReviewResponse, CommandState};
+use super::{
+    repository::{FileChangeKindResponseToken, FileReviewResponse},
+    CommandState,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -179,7 +182,7 @@ pub struct ChangedSpecFileResponse {
     target_path: String,
     old_path: Option<String>,
     new_path: Option<String>,
-    change: &'static str,
+    change: FileChangeKindResponseToken,
 }
 
 impl From<ChangedSpecFile> for ChangedSpecFileResponse {
@@ -190,7 +193,7 @@ impl From<ChangedSpecFile> for ChangedSpecFileResponse {
             target_path: value.target_path.as_str().to_string(),
             old_path: value.old_path.map(|path| path.as_str().to_string()),
             new_path: value.new_path.map(|path| path.as_str().to_string()),
-            change: Self::change_name(value.change),
+            change: value.change.into(),
         }
     }
 }
@@ -351,20 +354,6 @@ impl SpecDiffCommandErrorCode {
             RepositoryPortError::ContentTooLarge => Self::GitOutputLimitExceeded,
             RepositoryPortError::PermissionDenied => Self::PermissionDenied,
             RepositoryPortError::Io => Self::Io,
-        }
-    }
-}
-
-impl ChangedSpecFileResponse {
-    fn change_name(change: FileChangeKind) -> &'static str {
-        match change {
-            FileChangeKind::Added => "added",
-            FileChangeKind::Modified => "modified",
-            FileChangeKind::Deleted => "deleted",
-            FileChangeKind::Renamed => "renamed",
-            FileChangeKind::Copied => "copied",
-            FileChangeKind::TypeChanged => "typeChanged",
-            FileChangeKind::Untracked => "untracked",
         }
     }
 }
