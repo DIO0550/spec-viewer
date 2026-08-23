@@ -1,7 +1,6 @@
 ---
 name: fix-diff-comments
 description: spec-viewerのリポジトリDiffに付いた未解決レビューコメントを読み、現在のワークツリーへ妥当な修正を反映する。GitHub PRのレビュースレッドや計画書コメントの修正には使用しない。
-argument-hint: "[コメントID ...]"
 ---
 
 # Diffコメント修正
@@ -15,7 +14,7 @@ spec-viewerの未解決Diffコメントを読み、既存のユーザー変更�
 3. `git rev-parse --git-common-dir` でGit共通ディレクトリを取得し、その配下の `spec-viewer/diff-comments/df1_*.v1.json` を探す。
 4. コメント文書を読む前に [references/diff-comment-format.md](references/diff-comment-format.md) を読み、`resolved: false` のコメントだけを抽出する。文書または未解決コメントがなければ、その旨を報告して終了する。
 5. 複数worktreeの文書に未解決コメントがある場合は、アンカーのパスと現在のリポジトリを照合する。候補を1件に絞れなければ、`worktreeId` と対象パスを提示してユーザーに選択を求める。推測で選ばない。
-6. `$ARGUMENTS` にコメントIDがあれば該当IDだけを対象にする。指定IDが存在しない、または解決済みなら報告する。引数がなければ選択した文書の未解決コメントをすべて対象にする。
+6. 選択した文書の未解決コメントをすべて対象候補とし、現在のコードと照合してAIが修正要否を判断する。
 
 ## コメントを評価する
 
