@@ -1,6 +1,6 @@
 use super::{
-    path_state::frame_submodule_state, selected_path_fingerprint, GitObjectBatch, GitObjectRead,
-    GitRunner, RepositoryWatchRegistry,
+    path_state::frame_submodule_state, selected_path_fingerprint, GitCommandKind, GitObjectBatch,
+    GitObjectRead, GitOperation, GitRunner, RepositoryWatchRegistry,
 };
 use crate::domain::{
     comment::diff::{DiffReviewIdentity, WorktreeStorageId},
@@ -155,9 +155,9 @@ impl GitRepositoryAdapter {
     fn working_tree_head(&self, root: &Path) -> Result<CommitSha, RepositoryPortError> {
         let bytes = match self.runner.run(
             root,
-            "working-tree-head",
+            GitOperation::WorkingTreeHead,
             &["rev-parse", "--verify", "HEAD"],
-            false,
+            GitCommandKind::Metadata,
         ) {
             Ok(bytes) => bytes,
             Err(error @ RepositoryPortError::GitFailed { .. }) => {
@@ -171,7 +171,7 @@ impl GitRepositoryAdapter {
         let value = std::str::from_utf8(&bytes)
             .map_err(|_| RepositoryPortError::UnsupportedPathEncoding)?;
         CommitSha::parse(value.trim()).map_err(|_| RepositoryPortError::GitFailed {
-            operation: "working-tree-head".into(),
+            operation: GitOperation::WorkingTreeHead.as_str().to_owned(),
             code: None,
             stderr: "Git returned an invalid object id".into(),
         })
@@ -195,9 +195,9 @@ impl GitRepositoryAdapter {
         self.runner
             .run(
                 root,
-                "comparison-revision-exists",
+                GitOperation::ComparisonRevisionExists,
                 &["rev-parse", "--verify", reference],
-                false,
+                GitCommandKind::Metadata,
             )
             .map_err(|error| match error {
                 RepositoryPortError::GitFailed { .. } => RepositoryPortError::RevisionNotFound,
@@ -208,9 +208,9 @@ impl GitRepositoryAdapter {
             .runner
             .run(
                 root,
-                "comparison-revision-commit",
+                GitOperation::ComparisonRevisionCommit,
                 &["rev-parse", "--verify", &commit_reference],
-                false,
+                GitCommandKind::Metadata,
             )
             .map_err(|error| match error {
                 RepositoryPortError::GitFailed { .. } => RepositoryPortError::RevisionNotCommit,
@@ -224,9 +224,9 @@ impl GitRepositoryAdapter {
     fn is_unborn_head(&self, root: &Path) -> Result<bool, RepositoryPortError> {
         let symbolic_head = match self.runner.run(
             root,
-            "working-tree-symbolic-head",
+            GitOperation::WorkingTreeSymbolicHead,
             &["symbolic-ref", "-q", "HEAD"],
-            false,
+            GitCommandKind::Metadata,
         ) {
             Ok(bytes) => bytes,
             Err(RepositoryPortError::GitFailed { .. }) => return Ok(false),
@@ -236,9 +236,9 @@ impl GitRepositoryAdapter {
             .map_err(|_| RepositoryPortError::UnsupportedPathEncoding)?;
         match self.runner.run(
             root,
-            "working-tree-head-reference",
+            GitOperation::WorkingTreeHeadReference,
             &["show-ref", "--verify", "--quiet", reference.trim()],
-            false,
+            GitCommandKind::Metadata,
         ) {
             Ok(_) => Ok(false),
             Err(RepositoryPortError::GitFailed { code: Some(1), .. }) => Ok(true),
@@ -365,9 +365,9 @@ impl GitRepositoryAdapter {
             arguments.extend(patch_paths);
             match self.runner.run_with_stdout_limit(
                 root,
-                "working-tree-file-patch",
+                GitOperation::WorkingTreeFilePatch,
                 &arguments,
-                true,
+                GitCommandKind::Content,
                 PATCH_LIMIT,
             ) {
                 Ok(bytes) => match String::from_utf8(bytes) {
@@ -478,9 +478,9 @@ impl GitRepositoryAdapter {
         let bare = self
             .text(
                 selected,
-                "is-bare",
+                GitOperation::IsBare,
                 &["rev-parse", "--is-bare-repository"],
-                false,
+                GitCommandKind::Metadata,
             )
             .map_err(|e| match e {
                 RepositoryPortError::GitFailed { .. } => RepositoryPortError::NotRepository,
@@ -491,31 +491,36 @@ impl GitRepositoryAdapter {
         }
         let root = self.text(
             selected,
-            "repository-root",
+            GitOperation::RepositoryRoot,
             &["rev-parse", "--show-toplevel"],
-            false,
+            GitCommandKind::Metadata,
         )?;
         fs::canonicalize(root.trim()).map_err(|_| RepositoryPortError::WorktreeUnavailable)
     }
     fn text(
         &self,
         root: &Path,
-        operation: &str,
+        operation: GitOperation,
         args: &[&str],
-        content: bool,
+        kind: GitCommandKind,
     ) -> Result<String, RepositoryPortError> {
-        String::from_utf8(self.runner.run(root, operation, args, content)?)
+        String::from_utf8(self.runner.run(root, operation, args, kind)?)
             .map_err(|_| RepositoryPortError::UnsupportedPathEncoding)
     }
     fn git_directories(&self, root: &Path) -> Result<(PathBuf, PathBuf), RepositoryPortError> {
-        let git_dir = self.text(root, "git-dir", &["rev-parse", "--git-dir"], false)?;
+        let git_dir = self.text(
+            root,
+            GitOperation::GitDir,
+            &["rev-parse", "--git-dir"],
+            GitCommandKind::Metadata,
+        )?;
         let canonical_git_dir = fs::canonicalize(root.join(git_dir.trim()))
             .map_err(|_| RepositoryPortError::WorktreeUnavailable)?;
         let common = self.text(
             root,
-            "common-dir",
+            GitOperation::CommonDir,
             &["rev-parse", "--git-common-dir"],
-            false,
+            GitCommandKind::Metadata,
         )?;
         let canonical_common = fs::canonicalize(root.join(common.trim()))
             .map_err(|_| RepositoryPortError::WorktreeUnavailable)?;
@@ -804,12 +809,12 @@ impl GitRepositoryAdapter {
             crate::domain::comment::diff::DiffSide::Base => {
                 let text = self.text(
                     &root,
-                    "diff-comment-base-source",
+                    GitOperation::DiffCommentBaseSource,
                     &[
                         "show",
                         &format!("{}:{}", identity.base_sha().as_str(), path.as_str()),
                     ],
-                    true,
+                    GitCommandKind::Content,
                 )?;
                 after_read();
                 if self.snapshot(&root, identity.repository_id())?
@@ -893,11 +898,16 @@ impl GitRepositoryAdapter {
     }
     fn head(&self, root: &Path) -> Result<CommitSha, RepositoryPortError> {
         CommitSha::parse(
-            self.text(root, "head", &["rev-parse", "HEAD"], false)?
-                .trim(),
+            self.text(
+                root,
+                GitOperation::Head,
+                &["rev-parse", "HEAD"],
+                GitCommandKind::Metadata,
+            )?
+            .trim(),
         )
         .map_err(|_| RepositoryPortError::GitFailed {
-            operation: "head".into(),
+            operation: GitOperation::Head.as_str().to_owned(),
             code: None,
             stderr: String::new(),
         })
@@ -906,7 +916,7 @@ impl GitRepositoryAdapter {
         self.runner
             .run(
                 root,
-                "verify-ref",
+                GitOperation::VerifyRef,
                 &[
                     "rev-parse",
                     "--verify",
@@ -914,7 +924,7 @@ impl GitRepositoryAdapter {
                     "--end-of-options",
                     reference,
                 ],
-                false,
+                GitCommandKind::Metadata,
             )
             .is_ok()
     }
@@ -938,9 +948,9 @@ impl GitRepositoryAdapter {
         let current = self
             .text(
                 root,
-                "current-branch",
+                GitOperation::CurrentBranch,
                 &["symbolic-ref", "--quiet", "--short", "HEAD"],
-                false,
+                GitCommandKind::Metadata,
             )
             .ok()
             .map(|s| s.trim().to_string());
@@ -968,9 +978,12 @@ impl GitRepositoryAdapter {
         } else {
             if let Some(branch) = current.as_deref() {
                 let key = format!("branch.{branch}.gh-merge-base");
-                if let Ok(value) =
-                    self.text(root, "gh-merge-base", &["config", "--get", &key], false)
-                {
+                if let Ok(value) = self.text(
+                    root,
+                    GitOperation::GhMergeBase,
+                    &["config", "--get", &key],
+                    GitCommandKind::Metadata,
+                ) {
                     let value = value.trim();
                     if let Ok(reference) = ValidatedRefName::parse(value) {
                         candidates.push((
@@ -982,9 +995,9 @@ impl GitRepositoryAdapter {
                 let remote_key = format!("branch.{branch}.remote");
                 if let Ok(remote) = self.text(
                     root,
-                    "branch-remote",
+                    GitOperation::BranchRemote,
                     &["config", "--get", &remote_key],
-                    false,
+                    GitCommandKind::Metadata,
                 ) {
                     let reference = format!("refs/remotes/{}/HEAD", remote.trim());
                     candidates.push((reference, BaseResolutionSource::CurrentRemoteHead));
@@ -997,9 +1010,9 @@ impl GitRepositoryAdapter {
             let remotes = self
                 .text(
                     root,
-                    "remote-heads",
+                    GitOperation::RemoteHeads,
                     &["for-each-ref", "--format=%(refname)", "refs/remotes/*/HEAD"],
-                    false,
+                    GitCommandKind::Metadata,
                 )
                 .unwrap_or_default();
             let mut others: Vec<_> = remotes
@@ -1031,14 +1044,14 @@ impl GitRepositoryAdapter {
             }
             let merge = self.text(
                 root,
-                "merge-base",
+                GitOperation::MergeBase,
                 &["merge-base", "--", &reference, "HEAD"],
-                false,
+                GitCommandKind::Metadata,
             );
             if let Ok(merge) = merge {
                 let merge_base_sha =
                     CommitSha::parse(merge.trim()).map_err(|_| RepositoryPortError::GitFailed {
-                        operation: "merge-base-output".into(),
+                        operation: GitOperation::MergeBaseOutput.as_str().to_owned(),
                         code: None,
                         stderr: "Git returned an invalid object id".into(),
                     })?;
@@ -1054,9 +1067,9 @@ impl GitRepositoryAdapter {
             let shallow = self
                 .text(
                     root,
-                    "shallow",
+                    GitOperation::Shallow,
                     &["rev-parse", "--is-shallow-repository"],
-                    false,
+                    GitCommandKind::Metadata,
                 )
                 .unwrap_or_default();
             let reason = if shallow.trim() == "true" {
@@ -1109,15 +1122,15 @@ impl GitRepositoryAdapter {
         );
         let head_bytes = self.runner.run(
             root,
-            "snapshot-head",
+            GitOperation::SnapshotHead,
             &["rev-parse", "--verify", "HEAD"],
-            false,
+            GitCommandKind::Metadata,
         )?;
         let index_bytes = self.runner.run(
             root,
-            "snapshot-index",
+            GitOperation::SnapshotIndex,
             &["ls-files", "--stage", "-z"],
-            false,
+            GitCommandKind::Metadata,
         )?;
         frame(&mut hasher, &head_bytes);
         frame(&mut hasher, &index_bytes);
@@ -1126,9 +1139,9 @@ impl GitRepositoryAdapter {
         // review changes instead of the complete repository size.
         let modified = self.runner.run(
             root,
-            "snapshot-modified",
+            GitOperation::SnapshotModified,
             &["diff-files", "--name-only", "-z", "--"],
-            false,
+            GitCommandKind::Metadata,
         )?;
         let mut modified_paths = modified
             .split(|byte| *byte == 0)
@@ -1161,18 +1174,18 @@ impl GitRepositoryAdapter {
                         .runner
                         .run(
                             &target,
-                            "snapshot-submodule-head",
+                            GitOperation::SnapshotSubmoduleHead,
                             &["rev-parse", "HEAD"],
-                            false,
+                            GitCommandKind::Metadata,
                         )
                         .unwrap_or_default();
                     let status = self
                         .runner
                         .run(
                             &target,
-                            "snapshot-submodule-status",
+                            GitOperation::SnapshotSubmoduleStatus,
                             &["status", "--porcelain=v1", "-z", "--untracked-files=all"],
-                            false,
+                            GitCommandKind::Metadata,
                         )
                         .unwrap_or_default();
                     frame_submodule_state(&mut hasher, &head, &status);
@@ -1182,9 +1195,9 @@ impl GitRepositoryAdapter {
         }
         let untracked = self.runner.run(
             root,
-            "snapshot-untracked",
+            GitOperation::SnapshotUntracked,
             &["ls-files", "--others", "--exclude-standard", "-z"],
-            false,
+            GitCommandKind::Metadata,
         )?;
         let mut paths: Vec<_> = untracked
             .split(|byte| *byte == 0)
@@ -1212,27 +1225,27 @@ impl GitRepositoryAdapter {
         }
         let final_modified = self.runner.run(
             root,
-            "snapshot-modified-recheck",
+            GitOperation::SnapshotModifiedRecheck,
             &["diff-files", "--name-only", "-z", "--"],
-            false,
+            GitCommandKind::Metadata,
         )?;
         let final_untracked = self.runner.run(
             root,
-            "snapshot-untracked-recheck",
+            GitOperation::SnapshotUntrackedRecheck,
             &["ls-files", "--others", "--exclude-standard", "-z"],
-            false,
+            GitCommandKind::Metadata,
         )?;
         let final_head = self.runner.run(
             root,
-            "snapshot-head-recheck",
+            GitOperation::SnapshotHeadRecheck,
             &["rev-parse", "--verify", "HEAD"],
-            false,
+            GitCommandKind::Metadata,
         )?;
         let final_index = self.runner.run(
             root,
-            "snapshot-index-recheck",
+            GitOperation::SnapshotIndexRecheck,
             &["ls-files", "--stage", "-z"],
-            false,
+            GitCommandKind::Metadata,
         )?;
         if final_head != head_bytes
             || final_index != index_bytes
@@ -1260,19 +1273,19 @@ impl GitRepositoryAdapter {
     ) -> Result<Vec<DiffFile>, RepositoryPortError> {
         let base_modes = parse_mode_map(&self.runner.run(
             root,
-            "base-modes",
+            GitOperation::BaseModes,
             &["ls-tree", "-r", "-z", merge.as_str()],
-            false,
+            GitCommandKind::Metadata,
         )?)?;
         let index_modes = parse_mode_map(&self.runner.run(
             root,
-            "index-modes",
+            GitOperation::IndexModes,
             &["ls-files", "--stage", "-z"],
-            false,
+            GitCommandKind::Metadata,
         )?)?;
         let raw = self.runner.run(
             root,
-            "changed-files",
+            GitOperation::ChangedFiles,
             &[
                 "diff",
                 "--name-status",
@@ -1282,7 +1295,7 @@ impl GitRepositoryAdapter {
                 "-l1000",
                 merge.as_str(),
             ],
-            false,
+            GitCommandKind::Metadata,
         )?;
         let mut fields = raw.split(|b| *b == 0).filter(|v| !v.is_empty());
         let mut files = Vec::new();
@@ -1349,9 +1362,9 @@ impl GitRepositoryAdapter {
         }
         let untracked = self.runner.run(
             root,
-            "untracked",
+            GitOperation::Untracked,
             &["ls-files", "--others", "--exclude-standard", "-z"],
-            false,
+            GitCommandKind::Metadata,
         )?;
         for raw_path in untracked.split(|b| *b == 0).filter(|v| !v.is_empty()) {
             let path = Self::path(raw_path)?;
@@ -1424,9 +1437,9 @@ impl GitRepositoryAdapter {
         let mut paths = BTreeSet::new();
         let visible = self.runner.run(
             root,
-            "all-files",
+            GitOperation::AllFiles,
             &["ls-files", "-c", "-o", "--exclude-standard", "-z"],
-            false,
+            GitCommandKind::Metadata,
         )?;
         for raw in visible
             .split(|byte| *byte == 0)
@@ -1436,7 +1449,7 @@ impl GitRepositoryAdapter {
         }
         let ignored = self.runner.run(
             root,
-            "ignored-roots",
+            GitOperation::IgnoredRoots,
             &[
                 "ls-files",
                 "-o",
@@ -1445,7 +1458,7 @@ impl GitRepositoryAdapter {
                 "--directory",
                 "-z",
             ],
-            false,
+            GitCommandKind::Metadata,
         )?;
         let mut ignored_directories = BTreeSet::new();
         let mut ignored_entries = BTreeSet::new();
@@ -1598,9 +1611,9 @@ impl GitRepositoryAdapter {
             .runner
             .run(
                 root,
-                "base-gitlink",
+                GitOperation::BaseGitlink,
                 &["ls-tree", merge.as_str(), "--", path.as_str()],
-                false,
+                GitCommandKind::Metadata,
             )
             .ok()
             .and_then(|bytes| Self::parse_oid_field(&bytes, 2));
@@ -1608,9 +1621,9 @@ impl GitRepositoryAdapter {
             .runner
             .run(
                 root,
-                "index-gitlink",
+                GitOperation::IndexGitlink,
                 &["ls-files", "--stage", "--", path.as_str()],
-                false,
+                GitCommandKind::Metadata,
             )
             .ok()
             .and_then(|bytes| Self::parse_oid_field(&bytes, 1));
@@ -1619,9 +1632,9 @@ impl GitRepositoryAdapter {
             .runner
             .run(
                 &submodule_root,
-                "submodule-head",
+                GitOperation::SubmoduleHead,
                 &["rev-parse", "HEAD"],
-                false,
+                GitCommandKind::Metadata,
             )
             .ok()
             .and_then(|bytes| Self::parse_oid_field(&bytes, 0));
@@ -1629,9 +1642,9 @@ impl GitRepositoryAdapter {
             .runner
             .run(
                 &submodule_root,
-                "submodule-status",
+                GitOperation::SubmoduleStatus,
                 &["status", "--porcelain=v1", "-z", "--untracked-files=all"],
-                false,
+                GitCommandKind::Metadata,
             )
             .unwrap_or_default();
         let mut tracked_changes = false;
@@ -1737,14 +1750,14 @@ impl WorkingTreeDiffPort for GitRepositoryAdapter {
         }];
         let output = self.text(
             &root,
-            "comparison-revisions",
+            GitOperation::ComparisonRevisions,
             &[
                 "for-each-ref",
                 "--format=%(refname)%00%(objectname)%00%(objecttype)",
                 "refs/heads",
                 "refs/tags",
             ],
-            false,
+            GitCommandKind::Metadata,
         )?;
         for line in output.lines().filter(|line| !line.is_empty()) {
             let fields = line.splitn(3, "\0").collect::<Vec<_>>();
@@ -1790,7 +1803,7 @@ impl WorkingTreeDiffPort for GitRepositoryAdapter {
         let max_count = format!("--max-count={}", limit.saturating_add(1));
         let output = self.runner.run(
             &root,
-            "spec-file-history",
+            GitOperation::SpecFileHistory,
             &[
                 "log",
                 &max_count,
@@ -1798,7 +1811,7 @@ impl WorkingTreeDiffPort for GitRepositoryAdapter {
                 "--",
                 path.as_str(),
             ],
-            false,
+            GitCommandKind::Metadata,
         )?;
         let mut items = output
             .split(|byte| *byte == 10)
@@ -1950,9 +1963,9 @@ impl RepositoryPort for GitRepositoryAdapter {
         let current_head = self.head(&root)?;
         let current_merge = self.text(
             &root,
-            "verify-merge-base",
+            GitOperation::VerifyMergeBase,
             &["merge-base", "--", branch_ref, "HEAD"],
-            false,
+            GitCommandKind::Metadata,
         )?;
         if current_head != *head_sha || current_merge.trim() != merge_base_sha.as_str() {
             return Err(RepositoryPortError::StaleBase);
@@ -2029,9 +2042,9 @@ impl RepositoryPort for GitRepositoryAdapter {
         self.runner
             .run(
                 &root,
-                "check-ignored-directory",
+                GitOperation::CheckIgnoredDirectory,
                 &["check-ignore", "--quiet", "--", directory.as_str()],
-                false,
+                GitCommandKind::Metadata,
             )
             .map_err(|error| match error {
                 RepositoryPortError::GitFailed { .. } => RepositoryPortError::InvalidCursor,
@@ -2173,9 +2186,9 @@ impl RepositoryPort for GitRepositoryAdapter {
         let current_head = self.head(&root)?;
         let current_merge = self.text(
             &root,
-            "file-review-merge-base",
+            GitOperation::FileReviewMergeBase,
             &["merge-base", "--", &branch_ref, "HEAD"],
-            false,
+            GitCommandKind::Metadata,
         )?;
         if current_head != expected_head || current_merge.trim() != merge.as_str() {
             return Err(RepositoryPortError::StaleBase);
@@ -2311,7 +2324,7 @@ impl RepositoryPort for GitRepositoryAdapter {
         } else {
             match self.runner.run_with_stdout_limit(
                 &root,
-                "file-patch",
+                GitOperation::FilePatch,
                 &[
                     "diff",
                     "--no-ext-diff",
@@ -2322,7 +2335,7 @@ impl RepositoryPort for GitRepositoryAdapter {
                     "--",
                     path.as_str(),
                 ],
-                true,
+                GitCommandKind::Content,
                 PATCH_LIMIT,
             ) {
                 Ok(bytes) => match String::from_utf8(bytes) {

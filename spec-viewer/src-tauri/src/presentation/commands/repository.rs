@@ -901,4 +901,36 @@ mod tests {
             RepositoryUseCaseError::Port(RepositoryPortError::StaleSnapshot).into();
         assert_eq!(error.code, "staleSnapshot");
     }
+    #[test]
+    fn git_errors_preserve_frontend_codes_and_messages() {
+        for (port_error, expected_code, expected_message) in [
+            (
+                RepositoryPortError::GitTimedOut {
+                    operation: "working-tree-head".into(),
+                },
+                "gitTimedOut",
+                "Git timed out: working-tree-head",
+            ),
+            (
+                RepositoryPortError::GitFailed {
+                    operation: "worktree-list".into(),
+                    code: Some(128),
+                    stderr: "not a repository".into(),
+                },
+                "gitFailed",
+                "Git failed: worktree-list",
+            ),
+            (
+                RepositoryPortError::GitOutputLimitExceeded {
+                    stream: StdioStream::Stdout,
+                },
+                "gitOutputLimitExceeded",
+                "Git output limit exceeded: stdout",
+            ),
+        ] {
+            let error: RepositoryCommandError = RepositoryUseCaseError::Port(port_error).into();
+            assert_eq!(error.code, expected_code);
+            assert_eq!(error.message, expected_message);
+        }
+    }
 }

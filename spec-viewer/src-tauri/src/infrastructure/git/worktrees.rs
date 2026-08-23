@@ -1,4 +1,4 @@
-use super::GitRunner;
+use super::{GitCommandKind, GitOperation, GitRunner};
 use crate::domain::repository::RepositoryPortError;
 use std::{
     fs,
@@ -63,9 +63,9 @@ impl GitWorktreeScanner {
     pub fn list(&self, cwd: &Path) -> Result<Vec<GitWorktreeEntry>, RepositoryPortError> {
         let output = self.runner.run(
             cwd,
-            "worktree-list",
+            GitOperation::WorktreeList,
             &["worktree", "list", "--porcelain"],
-            false,
+            GitCommandKind::Metadata,
         )?;
         let mut entries = parse_worktree_list(&output)?;
         prioritize_containing_worktree(cwd, &mut entries);
@@ -144,7 +144,7 @@ fn push_entry(entries: &mut Vec<GitWorktreeEntry>, entry: Option<GitWorktreeEntr
 
 fn invalid_worktree_output() -> RepositoryPortError {
     RepositoryPortError::GitFailed {
-        operation: "worktree-list".to_owned(),
+        operation: GitOperation::WorktreeList.as_str().to_owned(),
         code: None,
         stderr: "Git returned invalid worktree porcelain output".to_owned(),
     }

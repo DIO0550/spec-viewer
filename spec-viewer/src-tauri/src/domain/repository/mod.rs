@@ -431,6 +431,27 @@ pub struct WorkingTreeDiffOverview {
     pub changed: Vec<DiffFile>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StdioStream {
+    Stdout,
+    Stderr,
+}
+
+impl StdioStream {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Stdout => "stdout",
+            Self::Stderr => "stderr",
+        }
+    }
+}
+
+impl std::fmt::Display for StdioStream {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 pub enum RepositoryPortError {
     #[error("repository HEAD does not exist")]
@@ -452,7 +473,7 @@ pub enum RepositoryPortError {
     #[error("Git timed out: {operation}")]
     GitTimedOut { operation: String },
     #[error("Git output limit exceeded: {stream}")]
-    GitOutputLimitExceeded { stream: String },
+    GitOutputLimitExceeded { stream: StdioStream },
     #[error("Git failed: {operation}")]
     GitFailed {
         operation: String,
@@ -541,6 +562,20 @@ pub trait WorkingTreeDiffPort {
 #[cfg(test)]
 mod tests {
     use crate::domain::workspace::ValidatedRefName;
+    #[test]
+    fn stdio_stream_tokens_and_error_display_match_the_wire_contract() {
+        for (stream, expected) in [
+            (StdioStream::Stdout, "stdout"),
+            (StdioStream::Stderr, "stderr"),
+        ] {
+            assert_eq!(stream.as_str(), expected);
+            assert_eq!(stream.to_string(), expected);
+            assert_eq!(
+                RepositoryPortError::GitOutputLimitExceeded { stream }.to_string(),
+                format!("Git output limit exceeded: {expected}")
+            );
+        }
+    }
 
     #[test]
     fn comparison_revision_accepts_head_commit_and_canonical_local_refs() {
