@@ -65,6 +65,33 @@ pub enum DiffCommentMutationOutcome {
     },
 }
 
+#[derive(Debug, Clone)]
+pub struct DiffCommentUpdate {
+    comment_id: String,
+    body: Option<String>,
+    resolved: Option<bool>,
+    reply_body: Option<String>,
+    deleted: bool,
+}
+
+impl DiffCommentUpdate {
+    pub fn new(
+        comment_id: String,
+        body: Option<String>,
+        resolved: Option<bool>,
+        reply_body: Option<String>,
+        deleted: bool,
+    ) -> Self {
+        Self {
+            comment_id,
+            body,
+            resolved,
+            reply_body,
+            deleted,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PreCommitFailureCode {
     RevisionOverflow,
@@ -188,24 +215,25 @@ impl<B: DiffCommentBackendPort> DiffCommentUseCases<B> {
         &self,
         identity: &DiffReviewIdentity,
         expected_revision: DiffCommentRevision,
-        comment_id: &str,
-        body: Option<String>,
-        resolved: Option<bool>,
-        reply_body: Option<String>,
-        deleted: bool,
+        update: DiffCommentUpdate,
         cancellation: &CancellationToken,
     ) -> Result<DiffCommentMutationOutcome, DiffCommentUseCaseError> {
         let context = self.backend.resolution_context(identity, cancellation)?;
-        if !deleted && body.is_none() && resolved.is_none() && reply_body.is_none() {
+        if !update.deleted
+            && update.body.is_none()
+            && update.resolved.is_none()
+            && update.reply_body.is_none()
+        {
             return Err(DiffCommentUseCaseError::InvalidRequest("empty update"));
         }
-        if deleted && (body.is_some() || resolved.is_some() || reply_body.is_some()) {
+        if update.deleted
+            && (update.body.is_some() || update.resolved.is_some() || update.reply_body.is_some())
+        {
             return Err(DiffCommentUseCaseError::InvalidRequest("mixed delete"));
         }
-        if reply_body.is_some() && (body.is_some() || resolved.is_some()) {
+        if update.reply_body.is_some() && (update.body.is_some() || update.resolved.is_some()) {
             return Err(DiffCommentUseCaseError::InvalidRequest("mixed reply"));
         }
-        let id = comment_id.to_owned();
         let outcome =
             self.backend
                 .mutate_document(&context, expected_revision, &|document, revision| {
@@ -214,13 +242,13 @@ impl<B: DiffCommentBackendPort> DiffCommentUseCases<B> {
                         .comments()
                         .iter()
                         .filter_map(|comment| {
-                            if comment.id() != id {
+                            if comment.id() != update.comment_id {
                                 return Some(Ok(comment.clone()));
                             }
                             found = true;
-                            if deleted {
+                            if update.deleted {
                                 None
-                            } else if let Some(reply_body) = &reply_body {
+                            } else if let Some(reply_body) = &update.reply_body {
                                 Some(
                                     comment
                                         .add_reply(
@@ -233,7 +261,7 @@ impl<B: DiffCommentBackendPort> DiffCommentUseCases<B> {
                             } else {
                                 Some(
                                     comment
-                                        .update(body.clone(), resolved)
+                                        .update(update.body.clone(), update.resolved)
                                         .map_err(|_| DiffCommentRepositoryError::InvalidStore),
                                 )
                             }
@@ -931,11 +959,7 @@ mod tests {
             .update(
                 &identity(),
                 DiffCommentRevision::ZERO,
-                "c1",
-                None,
-                None,
-                None,
-                true,
+                DiffCommentUpdate::new("c1".into(), None, None, None, true),
                 &CancellationToken::default(),
             )
             .unwrap();
@@ -953,11 +977,7 @@ mod tests {
             .update(
                 &identity(),
                 DiffCommentRevision::ZERO,
-                "c1",
-                None,
-                None,
-                Some("follow up".into()),
-                false,
+                DiffCommentUpdate::new("c1".into(), None, None, Some("follow up".into()), false),
                 &CancellationToken::default(),
             )
             .unwrap();

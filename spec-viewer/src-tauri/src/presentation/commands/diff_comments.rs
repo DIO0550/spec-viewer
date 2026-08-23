@@ -7,7 +7,8 @@ use tauri::State;
 
 use crate::{
     app::use_cases::diff_comments::{
-        DiffCommentMutationOutcome, DiffCommentUseCaseError, PreCommitFailureCode,
+        DiffCommentMutationOutcome, DiffCommentUpdate, DiffCommentUseCaseError,
+        PreCommitFailureCode,
     },
     domain::{
         comment::diff::{
@@ -566,11 +567,13 @@ pub fn update_diff_comment(
         .update(
             &identity,
             revision,
-            &request.comment_id,
-            request.body,
-            request.resolved,
-            request.reply_body,
-            request.deleted,
+            DiffCommentUpdate::new(
+                request.comment_id,
+                request.body,
+                request.resolved,
+                request.reply_body,
+                request.deleted,
+            ),
             &CancellationToken::default(),
         )
         .map(Into::into)
