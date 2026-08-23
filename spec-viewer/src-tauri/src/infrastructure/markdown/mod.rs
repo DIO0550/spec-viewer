@@ -81,7 +81,6 @@ impl FilesystemMarkdownReader {
 
         Ok(MarkdownDocument::new_artifact(
             artifact.identity.clone(),
-            artifact.file_key,
             artifact.format,
             display_path(&file_path),
             contents,
@@ -150,7 +149,6 @@ impl MarkdownReadResult {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MarkdownDocument {
     identity: SpecArtifactIdentity,
-    file_key: Option<SpecFileKey>,
     format: SpecDocumentFormat,
     path: String,
     contents: String,
@@ -167,7 +165,6 @@ impl MarkdownDocument {
     ) -> Self {
         Self::new_artifact(
             SpecArtifactIdentity::Standard(key),
-            Some(key),
             format,
             path,
             contents,
@@ -177,7 +174,6 @@ impl MarkdownDocument {
 
     pub fn new_artifact(
         identity: SpecArtifactIdentity,
-        file_key: Option<SpecFileKey>,
         format: SpecDocumentFormat,
         path: impl Into<String>,
         contents: impl Into<String>,
@@ -185,7 +181,6 @@ impl MarkdownDocument {
     ) -> Self {
         Self {
             identity,
-            file_key,
             format,
             path: path.into(),
             contents: contents.into(),
@@ -193,17 +188,12 @@ impl MarkdownDocument {
         }
     }
 
-    pub fn key(&self) -> SpecFileKey {
-        self.file_key
-            .expect("legacy Markdown documents should have a fixed file key")
-    }
-
     pub fn identity(&self) -> &SpecArtifactIdentity {
         &self.identity
     }
 
     pub fn file_key(&self) -> Option<SpecFileKey> {
-        self.file_key
+        self.identity.standard_key()
     }
 
     pub fn format(&self) -> SpecDocumentFormat {

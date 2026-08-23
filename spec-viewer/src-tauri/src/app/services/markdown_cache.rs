@@ -10,7 +10,7 @@ use std::{
 
 use crate::{
     domain::{
-        spec::{MarkdownBlock, SpecDocumentFormat, SpecFileKey, SpecId},
+        spec::{MarkdownBlock, SpecArtifactIdentity, SpecDocumentFormat, SpecFileKey, SpecId},
         workspace::{WorkspaceConfig, WorkspaceLayout},
     },
     infrastructure::markdown::{
@@ -41,7 +41,7 @@ pub struct FileStamp {
 
 #[derive(Clone, Debug)]
 pub struct CachedMarkdownDocument {
-    key: SpecFileKey,
+    identity: SpecArtifactIdentity,
     format: SpecDocumentFormat,
     path: String,
     contents: String,
@@ -57,7 +57,7 @@ impl CachedMarkdownDocument {
         let size_bytes = contents.len();
 
         Self {
-            key: document.key(),
+            identity: document.identity().clone(),
             format: document.format(),
             path: document.path().to_string(),
             contents,
@@ -69,7 +69,13 @@ impl CachedMarkdownDocument {
     }
 
     fn into_document(self) -> MarkdownDocument {
-        MarkdownDocument::new(self.key, self.format, self.path, self.contents, self.blocks)
+        MarkdownDocument::new_artifact(
+            self.identity,
+            self.format,
+            self.path,
+            self.contents,
+            self.blocks,
+        )
     }
 }
 

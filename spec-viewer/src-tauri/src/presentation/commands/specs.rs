@@ -597,8 +597,13 @@ impl From<ArchiveSpecResult> for ArchiveSpecResponse {
 
 impl From<AppMarkdownDocument> for ReadSpecFileResponse {
     fn from(document: AppMarkdownDocument) -> Self {
+        let key = match document.identity() {
+            SpecArtifactIdentity::Standard(key) => key.as_str().to_string(),
+            SpecArtifactIdentity::DirectMarkdown(file_name) => file_name.clone(),
+        };
+
         Self {
-            key: document.key().as_str().to_string(),
+            key,
             format: format_label(document.format()).to_string(),
             path: document.path().to_string(),
             contents: Some(document.contents().to_string()),
