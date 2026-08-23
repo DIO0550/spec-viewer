@@ -1,5 +1,13 @@
 @import "./editor-viewer.css";
 
+:root {
+  --repository-warning-text: #92400e;
+}
+
+:root[data-theme="dark"] {
+  --repository-warning-text: #e1b47a;
+}
+
 .repository-diff-panel {
   display: flex;
   flex: 1 1 auto;
@@ -91,7 +99,7 @@
 .repository-file-tab__status[data-change="renamed"],
 .repository-file-tab__status[data-change="copied"],
 .repository-file-tab__status[data-change="typeChanged"] {
-  color: var(--color-warning, #b45309);
+  color: var(--repository-warning-text);
 }
 
 .repository-file-tab__path {
@@ -180,7 +188,7 @@
 .repository-diff-file-header__status[data-change="renamed"],
 .repository-diff-file-header__status[data-change="copied"],
 .repository-diff-file-header__status[data-change="typeChanged"] {
-  color: var(--color-warning, #b45309);
+  color: var(--repository-warning-text);
 }
 
 .repository-diff-file-header__summary strong:first-child {
