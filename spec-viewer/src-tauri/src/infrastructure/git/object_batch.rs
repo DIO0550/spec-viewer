@@ -132,6 +132,7 @@ impl Drop for BatchSession {
 
 #[derive(Debug, Clone, Default)]
 pub struct GitObjectBatch {
+    #[cfg(not(windows))]
     sessions: Arc<Mutex<BTreeMap<Vec<u8>, BatchSession>>>,
     cache: Arc<Mutex<BlobCache>>,
 }
@@ -146,6 +147,24 @@ impl GitObjectBatch {
         if object.contains(['\n', '\r']) {
             return Err(RepositoryPortError::InvalidRepositoryPath);
         }
+        #[cfg(windows)]
+        {
+            let mut session = BatchSession::spawn(root)?;
+            return self.read_from_session(&mut session, object, content_limit);
+        }
+        #[cfg(not(windows))]
+        {
+            self.read_from_persistent_session(root, object, content_limit)
+        }
+    }
+
+    #[cfg(not(windows))]
+    fn read_from_persistent_session(
+        &self,
+        root: &Path,
+        object: &str,
+        content_limit: usize,
+    ) -> Result<GitObjectRead, RepositoryPortError> {
         let key = root.as_os_str().as_encoded_bytes().to_vec();
         let mut sessions = self.sessions.lock().map_err(|_| RepositoryPortError::Io)?;
         if !sessions.contains_key(&key) {
