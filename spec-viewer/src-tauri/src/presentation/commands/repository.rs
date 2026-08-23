@@ -26,6 +26,164 @@ pub struct LoadRepositoryFileRequest {
     pub path: String,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum FileChangeKindResponseToken {
+    Added,
+    Modified,
+    Deleted,
+    Renamed,
+    Copied,
+    TypeChanged,
+    Untracked,
+}
+
+impl From<FileChangeKind> for FileChangeKindResponseToken {
+    fn from(value: FileChangeKind) -> Self {
+        match value {
+            FileChangeKind::Added => Self::Added,
+            FileChangeKind::Modified => Self::Modified,
+            FileChangeKind::Deleted => Self::Deleted,
+            FileChangeKind::Renamed => Self::Renamed,
+            FileChangeKind::Copied => Self::Copied,
+            FileChangeKind::TypeChanged => Self::TypeChanged,
+            FileChangeKind::Untracked => Self::Untracked,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum EntryKindResponseToken {
+    Regular,
+    Symlink,
+    Submodule,
+}
+
+impl From<EntryKind> for EntryKindResponseToken {
+    fn from(value: EntryKind) -> Self {
+        match value {
+            EntryKind::Regular => Self::Regular,
+            EntryKind::Symlink => Self::Symlink,
+            EntryKind::Submodule => Self::Submodule,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ContentClassificationResponseToken {
+    Text,
+    Binary,
+    NotApplicable,
+    Unknown,
+}
+
+impl From<ContentClassification> for ContentClassificationResponseToken {
+    fn from(value: ContentClassification) -> Self {
+        match value {
+            ContentClassification::Text => Self::Text,
+            ContentClassification::Binary => Self::Binary,
+            ContentClassification::NotApplicable => Self::NotApplicable,
+            ContentClassification::Unknown => Self::Unknown,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum OmissionReasonResponseToken {
+    Binary,
+    LargeFile,
+    DiffLimit,
+    MissingSide,
+    UnsupportedEntryKind,
+}
+
+impl From<OmissionReason> for OmissionReasonResponseToken {
+    fn from(value: OmissionReason) -> Self {
+        match value {
+            OmissionReason::Binary => Self::Binary,
+            OmissionReason::LargeFile => Self::LargeFile,
+            OmissionReason::DiffLimit => Self::DiffLimit,
+            OmissionReason::MissingSide => Self::MissingSide,
+            OmissionReason::UnsupportedEntryKind => Self::UnsupportedEntryKind,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum DiffLineKindResponseToken {
+    Context,
+    Added,
+    Removed,
+    NoNewline,
+}
+
+impl From<DiffLineKind> for DiffLineKindResponseToken {
+    fn from(value: DiffLineKind) -> Self {
+        match value {
+            DiffLineKind::Context => Self::Context,
+            DiffLineKind::Added => Self::Added,
+            DiffLineKind::Removed => Self::Removed,
+            DiffLineKind::NoNewline => Self::NoNewline,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum BaseResolutionReasonResponseToken {
+    NotFound,
+    AmbiguousRemoteHead,
+    DetachedHead,
+    ShallowHistory,
+    UnbornHead,
+    NoCommonAncestor,
+    MissingRef,
+    InvalidRef,
+}
+
+impl From<BaseResolutionFailure> for BaseResolutionReasonResponseToken {
+    fn from(value: BaseResolutionFailure) -> Self {
+        match value {
+            BaseResolutionFailure::NotFound => Self::NotFound,
+            BaseResolutionFailure::AmbiguousRemoteHead => Self::AmbiguousRemoteHead,
+            BaseResolutionFailure::DetachedHead => Self::DetachedHead,
+            BaseResolutionFailure::ShallowHistory => Self::ShallowHistory,
+            BaseResolutionFailure::UnbornHead => Self::UnbornHead,
+            BaseResolutionFailure::NoCommonAncestor => Self::NoCommonAncestor,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum BaseResolutionSourceResponseToken {
+    Explicit,
+    GhMergeBase,
+    CurrentRemoteHead,
+    OriginHead,
+    OtherRemoteHead,
+    Main,
+    Master,
+}
+
+impl From<BaseResolutionSource> for BaseResolutionSourceResponseToken {
+    fn from(value: BaseResolutionSource) -> Self {
+        match value {
+            BaseResolutionSource::Explicit => Self::Explicit,
+            BaseResolutionSource::GhMergeBase => Self::GhMergeBase,
+            BaseResolutionSource::CurrentRemoteHead => Self::CurrentRemoteHead,
+            BaseResolutionSource::OriginHead => Self::OriginHead,
+            BaseResolutionSource::OtherRemoteHead => Self::OtherRemoteHead,
+            BaseResolutionSource::Main => Self::Main,
+            BaseResolutionSource::Master => Self::Master,
+        }
+    }
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RepositoryCommandError {
@@ -81,11 +239,11 @@ impl From<RepositoryUseCaseError> for RepositoryCommandError {
 #[serde(rename_all = "camelCase")]
 pub struct BaseResponse {
     pub state: &'static str,
-    pub source: Option<&'static str>,
+    pub source: Option<BaseResolutionSourceResponseToken>,
     pub branch_ref: Option<String>,
     pub merge_base_sha: Option<String>,
     pub head_sha: Option<String>,
-    pub reason: Option<&'static str>,
+    pub reason: Option<BaseResolutionReasonResponseToken>,
     pub candidates: Vec<String>,
     pub override_ref: Option<String>,
 }
@@ -112,7 +270,7 @@ impl From<&BaseBranchResolution> for BaseResponse {
                 branch_ref: None,
                 merge_base_sha: None,
                 head_sha: None,
-                reason: Some(base_reason(*reason)),
+                reason: Some((*reason).into()),
                 candidates: candidates.clone(),
                 override_ref: None,
             },
@@ -125,42 +283,25 @@ impl From<&BaseBranchResolution> for BaseResponse {
                 branch_ref: None,
                 merge_base_sha: None,
                 head_sha: None,
-                reason: Some(if *missing { "missingRef" } else { "invalidRef" }),
+                reason: Some(if *missing {
+                    BaseResolutionReasonResponseToken::MissingRef
+                } else {
+                    BaseResolutionReasonResponseToken::InvalidRef
+                }),
                 candidates: vec![],
                 override_ref: Some(override_ref.clone()),
             },
         }
     }
 }
-fn base_reason(reason: BaseResolutionFailure) -> &'static str {
-    match reason {
-        BaseResolutionFailure::NotFound => "notFound",
-        BaseResolutionFailure::AmbiguousRemoteHead => "ambiguousRemoteHead",
-        BaseResolutionFailure::DetachedHead => "detachedHead",
-        BaseResolutionFailure::ShallowHistory => "shallowHistory",
-        BaseResolutionFailure::UnbornHead => "unbornHead",
-        BaseResolutionFailure::NoCommonAncestor => "noCommonAncestor",
-    }
-}
-fn source(source: Option<BaseResolutionSource>) -> Option<&'static str> {
-    source.map(|s| match s {
-        BaseResolutionSource::Explicit => "explicit",
-        BaseResolutionSource::GhMergeBase => "ghMergeBase",
-        BaseResolutionSource::CurrentRemoteHead => "currentRemoteHead",
-        BaseResolutionSource::OriginHead => "originHead",
-        BaseResolutionSource::OtherRemoteHead => "otherRemoteHead",
-        BaseResolutionSource::Main => "main",
-        BaseResolutionSource::Master => "master",
-    })
-}
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FileChangeResponse {
     pub old_path: Option<String>,
     pub new_path: Option<String>,
-    pub change: &'static str,
-    pub entry_kind: &'static str,
-    pub content_classification: &'static str,
+    pub change: FileChangeKindResponseToken,
+    pub entry_kind: EntryKindResponseToken,
+    pub content_classification: ContentClassificationResponseToken,
     pub similarity: Option<u8>,
     pub old_mode: Option<String>,
     pub new_mode: Option<String>,
@@ -170,26 +311,9 @@ impl From<&DiffFile> for FileChangeResponse {
         Self {
             old_path: file.old_path.as_ref().map(|p| p.as_str().into()),
             new_path: file.new_path.as_ref().map(|p| p.as_str().into()),
-            change: match file.change {
-                FileChangeKind::Added => "added",
-                FileChangeKind::Modified => "modified",
-                FileChangeKind::Deleted => "deleted",
-                FileChangeKind::Renamed => "renamed",
-                FileChangeKind::Copied => "copied",
-                FileChangeKind::TypeChanged => "typeChanged",
-                FileChangeKind::Untracked => "untracked",
-            },
-            entry_kind: match file.entry_kind {
-                EntryKind::Regular => "regular",
-                EntryKind::Symlink => "symlink",
-                EntryKind::Submodule => "submodule",
-            },
-            content_classification: match file.content_classification {
-                ContentClassification::Text => "text",
-                ContentClassification::Binary => "binary",
-                ContentClassification::NotApplicable => "notApplicable",
-                ContentClassification::Unknown => "unknown",
-            },
+            change: file.change.into(),
+            entry_kind: file.entry_kind.into(),
+            content_classification: file.content_classification.into(),
             similarity: file.similarity,
             old_mode: file.old_mode.clone(),
             new_mode: file.new_mode.clone(),
@@ -202,9 +326,9 @@ impl From<&DiffFile> for FileChangeResponse {
 pub struct RepositoryFileChangeResponse {
     pub old_path: Option<String>,
     pub new_path: Option<String>,
-    pub change: Option<&'static str>,
-    pub entry_kind: &'static str,
-    pub content_classification: &'static str,
+    pub change: Option<FileChangeKindResponseToken>,
+    pub entry_kind: EntryKindResponseToken,
+    pub content_classification: ContentClassificationResponseToken,
     pub similarity: Option<u8>,
     pub old_mode: Option<String>,
     pub new_mode: Option<String>,
@@ -212,30 +336,13 @@ pub struct RepositoryFileChangeResponse {
 
 impl From<RepositoryFileMetadata> for RepositoryFileChangeResponse {
     fn from(file: RepositoryFileMetadata) -> Self {
-        let change = file.change.map(|change| match change {
-            FileChangeKind::Added => "added",
-            FileChangeKind::Modified => "modified",
-            FileChangeKind::Deleted => "deleted",
-            FileChangeKind::Renamed => "renamed",
-            FileChangeKind::Copied => "copied",
-            FileChangeKind::TypeChanged => "typeChanged",
-            FileChangeKind::Untracked => "untracked",
-        });
+        let change = file.change.map(Into::into);
         Self {
             old_path: file.old_path.map(|path| path.as_str().into()),
             new_path: file.new_path.map(|path| path.as_str().into()),
             change,
-            entry_kind: match file.entry_kind {
-                EntryKind::Regular => "regular",
-                EntryKind::Symlink => "symlink",
-                EntryKind::Submodule => "submodule",
-            },
-            content_classification: match file.content_classification {
-                ContentClassification::Text => "text",
-                ContentClassification::Binary => "binary",
-                ContentClassification::NotApplicable => "notApplicable",
-                ContentClassification::Unknown => "unknown",
-            },
+            entry_kind: file.entry_kind.into(),
+            content_classification: file.content_classification.into(),
             similarity: file.similarity,
             old_mode: file.old_mode,
             new_mode: file.new_mode,
@@ -260,8 +367,8 @@ pub struct TreeNodeResponse {
     pub path: String,
     pub name: String,
     pub kind: &'static str,
-    pub entry_kind: Option<&'static str>,
-    pub change: Option<&'static str>,
+    pub entry_kind: Option<EntryKindResponseToken>,
+    pub change: Option<FileChangeKindResponseToken>,
     pub ignored: bool,
     pub children: TreeChildrenResponse,
 }
@@ -274,20 +381,8 @@ impl From<TreeNode> for TreeNodeResponse {
                 TreeNodeKind::File => "file",
                 TreeNodeKind::Directory => "directory",
             },
-            entry_kind: node.entry_kind.map(|kind| match kind {
-                EntryKind::Regular => "regular",
-                EntryKind::Symlink => "symlink",
-                EntryKind::Submodule => "submodule",
-            }),
-            change: node.change.map(|change| match change {
-                FileChangeKind::Added => "added",
-                FileChangeKind::Modified => "modified",
-                FileChangeKind::Deleted => "deleted",
-                FileChangeKind::Renamed => "renamed",
-                FileChangeKind::Copied => "copied",
-                FileChangeKind::TypeChanged => "typeChanged",
-                FileChangeKind::Untracked => "untracked",
-            }),
+            entry_kind: node.entry_kind.map(Into::into),
+            change: node.change.map(Into::into),
             ignored: node.ignored,
             children: match node.children {
                 TreeChildren::Loaded(items) => TreeChildrenResponse::Loaded {
@@ -337,7 +432,7 @@ impl From<RepositoryOverview> for RepositoryOverviewResponse {
                     current_snapshot_id: identity.current_snapshot_id().as_str().into(),
                 });
 
-        base.source = source(value.base_source);
+        base.source = value.base_source.map(Into::into);
         Self {
             repository_id: Some(value.repository_id.as_str().into()),
             base,
@@ -362,7 +457,7 @@ impl From<RepositoryOverview> for RepositoryOverviewResponse {
 pub struct ContentResponse {
     pub state: &'static str,
     pub text: Option<String>,
-    pub reason: Option<&'static str>,
+    pub reason: Option<OmissionReasonResponseToken>,
     pub byte_length: Option<u64>,
 }
 impl From<ContentAvailability> for ContentResponse {
@@ -380,13 +475,7 @@ impl From<ContentAvailability> for ContentResponse {
             } => Self {
                 state: "omitted",
                 text: None,
-                reason: Some(match reason {
-                    OmissionReason::Binary => "binary",
-                    OmissionReason::LargeFile => "largeFile",
-                    OmissionReason::DiffLimit => "diffLimit",
-                    OmissionReason::MissingSide => "missingSide",
-                    OmissionReason::UnsupportedEntryKind => "unsupportedEntryKind",
-                }),
+                reason: Some(reason.into()),
                 byte_length,
             },
         }
@@ -395,7 +484,7 @@ impl From<ContentAvailability> for ContentResponse {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DiffLineResponse {
-    pub kind: &'static str,
+    pub kind: DiffLineKindResponseToken,
     pub text: String,
 }
 
@@ -411,7 +500,7 @@ pub struct DiffHunkResponse {
 pub struct StructuredDiffResponse {
     pub state: &'static str,
     pub hunks: Vec<DiffHunkResponse>,
-    pub reason: Option<&'static str>,
+    pub reason: Option<OmissionReasonResponseToken>,
 }
 impl From<StructuredDiff> for StructuredDiffResponse {
     fn from(value: StructuredDiff) -> Self {
@@ -426,12 +515,7 @@ impl From<StructuredDiff> for StructuredDiffResponse {
                             .lines
                             .into_iter()
                             .map(|line| DiffLineResponse {
-                                kind: match line.kind {
-                                    DiffLineKind::Context => "context",
-                                    DiffLineKind::Added => "added",
-                                    DiffLineKind::Removed => "removed",
-                                    DiffLineKind::NoNewline => "noNewline",
-                                },
+                                kind: line.kind.into(),
                                 text: line.text,
                             })
                             .collect(),
@@ -442,13 +526,7 @@ impl From<StructuredDiff> for StructuredDiffResponse {
             StructuredDiff::Omitted { reason } => Self {
                 state: "omitted",
                 hunks: vec![],
-                reason: Some(match reason {
-                    OmissionReason::Binary => "binary",
-                    OmissionReason::LargeFile => "largeFile",
-                    OmissionReason::DiffLimit => "diffLimit",
-                    OmissionReason::MissingSide => "missingSide",
-                    OmissionReason::UnsupportedEntryKind => "unsupportedEntryKind",
-                }),
+                reason: Some(reason.into()),
             },
         }
     }
@@ -565,7 +643,7 @@ pub fn load_repository_diff(
                     branch_ref: None,
                     merge_base_sha: None,
                     head_sha: None,
-                    reason: Some("invalidRef"),
+                    reason: Some(BaseResolutionReasonResponseToken::InvalidRef),
                     candidates: vec![],
                     override_ref: Some(override_ref),
                 },
@@ -616,12 +694,121 @@ pub fn load_repository_file(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn assert_wire_token<T>(value: T, expected: &str)
+    where
+        T: Serialize,
+    {
+        assert_eq!(serde_json::to_value(value).unwrap(), expected);
+    }
+
     #[test]
-    fn base_reasons_are_camel_case() {
+    fn repository_domain_enums_have_exhaustive_wire_tokens() {
+        for (value, expected) in [
+            (FileChangeKind::Added, "added"),
+            (FileChangeKind::Modified, "modified"),
+            (FileChangeKind::Deleted, "deleted"),
+            (FileChangeKind::Renamed, "renamed"),
+            (FileChangeKind::Copied, "copied"),
+            (FileChangeKind::TypeChanged, "typeChanged"),
+            (FileChangeKind::Untracked, "untracked"),
+        ] {
+            assert_wire_token(FileChangeKindResponseToken::from(value), expected);
+        }
+        for (value, expected) in [
+            (EntryKind::Regular, "regular"),
+            (EntryKind::Symlink, "symlink"),
+            (EntryKind::Submodule, "submodule"),
+        ] {
+            assert_wire_token(EntryKindResponseToken::from(value), expected);
+        }
+        for (value, expected) in [
+            (ContentClassification::Text, "text"),
+            (ContentClassification::Binary, "binary"),
+            (ContentClassification::NotApplicable, "notApplicable"),
+            (ContentClassification::Unknown, "unknown"),
+        ] {
+            assert_wire_token(ContentClassificationResponseToken::from(value), expected);
+        }
+        for (value, expected) in [
+            (OmissionReason::Binary, "binary"),
+            (OmissionReason::LargeFile, "largeFile"),
+            (OmissionReason::DiffLimit, "diffLimit"),
+            (OmissionReason::MissingSide, "missingSide"),
+            (OmissionReason::UnsupportedEntryKind, "unsupportedEntryKind"),
+        ] {
+            assert_wire_token(OmissionReasonResponseToken::from(value), expected);
+        }
+        for (value, expected) in [
+            (DiffLineKind::Context, "context"),
+            (DiffLineKind::Added, "added"),
+            (DiffLineKind::Removed, "removed"),
+            (DiffLineKind::NoNewline, "noNewline"),
+        ] {
+            assert_wire_token(DiffLineKindResponseToken::from(value), expected);
+        }
+    }
+
+    #[test]
+    fn base_resolution_domain_enums_have_exhaustive_wire_tokens() {
+        for (value, expected) in [
+            (BaseResolutionFailure::NotFound, "notFound"),
+            (
+                BaseResolutionFailure::AmbiguousRemoteHead,
+                "ambiguousRemoteHead",
+            ),
+            (BaseResolutionFailure::DetachedHead, "detachedHead"),
+            (BaseResolutionFailure::ShallowHistory, "shallowHistory"),
+            (BaseResolutionFailure::UnbornHead, "unbornHead"),
+            (BaseResolutionFailure::NoCommonAncestor, "noCommonAncestor"),
+        ] {
+            assert_wire_token(BaseResolutionReasonResponseToken::from(value), expected);
+        }
+        assert_wire_token(BaseResolutionReasonResponseToken::MissingRef, "missingRef");
+        assert_wire_token(BaseResolutionReasonResponseToken::InvalidRef, "invalidRef");
+        for (value, expected) in [
+            (BaseResolutionSource::Explicit, "explicit"),
+            (BaseResolutionSource::GhMergeBase, "ghMergeBase"),
+            (BaseResolutionSource::CurrentRemoteHead, "currentRemoteHead"),
+            (BaseResolutionSource::OriginHead, "originHead"),
+            (BaseResolutionSource::OtherRemoteHead, "otherRemoteHead"),
+            (BaseResolutionSource::Main, "main"),
+            (BaseResolutionSource::Master, "master"),
+        ] {
+            assert_wire_token(BaseResolutionSourceResponseToken::from(value), expected);
+        }
+    }
+
+    #[test]
+    fn base_response_preserves_nullable_wire_contract() {
+        let base = BaseBranchResolution::Resolved {
+            branch_ref: "refs/heads/main".into(),
+            merge_base_sha: CommitSha::parse("a".repeat(40)).unwrap(),
+            head_sha: CommitSha::parse("b".repeat(40)).unwrap(),
+        };
+
+        let json = serde_json::to_value(BaseResponse::from(&base)).unwrap();
+
         assert_eq!(
-            base_reason(BaseResolutionFailure::NoCommonAncestor),
-            "noCommonAncestor"
+            json,
+            serde_json::json!({
+                "state": "resolved",
+                "source": null,
+                "branchRef": "refs/heads/main",
+                "mergeBaseSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "headSha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "reason": null,
+                "candidates": [],
+                "overrideRef": null
+            })
         );
+
+        let invalid = BaseBranchResolution::InvalidOverride {
+            override_ref: "missing".into(),
+            missing: true,
+        };
+        let invalid_json = serde_json::to_value(BaseResponse::from(&invalid)).unwrap();
+        assert_eq!(invalid_json["reason"], "missingRef");
     }
     #[test]
     fn lazy_request_uses_current_snapshot_and_opaque_node_id_fields() {

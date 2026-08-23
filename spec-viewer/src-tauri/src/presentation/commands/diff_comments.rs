@@ -242,6 +242,140 @@ impl From<DiffCommentUseCaseError> for DiffCommentCommandError {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum DiffSideResponseToken {
+    Base,
+    Current,
+}
+
+impl From<DiffSide> for DiffSideResponseToken {
+    fn from(value: DiffSide) -> Self {
+        match value {
+            DiffSide::Base => Self::Base,
+            DiffSide::Current => Self::Current,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum StaleAnchorReasonResponseToken {
+    SnapshotChanged,
+    PathMissing,
+    AmbiguousRename,
+    ContextNotFound,
+    AmbiguousContext,
+    Deleted,
+    Binary,
+    Unsupported,
+}
+
+impl From<StaleAnchorReason> for StaleAnchorReasonResponseToken {
+    fn from(value: StaleAnchorReason) -> Self {
+        match value {
+            StaleAnchorReason::SnapshotChanged => Self::SnapshotChanged,
+            StaleAnchorReason::PathMissing => Self::PathMissing,
+            StaleAnchorReason::AmbiguousRename => Self::AmbiguousRename,
+            StaleAnchorReason::ContextNotFound => Self::ContextNotFound,
+            StaleAnchorReason::AmbiguousContext => Self::AmbiguousContext,
+            StaleAnchorReason::Deleted => Self::Deleted,
+            StaleAnchorReason::Binary => Self::Binary,
+            StaleAnchorReason::Unsupported => Self::Unsupported,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum UnavailableReasonResponseToken {
+    Io,
+    Permission,
+    BudgetExceeded,
+    Cancelled,
+    RepositoryChanged,
+}
+
+impl From<UnavailableReason> for UnavailableReasonResponseToken {
+    fn from(value: UnavailableReason) -> Self {
+        match value {
+            UnavailableReason::Io => Self::Io,
+            UnavailableReason::Permission => Self::Permission,
+            UnavailableReason::BudgetExceeded => Self::BudgetExceeded,
+            UnavailableReason::Cancelled => Self::Cancelled,
+            UnavailableReason::RepositoryChanged => Self::RepositoryChanged,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ResolutionWarningCodeResponseToken {
+    ResolutionUnavailable(UnavailableReasonResponseToken),
+    DurabilityUncertain,
+}
+
+impl From<ResolutionWarningCode> for ResolutionWarningCodeResponseToken {
+    fn from(value: ResolutionWarningCode) -> Self {
+        match value {
+            ResolutionWarningCode::ResolutionUnavailable(reason) => {
+                Self::ResolutionUnavailable(reason.into())
+            }
+            ResolutionWarningCode::DurabilityUncertain => Self::DurabilityUncertain,
+        }
+    }
+}
+
+impl Serialize for ResolutionWarningCodeResponseToken {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            Self::ResolutionUnavailable(reason) => reason.serialize(serializer),
+            Self::DurabilityUncertain => serializer.serialize_str("durabilityUncertain"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum DiffCommentDurabilityResponseToken {
+    Durable,
+    Uncertain,
+}
+
+impl DiffCommentDurabilityResponseToken {
+    fn from_uncertainty(is_uncertain: bool) -> Self {
+        if is_uncertain {
+            Self::Uncertain
+        } else {
+            Self::Durable
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum PreCommitFailureCodeResponseToken {
+    RevisionOverflow,
+    StoreBusy,
+    Io,
+    Permission,
+    InvalidStore,
+}
+
+impl From<PreCommitFailureCode> for PreCommitFailureCodeResponseToken {
+    fn from(value: PreCommitFailureCode) -> Self {
+        match value {
+            PreCommitFailureCode::RevisionOverflow => Self::RevisionOverflow,
+            PreCommitFailureCode::StoreBusy => Self::StoreBusy,
+            PreCommitFailureCode::Io => Self::Io,
+            PreCommitFailureCode::Permission => Self::Permission,
+            PreCommitFailureCode::InvalidStore => Self::InvalidStore,
+        }
+    }
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ResolvedDiffCommentsResponse {
@@ -280,7 +414,7 @@ pub struct DiffLineAnchorResponse {
     worktree_id: String,
     base_sha: String,
     current_snapshot_id: String,
-    side: &'static str,
+    side: DiffSideResponseToken,
     #[serde(skip_serializing_if = "Option::is_none")]
     old_path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -304,21 +438,21 @@ pub enum DiffAnchorResolutionResponse {
     Exact {
         selection_path: String,
         side_path: String,
-        side: &'static str,
+        side: DiffSideResponseToken,
         line: u32,
     },
     Relocated {
         selection_path: String,
         side_path: String,
-        side: &'static str,
+        side: DiffSideResponseToken,
         line: u32,
     },
     Stale {
-        reason: &'static str,
+        reason: StaleAnchorReasonResponseToken,
         candidate_count: u32,
     },
     Unavailable {
-        reason: &'static str,
+        reason: UnavailableReasonResponseToken,
         can_jump: bool,
     },
 }
@@ -326,7 +460,7 @@ pub enum DiffAnchorResolutionResponse {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ResolutionWarningResponse {
-    code: &'static str,
+    code: ResolutionWarningCodeResponseToken,
     message: String,
 }
 
@@ -341,7 +475,7 @@ pub enum DiffCommentMutationOutcomeResponse {
         document: ResolvedDiffCommentsResponse,
         revision: String,
         resolution_warnings: Vec<ResolutionWarningResponse>,
-        durability: &'static str,
+        durability: DiffCommentDurabilityResponseToken,
     },
     Conflict {
         latest_document: ResolvedDiffCommentsResponse,
@@ -349,7 +483,7 @@ pub enum DiffCommentMutationOutcomeResponse {
         resolution_warnings: Vec<ResolutionWarningResponse>,
     },
     PreCommitFailure {
-        code: &'static str,
+        code: PreCommitFailureCodeResponseToken,
         retryable: bool,
         #[serde(skip_serializing_if = "Option::is_none")]
         current_document: Option<ResolvedDiffCommentsResponse>,
@@ -405,7 +539,7 @@ impl From<&ResolvedDiffComment> for ResolvedDiffCommentResponse {
                 worktree_id: anchor.identity().worktree_id().as_str().into(),
                 base_sha: anchor.identity().base_sha().as_str().into(),
                 current_snapshot_id: anchor.identity().current_snapshot_id().as_str().into(),
-                side: side(target.side()),
+                side: target.side().into(),
                 old_path: target.old_path().map(|path| path.as_str().into()),
                 new_path: target.new_path().map(|path| path.as_str().into()),
                 line: target.line().get(),
@@ -431,7 +565,7 @@ impl From<&DiffAnchorResolution> for DiffAnchorResolutionResponse {
             } => Self::Exact {
                 selection_path: selection_path.as_str().into(),
                 side_path: side_path.as_str().into(),
-                side: side(*anchor_side),
+                side: (*anchor_side).into(),
                 line: line.get(),
             },
             DiffAnchorResolution::Relocated {
@@ -442,18 +576,18 @@ impl From<&DiffAnchorResolution> for DiffAnchorResolutionResponse {
             } => Self::Relocated {
                 selection_path: selection_path.as_str().into(),
                 side_path: side_path.as_str().into(),
-                side: side(*anchor_side),
+                side: (*anchor_side).into(),
                 line: line.get(),
             },
             DiffAnchorResolution::Stale {
                 reason,
                 candidate_count,
             } => Self::Stale {
-                reason: stale_reason(*reason),
+                reason: (*reason).into(),
                 candidate_count: *candidate_count,
             },
             DiffAnchorResolution::Unavailable { reason } => Self::Unavailable {
-                reason: unavailable_reason(*reason),
+                reason: (*reason).into(),
                 can_jump: false,
             },
         }
@@ -463,10 +597,7 @@ impl From<&DiffAnchorResolution> for DiffAnchorResolutionResponse {
 impl From<&crate::domain::comment::diff::ResolutionWarning> for ResolutionWarningResponse {
     fn from(value: &crate::domain::comment::diff::ResolutionWarning) -> Self {
         Self {
-            code: match value.code {
-                ResolutionWarningCode::ResolutionUnavailable(reason) => unavailable_reason(reason),
-                ResolutionWarningCode::DurabilityUncertain => "durabilityUncertain",
-            },
+            code: value.code.into(),
             message: value.message.clone(),
         }
     }
@@ -489,11 +620,9 @@ impl From<DiffCommentMutationOutcome> for DiffCommentMutationOutcomeResponse {
                     document: document.into(),
                     revision,
                     resolution_warnings,
-                    durability: if durability_uncertain {
-                        "uncertain"
-                    } else {
-                        "durable"
-                    },
+                    durability: DiffCommentDurabilityResponseToken::from_uncertainty(
+                        durability_uncertain,
+                    ),
                 }
             }
             DiffCommentMutationOutcome::Conflict { latest_document } => {
@@ -517,50 +646,13 @@ impl From<DiffCommentMutationOutcome> for DiffCommentMutationOutcomeResponse {
                     .as_ref()
                     .map(|document| document.document.revision().to_string());
                 Self::PreCommitFailure {
-                    code: precommit_code(code),
+                    code: code.into(),
                     retryable: code.retryable(),
                     current_document: current_document.map(Into::into),
                     current_revision,
                 }
             }
         }
-    }
-}
-
-fn side(value: DiffSide) -> &'static str {
-    match value {
-        DiffSide::Base => "base",
-        DiffSide::Current => "current",
-    }
-}
-fn stale_reason(value: StaleAnchorReason) -> &'static str {
-    match value {
-        StaleAnchorReason::SnapshotChanged => "snapshotChanged",
-        StaleAnchorReason::PathMissing => "pathMissing",
-        StaleAnchorReason::AmbiguousRename => "ambiguousRename",
-        StaleAnchorReason::ContextNotFound => "contextNotFound",
-        StaleAnchorReason::AmbiguousContext => "ambiguousContext",
-        StaleAnchorReason::Deleted => "deleted",
-        StaleAnchorReason::Binary => "binary",
-        StaleAnchorReason::Unsupported => "unsupported",
-    }
-}
-fn unavailable_reason(value: UnavailableReason) -> &'static str {
-    match value {
-        UnavailableReason::Io => "io",
-        UnavailableReason::Permission => "permission",
-        UnavailableReason::BudgetExceeded => "budgetExceeded",
-        UnavailableReason::Cancelled => "cancelled",
-        UnavailableReason::RepositoryChanged => "repositoryChanged",
-    }
-}
-fn precommit_code(value: PreCommitFailureCode) -> &'static str {
-    match value {
-        PreCommitFailureCode::RevisionOverflow => "revisionOverflow",
-        PreCommitFailureCode::StoreBusy => "storeBusy",
-        PreCommitFailureCode::Io => "io",
-        PreCommitFailureCode::Permission => "permission",
-        PreCommitFailureCode::InvalidStore => "invalidStore",
     }
 }
 
@@ -627,6 +719,195 @@ pub fn update_diff_comment(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn assert_wire_token<T>(value: T, expected: &str)
+    where
+        T: Serialize,
+    {
+        assert_eq!(serde_json::to_value(value).unwrap(), expected);
+    }
+
+    #[test]
+    fn diff_comment_domain_enums_have_exhaustive_wire_tokens() {
+        for (value, expected) in [(DiffSide::Base, "base"), (DiffSide::Current, "current")] {
+            assert_wire_token(DiffSideResponseToken::from(value), expected);
+        }
+        for (value, expected) in [
+            (StaleAnchorReason::SnapshotChanged, "snapshotChanged"),
+            (StaleAnchorReason::PathMissing, "pathMissing"),
+            (StaleAnchorReason::AmbiguousRename, "ambiguousRename"),
+            (StaleAnchorReason::ContextNotFound, "contextNotFound"),
+            (StaleAnchorReason::AmbiguousContext, "ambiguousContext"),
+            (StaleAnchorReason::Deleted, "deleted"),
+            (StaleAnchorReason::Binary, "binary"),
+            (StaleAnchorReason::Unsupported, "unsupported"),
+        ] {
+            assert_wire_token(StaleAnchorReasonResponseToken::from(value), expected);
+        }
+        for (value, expected) in [
+            (UnavailableReason::Io, "io"),
+            (UnavailableReason::Permission, "permission"),
+            (UnavailableReason::BudgetExceeded, "budgetExceeded"),
+            (UnavailableReason::Cancelled, "cancelled"),
+            (UnavailableReason::RepositoryChanged, "repositoryChanged"),
+        ] {
+            assert_wire_token(UnavailableReasonResponseToken::from(value), expected);
+            assert_wire_token(
+                ResolutionWarningCodeResponseToken::from(
+                    ResolutionWarningCode::ResolutionUnavailable(value),
+                ),
+                expected,
+            );
+        }
+        assert_wire_token(
+            ResolutionWarningCodeResponseToken::from(ResolutionWarningCode::DurabilityUncertain),
+            "durabilityUncertain",
+        );
+        for (value, expected) in [
+            (PreCommitFailureCode::RevisionOverflow, "revisionOverflow"),
+            (PreCommitFailureCode::StoreBusy, "storeBusy"),
+            (PreCommitFailureCode::Io, "io"),
+            (PreCommitFailureCode::Permission, "permission"),
+            (PreCommitFailureCode::InvalidStore, "invalidStore"),
+        ] {
+            assert_wire_token(PreCommitFailureCodeResponseToken::from(value), expected);
+        }
+        for (value, expected) in [
+            (DiffCommentDurabilityResponseToken::Durable, "durable"),
+            (DiffCommentDurabilityResponseToken::Uncertain, "uncertain"),
+        ] {
+            assert_wire_token(value, expected);
+        }
+    }
+
+    fn empty_document_response() -> ResolvedDiffCommentsResponse {
+        ResolvedDiffCommentsResponse {
+            version: 1,
+            repository_id: "rr1_repository".into(),
+            worktree_id: "rw1_worktree".into(),
+            revision: "0".into(),
+            comments: vec![],
+            resolution_warnings: vec![],
+        }
+    }
+
+    #[test]
+    fn anchor_resolution_tagged_enum_wire_contract_is_stable() {
+        let cases = [
+            (
+                DiffAnchorResolutionResponse::Exact {
+                    selection_path: "src/current.rs".into(),
+                    side_path: "src/current.rs".into(),
+                    side: DiffSideResponseToken::Current,
+                    line: 4,
+                },
+                serde_json::json!({
+                    "status": "exact",
+                    "selectionPath": "src/current.rs",
+                    "sidePath": "src/current.rs",
+                    "side": "current",
+                    "line": 4
+                }),
+            ),
+            (
+                DiffAnchorResolutionResponse::Relocated {
+                    selection_path: "src/current.rs".into(),
+                    side_path: "src/base.rs".into(),
+                    side: DiffSideResponseToken::Base,
+                    line: 7,
+                },
+                serde_json::json!({
+                    "status": "relocated",
+                    "selectionPath": "src/current.rs",
+                    "sidePath": "src/base.rs",
+                    "side": "base",
+                    "line": 7
+                }),
+            ),
+            (
+                DiffAnchorResolutionResponse::Stale {
+                    reason: StaleAnchorReasonResponseToken::AmbiguousContext,
+                    candidate_count: 2,
+                },
+                serde_json::json!({
+                    "status": "stale",
+                    "reason": "ambiguousContext",
+                    "candidateCount": 2
+                }),
+            ),
+            (
+                DiffAnchorResolutionResponse::Unavailable {
+                    reason: UnavailableReasonResponseToken::RepositoryChanged,
+                    can_jump: false,
+                },
+                serde_json::json!({
+                    "status": "unavailable",
+                    "reason": "repositoryChanged",
+                    "canJump": false
+                }),
+            ),
+        ];
+
+        for (response, expected) in cases {
+            assert_eq!(serde_json::to_value(response).unwrap(), expected);
+        }
+    }
+
+    #[test]
+    fn warning_code_remains_one_json_string() {
+        let warning = ResolutionWarningResponse {
+            code: ResolutionWarningCodeResponseToken::from(
+                ResolutionWarningCode::ResolutionUnavailable(UnavailableReason::BudgetExceeded),
+            ),
+            message: "Resolution budget exceeded.".into(),
+        };
+
+        assert_eq!(
+            serde_json::to_value(warning).unwrap(),
+            serde_json::json!({
+                "code": "budgetExceeded",
+                "message": "Resolution budget exceeded."
+            })
+        );
+    }
+
+    #[test]
+    fn mutation_outcome_tag_and_omission_contract_is_stable() {
+        let committed = DiffCommentMutationOutcomeResponse::Committed {
+            document: empty_document_response(),
+            revision: "0".into(),
+            resolution_warnings: vec![],
+            durability: DiffCommentDurabilityResponseToken::Durable,
+        };
+        let committed_json = serde_json::to_value(committed).unwrap();
+        assert_eq!(committed_json["kind"], "committed");
+        assert_eq!(committed_json["durability"], "durable");
+        assert_eq!(committed_json["resolutionWarnings"], serde_json::json!([]));
+
+        let conflict = DiffCommentMutationOutcomeResponse::Conflict {
+            latest_document: empty_document_response(),
+            latest_revision: "0".into(),
+            resolution_warnings: vec![],
+        };
+        let conflict_json = serde_json::to_value(conflict).unwrap();
+        assert_eq!(conflict_json["kind"], "conflict");
+        assert_eq!(conflict_json["latestRevision"], "0");
+
+        let failure = DiffCommentMutationOutcomeResponse::PreCommitFailure {
+            code: PreCommitFailureCodeResponseToken::RevisionOverflow,
+            retryable: false,
+            current_document: None,
+            current_revision: None,
+        };
+        assert_eq!(
+            serde_json::to_value(failure).unwrap(),
+            serde_json::json!({
+                "kind": "preCommitFailure",
+                "code": "revisionOverflow",
+                "retryable": false
+            })
+        );
+    }
 
     fn identity_request() -> DiffReviewIdentityRequest {
         DiffReviewIdentityRequest {
@@ -748,9 +1029,9 @@ mod tests {
 
     #[test]
     fn revision_overflow_wire_is_non_retryable() {
-        assert_eq!(
-            precommit_code(PreCommitFailureCode::RevisionOverflow),
-            "revisionOverflow"
+        assert_wire_token(
+            PreCommitFailureCodeResponseToken::from(PreCommitFailureCode::RevisionOverflow),
+            "revisionOverflow",
         );
         assert!(!PreCommitFailureCode::RevisionOverflow.retryable());
     }
