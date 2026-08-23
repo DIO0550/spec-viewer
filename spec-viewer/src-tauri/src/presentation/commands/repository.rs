@@ -694,12 +694,121 @@ pub fn load_repository_file(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn assert_wire_token<T>(value: T, expected: &str)
+    where
+        T: Serialize,
+    {
+        assert_eq!(serde_json::to_value(value).unwrap(), expected);
+    }
+
     #[test]
-    fn base_reasons_are_camel_case() {
+    fn repository_domain_enums_have_exhaustive_wire_tokens() {
+        for (value, expected) in [
+            (FileChangeKind::Added, "added"),
+            (FileChangeKind::Modified, "modified"),
+            (FileChangeKind::Deleted, "deleted"),
+            (FileChangeKind::Renamed, "renamed"),
+            (FileChangeKind::Copied, "copied"),
+            (FileChangeKind::TypeChanged, "typeChanged"),
+            (FileChangeKind::Untracked, "untracked"),
+        ] {
+            assert_wire_token(FileChangeKindResponseToken::from(value), expected);
+        }
+        for (value, expected) in [
+            (EntryKind::Regular, "regular"),
+            (EntryKind::Symlink, "symlink"),
+            (EntryKind::Submodule, "submodule"),
+        ] {
+            assert_wire_token(EntryKindResponseToken::from(value), expected);
+        }
+        for (value, expected) in [
+            (ContentClassification::Text, "text"),
+            (ContentClassification::Binary, "binary"),
+            (ContentClassification::NotApplicable, "notApplicable"),
+            (ContentClassification::Unknown, "unknown"),
+        ] {
+            assert_wire_token(ContentClassificationResponseToken::from(value), expected);
+        }
+        for (value, expected) in [
+            (OmissionReason::Binary, "binary"),
+            (OmissionReason::LargeFile, "largeFile"),
+            (OmissionReason::DiffLimit, "diffLimit"),
+            (OmissionReason::MissingSide, "missingSide"),
+            (OmissionReason::UnsupportedEntryKind, "unsupportedEntryKind"),
+        ] {
+            assert_wire_token(OmissionReasonResponseToken::from(value), expected);
+        }
+        for (value, expected) in [
+            (DiffLineKind::Context, "context"),
+            (DiffLineKind::Added, "added"),
+            (DiffLineKind::Removed, "removed"),
+            (DiffLineKind::NoNewline, "noNewline"),
+        ] {
+            assert_wire_token(DiffLineKindResponseToken::from(value), expected);
+        }
+    }
+
+    #[test]
+    fn base_resolution_domain_enums_have_exhaustive_wire_tokens() {
+        for (value, expected) in [
+            (BaseResolutionFailure::NotFound, "notFound"),
+            (
+                BaseResolutionFailure::AmbiguousRemoteHead,
+                "ambiguousRemoteHead",
+            ),
+            (BaseResolutionFailure::DetachedHead, "detachedHead"),
+            (BaseResolutionFailure::ShallowHistory, "shallowHistory"),
+            (BaseResolutionFailure::UnbornHead, "unbornHead"),
+            (BaseResolutionFailure::NoCommonAncestor, "noCommonAncestor"),
+        ] {
+            assert_wire_token(BaseResolutionReasonResponseToken::from(value), expected);
+        }
+        assert_wire_token(BaseResolutionReasonResponseToken::MissingRef, "missingRef");
+        assert_wire_token(BaseResolutionReasonResponseToken::InvalidRef, "invalidRef");
+        for (value, expected) in [
+            (BaseResolutionSource::Explicit, "explicit"),
+            (BaseResolutionSource::GhMergeBase, "ghMergeBase"),
+            (BaseResolutionSource::CurrentRemoteHead, "currentRemoteHead"),
+            (BaseResolutionSource::OriginHead, "originHead"),
+            (BaseResolutionSource::OtherRemoteHead, "otherRemoteHead"),
+            (BaseResolutionSource::Main, "main"),
+            (BaseResolutionSource::Master, "master"),
+        ] {
+            assert_wire_token(BaseResolutionSourceResponseToken::from(value), expected);
+        }
+    }
+
+    #[test]
+    fn base_response_preserves_nullable_wire_contract() {
+        let base = BaseBranchResolution::Resolved {
+            branch_ref: "refs/heads/main".into(),
+            merge_base_sha: CommitSha::parse("a".repeat(40)).unwrap(),
+            head_sha: CommitSha::parse("b".repeat(40)).unwrap(),
+        };
+
+        let json = serde_json::to_value(BaseResponse::from(&base)).unwrap();
+
         assert_eq!(
-            base_reason(BaseResolutionFailure::NoCommonAncestor),
-            "noCommonAncestor"
+            json,
+            serde_json::json!({
+                "state": "resolved",
+                "source": null,
+                "branchRef": "refs/heads/main",
+                "mergeBaseSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "headSha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "reason": null,
+                "candidates": [],
+                "overrideRef": null
+            })
         );
+
+        let invalid = BaseBranchResolution::InvalidOverride {
+            override_ref: "missing".into(),
+            missing: true,
+        };
+        let invalid_json = serde_json::to_value(BaseResponse::from(&invalid)).unwrap();
+        assert_eq!(invalid_json["reason"], "missingRef");
     }
     #[test]
     fn lazy_request_uses_current_snapshot_and_opaque_node_id_fields() {

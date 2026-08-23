@@ -720,6 +720,195 @@ pub fn update_diff_comment(
 mod tests {
     use super::*;
 
+    fn assert_wire_token<T>(value: T, expected: &str)
+    where
+        T: Serialize,
+    {
+        assert_eq!(serde_json::to_value(value).unwrap(), expected);
+    }
+
+    #[test]
+    fn diff_comment_domain_enums_have_exhaustive_wire_tokens() {
+        for (value, expected) in [(DiffSide::Base, "base"), (DiffSide::Current, "current")] {
+            assert_wire_token(DiffSideResponseToken::from(value), expected);
+        }
+        for (value, expected) in [
+            (StaleAnchorReason::SnapshotChanged, "snapshotChanged"),
+            (StaleAnchorReason::PathMissing, "pathMissing"),
+            (StaleAnchorReason::AmbiguousRename, "ambiguousRename"),
+            (StaleAnchorReason::ContextNotFound, "contextNotFound"),
+            (StaleAnchorReason::AmbiguousContext, "ambiguousContext"),
+            (StaleAnchorReason::Deleted, "deleted"),
+            (StaleAnchorReason::Binary, "binary"),
+            (StaleAnchorReason::Unsupported, "unsupported"),
+        ] {
+            assert_wire_token(StaleAnchorReasonResponseToken::from(value), expected);
+        }
+        for (value, expected) in [
+            (UnavailableReason::Io, "io"),
+            (UnavailableReason::Permission, "permission"),
+            (UnavailableReason::BudgetExceeded, "budgetExceeded"),
+            (UnavailableReason::Cancelled, "cancelled"),
+            (UnavailableReason::RepositoryChanged, "repositoryChanged"),
+        ] {
+            assert_wire_token(UnavailableReasonResponseToken::from(value), expected);
+            assert_wire_token(
+                ResolutionWarningCodeResponseToken::from(
+                    ResolutionWarningCode::ResolutionUnavailable(value),
+                ),
+                expected,
+            );
+        }
+        assert_wire_token(
+            ResolutionWarningCodeResponseToken::from(ResolutionWarningCode::DurabilityUncertain),
+            "durabilityUncertain",
+        );
+        for (value, expected) in [
+            (PreCommitFailureCode::RevisionOverflow, "revisionOverflow"),
+            (PreCommitFailureCode::StoreBusy, "storeBusy"),
+            (PreCommitFailureCode::Io, "io"),
+            (PreCommitFailureCode::Permission, "permission"),
+            (PreCommitFailureCode::InvalidStore, "invalidStore"),
+        ] {
+            assert_wire_token(PreCommitFailureCodeResponseToken::from(value), expected);
+        }
+        for (value, expected) in [
+            (DiffCommentDurabilityResponseToken::Durable, "durable"),
+            (DiffCommentDurabilityResponseToken::Uncertain, "uncertain"),
+        ] {
+            assert_wire_token(value, expected);
+        }
+    }
+
+    fn empty_document_response() -> ResolvedDiffCommentsResponse {
+        ResolvedDiffCommentsResponse {
+            version: 1,
+            repository_id: "rr1_repository".into(),
+            worktree_id: "rw1_worktree".into(),
+            revision: "0".into(),
+            comments: vec![],
+            resolution_warnings: vec![],
+        }
+    }
+
+    #[test]
+    fn anchor_resolution_tagged_enum_wire_contract_is_stable() {
+        let cases = [
+            (
+                DiffAnchorResolutionResponse::Exact {
+                    selection_path: "src/current.rs".into(),
+                    side_path: "src/current.rs".into(),
+                    side: DiffSideResponseToken::Current,
+                    line: 4,
+                },
+                serde_json::json!({
+                    "status": "exact",
+                    "selectionPath": "src/current.rs",
+                    "sidePath": "src/current.rs",
+                    "side": "current",
+                    "line": 4
+                }),
+            ),
+            (
+                DiffAnchorResolutionResponse::Relocated {
+                    selection_path: "src/current.rs".into(),
+                    side_path: "src/base.rs".into(),
+                    side: DiffSideResponseToken::Base,
+                    line: 7,
+                },
+                serde_json::json!({
+                    "status": "relocated",
+                    "selectionPath": "src/current.rs",
+                    "sidePath": "src/base.rs",
+                    "side": "base",
+                    "line": 7
+                }),
+            ),
+            (
+                DiffAnchorResolutionResponse::Stale {
+                    reason: StaleAnchorReasonResponseToken::AmbiguousContext,
+                    candidate_count: 2,
+                },
+                serde_json::json!({
+                    "status": "stale",
+                    "reason": "ambiguousContext",
+                    "candidateCount": 2
+                }),
+            ),
+            (
+                DiffAnchorResolutionResponse::Unavailable {
+                    reason: UnavailableReasonResponseToken::RepositoryChanged,
+                    can_jump: false,
+                },
+                serde_json::json!({
+                    "status": "unavailable",
+                    "reason": "repositoryChanged",
+                    "canJump": false
+                }),
+            ),
+        ];
+
+        for (response, expected) in cases {
+            assert_eq!(serde_json::to_value(response).unwrap(), expected);
+        }
+    }
+
+    #[test]
+    fn warning_code_remains_one_json_string() {
+        let warning = ResolutionWarningResponse {
+            code: ResolutionWarningCodeResponseToken::from(
+                ResolutionWarningCode::ResolutionUnavailable(UnavailableReason::BudgetExceeded),
+            ),
+            message: "Resolution budget exceeded.".into(),
+        };
+
+        assert_eq!(
+            serde_json::to_value(warning).unwrap(),
+            serde_json::json!({
+                "code": "budgetExceeded",
+                "message": "Resolution budget exceeded."
+            })
+        );
+    }
+
+    #[test]
+    fn mutation_outcome_tag_and_omission_contract_is_stable() {
+        let committed = DiffCommentMutationOutcomeResponse::Committed {
+            document: empty_document_response(),
+            revision: "0".into(),
+            resolution_warnings: vec![],
+            durability: DiffCommentDurabilityResponseToken::Durable,
+        };
+        let committed_json = serde_json::to_value(committed).unwrap();
+        assert_eq!(committed_json["kind"], "committed");
+        assert_eq!(committed_json["durability"], "durable");
+        assert_eq!(committed_json["resolutionWarnings"], serde_json::json!([]));
+
+        let conflict = DiffCommentMutationOutcomeResponse::Conflict {
+            latest_document: empty_document_response(),
+            latest_revision: "0".into(),
+            resolution_warnings: vec![],
+        };
+        let conflict_json = serde_json::to_value(conflict).unwrap();
+        assert_eq!(conflict_json["kind"], "conflict");
+        assert_eq!(conflict_json["latestRevision"], "0");
+
+        let failure = DiffCommentMutationOutcomeResponse::PreCommitFailure {
+            code: PreCommitFailureCodeResponseToken::RevisionOverflow,
+            retryable: false,
+            current_document: None,
+            current_revision: None,
+        };
+        assert_eq!(
+            serde_json::to_value(failure).unwrap(),
+            serde_json::json!({
+                "kind": "preCommitFailure",
+                "code": "revisionOverflow",
+                "retryable": false
+            })
+        );
+    }
+
     fn identity_request() -> DiffReviewIdentityRequest {
         DiffReviewIdentityRequest {
             repository_id: format!("rr1_{}", "1".repeat(64)),
@@ -840,9 +1029,9 @@ mod tests {
 
     #[test]
     fn revision_overflow_wire_is_non_retryable() {
-        assert_eq!(
-            precommit_code(PreCommitFailureCode::RevisionOverflow),
-            "revisionOverflow"
+        assert_wire_token(
+            PreCommitFailureCodeResponseToken::from(PreCommitFailureCode::RevisionOverflow),
+            "revisionOverflow",
         );
         assert!(!PreCommitFailureCode::RevisionOverflow.retryable());
     }
