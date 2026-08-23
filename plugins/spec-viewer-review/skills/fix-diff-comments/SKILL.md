@@ -1,105 +1,51 @@
 ---
 name: fix-diff-comments
-description: Fix unresolved code review comments created on a repository diff in spec-viewer. Use when the user asks to apply, address, or repair spec-viewer diff comments; do not use for GitHub PR review threads or planning-document comments.
-argument-hint: "[comment-id ...]"
+description: spec-viewerのリポジトリDiffに付いた未解決レビューコメントを読み、現在のワークツリーへ妥当な修正を反映する。GitHub PRのレビュースレッドや計画書コメントの修正には使用しない。
+argument-hint: "[コメントID ...]"
 ---
 
-# Fix Diff Comments
+# Diffコメント修正
 
-Apply valid, unresolved spec-viewer Diff comments to the current working tree while preserving unrelated user changes.
+spec-viewerの未解決Diffコメントを読み、既存のユーザー変更を保護しながら現在のワークツリーへ修正を反映する。
 
-## Comment store
+## コメントを読み込む
 
-Repository Diff comments are stored under the canonical Git common directory:
+1. 対象ファイルに適用される `AGENTS.md` や `CLAUDE.md` を読む。言語・作業フロー用スキルの利用が指定されている場合は、編集前に呼び出す。
+2. `git status --short`、未ステージ差分、ステージ済み差分を確認し、既存変更を破棄・上書きしない。
+3. `git rev-parse --git-common-dir` でGit共通ディレクトリを取得し、その配下の `spec-viewer/diff-comments/df1_*.v1.json` を探す。
+4. コメント文書を読む前に [references/diff-comment-format.md](references/diff-comment-format.md) を読み、`resolved: false` のコメントだけを抽出する。文書または未解決コメントがなければ、その旨を報告して終了する。
+5. 複数worktreeの文書に未解決コメントがある場合は、アンカーのパスと現在のリポジトリを照合する。候補を1件に絞れなければ、`worktreeId` と対象パスを提示してユーザーに選択を求める。推測で選ばない。
+6. `$ARGUMENTS` にコメントIDがあれば該当IDだけを対象にする。指定IDが存在しない、または解決済みなら報告する。引数がなければ選択した文書の未解決コメントをすべて対象にする。
 
-```text
-<git-common-dir>/spec-viewer/diff-comments/df1_*.v1.json
-```
+## コメントを評価する
 
-Resolve `<git-common-dir>` with `git rev-parse --git-common-dir`, then inspect the matching JSON files. Do not edit them.
+`body` を修正要求として扱い、`replies` を時系列の補足指示として読む。後の返信は元の要求を限定・更新できる。
 
-Each document has this shape:
+- `anchor.side` が `current`: `newPath` を編集する。
+- `anchor.side` が `base`: `newPath` があればそれを、なければ `oldPath` に対応する現在のファイルを編集する。baseコミット自体は変更しない。
 
-```json
-{
-  "version": 1,
-  "repositoryId": "rr1_...",
-  "worktreeId": "rw1_...",
-  "revision": "25",
-  "comments": [
-    {
-      "id": "comment-id",
-      "body": "Requested correction",
-      "resolved": false,
-      "createdAt": "2026-08-23T00:00:00Z",
-      "replies": [
-        {
-          "id": "reply-id",
-          "body": "Clarification",
-          "createdAt": "2026-08-23T00:01:00Z"
-        }
-      ],
-      "anchor": {
-        "repositoryId": "rr1_...",
-        "worktreeId": "rw1_...",
-        "baseSha": "commit SHA",
-        "currentSnapshotId": "snapshot ID",
-        "side": "current",
-        "oldPath": "previous/path.ts",
-        "newPath": "current/path.ts",
-        "line": 12,
-        "endLine": 14,
-        "lineHash": "sha256:...",
-        "snippet": "anchored source line",
-        "contextBefore": ["preceding line"],
-        "contextAfter": ["following line"]
-      }
-    }
-  ]
-}
-```
+行番号はコメント作成時点のため古い可能性がある。`snippet`、`contextBefore`、`contextAfter`、パス、現在の差分を組み合わせて対象箇所を特定する。候補が複数ある場合は推測しない。
 
-`oldPath`, `newPath`, `endLine`, and `replies` can be absent when not applicable.
+各コメントを次のいずれかに分類する。
 
-## Load the review
+- **修正**: 問題が存在し、要求内容も妥当。
+- **対応済み**: 現在のコードがすでに要求を満たしている。
+- **スキップ**: 指摘が誤っている、リポジトリ規約や別コメントと矛盾する、対象が存在しない、またはアンカーを特定できない。
 
-1. Read the repository instructions that govern the target files, including `AGENTS.md` or `CLAUDE.md` files. Invoke any language or workflow skills they require before editing.
-2. Inspect `git status --short`, the unstaged Diff, and the staged Diff. Preserve all pre-existing changes.
-3. Find the comment documents in the store above and read comments with `resolved: false`. If no document or unresolved comment exists, report that and stop.
-4. When multiple worktree documents contain unresolved comments, compare their anchor paths with the current repository. If more than one remains plausible, present their `worktreeId` and paths and ask the user which review to apply; do not guess.
-5. If `$ARGUMENTS` contains comment IDs, handle only those IDs and report requested IDs that are absent or already resolved. Otherwise handle every unresolved comment in the selected document.
+スキップ時は根拠を具体的に説明する。
 
-## Evaluate each comment
+## 修正と検証
 
-Use `body` as the requested change. Treat `replies` as chronological clarification; a later reply can narrow or supersede the original request.
+妥当なコメントごとに最小限の変更を行う。重複するコメントは、修正同士が打ち消し合わないようまとめて扱う。振る舞いが変わる場合はテストを更新し、リポジトリ規約で必要な最小範囲のテスト・lint・型チェック・ビルドを実行する。
 
-Resolve the editable path as follows:
+Git共通ディレクトリの `spec-viewer/diff-comments/`、コメントの `resolved`、文書の `revision` は変更しない。コミット、push、外部コメントへの返信や解決は、ユーザーが別途依頼した場合だけ行う。
 
-- `anchor.side: "current"`: use `newPath`.
-- `anchor.side: "base"`: use `newPath` when present, otherwise `oldPath`. Modify the current working tree, never the base commit.
+## 報告
 
-The recorded line range belongs to the snapshot at comment creation and may be stale. Locate the target by combining `snippet`, `contextBefore`, `contextAfter`, the path, and the current Diff. Do not guess when multiple locations are plausible.
-
-Before editing, classify each comment:
-
-- **Apply**: the issue exists and the requested outcome is sound.
-- **Already addressed**: the current code already satisfies it.
-- **Skip**: it is incorrect, conflicts with repository requirements or another comment, targets unavailable content, or cannot be anchored confidently.
-
-Explain skipped comments with concrete evidence.
-
-## Implement and verify
-
-Make the smallest coherent change for each applicable comment. Group overlapping comments so one edit does not undo another. Update tests when behavior changes, and run the narrowest relevant checks required by the repository instructions.
-
-Do not edit the `spec-viewer/diff-comments/` store, change `resolved`, or rewrite `revision`. spec-viewer owns that state. Do not commit, push, post replies, or resolve comments in another system unless the user separately requests those actions.
-
-## Report
-
-Report one result per requested comment:
+対象コメントごとに結果を報告する。
 
 ```text
-- <comment-id> <path>:<line> — fixed | already addressed | skipped: <concise result>
+- <コメントID> <パス>:<行> — 修正 | 対応済み | スキップ: <結果の要約>
 ```
 
-Then list verification commands and outcomes, mention remaining comments, and ask the user to inspect the changes and resolve satisfied comments in spec-viewer.
+最後に検証コマンドと結果、残っているコメントを示し、spec-viewer上で変更確認とコメント解決を行うよう案内する。
