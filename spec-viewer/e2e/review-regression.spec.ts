@@ -136,7 +136,9 @@ test("[R199-REVIEW-002] Diff line creates a comment", async ({ page }) => {
   const composer = page.getByRole("textbox", { name: /2行目へのコメント/ });
   await composer.fill("Diff review");
   await composer.press("Control+Enter");
-  await expect(page.getByText("Diff review")).toBeVisible();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("Diff review"),
+  ).toBeVisible();
 });
 
 test("[R199-REVIEW-003] resolve changes status filter result", async ({
@@ -155,7 +157,9 @@ test("[R199-REVIEW-003] resolve changes status filter result", async ({
   await page.getByRole("button", { name: /^解決 comment-/ }).click();
   await expect(lineComment).toBeHidden();
   await page.getByRole("button", { name: /^解決済み 1$/ }).click();
-  await expect(page.getByText("Resolve me")).toBeVisible();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("Resolve me"),
+  ).toBeVisible();
 });
 
 test("[R199-REVIEW-004] card jump focuses line indicator", async ({ page }) => {

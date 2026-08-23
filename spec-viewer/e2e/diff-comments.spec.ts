@@ -61,19 +61,27 @@ test("actual AppでCAS conflict draftを保持しreloadとA-B-Aでidentityを分
   await expect(page.getByRole("alert")).toContainText("競合");
   await expect(composer).toHaveValue("Conflict-safe draft");
   await composer.press("Control+Enter");
-  await expect(page.getByText("Conflict-safe draft")).toBeVisible();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("Conflict-safe draft"),
+  ).toBeVisible();
 
   await openWorkspace(page, "/workspace/worktree-b");
   await openRepositoryFile(page);
-  await expect(page.getByText("Conflict-safe draft")).toBeHidden();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("Conflict-safe draft"),
+  ).toBeHidden();
   await openWorkspace(page, "/workspace/worktree-a");
   await openRepositoryFile(page);
-  await expect(page.getByText("Conflict-safe draft")).toBeVisible();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("Conflict-safe draft"),
+  ).toBeVisible();
 
   await page.reload();
   await openWorkspace(page, "/workspace/worktree-a");
   await openRepositoryFile(page);
-  await expect(page.getByText("Conflict-safe draft")).toBeVisible();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("Conflict-safe draft"),
+  ).toBeVisible();
 });
 
 test("actual Appでstale保存後に本文を保持して最新snapshotへ再保存できる", async ({
@@ -91,7 +99,11 @@ test("actual Appでstale保存後に本文を保持して最新snapshotへ再保
   await expect(composer).toHaveValue("Retry after snapshot refresh");
   await expect(page.getByRole("button", { name: "保存" })).toBeEnabled();
   await composer.press("Control+Enter");
-  await expect(page.getByText("Retry after snapshot refresh")).toBeVisible();
+  await expect(
+    page
+      .locator(".diff-review-sidebar")
+      .getByText("Retry after snapshot refresh"),
+  ).toBeVisible();
 });
 
 test("actual Appでactive change未選択のEditorは先頭から表示する", async ({
@@ -199,13 +211,19 @@ test("actual Appでpending A-B-A settlementをorigin identityへ隔離する", a
 
   await openWorkspace(page, "/workspace/worktree-b");
   await openRepositoryFile(page);
-  await expect(page.getByText("pending A only")).toBeHidden();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("pending A only"),
+  ).toBeHidden();
   await page.waitForTimeout(350);
-  await expect(page.getByText("pending A only")).toBeHidden();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("pending A only"),
+  ).toBeHidden();
 
   await openWorkspace(page, "/workspace/worktree-a");
   await openRepositoryFile(page);
-  await expect(page.getByText("pending A only")).toBeVisible();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("pending A only"),
+  ).toBeVisible();
 });
 
 test("actual Appでpermission recoveryとcommitted uncertaintyを区別する", async ({
@@ -236,7 +254,9 @@ test("actual Appでpermission recoveryとcommitted uncertaintyを区別する", 
   });
   await uncertainComposer.fill("committed uncertain");
   await uncertainComposer.press("Control+Enter");
-  await expect(page.getByText("committed uncertain")).toBeVisible();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("committed uncertain"),
+  ).toBeVisible();
   await expect(page.getByText(/永続化の確認が不確実/)).toBeVisible();
   await expect(uncertainComposer).toBeHidden();
   await expect(page.getByRole("button", { name: "保存を再試行" })).toBeHidden();
@@ -332,13 +352,17 @@ test("actual AppでAll unchanged current lineをsave reload jumpする", async (
   const composer = page.getByRole("textbox", { name: /2行目へのコメント/ });
   await composer.fill("unchanged All persisted");
   await composer.press("Control+Enter");
-  await expect(page.getByText("unchanged All persisted")).toBeVisible();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("unchanged All persisted"),
+  ).toBeVisible();
 
   await page.reload();
   await openWorkspace(page, "/workspace/worktree-a");
   await page.getByRole("tab", { name: "Diff" }).click();
   await page.getByRole("tab", { name: "All" }).click();
-  await expect(page.getByText("unchanged All persisted")).toBeVisible();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("unchanged All persisted"),
+  ).toBeVisible();
   await page
     .getByRole("button", { name: /notes\.md current 2行目へ移動/ })
     .click();
@@ -377,7 +401,9 @@ test("actual AppでstoreBusyとioはdraftを保持してretryできinvalidStore�
     ).toBeVisible();
     await page.getByRole("button", { name: "保存を再試行" }).click();
     await expect(
-      page.getByText(`${scenario.failure} retry body`),
+      page
+        .locator(".diff-review-sidebar")
+        .getByText(`${scenario.failure} retry body`),
     ).toBeVisible();
   }
 
@@ -407,7 +433,9 @@ test("actual Appでrelocatedだけjump可能、staleは非jumpでexport操作を
   await openWorkspace(page, "/workspace/worktree-a");
   await openRepositoryFile(page);
 
-  await expect(page.getByText("relocated body")).toBeVisible();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("relocated body"),
+  ).toBeVisible();
   await page
     .getByRole("button", {
       name: /implementation-plan\.md current 2行目へ移動/,
@@ -465,13 +493,17 @@ test("actual AppでDiffコメントを確認後に削除する", async ({ page }
   const composer = page.getByRole("textbox", { name: /2行目へのコメント/ });
   await composer.fill("delete this comment");
   await composer.press("Control+Enter");
-  await expect(page.getByText("delete this comment")).toBeVisible();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("delete this comment"),
+  ).toBeVisible();
 
   await page.getByRole("button", { name: /^削除 comment-/ }).click();
   await page
     .getByRole("button", { name: /^コメント削除を確定 comment-/ })
     .click();
 
-  await expect(page.getByText("delete this comment")).toBeHidden();
+  await expect(
+    page.locator(".diff-review-sidebar").getByText("delete this comment"),
+  ).toBeHidden();
   await expect(page.locator("article[data-comment-id]")).toHaveCount(0);
 });
