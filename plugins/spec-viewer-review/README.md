@@ -4,7 +4,7 @@ Claude Code plugin that applies unresolved review comments created on repository
 
 The plugin provides the `/spec-viewer-review:fix-diff-comments` skill. Pass one or more comment IDs to limit the repair, or omit arguments to process every unresolved comment in the current worktree.
 
-The bundled reader locates the current worktree's private spec-viewer comment document without changing it. The skill edits source files and runs repository checks, but leaves comment resolution to spec-viewer.
+The skill reads spec-viewer Diff comment JSON directly, applies valid unresolved instructions to source files, and runs repository checks. It does not require a helper runtime or modify the comment document; comment resolution remains in spec-viewer.
 
 ## Local development
 
