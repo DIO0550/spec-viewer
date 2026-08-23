@@ -1663,8 +1663,12 @@ impl GitRepositoryAdapter {
         path: &RepositoryRelativePath,
     ) -> Result<SubmoduleState, RepositoryPortError> {
         let mut previous = self.submodule_state(root, merge, path);
+        #[cfg(all(test, windows))]
+        eprintln!("submodule stability observation 1: {previous:?}");
         for _ in 0..2 {
             let current = self.submodule_state(root, merge, path);
+            #[cfg(all(test, windows))]
+            eprintln!("submodule stability observation: {current:?}");
             if current == previous {
                 return Ok(current);
             }
@@ -2165,8 +2169,14 @@ impl RepositoryPort for GitRepositoryAdapter {
         path: &RepositoryRelativePath,
     ) -> Result<RepositoryFileReview, RepositoryPortError> {
         let root = self.root(worktree)?;
+        #[cfg(all(test, windows))]
+        eprintln!("load_file checkpoint: root");
         let context = self.review_context(&root, snapshot)?;
+        #[cfg(all(test, windows))]
+        eprintln!("load_file checkpoint: context");
         let initial_path_fingerprint = selected_path_fingerprint(&self.runner, &root, path)?;
+        #[cfg(all(test, windows))]
+        eprintln!("load_file checkpoint: path fingerprint");
         let file = context
             .changed
             .iter()
@@ -2237,6 +2247,8 @@ impl RepositoryPort for GitRepositoryAdapter {
             return Ok(review);
         };
         if file.entry_kind == EntryKind::Submodule {
+            #[cfg(all(test, windows))]
+            eprintln!("load_file checkpoint: submodule branch");
             let omitted = ContentAvailability::Omitted {
                 reason: OmissionReason::UnsupportedEntryKind,
                 byte_length: None,
