@@ -145,6 +145,11 @@
     "name": "Default"
   },
   {
+    "id": "components-errorboundary--dialog-error",
+    "title": "components/ErrorBoundary",
+    "name": "Dialog Error"
+  },
+  {
     "id": "components-errorboundary--edge-cases",
     "title": "components/ErrorBoundary",
     "name": "Edge Cases"
@@ -460,6 +465,11 @@
     "name": "Availability Matrix"
   },
   {
+    "id": "features-diff-components-currentfileviewer--current-content-only",
+    "title": "features/diff/components/CurrentFileViewer",
+    "name": "Current Content Only"
+  },
+  {
     "id": "features-diff-components-currentfileviewer--dark-theme",
     "title": "features/diff/components/CurrentFileViewer",
     "name": "Dark Theme"
@@ -498,11 +508,6 @@
     "id": "features-diff-components-currentfileviewer--invalid-hunks",
     "title": "features/diff/components/CurrentFileViewer",
     "name": "Invalid Hunks"
-  },
-  {
-    "id": "features-diff-components-currentfileviewer--keyboard-peek",
-    "title": "features/diff/components/CurrentFileViewer",
-    "name": "Keyboard Peek"
   },
   {
     "id": "features-diff-components-currentfileviewer--large-line-count",
@@ -958,6 +963,11 @@
     "id": "features-specs-components-markdownviewer--highlighted-selection-surface",
     "title": "features/specs/components/MarkdownViewer",
     "name": "Highlighted Selection Surface"
+  },
+  {
+    "id": "features-specs-components-markdownviewer--mermaid-diagram",
+    "title": "features/specs/components/MarkdownViewer",
+    "name": "Mermaid Diagram"
   },
   {
     "id": "features-specs-components-markdownviewer--tech-reference-html-preview",
