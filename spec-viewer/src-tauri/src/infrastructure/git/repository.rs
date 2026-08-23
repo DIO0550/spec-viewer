@@ -1956,15 +1956,19 @@ impl RepositoryPort for GitRepositoryAdapter {
         if current_head != *head_sha || current_merge.trim() != merge_base_sha.as_str() {
             return Err(RepositoryPortError::StaleBase);
         }
-        let repository_changed = match initial_watch_generation {
+        let watch_requires_confirmation = match initial_watch_generation {
             Some(initial) => self
                 .repository_watches
                 .generation(&root, &watch_paths)
                 .map(|current| current != initial)
                 .unwrap_or(true),
-            None => self.snapshot(&root, &repository_id)? != snapshot,
+            None => true,
         };
-        if repository_changed {
+        // Filesystem watchers are an optimization, not a source of truth. In
+        // particular, Windows can report metadata activity from read-only Git
+        // commands as a change. Confirm such notifications against the content
+        // snapshot so stable repositories do not fail an overview load.
+        if watch_requires_confirmation && self.snapshot(&root, &repository_id)? != snapshot {
             return Err(RepositoryPortError::EntryChangedDuringRead);
         }
         let worktree_storage_id = self.worktree_storage_id(&root)?;
