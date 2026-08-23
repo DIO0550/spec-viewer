@@ -71,6 +71,51 @@ pub struct UpdateDiffCommentRequest {
     deleted: bool,
 }
 
+#[derive(Debug)]
+struct UpdateDiffCommentCommandInput {
+    identity: DiffReviewIdentity,
+    expected_revision: DiffCommentRevision,
+    intent: DiffCommentUpdate,
+}
+
+impl TryFrom<UpdateDiffCommentRequest> for UpdateDiffCommentCommandInput {
+    type Error = DiffCommentCommandError;
+
+    fn try_from(value: UpdateDiffCommentRequest) -> Result<Self, Self::Error> {
+        let UpdateDiffCommentRequest {
+            identity,
+            expected_revision,
+            comment_id,
+            body,
+            resolved,
+            reply_body,
+            deleted,
+        } = value;
+        let identity = DiffReviewIdentity::try_from(identity)?;
+        let expected_revision = expected_revision
+            .parse::<DiffCommentRevision>()
+            .map_err(invalid_revision)?;
+        let intent = match (deleted, body, resolved, reply_body) {
+            (true, None, None, None) => DiffCommentUpdate::Delete { comment_id },
+            (false, body, resolved, None) if body.is_some() || resolved.is_some() => {
+                DiffCommentUpdate::Edit {
+                    comment_id,
+                    body,
+                    resolved,
+                }
+            }
+            (false, None, None, Some(body)) => DiffCommentUpdate::Reply { comment_id, body },
+            _ => return Err(DiffCommentCommandError::invalid("update")),
+        };
+
+        Ok(Self {
+            identity,
+            expected_revision,
+            intent,
+        })
+    }
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct DiffAnchorTargetRequest {
@@ -557,23 +602,17 @@ pub fn update_diff_comment(
     state: State<'_, CommandState>,
     request: UpdateDiffCommentRequest,
 ) -> Result<DiffCommentMutationOutcomeResponse, DiffCommentCommandError> {
-    let identity = DiffReviewIdentity::try_from(request.identity)?;
-    let revision = request
-        .expected_revision
-        .parse::<DiffCommentRevision>()
-        .map_err(invalid_revision)?;
+    let UpdateDiffCommentCommandInput {
+        identity,
+        expected_revision,
+        intent,
+    } = request.try_into()?;
     state
         .diff_comment_use_cases()
         .update(
             &identity,
-            revision,
-            DiffCommentUpdate::new(
-                request.comment_id,
-                request.body,
-                request.resolved,
-                request.reply_body,
-                request.deleted,
-            ),
+            expected_revision,
+            intent,
             &CancellationToken::default(),
         )
         .map(Into::into)
@@ -583,6 +622,32 @@ pub fn update_diff_comment(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn identity_request() -> DiffReviewIdentityRequest {
+        DiffReviewIdentityRequest {
+            repository_id: format!("rr1_{}", "1".repeat(64)),
+            worktree_id: format!("rw1_{}", "2".repeat(64)),
+            base_sha: "3".repeat(40),
+            current_snapshot_id: format!("rs1_{}", "4".repeat(64)),
+        }
+    }
+
+    fn update_request(
+        body: Option<&str>,
+        resolved: Option<bool>,
+        reply_body: Option<&str>,
+        deleted: bool,
+    ) -> UpdateDiffCommentRequest {
+        UpdateDiffCommentRequest {
+            identity: identity_request(),
+            expected_revision: "0".into(),
+            comment_id: "c1".into(),
+            body: body.map(str::to_owned),
+            resolved,
+            reply_body: reply_body.map(str::to_owned),
+            deleted,
+        }
+    }
 
     #[test]
     fn unavailable_wire_is_non_jumpable() {

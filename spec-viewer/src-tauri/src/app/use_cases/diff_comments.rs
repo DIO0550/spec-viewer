@@ -66,28 +66,27 @@ pub enum DiffCommentMutationOutcome {
 }
 
 #[derive(Debug, Clone)]
-pub struct DiffCommentUpdate {
-    comment_id: String,
-    body: Option<String>,
-    resolved: Option<bool>,
-    reply_body: Option<String>,
-    deleted: bool,
-}
-
-impl DiffCommentUpdate {
-    pub fn new(
+pub enum DiffCommentUpdate {
+    Edit {
         comment_id: String,
         body: Option<String>,
         resolved: Option<bool>,
-        reply_body: Option<String>,
-        deleted: bool,
-    ) -> Self {
-        Self {
-            comment_id,
-            body,
-            resolved,
-            reply_body,
-            deleted,
+    },
+    Reply {
+        comment_id: String,
+        body: String,
+    },
+    Delete {
+        comment_id: String,
+    },
+}
+
+impl DiffCommentUpdate {
+    fn comment_id(&self) -> &str {
+        match self {
+            Self::Edit { comment_id, .. }
+            | Self::Reply { comment_id, .. }
+            | Self::Delete { comment_id } => comment_id,
         }
     }
 }
@@ -219,21 +218,6 @@ impl<B: DiffCommentBackendPort> DiffCommentUseCases<B> {
         cancellation: &CancellationToken,
     ) -> Result<DiffCommentMutationOutcome, DiffCommentUseCaseError> {
         let context = self.backend.resolution_context(identity, cancellation)?;
-        if !update.deleted
-            && update.body.is_none()
-            && update.resolved.is_none()
-            && update.reply_body.is_none()
-        {
-            return Err(DiffCommentUseCaseError::InvalidRequest("empty update"));
-        }
-        if update.deleted
-            && (update.body.is_some() || update.resolved.is_some() || update.reply_body.is_some())
-        {
-            return Err(DiffCommentUseCaseError::InvalidRequest("mixed delete"));
-        }
-        if update.reply_body.is_some() && (update.body.is_some() || update.resolved.is_some()) {
-            return Err(DiffCommentUseCaseError::InvalidRequest("mixed reply"));
-        }
         let outcome =
             self.backend
                 .mutate_document(&context, expected_revision, &|document, revision| {
@@ -242,28 +226,26 @@ impl<B: DiffCommentBackendPort> DiffCommentUseCases<B> {
                         .comments()
                         .iter()
                         .filter_map(|comment| {
-                            if comment.id() != update.comment_id {
+                            if comment.id() != update.comment_id() {
                                 return Some(Ok(comment.clone()));
                             }
                             found = true;
-                            if update.deleted {
-                                None
-                            } else if let Some(reply_body) = &update.reply_body {
-                                Some(
+                            match &update {
+                                DiffCommentUpdate::Edit { body, resolved, .. } => Some(
+                                    comment
+                                        .update(body.clone(), *resolved)
+                                        .map_err(|_| DiffCommentRepositoryError::InvalidStore),
+                                ),
+                                DiffCommentUpdate::Reply { body, .. } => Some(
                                     comment
                                         .add_reply(
                                             Uuid::new_v4().to_string(),
-                                            reply_body.clone(),
+                                            body.clone(),
                                             Utc::now(),
                                         )
                                         .map_err(|_| DiffCommentRepositoryError::InvalidStore),
-                                )
-                            } else {
-                                Some(
-                                    comment
-                                        .update(update.body.clone(), update.resolved)
-                                        .map_err(|_| DiffCommentRepositoryError::InvalidStore),
-                                )
+                                ),
+                                DiffCommentUpdate::Delete { .. } => None,
                             }
                         })
                         .collect::<Result<Vec<_>, _>>()?;
@@ -959,7 +941,9 @@ mod tests {
             .update(
                 &identity(),
                 DiffCommentRevision::ZERO,
-                DiffCommentUpdate::new("c1".into(), None, None, None, true),
+                DiffCommentUpdate::Delete {
+                    comment_id: "c1".into(),
+                },
                 &CancellationToken::default(),
             )
             .unwrap();
@@ -977,7 +961,10 @@ mod tests {
             .update(
                 &identity(),
                 DiffCommentRevision::ZERO,
-                DiffCommentUpdate::new("c1".into(), None, None, Some("follow up".into()), false),
+                DiffCommentUpdate::Reply {
+                    comment_id: "c1".into(),
+                    body: "follow up".into(),
+                },
                 &CancellationToken::default(),
             )
             .unwrap();
@@ -990,6 +977,30 @@ mod tests {
             document.comments[0].comment.replies()[0].body(),
             "follow up"
         );
+    }
+
+    #[test]
+    fn update_edits_body_and_resolution_without_adding_reply() {
+        let backend = FakeBackend::new(document(), None);
+        let outcome = DiffCommentUseCases::new(backend)
+            .update(
+                &identity(),
+                DiffCommentRevision::ZERO,
+                DiffCommentUpdate::Edit {
+                    comment_id: "c1".into(),
+                    body: Some("updated body".into()),
+                    resolved: Some(true),
+                },
+                &CancellationToken::default(),
+            )
+            .unwrap();
+
+        let DiffCommentMutationOutcome::Committed { document, .. } = outcome else {
+            panic!("edit must commit");
+        };
+        assert_eq!(document.comments[0].comment.body(), "updated body");
+        assert!(document.comments[0].comment.resolved());
+        assert!(document.comments[0].comment.replies().is_empty());
     }
 
     #[test]
