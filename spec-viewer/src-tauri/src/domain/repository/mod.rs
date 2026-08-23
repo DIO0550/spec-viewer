@@ -595,6 +595,20 @@ pub trait WorkingTreeDiffPort {
 #[cfg(test)]
 mod tests {
     use crate::domain::workspace::ValidatedRefName;
+
+    #[test]
+    fn git_file_modes_derive_entry_kinds_exhaustively() {
+        for (mode, expected) in [
+            (GitFileMode::Regular, Some(EntryKind::Regular)),
+            (GitFileMode::Executable, Some(EntryKind::Regular)),
+            (GitFileMode::Symlink, Some(EntryKind::Symlink)),
+            (GitFileMode::Submodule, Some(EntryKind::Submodule)),
+            (GitFileMode::Directory, None),
+        ] {
+            assert_eq!(mode.entry_kind(), expected);
+        }
+    }
+
     #[test]
     fn stdio_stream_tokens_and_error_display_match_the_wire_contract() {
         for (stream, expected) in [
@@ -716,6 +730,58 @@ mod tests {
             Some(90)
         )
         .is_err());
+    }
+
+    #[test]
+    fn diff_file_rejects_directory_and_mode_entry_kind_mismatches() {
+        let path = || RepositoryRelativePath::parse("mode.txt").unwrap();
+        let invalid_states = [
+            (
+                EntryKind::Regular,
+                Some(GitFileMode::Regular),
+                Some(GitFileMode::Submodule),
+            ),
+            (
+                EntryKind::Symlink,
+                Some(GitFileMode::Regular),
+                Some(GitFileMode::Regular),
+            ),
+            (
+                EntryKind::Regular,
+                Some(GitFileMode::Directory),
+                Some(GitFileMode::Directory),
+            ),
+        ];
+
+        for (entry_kind, old_mode, new_mode) in invalid_states {
+            assert_eq!(
+                DiffFile::new(
+                    Some(path()),
+                    Some(path()),
+                    FileChangeKind::Modified,
+                    entry_kind,
+                    ContentClassification::Text,
+                    None,
+                    old_mode,
+                    new_mode,
+                ),
+                Err(RepositoryError::InvalidValue(
+                    "invalid diff file state".into()
+                ))
+            );
+        }
+
+        assert!(DiffFile::new(
+            Some(path()),
+            Some(path()),
+            FileChangeKind::Modified,
+            EntryKind::Regular,
+            ContentClassification::Text,
+            None,
+            Some(GitFileMode::Regular),
+            Some(GitFileMode::Executable),
+        )
+        .is_ok());
     }
 
     #[test]

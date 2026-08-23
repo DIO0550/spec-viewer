@@ -2754,6 +2754,54 @@ fn map_filesystem_error(error: std::io::Error) -> RepositoryPortError {
 #[cfg(test)]
 mod tests {
     #[test]
+    fn git_mode_parser_accepts_only_canonical_modes() {
+        let modes = parse_mode_map(
+            b"100644 blob a\tregular\0\
+100755 blob b\texecutable\0\
+120000 blob c\tsymlink\0\
+160000 commit d\tsubmodule\0\
+040000 tree e\tdirectory\0",
+        )
+        .unwrap();
+
+        assert_eq!(modes["regular"], GitFileMode::Regular);
+        assert_eq!(modes["executable"], GitFileMode::Executable);
+        assert_eq!(modes["symlink"], GitFileMode::Symlink);
+        assert_eq!(modes["submodule"], GitFileMode::Submodule);
+        assert_eq!(modes["directory"], GitFileMode::Directory);
+        assert_eq!(
+            parse_mode_map(b"100600 blob a\tunsupported\0"),
+            Err(RepositoryPortError::InvalidRepositoryPath)
+        );
+        assert_eq!(
+            entry_kind_for_modes(None, Some(GitFileMode::Directory)),
+            Err(RepositoryPortError::InvalidRepositoryPath)
+        );
+        assert_eq!(
+            entry_kind_for_modes(Some(GitFileMode::Regular), Some(GitFileMode::Submodule)),
+            Ok(EntryKind::Submodule)
+        );
+    }
+
+    #[test]
+    fn file_history_parser_types_timestamps_and_rejects_invalid_values() {
+        let sha = "a".repeat(40);
+        let timestamp = "2026-08-23T12:34:56+09:30";
+        let valid = format!("{sha}\0{timestamp}\0message\n");
+        let history = parse_file_history(valid.as_bytes(), 50).unwrap();
+        assert_eq!(
+            history.items[0].committed_at.to_rfc3339(),
+            "2026-08-23T12:34:56+09:30"
+        );
+
+        let invalid = format!("{sha}\0not-a-timestamp\0message\n");
+        assert_eq!(
+            parse_file_history(invalid.as_bytes(), 50),
+            Err(RepositoryPortError::InvalidHistoryOutput)
+        );
+    }
+
+    #[test]
     fn diff_comment_context_requires_full_identity_and_snapshot_file_matrix() {
         use crate::domain::comment::diff::{DiffAnchorPaths, DiffAnchorTarget, DiffSide};
         use std::num::NonZeroU32;
@@ -2819,8 +2867,8 @@ mod tests {
                         EntryKind::Regular,
                         ContentClassification::Text,
                         Some(100),
-                        Some("100644".into()),
-                        Some("100644".into()),
+                        Some(GitFileMode::Regular),
+                        Some(GitFileMode::Regular),
                     )
                     .unwrap(),
                 );
@@ -3635,12 +3683,12 @@ mod tests {
             content_classification: ContentClassification::Text,
             similarity: None,
             old_mode: None,
-            new_mode: Some("100644".into()),
+            new_mode: Some(GitFileMode::Regular),
         };
         assert!(similarity_warnings(&vec![candidate.clone(); 1000]).is_empty());
         assert_eq!(
             similarity_warnings(&vec![candidate; 1001]),
-            vec!["similarityDetectionLimit"]
+            vec![RepositoryWarning::SimilarityDetectionLimit]
         );
     }
 
@@ -4625,8 +4673,8 @@ mod tests {
                         .is_some_and(|path| path.as_str() == "mode-only.sh")
                 })
                 .unwrap();
-            assert_eq!(mode.old_mode.as_deref(), Some("100644"));
-            assert_eq!(mode.new_mode.as_deref(), Some("100755"));
+            assert_eq!(mode.old_mode, Some(GitFileMode::Regular));
+            assert_eq!(mode.new_mode, Some(GitFileMode::Executable));
         }
         let review = adapter
             .load_file(

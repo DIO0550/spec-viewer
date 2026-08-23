@@ -431,6 +431,26 @@ mod tests {
     use super::*;
 
     use crate::domain::repository::FileChangeKind;
+    use chrono::DateTime;
+
+    #[test]
+    fn file_history_response_preserves_timestamp_offset_wire_contract() {
+        let response = SpecFileCommitResponse::from(SpecFileCommit {
+            commit: CommitSha::parse("a".repeat(40)).unwrap(),
+            committed_at: DateTime::parse_from_rfc3339("2026-08-23T12:34:56+09:30").unwrap(),
+            message: "typed timestamp".into(),
+        });
+
+        assert_eq!(
+            serde_json::to_value(response).unwrap(),
+            serde_json::json!({
+                "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "committedAt": "2026-08-23T12:34:56+09:30",
+                "message": "typed timestamp"
+            })
+        );
+    }
+
     #[test]
     fn requests_use_camel_case_contract() {
         let request: GetSpecFileDiffRequest = serde_json::from_value(serde_json::json!({
@@ -512,6 +532,23 @@ mod tests {
         for (code, expected) in cases {
             assert_eq!(serde_json::to_value(code).unwrap(), expected);
         }
+    }
+
+    #[test]
+    fn invalid_timestamp_preserves_history_error_wire_contract() {
+        let error: SpecDiffCommandError =
+            SpecDiffUseCaseError::<SpecDiffTargetResolutionError>::Repository(
+                RepositoryPortError::InvalidHistoryOutput,
+            )
+            .into();
+
+        assert_eq!(
+            serde_json::to_value(error).unwrap(),
+            serde_json::json!({
+                "code": "invalidHistoryOutput",
+                "message": "invalid Git history output"
+            })
+        );
     }
 
     #[test]
