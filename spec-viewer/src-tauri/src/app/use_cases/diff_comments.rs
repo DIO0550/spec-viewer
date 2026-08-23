@@ -15,7 +15,7 @@ use crate::domain::{
     comment::{
         diff::{
             canonical_lines, line_hash, truncate_context, CancellationToken, DiffAnchorResolution,
-            DiffAnchorTarget, DiffCommentError, DiffCommentRevision, DiffLineAnchor,
+            DiffAnchorTarget, DiffCommentError, DiffCommentRevision, DiffLineAnchor, DiffLineHash,
             DiffReviewIdentity, ResolutionWarning, ResolutionWarningCode, ResolvedDiffComment,
             ResolvedDiffComments, StaleAnchorReason, StoredDiffComment, StoredDiffCommentDocument,
             UnavailableReason,
@@ -116,7 +116,7 @@ impl ResolutionClock for SystemResolutionClock {
 #[derive(Debug)]
 struct SourceIndex {
     lines: Vec<String>,
-    by_hash: HashMap<String, Vec<usize>>,
+    by_hash: HashMap<DiffLineHash, Vec<usize>>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -134,7 +134,7 @@ impl SourceIndex {
             .into_iter()
             .map(ToOwned::to_owned)
             .collect::<Vec<_>>();
-        let mut by_hash = HashMap::<String, Vec<usize>>::new();
+        let mut by_hash = HashMap::<DiffLineHash, Vec<usize>>::new();
         for (index, line) in lines.iter().enumerate() {
             by_hash.entry(line_hash(line)).or_default().push(index);
         }
@@ -604,7 +604,7 @@ fn resolve_one_for_target(
     if identity_matches
         && lines
             .get(original)
-            .is_some_and(|line| line_hash(line) == anchor.line_hash())
+            .is_some_and(|line| anchor.line_hash() == &line_hash(line))
     {
         return DiffAnchorResolution::Exact {
             selection_path: runtime_target.selection_path().clone(),

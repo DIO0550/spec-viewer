@@ -12,9 +12,10 @@ use crate::{
     },
     domain::{
         comment::diff::{
-            CancellationToken, DiffAnchorResolution, DiffAnchorTarget, DiffCommentRevision,
-            DiffReviewIdentity, DiffSide, ResolutionWarningCode, ResolvedDiffComment,
-            ResolvedDiffComments, StaleAnchorReason, UnavailableReason, WorktreeStorageId,
+            CancellationToken, DiffAnchorPaths, DiffAnchorResolution, DiffAnchorTarget,
+            DiffCommentRevision, DiffReviewIdentity, DiffSide, ResolutionWarningCode,
+            ResolvedDiffComment, ResolvedDiffComments, StaleAnchorReason, UnavailableReason,
+            WorktreeStorageId,
         },
         repository::{CommitSha, RepositoryId, RepositoryRelativePath, SnapshotId},
     },
@@ -137,7 +138,7 @@ enum DiffSideRequest {
 impl TryFrom<DiffAnchorTargetRequest> for DiffAnchorTarget {
     type Error = DiffCommentCommandError;
     fn try_from(value: DiffAnchorTargetRequest) -> Result<Self, Self::Error> {
-        DiffAnchorTarget::new_range(
+        let paths = DiffAnchorPaths::new(
             match value.side {
                 DiffSideRequest::Base => DiffSide::Base,
                 DiffSideRequest::Current => DiffSide::Current,
@@ -152,6 +153,10 @@ impl TryFrom<DiffAnchorTargetRequest> for DiffAnchorTarget {
                 .map(RepositoryRelativePath::parse)
                 .transpose()
                 .map_err(invalid)?,
+        )
+        .map_err(invalid)?;
+        DiffAnchorTarget::new_range(
+            paths,
             NonZeroU32::new(value.line).ok_or_else(|| DiffCommentCommandError::invalid("line"))?,
             value
                 .end_line
@@ -405,7 +410,7 @@ impl From<&ResolvedDiffComment> for ResolvedDiffCommentResponse {
                 new_path: target.new_path().map(|path| path.as_str().into()),
                 line: target.line().get(),
                 end_line: target.end_line().map(NonZeroU32::get),
-                line_hash: anchor.line_hash().into(),
+                line_hash: anchor.line_hash().as_str().into(),
                 snippet: anchor.snippet().into(),
                 context_before: anchor.context_before().to_vec(),
                 context_after: anchor.context_after().to_vec(),

@@ -12,8 +12,8 @@ use thiserror::Error;
 
 use crate::domain::{
     comment::diff::{
-        DiffAnchorTarget, DiffCommentReply, DiffCommentRevision, DiffLineAnchor,
-        DiffReviewIdentity, DiffSide, StoredDiffComment, StoredDiffCommentDocument,
+        DiffAnchorPaths, DiffAnchorTarget, DiffCommentReply, DiffCommentRevision, DiffLineAnchor,
+        DiffLineHash, DiffReviewIdentity, DiffSide, StoredDiffComment, StoredDiffCommentDocument,
         WorktreeStorageId,
     },
     repository::{CommitSha, RepositoryId, RepositoryRelativePath, SnapshotId},
@@ -177,7 +177,7 @@ impl From<&StoredDiffComment> for CommentDto {
                 new_path: target.new_path().map(|path| path.as_str().into()),
                 line: target.line().get(),
                 end_line: target.end_line().map(NonZeroU32::get),
-                line_hash: anchor.line_hash().into(),
+                line_hash: anchor.line_hash().as_str().into(),
                 snippet: anchor.snippet().into(),
                 context_before: anchor.context_before().to_vec(),
                 context_after: anchor.context_after().to_vec(),
@@ -206,7 +206,7 @@ impl CommentDto {
                 "anchor identity mismatch".into(),
             ));
         }
-        let target = DiffAnchorTarget::new_range(
+        let paths = DiffAnchorPaths::new(
             match self.anchor.side {
                 SideDto::Base => DiffSide::Base,
                 SideDto::Current => DiffSide::Current,
@@ -221,6 +221,10 @@ impl CommentDto {
                 .map(RepositoryRelativePath::parse)
                 .transpose()
                 .map_err(|error| DiffCommentJsonError::Invalid(error.to_string()))?,
+        )
+        .map_err(|error| DiffCommentJsonError::Invalid(error.to_string()))?;
+        let target = DiffAnchorTarget::new_range(
+            paths,
             NonZeroU32::new(self.anchor.line)
                 .ok_or_else(|| DiffCommentJsonError::Invalid("line must be non-zero".into()))?,
             self.anchor
@@ -233,10 +237,12 @@ impl CommentDto {
                 .transpose()?,
         )
         .map_err(|error| DiffCommentJsonError::Invalid(error.to_string()))?;
+        let line_hash = DiffLineHash::parse(self.anchor.line_hash)
+            .map_err(|error| DiffCommentJsonError::Invalid(error.to_string()))?;
         let anchor = DiffLineAnchor::new(
             identity,
             target,
-            self.anchor.line_hash,
+            line_hash,
             self.anchor.snippet,
             self.anchor.context_before,
             self.anchor.context_after,

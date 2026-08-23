@@ -135,58 +135,107 @@ pub enum DiffSide {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum DiffAnchorPaths {
+    Base {
+        old_path: RepositoryRelativePath,
+        new_path: Option<RepositoryRelativePath>,
+    },
+    Current {
+        new_path: RepositoryRelativePath,
+        old_path: Option<RepositoryRelativePath>,
+    },
+}
+
+impl DiffAnchorPaths {
+    pub fn new(
+        side: DiffSide,
+        old_path: Option<RepositoryRelativePath>,
+        new_path: Option<RepositoryRelativePath>,
+    ) -> Result<Self, DiffCommentError> {
+        match (side, old_path, new_path) {
+            (DiffSide::Base, Some(old_path), new_path) => Ok(Self::Base { old_path, new_path }),
+            (DiffSide::Current, old_path, Some(new_path)) => {
+                Ok(Self::Current { new_path, old_path })
+            }
+            _ => Err(DiffCommentError::InvalidValue("sidePath")),
+        }
+    }
+
+    pub fn side(&self) -> DiffSide {
+        match self {
+            Self::Base { .. } => DiffSide::Base,
+            Self::Current { .. } => DiffSide::Current,
+        }
+    }
+
+    pub fn old_path(&self) -> Option<&RepositoryRelativePath> {
+        match self {
+            Self::Base { old_path, .. } => Some(old_path),
+            Self::Current { old_path, .. } => old_path.as_ref(),
+        }
+    }
+
+    pub fn new_path(&self) -> Option<&RepositoryRelativePath> {
+        match self {
+            Self::Base { new_path, .. } => new_path.as_ref(),
+            Self::Current { new_path, .. } => Some(new_path),
+        }
+    }
+
+    pub fn side_path(&self) -> &RepositoryRelativePath {
+        match self {
+            Self::Base { old_path, .. } => old_path,
+            Self::Current { new_path, .. } => new_path,
+        }
+    }
+
+    pub fn selection_path(&self) -> &RepositoryRelativePath {
+        match self {
+            Self::Base { old_path, new_path } => new_path.as_ref().unwrap_or(old_path),
+            Self::Current { new_path, .. } => new_path,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DiffAnchorTarget {
-    side: DiffSide,
-    old_path: Option<RepositoryRelativePath>,
-    new_path: Option<RepositoryRelativePath>,
+    paths: DiffAnchorPaths,
     line: NonZeroU32,
     end_line: Option<NonZeroU32>,
 }
 
 impl DiffAnchorTarget {
-    pub fn new(
-        side: DiffSide,
-        old_path: Option<RepositoryRelativePath>,
-        new_path: Option<RepositoryRelativePath>,
-        line: NonZeroU32,
-    ) -> Result<Self, DiffCommentError> {
-        Self::new_range(side, old_path, new_path, line, None)
+    pub fn new(paths: DiffAnchorPaths, line: NonZeroU32) -> Self {
+        Self {
+            paths,
+            line,
+            end_line: None,
+        }
     }
 
     pub fn new_range(
-        side: DiffSide,
-        old_path: Option<RepositoryRelativePath>,
-        new_path: Option<RepositoryRelativePath>,
+        paths: DiffAnchorPaths,
         line: NonZeroU32,
         end_line: Option<NonZeroU32>,
     ) -> Result<Self, DiffCommentError> {
-        let valid = match side {
-            DiffSide::Base => old_path.is_some(),
-            DiffSide::Current => new_path.is_some(),
-        };
-        if !valid {
-            return Err(DiffCommentError::InvalidValue("sidePath"));
-        }
         if end_line.is_some_and(|end| end < line) {
             return Err(DiffCommentError::InvalidValue("endLine"));
         }
         Ok(Self {
-            side,
-            old_path,
-            new_path,
+            paths,
             line,
             end_line: end_line.filter(|end| *end != line),
         })
     }
 
     pub fn side(&self) -> DiffSide {
-        self.side
+        self.paths.side()
     }
     pub fn old_path(&self) -> Option<&RepositoryRelativePath> {
-        self.old_path.as_ref()
+        self.paths.old_path()
     }
     pub fn new_path(&self) -> Option<&RepositoryRelativePath> {
-        self.new_path.as_ref()
+        self.paths.new_path()
     }
     pub fn line(&self) -> NonZeroU32 {
         self.line
@@ -198,16 +247,32 @@ impl DiffAnchorTarget {
         self.end_line.unwrap_or(self.line)
     }
     pub fn side_path(&self) -> &RepositoryRelativePath {
-        match self.side {
-            DiffSide::Base => self.old_path.as_ref().expect("validated"),
-            DiffSide::Current => self.new_path.as_ref().expect("validated"),
-        }
+        self.paths.side_path()
     }
     pub fn selection_path(&self) -> &RepositoryRelativePath {
-        self.new_path
-            .as_ref()
-            .or(self.old_path.as_ref())
-            .expect("validated")
+        self.paths.selection_path()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct DiffLineHash(String);
+
+impl DiffLineHash {
+    pub fn parse(value: impl Into<String>) -> Result<Self, DiffCommentError> {
+        let value = value.into();
+        let valid = value.strip_prefix("sha256:").is_some_and(|hash| {
+            hash.len() == 64
+                && hash
+                    .bytes()
+                    .all(|byte| byte.is_ascii_digit() || matches!(byte, b'a'..=b'f'))
+        });
+        valid
+            .then_some(Self(value))
+            .ok_or(DiffCommentError::InvalidValue("lineHash"))
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
     }
 }
 
@@ -215,7 +280,7 @@ impl DiffAnchorTarget {
 pub struct DiffLineAnchor {
     identity: DiffReviewIdentity,
     target: DiffAnchorTarget,
-    line_hash: String,
+    line_hash: DiffLineHash,
     snippet: String,
     context_before: Vec<String>,
     context_after: Vec<String>,
@@ -225,19 +290,11 @@ impl DiffLineAnchor {
     pub fn new(
         identity: DiffReviewIdentity,
         target: DiffAnchorTarget,
-        line_hash: String,
+        line_hash: DiffLineHash,
         snippet: String,
         context_before: Vec<String>,
         context_after: Vec<String>,
     ) -> Result<Self, DiffCommentError> {
-        if !line_hash.strip_prefix("sha256:").is_some_and(|hash| {
-            hash.len() == 64
-                && hash
-                    .bytes()
-                    .all(|byte| byte.is_ascii_digit() || matches!(byte, b'a'..=b'f'))
-        }) {
-            return Err(DiffCommentError::InvalidValue("lineHash"));
-        }
         if context_before.len() > MAX_CONTEXT_LINES
             || context_after.len() > MAX_CONTEXT_LINES
             || snippet.chars().count() > MAX_CONTEXT_SCALARS
@@ -264,7 +321,7 @@ impl DiffLineAnchor {
     pub fn target(&self) -> &DiffAnchorTarget {
         &self.target
     }
-    pub fn line_hash(&self) -> &str {
+    pub fn line_hash(&self) -> &DiffLineHash {
         &self.line_hash
     }
     pub fn snippet(&self) -> &str {
@@ -642,8 +699,11 @@ pub fn canonical_lines(text: &str) -> Vec<&str> {
     lines
 }
 
-pub fn line_hash(line: &str) -> String {
-    format!("sha256:{}", hex(Sha256::digest(line.as_bytes()).as_slice()))
+pub fn line_hash(line: &str) -> DiffLineHash {
+    DiffLineHash(format!(
+        "sha256:{}",
+        hex(Sha256::digest(line.as_bytes()).as_slice())
+    ))
 }
 
 fn hex(bytes: &[u8]) -> String {

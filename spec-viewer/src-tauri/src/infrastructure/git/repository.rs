@@ -673,7 +673,9 @@ impl GitRepositoryAdapter {
         crate::domain::comment::diff::DiffAnchorTarget,
         crate::domain::comment::diff_repository::DiffCommentResolutionError,
     > {
-        use crate::domain::comment::diff::{DiffAnchorTarget, DiffSide, StaleAnchorReason};
+        use crate::domain::comment::diff::{
+            DiffAnchorPaths, DiffAnchorTarget, DiffSide, StaleAnchorReason,
+        };
         use crate::domain::comment::diff_repository::DiffCommentResolutionError;
         let stale = |reason, candidate_count| DiffCommentResolutionError::Stale {
             reason,
@@ -721,12 +723,12 @@ impl GitRepositoryAdapter {
             } else {
                 None
             };
-            return DiffAnchorTarget::new(
+            return DiffAnchorPaths::new(
                 historical.side(),
                 (historical.side() == DiffSide::Base).then(|| side_path.clone()),
                 new_path,
-                historical.line(),
             )
+            .map(|paths| DiffAnchorTarget::new(paths, historical.line()))
             .map_err(|_| stale(StaleAnchorReason::PathMissing, 0));
         }
         let candidates = context
@@ -758,25 +760,24 @@ impl GitRepositoryAdapter {
             if historical.side() == DiffSide::Current && file.change == FileChangeKind::Deleted {
                 return Err(stale(StaleAnchorReason::Deleted, 0));
             }
-            let mapped = DiffAnchorTarget::new(
+            let paths = DiffAnchorPaths::new(
                 historical.side(),
                 file.old_path.clone(),
                 file.new_path.clone(),
-                historical.line(),
             )
             .map_err(|_| stale(StaleAnchorReason::PathMissing, 0))?;
-            return Ok(mapped);
+            return Ok(DiffAnchorTarget::new(paths, historical.line()));
         }
         if historical.side() == DiffSide::Current
             && context.all_paths.iter().any(|path| path == side_path)
         {
-            return DiffAnchorTarget::new(
-                DiffSide::Current,
-                None,
-                Some(side_path.clone()),
+            return Ok(DiffAnchorTarget::new(
+                DiffAnchorPaths::Current {
+                    new_path: side_path.clone(),
+                    old_path: None,
+                },
                 historical.line(),
-            )
-            .map_err(|_| stale(StaleAnchorReason::PathMissing, 0));
+            ));
         }
         Err(stale(StaleAnchorReason::PathMissing, 0))
     }
