@@ -116,7 +116,7 @@ impl BatchSession {
         self.stdout
             .read_exact(&mut delimiter)
             .map_err(|_| RepositoryPortError::Io)?;
-        if delimiter != [b'\n'] {
+        if delimiter != *b"\n" {
             return Err(RepositoryPortError::Io);
         }
         Ok(bytes)
