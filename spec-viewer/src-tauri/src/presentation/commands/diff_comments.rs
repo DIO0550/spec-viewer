@@ -71,6 +71,51 @@ pub struct UpdateDiffCommentRequest {
     deleted: bool,
 }
 
+#[derive(Debug)]
+struct UpdateDiffCommentCommandInput {
+    identity: DiffReviewIdentity,
+    expected_revision: DiffCommentRevision,
+    intent: DiffCommentUpdate,
+}
+
+impl TryFrom<UpdateDiffCommentRequest> for UpdateDiffCommentCommandInput {
+    type Error = DiffCommentCommandError;
+
+    fn try_from(value: UpdateDiffCommentRequest) -> Result<Self, Self::Error> {
+        let UpdateDiffCommentRequest {
+            identity,
+            expected_revision,
+            comment_id,
+            body,
+            resolved,
+            reply_body,
+            deleted,
+        } = value;
+        let identity = DiffReviewIdentity::try_from(identity)?;
+        let expected_revision = expected_revision
+            .parse::<DiffCommentRevision>()
+            .map_err(invalid_revision)?;
+        let intent = match (deleted, body, resolved, reply_body) {
+            (true, None, None, None) => DiffCommentUpdate::Delete { comment_id },
+            (false, body, resolved, None) if body.is_some() || resolved.is_some() => {
+                DiffCommentUpdate::Edit {
+                    comment_id,
+                    body,
+                    resolved,
+                }
+            }
+            (false, None, None, Some(body)) => DiffCommentUpdate::Reply { comment_id, body },
+            _ => return Err(DiffCommentCommandError::invalid("update")),
+        };
+
+        Ok(Self {
+            identity,
+            expected_revision,
+            intent,
+        })
+    }
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct DiffAnchorTargetRequest {
@@ -557,23 +602,17 @@ pub fn update_diff_comment(
     state: State<'_, CommandState>,
     request: UpdateDiffCommentRequest,
 ) -> Result<DiffCommentMutationOutcomeResponse, DiffCommentCommandError> {
-    let identity = DiffReviewIdentity::try_from(request.identity)?;
-    let revision = request
-        .expected_revision
-        .parse::<DiffCommentRevision>()
-        .map_err(invalid_revision)?;
+    let UpdateDiffCommentCommandInput {
+        identity,
+        expected_revision,
+        intent,
+    } = request.try_into()?;
     state
         .diff_comment_use_cases()
         .update(
             &identity,
-            revision,
-            DiffCommentUpdate::new(
-                request.comment_id,
-                request.body,
-                request.resolved,
-                request.reply_body,
-                request.deleted,
-            ),
+            expected_revision,
+            intent,
             &CancellationToken::default(),
         )
         .map(Into::into)
@@ -583,6 +622,32 @@ pub fn update_diff_comment(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn identity_request() -> DiffReviewIdentityRequest {
+        DiffReviewIdentityRequest {
+            repository_id: format!("rr1_{}", "1".repeat(64)),
+            worktree_id: format!("rw1_{}", "2".repeat(64)),
+            base_sha: "3".repeat(40),
+            current_snapshot_id: format!("rs1_{}", "4".repeat(64)),
+        }
+    }
+
+    fn update_request(
+        body: Option<&str>,
+        resolved: Option<bool>,
+        reply_body: Option<&str>,
+        deleted: bool,
+    ) -> UpdateDiffCommentRequest {
+        UpdateDiffCommentRequest {
+            identity: identity_request(),
+            expected_revision: "0".into(),
+            comment_id: "c1".into(),
+            body: body.map(str::to_owned),
+            resolved,
+            reply_body: reply_body.map(str::to_owned),
+            deleted,
+        }
+    }
 
     #[test]
     fn unavailable_wire_is_non_jumpable() {
@@ -611,5 +676,175 @@ mod tests {
         ));
         assert_eq!(error.code, "identityMismatch");
         assert_eq!(error.message, "The repository could not be read.");
+    }
+
+    #[test]
+    fn update_request_wire_remains_flat_and_deleted_defaults_to_false() {
+        let request: UpdateDiffCommentRequest = serde_json::from_value(serde_json::json!({
+            "identity": {
+                "repositoryId": format!("rr1_{}", "1".repeat(64)),
+                "worktreeId": format!("rw1_{}", "2".repeat(64)),
+                "baseSha": "3".repeat(40),
+                "currentSnapshotId": format!("rs1_{}", "4".repeat(64))
+            },
+            "expectedRevision": "0",
+            "commentId": "c1",
+            "body": "updated",
+            "resolved": true,
+            "replyBody": null
+        }))
+        .unwrap();
+
+        assert_eq!(request.comment_id, "c1");
+        assert_eq!(request.body.as_deref(), Some("updated"));
+        assert_eq!(request.resolved, Some(true));
+        assert_eq!(request.reply_body, None);
+        assert!(!request.deleted);
+    }
+
+    #[test]
+    fn update_request_wire_rejects_top_level_intent_field() {
+        let error = serde_json::from_value::<UpdateDiffCommentRequest>(serde_json::json!({
+            "identity": {
+                "repositoryId": format!("rr1_{}", "1".repeat(64)),
+                "worktreeId": format!("rw1_{}", "2".repeat(64)),
+                "baseSha": "3".repeat(40),
+                "currentSnapshotId": format!("rs1_{}", "4".repeat(64))
+            },
+            "expectedRevision": "0",
+            "commentId": "c1",
+            "body": "updated",
+            "resolved": null,
+            "replyBody": null,
+            "deleted": false,
+            "intent": {
+                "kind": "edit"
+            }
+        }))
+        .unwrap_err();
+
+        assert!(error.to_string().contains("unknown field `intent`"));
+    }
+
+    #[test]
+    fn update_request_converts_each_valid_mutation_intent_with_exact_payload() {
+        let body_only = UpdateDiffCommentCommandInput::try_from(update_request(
+            Some("body only"),
+            None,
+            None,
+            false,
+        ))
+        .unwrap();
+        let DiffCommentUpdate::Edit {
+            comment_id,
+            body,
+            resolved,
+        } = body_only.intent
+        else {
+            panic!("body-only request must become Edit");
+        };
+        assert_eq!(comment_id, "c1");
+        assert_eq!(body.as_deref(), Some("body only"));
+        assert_eq!(resolved, None);
+
+        let resolution_only =
+            UpdateDiffCommentCommandInput::try_from(update_request(None, Some(false), None, false))
+                .unwrap();
+        let DiffCommentUpdate::Edit {
+            comment_id,
+            body,
+            resolved,
+        } = resolution_only.intent
+        else {
+            panic!("resolution-only request must become Edit");
+        };
+        assert_eq!(comment_id, "c1");
+        assert_eq!(body, None);
+        assert_eq!(resolved, Some(false));
+
+        let body_and_resolution = UpdateDiffCommentCommandInput::try_from(update_request(
+            Some("body and resolution"),
+            Some(true),
+            None,
+            false,
+        ))
+        .unwrap();
+        let DiffCommentUpdate::Edit {
+            comment_id,
+            body,
+            resolved,
+        } = body_and_resolution.intent
+        else {
+            panic!("body-and-resolution request must become Edit");
+        };
+        assert_eq!(comment_id, "c1");
+        assert_eq!(body.as_deref(), Some("body and resolution"));
+        assert_eq!(resolved, Some(true));
+
+        let reply = UpdateDiffCommentCommandInput::try_from(update_request(
+            None,
+            None,
+            Some("follow up"),
+            false,
+        ))
+        .unwrap();
+        let DiffCommentUpdate::Reply { comment_id, body } = reply.intent else {
+            panic!("reply request must become Reply");
+        };
+        assert_eq!(comment_id, "c1");
+        assert_eq!(body, "follow up");
+
+        let delete =
+            UpdateDiffCommentCommandInput::try_from(update_request(None, None, None, true))
+                .unwrap();
+        let DiffCommentUpdate::Delete { comment_id } = delete.intent else {
+            panic!("delete request must become Delete");
+        };
+        assert_eq!(comment_id, "c1");
+    }
+
+    #[test]
+    fn update_request_rejects_every_invalid_mutation_combination_with_stable_wire_error() {
+        let invalid_requests = [
+            update_request(None, None, None, false),
+            update_request(Some("body"), None, Some("reply"), false),
+            update_request(None, Some(true), Some("reply"), false),
+            update_request(Some("body"), Some(true), Some("reply"), false),
+            update_request(Some("body"), None, None, true),
+            update_request(None, Some(true), None, true),
+            update_request(None, None, Some("reply"), true),
+            update_request(Some("body"), Some(true), None, true),
+            update_request(Some("body"), None, Some("reply"), true),
+            update_request(None, Some(true), Some("reply"), true),
+            update_request(Some("body"), Some(true), Some("reply"), true),
+        ];
+
+        for request in invalid_requests {
+            let error = UpdateDiffCommentCommandInput::try_from(request).unwrap_err();
+            assert_eq!(error.code, "invalidRequest");
+            assert_eq!(error.message, "The Diff comment request is invalid.");
+        }
+    }
+
+    #[test]
+    fn update_request_validates_identity_then_revision_before_intent() {
+        let mut invalid_identity = update_request(Some("updated"), None, None, false);
+        invalid_identity.identity.repository_id = "invalid".into();
+        invalid_identity.expected_revision = "invalid".into();
+        let identity_error = UpdateDiffCommentCommandInput::try_from(invalid_identity).unwrap_err();
+        assert_eq!(identity_error.code, "invalidRequest");
+        assert_eq!(
+            identity_error.message,
+            "The Diff comment request is invalid."
+        );
+
+        let mut invalid_revision = update_request(None, None, None, false);
+        invalid_revision.expected_revision = "invalid".into();
+        let revision_error = UpdateDiffCommentCommandInput::try_from(invalid_revision).unwrap_err();
+        assert_eq!(revision_error.code, "invalidRevision");
+        assert_eq!(
+            revision_error.message,
+            "The Diff comment revision is invalid."
+        );
     }
 }
