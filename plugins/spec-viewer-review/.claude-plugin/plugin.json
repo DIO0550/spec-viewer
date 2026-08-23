@@ -1,9 +1,9 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "spec-viewer-review",
-  "displayName": "Spec Viewer Review",
+  "displayName": "Spec Viewer レビュー",
   "version": "0.1.0",
-  "description": "Fix unresolved review comments attached to repository diffs in spec-viewer",
+  "description": "spec-viewerのリポジトリDiffに付いた未解決レビューコメントを修正する",
   "author": {
     "name": "DIO0550"
   },
