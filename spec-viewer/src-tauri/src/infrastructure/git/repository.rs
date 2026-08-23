@@ -1,5 +1,6 @@
 use super::{
-    selected_path_fingerprint, GitObjectBatch, GitObjectRead, GitRunner, RepositoryWatchRegistry,
+    path_state::frame_submodule_state, selected_path_fingerprint, GitObjectBatch, GitObjectRead,
+    GitRunner, RepositoryWatchRegistry,
 };
 use crate::domain::{
     comment::diff::{DiffReviewIdentity, WorktreeStorageId},
@@ -1173,8 +1174,7 @@ impl GitRepositoryAdapter {
                             false,
                         )
                         .unwrap_or_default();
-                    frame(&mut hasher, &head);
-                    frame(&mut hasher, &status);
+                    frame_submodule_state(&mut hasher, &head, &status);
                 }
                 Ok(_) => hasher.update([4]),
             }
@@ -1654,27 +1654,6 @@ impl GitRepositoryAdapter {
             tracked_changes,
             untracked_changes,
         }
-    }
-
-    fn stable_submodule_state(
-        &self,
-        root: &Path,
-        merge: &CommitSha,
-        path: &RepositoryRelativePath,
-    ) -> Result<SubmoduleState, RepositoryPortError> {
-        let mut previous = self.submodule_state(root, merge, path);
-        #[cfg(all(test, windows))]
-        eprintln!("submodule stability observation 1: {previous:?}");
-        for _ in 0..2 {
-            let current = self.submodule_state(root, merge, path);
-            #[cfg(all(test, windows))]
-            eprintln!("submodule stability observation: {current:?}");
-            if current == previous {
-                return Ok(current);
-            }
-            previous = current;
-        }
-        Err(RepositoryPortError::EntryChangedDuringRead)
     }
 
     fn side_for_entry(bytes: Option<Vec<u8>>, kind: EntryKind) -> ContentAvailability {
@@ -2169,14 +2148,8 @@ impl RepositoryPort for GitRepositoryAdapter {
         path: &RepositoryRelativePath,
     ) -> Result<RepositoryFileReview, RepositoryPortError> {
         let root = self.root(worktree)?;
-        #[cfg(all(test, windows))]
-        eprintln!("load_file checkpoint: root");
         let context = self.review_context(&root, snapshot)?;
-        #[cfg(all(test, windows))]
-        eprintln!("load_file checkpoint: context");
         let initial_path_fingerprint = selected_path_fingerprint(&self.runner, &root, path)?;
-        #[cfg(all(test, windows))]
-        eprintln!("load_file checkpoint: path fingerprint");
         let file = context
             .changed
             .iter()
@@ -2247,13 +2220,10 @@ impl RepositoryPort for GitRepositoryAdapter {
             return Ok(review);
         };
         if file.entry_kind == EntryKind::Submodule {
-            #[cfg(all(test, windows))]
-            eprintln!("load_file checkpoint: submodule branch");
             let omitted = ContentAvailability::Omitted {
                 reason: OmissionReason::UnsupportedEntryKind,
                 byte_length: None,
             };
-            let submodule = self.stable_submodule_state(&root, &merge, path)?;
             let review = FileReview {
                 file,
                 old_content: omitted.clone(),
@@ -2262,8 +2232,11 @@ impl RepositoryPort for GitRepositoryAdapter {
                 structured_diff: StructuredDiff::Omitted {
                     reason: OmissionReason::UnsupportedEntryKind,
                 },
-                submodule: Some(submodule),
+                submodule: Some(self.submodule_state(&root, &merge, path)),
             };
+            if selected_path_fingerprint(&self.runner, &root, path)? != initial_path_fingerprint {
+                return Err(RepositoryPortError::EntryChangedDuringRead);
+            }
             return Ok(review.into());
         }
         let old_content = self.base_side(&root, &merge, file.old_path.as_ref(), file.entry_kind)?;

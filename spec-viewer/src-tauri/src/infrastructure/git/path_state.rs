@@ -68,7 +68,7 @@ fn frame(hasher: &mut Sha256, bytes: &[u8]) {
     hasher.update(bytes);
 }
 
-fn frame_submodule_state(hasher: &mut Sha256, head: &[u8], status: &[u8]) {
+pub(super) fn frame_submodule_state(hasher: &mut Sha256, head: &[u8], status: &[u8]) {
     let head = head.strip_suffix(b"\n").unwrap_or(head);
     let head = head.strip_suffix(b"\r").unwrap_or(head);
     frame(hasher, head);
