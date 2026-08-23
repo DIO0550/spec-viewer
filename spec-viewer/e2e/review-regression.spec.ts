@@ -157,6 +157,7 @@ test("[R199-REVIEW-003] resolve changes status filter result", async ({
   await page.getByRole("button", { name: /^解決 comment-/ }).click();
   await expect(lineComment).toBeHidden();
   await page.getByRole("button", { name: /^解決済み 1$/ }).click();
+  await page.getByRole("button", { name: /^コメントを展開 comment-/ }).click();
   await expect(
     page.locator(".diff-review-sidebar").getByText("Resolve me"),
   ).toBeVisible();
