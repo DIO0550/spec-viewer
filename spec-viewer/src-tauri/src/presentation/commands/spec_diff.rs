@@ -152,7 +152,7 @@ impl From<SpecFileCommit> for SpecFileCommitResponse {
     fn from(value: SpecFileCommit) -> Self {
         Self {
             sha: value.commit.as_str().to_string(),
-            committed_at: value.committed_at,
+            committed_at: value.committed_at.to_rfc3339(),
             message: value.message,
         }
     }

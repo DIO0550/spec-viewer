@@ -71,6 +71,46 @@ impl From<EntryKind> for EntryKindResponseToken {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub enum GitFileModeResponseToken {
+    #[serde(rename = "100644")]
+    Regular,
+    #[serde(rename = "100755")]
+    Executable,
+    #[serde(rename = "120000")]
+    Symlink,
+    #[serde(rename = "160000")]
+    Submodule,
+    #[serde(rename = "040000")]
+    Directory,
+}
+
+impl From<GitFileMode> for GitFileModeResponseToken {
+    fn from(value: GitFileMode) -> Self {
+        match value {
+            GitFileMode::Regular => Self::Regular,
+            GitFileMode::Executable => Self::Executable,
+            GitFileMode::Symlink => Self::Symlink,
+            GitFileMode::Submodule => Self::Submodule,
+            GitFileMode::Directory => Self::Directory,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum RepositoryWarningResponseToken {
+    SimilarityDetectionLimit,
+}
+
+impl From<RepositoryWarning> for RepositoryWarningResponseToken {
+    fn from(value: RepositoryWarning) -> Self {
+        match value {
+            RepositoryWarning::SimilarityDetectionLimit => Self::SimilarityDetectionLimit,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ContentClassificationResponseToken {
     Text,
@@ -303,8 +343,8 @@ pub struct FileChangeResponse {
     pub entry_kind: EntryKindResponseToken,
     pub content_classification: ContentClassificationResponseToken,
     pub similarity: Option<u8>,
-    pub old_mode: Option<String>,
-    pub new_mode: Option<String>,
+    pub old_mode: Option<GitFileModeResponseToken>,
+    pub new_mode: Option<GitFileModeResponseToken>,
 }
 impl From<&DiffFile> for FileChangeResponse {
     fn from(file: &DiffFile) -> Self {
@@ -315,8 +355,8 @@ impl From<&DiffFile> for FileChangeResponse {
             entry_kind: file.entry_kind.into(),
             content_classification: file.content_classification.into(),
             similarity: file.similarity,
-            old_mode: file.old_mode.clone(),
-            new_mode: file.new_mode.clone(),
+            old_mode: file.old_mode.map(Into::into),
+            new_mode: file.new_mode.map(Into::into),
         }
     }
 }
@@ -330,8 +370,8 @@ pub struct RepositoryFileChangeResponse {
     pub entry_kind: EntryKindResponseToken,
     pub content_classification: ContentClassificationResponseToken,
     pub similarity: Option<u8>,
-    pub old_mode: Option<String>,
-    pub new_mode: Option<String>,
+    pub old_mode: Option<GitFileModeResponseToken>,
+    pub new_mode: Option<GitFileModeResponseToken>,
 }
 
 impl From<RepositoryFileMetadata> for RepositoryFileChangeResponse {
@@ -344,8 +384,8 @@ impl From<RepositoryFileMetadata> for RepositoryFileChangeResponse {
             entry_kind: file.entry_kind.into(),
             content_classification: file.content_classification.into(),
             similarity: file.similarity,
-            old_mode: file.old_mode,
-            new_mode: file.new_mode,
+            old_mode: file.old_mode.map(Into::into),
+            new_mode: file.new_mode.map(Into::into),
         }
     }
 }
@@ -416,7 +456,7 @@ pub struct RepositoryOverviewResponse {
     pub all_root: Vec<TreeNodeResponse>,
     pub all: Vec<String>,
     pub ignored_directories: Vec<String>,
-    pub warnings: Vec<String>,
+    pub warnings: Vec<RepositoryWarningResponseToken>,
 }
 impl From<RepositoryOverview> for RepositoryOverviewResponse {
     fn from(value: RepositoryOverview) -> Self {
@@ -448,7 +488,7 @@ impl From<RepositoryOverview> for RepositoryOverviewResponse {
                 .iter()
                 .map(|path| path.as_str().into())
                 .collect(),
-            warnings: value.warnings,
+            warnings: value.warnings.into_iter().map(Into::into).collect(),
         }
     }
 }
