@@ -119,6 +119,10 @@
   cursor: pointer;
 }
 
+.repository-file-tab__close::before {
+  content: "×";
+}
+
 .repository-file-tab__close:hover {
   color: var(--color-text);
   background: var(--color-control-hover);
