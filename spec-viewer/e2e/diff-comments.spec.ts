@@ -237,9 +237,9 @@ test("actual Appでpermission recoveryとcommitted uncertaintyを区別する", 
   await expect(page.getByRole("alert")).toContainText("権限");
   await expect(page.getByRole("button", { name: "保存を再試行" })).toBeHidden();
   await page.getByRole("button", { name: "キャンセル" }).click();
-  await page.getByRole("button", { name: "Diff commentsを再読み込み" }).click();
+  await page.getByRole("button", { name: "コメントを再読み込み" }).click();
   await expect(
-    page.getByRole("button", { name: "Diff commentsを再読み込み" }),
+    page.getByRole("button", { name: "コメントを再読み込み" }),
   ).toBeEnabled();
 
   await page.evaluate(() => localStorage.setItem("e2e-uncertain-once", "true"));
