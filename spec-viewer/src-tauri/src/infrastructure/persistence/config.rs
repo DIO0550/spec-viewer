@@ -11,11 +11,11 @@ use serde::Deserialize;
 use thiserror::Error;
 
 use crate::domain::{
-    spec::{SpecDomainError, SpecFileKey, SpecNodeKind},
+    spec::{SpecDomainError, SpecFileKey},
     workspace::{
-        default_scan_excluded_directory_names, SpecConfigOverride, WorkspaceConfig,
-        WorkspaceConfigError, WorkspaceConfigSource, WorkspaceFileMapping, WorkspaceKind,
-        WorkspaceLayout,
+        default_scan_excluded_directory_names, SpecConfigOverride, SpecOverrideNodeKind,
+        WorkspaceConfig, WorkspaceConfigError, WorkspaceConfigSource, WorkspaceFileMapping,
+        WorkspaceKind, WorkspaceLayout,
     },
 };
 
@@ -168,13 +168,13 @@ fn parse_spec_config_override(
 
     let node_kind = raw_config
         .node_kind
-        .map(|value| match value.as_str() {
-            "spec" => Ok(SpecNodeKind::Spec),
-            "category" => Ok(SpecNodeKind::Category),
-            _ => Err(ConfigLoadError::InvalidNodeKind {
-                path: display_path(path),
-                value,
-            }),
+        .map(|value| {
+            SpecOverrideNodeKind::try_from(value).map_err(|value| {
+                ConfigLoadError::InvalidNodeKind {
+                    path: display_path(path),
+                    value,
+                }
+            })
         })
         .transpose()?;
 
@@ -193,7 +193,25 @@ struct RawWorkspaceConfig {
     #[serde(rename = "scanExcludedDirectoryNames")]
     scan_excluded_directory_names: Option<Vec<String>>,
     #[serde(rename = "nodeKind")]
-    node_kind: Option<String>,
+    node_kind: Option<RawSpecOverrideNodeKind>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(transparent)]
+struct RawSpecOverrideNodeKind(String);
+
+impl TryFrom<RawSpecOverrideNodeKind> for SpecOverrideNodeKind {
+    type Error = String;
+
+    fn try_from(value: RawSpecOverrideNodeKind) -> Result<Self, Self::Error> {
+        let RawSpecOverrideNodeKind(value) = value;
+
+        match value.as_str() {
+            "spec" => Ok(Self::Spec),
+            "category" => Ok(Self::Category),
+            _ => Err(value),
+        }
+    }
 }
 
 #[derive(Debug, Error)]

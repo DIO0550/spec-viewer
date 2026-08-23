@@ -23,7 +23,8 @@ use crate::domain::{
         SpecNodeKind, SpecProgress,
     },
     workspace::{
-        WorkspaceConfig, WorkspaceDomainError, WorkspaceKind, WorkspaceLayout, WorkspaceRoot,
+        SpecOverrideNodeKind, WorkspaceConfig, WorkspaceDomainError, WorkspaceKind,
+        WorkspaceLayout, WorkspaceRoot,
     },
 };
 use crate::infrastructure::markdown::parser::count_task_markers;
@@ -882,7 +883,7 @@ fn scan_directory_projection(
         .filter(|file| file.status() == SpecFileStatus::Present)
         .count();
 
-    if effective.node_kind == Some(SpecNodeKind::Category) && present_document_count > 0 {
+    if effective.node_kind == Some(SpecOverrideNodeKind::Category) && present_document_count > 0 {
         return Err(SpecTreeScanError::ConflictingNodeKind {
             path: display_path(directory),
         });
@@ -890,9 +891,9 @@ fn scan_directory_projection(
 
     let inferred_kind =
         if present_document_count > 0 || has_numbered_spec_name(label) || children.is_empty() {
-            SpecNodeKind::Spec
+            SpecOverrideNodeKind::Spec
         } else {
-            SpecNodeKind::Category
+            SpecOverrideNodeKind::Category
         };
     let kind = effective.node_kind.unwrap_or(inferred_kind);
     let identity = SpecNodeIdentity::new(source_group_id, relative_id).map_err(|source| {
@@ -904,14 +905,11 @@ fn scan_directory_projection(
     })?;
 
     match kind {
-        SpecNodeKind::Spec => {
+        SpecOverrideNodeKind::Spec => {
             let progress = calculate_spec_progress(directory, &effective.config)?;
             SpecNode::spec_with_progress(identity, label, files, children, progress)
         }
-        SpecNodeKind::Category => SpecNode::category(identity, label, children),
-        SpecNodeKind::Archive | SpecNodeKind::SourceGroup => {
-            unreachable!("spec override only accepts spec or category kinds")
-        }
+        SpecOverrideNodeKind::Category => SpecNode::category(identity, label, children),
     }
     .map_err(|source| SpecTreeScanError::InvalidNode {
         id: spec_node_id(source_group_id, relative_id),
@@ -935,7 +933,7 @@ fn relative_node_id(parent_relative_id: &str, label: &str) -> String {
 
 struct EffectiveDirectoryConfig {
     config: WorkspaceConfig,
-    node_kind: Option<SpecNodeKind>,
+    node_kind: Option<SpecOverrideNodeKind>,
 }
 
 fn effective_directory_config(
