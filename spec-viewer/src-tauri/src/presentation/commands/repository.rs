@@ -803,14 +803,12 @@ mod tests {
         ] {
             let response = FileChangeResponse::from(
                 &DiffFile::new(
-                    Some(RepositoryRelativePath::parse("mode.txt").unwrap()),
-                    Some(RepositoryRelativePath::parse("mode.txt").unwrap()),
-                    FileChangeKind::Modified,
-                    mode.entry_kind().unwrap(),
-                    ContentClassification::Text,
-                    None,
-                    Some(mode),
-                    Some(mode),
+                    DiffFileSides::Modified {
+                        path: RepositoryRelativePath::parse("mode.txt").unwrap(),
+                        old_mode: Some(mode),
+                        new_mode: Some(mode),
+                    },
+                    DiffFileMetadata::new(mode.entry_kind().unwrap(), ContentClassification::Text),
                 )
                 .unwrap(),
             );

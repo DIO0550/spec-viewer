@@ -1298,69 +1298,7 @@ impl GitRepositoryAdapter {
             ],
             GitCommandKind::Metadata,
         )?;
-        let mut fields = raw.split(|b| *b == 0).filter(|v| !v.is_empty());
-        let mut files = Vec::new();
-        while let Some(status) = fields.next() {
-            let code = status[0] as char;
-            if matches!(code, 'R' | 'C') {
-                let old = Self::path(
-                    fields
-                        .next()
-                        .ok_or(RepositoryPortError::InvalidRepositoryPath)?,
-                )?;
-                let new = Self::path(
-                    fields
-                        .next()
-                        .ok_or(RepositoryPortError::InvalidRepositoryPath)?,
-                )?;
-                let change = if code == 'R' {
-                    FileChangeKind::Renamed
-                } else {
-                    FileChangeKind::Copied
-                };
-                let similarity = std::str::from_utf8(&status[1..])
-                    .ok()
-                    .and_then(|value| value.parse().ok());
-                files.push(
-                    DiffFile::new(
-                        Some(old),
-                        Some(new),
-                        change,
-                        EntryKind::Regular,
-                        ContentClassification::Unknown,
-                        similarity,
-                        None,
-                        None,
-                    )
-                    .map_err(|_| RepositoryPortError::InvalidRepositoryPath)?,
-                );
-            } else {
-                let path = Self::path(
-                    fields
-                        .next()
-                        .ok_or(RepositoryPortError::InvalidRepositoryPath)?,
-                )?;
-                let change = match code {
-                    'A' => FileChangeKind::Added,
-                    'D' => FileChangeKind::Deleted,
-                    'T' => FileChangeKind::TypeChanged,
-                    _ => FileChangeKind::Modified,
-                };
-                files.push(
-                    DiffFile::new(
-                        (change != FileChangeKind::Added).then(|| path.clone()),
-                        (change != FileChangeKind::Deleted).then_some(path),
-                        change,
-                        EntryKind::Regular,
-                        ContentClassification::Unknown,
-                        None,
-                        None,
-                        None,
-                    )
-                    .map_err(|_| RepositoryPortError::InvalidRepositoryPath)?,
-                );
-            }
-        }
+        let mut sides = parse_diff_statuses(&raw)?;
         let untracked = self.runner.run(
             root,
             GitOperation::Untracked,
@@ -1369,47 +1307,35 @@ impl GitRepositoryAdapter {
         )?;
         for raw_path in untracked.split(|b| *b == 0).filter(|v| !v.is_empty()) {
             let path = Self::path(raw_path)?;
-            if !files.iter().any(|f| f.new_path.as_ref() == Some(&path)) {
-                files.push(
-                    DiffFile::new(
-                        None,
-                        Some(path),
-                        FileChangeKind::Untracked,
-                        EntryKind::Regular,
-                        ContentClassification::Unknown,
-                        None,
-                        None,
-                        None,
-                    )
-                    .map_err(|_| RepositoryPortError::InvalidRepositoryPath)?,
-                );
+            if !sides.iter().any(|change| change.new_path() == Some(&path)) {
+                sides.push(DiffFileSides::Untracked {
+                    new_path: path,
+                    new_mode: None,
+                });
             }
         }
-        files.sort_by(|a, b| {
-            a.new_path
-                .as_ref()
-                .or(a.old_path.as_ref())
-                .map(|p| p.as_str())
+        sides.sort_by(|a, b| {
+            a.new_path()
+                .or_else(|| a.old_path())
+                .map(|path| path.as_str())
                 .cmp(
-                    &b.new_path
-                        .as_ref()
-                        .or(b.old_path.as_ref())
-                        .map(|p| p.as_str()),
+                    &b.new_path()
+                        .or_else(|| b.old_path())
+                        .map(|path| path.as_str()),
                 )
         });
-        for file in &mut files {
-            let old_mode = file
-                .old_path
-                .as_ref()
+        let mut files = Vec::with_capacity(sides.len());
+        for change in sides {
+            let old_mode = change
+                .old_path()
                 .and_then(|path| base_modes.get(path.as_str()))
                 .copied();
-            let mut new_mode = file
-                .new_path
-                .as_ref()
+            let mut new_mode = change
+                .new_path()
                 .and_then(|path| index_modes.get(path.as_str()))
                 .copied();
             if new_mode.is_none() {
-                if let Some(path) = file.new_path.as_ref() {
+                if let Some(path) = change.new_path() {
                     if fs::symlink_metadata(root.join(path.as_str()))
                         .is_ok_and(|metadata| metadata.file_type().is_symlink())
                     {
@@ -1417,12 +1343,25 @@ impl GitRepositoryAdapter {
                     }
                 }
             }
-            file.entry_kind = entry_kind_for_modes(old_mode, new_mode)?;
-            if old_mode != new_mode {
-                file.old_mode = old_mode;
-                file.new_mode = new_mode;
-            }
-            file.content_classification = self.classify_current(root, file)?;
+            let entry_kind = entry_kind_for_modes(old_mode, new_mode)?;
+            let wire_modes = if old_mode == new_mode {
+                DiffFileModes {
+                    old: None,
+                    new: None,
+                }
+            } else {
+                DiffFileModes {
+                    old: old_mode,
+                    new: new_mode,
+                }
+            };
+            let mut file = DiffFile::new(
+                change.with_modes(wire_modes),
+                DiffFileMetadata::new(entry_kind, ContentClassification::Unknown),
+            )
+            .map_err(|_| RepositoryPortError::InvalidRepositoryPath)?;
+            file.content_classification = self.classify_current(root, &file)?;
+            files.push(file);
         }
         Ok(files)
     }
@@ -2603,6 +2542,95 @@ fn parse_file_history(bytes: &[u8], limit: usize) -> Result<SpecFileHistory, Rep
     let truncated = items.len() > limit;
     items.truncate(limit);
     Ok(SpecFileHistory { items, truncated })
+}
+
+fn parse_diff_statuses(raw: &[u8]) -> Result<Vec<DiffFileSides>, RepositoryPortError> {
+    let mut fields = raw
+        .split(|byte| *byte == 0)
+        .filter(|value| !value.is_empty());
+    let mut changes = Vec::new();
+    while let Some(status) = fields.next() {
+        let code = *status
+            .first()
+            .ok_or(RepositoryPortError::InvalidRepositoryPath)? as char;
+        let parse_path = |value: &[u8]| {
+            let value = std::str::from_utf8(value)
+                .map_err(|_| RepositoryPortError::UnsupportedPathEncoding)?;
+            RepositoryRelativePath::parse(value)
+                .map_err(|_| RepositoryPortError::InvalidRepositoryPath)
+        };
+        let change = match code {
+            'R' | 'C' => {
+                let old_path = parse_path(
+                    fields
+                        .next()
+                        .ok_or(RepositoryPortError::InvalidRepositoryPath)?,
+                )?;
+                let new_path = parse_path(
+                    fields
+                        .next()
+                        .ok_or(RepositoryPortError::InvalidRepositoryPath)?,
+                )?;
+                let similarity = std::str::from_utf8(&status[1..])
+                    .ok()
+                    .and_then(|value| value.parse().ok());
+                if code == 'R' {
+                    DiffFileSides::Renamed {
+                        old_path,
+                        new_path,
+                        similarity,
+                        old_mode: None,
+                        new_mode: None,
+                    }
+                } else {
+                    DiffFileSides::Copied {
+                        old_path,
+                        new_path,
+                        similarity,
+                        old_mode: None,
+                        new_mode: None,
+                    }
+                }
+            }
+            'A' => DiffFileSides::Added {
+                new_path: parse_path(
+                    fields
+                        .next()
+                        .ok_or(RepositoryPortError::InvalidRepositoryPath)?,
+                )?,
+                new_mode: None,
+            },
+            'D' => DiffFileSides::Deleted {
+                old_path: parse_path(
+                    fields
+                        .next()
+                        .ok_or(RepositoryPortError::InvalidRepositoryPath)?,
+                )?,
+                old_mode: None,
+            },
+            'M' => DiffFileSides::Modified {
+                path: parse_path(
+                    fields
+                        .next()
+                        .ok_or(RepositoryPortError::InvalidRepositoryPath)?,
+                )?,
+                old_mode: None,
+                new_mode: None,
+            },
+            'T' => DiffFileSides::TypeChanged {
+                path: parse_path(
+                    fields
+                        .next()
+                        .ok_or(RepositoryPortError::InvalidRepositoryPath)?,
+                )?,
+                old_mode: None,
+                new_mode: None,
+            },
+            _ => return Err(RepositoryPortError::UnsupportedDiffStatus { code }),
+        };
+        changes.push(change);
+    }
+    Ok(changes)
 }
 
 fn parse_git_file_mode(value: &str) -> Result<GitFileMode, RepositoryPortError> {

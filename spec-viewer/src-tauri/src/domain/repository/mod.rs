@@ -177,6 +177,139 @@ pub enum FileChangeKind {
     TypeChanged,
     Untracked,
 }
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DiffFileSides {
+    Added {
+        new_path: RepositoryRelativePath,
+        new_mode: Option<GitFileMode>,
+    },
+    Modified {
+        path: RepositoryRelativePath,
+        old_mode: Option<GitFileMode>,
+        new_mode: Option<GitFileMode>,
+    },
+    Deleted {
+        old_path: RepositoryRelativePath,
+        old_mode: Option<GitFileMode>,
+    },
+    Renamed {
+        old_path: RepositoryRelativePath,
+        new_path: RepositoryRelativePath,
+        similarity: Option<u8>,
+        old_mode: Option<GitFileMode>,
+        new_mode: Option<GitFileMode>,
+    },
+    Copied {
+        old_path: RepositoryRelativePath,
+        new_path: RepositoryRelativePath,
+        similarity: Option<u8>,
+        old_mode: Option<GitFileMode>,
+        new_mode: Option<GitFileMode>,
+    },
+    TypeChanged {
+        path: RepositoryRelativePath,
+        old_mode: Option<GitFileMode>,
+        new_mode: Option<GitFileMode>,
+    },
+    Untracked {
+        new_path: RepositoryRelativePath,
+        new_mode: Option<GitFileMode>,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DiffFileModes {
+    pub old: Option<GitFileMode>,
+    pub new: Option<GitFileMode>,
+}
+
+impl DiffFileSides {
+    pub fn old_path(&self) -> Option<&RepositoryRelativePath> {
+        match self {
+            Self::Added { .. } | Self::Untracked { .. } => None,
+            Self::Modified { path, .. } | Self::TypeChanged { path, .. } => Some(path),
+            Self::Deleted { old_path, .. }
+            | Self::Renamed { old_path, .. }
+            | Self::Copied { old_path, .. } => Some(old_path),
+        }
+    }
+
+    pub fn new_path(&self) -> Option<&RepositoryRelativePath> {
+        match self {
+            Self::Deleted { .. } => None,
+            Self::Added { new_path, .. }
+            | Self::Untracked { new_path, .. }
+            | Self::Modified { path: new_path, .. }
+            | Self::TypeChanged { path: new_path, .. }
+            | Self::Renamed { new_path, .. }
+            | Self::Copied { new_path, .. } => Some(new_path),
+        }
+    }
+
+    pub const fn change(&self) -> FileChangeKind {
+        match self {
+            Self::Added { .. } => FileChangeKind::Added,
+            Self::Modified { .. } => FileChangeKind::Modified,
+            Self::Deleted { .. } => FileChangeKind::Deleted,
+            Self::Renamed { .. } => FileChangeKind::Renamed,
+            Self::Copied { .. } => FileChangeKind::Copied,
+            Self::TypeChanged { .. } => FileChangeKind::TypeChanged,
+            Self::Untracked { .. } => FileChangeKind::Untracked,
+        }
+    }
+
+    pub fn with_modes(self, modes: DiffFileModes) -> Self {
+        match self {
+            Self::Added { new_path, .. } => Self::Added {
+                new_path,
+                new_mode: modes.new,
+            },
+            Self::Modified { path, .. } => Self::Modified {
+                path,
+                old_mode: modes.old,
+                new_mode: modes.new,
+            },
+            Self::Deleted { old_path, .. } => Self::Deleted {
+                old_path,
+                old_mode: modes.old,
+            },
+            Self::Renamed {
+                old_path,
+                new_path,
+                similarity,
+                ..
+            } => Self::Renamed {
+                old_path,
+                new_path,
+                similarity,
+                old_mode: modes.old,
+                new_mode: modes.new,
+            },
+            Self::Copied {
+                old_path,
+                new_path,
+                similarity,
+                ..
+            } => Self::Copied {
+                old_path,
+                new_path,
+                similarity,
+                old_mode: modes.old,
+                new_mode: modes.new,
+            },
+            Self::TypeChanged { path, .. } => Self::TypeChanged {
+                path,
+                old_mode: modes.old,
+                new_mode: modes.new,
+            },
+            Self::Untracked { new_path, .. } => Self::Untracked {
+                new_path,
+                new_mode: modes.new,
+            },
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EntryKind {
     Regular,
@@ -218,6 +351,21 @@ pub enum ContentClassification {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DiffFileMetadata {
+    pub entry_kind: EntryKind,
+    pub content_classification: ContentClassification,
+}
+
+impl DiffFileMetadata {
+    pub const fn new(entry_kind: EntryKind, content_classification: ContentClassification) -> Self {
+        Self {
+            entry_kind,
+            content_classification,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OmissionReason {
     Binary,
     LargeFile,
@@ -250,17 +398,85 @@ pub struct DiffFile {
 }
 
 impl DiffFile {
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        old_path: Option<RepositoryRelativePath>,
-        new_path: Option<RepositoryRelativePath>,
-        change: FileChangeKind,
-        entry_kind: EntryKind,
-        content_classification: ContentClassification,
-        similarity: Option<u8>,
-        old_mode: Option<GitFileMode>,
-        new_mode: Option<GitFileMode>,
-    ) -> Result<Self, RepositoryError> {
+    pub fn new(sides: DiffFileSides, metadata: DiffFileMetadata) -> Result<Self, RepositoryError> {
+        let (old_path, new_path, change, similarity, old_mode, new_mode) = match sides {
+            DiffFileSides::Added { new_path, new_mode } => (
+                None,
+                Some(new_path),
+                FileChangeKind::Added,
+                None,
+                None,
+                new_mode,
+            ),
+            DiffFileSides::Modified {
+                path,
+                old_mode,
+                new_mode,
+            } => (
+                Some(path.clone()),
+                Some(path),
+                FileChangeKind::Modified,
+                None,
+                old_mode,
+                new_mode,
+            ),
+            DiffFileSides::Deleted { old_path, old_mode } => (
+                Some(old_path),
+                None,
+                FileChangeKind::Deleted,
+                None,
+                old_mode,
+                None,
+            ),
+            DiffFileSides::Renamed {
+                old_path,
+                new_path,
+                similarity,
+                old_mode,
+                new_mode,
+            } => (
+                Some(old_path),
+                Some(new_path),
+                FileChangeKind::Renamed,
+                similarity,
+                old_mode,
+                new_mode,
+            ),
+            DiffFileSides::Copied {
+                old_path,
+                new_path,
+                similarity,
+                old_mode,
+                new_mode,
+            } => (
+                Some(old_path),
+                Some(new_path),
+                FileChangeKind::Copied,
+                similarity,
+                old_mode,
+                new_mode,
+            ),
+            DiffFileSides::TypeChanged {
+                path,
+                old_mode,
+                new_mode,
+            } => (
+                Some(path.clone()),
+                Some(path),
+                FileChangeKind::TypeChanged,
+                None,
+                old_mode,
+                new_mode,
+            ),
+            DiffFileSides::Untracked { new_path, new_mode } => (
+                None,
+                Some(new_path),
+                FileChangeKind::Untracked,
+                None,
+                None,
+                new_mode,
+            ),
+        };
         let sides_valid = match change {
             FileChangeKind::Added | FileChangeKind::Untracked => {
                 old_path.is_none() && new_path.is_some()
@@ -282,7 +498,7 @@ impl DiffFile {
         let modes_supported =
             old_mode != Some(GitFileMode::Directory) && new_mode != Some(GitFileMode::Directory);
         let entry_kind_matches_mode = match new_mode.or(old_mode) {
-            Some(mode) => mode.entry_kind() == Some(entry_kind),
+            Some(mode) => mode.entry_kind() == Some(metadata.entry_kind),
             None => true,
         };
         if !sides_valid || !similarity_valid || !modes_supported || !entry_kind_matches_mode {
@@ -294,8 +510,8 @@ impl DiffFile {
             old_path,
             new_path,
             change,
-            entry_kind,
-            content_classification,
+            entry_kind: metadata.entry_kind,
+            content_classification: metadata.content_classification,
             similarity,
             old_mode,
             new_mode,
@@ -523,6 +739,8 @@ pub enum RepositoryPortError {
     InvalidHistoryOutput,
     #[error("invalid repository path")]
     InvalidRepositoryPath,
+    #[error("unsupported Git diff status code: {code:?}")]
+    UnsupportedDiffStatus { code: char },
     #[error("stale base")]
     StaleBase,
     #[error("stale snapshot")]
