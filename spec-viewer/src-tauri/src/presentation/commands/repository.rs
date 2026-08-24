@@ -243,7 +243,8 @@ impl RepositoryCommandError {
             RepositoryPortError::GitUnavailable => "gitUnavailable",
             RepositoryPortError::GitTimedOut { .. } => "gitTimedOut",
             RepositoryPortError::GitOutputLimitExceeded { .. } => "gitOutputLimitExceeded",
-            RepositoryPortError::GitFailed { .. } => "gitFailed",
+            RepositoryPortError::GitFailed { .. }
+            | RepositoryPortError::UnsupportedDiffStatus { .. } => "gitFailed",
             RepositoryPortError::UnsupportedPathEncoding => "unsupportedPathEncoding",
             RepositoryPortError::RevisionNotFound => "revisionNotFound",
             RepositoryPortError::RevisionNotCommit => "revisionNotCommit",
@@ -803,14 +804,12 @@ mod tests {
         ] {
             let response = FileChangeResponse::from(
                 &DiffFile::new(
-                    Some(RepositoryRelativePath::parse("mode.txt").unwrap()),
-                    Some(RepositoryRelativePath::parse("mode.txt").unwrap()),
-                    FileChangeKind::Modified,
-                    mode.entry_kind().unwrap(),
-                    ContentClassification::Text,
-                    None,
-                    Some(mode),
-                    Some(mode),
+                    DiffFileSides::Modified {
+                        path: RepositoryRelativePath::parse("mode.txt").unwrap(),
+                        old_mode: Some(mode),
+                        new_mode: Some(mode),
+                    },
+                    DiffFileMetadata::new(mode.entry_kind().unwrap(), ContentClassification::Text),
                 )
                 .unwrap(),
             );
@@ -1031,6 +1030,11 @@ mod tests {
                 },
                 "gitOutputLimitExceeded",
                 "Git output limit exceeded: stdout",
+            ),
+            (
+                RepositoryPortError::UnsupportedDiffStatus { code: 'U' },
+                "gitFailed",
+                "unsupported Git diff status code: 'U'",
             ),
         ] {
             let error: RepositoryCommandError = RepositoryUseCaseError::Port(port_error).into();

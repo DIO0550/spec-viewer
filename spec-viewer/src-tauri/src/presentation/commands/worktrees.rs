@@ -59,7 +59,10 @@ impl WorktreesCommandError {
             RepositoryPortError::GitOutputLimitExceeded { .. } => {
                 WorktreesCommandErrorCode::GitOutputLimitExceeded
             }
-            RepositoryPortError::GitFailed { .. } => WorktreesCommandErrorCode::GitFailed,
+            RepositoryPortError::GitFailed { .. }
+            | RepositoryPortError::UnsupportedDiffStatus { .. } => {
+                WorktreesCommandErrorCode::GitFailed
+            }
             RepositoryPortError::UnsupportedPathEncoding => {
                 WorktreesCommandErrorCode::UnsupportedPathEncoding
             }

@@ -339,7 +339,8 @@ impl SpecDiffCommandErrorCode {
             RepositoryPortError::GitUnavailable => Self::GitUnavailable,
             RepositoryPortError::GitTimedOut { .. } => Self::GitTimedOut,
             RepositoryPortError::GitOutputLimitExceeded { .. } => Self::GitOutputLimitExceeded,
-            RepositoryPortError::GitFailed { .. } => Self::GitFailed,
+            RepositoryPortError::GitFailed { .. }
+            | RepositoryPortError::UnsupportedDiffStatus { .. } => Self::GitFailed,
             RepositoryPortError::UnsupportedPathEncoding => Self::UnsupportedPathEncoding,
             RepositoryPortError::RevisionNotFound => Self::RevisionNotFound,
             RepositoryPortError::RevisionNotCommit => Self::RevisionNotCommit,
