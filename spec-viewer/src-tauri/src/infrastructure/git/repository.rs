@@ -2812,6 +2812,27 @@ mod tests {
     }
 
     #[test]
+    fn diff_status_parser_handles_modified_explicitly_and_fails_closed() {
+        let parsed = parse_diff_statuses(b"M\0changed.rs\0").unwrap();
+        assert_eq!(
+            parsed,
+            vec![DiffFileSides::Modified {
+                path: RepositoryRelativePath::parse("changed.rs").unwrap(),
+                old_mode: None,
+                new_mode: None,
+            }]
+        );
+
+        for code in ['U', 'X', 'Q'] {
+            let raw = [vec![code as u8, 0], b"changed.rs\0".to_vec()].concat();
+            assert_eq!(
+                parse_diff_statuses(&raw),
+                Err(RepositoryPortError::UnsupportedDiffStatus { code })
+            );
+        }
+    }
+
+    #[test]
     fn file_history_parser_types_timestamps_and_rejects_invalid_values() {
         let sha = "a".repeat(40);
         let timestamp = "2026-08-23T12:34:56+09:30";
@@ -2889,14 +2910,14 @@ mod tests {
             for target in ["copy-one.rs", "copy-two.rs"] {
                 context.changed.push(
                     DiffFile::new(
-                        Some(RepositoryRelativePath::parse("copy-source.rs").unwrap()),
-                        Some(RepositoryRelativePath::parse(target).unwrap()),
-                        FileChangeKind::Copied,
-                        EntryKind::Regular,
-                        ContentClassification::Text,
-                        Some(100),
-                        Some(GitFileMode::Regular),
-                        Some(GitFileMode::Regular),
+                        DiffFileSides::Copied {
+                            old_path: RepositoryRelativePath::parse("copy-source.rs").unwrap(),
+                            new_path: RepositoryRelativePath::parse(target).unwrap(),
+                            similarity: Some(100),
+                            old_mode: Some(GitFileMode::Regular),
+                            new_mode: Some(GitFileMode::Regular),
+                        },
+                        DiffFileMetadata::new(EntryKind::Regular, ContentClassification::Text),
                     )
                     .unwrap(),
                 );

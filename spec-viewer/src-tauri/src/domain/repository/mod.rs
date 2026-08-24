@@ -920,15 +920,47 @@ mod tests {
         change: FileChangeKind,
         similarity: Option<u8>,
     ) -> Result<DiffFile, RepositoryError> {
+        let sides = match change {
+            FileChangeKind::Added => DiffFileSides::Added {
+                new_path: RepositoryRelativePath::parse(new_path.unwrap()).unwrap(),
+                new_mode: None,
+            },
+            FileChangeKind::Modified => DiffFileSides::Modified {
+                path: RepositoryRelativePath::parse(old_path.unwrap()).unwrap(),
+                old_mode: None,
+                new_mode: None,
+            },
+            FileChangeKind::Deleted => DiffFileSides::Deleted {
+                old_path: RepositoryRelativePath::parse(old_path.unwrap()).unwrap(),
+                old_mode: None,
+            },
+            FileChangeKind::Renamed => DiffFileSides::Renamed {
+                old_path: RepositoryRelativePath::parse(old_path.unwrap()).unwrap(),
+                new_path: RepositoryRelativePath::parse(new_path.unwrap()).unwrap(),
+                similarity,
+                old_mode: None,
+                new_mode: None,
+            },
+            FileChangeKind::Copied => DiffFileSides::Copied {
+                old_path: RepositoryRelativePath::parse(old_path.unwrap()).unwrap(),
+                new_path: RepositoryRelativePath::parse(new_path.unwrap()).unwrap(),
+                similarity,
+                old_mode: None,
+                new_mode: None,
+            },
+            FileChangeKind::TypeChanged => DiffFileSides::TypeChanged {
+                path: RepositoryRelativePath::parse(old_path.unwrap()).unwrap(),
+                old_mode: None,
+                new_mode: None,
+            },
+            FileChangeKind::Untracked => DiffFileSides::Untracked {
+                new_path: RepositoryRelativePath::parse(new_path.unwrap()).unwrap(),
+                new_mode: None,
+            },
+        };
         DiffFile::new(
-            old_path.map(|path| RepositoryRelativePath::parse(path).unwrap()),
-            new_path.map(|path| RepositoryRelativePath::parse(path).unwrap()),
-            change,
-            EntryKind::Regular,
-            ContentClassification::Text,
-            similarity,
-            None,
-            None,
+            sides,
+            DiffFileMetadata::new(EntryKind::Regular, ContentClassification::Text),
         )
     }
 
@@ -937,17 +969,9 @@ mod tests {
         assert!(diff_file(None, Some("new"), FileChangeKind::Added, None).is_ok());
         assert!(diff_file(Some("old"), None, FileChangeKind::Deleted, None).is_ok());
         assert!(diff_file(Some("old"), Some("new"), FileChangeKind::Renamed, Some(50)).is_ok());
-        assert!(diff_file(Some("old"), Some("old"), FileChangeKind::Added, None).is_err());
-        assert!(diff_file(Some("old"), None, FileChangeKind::Renamed, Some(100)).is_err());
+        assert!(diff_file(Some("old"), Some("old"), FileChangeKind::Renamed, Some(100)).is_err());
         assert!(diff_file(Some("old"), Some("new"), FileChangeKind::Copied, Some(49)).is_err());
         assert!(diff_file(Some("old"), Some("new"), FileChangeKind::Copied, None).is_err());
-        assert!(diff_file(
-            Some("same"),
-            Some("same"),
-            FileChangeKind::Modified,
-            Some(90)
-        )
-        .is_err());
     }
 
     #[test]
@@ -974,14 +998,12 @@ mod tests {
         for (entry_kind, old_mode, new_mode) in invalid_states {
             assert_eq!(
                 DiffFile::new(
-                    Some(path()),
-                    Some(path()),
-                    FileChangeKind::Modified,
-                    entry_kind,
-                    ContentClassification::Text,
-                    None,
-                    old_mode,
-                    new_mode,
+                    DiffFileSides::Modified {
+                        path: path(),
+                        old_mode,
+                        new_mode,
+                    },
+                    DiffFileMetadata::new(entry_kind, ContentClassification::Text),
                 ),
                 Err(RepositoryError::InvalidValue(
                     "invalid diff file state".into()
@@ -990,14 +1012,12 @@ mod tests {
         }
 
         assert!(DiffFile::new(
-            Some(path()),
-            Some(path()),
-            FileChangeKind::Modified,
-            EntryKind::Regular,
-            ContentClassification::Text,
-            None,
-            Some(GitFileMode::Regular),
-            Some(GitFileMode::Executable),
+            DiffFileSides::Modified {
+                path: path(),
+                old_mode: Some(GitFileMode::Regular),
+                new_mode: Some(GitFileMode::Executable),
+            },
+            DiffFileMetadata::new(EntryKind::Regular, ContentClassification::Text),
         )
         .is_ok());
     }

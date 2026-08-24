@@ -537,7 +537,9 @@ mod tests {
     }
 
     use super::*;
-    use crate::domain::repository::{ContentClassification, EntryKind};
+    use crate::domain::repository::{
+        ContentClassification, DiffFileMetadata, DiffFileSides, EntryKind,
+    };
 
     fn target(spec_id: &str, key: SpecFileKey, paths: &[&str]) -> SpecDiffTarget {
         SpecDiffTarget::new(
@@ -556,15 +558,47 @@ mod tests {
     }
 
     fn diff(old: Option<&str>, new: Option<&str>, change: FileChangeKind) -> DiffFile {
+        let sides = match change {
+            FileChangeKind::Added => DiffFileSides::Added {
+                new_path: RepositoryRelativePath::parse(new.unwrap()).unwrap(),
+                new_mode: None,
+            },
+            FileChangeKind::Modified => DiffFileSides::Modified {
+                path: RepositoryRelativePath::parse(old.unwrap()).unwrap(),
+                old_mode: None,
+                new_mode: None,
+            },
+            FileChangeKind::Deleted => DiffFileSides::Deleted {
+                old_path: RepositoryRelativePath::parse(old.unwrap()).unwrap(),
+                old_mode: None,
+            },
+            FileChangeKind::Renamed => DiffFileSides::Renamed {
+                old_path: RepositoryRelativePath::parse(old.unwrap()).unwrap(),
+                new_path: RepositoryRelativePath::parse(new.unwrap()).unwrap(),
+                similarity: Some(100),
+                old_mode: None,
+                new_mode: None,
+            },
+            FileChangeKind::Copied => DiffFileSides::Copied {
+                old_path: RepositoryRelativePath::parse(old.unwrap()).unwrap(),
+                new_path: RepositoryRelativePath::parse(new.unwrap()).unwrap(),
+                similarity: Some(100),
+                old_mode: None,
+                new_mode: None,
+            },
+            FileChangeKind::TypeChanged => DiffFileSides::TypeChanged {
+                path: RepositoryRelativePath::parse(old.unwrap()).unwrap(),
+                old_mode: None,
+                new_mode: None,
+            },
+            FileChangeKind::Untracked => DiffFileSides::Untracked {
+                new_path: RepositoryRelativePath::parse(new.unwrap()).unwrap(),
+                new_mode: None,
+            },
+        };
         DiffFile::new(
-            old.map(|path| RepositoryRelativePath::parse(path).unwrap()),
-            new.map(|path| RepositoryRelativePath::parse(path).unwrap()),
-            change,
-            EntryKind::Regular,
-            ContentClassification::Text,
-            matches!(change, FileChangeKind::Renamed | FileChangeKind::Copied).then_some(100),
-            None,
-            None,
+            sides,
+            DiffFileMetadata::new(EntryKind::Regular, ContentClassification::Text),
         )
         .unwrap()
     }

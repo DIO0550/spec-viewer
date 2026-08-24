@@ -243,7 +243,8 @@ impl RepositoryCommandError {
             RepositoryPortError::GitUnavailable => "gitUnavailable",
             RepositoryPortError::GitTimedOut { .. } => "gitTimedOut",
             RepositoryPortError::GitOutputLimitExceeded { .. } => "gitOutputLimitExceeded",
-            RepositoryPortError::GitFailed { .. } => "gitFailed",
+            RepositoryPortError::GitFailed { .. }
+            | RepositoryPortError::UnsupportedDiffStatus { .. } => "gitFailed",
             RepositoryPortError::UnsupportedPathEncoding => "unsupportedPathEncoding",
             RepositoryPortError::RevisionNotFound => "revisionNotFound",
             RepositoryPortError::RevisionNotCommit => "revisionNotCommit",
@@ -1029,6 +1030,11 @@ mod tests {
                 },
                 "gitOutputLimitExceeded",
                 "Git output limit exceeded: stdout",
+            ),
+            (
+                RepositoryPortError::UnsupportedDiffStatus { code: 'U' },
+                "gitFailed",
+                "unsupported Git diff status code: 'U'",
             ),
         ] {
             let error: RepositoryCommandError = RepositoryUseCaseError::Port(port_error).into();
