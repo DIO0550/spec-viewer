@@ -158,7 +158,7 @@ paths and raw control characters are not included in command error messages.
 | Invalid or missing override never silently falls back | `validates_override_before_calling_port`, `base_resolution_keeps_missing_detached_unborn_and_disconnected_states` |
 | Multiple other remote HEADs are ambiguous | `inferred_base_priority_preserves_source_and_remote_ambiguity` |
 | Unborn, detached, shallow, deleted/disconnected base are explicit | `base_resolution_keeps_missing_detached_unborn_and_disconnected_states`, `shallow_history_without_merge_base_is_explicit_state` |
-| Workspace and repository concepts remain separate domain modules | `domain/workspace/mod.rs`, `domain/repository/mod.rs` |
+| Workspace and repository concepts remain separate domain modules | `domain/workspace.rs`, `domain/repository.rs` |
 | Canonical common-dir handles linked/bare/deleted/escape variants | `repository_variants_keep_identity_and_typed_errors` |
 | Opaque current snapshot covers committed/index/worktree/untracked | `overview_unifies_committed_staged_unstaged_and_untracked_changes` |
 
