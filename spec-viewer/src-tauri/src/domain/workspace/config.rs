@@ -110,9 +110,9 @@ impl WorkspaceConfig {
 
     pub fn default_for(kind: WorkspaceKind) -> Self {
         match kind {
-            WorkspaceKind::PluginWorkspace | WorkspaceKind::PluginWorktree => {
-                Self::plugin_workspace_default()
-            }
+            WorkspaceKind::PluginWorkspace
+            | WorkspaceKind::PluginWorktree
+            | WorkspaceKind::SpecSkill => Self::plugin_workspace_default(),
         }
     }
 

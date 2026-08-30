@@ -1,8 +1,10 @@
 //! Spec document and tree domain concepts.
 
+mod archive_policy;
 mod artifact;
 mod progress;
 
+pub use archive_policy::{SpecArchivePolicy, SpecArchivePolicyError, SpecArchiveTarget};
 pub use artifact::{
     ArtifactConfiguration, ArtifactEvaluation, ArtifactPresence, SpecArtifactFact,
     SpecArtifactIdentity,
@@ -32,6 +34,18 @@ impl SpecId {
             return Err(SpecDomainError::MissingSpecId);
         }
 
+        let has_unsafe_segment = trimmed
+            .split('/')
+            .any(|segment| segment.is_empty() || matches!(segment, "." | ".."));
+
+        if trimmed.contains('\\')
+            || trimmed.contains('\0')
+            || trimmed.contains(':')
+            || has_unsafe_segment
+        {
+            return Err(SpecDomainError::UnsafeSpecId { value });
+        }
+
         Ok(Self {
             value: trimmed.to_string(),
         })
@@ -39,6 +53,10 @@ impl SpecId {
 
     pub fn as_str(&self) -> &str {
         &self.value
+    }
+
+    pub fn segments(&self) -> impl Iterator<Item = &str> {
+        self.value.split('/')
     }
 }
 
@@ -756,6 +774,14 @@ impl SpecNode {
         self.descendant_spec_count
     }
 
+    pub fn is_reviewable(&self) -> bool {
+        self.present_document_count > 0
+    }
+
+    pub fn is_archiveable(&self) -> bool {
+        self.is_reviewable()
+    }
+
     pub fn file_for_key(&self, key: SpecFileKey) -> Option<&SpecFile> {
         self.files.iter().find(|file| file.key() == key)
     }
@@ -765,10 +791,61 @@ impl SpecNode {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct SpecTree {
+    roots: Vec<SpecNode>,
+}
+
+impl SpecTree {
+    pub fn new(roots: Vec<SpecNode>) -> Self {
+        Self { roots }
+    }
+
+    pub fn roots(&self) -> &[SpecNode] {
+        &self.roots
+    }
+
+    pub fn into_roots(self) -> Vec<SpecNode> {
+        self.roots
+    }
+
+    pub fn find(&self, spec_id: &SpecId) -> Option<&SpecNode> {
+        self.nodes().find(|node| node.id() == spec_id.as_str())
+    }
+
+    pub fn nodes(&self) -> SpecTreeNodeIter<'_> {
+        SpecTreeNodeIter::new(&self.roots)
+    }
+}
+
+pub struct SpecTreeNodeIter<'a> {
+    pending: Vec<&'a SpecNode>,
+}
+
+impl<'a> SpecTreeNodeIter<'a> {
+    fn new(roots: &'a [SpecNode]) -> Self {
+        Self {
+            pending: roots.iter().rev().collect(),
+        }
+    }
+}
+
+impl<'a> Iterator for SpecTreeNodeIter<'a> {
+    type Item = &'a SpecNode;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let node = self.pending.pop()?;
+        self.pending.extend(node.children().iter().rev());
+        Some(node)
+    }
+}
+
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 pub enum SpecDomainError {
     #[error("spec id is required")]
     MissingSpecId,
+    #[error("unsafe spec id: {value}")]
+    UnsafeSpecId { value: String },
     #[error("unsupported spec file key: {key}")]
     UnsupportedFileKey { key: String },
     #[error("file name is required for spec file key: {key}")]
@@ -799,7 +876,6 @@ pub enum SpecDomainError {
         end_byte_offset: usize,
     },
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -835,6 +911,25 @@ mod tests {
             ],
             SpecFileKey::default_keys()
         );
+    }
+
+    #[test]
+    fn spec_id_rejects_unsafe_paths() {
+        for value in [
+            "../outside",
+            "auth/../../outside",
+            "/absolute",
+            "auth\\flow",
+            "C:relative",
+            "auth\0flow",
+        ] {
+            assert_eq!(
+                Err(SpecDomainError::UnsafeSpecId {
+                    value: value.to_string(),
+                }),
+                SpecId::new(value),
+            );
+        }
     }
 
     #[test]

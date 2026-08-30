@@ -5,10 +5,15 @@ use std::fmt;
 use thiserror::Error;
 
 mod config;
+mod topology;
 
 pub use config::{
     default_scan_excluded_directory_names, SpecConfigOverride, SpecOverrideNodeKind,
     WorkspaceConfig, WorkspaceConfigError, WorkspaceConfigSource, WorkspaceFileMapping,
+};
+pub use topology::{
+    SpecLocationDescriptor, SpecSourceGroupDescriptor, WorkspaceDetectionMode,
+    WorkspaceDetectionRule, WorkspaceRelativePath, WorkspaceTopology,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -101,6 +106,7 @@ impl fmt::Display for WorkspaceRoot {
 pub enum WorkspaceKind {
     PluginWorkspace,
     PluginWorktree,
+    SpecSkill,
 }
 
 impl WorkspaceKind {
@@ -108,6 +114,7 @@ impl WorkspaceKind {
         match value {
             "plugin-workspace" => Ok(Self::PluginWorkspace),
             "plugin-worktree" => Ok(Self::PluginWorktree),
+            "spec-skill" => Ok(Self::SpecSkill),
             _ => Err(WorkspaceDomainError::UnsupportedLayout {
                 layout: value.to_string(),
             }),
@@ -118,6 +125,7 @@ impl WorkspaceKind {
         match self {
             Self::PluginWorkspace => "plugin-workspace",
             Self::PluginWorktree => "plugin-worktree",
+            Self::SpecSkill => "spec-skill",
         }
     }
 }
@@ -141,6 +149,10 @@ impl WorkspaceLayout {
         Self::new(root, WorkspaceKind::PluginWorktree)
     }
 
+    pub fn spec_skill(root: WorkspaceRoot) -> Self {
+        Self::new(root, WorkspaceKind::SpecSkill)
+    }
+
     pub fn root(&self) -> &WorkspaceRoot {
         &self.root
     }
@@ -160,6 +172,10 @@ pub enum WorkspaceDomainError {
     InvalidRefName { value: String },
     #[error("unsupported workspace layout: {layout}")]
     UnsupportedLayout { layout: String },
+    #[error("unsafe relative workspace path: {value}")]
+    UnsafeRelativePath { value: String },
+    #[error("unsupported spec source: {name}")]
+    UnsupportedSpecSource { name: String },
 }
 
 #[cfg(test)]

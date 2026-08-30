@@ -126,7 +126,7 @@ mod tests {
     use super::*;
     use crate::domain::{
         comment::CommentScope,
-        spec::{SpecFileKey, SpecId},
+        spec::{SpecDomainError, SpecFileKey, SpecId},
         workspace::{WorkspaceKind, WorkspaceRoot},
     };
 
@@ -225,34 +225,20 @@ mod tests {
 
     #[test]
     fn rejects_traversal_and_absolute_spec_ids() {
-        let workspace = TestWorkspace::new("invalid");
-        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
-
         for spec_id in ["../outside", "auth/../../outside", "/tmp/spec"] {
-            let scope = scope(spec_id, SpecFileKey::Tasks);
-            let result = CommentStoragePathResolver::new().resolve(&layout, &scope);
-
             assert!(matches!(
-                result,
-                Err(CommentStoragePathError::InvalidSpecId { spec_id: actual })
-                    if actual == spec_id
+                SpecId::new(spec_id),
+                Err(SpecDomainError::UnsafeSpecId { value }) if value == spec_id
             ));
         }
     }
 
     #[test]
     fn rejects_backslash_and_nul_spec_ids() {
-        let workspace = TestWorkspace::new("invalid-separators");
-        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
-
         for spec_id in ["auth\\flow", "auth\0flow"] {
-            let scope = scope(spec_id, SpecFileKey::Tasks);
-            let result = CommentStoragePathResolver::new().resolve(&layout, &scope);
-
             assert!(matches!(
-                result,
-                Err(CommentStoragePathError::InvalidSpecId { spec_id: actual })
-                    if actual == spec_id
+                SpecId::new(spec_id),
+                Err(SpecDomainError::UnsafeSpecId { value }) if value == spec_id
             ));
         }
     }
