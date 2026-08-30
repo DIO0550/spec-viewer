@@ -18,13 +18,13 @@ use thiserror::Error;
 use crate::domain::{
     spec::{
         artifact_progress, progress_without_tasks, ArtifactConfiguration, ArtifactEvaluation,
-        ArtifactEvaluationError, ArtifactPresence, SpecArtifactFact, SpecArtifactIdentity,
-        SpecDocumentFormat, SpecDomainError, SpecFile, SpecFileKey, SpecFileStatus, SpecNode,
-        SpecNodeIdentity, SpecNodeKind, SpecProgress,
+        ArtifactEvaluationError, ArtifactPresence, SpecArchiveTarget, SpecArtifactFact,
+        SpecArtifactIdentity, SpecDocumentFormat, SpecDomainError, SpecFile, SpecFileKey,
+        SpecFileStatus, SpecId, SpecNode, SpecNodeIdentity, SpecProgress,
     },
     workspace::{
         SpecOverrideNodeKind, WorkspaceConfig, WorkspaceDomainError, WorkspaceKind,
-        WorkspaceLayout, WorkspaceRoot,
+        WorkspaceLayout, WorkspaceRoot, WorkspaceTopology,
     },
 };
 use crate::infrastructure::markdown::parser::count_task_markers;
@@ -38,6 +38,7 @@ const PLUGIN_WORKSPACE_SPECS_DIR: &str = ".plugin-workspace/.specs";
 const PLUGIN_WORKSPACE_DIRECTORY: &str = ".plugin-workspace";
 const PLUGIN_WORKTREE_DIRECTORY: &str = ".plugin-worktree";
 const PLUGIN_WORKTREE_SPECS_DIR: &str = ".specs";
+const SPEC_SKILL_FEATURES_DIR: &str = ".spec-skill/features";
 const CLAUDE_WORKTREES_DIR: &str = ".claude/worktrees";
 const SPEC_ARCHIVE_DIRECTORY: &str = ".archive";
 const CLAUDE_WORKTREE_SPEC_CONTAINERS: [&str; 2] =
@@ -315,60 +316,52 @@ static ARCHIVE_SOURCE_GROUP_LOCKS: OnceLock<Mutex<HashMap<String, Arc<Mutex<()>>
     OnceLock::new();
 const ARCHIVE_RENAME_RETRY_LIMIT: usize = 8;
 
-pub fn archive_spec_directory(
+pub fn with_archive_source_group_lock<T>(
     layout: &WorkspaceLayout,
-    config: &WorkspaceConfig,
-    spec_id: &str,
-) -> Result<ArchivedSpecDestination, SpecArchiveError> {
-    let relative_spec_path = safe_relative_spec_path(spec_id).map_err(SpecArchiveError::from)?;
+    spec_id: &SpecId,
+    operation: impl FnOnce() -> T,
+) -> Result<T, SpecArchiveError> {
+    let topology = WorkspaceTopology::default();
+    let location = topology
+        .locate_spec(layout.kind(), spec_id.as_str())
+        .map_err(|_| SpecArchiveError::InvalidArchiveSource {
+            spec_id: spec_id.to_string(),
+        })?;
+    let source_group_id = location.source_root().as_str().to_string();
+    let lock = archive_source_group_lock(layout, &source_group_id)?;
+    let _guard = lock
+        .lock()
+        .map_err(|_| SpecArchiveError::ArchiveLock { source_group_id })?;
 
-    if relative_spec_path
+    Ok(operation())
+}
+
+pub(crate) fn archive_spec_directory(
+    layout: &WorkspaceLayout,
+    target: &SpecArchiveTarget,
+) -> Result<ArchivedSpecDestination, SpecArchiveError> {
+    let archive_paths = archive_spec_paths(layout, target)?;
+    let relative_id = display_path(&archive_paths.relative_spec_path);
+
+    if archive_paths
+        .relative_spec_path
         .components()
         .any(|component| component.as_os_str() == SPEC_ARCHIVE_DIRECTORY)
     {
         return Err(SpecArchiveError::AlreadyArchived {
-            spec_id: spec_id.to_string(),
+            spec_id: target.spec_id().to_string(),
         });
     }
 
-    let archive_paths = archive_spec_paths(layout, &relative_spec_path)?;
-
     if archive_paths.relative_spec_path.as_os_str().is_empty() {
-        return Err(SpecArchiveError::SourceGroupRoot {
-            spec_id: spec_id.to_string(),
+        return Err(SpecArchiveError::InvalidArchiveSource {
+            spec_id: target.spec_id().to_string(),
         });
     }
 
     if !directory_exists_for_archive(&archive_paths.source_root)? {
         return Err(SpecArchiveError::StaleSourceGroup {
             source_group_id: archive_paths.source_group_id.clone(),
-        });
-    }
-
-    // Serialize the whole read-validate-move sequence per source group. The
-    // tree scan below reads the specs directory, so it must run under the same
-    // lock as the move; otherwise a concurrent archive in the same source group
-    // can mutate the directory mid-scan and surface a spurious ReadDirectory
-    // error.
-    let lock = archive_source_group_lock(layout, &archive_paths.source_group_id)?;
-    let _guard = lock.lock().map_err(|_| SpecArchiveError::ArchiveLock {
-        source_group_id: archive_paths.source_group_id.clone(),
-    })?;
-
-    let relative_id = display_path(&archive_paths.relative_spec_path);
-    let tree = FilesystemSpecTreeScanner::new()
-        .scan(layout, config)
-        .map_err(|source| SpecArchiveError::ScanProjection { source })?;
-    let node = find_node_by_identity(&tree, &archive_paths.source_group_id, &relative_id)
-        .ok_or_else(|| SpecArchiveError::StaleSpecNode {
-            source_group_id: archive_paths.source_group_id.clone(),
-            relative_id: relative_id.clone(),
-        })?;
-
-    if node.kind() != SpecNodeKind::Spec {
-        return Err(SpecArchiveError::NotArchivableNode {
-            spec_id: spec_id.to_string(),
-            kind: node.kind(),
         });
     }
 
@@ -470,20 +463,6 @@ fn directory_exists_for_archive(path: &Path) -> Result<bool, SpecArchiveError> {
     }
 }
 
-fn find_node_by_identity<'a>(
-    nodes: &'a [SpecNode],
-    source_group_id: &str,
-    relative_id: &str,
-) -> Option<&'a SpecNode> {
-    nodes.iter().find_map(|node| {
-        if node.source_group_id() == source_group_id && node.relative_id() == relative_id {
-            return Some(node);
-        }
-
-        find_node_by_identity(node.children(), source_group_id, relative_id)
-    })
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct ArchiveSpecPaths {
     source_path: PathBuf,
@@ -494,38 +473,20 @@ struct ArchiveSpecPaths {
 
 fn archive_spec_paths(
     layout: &WorkspaceLayout,
-    relative_spec_path: &Path,
+    target: &SpecArchiveTarget,
 ) -> Result<ArchiveSpecPaths, SpecArchiveError> {
     let workspace_root = PathBuf::from(layout.root().as_str());
-
-    if let Some(source_root_relative) = claude_plugin_worktree_source_root(relative_spec_path) {
-        let relative_path = relative_spec_path
-            .strip_prefix(&source_root_relative)
-            .map_err(|_| SpecArchiveError::InvalidArchiveSource {
-                spec_id: display_path(relative_spec_path),
-            })?
-            .to_path_buf();
-
-        return Ok(ArchiveSpecPaths {
-            source_path: workspace_root.join(relative_spec_path),
-            source_root: workspace_root.join(&source_root_relative),
-            source_group_id: display_path(&source_root_relative),
-            relative_spec_path: relative_path,
-        });
-    }
-
-    let source_root_relative = Path::new(spec_root_directory_for_kind(layout.kind()));
-    let source_root = workspace_root.join(source_root_relative);
-    let relative_path = relative_spec_path
-        .strip_prefix(source_root_relative)
-        .unwrap_or(relative_spec_path)
-        .to_path_buf();
+    let location = WorkspaceTopology::default()
+        .locate_spec(layout.kind(), target.spec_id().as_str())
+        .map_err(|_| SpecArchiveError::InvalidArchiveSource {
+            spec_id: target.spec_id().to_string(),
+        })?;
 
     Ok(ArchiveSpecPaths {
-        source_path: source_root.join(&relative_path),
-        source_root,
-        source_group_id: display_path(source_root_relative),
-        relative_spec_path: relative_path,
+        source_path: workspace_root.join(location.directory().as_str()),
+        source_root: workspace_root.join(location.source_root().as_str()),
+        source_group_id: location.source_root().as_str().to_string(),
+        relative_spec_path: PathBuf::from(location.relative_spec()),
     })
 }
 
@@ -558,6 +519,7 @@ fn spec_root_directory_for_kind(kind: WorkspaceKind) -> &'static str {
     match kind {
         WorkspaceKind::PluginWorkspace => PLUGIN_WORKSPACE_SPECS_DIR,
         WorkspaceKind::PluginWorktree => PLUGIN_WORKTREE_SPECS_DIR,
+        WorkspaceKind::SpecSkill => SPEC_SKILL_FEATURES_DIR,
     }
 }
 
@@ -734,30 +696,6 @@ fn is_claude_plugin_worktree_spec_path(relative_spec_path: &Path) -> bool {
             && specs == PLUGIN_WORKTREE_SPECS_DIR
             && components.len() > 5
     )
-}
-
-fn claude_plugin_worktree_source_root(relative_spec_path: &Path) -> Option<PathBuf> {
-    let components = relative_spec_path_components(relative_spec_path);
-
-    if !matches!(
-        components.as_slice(),
-        [claude, worktrees, worktree_name, plugin_container, specs, ..]
-            if claude == ".claude"
-                && worktrees == "worktrees"
-                && !worktree_name.is_empty()
-                && CLAUDE_WORKTREE_SPEC_CONTAINERS.contains(&plugin_container.as_str())
-                && specs == PLUGIN_WORKTREE_SPECS_DIR
-    ) {
-        return None;
-    }
-
-    let mut source_root = PathBuf::new();
-
-    for component in components.iter().take(5) {
-        source_root.push(component);
-    }
-
-    Some(source_root)
 }
 
 fn relative_spec_path_components(relative_spec_path: &Path) -> Vec<String> {
@@ -1153,21 +1091,10 @@ pub enum SafeSpecPathError {
 
 #[derive(Debug, Error)]
 pub enum SpecArchiveError {
-    #[error("spec id cannot be archived because it is a source group root: {spec_id}")]
-    SourceGroupRoot { spec_id: String },
     #[error("spec id is already inside an archive: {spec_id}")]
     AlreadyArchived { spec_id: String },
-    #[error("node is not archivable ({kind:?}): {spec_id}")]
-    NotArchivableNode { spec_id: String, kind: SpecNodeKind },
     #[error("source group is no longer available; reload required: {source_group_id}")]
     StaleSourceGroup { source_group_id: String },
-    #[error("spec node is stale; reload required: {source_group_id}:{relative_id}")]
-    StaleSpecNode {
-        source_group_id: String,
-        relative_id: String,
-    },
-    #[error("failed to scan authoritative spec projection before archive")]
-    ScanProjection { source: SpecTreeScanError },
     #[error("failed to acquire archive lock for source group: {source_group_id}")]
     ArchiveLock { source_group_id: String },
     #[error(
@@ -1177,8 +1104,6 @@ pub enum SpecArchiveError {
         source_group_id: String,
         relative_id: String,
     },
-    #[error("spec id cannot be archived because it is invalid: {source}")]
-    InvalidSpecId { source: SafeSpecPathError },
     #[error("spec archive source is invalid: {spec_id}")]
     InvalidArchiveSource { spec_id: String },
     #[error("spec directory does not exist: {path}")]
@@ -1199,12 +1124,6 @@ pub enum SpecArchiveError {
     },
 }
 
-impl From<SafeSpecPathError> for SpecArchiveError {
-    fn from(source: SafeSpecPathError) -> Self {
-        Self::InvalidSpecId { source }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::{
@@ -1215,7 +1134,10 @@ mod tests {
 
     use super::*;
     use crate::domain::{
-        spec::{SpecDocumentFormat, SpecFileKey, SpecFileStatus, SpecNodeKind, SpecProgress},
+        spec::{
+            SpecArchivePolicy, SpecDocumentFormat, SpecFileKey, SpecFileStatus, SpecNodeKind,
+            SpecProgress, SpecTree,
+        },
         workspace::{WorkspaceFileMapping, WorkspaceRoot},
     };
 
@@ -1794,28 +1716,58 @@ mod tests {
         assert_eq!(SpecDocumentFormat::Html, tasks.format());
     }
 
+    fn approved_archive_target(
+        layout: &WorkspaceLayout,
+        config: &WorkspaceConfig,
+        raw_spec_id: &str,
+    ) -> SpecArchiveTarget {
+        let tree = SpecTree::new(
+            FilesystemSpecTreeScanner::new()
+                .scan(layout, config)
+                .expect("spec tree should scan"),
+        );
+        let spec_id = SpecId::new(raw_spec_id).expect("spec id should be valid");
+
+        SpecArchivePolicy
+            .target_for(
+                &tree,
+                &WorkspaceTopology::default(),
+                layout.kind(),
+                &spec_id,
+            )
+            .expect("fixture should be approved by archive policy")
+    }
+
+    fn archive_approved_spec(
+        layout: &WorkspaceLayout,
+        config: &WorkspaceConfig,
+        raw_spec_id: &str,
+    ) -> Result<ArchivedSpecDestination, SpecArchiveError> {
+        let target = approved_archive_target(layout, config, raw_spec_id);
+
+        with_archive_source_group_lock(layout, target.spec_id(), || {
+            archive_spec_directory(layout, &target)
+        })?
+    }
+
     #[test]
-    fn archive_spec_directory_moves_plugin_workspace_spec_to_hidden_archive() {
+    fn archive_spec_directory_moves_approved_spec_and_keeps_metadata() {
         let workspace = TestWorkspace::new("archive-plugin-workspace-spec");
-        workspace.create_dir(PLUGIN_WORKSPACE_SPECS_DIR);
         workspace.write_file(".plugin-workspace/.specs/auth/tasks.md", "# Tasks");
         let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
         let config = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
 
-        let archive_path =
-            archive_spec_directory(&layout, &config, ".plugin-workspace/.specs/auth")
-                .expect("spec should be archived");
+        let destination = archive_approved_spec(&layout, &config, ".plugin-workspace/.specs/auth")
+            .expect("spec should be archived");
 
         assert_eq!(
             workspace
                 .root()
                 .join(".plugin-workspace/.specs/.archive/auth"),
-            archive_path.path()
+            destination.path()
         );
-        assert!(!workspace
-            .root()
-            .join(".plugin-workspace/.specs/auth")
-            .exists());
+        assert_eq!(PLUGIN_WORKSPACE_SPECS_DIR, destination.source_group_id());
+        assert_eq!(".archive/auth", destination.destination_node_id());
         assert!(workspace
             .root()
             .join(".plugin-workspace/.specs/.archive/auth/tasks.md")
@@ -1823,92 +1775,39 @@ mod tests {
     }
 
     #[test]
-    fn archive_spec_directory_uses_suffix_when_archive_destination_exists() {
+    fn archive_spec_directory_uses_suffix_when_destination_exists() {
         let workspace = TestWorkspace::new("archive-plugin-workspace-spec-conflict");
-        workspace.create_dir(PLUGIN_WORKSPACE_SPECS_DIR);
         workspace.write_file(".plugin-workspace/.specs/auth/tasks.md", "# New");
         workspace.write_file(".plugin-workspace/.specs/.archive/auth/tasks.md", "# Old");
         let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
         let config = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
 
-        let archive_path =
-            archive_spec_directory(&layout, &config, ".plugin-workspace/.specs/auth")
-                .expect("spec should be archived with suffix");
+        let destination = archive_approved_spec(&layout, &config, ".plugin-workspace/.specs/auth")
+            .expect("spec should be archived with suffix");
 
         assert_eq!(
             workspace
                 .root()
                 .join(".plugin-workspace/.specs/.archive/auth-1"),
-            archive_path.path()
+            destination.path()
         );
-        assert!(workspace
-            .root()
-            .join(".plugin-workspace/.specs/.archive/auth-1/tasks.md")
-            .exists());
+        assert_eq!(".archive/auth-1", destination.destination_node_id());
     }
 
     #[test]
-    fn archive_spec_directory_rejects_source_group_root() {
-        let workspace = TestWorkspace::new("archive-source-group-root");
-        workspace.create_dir(PLUGIN_WORKSPACE_SPECS_DIR);
-        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
-        let config = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
-
-        let result = archive_spec_directory(&layout, &config, ".plugin-workspace/.specs");
-
-        assert!(matches!(
-            result,
-            Err(SpecArchiveError::SourceGroupRoot { .. })
-        ));
-    }
-
-    #[test]
-    fn archive_spec_directory_rejects_category_archived_and_moved_nodes() {
-        let workspace = TestWorkspace::new("archive-kind-guards");
-        workspace.write_file(
-            ".plugin-workspace/.specs/category/.spec-reviewer/config.json",
-            r#"{ "nodeKind": "category" }"#,
-        );
-        workspace.create_dir(".plugin-workspace/.specs/category/child");
+    fn archive_spec_directory_reports_stale_source_group_after_approval() {
+        let workspace = TestWorkspace::new("archive-stale-source-group");
         workspace.write_file(".plugin-workspace/.specs/auth/tasks.md", "# Tasks");
         let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
         let config = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
+        let target = approved_archive_target(&layout, &config, ".plugin-workspace/.specs/auth");
+        fs::remove_dir_all(workspace.root().join(PLUGIN_WORKSPACE_SPECS_DIR))
+            .expect("source group should be removed for stale fixture");
 
-        let category =
-            archive_spec_directory(&layout, &config, ".plugin-workspace/.specs/category");
-        assert!(matches!(
-            category,
-            Err(SpecArchiveError::NotArchivableNode {
-                kind: SpecNodeKind::Category,
-                ..
-            })
-        ));
-
-        let archived =
-            archive_spec_directory(&layout, &config, ".plugin-workspace/.specs/.archive/old");
-        assert!(matches!(
-            archived,
-            Err(SpecArchiveError::AlreadyArchived { .. })
-        ));
-
-        archive_spec_directory(&layout, &config, ".plugin-workspace/.specs/auth")
-            .expect("first archive should succeed");
-        let moved = archive_spec_directory(&layout, &config, ".plugin-workspace/.specs/auth");
-        assert!(matches!(moved, Err(SpecArchiveError::StaleSpecNode { .. })));
-    }
-
-    #[test]
-    fn archive_spec_directory_reports_stale_secondary_source_group() {
-        let workspace = TestWorkspace::new("archive-stale-source-group");
-        workspace.create_dir(PLUGIN_WORKSPACE_SPECS_DIR);
-        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
-        let config = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
-
-        let result = archive_spec_directory(
-            &layout,
-            &config,
-            ".claude/worktrees/missing/.plugin-worktree/.specs/auth",
-        );
+        let result = with_archive_source_group_lock(&layout, target.spec_id(), || {
+            archive_spec_directory(&layout, &target)
+        })
+        .expect("lock acquisition should succeed");
 
         assert!(matches!(
             result,
@@ -1917,7 +1816,7 @@ mod tests {
     }
 
     #[test]
-    fn archive_spec_directory_returns_unique_destination_identity_for_two_collisions() {
+    fn archive_spec_directory_returns_unique_destination_identity_for_collisions() {
         let workspace = TestWorkspace::new("archive-destination-identity");
         let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
         let config = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
@@ -1926,7 +1825,7 @@ mod tests {
         for _ in 0..3 {
             workspace.write_file(".plugin-workspace/.specs/auth/tasks.md", "# Tasks");
             destinations.push(
-                archive_spec_directory(&layout, &config, ".plugin-workspace/.specs/auth")
+                archive_approved_spec(&layout, &config, ".plugin-workspace/.specs/auth")
                     .expect("archive should allocate a unique destination"),
             );
         }
@@ -1944,37 +1843,62 @@ mod tests {
     }
 
     #[test]
-    fn archive_spec_directory_serializes_concurrent_requests_per_source_group() {
-        let workspace = TestWorkspace::new("archive-concurrency");
-        workspace.write_file(".plugin-workspace/.specs/auth/tasks.md", "# Auth");
-        workspace.write_file(".plugin-workspace/.specs/billing/tasks.md", "# Billing");
+    fn archive_lock_serializes_the_whole_source_group_operation() {
+        let workspace = TestWorkspace::new("archive-lock-operation");
+        workspace.create_dir(PLUGIN_WORKSPACE_SPECS_DIR);
         let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
-        let config = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
-        let requests = ["auth", "billing"].map(|spec| {
-            let layout = layout.clone();
-            let config = config.clone();
-            std::thread::spawn(move || {
-                archive_spec_directory(
-                    &layout,
-                    &config,
-                    &format!(".plugin-workspace/.specs/{spec}"),
-                )
+        let spec_id =
+            SpecId::new(".plugin-workspace/.specs/auth").expect("spec id should be valid");
+        let (first_entered_tx, first_entered_rx) = std::sync::mpsc::channel();
+        let (release_first_tx, release_first_rx) = std::sync::mpsc::channel();
+        let first_layout = layout.clone();
+        let first_id = spec_id.clone();
+
+        let first = std::thread::spawn(move || {
+            with_archive_source_group_lock(&first_layout, &first_id, || {
+                first_entered_tx
+                    .send(())
+                    .expect("first entry should signal");
+                release_first_rx
+                    .recv()
+                    .expect("first operation should release");
             })
+            .expect("first lock operation should complete");
         });
-        let destinations = requests.map(|request| {
-            request
-                .join()
-                .expect("archive thread should not panic")
-                .expect("archive request should succeed")
+        first_entered_rx
+            .recv_timeout(std::time::Duration::from_secs(1))
+            .expect("first operation should enter the lock");
+
+        let (second_started_tx, second_started_rx) = std::sync::mpsc::channel();
+        let (second_entered_tx, second_entered_rx) = std::sync::mpsc::channel();
+        let second_layout = layout.clone();
+        let second_id = spec_id.clone();
+        let second = std::thread::spawn(move || {
+            second_started_tx
+                .send(())
+                .expect("second attempt should signal");
+            with_archive_source_group_lock(&second_layout, &second_id, || {
+                second_entered_tx
+                    .send(())
+                    .expect("second entry should signal");
+            })
+            .expect("second lock operation should complete");
         });
 
-        assert_ne!(
-            destinations[0].destination_node_id(),
-            destinations[1].destination_node_id(),
-        );
-        assert!(destinations
-            .iter()
-            .all(|destination| destination.source_group_id() == PLUGIN_WORKSPACE_SPECS_DIR));
+        second_started_rx
+            .recv_timeout(std::time::Duration::from_secs(1))
+            .expect("second thread should attempt the lock");
+        assert!(second_entered_rx
+            .recv_timeout(std::time::Duration::from_millis(100))
+            .is_err());
+        release_first_tx
+            .send(())
+            .expect("first operation should release");
+        second_entered_rx
+            .recv_timeout(std::time::Duration::from_secs(1))
+            .expect("second operation should enter after release");
+        first.join().expect("first thread should finish");
+        second.join().expect("second thread should finish");
     }
 
     #[test]

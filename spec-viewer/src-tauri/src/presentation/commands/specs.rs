@@ -14,7 +14,7 @@ use crate::{
     },
     domain::spec::{
         MarkdownBlock, MarkdownBlockSourceRange, SpecArtifactIdentity, SpecDocumentFormat,
-        SpecFile, SpecFileKey, SpecFileStatus, SpecNode, SpecNodeKind,
+        SpecFile, SpecFileKey, SpecFileStatus, SpecId, SpecNode, SpecNodeKind,
     },
 };
 
@@ -446,9 +446,8 @@ pub fn archive_spec(
     request: ArchiveSpecRequest,
 ) -> ArchiveSpecCommandResult<ArchiveSpecResponse> {
     let workspace = load_workspace(state.use_cases(), &request.workspace_path)?;
-    let result = state
-        .use_cases()
-        .archive_spec(&workspace, &request.spec_id)?;
+    let spec_id = SpecId::new(&request.spec_id).map_err(AppUseCaseError::from)?;
+    let result = state.use_cases().archive_spec(&workspace, &spec_id)?;
 
     Ok(ArchiveSpecResponse::from(result))
 }
@@ -959,5 +958,14 @@ mod tests {
         assert_eq!("html", response.format());
         assert_eq!("/workspace/auth/tasks.html", response.path());
         assert!(response.blocks().is_empty());
+    }
+    #[test]
+    fn spec_archive_app_error_keeps_public_command_code() {
+        let error = SpecCommandError::from(AppUseCaseError::SpecArchive {
+            message: "archive rejected by domain policy".to_string(),
+        });
+        let serialized = serde_json::to_value(error).expect("command error should serialize");
+
+        assert_eq!("specArchive", serialized["code"]);
     }
 }

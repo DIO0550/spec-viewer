@@ -22,15 +22,17 @@ use crate::{
     },
     domain::{
         comment::{CommentDomainError, CommentRepositoryError},
-        spec::{MarkdownBlock, SpecDocumentFormat, SpecDomainError},
-        spec::{SpecFileKey, SpecNode},
-        workspace::{WorkspaceConfig, WorkspaceLayout},
+        spec::{
+            MarkdownBlock, SpecArchivePolicy, SpecArchivePolicyError, SpecDocumentFormat,
+            SpecDomainError, SpecFileKey, SpecId, SpecNode, SpecTree,
+        },
+        workspace::{WorkspaceConfig, WorkspaceLayout, WorkspaceTopology},
     },
     infrastructure::{
         filesystem::{
-            archive_spec_directory, spec_directory_path, FilesystemSpecTreeScanner,
-            FilesystemWorkspaceDetector, SafeSpecPathError, SpecArchiveError, SpecTreeScanError,
-            WorkspaceDetectionError,
+            archive_spec_directory, spec_directory_path, with_archive_source_group_lock,
+            FilesystemSpecTreeScanner, FilesystemWorkspaceDetector, SafeSpecPathError,
+            SpecArchiveError, SpecTreeScanError, WorkspaceDetectionError,
         },
         markdown::{
             FilesystemMarkdownReader, MarkdownDocument, MarkdownReadError, MarkdownReadResult,
@@ -120,16 +122,32 @@ impl FilesystemAppUseCases {
     pub fn archive_spec(
         &self,
         workspace: &LoadWorkspaceResult,
-        spec_id: &str,
+        spec_id: &SpecId,
     ) -> Result<ArchiveSpecResult, AppUseCaseError> {
-        let destination = archive_spec_directory(workspace.layout(), workspace.config(), spec_id)?;
-
-        Ok(ArchiveSpecResult::new(
+        let operation = with_archive_source_group_lock(
+            workspace.layout(),
             spec_id,
-            destination.path().to_string_lossy().into_owned(),
-            destination.source_group_id(),
-            destination.destination_node_id(),
-        ))
+            || -> Result<ArchiveSpecResult, AppUseCaseError> {
+                let tree = self.list_specs(workspace)?.into_tree();
+                let topology = WorkspaceTopology::default();
+                let target = SpecArchivePolicy.target_for(
+                    &tree,
+                    &topology,
+                    workspace.layout().kind(),
+                    spec_id,
+                )?;
+                let destination = archive_spec_directory(workspace.layout(), &target)?;
+
+                Ok(ArchiveSpecResult::new(
+                    spec_id.as_str(),
+                    destination.path().to_string_lossy().into_owned(),
+                    destination.source_group_id(),
+                    destination.destination_node_id(),
+                ))
+            },
+        )?;
+
+        operation
     }
 
     pub fn read_spec_file_cached(
@@ -360,6 +378,10 @@ impl ListSpecsResult {
 
     pub fn into_specs(self) -> Vec<SpecNode> {
         self.specs
+    }
+
+    pub fn into_tree(self) -> SpecTree {
+        SpecTree::new(self.specs)
     }
 }
 
@@ -624,6 +646,14 @@ impl From<SafeSpecPathError> for AppUseCaseError {
 
 impl From<SpecArchiveError> for AppUseCaseError {
     fn from(source: SpecArchiveError) -> Self {
+        Self::SpecArchive {
+            message: source.to_string(),
+        }
+    }
+}
+
+impl From<SpecArchivePolicyError> for AppUseCaseError {
+    fn from(source: SpecArchivePolicyError) -> Self {
         Self::SpecArchive {
             message: source.to_string(),
         }
