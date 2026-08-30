@@ -175,6 +175,7 @@ impl ResolveSpecDiffTargets for FilesystemSpecDiffTargetResolver {
         let primary_source_group = match layout.kind() {
             WorkspaceKind::PluginWorkspace => ".plugin-workspace/.specs",
             WorkspaceKind::PluginWorktree => ".specs",
+            WorkspaceKind::SpecSkill => ".spec-skill/features",
         };
         let mut targets = Vec::new();
         self.collect_targets(
