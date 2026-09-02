@@ -11,6 +11,48 @@ pub use config::{
     WorkspaceConfigError, WorkspaceConfigSource, WorkspaceFileMapping,
 };
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct WorkspaceRelativePath {
+    value: String,
+}
+
+impl WorkspaceRelativePath {
+    pub fn new(value: impl Into<String>) -> Result<Self, WorkspaceDomainError> {
+        Self::try_from(value.into())
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.value
+    }
+}
+
+impl TryFrom<String> for WorkspaceRelativePath {
+    type Error = WorkspaceDomainError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        let violation = value.split('/').find_map(|segment| match segment {
+            "" => Some(RelativePathViolation::EmptySegment),
+            "." => Some(RelativePathViolation::CurrentDirectorySegment),
+            ".." => Some(RelativePathViolation::ParentDirectorySegment),
+            _ => segment
+                .chars()
+                .find(|character| matches!(character, '\\' | '\0' | ':'))
+                .map(|character| RelativePathViolation::ForbiddenCharacter { character }),
+        });
+
+        match violation {
+            Some(violation) => Err(WorkspaceDomainError::InvalidRelativePath { value, violation }),
+            None => Ok(Self { value }),
+        }
+    }
+}
+
+impl fmt::Display for WorkspaceRelativePath {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct WorkspaceRoot {
     value: String,
@@ -102,7 +144,24 @@ impl WorkspaceLayout {
 }
 
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
+pub enum RelativePathViolation {
+    #[error("contains an empty path segment")]
+    EmptySegment,
+    #[error("contains a current-directory segment")]
+    CurrentDirectorySegment,
+    #[error("contains a parent-directory segment")]
+    ParentDirectorySegment,
+    #[error("contains forbidden character {character:?}")]
+    ForbiddenCharacter { character: char },
+}
+
+#[derive(Debug, Error, Clone, PartialEq, Eq)]
 pub enum WorkspaceDomainError {
+    #[error("workspace-relative path is invalid: {value}: {violation}")]
+    InvalidRelativePath {
+        value: String,
+        violation: RelativePathViolation,
+    },
     #[error("workspace root is required")]
     MissingRoot,
     #[error("unsupported workspace layout: {layout}")]
