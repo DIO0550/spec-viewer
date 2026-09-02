@@ -17,7 +17,16 @@ use crate::domain::{
 
 const USER_REVIEW_ID_PREFIX: &str = "urv_";
 const USER_REVIEW_ID_HEX_LENGTH: usize = 32;
-const USER_REVIEW_ID_LENGTH: usize = USER_REVIEW_ID_PREFIX.len() + USER_REVIEW_ID_HEX_LENGTH;
+
+#[derive(Debug, Error, Clone, PartialEq, Eq)]
+pub enum UserReviewIdViolation {
+    #[error("prefix must be urv_")]
+    InvalidPrefix,
+    #[error("payload length must be {expected}, got {actual}")]
+    InvalidLength { expected: usize, actual: usize },
+    #[error("payload contains non-lowercase-hex character {character:?} at {index}")]
+    InvalidHexCharacter { index: usize, character: char },
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct UserReviewId {
@@ -26,13 +35,7 @@ pub struct UserReviewId {
 
 impl UserReviewId {
     pub fn new(value: impl Into<String>) -> Result<Self, UserReviewDomainError> {
-        let value = value.into();
-
-        if !is_canonical_user_review_id(&value) {
-            return Err(UserReviewDomainError::InvalidUserReviewId { value });
-        }
-
-        Ok(Self { value })
+        Self::try_from(value.into())
     }
 
     pub fn from_uuid(uuid: Uuid) -> Result<Self, UserReviewDomainError> {
@@ -40,11 +43,36 @@ impl UserReviewId {
             return Err(UserReviewDomainError::InvalidUserReviewUuid { uuid });
         }
 
-        Self::new(format!("{USER_REVIEW_ID_PREFIX}{}", uuid.simple()))
+        Self::try_from(format!("{USER_REVIEW_ID_PREFIX}{}", uuid.simple()))
     }
 
     pub fn as_str(&self) -> &str {
         &self.value
+    }
+}
+
+impl TryFrom<String> for UserReviewId {
+    type Error = UserReviewDomainError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        let violation = match value.strip_prefix(USER_REVIEW_ID_PREFIX) {
+            None => Some(UserReviewIdViolation::InvalidPrefix),
+            Some(payload) if payload.len() != USER_REVIEW_ID_HEX_LENGTH => {
+                Some(UserReviewIdViolation::InvalidLength {
+                    expected: USER_REVIEW_ID_HEX_LENGTH,
+                    actual: payload.len(),
+                })
+            }
+            Some(payload) => payload.char_indices().find_map(|(index, character)| {
+                (!matches!(character, '0'..='9' | 'a'..='f'))
+                    .then_some(UserReviewIdViolation::InvalidHexCharacter { index, character })
+            }),
+        };
+
+        match violation {
+            Some(violation) => Err(UserReviewDomainError::InvalidUserReviewId { value, violation }),
+            None => Ok(Self { value }),
+        }
     }
 }
 
@@ -98,32 +126,6 @@ impl UserReviewTarget {
             Self::Spec { .. } => None,
         }
     }
-
-    fn validate_source(
-        &self,
-        comment_id: &CommentId,
-        source: &UserReviewSource,
-    ) -> Result<(), UserReviewDomainError> {
-        if self.spec_id() != source.spec_id() {
-            return Err(UserReviewDomainError::CommentSourceSpecMismatch {
-                comment_id: comment_id.clone(),
-                target_spec_id: self.spec_id().clone(),
-                source_spec_id: source.spec_id().clone(),
-            });
-        }
-
-        if let Some(target_file_key) = self.file_key() {
-            if target_file_key != source.file_key() {
-                return Err(UserReviewDomainError::CommentSourceFileMismatch {
-                    comment_id: comment_id.clone(),
-                    target_file_key,
-                    source_file_key: source.file_key(),
-                });
-            }
-        }
-
-        Ok(())
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -174,43 +176,120 @@ impl PositiveLineNumber {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct LineRange {
+    start: PositiveLineNumber,
+    end: PositiveLineNumber,
+}
+
+impl LineRange {
+    pub fn new(
+        start: PositiveLineNumber,
+        end: PositiveLineNumber,
+    ) -> Result<Self, UserReviewDomainError> {
+        if end < start {
+            return Err(UserReviewDomainError::InvalidLineRange { start, end });
+        }
+
+        Ok(Self { start, end })
+    }
+
+    pub fn start(self) -> PositiveLineNumber {
+        self.start
+    }
+
+    pub fn end(self) -> PositiveLineNumber {
+        self.end
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UserReviewAnchor {
+    source: UserReviewSource,
+    block_type: MarkdownBlockType,
+    line_range: LineRange,
+    text_snippet: TextSnippet,
+    text_hash: MarkdownBlockHash,
+}
+
+impl UserReviewAnchor {
+    pub fn new(
+        source: UserReviewSource,
+        block_type: MarkdownBlockType,
+        line_range: LineRange,
+        text_snippet: TextSnippet,
+        text_hash: MarkdownBlockHash,
+    ) -> Self {
+        Self {
+            source,
+            block_type,
+            line_range,
+            text_snippet,
+            text_hash,
+        }
+    }
+
+    pub fn source(&self) -> &UserReviewSource {
+        &self.source
+    }
+
+    pub fn block_type(&self) -> MarkdownBlockType {
+        self.block_type
+    }
+
+    pub fn line_range(&self) -> LineRange {
+        self.line_range
+    }
+
+    pub fn text_snippet(&self) -> &TextSnippet {
+        &self.text_snippet
+    }
+
+    pub fn text_hash(&self) -> &MarkdownBlockHash {
+        &self.text_hash
+    }
+
+    fn identity(&self) -> UserReviewAnchorIdentity<'_> {
+        UserReviewAnchorIdentity {
+            spec_id: self.source.spec_id(),
+            file_key: self.source.file_key(),
+            file_path: self.source.file_path(),
+            block_type: self.block_type,
+            line_range: self.line_range,
+            text_hash: &self.text_hash,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct UserReviewAnchorIdentity<'a> {
+    spec_id: &'a SpecId,
+    file_key: SpecFileKey,
+    file_path: &'a WorkspaceRelativePath,
+    block_type: MarkdownBlockType,
+    line_range: LineRange,
+    text_hash: &'a MarkdownBlockHash,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UserReviewComment {
     id: CommentId,
     status: CommentStatus,
-    source: UserReviewSource,
-    block_type: MarkdownBlockType,
-    line_start: PositiveLineNumber,
-    line_end: PositiveLineNumber,
-    text_snippet: TextSnippet,
-    text_hash: MarkdownBlockHash,
+    anchor: UserReviewAnchor,
     body: CommentBody,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
 }
 
 impl UserReviewComment {
-    #[allow(clippy::too_many_arguments)]
     pub fn new(
         id: CommentId,
         status: CommentStatus,
-        source: UserReviewSource,
-        block_type: MarkdownBlockType,
-        line_start: PositiveLineNumber,
-        line_end: PositiveLineNumber,
-        text_snippet: TextSnippet,
-        text_hash: MarkdownBlockHash,
+        anchor: UserReviewAnchor,
         body: CommentBody,
         created_at: DateTime<Utc>,
         updated_at: DateTime<Utc>,
     ) -> Result<Self, UserReviewDomainError> {
-        if line_end < line_start {
-            return Err(UserReviewDomainError::InvalidLineRange {
-                start: line_start,
-                end: line_end,
-            });
-        }
-
         if updated_at < created_at {
             return Err(UserReviewDomainError::CommentUpdatedBeforeCreated {
                 id,
@@ -222,12 +301,7 @@ impl UserReviewComment {
         Ok(Self {
             id,
             status,
-            source,
-            block_type,
-            line_start,
-            line_end,
-            text_snippet,
-            text_hash,
+            anchor,
             body,
             created_at,
             updated_at,
@@ -242,28 +316,8 @@ impl UserReviewComment {
         self.status
     }
 
-    pub fn source(&self) -> &UserReviewSource {
-        &self.source
-    }
-
-    pub fn block_type(&self) -> MarkdownBlockType {
-        self.block_type
-    }
-
-    pub fn line_start(&self) -> PositiveLineNumber {
-        self.line_start
-    }
-
-    pub fn line_end(&self) -> PositiveLineNumber {
-        self.line_end
-    }
-
-    pub fn text_snippet(&self) -> &TextSnippet {
-        &self.text_snippet
-    }
-
-    pub fn text_hash(&self) -> &MarkdownBlockHash {
-        &self.text_hash
+    pub fn anchor(&self) -> &UserReviewAnchor {
+        &self.anchor
     }
 
     pub fn body(&self) -> &CommentBody {
@@ -277,29 +331,74 @@ impl UserReviewComment {
     pub fn updated_at(&self) -> DateTime<Utc> {
         self.updated_at
     }
-
-    fn source_identity(&self) -> UserReviewCommentSourceIdentity<'_> {
-        UserReviewCommentSourceIdentity {
-            spec_id: self.source.spec_id(),
-            file_key: self.source.file_key(),
-            file_path: self.source.file_path(),
-            block_type: self.block_type,
-            line_start: self.line_start,
-            line_end: self.line_end,
-            text_hash: &self.text_hash,
-        }
-    }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-struct UserReviewCommentSourceIdentity<'a> {
-    spec_id: &'a SpecId,
-    file_key: SpecFileKey,
-    file_path: &'a WorkspaceRelativePath,
-    block_type: MarkdownBlockType,
-    line_start: PositiveLineNumber,
-    line_end: PositiveLineNumber,
-    text_hash: &'a MarkdownBlockHash,
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UserReviewContent {
+    target: UserReviewTarget,
+    comments: Vec<UserReviewComment>,
+}
+
+impl UserReviewContent {
+    pub fn new(
+        target: UserReviewTarget,
+        comments: Vec<UserReviewComment>,
+    ) -> Result<Self, UserReviewDomainError> {
+        if comments.is_empty() {
+            return Err(UserReviewDomainError::MissingComments);
+        }
+
+        {
+            let mut comment_ids = HashSet::with_capacity(comments.len());
+            let mut source_identities = HashMap::with_capacity(comments.len());
+
+            for comment in &comments {
+                if !comment_ids.insert(comment.id().clone()) {
+                    return Err(UserReviewDomainError::DuplicateCommentId {
+                        id: comment.id().clone(),
+                    });
+                }
+
+                let source = comment.anchor().source();
+                if target.spec_id() != source.spec_id() {
+                    return Err(UserReviewDomainError::CommentSourceSpecMismatch {
+                        comment_id: comment.id().clone(),
+                        target_spec_id: target.spec_id().clone(),
+                        source_spec_id: source.spec_id().clone(),
+                    });
+                }
+
+                if let Some(target_file_key) = target.file_key() {
+                    if target_file_key != source.file_key() {
+                        return Err(UserReviewDomainError::CommentSourceFileMismatch {
+                            comment_id: comment.id().clone(),
+                            target_file_key,
+                            source_file_key: source.file_key(),
+                        });
+                    }
+                }
+
+                if let Some(first_id) =
+                    source_identities.insert(comment.anchor().identity(), comment.id().clone())
+                {
+                    return Err(UserReviewDomainError::DuplicateCommentSource {
+                        first_id,
+                        duplicate_id: comment.id().clone(),
+                    });
+                }
+            }
+        }
+
+        Ok(Self { target, comments })
+    }
+
+    pub fn target(&self) -> &UserReviewTarget {
+        &self.target
+    }
+
+    pub fn comments(&self) -> &[UserReviewComment] {
+        &self.comments
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -309,55 +408,140 @@ pub enum UserReviewArchiveTransition {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct UserReview {
-    id: UserReviewId,
-    status: UserReviewStatus,
-    target: UserReviewTarget,
-    comments: Vec<UserReviewComment>,
-    created_at: DateTime<Utc>,
-    updated_at: DateTime<Utc>,
-    archived_at: Option<DateTime<Utc>>,
+enum UserReviewLifecycleState {
+    Active,
+    Archived { archived_at: DateTime<Utc> },
 }
 
-impl UserReview {
-    pub fn new(
-        id: UserReviewId,
-        target: UserReviewTarget,
-        comments: Vec<UserReviewComment>,
-        created_at: DateTime<Utc>,
-    ) -> Result<Self, UserReviewDomainError> {
-        Self::restore(
-            id,
-            UserReviewStatus::Active,
-            target,
-            comments,
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct UserReviewLifecycle {
+    created_at: DateTime<Utc>,
+    state: UserReviewLifecycleState,
+}
+
+impl UserReviewLifecycle {
+    fn active(created_at: DateTime<Utc>) -> Self {
+        Self {
             created_at,
-            created_at,
-            None,
-        )
+            state: UserReviewLifecycleState::Active,
+        }
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn restore(
-        id: UserReviewId,
+    fn restore(
         status: UserReviewStatus,
-        target: UserReviewTarget,
-        comments: Vec<UserReviewComment>,
         created_at: DateTime<Utc>,
         updated_at: DateTime<Utc>,
         archived_at: Option<DateTime<Utc>>,
     ) -> Result<Self, UserReviewDomainError> {
-        validate_review_timestamps(status, created_at, updated_at, archived_at)?;
-        validate_comments(&target, &comments)?;
+        if updated_at < created_at {
+            return Err(UserReviewDomainError::ReviewUpdatedBeforeCreated {
+                created_at,
+                updated_at,
+            });
+        }
+
+        match (status, archived_at) {
+            (UserReviewStatus::Active, Some(archived_at)) => {
+                Err(UserReviewDomainError::ActiveReviewHasArchivedAt { archived_at })
+            }
+            (UserReviewStatus::Active, None) if updated_at != created_at => {
+                Err(UserReviewDomainError::ActiveTimestampsDiffer {
+                    created_at,
+                    updated_at,
+                })
+            }
+            (UserReviewStatus::Active, None) => Ok(Self::active(created_at)),
+            (UserReviewStatus::Archived, None) => {
+                Err(UserReviewDomainError::ArchivedReviewMissingArchivedAt)
+            }
+            (UserReviewStatus::Archived, Some(archived_at)) if updated_at != archived_at => {
+                Err(UserReviewDomainError::ArchivedTimestampsDiffer {
+                    updated_at,
+                    archived_at,
+                })
+            }
+            (UserReviewStatus::Archived, Some(archived_at)) => Ok(Self {
+                created_at,
+                state: UserReviewLifecycleState::Archived { archived_at },
+            }),
+        }
+    }
+
+    fn archive(
+        &mut self,
+        archived_at: DateTime<Utc>,
+    ) -> Result<UserReviewArchiveTransition, UserReviewDomainError> {
+        if matches!(&self.state, UserReviewLifecycleState::Archived { .. }) {
+            return Ok(UserReviewArchiveTransition::AlreadyArchived);
+        }
+
+        if archived_at < self.updated_at() {
+            return Err(UserReviewDomainError::ArchiveTimestampRollback {
+                current_updated_at: self.updated_at(),
+                attempted_archived_at: archived_at,
+            });
+        }
+
+        self.state = UserReviewLifecycleState::Archived { archived_at };
+        Ok(UserReviewArchiveTransition::Archived)
+    }
+
+    fn status(&self) -> UserReviewStatus {
+        match &self.state {
+            UserReviewLifecycleState::Active => UserReviewStatus::Active,
+            UserReviewLifecycleState::Archived { .. } => UserReviewStatus::Archived,
+        }
+    }
+
+    fn created_at(&self) -> DateTime<Utc> {
+        self.created_at
+    }
+
+    fn updated_at(&self) -> DateTime<Utc> {
+        match &self.state {
+            UserReviewLifecycleState::Active => self.created_at,
+            UserReviewLifecycleState::Archived { archived_at } => *archived_at,
+        }
+    }
+
+    fn archived_at(&self) -> Option<DateTime<Utc>> {
+        match &self.state {
+            UserReviewLifecycleState::Active => None,
+            UserReviewLifecycleState::Archived { archived_at } => Some(*archived_at),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UserReview {
+    id: UserReviewId,
+    content: UserReviewContent,
+    lifecycle: UserReviewLifecycle,
+}
+
+impl UserReview {
+    pub fn new(id: UserReviewId, content: UserReviewContent, created_at: DateTime<Utc>) -> Self {
+        Self {
+            id,
+            content,
+            lifecycle: UserReviewLifecycle::active(created_at),
+        }
+    }
+
+    pub fn restore(
+        id: UserReviewId,
+        content: UserReviewContent,
+        status: UserReviewStatus,
+        created_at: DateTime<Utc>,
+        updated_at: DateTime<Utc>,
+        archived_at: Option<DateTime<Utc>>,
+    ) -> Result<Self, UserReviewDomainError> {
+        let lifecycle = UserReviewLifecycle::restore(status, created_at, updated_at, archived_at)?;
 
         Ok(Self {
             id,
-            status,
-            target,
-            comments,
-            created_at,
-            updated_at,
-            archived_at,
+            content,
+            lifecycle,
         })
     }
 
@@ -374,29 +558,14 @@ impl UserReview {
             });
         }
 
-        if &self.target != requested_target {
+        if self.content.target() != requested_target {
             return Err(UserReviewDomainError::ArchiveTargetMismatch {
-                aggregate_target: self.target.clone(),
+                aggregate_target: self.content.target().clone(),
                 requested_target: requested_target.clone(),
             });
         }
 
-        if self.status.is_archived() {
-            return Ok(UserReviewArchiveTransition::AlreadyArchived);
-        }
-
-        if archived_at < self.updated_at {
-            return Err(UserReviewDomainError::ArchiveTimestampRollback {
-                current_updated_at: self.updated_at,
-                attempted_archived_at: archived_at,
-            });
-        }
-
-        self.status = UserReviewStatus::Archived;
-        self.updated_at = archived_at;
-        self.archived_at = Some(archived_at);
-
-        Ok(UserReviewArchiveTransition::Archived)
+        self.lifecycle.archive(archived_at)
     }
 
     pub fn id(&self) -> &UserReviewId {
@@ -404,119 +573,37 @@ impl UserReview {
     }
 
     pub fn status(&self) -> UserReviewStatus {
-        self.status
+        self.lifecycle.status()
     }
 
     pub fn target(&self) -> &UserReviewTarget {
-        &self.target
+        self.content.target()
     }
 
     pub fn comments(&self) -> &[UserReviewComment] {
-        &self.comments
+        self.content.comments()
     }
 
     pub fn created_at(&self) -> DateTime<Utc> {
-        self.created_at
+        self.lifecycle.created_at()
     }
 
     pub fn updated_at(&self) -> DateTime<Utc> {
-        self.updated_at
+        self.lifecycle.updated_at()
     }
 
     pub fn archived_at(&self) -> Option<DateTime<Utc>> {
-        self.archived_at
+        self.lifecycle.archived_at()
     }
-}
-
-fn validate_comments(
-    target: &UserReviewTarget,
-    comments: &[UserReviewComment],
-) -> Result<(), UserReviewDomainError> {
-    if comments.is_empty() {
-        return Err(UserReviewDomainError::MissingComments);
-    }
-
-    let mut comment_ids = HashSet::with_capacity(comments.len());
-    let mut source_identities = HashMap::with_capacity(comments.len());
-
-    for comment in comments {
-        if !comment_ids.insert(comment.id().clone()) {
-            return Err(UserReviewDomainError::DuplicateCommentId {
-                id: comment.id().clone(),
-            });
-        }
-
-        target.validate_source(comment.id(), comment.source())?;
-
-        if let Some(first_id) =
-            source_identities.insert(comment.source_identity(), comment.id().clone())
-        {
-            return Err(UserReviewDomainError::DuplicateCommentSource {
-                first_id,
-                duplicate_id: comment.id().clone(),
-            });
-        }
-    }
-
-    Ok(())
-}
-
-fn validate_review_timestamps(
-    status: UserReviewStatus,
-    created_at: DateTime<Utc>,
-    updated_at: DateTime<Utc>,
-    archived_at: Option<DateTime<Utc>>,
-) -> Result<(), UserReviewDomainError> {
-    if updated_at < created_at {
-        return Err(UserReviewDomainError::ReviewUpdatedBeforeCreated {
-            created_at,
-            updated_at,
-        });
-    }
-
-    match status {
-        UserReviewStatus::Active => {
-            if let Some(archived_at) = archived_at {
-                return Err(UserReviewDomainError::ActiveReviewHasArchivedAt { archived_at });
-            }
-
-            if created_at != updated_at {
-                return Err(UserReviewDomainError::ActiveTimestampsDiffer {
-                    created_at,
-                    updated_at,
-                });
-            }
-        }
-        UserReviewStatus::Archived => {
-            let archived_at =
-                archived_at.ok_or(UserReviewDomainError::ArchivedReviewMissingArchivedAt)?;
-
-            if updated_at != archived_at {
-                return Err(UserReviewDomainError::ArchivedTimestampsDiffer {
-                    updated_at,
-                    archived_at,
-                });
-            }
-        }
-    }
-
-    Ok(())
-}
-
-fn is_canonical_user_review_id(value: &str) -> bool {
-    let bytes = value.as_bytes();
-
-    bytes.len() == USER_REVIEW_ID_LENGTH
-        && bytes.starts_with(USER_REVIEW_ID_PREFIX.as_bytes())
-        && bytes[USER_REVIEW_ID_PREFIX.len()..]
-            .iter()
-            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(byte))
 }
 
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 pub enum UserReviewDomainError {
-    #[error("user review ID must match ^urv_[0-9a-f]{{32}}$: {value}")]
-    InvalidUserReviewId { value: String },
+    #[error("user review ID is invalid: {value}: {violation}")]
+    InvalidUserReviewId {
+        value: String,
+        violation: UserReviewIdViolation,
+    },
     #[error("user review ID generation requires an RFC UUID v4: {uuid}")]
     InvalidUserReviewUuid { uuid: Uuid },
     #[error("user review requires at least one comment snapshot")]
