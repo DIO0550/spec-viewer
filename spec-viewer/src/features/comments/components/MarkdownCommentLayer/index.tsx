@@ -719,6 +719,15 @@ function CommentEditPopover({
     }
   };
 
+  const resolveComment = async (): Promise<void> => {
+    setErrorMessage(null);
+    const wasResolved = await onResolve(draft.comment.id);
+
+    if (!wasResolved) {
+      setErrorMessage("コメントを解決できませんでした。再試行してください。");
+    }
+  };
+
   return (
     <aside
       ref={popoverRef}
@@ -790,7 +799,7 @@ function CommentEditPopover({
             className="button button--secondary"
             type="button"
             disabled={isBusy}
-            onClick={() => void onResolve(draft.comment.id)}
+            onClick={() => void resolveComment()}
           >
             <CheckCircle2 aria-hidden="true" size={15} />
             {uiText.commentThread.resolve}

@@ -245,6 +245,37 @@ test("delete が false を返すと edit popover に error を表示する", asy
   result.unmount();
 });
 
+test("resolve が false を返すと edit popover に error を表示する", async () => {
+  const comment = createComment();
+  const baseProps = createLayerProps({ comments: [comment] });
+  const props = {
+    ...baseProps,
+    actions: {
+      ...baseProps.actions,
+      resolve: vi.fn().mockResolvedValue(false),
+    },
+  };
+  const result = renderLayer(props);
+  const toggle = result.container.querySelector<HTMLButtonElement>(
+    ".markdown-comment-annotation__toggle",
+  );
+  act(() => toggle?.click());
+  const editButton = result.container.querySelector<HTMLButtonElement>(
+    ".markdown-comment-annotation__select",
+  );
+  act(() => editButton?.click());
+  const resolveButton = result.container.querySelector<HTMLButtonElement>(
+    ".add-comment-popover__status-actions .button--secondary",
+  );
+
+  await act(async () => resolveButton?.click());
+
+  const error = result.container.querySelector(".add-comment-popover__error");
+  expect(error).not.toBeNull();
+  expect(error?.textContent).toContain("コメントを解決できませんでした");
+  result.unmount();
+});
+
 test("comment preview は省略記号を含めて84文字以内に収める", () => {
   const comment = { ...createComment(), body: "x".repeat(85) };
   const result = renderLayer(createLayerProps({ comments: [comment] }));
