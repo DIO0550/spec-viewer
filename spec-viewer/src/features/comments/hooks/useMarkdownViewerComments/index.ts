@@ -187,6 +187,19 @@ export function useMarkdownViewerComments({
     [actions.update, closeEditDraft],
   );
 
+  const submitResolve = useCallback(
+    async (commentId: CommentId): Promise<boolean> => {
+      const wasResolved = await actions.resolve(commentId);
+
+      if (wasResolved) {
+        closeEditDraft();
+      }
+
+      return wasResolved;
+    },
+    [actions.resolve, closeEditDraft],
+  );
+
   const submitDelete = useCallback(
     async (commentId: CommentId): Promise<boolean> => {
       const wasDeleted = await actions.delete(commentId);
@@ -212,7 +225,7 @@ export function useMarkdownViewerComments({
     closeEditDraft,
     submitAdd,
     submitUpdate,
-    submitResolve: actions.resolve,
+    submitResolve,
     submitDelete,
   };
 }

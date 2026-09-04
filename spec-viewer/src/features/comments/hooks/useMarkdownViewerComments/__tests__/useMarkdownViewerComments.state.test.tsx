@@ -192,6 +192,8 @@ test.each([
   ["update", false, false],
   ["delete", true, true],
   ["delete", false, false],
+  ["resolve", true, true],
+  ["resolve", false, false],
 ] as const)("%s が %s のとき対応 draft の close=%s", async (operation, succeeds, closes) => {
   const comment = createComment();
   const actions = createActions({
@@ -221,6 +223,11 @@ test.each([
           comment,
           selectionBounds: { top: 1, left: 2, width: 3, height: 4 },
         }),
+      resolve: () =>
+        result.current.beginEditDraft({
+          comment,
+          selectionBounds: { top: 1, left: 2, width: 3, height: 4 },
+        }),
     } as const;
     prepareDraft[operation]();
   });
@@ -230,6 +237,7 @@ test.each([
         result.current.submitAdd({ anchor: comment.anchor, body: "new" }),
       update: () => result.current.submitUpdate(comment.id, "updated"),
       delete: () => result.current.submitDelete(comment.id),
+      resolve: () => result.current.submitResolve(comment.id),
     } as const;
     await submissions[operation]();
   });
