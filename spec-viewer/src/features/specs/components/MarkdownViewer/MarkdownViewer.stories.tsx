@@ -2,10 +2,10 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
 
 import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
-
-const createTextHash = (value: string): string => value;
 import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
 import type { MarkdownBlockMetadata } from "@/features/specs/types/spec";
+
+const createTextHash = (value: string): string => value;
 
 const workspacePath = "/workspace/spec-reviewer";
 const markdownContents = [
