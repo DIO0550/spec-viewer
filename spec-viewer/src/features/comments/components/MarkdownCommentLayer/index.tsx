@@ -710,6 +710,15 @@ function CommentEditPopover({
     }
   };
 
+  const deleteComment = async (): Promise<void> => {
+    setErrorMessage(null);
+    const wasDeleted = await onDelete(draft.comment.id);
+
+    if (!wasDeleted) {
+      setErrorMessage("コメントを削除できませんでした。再試行してください。");
+    }
+  };
+
   return (
     <aside
       ref={popoverRef}
@@ -761,7 +770,7 @@ function CommentEditPopover({
                 className="button button--danger"
                 type="button"
                 disabled={isBusy}
-                onClick={() => void onDelete(draft.comment.id)}
+                onClick={() => void deleteComment()}
               >
                 {uiText.commentThread.delete}
               </button>
