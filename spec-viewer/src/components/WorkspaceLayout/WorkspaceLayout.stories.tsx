@@ -1050,10 +1050,7 @@ function createShellArgs({
             state={documentState}
             selectedSpecLabel={selectedSpec?.label ?? null}
             selectedFileLabel={selectedFile?.label ?? null}
-            comments={sampleComments}
-            activeCommentId={commentId("cmt_story_open_1")}
             onReload={fn()}
-            onSelectComment={fn()}
           />
         </div>
       </section>

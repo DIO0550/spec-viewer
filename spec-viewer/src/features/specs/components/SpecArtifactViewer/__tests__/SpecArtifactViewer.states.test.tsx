@@ -113,7 +113,7 @@ const standardArtifact: SpecArtifact = {
   error: null,
 };
 
-test("standard artifactはコメント追加UIを表示する", () => {
+test("standard artifactもpure adapter単体ではコメントUIを表示しない", () => {
   const result = renderViewer(
     SpecBundleState.loaded({ ...bundle, artifacts: [standardArtifact] }),
     standardArtifact,
@@ -121,7 +121,7 @@ test("standard artifactはコメント追加UIを表示する", () => {
 
   expect(
     result.container.querySelector(".markdown-block-comment-button"),
-  ).not.toBeNull();
+  ).toBeNull();
   expect(result.container.textContent).toContain("Standard artifact");
   result.unmount();
 });

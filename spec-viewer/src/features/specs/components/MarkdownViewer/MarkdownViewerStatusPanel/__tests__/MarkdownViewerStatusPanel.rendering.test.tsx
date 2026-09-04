@@ -56,7 +56,7 @@ test("MarkdownViewerPanelは共通tabpanel属性とref到達先を保持する",
       as="article"
       panelRef={panelRef}
       variant="html"
-      dataCommentDialogOpen="true"
+      interactionOverlayOpen={true}
     >
       <p>Rendered body</p>
     </MarkdownViewerPanel>,
@@ -67,7 +67,7 @@ test("MarkdownViewerPanelは共通tabpanel属性とref到達先を保持する",
   expect(panel?.getAttribute("role")).toBe("tabpanel");
   expect(panel?.getAttribute("tabindex")).toBe("-1");
   expect(panel?.className).toBe("markdown-viewer markdown-viewer--html");
-  expect(panel?.getAttribute("data-comment-dialog-open")).toBe("true");
+  expect(panel?.getAttribute("data-viewer-overlay-open")).toBe("true");
   expect(panelRef.current).toBe(panel);
   result.unmount();
 });

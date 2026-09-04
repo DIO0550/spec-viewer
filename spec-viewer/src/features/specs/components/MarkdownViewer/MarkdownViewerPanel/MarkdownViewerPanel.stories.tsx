@@ -43,7 +43,7 @@ export const AllProps: Story = {
   args: {
     as: "article",
     variant: "html",
-    dataCommentDialogOpen: "true",
+    interactionOverlayOpen: true,
     /** Sample sandboxed HTML content shown inside the html-variant panel. */
     children: (
       <iframe
