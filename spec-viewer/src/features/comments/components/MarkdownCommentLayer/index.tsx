@@ -860,20 +860,32 @@ const commentPopoverEstimatedHeight = 360;
 const commentPopoverEstimatedWidth = 382;
 
 /** @returns Viewport-clamped fixed positioning for selection UI. */
-function createFloatingStyle(
+export function createFloatingStyle(
   draft: CommentAnchorDraft,
   kind: FloatingKind,
 ): CSSProperties {
   const bounds = draft.selectionBounds;
 
   if (kind === "button") {
+    const preferredLeft =
+      bounds.commentLaneLeft ?? bounds.left + bounds.width / 2;
+    const maxLeft = Math.max(
+      floatingViewportMargin,
+      window.innerWidth - floatingViewportMargin,
+    );
+    const left = Math.max(
+      floatingViewportMargin,
+      Math.min(preferredLeft, maxLeft),
+    );
+
     return {
       top: Math.max(floatingViewportMargin, bounds.top - 44),
-      left: Math.max(
-        floatingViewportMargin,
-        bounds.commentLaneLeft ?? bounds.left + bounds.width / 2,
-      ),
-      transform: bounds.commentLaneLeft === undefined ? undefined : "none",
+      left,
+      transform: resolveFloatingButtonTransform({
+        preferredLeft,
+        maxLeft,
+        hasCommentLane: bounds.commentLaneLeft !== undefined,
+      }),
     };
   }
 
@@ -885,6 +897,27 @@ function createFloatingStyle(
 }
 
 /** @returns Viewport-clamped fixed positioning for a comment popover. */
+function resolveFloatingButtonTransform({
+  preferredLeft,
+  maxLeft,
+  hasCommentLane,
+}: Readonly<{
+  preferredLeft: number;
+  maxLeft: number;
+  hasCommentLane: boolean;
+}>): CSSProperties["transform"] {
+  if (hasCommentLane || preferredLeft <= floatingViewportMargin) {
+    return "none";
+  }
+
+  if (preferredLeft >= maxLeft) {
+    return "translateX(-100%)";
+  }
+
+  return undefined;
+}
+
+/**  Viewport-clamped fixed positioning for a comment popover. */
 function createFloatingPopoverStyle(
   bounds: CommentSelectionBounds,
 ): CSSProperties {

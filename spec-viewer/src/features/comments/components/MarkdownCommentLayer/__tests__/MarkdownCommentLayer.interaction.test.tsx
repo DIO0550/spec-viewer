@@ -5,6 +5,7 @@ import type { Comment } from "@/features/comments/domain/comment";
 import { CommentId } from "@/features/comments/domain/commentId";
 import { CommentOperationIdleState } from "@/features/comments/domain/commentOperation";
 import {
+  createFloatingStyle,
   MarkdownCommentLayer,
   type MarkdownCommentLayerProps,
 } from "@/features/comments/components/MarkdownCommentLayer";
@@ -147,6 +148,48 @@ function inputTextarea(textarea: HTMLTextAreaElement, value: string): void {
   setter?.call(textarea, value);
   textarea.dispatchEvent(new Event("input", { bubbles: true }));
 }
+
+test("selection button はviewport端でtransform方向を切り替える", () => {
+  const anchor = createComment().anchor;
+  const leftStyle = createFloatingStyle(
+    {
+      anchor,
+      selectionBounds: { top: 50, left: -20, width: 0, height: 10 },
+    },
+    "button",
+  );
+  const centerStyle = createFloatingStyle(
+    {
+      anchor,
+      selectionBounds: {
+        top: 50,
+        left: window.innerWidth / 2,
+        width: 0,
+        height: 10,
+      },
+    },
+    "button",
+  );
+  const rightStyle = createFloatingStyle(
+    {
+      anchor,
+      selectionBounds: {
+        top: 50,
+        left: window.innerWidth + 20,
+        width: 0,
+        height: 10,
+      },
+    },
+    "button",
+  );
+
+  expect(leftStyle).toMatchObject({ left: 8, transform: "none" });
+  expect(centerStyle.transform).toBeUndefined();
+  expect(rightStyle).toMatchObject({
+    left: window.innerWidth - 8,
+    transform: "translateX(-100%)",
+  });
+});
 
 test("block action から draft を作成して add action へ委譲する", async () => {
   const props = createLayerProps();
