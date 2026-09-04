@@ -2638,21 +2638,21 @@ textarea:disabled {
   overflow: hidden;
 }
 
-.markdown-viewer[data-comment-dialog-open="true"]
+.markdown-viewer[data-viewer-overlay-open="true"]
   .text-selection-comment-button,
-.markdown-viewer[data-comment-dialog-open="true"]
+.markdown-viewer[data-viewer-overlay-open="true"]
   .markdown-block-comment-button,
-.markdown-viewer[data-comment-dialog-open="true"]
+.markdown-viewer[data-viewer-overlay-open="true"]
   .markdown-comment-target:hover
   > .markdown-block-comment-button,
-.markdown-viewer[data-comment-dialog-open="true"]
+.markdown-viewer[data-viewer-overlay-open="true"]
   .markdown-comment-target:focus-within
   > .markdown-block-comment-button,
-.markdown-viewer[data-comment-dialog-open="true"]
+.markdown-viewer[data-viewer-overlay-open="true"]
   .markdown-rendered
   li:hover
   > .markdown-block-comment-button,
-.markdown-viewer[data-comment-dialog-open="true"]
+.markdown-viewer[data-viewer-overlay-open="true"]
   .markdown-rendered
   li:focus-within
   > .markdown-block-comment-button {

@@ -1,17 +1,8 @@
-import type { CommentBlockType } from "@/features/comments/domain/commentAnchor";
 import type {
   CommentAnchorDraft,
   CommentSelectionBounds,
 } from "@/features/comments/types/comment";
-import type { SpecFileKey } from "@/features/specs/types/spec";
-
-type MarkdownBlockType =
-  | "heading"
-  | "paragraph"
-  | "list-item"
-  | "table"
-  | "code"
-  | "blockquote";
+import { readRenderedBlockModel, type SpecFileKey } from "@/features/specs";
 
 type CreateCommentAnchorDraftOptions = Readonly<{
   selection: Selection | null;
@@ -24,9 +15,8 @@ type CreateCommentAnchorDraftFromBlockOptions = Readonly<{
   fileKey: SpecFileKey;
 }>;
 
-const BLOCK_SELECTOR = "[data-block-type][data-block-index]";
-const BACKEND_BLOCK_SELECTOR =
-  "[data-block-type][data-block-index][data-comment-block-type][data-text-hash]";
+const RENDERED_BLOCK_SELECTOR =
+  "[data-block-type][data-block-index][data-rendered-block-type][data-text-hash][data-text-snippet]";
 const COMMENT_TARGET_SELECTOR = ".markdown-comment-target";
 const COMMENT_UI_SELECTOR =
   ".markdown-block-comment-button, .markdown-comment-annotations";
@@ -62,9 +52,9 @@ export function createCommentAnchorDraftFromSelection({
     return null;
   }
 
-  const blockMetadata = readBlockMetadata(startBlock);
+  const blockModel = readRenderedBlockModel(startBlock);
 
-  if (blockMetadata === null) {
+  if (blockModel === null) {
     return null;
   }
 
@@ -75,14 +65,13 @@ export function createCommentAnchorDraftFromSelection({
   }
 
   const charRange = createCharRange(range, startBlock);
-  const blockText = createBlockText(startBlock);
 
   return {
     anchor: {
       fileKey,
-      blockType: blockMetadata.blockType,
-      blockIndex: blockMetadata.blockIndex,
-      textHash: blockMetadata.textHash ?? createTextHash(blockText),
+      blockType: blockModel.metadata.blockType,
+      blockIndex: blockModel.metadata.blockIndex,
+      textHash: blockModel.metadata.textHash,
       textSnippet,
       charRange,
     },
@@ -99,9 +88,9 @@ export function createCommentAnchorDraftFromBlock({
     return null;
   }
 
-  const blockMetadata = readBlockMetadata(block);
+  const blockModel = readRenderedBlockModel(block);
 
-  if (blockMetadata === null) {
+  if (blockModel === null) {
     return null;
   }
 
@@ -115,9 +104,9 @@ export function createCommentAnchorDraftFromBlock({
   return {
     anchor: {
       fileKey,
-      blockType: blockMetadata.blockType,
-      blockIndex: blockMetadata.blockIndex,
-      textHash: blockMetadata.textHash ?? createTextHash(blockText),
+      blockType: blockModel.metadata.blockType,
+      blockIndex: blockModel.metadata.blockIndex,
+      textHash: blockModel.metadata.textHash,
       textSnippet,
       charRange: {
         start: 0,
@@ -200,129 +189,13 @@ function findSelectionBlock(
     return null;
   }
 
-  const backendBlock = element.closest<HTMLElement>(BACKEND_BLOCK_SELECTOR);
-
-  if (backendBlock !== null && renderedRoot.contains(backendBlock)) {
-    return backendBlock;
-  }
-
-  const block = element.closest<HTMLElement>(BLOCK_SELECTOR);
+  const block = element.closest<HTMLElement>(RENDERED_BLOCK_SELECTOR);
 
   if (block === null || !renderedRoot.contains(block)) {
     return null;
   }
 
   return block;
-}
-
-type BlockMetadata = Readonly<{
-  blockType: CommentBlockType;
-  blockIndex: number;
-  textHash: string | null;
-}>;
-
-/**
- * @param block - The rendered Markdown block element.
- * @returns Validated block metadata from a rendered Markdown block.
- */
-function readBlockMetadata(block: HTMLElement): BlockMetadata | null {
-  const blockType = readCommentBlockType(block);
-  const blockIndex = Number.parseInt(block.dataset.blockIndex ?? "", 10);
-
-  if (
-    blockType === null ||
-    !Number.isSafeInteger(blockIndex) ||
-    blockIndex < 0
-  ) {
-    return null;
-  }
-
-  return {
-    blockType,
-    blockIndex,
-    textHash: readBackendTextHash(block),
-  };
-}
-
-/**
- * @param block - The rendered Markdown block element.
- * @returns The persisted comment block type represented by a rendered block.
- */
-function readCommentBlockType(block: HTMLElement): CommentBlockType | null {
-  if (isCommentBlockType(block.dataset.commentBlockType)) {
-    return block.dataset.commentBlockType;
-  }
-
-  return mapMarkdownBlockType(block.dataset.blockType);
-}
-
-/**
- * @param block - The rendered Markdown block element.
- * @returns The backend text hash attached to the rendered block, when available.
- */
-function readBackendTextHash(block: HTMLElement): string | null {
-  const textHash = block.dataset.textHash;
-
-  if (textHash === undefined || textHash.trim().length === 0) {
-    return null;
-  }
-
-  return textHash;
-}
-
-/** @returns The persisted comment block type for a rendered Markdown block type. */
-function mapMarkdownBlockType(
-  blockType: string | undefined,
-): CommentBlockType | null {
-  if (blockType === undefined) {
-    return null;
-  }
-
-  const blockTypeMap: Record<MarkdownBlockType, CommentBlockType> = {
-    heading: "heading",
-    paragraph: "paragraph",
-    "list-item": "list_item",
-    table: "table",
-    code: "code_block",
-    blockquote: "block_quote",
-  };
-
-  if (!isMarkdownBlockType(blockType)) {
-    return null;
-  }
-
-  return blockTypeMap[blockType];
-}
-
-/** @returns true when the raw data attribute is a supported Markdown block type. */
-function isMarkdownBlockType(
-  blockType: string,
-): blockType is MarkdownBlockType {
-  return (
-    blockType === "heading" ||
-    blockType === "paragraph" ||
-    blockType === "list-item" ||
-    blockType === "table" ||
-    blockType === "code" ||
-    blockType === "blockquote"
-  );
-}
-
-/** @returns true when the raw data attribute is a persisted comment block type. */
-function isCommentBlockType(
-  blockType: string | undefined,
-): blockType is CommentBlockType {
-  return (
-    blockType === "paragraph" ||
-    blockType === "heading" ||
-    blockType === "list_item" ||
-    blockType === "code_block" ||
-    blockType === "block_quote" ||
-    blockType === "table" ||
-    blockType === "thematic_break" ||
-    blockType === "html" ||
-    blockType === "other"
-  );
 }
 
 /** @returns The selected character range within the rendered block text. */

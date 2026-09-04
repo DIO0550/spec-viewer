@@ -1,25 +1,25 @@
-import type { ComponentProps } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
+import type { RenderedDocumentPort } from "@/features/specs/components/MarkdownViewer/renderedDocument";
 import type { SpecBundleState } from "@/features/specs/domain/specBundleState";
 import { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
 import type { SpecArtifact } from "@/features/specs/types/spec";
 
-type MarkdownViewerProps = ComponentProps<typeof MarkdownViewer>;
-
-type Props = Omit<MarkdownViewerProps, "state" | "selectedFileLabel"> &
-  Readonly<{
-    bundleState: SpecBundleState;
-    artifact: SpecArtifact | null;
-    workspacePath: string | null;
-  }>;
+export type SpecArtifactViewerProps = Readonly<{
+  bundleState: SpecBundleState;
+  artifact: SpecArtifact | null;
+  workspacePath: string | null;
+  selectedSpecLabel: string | null;
+  renderedDocumentPort?: RenderedDocumentPort;
+  onReload: () => void;
+  onFirstReadable?: () => void;
+}>;
 
 /**
  * Placeholder file key used only to satisfy the `SpecFileKey`-typed
  * `SpecDocumentState` shape for direct Markdown artifacts. It is inert:
- * direct artifacts render with `commentsEnabled={false}`, so this key is never
- * used to anchor, scope, or persist comments (see the direct-artifact boundary
- * in the implementation plan). Standard artifacts always carry their real key.
+ * App composition never attaches an interaction port to direct artifacts, so
+ * this key cannot escape into persistence. Standard artifacts always carry their real key.
  */
 const DIRECT_ARTIFACT_PLACEHOLDER_KEY = "impl" as const;
 
@@ -38,7 +38,7 @@ export function SpecArtifactViewer({
   selectedSpecLabel,
   onReload,
   ...viewerProps
-}: Props) {
+}: SpecArtifactViewerProps) {
   if (bundleState.status === "loading") {
     return (
       <section
@@ -130,7 +130,6 @@ export function SpecArtifactViewer({
     <MarkdownViewer
       {...viewerProps}
       state={state}
-      commentsEnabled={isStandardArtifact}
       selectedSpecLabel={selectedSpecLabel}
       selectedFileLabel={artifact.label}
       selectedFileTypeLabel={

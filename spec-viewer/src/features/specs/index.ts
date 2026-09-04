@@ -1,6 +1,22 @@
 export { SpecArtifactTabs } from "@/features/specs/components/SpecArtifactTabs";
-export { SpecArtifactViewer } from "@/features/specs/components/SpecArtifactViewer";
-export { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
+export {
+  SpecArtifactViewer,
+  type SpecArtifactViewerProps,
+} from "@/features/specs/components/SpecArtifactViewer";
+export {
+  MarkdownViewer,
+  type MarkdownViewerProps,
+} from "@/features/specs/components/MarkdownViewer";
+export {
+  createRenderedBlockKey,
+  readRenderedBlockModel,
+  type RenderedBlockModel,
+  type RenderedBlockProjection,
+  type RenderedBlockType,
+  type RenderedDocumentPort,
+  type RenderedTextDecoration,
+} from "@/features/specs/components/MarkdownViewer/renderedDocument";
+export { SpecBundleState } from "@/features/specs/domain/specBundleState";
 export { SpecTabs } from "@/features/specs/components/SpecTabs";
 export { SpecTree } from "@/features/specs/components/SpecTree";
 export {
@@ -18,6 +34,8 @@ export type {
 export type {
   MarkdownBlockMetadata,
   MarkdownBlockType,
+  SpecArtifact,
+  SpecBundle,
   SpecDocument,
   SpecFile,
   SpecFileKey,

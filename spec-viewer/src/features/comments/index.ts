@@ -1,9 +1,13 @@
 export { AddCommentPopover } from "@/features/comments/components/AddCommentPopover";
+export {
+  MarkdownCommentLayer,
+  type MarkdownCommentLayerProps,
+} from "@/features/comments/components/MarkdownCommentLayer";
 export { CommentComposer } from "@/features/comments/components/CommentComposer";
 export { CommentSidebar } from "@/features/comments/components/CommentSidebar";
 export { Comment } from "@/features/comments/domain/comment";
 export type { CommentAnchor } from "@/features/comments/domain/commentAnchor";
-export type { CommentId } from "@/features/comments/domain/commentId";
+export { CommentId } from "@/features/comments/domain/commentId";
 export { Comments } from "@/features/comments/domain/comments";
 export type {
   AddCommentSubmitInput,
@@ -24,6 +28,12 @@ export {
   type CommentOperationState,
 } from "./domain/commentOperation";
 export { useComments } from "./hooks/useComments";
+export {
+  type MarkdownViewerCommentActions,
+  type MarkdownViewerCommentEditDraft,
+  type UseMarkdownViewerCommentsResult,
+  useMarkdownViewerComments,
+} from "./hooks/useMarkdownViewerComments";
 export { createTextHash } from "./lib/comment-anchor-draft";
 export {
   createSpecSkillMcpFeedbackDryRunPayload,

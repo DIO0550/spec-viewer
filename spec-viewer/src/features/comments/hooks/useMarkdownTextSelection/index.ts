@@ -1,4 +1,4 @@
-import { type RefObject, useEffect, useState } from "react";
+import { type RefObject, useCallback, useEffect, useState } from "react";
 
 import { createCommentAnchorDraftFromSelection } from "@/features/comments/lib/comment-anchor-draft";
 import type { CommentAnchorDraft } from "@/features/comments/types/comment";
@@ -94,11 +94,13 @@ export function useMarkdownTextSelection({
     };
   }, [fileKey, renderedRootRef]);
 
+  const clearSelectionDraft = useCallback((): void => {
+    setSelectionDraft(null);
+  }, []);
+
   return {
     selectionDraft,
-    clearSelectionDraft: () => {
-      setSelectionDraft(null);
-    },
+    clearSelectionDraft,
   };
 }
 
