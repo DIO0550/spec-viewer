@@ -148,7 +148,7 @@ test("初回 render commit の anchor state を mount effect で上書きしな�
   expect(result.current.projections.get("paragraph:0")?.state).toBe("stale");
 });
 
-test("fileKey が変わると draft を reset する", () => {
+test("fileKey が変わると draft と anchor state を reset する", () => {
   const comment = createComment();
   const actions = createActions();
   const options = {
@@ -182,6 +182,7 @@ test("fileKey が変わると draft を reset する", () => {
 
   expect(result.current.anchorDraft).toBeNull();
   expect(result.current.editDraft).toBeNull();
+  expect(result.current.anchorDisplayStates).toEqual([]);
 });
 
 test.each([

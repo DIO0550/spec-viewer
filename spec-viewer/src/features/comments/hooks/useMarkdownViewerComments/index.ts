@@ -99,6 +99,7 @@ export function useMarkdownViewerComments({
   useEffect(() => {
     setAnchorDraft(null);
     setEditDraft(null);
+    setAnchorDisplayStates([]);
   }, [fileKey]);
 
   const reconcileRenderedDocument = useCallback((): void => {
