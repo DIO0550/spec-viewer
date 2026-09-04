@@ -39,6 +39,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Frontend architecture tests
+        run: pnpm architecture:test
+
+      - name: Frontend architecture check
+        run: pnpm architecture:check
+
       - name: Typecheck
         run: pnpm typecheck
 
