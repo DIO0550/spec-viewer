@@ -1,8 +1,9 @@
-import { act } from "react";
+import { act, createRef } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
 import { SpecArtifactViewer } from "@/features/specs/components/SpecArtifactViewer";
+import type { RenderedDocumentPort } from "@/features/specs/components/MarkdownViewer/renderedDocument";
 import { SpecBundleState } from "@/features/specs/domain/specBundleState";
 import { SpecFeatureError } from "@/features/specs/domain/specError";
 import type { SpecArtifact, SpecBundle } from "@/features/specs/types/spec";
@@ -38,6 +39,7 @@ const bundle: SpecBundle = {
 function renderViewer(
   bundleState = SpecBundleState.loaded(bundle),
   selectedArtifact: SpecArtifact | null = artifact,
+  renderedDocumentPort?: RenderedDocumentPort,
 ) {
   const container = document.createElement("div");
   document.body.append(container);
@@ -50,6 +52,7 @@ function renderViewer(
         artifact={selectedArtifact}
         workspacePath="/workspace/spec-viewer"
         selectedSpecLabel="Issue 194"
+        renderedDocumentPort={renderedDocumentPort}
         onReload={onReload}
       />,
     );
@@ -112,6 +115,26 @@ const standardArtifact: SpecArtifact = {
   ],
   error: null,
 };
+
+test("direct Markdownは渡されたrendered document portを接続しない", () => {
+  const renderOverlay = vi.fn(() => "direct overlay");
+  const renderedDocumentPort: RenderedDocumentPort = {
+    rootRef: createRef<HTMLDivElement>(),
+    isOverlayOpen: false,
+    projectBlock: () => null,
+    onRenderedDocumentCommit: vi.fn(),
+    renderOverlay,
+  };
+  const result = renderViewer(
+    SpecBundleState.loaded(bundle),
+    artifact,
+    renderedDocumentPort,
+  );
+
+  expect(renderOverlay).not.toHaveBeenCalled();
+  expect(result.container.textContent).not.toContain("direct overlay");
+  result.unmount();
+});
 
 test("standard artifactもpure adapter単体ではコメントUIを表示しない", () => {
   const result = renderViewer(

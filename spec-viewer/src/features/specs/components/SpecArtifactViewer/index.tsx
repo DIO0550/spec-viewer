@@ -36,6 +36,7 @@ export function SpecArtifactViewer({
   artifact,
   workspacePath,
   selectedSpecLabel,
+  renderedDocumentPort,
   onReload,
   ...viewerProps
 }: SpecArtifactViewerProps) {
@@ -129,6 +130,9 @@ export function SpecArtifactViewer({
   return (
     <MarkdownViewer
       {...viewerProps}
+      renderedDocumentPort={
+        isStandardArtifact ? renderedDocumentPort : undefined
+      }
       state={state}
       selectedSpecLabel={selectedSpecLabel}
       selectedFileLabel={artifact.label}
