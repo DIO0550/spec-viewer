@@ -545,6 +545,7 @@ function formatAnnotationStatus(
 /** @returns A compact one-line preview of a comment body. */
 function createCommentPreview(body: string): string {
   const maxLength = 84;
+  const ellipsis = "...";
   const normalizedBody = body.replace(/\s+/g, " ").trim();
 
   if (normalizedBody.length === 0) {
@@ -555,7 +556,7 @@ function createCommentPreview(body: string): string {
     return normalizedBody;
   }
 
-  return `${normalizedBody.slice(0, maxLength - 1)}...`;
+  return normalizedBody.slice(0, maxLength - ellipsis.length) + ellipsis;
 }
 
 /** @returns A selection action adjacent to the selected Markdown text. */

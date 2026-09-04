@@ -210,6 +210,23 @@ test("annotation から edit dialog を開いて update action へ委譲する",
   result.unmount();
 });
 
+test("comment preview は省略記号を含めて84文字以内に収める", () => {
+  const comment = { ...createComment(), body: "x".repeat(85) };
+  const result = renderLayer(createLayerProps({ comments: [comment] }));
+  const toggle = result.container.querySelector<HTMLButtonElement>(
+    ".markdown-comment-annotation__toggle",
+  );
+
+  act(() => toggle?.click());
+
+  const preview = result.container.querySelector(
+    ".markdown-comment-annotation__preview",
+  );
+  expect(preview?.textContent).toBe("x".repeat(81) + "...");
+  expect(preview?.textContent).toHaveLength(84);
+  result.unmount();
+});
+
 test("resolved comment は inline projection と annotation から除外する", () => {
   const result = renderLayer(
     createLayerProps({ comments: [createComment("resolved")] }),
