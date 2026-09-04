@@ -227,6 +227,41 @@ test("comment preview は省略記号を含めて84文字以内に収める", ()
   result.unmount();
 });
 
+test("edit popover は表示中かつ操作可能な間だけ outside click listener を登録する", () => {
+  const addEventListener = vi.spyOn(document, "addEventListener");
+  const comment = createComment();
+  const props = createLayerProps({ comments: [comment] });
+  const result = renderLayer(props);
+
+  expect(
+    addEventListener.mock.calls.filter(([eventName]) => eventName === "mousedown"),
+  ).toHaveLength(0);
+
+  const toggle = result.container.querySelector<HTMLButtonElement>(
+    ".markdown-comment-annotation__toggle",
+  );
+  act(() => toggle?.click());
+  const editButton = result.container.querySelector<HTMLButtonElement>(
+    ".markdown-comment-annotation__select",
+  );
+  act(() => editButton?.click());
+
+  expect(
+    addEventListener.mock.calls.filter(([eventName]) => eventName === "mousedown"),
+  ).toHaveLength(1);
+
+  result.rerender({
+    ...props,
+    editState: { ...props.editState, isSaving: true },
+  });
+
+  expect(
+    addEventListener.mock.calls.filter(([eventName]) => eventName === "mousedown"),
+  ).toHaveLength(1);
+  result.unmount();
+  addEventListener.mockRestore();
+});
+
 test("resolved comment は inline projection と annotation から除外する", () => {
   const result = renderLayer(
     createLayerProps({ comments: [createComment("resolved")] }),

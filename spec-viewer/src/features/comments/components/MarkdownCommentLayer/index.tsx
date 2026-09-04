@@ -670,10 +670,12 @@ function CommentEditPopover({
   }, [draft?.comment.id, draft?.comment.body]);
 
   useEffect(() => {
+    if (draft === null || isBusy) {
+      return;
+    }
+
     const closeOnOutsideMouseDown = (event: globalThis.MouseEvent): void => {
       if (
-        draft === null ||
-        isBusy ||
         !(event.target instanceof Node) ||
         popoverRef.current?.contains(event.target)
       ) {
