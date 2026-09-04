@@ -89,7 +89,7 @@ function renderHook<TResult, TProps = undefined>(
   };
 }
 
-test("render commit 後に anchor state を報告し projection を更新する", () => {
+test("render commit 後に anchor state を更新し同一状態の再報告を省く", () => {
   const comment = createComment();
   const actions = createActions();
   const readAnchorDisplayStates = vi.fn(() => [
@@ -108,9 +108,11 @@ test("render commit 後に anchor state を報告し projection を更新する"
 
   act(() => {
     result.current.reconcileRenderedDocument();
+    result.current.reconcileRenderedDocument();
   });
 
-  expect(readAnchorDisplayStates).toHaveBeenCalledTimes(1);
+  expect(readAnchorDisplayStates).toHaveBeenCalledTimes(2);
+  expect(actions.reportAnchorDisplayStates).toHaveBeenCalledTimes(1);
   expect(actions.reportAnchorDisplayStates).toHaveBeenLastCalledWith([
     { commentId: comment.id, status: "exact" },
   ]);
@@ -183,6 +185,11 @@ test("fileKey が変わると draft と anchor state を reset する", () => {
   expect(result.current.anchorDraft).toBeNull();
   expect(result.current.editDraft).toBeNull();
   expect(result.current.anchorDisplayStates).toEqual([]);
+
+  act(() => {
+    result.current.reconcileRenderedDocument();
+  });
+  expect(actions.reportAnchorDisplayStates).toHaveBeenCalledTimes(2);
 });
 
 test.each([

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Comment } from "@/features/comments/domain/comment";
 import type { CommentId } from "@/features/comments/domain/commentId";
 import {
@@ -76,6 +76,9 @@ export function useMarkdownViewerComments({
   const [anchorDisplayStates, setAnchorDisplayStates] = useState<
     readonly CommentAnchorDisplayState[]
   >([]);
+  const anchorDisplayStatesRef = useRef<
+    readonly CommentAnchorDisplayState[]
+  >([]);
   const visibleComments = useMemo(
     () => comments.filter((comment) => comment.status !== "resolved"),
     [comments],
@@ -100,16 +103,23 @@ export function useMarkdownViewerComments({
     setAnchorDraft(null);
     setEditDraft(null);
     setAnchorDisplayStates([]);
+    anchorDisplayStatesRef.current = [];
   }, [fileKey]);
 
   const reconcileRenderedDocument = useCallback((): void => {
     const nextStates = readAnchorDisplayStates();
 
-    setAnchorDisplayStates((currentStates) =>
-      areCommentAnchorDisplayStatesEqual(currentStates, nextStates)
-        ? currentStates
-        : nextStates,
-    );
+    if (
+      areCommentAnchorDisplayStatesEqual(
+        anchorDisplayStatesRef.current,
+        nextStates,
+      )
+    ) {
+      return;
+    }
+
+    anchorDisplayStatesRef.current = nextStates;
+    setAnchorDisplayStates(nextStates);
     actions.reportAnchorDisplayStates(nextStates);
   }, [actions.reportAnchorDisplayStates, readAnchorDisplayStates]);
 
