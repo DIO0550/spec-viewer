@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 
 test("Spec本文はマウスのドラッグ選択を保持する", async ({ page }) => {
   await page.goto(
-    "/iframe.html?id=features-specs-components-markdownviewer--highlighted-selection-surface&viewMode=story",
+    "/iframe.html?id=features-specs-components-markdownviewer--default&viewMode=story",
   );
   const paragraph = page.locator(".markdown-rendered p").first();
   await expect(paragraph).toBeVisible();
