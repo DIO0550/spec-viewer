@@ -58,18 +58,19 @@ where
 {
     pub fn list_comments(
         &self,
-        spec_id: &str,
+        spec_id: &SpecId,
         file_key: SpecFileKey,
         status_filter: CommentStatusFilter,
     ) -> Result<Vec<Comment>, AppUseCaseError> {
-        let query = CommentListQuery::with_status_filter(scope(spec_id, file_key)?, status_filter);
+        let scope = CommentScope::new(spec_id.clone(), file_key);
+        let query = CommentListQuery::with_status_filter(scope, status_filter);
 
         self.repository.list(&query).map_err(AppUseCaseError::from)
     }
 
     pub fn resolve_comment_anchors(
         &self,
-        spec_id: &str,
+        spec_id: &SpecId,
         file_key: SpecFileKey,
         status_filter: CommentStatusFilter,
         current_blocks: &[MarkdownBlock],
@@ -85,16 +86,16 @@ where
 
     pub fn add_comment(
         &self,
-        spec_id: &str,
+        spec_id: &SpecId,
         anchor: CommentAnchor,
-        body: impl Into<String>,
+        body: CommentBody,
     ) -> Result<Comment, AppUseCaseError> {
-        let scope = scope(spec_id, anchor.file_key())?;
+        let scope = CommentScope::new(spec_id.clone(), anchor.file_key());
         let now = self.clock.now();
         let comment = Comment::new(
             self.id_generator.generate_comment_id()?,
             anchor,
-            CommentBody::new(body)?,
+            body,
             now,
             now,
         )?;
@@ -106,16 +107,15 @@ where
 
     pub fn update_comment(
         &self,
-        spec_id: &str,
+        spec_id: &SpecId,
         file_key: SpecFileKey,
-        id: &str,
-        body: impl Into<String>,
+        id: &CommentId,
+        body: CommentBody,
     ) -> Result<Comment, AppUseCaseError> {
-        let scope = scope(spec_id, file_key)?;
-        let id = CommentId::new(id)?;
-        let mut comment = self.get_comment(&scope, &id)?;
+        let scope = CommentScope::new(spec_id.clone(), file_key);
+        let mut comment = self.get_comment(&scope, id)?;
 
-        comment.update_body(CommentBody::new(body)?, self.clock.now())?;
+        comment.update_body(body, self.clock.now())?;
 
         self.repository
             .update(&scope, comment)
@@ -124,46 +124,44 @@ where
 
     pub fn delete_comment(
         &self,
-        spec_id: &str,
+        spec_id: &SpecId,
         file_key: SpecFileKey,
-        id: &str,
+        id: &CommentId,
     ) -> Result<(), AppUseCaseError> {
-        let scope = scope(spec_id, file_key)?;
-        let id = CommentId::new(id)?;
+        let scope = CommentScope::new(spec_id.clone(), file_key);
 
         self.repository
-            .delete(&scope, &id)
+            .delete(&scope, id)
             .map_err(AppUseCaseError::from)
     }
 
     pub fn resolve_comment(
         &self,
-        spec_id: &str,
+        spec_id: &SpecId,
         file_key: SpecFileKey,
-        id: &str,
+        id: &CommentId,
     ) -> Result<Comment, AppUseCaseError> {
         self.set_comment_status(spec_id, file_key, id, CommentStatus::Resolved)
     }
 
     pub fn reopen_comment(
         &self,
-        spec_id: &str,
+        spec_id: &SpecId,
         file_key: SpecFileKey,
-        id: &str,
+        id: &CommentId,
     ) -> Result<Comment, AppUseCaseError> {
         self.set_comment_status(spec_id, file_key, id, CommentStatus::Open)
     }
 
     fn set_comment_status(
         &self,
-        spec_id: &str,
+        spec_id: &SpecId,
         file_key: SpecFileKey,
-        id: &str,
+        id: &CommentId,
         status: CommentStatus,
     ) -> Result<Comment, AppUseCaseError> {
-        let scope = scope(spec_id, file_key)?;
-        let id = CommentId::new(id)?;
-        let mut comment = self.get_comment(&scope, &id)?;
+        let scope = CommentScope::new(spec_id.clone(), file_key);
+        let mut comment = self.get_comment(&scope, id)?;
         let now = self.clock.now();
 
         match status {
@@ -298,7 +296,7 @@ pub struct UuidCommentIdGenerator;
 
 impl GenerateCommentId for UuidCommentIdGenerator {
     fn generate_comment_id(&self) -> Result<CommentId, AppUseCaseError> {
-        CommentId::new(format!("cmt_{}", Uuid::new_v4().simple())).map_err(AppUseCaseError::from)
+        Ok(CommentId::generate(Uuid::new_v4()))
     }
 }
 
@@ -313,10 +311,6 @@ impl GetCurrentTime for UtcCommentClock {
     fn now(&self) -> DateTime<Utc> {
         Utc::now()
     }
-}
-
-fn scope(spec_id: &str, file_key: SpecFileKey) -> Result<CommentScope, AppUseCaseError> {
-    Ok(CommentScope::new(SpecId::new(spec_id)?, file_key))
 }
 
 fn resolve_comment_anchor(
@@ -859,6 +853,18 @@ mod tests {
             .with_timezone(&Utc)
     }
 
+    fn spec_id(value: &str) -> SpecId {
+        SpecId::new(value).expect("spec id should be valid")
+    }
+
+    fn comment_id(value: &str) -> CommentId {
+        CommentId::new(value).expect("comment id should be valid")
+    }
+
+    fn comment_body(value: &str) -> CommentBody {
+        CommentBody::new(value).expect("comment body should be valid")
+    }
+
     fn anchor(file_key: SpecFileKey) -> CommentAnchor {
         anchor_with(
             file_key,
@@ -961,7 +967,11 @@ mod tests {
         let use_cases = use_cases(repository);
 
         let comments = use_cases
-            .list_comments("auth-flow", SpecFileKey::Impl, CommentStatusFilter::Open)
+            .list_comments(
+                &spec_id("auth-flow"),
+                SpecFileKey::Impl,
+                CommentStatusFilter::Open,
+            )
             .expect("comments should list");
 
         assert_eq!(1, comments.len());
@@ -975,9 +985,9 @@ mod tests {
 
         let added = use_cases
             .add_comment(
-                "auth-flow",
+                &spec_id("auth-flow"),
                 anchor(SpecFileKey::Impl),
-                "  Please clarify.  ",
+                comment_body("  Please clarify.  "),
             )
             .expect("comment should be added");
 
@@ -986,22 +996,6 @@ mod tests {
         assert_eq!(timestamp(5), added.created_at());
         assert_eq!(timestamp(5), added.updated_at());
         assert_eq!(vec![added], *repository.comments.borrow());
-    }
-
-    #[test]
-    fn add_comment_rejects_empty_body_before_persistence() {
-        let repository = FakeCommentRepository::default();
-        let use_cases = use_cases(repository.clone());
-
-        let result = use_cases.add_comment("auth-flow", anchor(SpecFileKey::Impl), "   ");
-
-        assert_eq!(
-            Err(AppUseCaseError::InvalidComment {
-                message: "comment body is required".to_string()
-            }),
-            result
-        );
-        assert!(repository.comments.borrow().is_empty());
     }
 
     #[test]
@@ -1018,10 +1012,10 @@ mod tests {
 
         let updated = use_cases
             .update_comment(
-                "auth-flow",
+                &spec_id("auth-flow"),
                 SpecFileKey::Impl,
-                "cmt_existing",
-                "Updated body",
+                &comment_id("cmt_existing"),
+                comment_body("Updated body"),
             )
             .expect("comment should update");
 
@@ -1045,8 +1039,12 @@ mod tests {
         repository.comments.borrow_mut().push(existing.clone());
         let use_cases = use_cases(repository.clone());
 
-        let result =
-            use_cases.update_comment("auth-flow", SpecFileKey::Impl, "cmt_existing", "Stale body");
+        let result = use_cases.update_comment(
+            &spec_id("auth-flow"),
+            SpecFileKey::Impl,
+            &comment_id("cmt_existing"),
+            comment_body("Stale body"),
+        );
 
         assert_eq!(
             Err(AppUseCaseError::InvalidComment {
@@ -1070,16 +1068,32 @@ mod tests {
         let use_cases = use_cases(repository.clone());
 
         let resolved = use_cases
-            .resolve_comment("auth-flow", SpecFileKey::Impl, "cmt_existing")
+            .resolve_comment(
+                &spec_id("auth-flow"),
+                SpecFileKey::Impl,
+                &comment_id("cmt_existing"),
+            )
             .expect("comment should resolve");
         let resolved_again = use_cases
-            .resolve_comment("auth-flow", SpecFileKey::Impl, "cmt_existing")
+            .resolve_comment(
+                &spec_id("auth-flow"),
+                SpecFileKey::Impl,
+                &comment_id("cmt_existing"),
+            )
             .expect("resolved comment should remain resolved");
         let reopened = use_cases
-            .reopen_comment("auth-flow", SpecFileKey::Impl, "cmt_existing")
+            .reopen_comment(
+                &spec_id("auth-flow"),
+                SpecFileKey::Impl,
+                &comment_id("cmt_existing"),
+            )
             .expect("comment should reopen");
         let reopened_again = use_cases
-            .reopen_comment("auth-flow", SpecFileKey::Impl, "cmt_existing")
+            .reopen_comment(
+                &spec_id("auth-flow"),
+                SpecFileKey::Impl,
+                &comment_id("cmt_existing"),
+            )
             .expect("open comment should remain open");
 
         assert_eq!(CommentStatus::Resolved, resolved.status());
@@ -1106,7 +1120,7 @@ mod tests {
 
         let result = use_cases
             .resolve_comment_anchors(
-                "auth-flow",
+                &spec_id("auth-flow"),
                 SpecFileKey::Impl,
                 CommentStatusFilter::All,
                 &blocks,
@@ -1159,7 +1173,7 @@ mod tests {
 
         let result = use_cases
             .resolve_comment_anchors(
-                "auth-flow",
+                &spec_id("auth-flow"),
                 SpecFileKey::Impl,
                 CommentStatusFilter::All,
                 &blocks,
@@ -1198,7 +1212,7 @@ mod tests {
 
         let result = use_cases
             .resolve_comment_anchors(
-                "auth-flow",
+                &spec_id("auth-flow"),
                 SpecFileKey::Impl,
                 CommentStatusFilter::All,
                 &blocks,
@@ -1243,7 +1257,7 @@ mod tests {
 
         let result = use_cases
             .resolve_comment_anchors(
-                "auth-flow",
+                &spec_id("auth-flow"),
                 SpecFileKey::Impl,
                 CommentStatusFilter::All,
                 &blocks,
@@ -1274,7 +1288,7 @@ mod tests {
 
         let result = use_cases
             .resolve_comment_anchors(
-                "auth-flow",
+                &spec_id("auth-flow"),
                 SpecFileKey::Impl,
                 CommentStatusFilter::All,
                 &blocks,
@@ -1313,7 +1327,7 @@ mod tests {
 
         let result = use_cases
             .resolve_comment_anchors(
-                "auth-flow",
+                &spec_id("auth-flow"),
                 SpecFileKey::Impl,
                 CommentStatusFilter::All,
                 &blocks,
@@ -1353,7 +1367,7 @@ mod tests {
 
         let result = use_cases
             .resolve_comment_anchors(
-                "auth-flow",
+                &spec_id("auth-flow"),
                 SpecFileKey::Impl,
                 CommentStatusFilter::All,
                 &blocks,
@@ -1392,7 +1406,7 @@ mod tests {
 
         let result = use_cases
             .resolve_comment_anchors(
-                "auth-flow",
+                &spec_id("auth-flow"),
                 SpecFileKey::Impl,
                 CommentStatusFilter::All,
                 &blocks,
@@ -1436,7 +1450,7 @@ mod tests {
 
         let result = use_cases
             .resolve_comment_anchors(
-                "auth-flow",
+                &spec_id("auth-flow"),
                 SpecFileKey::Impl,
                 CommentStatusFilter::All,
                 &blocks,
@@ -1478,7 +1492,7 @@ mod tests {
 
         let result = use_cases
             .resolve_comment_anchors(
-                "auth-flow",
+                &spec_id("auth-flow"),
                 SpecFileKey::Impl,
                 CommentStatusFilter::All,
                 &blocks,
@@ -1516,7 +1530,7 @@ mod tests {
 
         let result = use_cases
             .resolve_comment_anchors(
-                "auth-flow",
+                &spec_id("auth-flow"),
                 SpecFileKey::Impl,
                 CommentStatusFilter::All,
                 &blocks,
@@ -1566,7 +1580,7 @@ mod tests {
 
         let result = use_cases
             .resolve_comment_anchors(
-                "auth-flow",
+                &spec_id("auth-flow"),
                 SpecFileKey::Impl,
                 CommentStatusFilter::All,
                 &blocks,
@@ -1620,7 +1634,7 @@ mod tests {
 
         let result = use_cases
             .resolve_comment_anchors(
-                "auth-flow",
+                &spec_id("auth-flow"),
                 SpecFileKey::Impl,
                 CommentStatusFilter::All,
                 &blocks,
@@ -1665,7 +1679,7 @@ mod tests {
 
         let result = use_cases
             .resolve_comment_anchors(
-                "auth-flow",
+                &spec_id("auth-flow"),
                 SpecFileKey::Impl,
                 CommentStatusFilter::All,
                 &blocks,
@@ -1699,7 +1713,7 @@ mod tests {
 
         let result = use_cases
             .resolve_comment_anchors(
-                "auth-flow",
+                &spec_id("auth-flow"),
                 SpecFileKey::Impl,
                 CommentStatusFilter::All,
                 &blocks,
@@ -1740,7 +1754,7 @@ mod tests {
 
         let result = use_cases
             .resolve_comment_anchors(
-                "auth-flow",
+                &spec_id("auth-flow"),
                 SpecFileKey::Impl,
                 CommentStatusFilter::All,
                 &blocks,
@@ -1769,7 +1783,7 @@ mod tests {
         );
 
         let result = use_cases.resolve_comment_anchors(
-            "auth-flow",
+            &spec_id("auth-flow"),
             SpecFileKey::Impl,
             CommentStatusFilter::All,
             &[],
@@ -1794,7 +1808,11 @@ mod tests {
         let use_cases = use_cases(repository.clone());
 
         use_cases
-            .delete_comment("auth-flow", SpecFileKey::Impl, "cmt_existing")
+            .delete_comment(
+                &spec_id("auth-flow"),
+                SpecFileKey::Impl,
+                &comment_id("cmt_existing"),
+            )
             .expect("comment should delete");
 
         assert!(repository.comments.borrow().is_empty());

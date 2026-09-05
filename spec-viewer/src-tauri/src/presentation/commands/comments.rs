@@ -14,10 +14,11 @@ use crate::{
     },
     domain::{
         comment::{
-            BlockIndex, BlockType, CharRange, Comment, CommentAnchor, CommentDomainError,
-            CommentStatus, CommentStatusFilter, TextHash, TextSnippet,
+            BlockIndex, BlockType, CharRange, Comment, CommentAnchor, CommentBody,
+            CommentDomainError, CommentId, CommentStatus, CommentStatusFilter, TextHash,
+            TextSnippet,
         },
-        spec::{MarkdownBlock, MarkdownBlockSourceRange, SpecFileKey, SpecNode},
+        spec::{MarkdownBlock, MarkdownBlockSourceRange, SpecFileKey, SpecId, SpecNode},
     },
 };
 
@@ -518,6 +519,7 @@ pub fn list_comments(
 ) -> ListCommentsCommandResult<ListCommentsResponse> {
     let file_key = parse_file_key(&request.file_key)?;
     let status_filter = parse_status_filter(request.status_filter.as_deref())?;
+    let spec_id = parse_spec_id(&request.spec_id)?;
     let workspace = state
         .use_cases()
         .load_workspace(&request.workspace_path)
@@ -532,12 +534,12 @@ pub fn list_comments(
     let result = (|| {
         let current_blocks = state
             .use_cases()
-            .read_spec_blocks_cached(&workspace, &request.spec_id, file_key)
+            .read_spec_blocks_cached(&workspace, spec_id.as_str(), file_key)
             .map_err(CommentCommandError::from)?;
         let resolutions = state
             .use_cases()
             .comment_use_cases(&workspace)
-            .resolve_comment_anchors(&request.spec_id, file_key, status_filter, &current_blocks)?;
+            .resolve_comment_anchors(&spec_id, file_key, status_filter, &current_blocks)?;
 
         Ok::<_, CommentCommandError>((current_blocks.len(), resolutions))
     })();
@@ -576,10 +578,13 @@ pub fn add_comment(
         .use_cases()
         .load_workspace(&request.workspace_path)
         .map_err(AddCommentCommandError::from_app_error)?;
+    let spec_id =
+        parse_spec_id(&request.spec_id).map_err(AddCommentCommandError::from_app_error)?;
+    let body = parse_comment_body(&request.body).map_err(AddCommentCommandError::from_app_error)?;
     let comment = state
         .use_cases()
         .comment_use_cases(&workspace)
-        .add_comment(&request.spec_id, anchor, request.body)
+        .add_comment(&spec_id, anchor, body)
         .map_err(AddCommentCommandError::from_app_error)?;
 
     Ok(CommentResponse::from(&comment))
@@ -595,15 +600,13 @@ pub fn update_comment(
         .use_cases()
         .load_workspace(&request.workspace_path)
         .map_err(CommentCommandError::from)?;
+    let spec_id = parse_spec_id(&request.spec_id)?;
+    let comment_id = parse_comment_id(&request.comment_id)?;
+    let body = parse_comment_body(&request.body)?;
     let comment = state
         .use_cases()
         .comment_use_cases(&workspace)
-        .update_comment(
-            &request.spec_id,
-            file_key,
-            &request.comment_id,
-            request.body,
-        )?;
+        .update_comment(&spec_id, file_key, &comment_id, body)?;
 
     Ok(CommentResponse::from(&comment))
 }
@@ -618,11 +621,13 @@ pub fn delete_comment(
         .use_cases()
         .load_workspace(&request.workspace_path)
         .map_err(CommentCommandError::from)?;
+    let spec_id = parse_spec_id(&request.spec_id)?;
+    let comment_id = parse_comment_id(&request.comment_id)?;
 
     state
         .use_cases()
         .comment_use_cases(&workspace)
-        .delete_comment(&request.spec_id, file_key, &request.comment_id)?;
+        .delete_comment(&spec_id, file_key, &comment_id)?;
 
     Ok(DeleteCommentResponse { deleted: true })
 }
@@ -914,13 +919,15 @@ fn update_comment_status(
         .use_cases()
         .load_workspace(&request.workspace_path)
         .map_err(CommentCommandError::from)?;
+    let spec_id = parse_spec_id(&request.spec_id)?;
+    let comment_id = parse_comment_id(&request.comment_id)?;
     let comment_use_cases = state.use_cases().comment_use_cases(&workspace);
     let comment = match action {
         CommentStatusAction::Resolve => {
-            comment_use_cases.resolve_comment(&request.spec_id, file_key, &request.comment_id)?
+            comment_use_cases.resolve_comment(&spec_id, file_key, &comment_id)?
         }
         CommentStatusAction::Reopen => {
-            comment_use_cases.reopen_comment(&request.spec_id, file_key, &request.comment_id)?
+            comment_use_cases.reopen_comment(&spec_id, file_key, &comment_id)?
         }
     };
 
@@ -936,10 +943,11 @@ fn build_comment_export(
     match &request.target {
         ExportCommentsTargetRequest::File { spec_id, file_key } => {
             let file_key = parse_file_key(file_key)?;
+            let parsed_spec_id = parse_spec_id(spec_id)?;
             let file = export_comment_file(
                 use_cases,
                 workspace,
-                spec_id,
+                &parsed_spec_id,
                 spec_id,
                 file_key,
                 file_key.display_label(),
@@ -960,8 +968,9 @@ fn build_comment_export(
             })
         }
         ExportCommentsTargetRequest::Spec { spec_id } => {
+            let parsed_spec_id = parse_spec_id(spec_id)?;
             let specs = use_cases.list_specs(workspace)?.into_specs();
-            let spec = find_spec_node(&specs, spec_id).ok_or_else(|| {
+            let spec = find_spec_node(&specs, &parsed_spec_id).ok_or_else(|| {
                 CommentCommandError::invalid_request(format!("unknown spec id: {spec_id}"))
             })?;
             let files = export_comment_files_for_spec(use_cases, workspace, spec)?;
@@ -1021,18 +1030,20 @@ fn build_llm_prompt(
     let files = match &request.target {
         ExportCommentsTargetRequest::File { spec_id, file_key } => {
             let file_key = parse_file_key(file_key)?;
+            let parsed_spec_id = parse_spec_id(spec_id)?;
             vec![prompt_file(
                 use_cases,
                 workspace,
-                spec_id,
+                &parsed_spec_id,
                 spec_id,
                 file_key,
                 file_key.display_label(),
             )?]
         }
         ExportCommentsTargetRequest::Spec { spec_id } => {
+            let parsed_spec_id = parse_spec_id(spec_id)?;
             let specs = use_cases.list_specs(workspace)?.into_specs();
-            let spec = find_spec_node(&specs, spec_id).ok_or_else(|| {
+            let spec = find_spec_node(&specs, &parsed_spec_id).ok_or_else(|| {
                 CommentCommandError::invalid_request(format!("unknown spec id: {spec_id}"))
             })?;
 
@@ -1077,7 +1088,7 @@ fn export_comment_files_for_spec(
             export_comment_file(
                 use_cases,
                 workspace,
-                spec.id().as_str(),
+                spec.id(),
                 spec.label(),
                 file.key(),
                 file.display_label(),
@@ -1097,7 +1108,7 @@ fn prompt_files_for_spec(
             prompt_file(
                 use_cases,
                 workspace,
-                spec.id().as_str(),
+                spec.id(),
                 spec.label(),
                 file.key(),
                 file.display_label(),
@@ -1109,18 +1120,19 @@ fn prompt_files_for_spec(
 fn export_comment_file(
     use_cases: &crate::app::use_cases::FilesystemAppUseCases,
     workspace: &crate::app::use_cases::LoadWorkspaceResult,
-    spec_id: &str,
+    spec_id: &SpecId,
     spec_label: &str,
     file_key: SpecFileKey,
     file_label: &str,
 ) -> CommentCommandResult<ExportedCommentFile> {
-    let current_blocks = read_current_markdown_blocks(use_cases, workspace, spec_id, file_key)?;
+    let current_blocks =
+        read_current_markdown_blocks(use_cases, workspace, spec_id.as_str(), file_key)?;
     let resolutions = use_cases
         .comment_use_cases(workspace)
         .resolve_comment_anchors(spec_id, file_key, CommentStatusFilter::All, &current_blocks)?;
 
     Ok(ExportedCommentFile {
-        spec_id: spec_id.to_string(),
+        spec_id: spec_id.as_str().to_string(),
         spec_label: spec_label.to_string(),
         file_key,
         file_label: file_label.to_string(),
@@ -1135,12 +1147,13 @@ fn export_comment_file(
 fn prompt_file(
     use_cases: &crate::app::use_cases::FilesystemAppUseCases,
     workspace: &crate::app::use_cases::LoadWorkspaceResult,
-    spec_id: &str,
+    spec_id: &SpecId,
     spec_label: &str,
     file_key: SpecFileKey,
     file_label: &str,
 ) -> CommentCommandResult<LlmPromptFile> {
-    let document = read_current_markdown_document(use_cases, workspace, spec_id, file_key)?;
+    let document =
+        read_current_markdown_document(use_cases, workspace, spec_id.as_str(), file_key)?;
     let resolutions = use_cases
         .comment_use_cases(workspace)
         .resolve_comment_anchors(
@@ -1164,7 +1177,7 @@ fn prompt_file(
     }
 
     Ok(LlmPromptFile {
-        spec_id: spec_id.to_string(),
+        spec_id: spec_id.as_str().to_string(),
         spec_label: spec_label.to_string(),
         file_key,
         file_label: file_label.to_string(),
@@ -1175,9 +1188,9 @@ fn prompt_file(
     })
 }
 
-fn find_spec_node<'a>(specs: &'a [SpecNode], spec_id: &str) -> Option<&'a SpecNode> {
+fn find_spec_node<'a>(specs: &'a [SpecNode], spec_id: &SpecId) -> Option<&'a SpecNode> {
     specs.iter().find_map(|spec| {
-        if spec.id().as_str() == spec_id {
+        if spec.id() == spec_id {
             return Some(spec);
         }
 
@@ -1573,6 +1586,18 @@ fn read_current_markdown_blocks(
         ReadSpecFileResult::Found(document) => Ok(document.blocks().to_vec()),
         ReadSpecFileResult::Missing(_) => Ok(Vec::new()),
     }
+}
+
+fn parse_spec_id(value: &str) -> Result<SpecId, AppUseCaseError> {
+    SpecId::new(value).map_err(AppUseCaseError::from)
+}
+
+fn parse_comment_id(value: &str) -> Result<CommentId, AppUseCaseError> {
+    CommentId::new(value).map_err(AppUseCaseError::from)
+}
+
+fn parse_comment_body(value: &str) -> Result<CommentBody, AppUseCaseError> {
+    CommentBody::new(value).map_err(AppUseCaseError::from)
 }
 
 fn parse_file_key(value: &str) -> CommentCommandResult<SpecFileKey> {
@@ -2132,6 +2157,29 @@ mod tests {
 
         assert_eq!(CommentCommandErrorCode::InvalidRequest, error.code());
         assert_eq!("unsupported comment status filter: closed", error.message());
+    }
+
+    #[test]
+    fn presentation_parsers_preserve_comment_ipc_error_codes() {
+        let spec_error = parse_spec_id("../secret").expect_err("unsafe spec id should fail");
+        let comment_error = CommentCommandError::from_app_error(spec_error);
+
+        assert_eq!(
+            CommentCommandErrorCode::InvalidRequest,
+            comment_error.code()
+        );
+
+        let id_error = parse_comment_id("   ").expect_err("missing comment id should fail");
+        let value = serde_json::to_value(CommentCommandError::from_app_error(id_error))
+            .expect("error should serialize");
+
+        assert_eq!("invalidComment", value["code"]);
+
+        let body_error = parse_comment_body("   ").expect_err("missing comment body should fail");
+        let value = serde_json::to_value(AddCommentCommandError::from_app_error(body_error))
+            .expect("error should serialize");
+
+        assert_eq!("invalidComment", value["code"]);
     }
 
     #[test]

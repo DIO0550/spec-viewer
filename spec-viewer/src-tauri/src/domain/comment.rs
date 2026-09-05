@@ -4,16 +4,21 @@ use std::{collections::HashSet, fmt};
 
 use chrono::{DateTime, Utc};
 use thiserror::Error;
+use uuid::Uuid;
 
 use crate::domain::spec::{MarkdownBlock, MarkdownBlockType, SpecFileKey};
 pub mod diff;
 pub mod diff_repository;
 
+#[cfg(test)]
+mod id_tests;
 mod repository;
 
 pub use repository::{
     CommentListQuery, CommentRepository, CommentRepositoryError, CommentScope, CommentStatusFilter,
 };
+
+const COMMENT_ID_PREFIX: &str = "cmt_";
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CommentId {
@@ -32,6 +37,12 @@ impl CommentId {
         Ok(Self {
             value: trimmed.to_string(),
         })
+    }
+
+    pub fn generate(uuid: Uuid) -> Self {
+        Self {
+            value: format!("{COMMENT_ID_PREFIX}{}", uuid.simple()),
+        }
     }
 
     pub fn as_str(&self) -> &str {
