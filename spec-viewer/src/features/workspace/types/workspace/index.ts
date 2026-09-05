@@ -1,21 +1,9 @@
-export type WorkspaceKind = "plugin-workspace" | "plugin-worktree";
-export type WorkspaceConfigSource =
-  | "default"
-  | "workspaceConfig"
-  | "specOverride";
-
-export type WorkspaceFileMapping = Readonly<{
-  key: string;
-  label: string;
-  fileName: string;
-  configSource?: WorkspaceConfigSource;
-}>;
-
-export type Workspace = Readonly<{
-  root: string;
-  kind: WorkspaceKind;
-  files: readonly WorkspaceFileMapping[];
-}>;
+export { Workspace } from "@/features/workspace/domain/workspace";
+export type {
+  WorkspaceConfigSource,
+  WorkspaceFileMapping,
+  WorkspaceKind,
+} from "@/features/workspace/domain/workspace";
 
 export type LoadWorkspaceRequest = Readonly<{
   selectedDirectory: string;

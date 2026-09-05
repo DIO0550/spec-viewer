@@ -1,4 +1,4 @@
-const initialGenerationValue = 0;
+const InitialGenerationValue = 0;
 
 export type GenerationToken = number & {
   readonly __brand: "GenerationToken";
@@ -10,15 +10,15 @@ export type Generation = Readonly<{
   /** Invalidates the current generation so existing tokens become stale. */
   invalidate: () => void;
   /**
-   * Checks whether a token matches the current generation.
    * @param token - The generation token to compare.
+   * @returns True when the token matches the current generation.
    */
   isCurrent: (token: GenerationToken) => boolean;
 }>;
 
-/** @returns A generation tracker for ignoring stale async results. */
+/** @returns An application-level tracker for ordering async completions. */
 export function createGeneration(): Generation {
-  let current = initialGenerationValue;
+  let current = InitialGenerationValue;
 
   return {
     next: (): GenerationToken => {
