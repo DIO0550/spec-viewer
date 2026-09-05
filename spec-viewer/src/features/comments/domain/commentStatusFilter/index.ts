@@ -43,7 +43,7 @@ export const CommentStatusFilter = {
     }
   },
   /**
-   * コメントステータスフィルタを IPC 互換の文字列へ変換する。
+   * コメントステータスフィルタを IPC コマンド値へ変換する。
    *
    * @param filter - コメントステータスフィルタ
    * @returns IPC payload と同じ文字列

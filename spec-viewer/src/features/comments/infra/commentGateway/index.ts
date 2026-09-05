@@ -1,18 +1,19 @@
+import type { Comment } from "@/features/comments/domain/comment";
+import type { CommentAnchor } from "@/features/comments/domain/commentAnchor";
+import type { CommentId } from "@/features/comments/domain/commentId";
+import type { CommentScope } from "@/features/comments/domain/commentScope";
 import {
   CommentStatusFilter,
   type CommentStatusFilter as CommentStatusFilterType,
 } from "@/features/comments/domain/commentStatusFilter";
-import type { CommentScope } from "@/features/comments/domain/commentScope";
 import type {
-  Comment,
-  CommentAnchor,
-  CommentId,
   CommentStatusRequest,
   DeleteCommentResponse,
   ListCommentsRequest,
   ListCommentsResponse,
 } from "@/features/comments/types/comment";
-import type { CommentCommands } from "@/shared/api/tauri";
+
+import type { CommentCommands } from "@/lib/api/tauri";
 
 export type AddCommentParam = Readonly<{
   anchor: CommentAnchor;
@@ -121,20 +122,6 @@ export async function reopenComment(
 }
 
 /**
- * @param commands - Comment command boundary
- * @param scope - Active comment scope
- * @param commentId - Comment id to toggle
- * @returns Toggled comment from the command boundary.
- */
-export async function toggleCommentResolved(
-  commands: CommentCommands,
-  scope: CommentScope,
-  commentId: CommentId,
-): Promise<Comment> {
-  return commands.toggleCommentResolved(createStatusRequest(scope, commentId));
-}
-
-/**
  * @param scope - Active comment scope
  * @param statusFilter - Active status filter
  * @param correlationId - Optional performance correlation id
@@ -146,7 +133,9 @@ export function createListCommentsRequest(
   correlationId: string | null,
 ): ListCommentsRequest {
   const request: ListCommentsRequest = {
-    ...scope,
+    workspacePath: scope.workspacePath,
+    specId: scope.specId,
+    fileKey: scope.fileKey,
     statusFilter: CommentStatusFilter.toString(statusFilter),
   };
 
@@ -170,7 +159,9 @@ export function createStatusRequest(
   commentId: CommentId,
 ): CommentStatusRequest {
   return {
-    ...scope,
+    workspacePath: scope.workspacePath,
+    specId: scope.specId,
+    fileKey: scope.fileKey,
     commentId,
   };
 }

@@ -8,17 +8,18 @@ import {
   type UseCommentExportResult,
   useCommentExport,
 } from "@/app/App/hooks/useCommentExport";
+import type { Comment } from "@/features/comments/domain/comment";
+import type { CommentAnchor } from "@/features/comments/domain/commentAnchor";
+import { CommentId as CommentIdValue } from "@/features/comments/domain/commentId";
 import type {
-  Comment,
-  CommentAnchor,
   CommentExportScope,
   ExportCommentsResponse,
   GenerateLlmPromptResponse,
 } from "@/features/comments/types/comment";
-import { CommentId as CommentIdValue } from "@/features/comments/types/comment";
-import { ExportCommentsCommandError } from "@/shared/api/tauri/exportComments";
-import { GenerateLlmPromptCommandError } from "@/shared/api/tauri/generateLlmPrompt";
-import { getUnknownErrorMessage } from "@/shared/lib/errorMessage";
+
+import { ExportCommentsCommandError } from "@/lib/api/tauri/exportComments";
+import { GenerateLlmPromptCommandError } from "@/lib/api/tauri/generateLlmPrompt";
+import { getUnknownErrorMessage } from "@/utils/errorMessage";
 
 const commentId = CommentIdValue.fromString;
 
@@ -36,7 +37,6 @@ const openComment: Comment = {
   anchor,
   body: "body",
   status: "open",
-  resolved: false,
   createdAt: "2026-05-05T10:00:00Z",
   updatedAt: "2026-05-05T10:00:00Z",
 };

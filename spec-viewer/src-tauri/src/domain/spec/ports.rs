@@ -82,7 +82,7 @@ impl ReadSpecFileResult {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpecDocument {
-    key: SpecFileKey,
+    identity: crate::domain::spec::SpecArtifactIdentity,
     format: SpecDocumentFormat,
     path: String,
     contents: String,
@@ -116,8 +116,24 @@ impl SpecDocument {
         contents: impl Into<String>,
         blocks: Vec<MarkdownBlock>,
     ) -> Self {
+        Self::with_artifact(
+            crate::domain::spec::SpecArtifactIdentity::Standard(key),
+            format,
+            path,
+            contents,
+            blocks,
+        )
+    }
+
+    pub fn with_artifact(
+        identity: crate::domain::spec::SpecArtifactIdentity,
+        format: SpecDocumentFormat,
+        path: impl Into<String>,
+        contents: impl Into<String>,
+        blocks: Vec<MarkdownBlock>,
+    ) -> Self {
         Self {
-            key,
+            identity,
             format,
             path: path.into(),
             contents: contents.into(),
@@ -125,8 +141,12 @@ impl SpecDocument {
         }
     }
 
-    pub fn key(&self) -> SpecFileKey {
-        self.key
+    pub fn identity(&self) -> &crate::domain::spec::SpecArtifactIdentity {
+        &self.identity
+    }
+
+    pub fn file_key(&self) -> Option<SpecFileKey> {
+        self.identity.standard_key()
     }
 
     pub fn format(&self) -> SpecDocumentFormat {

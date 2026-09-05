@@ -14,7 +14,7 @@ use crate::{
     domain::spec::SpecFileKey,
 };
 
-use super::{parse_spec_id, CommandError, CommandState};
+use super::{parse_spec_id, CommandState};
 
 pub type StartSpecFileWatchCommandResult<T> = Result<T, WatchCommandError>;
 pub type StopSpecFileWatchCommandResult<T> = Result<T, WatchCommandError>;
@@ -45,6 +45,14 @@ impl WatchCommandError {
         }
     }
 
+    fn invalid_request(message: impl Into<String>) -> Self {
+        Self::new(WatchCommandErrorCode::InvalidRequest, message)
+    }
+
+    fn file_watch(message: impl Into<String>) -> Self {
+        Self::new(WatchCommandErrorCode::FileWatch, message)
+    }
+
     fn from_app_error(error: AppUseCaseError) -> Self {
         let code = match error {
             AppUseCaseError::WorkspaceDetection { .. } => WatchCommandErrorCode::WorkspaceDetection,
@@ -54,36 +62,16 @@ impl WatchCommandError {
             | AppUseCaseError::SpecArchive { .. }
             | AppUseCaseError::MarkdownRead { .. }
             | AppUseCaseError::InvalidComment { .. }
-            | AppUseCaseError::CommentRepository { .. }
-            | AppUseCaseError::ReviewRunExport { .. } => WatchCommandErrorCode::Unexpected,
+            | AppUseCaseError::CommentRepository { .. } => WatchCommandErrorCode::Unexpected,
         };
 
         Self::new(code, error.to_string())
-    }
-
-    fn from_command_error(error: CommandError) -> Self {
-        let code = match error.code() {
-            "invalidRequest" => WatchCommandErrorCode::InvalidRequest,
-            "workspaceDetection" => WatchCommandErrorCode::WorkspaceDetection,
-            "configLoad" => WatchCommandErrorCode::ConfigLoad,
-            "invalidSpec" => WatchCommandErrorCode::InvalidSpec,
-            "fileWatch" => WatchCommandErrorCode::FileWatch,
-            _ => WatchCommandErrorCode::Unexpected,
-        };
-
-        Self::new(code, error.message())
     }
 }
 
 impl From<AppUseCaseError> for WatchCommandError {
     fn from(error: AppUseCaseError) -> Self {
         Self::from_app_error(error)
-    }
-}
-
-impl From<CommandError> for WatchCommandError {
-    fn from(error: CommandError) -> Self {
-        Self::from_command_error(error)
     }
 }
 
@@ -146,17 +134,17 @@ pub fn start_spec_file_watch(
     request: StartSpecFileWatchRequest,
 ) -> StartSpecFileWatchCommandResult<StartSpecFileWatchResponse> {
     let file_key = SpecFileKey::from_str(&request.file_key).map_err(|_| {
-        CommandError::invalid_request(format!("unsupported file key: {}", request.file_key))
+        WatchCommandError::invalid_request(format!("unsupported file key: {}", request.file_key))
     })?;
     let workspace = state
         .use_cases()
         .load_workspace(&request.workspace_path)
-        .map_err(CommandError::from)?;
+        .map_err(WatchCommandError::from)?;
     let spec_id = parse_spec_id(&request.spec_id)?;
     let plan = state
         .use_cases()
         .plan_file_watch(&workspace, &spec_id, file_key)
-        .map_err(CommandError::from)?;
+        .map_err(WatchCommandError::from)?;
     let use_cases = state.use_cases().clone();
     let registration = state
         .file_watch_manager()
@@ -164,7 +152,7 @@ pub fn start_spec_file_watch(
             invalidate_markdown_cache(&use_cases, &notification);
             emit_file_watch_notification(&app_handle, notification);
         })
-        .map_err(|error| CommandError::file_watch(error.to_string()))?;
+        .map_err(|error| WatchCommandError::file_watch(error.to_string()))?;
 
     Ok(StartSpecFileWatchResponse::from(registration))
 }
