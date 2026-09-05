@@ -152,9 +152,7 @@ test("useThemeは選択したlight preferenceを同じact cycleで保存してdo
 
   expect(result.current.themeMode).toBe("light");
   expect(result.current.resolvedTheme).toBe("light");
-  expect(window.localStorage.getItem("spec-reviewer.theme-mode")).toBe(
-    "light",
-  );
+  expect(window.localStorage.getItem("spec-reviewer.theme-mode")).toBe("light");
   expect(document.documentElement.dataset.theme).toBe("light");
   expect(document.documentElement.dataset.themeMode).toBe("light");
   expect(document.documentElement.style.colorScheme).toBe("light");
@@ -171,6 +169,27 @@ test("useThemeは保存済みdark preferenceを初期値にする", () => {
   expect(result.current.resolvedTheme).toBe("dark");
   expect(document.documentElement.dataset.theme).toBe("dark");
   expect(document.documentElement.dataset.themeMode).toBe("dark");
+  result.unmount();
+});
+
+test("ThemeProviderはfixedTheme指定時に保存済みdark preferenceよりlightを優先する", () => {
+  resetThemeEnvironment(false);
+  window.localStorage.setItem("spec-reviewer.theme-mode", "dark");
+  const FixedLightThemeProvider = (
+    props: Readonly<{ children: ReactNode }>,
+  ): ReactElement => (
+    <ThemeProvider fixedTheme="light">{props.children}</ThemeProvider>
+  );
+
+  const result = renderHook(() => useTheme(), {
+    wrapper: FixedLightThemeProvider,
+  });
+
+  expect(result.current.themeMode).toBe("light");
+  expect(result.current.resolvedTheme).toBe("light");
+  expect(document.documentElement.dataset.theme).toBe("light");
+  expect(document.documentElement.dataset.themeMode).toBe("light");
+  expect(document.documentElement.style.colorScheme).toBe("light");
   result.unmount();
 });
 

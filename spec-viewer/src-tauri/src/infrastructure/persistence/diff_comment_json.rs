@@ -1,0 +1,643 @@
+//! Strict JSON v1 codec for repository Diff comments.
+
+use std::{cell::Cell, collections::HashSet, fmt, num::NonZeroU32, rc::Rc};
+
+use chrono::{DateTime, Utc};
+use serde::{
+    de::{self, DeserializeOwned, MapAccess, SeqAccess, Visitor},
+    Deserialize, Deserializer, Serialize,
+};
+use serde_json::Value;
+use thiserror::Error;
+
+use crate::domain::{
+    comment::diff::{
+        DiffAnchorPaths, DiffAnchorTarget, DiffCommentReply, DiffCommentRevision, DiffLineAnchor,
+        DiffLineHash, DiffReviewIdentity, DiffSide, StoredDiffComment, StoredDiffCommentDocument,
+        WorktreeStorageId,
+    },
+    repository::{CommitSha, RepositoryId, RepositoryRelativePath, SnapshotId},
+};
+
+pub const MAX_DIFF_COMMENT_JSON_BYTES: usize = 8 * 1024 * 1024;
+const MAX_JSON_DEPTH: usize = 32;
+const MAX_JSON_NODES: usize = 250_000;
+
+#[derive(Debug, Error)]
+pub enum DiffCommentJsonError {
+    #[error("Diff comment JSON exceeds the byte limit")]
+    TooLarge,
+    #[error("invalid Diff comment JSON: {0}")]
+    Invalid(String),
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct DocumentDto {
+    version: u8,
+    repository_id: String,
+    worktree_id: String,
+    revision: String,
+    comments: Vec<CommentDto>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct CommentDto {
+    id: String,
+    body: String,
+    resolved: bool,
+    created_at: DateTime<Utc>,
+    #[serde(default)]
+    replies: Vec<ReplyDto>,
+    anchor: AnchorDto,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ReplyDto {
+    id: String,
+    body: String,
+    created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct AnchorDto {
+    repository_id: String,
+    worktree_id: String,
+    base_sha: String,
+    current_snapshot_id: String,
+    side: SideDto,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    old_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    new_path: Option<String>,
+    line: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    end_line: Option<u32>,
+    line_hash: String,
+    snippet: String,
+    context_before: Vec<String>,
+    context_after: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+enum SideDto {
+    Base,
+    Current,
+}
+
+pub fn encode(document: &StoredDiffCommentDocument) -> Result<Vec<u8>, DiffCommentJsonError> {
+    let dto = DocumentDto {
+        version: 1,
+        repository_id: document.scope().repository_id().as_str().into(),
+        worktree_id: document.scope().worktree_id().as_str().into(),
+        revision: document.revision().to_string(),
+        comments: document.comments().iter().map(CommentDto::from).collect(),
+    };
+    let mut bytes = serde_json::to_vec_pretty(&dto)
+        .map_err(|error| DiffCommentJsonError::Invalid(error.to_string()))?;
+    bytes.push(b'\n');
+    if bytes.len() > MAX_DIFF_COMMENT_JSON_BYTES {
+        return Err(DiffCommentJsonError::TooLarge);
+    }
+    Ok(bytes)
+}
+
+pub fn decode(
+    bytes: &[u8],
+    expected: &DiffReviewIdentity,
+) -> Result<StoredDiffCommentDocument, DiffCommentJsonError> {
+    if bytes.len() > MAX_DIFF_COMMENT_JSON_BYTES {
+        return Err(DiffCommentJsonError::TooLarge);
+    }
+    let mut deserializer = serde_json::Deserializer::from_slice(bytes);
+    let value = (&mut deserializer)
+        .deserialize_any(UniqueValueVisitor::root())
+        .map_err(|error| DiffCommentJsonError::Invalid(error.to_string()))?;
+    deserializer
+        .end()
+        .map_err(|error| DiffCommentJsonError::Invalid(error.to_string()))?;
+    let dto: DocumentDto = from_value(value)?;
+    if dto.version != 1
+        || dto.repository_id != expected.repository_id().as_str()
+        || dto.worktree_id != expected.worktree_id().as_str()
+    {
+        return Err(DiffCommentJsonError::Invalid(
+            "identity or version mismatch".into(),
+        ));
+    }
+    let revision = dto
+        .revision
+        .parse::<DiffCommentRevision>()
+        .map_err(|error| DiffCommentJsonError::Invalid(error.to_string()))?;
+    let comments = dto
+        .comments
+        .into_iter()
+        .map(|comment| comment.into_domain(&expected.scope()))
+        .collect::<Result<Vec<_>, _>>()?;
+    StoredDiffCommentDocument::new(expected.scope(), revision, comments)
+        .map_err(|error| DiffCommentJsonError::Invalid(error.to_string()))
+}
+
+fn from_value<T: DeserializeOwned>(value: Value) -> Result<T, DiffCommentJsonError> {
+    serde_json::from_value(value).map_err(|error| DiffCommentJsonError::Invalid(error.to_string()))
+}
+
+impl From<&StoredDiffComment> for CommentDto {
+    fn from(comment: &StoredDiffComment) -> Self {
+        let anchor = comment.anchor();
+        let target = anchor.target();
+        Self {
+            id: comment.id().into(),
+            body: comment.body().into(),
+            resolved: comment.resolved(),
+            created_at: comment.created_at(),
+            replies: comment
+                .replies()
+                .iter()
+                .map(|reply| ReplyDto {
+                    id: reply.id().into(),
+                    body: reply.body().into(),
+                    created_at: reply.created_at(),
+                })
+                .collect(),
+            anchor: AnchorDto {
+                repository_id: anchor.identity().repository_id().as_str().into(),
+                worktree_id: anchor.identity().worktree_id().as_str().into(),
+                base_sha: anchor.identity().base_sha().as_str().into(),
+                current_snapshot_id: anchor.identity().current_snapshot_id().as_str().into(),
+                side: match target.side() {
+                    DiffSide::Base => SideDto::Base,
+                    DiffSide::Current => SideDto::Current,
+                },
+                old_path: target.old_path().map(|path| path.as_str().into()),
+                new_path: target.new_path().map(|path| path.as_str().into()),
+                line: target.line().get(),
+                end_line: target.end_line().map(NonZeroU32::get),
+                line_hash: anchor.line_hash().as_str().into(),
+                snippet: anchor.snippet().into(),
+                context_before: anchor.context_before().to_vec(),
+                context_after: anchor.context_after().to_vec(),
+            },
+        }
+    }
+}
+
+impl CommentDto {
+    fn into_domain(
+        self,
+        expected: &crate::domain::comment::diff::DiffCommentScope,
+    ) -> Result<StoredDiffComment, DiffCommentJsonError> {
+        let identity = DiffReviewIdentity::new(
+            RepositoryId::parse(self.anchor.repository_id)
+                .map_err(|error| DiffCommentJsonError::Invalid(error.to_string()))?,
+            WorktreeStorageId::parse(self.anchor.worktree_id)
+                .map_err(|error| DiffCommentJsonError::Invalid(error.to_string()))?,
+            CommitSha::parse(self.anchor.base_sha)
+                .map_err(|error| DiffCommentJsonError::Invalid(error.to_string()))?,
+            SnapshotId::parse(self.anchor.current_snapshot_id)
+                .map_err(|error| DiffCommentJsonError::Invalid(error.to_string()))?,
+        );
+        if identity.scope() != *expected {
+            return Err(DiffCommentJsonError::Invalid(
+                "anchor identity mismatch".into(),
+            ));
+        }
+        let paths = DiffAnchorPaths::new(
+            match self.anchor.side {
+                SideDto::Base => DiffSide::Base,
+                SideDto::Current => DiffSide::Current,
+            },
+            self.anchor
+                .old_path
+                .map(RepositoryRelativePath::parse)
+                .transpose()
+                .map_err(|error| DiffCommentJsonError::Invalid(error.to_string()))?,
+            self.anchor
+                .new_path
+                .map(RepositoryRelativePath::parse)
+                .transpose()
+                .map_err(|error| DiffCommentJsonError::Invalid(error.to_string()))?,
+        )
+        .map_err(|error| DiffCommentJsonError::Invalid(error.to_string()))?;
+        let target = DiffAnchorTarget::new_range(
+            paths,
+            NonZeroU32::new(self.anchor.line)
+                .ok_or_else(|| DiffCommentJsonError::Invalid("line must be non-zero".into()))?,
+            self.anchor
+                .end_line
+                .map(|line| {
+                    NonZeroU32::new(line).ok_or_else(|| {
+                        DiffCommentJsonError::Invalid("endLine must be non-zero".into())
+                    })
+                })
+                .transpose()?,
+        )
+        .map_err(|error| DiffCommentJsonError::Invalid(error.to_string()))?;
+        let line_hash = DiffLineHash::parse(self.anchor.line_hash)
+            .map_err(|error| DiffCommentJsonError::Invalid(error.to_string()))?;
+        let anchor = DiffLineAnchor::new(
+            identity,
+            target,
+            line_hash,
+            self.anchor.snippet,
+            self.anchor.context_before,
+            self.anchor.context_after,
+        )
+        .map_err(|error| DiffCommentJsonError::Invalid(error.to_string()))?;
+        let replies = self
+            .replies
+            .into_iter()
+            .map(|reply| DiffCommentReply::new(reply.id, reply.body, reply.created_at))
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|error| DiffCommentJsonError::Invalid(error.to_string()))?;
+        StoredDiffComment::new_with_replies(
+            self.id,
+            self.body,
+            self.resolved,
+            self.created_at,
+            anchor,
+            replies,
+        )
+        .map_err(|error| DiffCommentJsonError::Invalid(error.to_string()))
+    }
+}
+
+#[derive(Clone)]
+struct UniqueValueVisitor {
+    nodes: Rc<Cell<usize>>,
+    depth: usize,
+}
+
+impl UniqueValueVisitor {
+    fn root() -> Self {
+        Self {
+            nodes: Rc::new(Cell::new(1)),
+            depth: 0,
+        }
+    }
+    fn seed<E: de::Error>(&self) -> Result<UniqueSeed, E> {
+        let depth = self.depth + 1;
+        let nodes = self.nodes.get().saturating_add(1);
+        if depth > MAX_JSON_DEPTH || nodes > MAX_JSON_NODES {
+            return Err(E::custom("JSON structural budget exceeded"));
+        }
+        self.nodes.set(nodes);
+        Ok(UniqueSeed {
+            visitor: Self {
+                nodes: Rc::clone(&self.nodes),
+                depth,
+            },
+        })
+    }
+}
+
+impl<'de> Visitor<'de> for UniqueValueVisitor {
+    type Value = Value;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("JSON without duplicate object keys")
+    }
+
+    fn visit_bool<E: de::Error>(self, value: bool) -> Result<Self::Value, E> {
+        Ok(Value::Bool(value))
+    }
+    fn visit_i64<E: de::Error>(self, value: i64) -> Result<Self::Value, E> {
+        Ok(Value::Number(value.into()))
+    }
+    fn visit_u64<E: de::Error>(self, value: u64) -> Result<Self::Value, E> {
+        Ok(Value::Number(value.into()))
+    }
+    fn visit_f64<E: de::Error>(self, value: f64) -> Result<Self::Value, E> {
+        serde_json::Number::from_f64(value)
+            .map(Value::Number)
+            .ok_or_else(|| E::custom("non-finite number"))
+    }
+    fn visit_str<E: de::Error>(self, value: &str) -> Result<Self::Value, E> {
+        Ok(Value::String(value.into()))
+    }
+    fn visit_string<E: de::Error>(self, value: String) -> Result<Self::Value, E> {
+        Ok(Value::String(value))
+    }
+    fn visit_none<E: de::Error>(self) -> Result<Self::Value, E> {
+        Ok(Value::Null)
+    }
+    fn visit_unit<E: de::Error>(self) -> Result<Self::Value, E> {
+        Ok(Value::Null)
+    }
+    fn visit_some<D: serde::Deserializer<'de>>(
+        self,
+        deserializer: D,
+    ) -> Result<Self::Value, D::Error> {
+        deserializer.deserialize_any(self.seed::<D::Error>()?.visitor)
+    }
+    fn visit_seq<A: SeqAccess<'de>>(self, mut sequence: A) -> Result<Self::Value, A::Error> {
+        let mut values = Vec::new();
+        while let Some(value) = sequence.next_element_seed(self.seed::<A::Error>()?)? {
+            values.push(value);
+        }
+        Ok(Value::Array(values))
+    }
+    fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
+        let mut seen = HashSet::new();
+        let mut values = serde_json::Map::new();
+        while let Some(key) = map.next_key::<String>()? {
+            if !seen.insert(key.clone()) {
+                return Err(de::Error::custom(format!("duplicate key: {key}")));
+            }
+            values.insert(key, map.next_value_seed(self.seed::<A::Error>()?)?);
+        }
+        Ok(Value::Object(values))
+    }
+}
+
+struct UniqueSeed {
+    visitor: UniqueValueVisitor,
+}
+impl<'de> de::DeserializeSeed<'de> for UniqueSeed {
+    type Value = Value;
+    fn deserialize<D: serde::Deserializer<'de>>(
+        self,
+        deserializer: D,
+    ) -> Result<Self::Value, D::Error> {
+        deserializer.deserialize_any(self.visitor)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn identity() -> DiffReviewIdentity {
+        DiffReviewIdentity::new(
+            RepositoryId::parse(format!("rr1_{}", "1".repeat(64))).unwrap(),
+            WorktreeStorageId::parse(format!("rw1_{}", "2".repeat(64))).unwrap(),
+            CommitSha::parse("3".repeat(40)).unwrap(),
+            SnapshotId::parse(format!("rs1_{}", "4".repeat(64))).unwrap(),
+        )
+    }
+
+    fn refreshed_identity() -> DiffReviewIdentity {
+        DiffReviewIdentity::new(
+            identity().repository_id().clone(),
+            identity().worktree_id().clone(),
+            CommitSha::parse("5".repeat(40)).unwrap(),
+            SnapshotId::parse(format!("rs1_{}", "6".repeat(64))).unwrap(),
+        )
+    }
+
+    fn historical_document() -> StoredDiffCommentDocument {
+        let target = DiffAnchorTarget::new(
+            DiffAnchorPaths::Current {
+                new_path: RepositoryRelativePath::parse("src/lib.rs").unwrap(),
+                old_path: None,
+            },
+            NonZeroU32::new(1).unwrap(),
+        );
+        let anchor = DiffLineAnchor::new(
+            identity(),
+            target,
+            crate::domain::comment::diff::line_hash("line"),
+            "line".into(),
+            vec![],
+            vec![],
+        )
+        .unwrap();
+        let comment = StoredDiffComment::new(
+            "historical".into(),
+            "body".into(),
+            false,
+            Utc::now(),
+            anchor,
+        )
+        .unwrap();
+        StoredDiffCommentDocument::new(identity().scope(), DiffCommentRevision::ZERO, vec![comment])
+            .unwrap()
+    }
+    #[test]
+    fn base_anchor_without_new_path_keeps_json_shape_and_selection_fallback() {
+        let old_path = RepositoryRelativePath::parse("src/old.rs").unwrap();
+        let target = DiffAnchorTarget::new(
+            DiffAnchorPaths::Base {
+                old_path: old_path.clone(),
+                new_path: None,
+            },
+            NonZeroU32::new(2).unwrap(),
+        );
+        let anchor = DiffLineAnchor::new(
+            identity(),
+            target,
+            crate::domain::comment::diff::line_hash("base line"),
+            "base line".into(),
+            vec![],
+            vec![],
+        )
+        .unwrap();
+        let comment =
+            StoredDiffComment::new("base-only".into(), "body".into(), false, Utc::now(), anchor)
+                .unwrap();
+        let document = StoredDiffCommentDocument::new(
+            identity().scope(),
+            DiffCommentRevision::ZERO,
+            vec![comment],
+        )
+        .unwrap();
+
+        let encoded = encode(&document).unwrap();
+        let value: Value = serde_json::from_slice(&encoded).unwrap();
+        let encoded_anchor = &value["comments"][0]["anchor"];
+        assert_eq!(encoded_anchor["side"], "base");
+        assert_eq!(encoded_anchor["oldPath"], "src/old.rs");
+        assert!(encoded_anchor.get("newPath").is_none());
+
+        let decoded = decode(&encoded, &identity()).unwrap();
+        let decoded_target = decoded.comments()[0].anchor().target();
+        assert_eq!(decoded_target.side(), DiffSide::Base);
+        assert_eq!(decoded_target.new_path(), None);
+        assert_eq!(decoded_target.side_path(), &old_path);
+        assert_eq!(decoded_target.selection_path(), &old_path);
+    }
+
+    #[test]
+    fn duplicate_keys_are_rejected_before_typed_decode() {
+        let bytes = br#"{"version":1,"version":1}"#;
+        assert!(decode(bytes, &identity())
+            .unwrap_err()
+            .to_string()
+            .contains("duplicate key"));
+    }
+
+    #[test]
+    fn trailing_json_value_is_rejected() {
+        let bytes = br#"{"version":1} {"version":1}"#;
+        assert!(decode(bytes, &identity()).is_err());
+    }
+
+    #[test]
+    fn deeply_nested_json_hits_streaming_structural_budget() {
+        let bytes = format!(
+            "{}null{}",
+            "[".repeat(MAX_JSON_DEPTH + 1),
+            "]".repeat(MAX_JSON_DEPTH + 1)
+        );
+        assert!(decode(bytes.as_bytes(), &identity())
+            .unwrap_err()
+            .to_string()
+            .contains("structural budget"));
+    }
+
+    #[test]
+    fn unknown_runtime_storage_fields_are_rejected() {
+        let value = format!(
+            r#"{{"version":1,"repositoryId":"{}","worktreeId":"{}","revision":"0","comments":[],"status":"exact"}}"#,
+            identity().repository_id().as_str(),
+            identity().worktree_id().as_str(),
+        );
+        assert!(decode(value.as_bytes(), &identity()).is_err());
+    }
+
+    #[test]
+    fn line_ranges_round_trip_and_legacy_anchors_remain_single_line() {
+        let target = DiffAnchorTarget::new_range(
+            DiffAnchorPaths::Current {
+                new_path: RepositoryRelativePath::parse("src/lib.rs").unwrap(),
+                old_path: None,
+            },
+            NonZeroU32::new(1).unwrap(),
+            Some(NonZeroU32::new(3).unwrap()),
+        )
+        .unwrap();
+        let anchor = DiffLineAnchor::new(
+            identity(),
+            target,
+            crate::domain::comment::diff::line_hash("line"),
+            "line".into(),
+            vec![],
+            vec![],
+        )
+        .unwrap();
+        let comment =
+            StoredDiffComment::new("range".into(), "body".into(), false, Utc::now(), anchor)
+                .unwrap();
+        let document = StoredDiffCommentDocument::new(
+            identity().scope(),
+            DiffCommentRevision::ZERO,
+            vec![comment],
+        )
+        .unwrap();
+
+        let encoded = encode(&document).unwrap();
+        let decoded = decode(&encoded, &identity()).unwrap();
+        assert_eq!(
+            decoded.comments()[0].anchor().target().range_end_line(),
+            NonZeroU32::new(3).unwrap()
+        );
+
+        let mut legacy: Value = serde_json::from_slice(&encoded).unwrap();
+        legacy["comments"][0]["anchor"]
+            .as_object_mut()
+            .unwrap()
+            .remove("endLine");
+        let decoded_legacy = decode(&serde_json::to_vec(&legacy).unwrap(), &identity()).unwrap();
+        assert_eq!(
+            decoded_legacy.comments()[0]
+                .anchor()
+                .target()
+                .range_end_line(),
+            NonZeroU32::new(1).unwrap()
+        );
+    }
+
+    #[test]
+    fn refreshed_base_and_snapshot_accept_historical_anchor_in_same_scope() {
+        let decoded = decode(
+            &encode(&historical_document()).unwrap(),
+            &refreshed_identity(),
+        )
+        .unwrap();
+        assert_eq!(decoded.scope(), &refreshed_identity().scope());
+        assert_eq!(decoded.comments()[0].anchor().identity(), &identity());
+    }
+
+    #[test]
+    fn historical_anchor_from_another_repository_scope_is_rejected() {
+        let mut value: Value =
+            serde_json::from_slice(&encode(&historical_document()).unwrap()).unwrap();
+        value["comments"][0]["anchor"]["repositoryId"] =
+            Value::String(format!("rr1_{}", "9".repeat(64)));
+        assert!(decode(&serde_json::to_vec(&value).unwrap(), &refreshed_identity()).is_err());
+    }
+
+    #[test]
+    fn replies_round_trip_and_legacy_documents_default_to_empty() {
+        let historical = historical_document();
+        let comment = historical.comments()[0]
+            .add_reply("reply-1".into(), "follow up".into(), Utc::now())
+            .unwrap();
+        let document = StoredDiffCommentDocument::new(
+            identity().scope(),
+            DiffCommentRevision::ZERO,
+            vec![comment],
+        )
+        .unwrap();
+        let encoded = encode(&document).unwrap();
+        let decoded = decode(&encoded, &identity()).unwrap();
+        assert_eq!(decoded.comments()[0].replies()[0].body(), "follow up");
+
+        let mut legacy: Value = serde_json::from_slice(&encoded).unwrap();
+        legacy["comments"][0]
+            .as_object_mut()
+            .unwrap()
+            .remove("replies");
+        let decoded_legacy = decode(&serde_json::to_vec(&legacy).unwrap(), &identity()).unwrap();
+        assert!(decoded_legacy.comments()[0].replies().is_empty());
+    }
+
+    #[test]
+    fn invalid_side_path_combination_is_rejected_as_typed_error() {
+        let mut value: Value =
+            serde_json::from_slice(&encode(&historical_document()).unwrap()).unwrap();
+        value["comments"][0]["anchor"]["side"] = Value::String("base".into());
+        value["comments"][0]["anchor"]
+            .as_object_mut()
+            .unwrap()
+            .remove("oldPath");
+
+        let error = decode(&serde_json::to_vec(&value).unwrap(), &identity()).unwrap_err();
+        assert!(matches!(
+            error,
+            DiffCommentJsonError::Invalid(message) if message.contains("sidePath")
+        ));
+    }
+
+    #[test]
+    fn invalid_line_hash_is_rejected_as_typed_error() {
+        let mut value: Value =
+            serde_json::from_slice(&encode(&historical_document()).unwrap()).unwrap();
+        value["comments"][0]["anchor"]["lineHash"] = Value::String("sha256:not-a-hash".into());
+
+        let error = decode(&serde_json::to_vec(&value).unwrap(), &identity()).unwrap_err();
+        assert!(matches!(
+            error,
+            DiffCommentJsonError::Invalid(message) if message.contains("lineHash")
+        ));
+    }
+
+    #[test]
+    fn r199_store_011_invalid_revision() {
+        for revision in ["00", "01", "-1", "+1", "18446744073709551616"] {
+            let bytes = format!(
+                r#"{{"version":1,"repositoryId":"{}","worktreeId":"{}","revision":"{revision}","comments":[]}}"#,
+                identity().repository_id().as_str(),
+                identity().worktree_id().as_str()
+            );
+            assert!(
+                decode(bytes.as_bytes(), &identity()).is_err(),
+                "accepted {revision}"
+            );
+        }
+    }
+}

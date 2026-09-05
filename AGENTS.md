@@ -119,6 +119,7 @@ Do not commit generated output from:
 - `spec-viewer/node_modules/`
 - `spec-viewer/dist/`
 - `spec-viewer/storybook-static/`
+- `visual-actual/` / `visual-baseline/` / `visual-report/`
 - `spec-viewer/src-tauri/target/`
 - `spec-viewer/src-tauri/gen/`
 

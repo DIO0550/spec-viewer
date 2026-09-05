@@ -1,6 +1,15 @@
-import { useCallback, useEffect, useReducer, useRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useReducer,
+  useRef,
+} from "react";
+import type { Comment } from "@/features/comments/domain/comment";
+import type { CommentAnchor } from "@/features/comments/domain/commentAnchor";
 import type { CommentFeatureError as CommentFeatureErrorType } from "@/features/comments/domain/commentError";
 import { CommentFeatureError } from "@/features/comments/domain/commentError";
+import type { CommentId } from "@/features/comments/domain/commentId";
 import {
   CommentOperationFailedState,
   CommentOperationIdleState,
@@ -16,21 +25,18 @@ import {
   deleteComment as deleteCommentViaGateway,
   reopenComment as reopenCommentViaGateway,
   resolveComment as resolveCommentViaGateway,
-  toggleCommentResolved as toggleCommentResolvedViaGateway,
   updateComment as updateCommentViaGateway,
 } from "@/features/comments/infra/commentGateway";
-import type {
-  Comment,
-  CommentAnchor,
-  CommentId,
-} from "@/features/comments/types/comment";
-import type { CommentCommands } from "@/shared/api/tauri";
-import { AddCommentCommandError } from "@/shared/api/tauri/addComment";
-import { DeleteCommentCommandError } from "@/shared/api/tauri/deleteComment";
-import { ReopenCommentCommandError } from "@/shared/api/tauri/reopenComment";
-import { ResolveCommentCommandError } from "@/shared/api/tauri/resolveComment";
-import { ToggleCommentResolvedCommandError } from "@/shared/api/tauri/toggleCommentResolved";
-import { UpdateCommentCommandError } from "@/shared/api/tauri/updateComment";
+import {
+  SelectionIdentity,
+  type SelectionIdentity as SelectionIdentityType,
+} from "@/features/specs/domain/specViewSelection";
+import type { CommentCommands } from "@/lib/api/tauri";
+import { AddCommentCommandError } from "@/lib/api/tauri/addComment";
+import { DeleteCommentCommandError } from "@/lib/api/tauri/deleteComment";
+import { ReopenCommentCommandError } from "@/lib/api/tauri/reopenComment";
+import { ResolveCommentCommandError } from "@/lib/api/tauri/resolveComment";
+import { UpdateCommentCommandError } from "@/lib/api/tauri/updateComment";
 
 export type AddCommentInput = Readonly<{
   anchor: CommentAnchor;
@@ -48,10 +54,9 @@ export type CommentListTransform = (
 
 export type UseCommentOperationsOptions = Readonly<{
   scope: CommentScope | null;
-  scopeKey: string;
+  selectionIdentity: SelectionIdentityType | null;
   statusFilter: CommentStatusFilter;
   commands: CommentCommands;
-  currentComments: readonly Comment[];
   /** @param transform - Transform applied to the active scope comment list. */
   updateCurrentScopeComments: (transform: CommentListTransform) => void;
   /** Reloads comments for the active scope. */
@@ -70,8 +75,6 @@ export type UseCommentOperationsResult = Readonly<{
   resolveComment: (commentId: CommentId) => Promise<Comment | null>;
   /** @param commentId - Id of the comment to reopen. */
   reopenComment: (commentId: CommentId) => Promise<Comment | null>;
-  /** @param commentId - Id of the comment to toggle. */
-  toggleCommentResolved: (commentId: CommentId) => Promise<Comment | null>;
 }>;
 
 type CommentOperationEvent =
@@ -91,7 +94,8 @@ type CommentOperationEvent =
 
 type AsyncOperationToken = Readonly<{
   requestId: number;
-  scopeKey: string;
+  selectionIdentity: SelectionIdentityType;
+  statusFilter: CommentStatusFilter;
 }>;
 
 const initialOperationState: CommentOperationState =
@@ -106,28 +110,31 @@ export function useCommentOperations(
 ): UseCommentOperationsResult {
   const {
     commands,
-    currentComments,
     reloadComments,
     scope,
-    scopeKey,
+    selectionIdentity,
     statusFilter,
     updateCurrentScopeComments,
   } = options;
   const operationRequestIdRef = useRef(0);
-  const activeOperationScopeKeyRef = useRef(scopeKey);
+  const activeSelectionIdentityRef = useRef(selectionIdentity);
+  const activeStatusFilterRef = useRef(statusFilter);
   const [operationState, dispatchOperation] = useReducer(
     commentOperationReducer,
     initialOperationState,
   );
 
-  activeOperationScopeKeyRef.current = scopeKey;
+  useLayoutEffect(() => {
+    activeSelectionIdentityRef.current = selectionIdentity;
+    activeStatusFilterRef.current = statusFilter;
+  }, [selectionIdentity, statusFilter]);
 
   const beginOperation = useCallback(
     (
       operation: CommentOperationKind,
       commentId: CommentId | null,
     ): AsyncOperationToken | null => {
-      if (scope === null) {
+      if (scope === null || selectionIdentity === null) {
         return null;
       }
 
@@ -139,9 +146,9 @@ export function useCommentOperations(
         commentId,
       });
 
-      return createOperationToken(requestId, scopeKey);
+      return createOperationToken(requestId, selectionIdentity, statusFilter);
     },
-    [scope, scopeKey],
+    [scope, selectionIdentity, statusFilter],
   );
 
   const canApplyOperationResult = useCallback(
@@ -149,7 +156,8 @@ export function useCommentOperations(
       isMatchingOperationToken(
         token,
         operationRequestIdRef.current,
-        activeOperationScopeKeyRef.current,
+        activeSelectionIdentityRef.current,
+        activeStatusFilterRef.current,
       ),
     [],
   );
@@ -175,9 +183,13 @@ export function useCommentOperations(
   );
 
   useEffect(() => {
+    // Each committed operation context invalidates work started by its predecessor.
+    void reloadComments;
+    void selectionIdentity;
+    void statusFilter;
     operationRequestIdRef.current += 1;
     dispatchOperation({ type: "operationInvalidated" });
-  }, [reloadComments, scopeKey]);
+  }, [reloadComments, selectionIdentity, statusFilter]);
 
   const addComment = useCallback(
     async (input: AddCommentInput): Promise<Comment | null> => {
@@ -403,57 +415,6 @@ export function useCommentOperations(
     ],
   );
 
-  const toggleCommentResolved = useCallback(
-    async (commentId: CommentId): Promise<Comment | null> => {
-      const token = beginOperation("toggle", commentId);
-      if (token === null || scope === null) {
-        return null;
-      }
-
-      const previousComments = currentComments;
-      updateCurrentScopeComments((comments) =>
-        Comments.upsertOptimisticToggle(comments, commentId, statusFilter),
-      );
-
-      try {
-        const comment = await toggleCommentResolvedViaGateway(
-          commands,
-          scope,
-          commentId,
-        );
-
-        if (!canApplyOperationResult(token)) {
-          return null;
-        }
-
-        updateCurrentScopeComments((comments) =>
-          Comments.upsertDisplayable(comments, comment, statusFilter),
-        );
-        markOperationSucceeded();
-        return comment;
-      } catch (error) {
-        if (!canApplyOperationResult(token)) {
-          return null;
-        }
-
-        updateCurrentScopeComments(() => previousComments);
-        markOperationFailed("toggle", commentId, error);
-        return null;
-      }
-    },
-    [
-      beginOperation,
-      canApplyOperationResult,
-      commands,
-      currentComments,
-      markOperationFailed,
-      markOperationSucceeded,
-      scope,
-      statusFilter,
-      updateCurrentScopeComments,
-    ],
-  );
-
   return {
     operationState,
     addComment,
@@ -461,7 +422,6 @@ export function useCommentOperations(
     deleteComment,
     resolveComment,
     reopenComment,
-    toggleCommentResolved,
   };
 }
 
@@ -524,10 +484,6 @@ function toCommentFeatureError(
       return CommentFeatureError.fromCommandError(
         ReopenCommentCommandError.fromUnknown(error),
       );
-    case "toggle":
-      return CommentFeatureError.fromCommandError(
-        ToggleCommentResolvedCommandError.fromUnknown(error),
-      );
     default:
       return assertNever(operation);
   }
@@ -546,28 +502,38 @@ function assertNever(value: never): never {
 
 /**
  * @param requestId - Operation request id.
- * @param scopeKey - Scope key captured when the request started.
+ * @param selectionIdentity - Selection captured when the operation started.
+ * @param statusFilter - Comment filter captured when the operation started.
  * @returns Token used to reject stale operation results.
  */
 function createOperationToken(
   requestId: number,
-  scopeKey: string,
+  selectionIdentity: SelectionIdentityType,
+  statusFilter: CommentStatusFilter,
 ): AsyncOperationToken {
-  return { requestId, scopeKey };
+  return { requestId, selectionIdentity, statusFilter };
 }
 
 /**
  * @param token - Captured operation token.
  * @param latestRequestId - Most recent operation request id.
- * @param currentScopeKey - Current active scope key.
+ * @param currentIdentity - Current active selection identity.
+ * @param currentStatusFilter - Current active comment filter.
  * @returns True when the async operation still belongs to the current scope.
  */
 function isMatchingOperationToken(
   token: AsyncOperationToken,
   latestRequestId: number,
-  currentScopeKey: string,
+  currentIdentity: SelectionIdentityType | null,
+  currentStatusFilter: CommentStatusFilter,
 ): boolean {
+  if (currentIdentity === null) {
+    return false;
+  }
+
   return (
-    token.requestId === latestRequestId && token.scopeKey === currentScopeKey
+    token.requestId === latestRequestId &&
+    token.statusFilter === currentStatusFilter &&
+    SelectionIdentity.equals(token.selectionIdentity, currentIdentity)
   );
 }

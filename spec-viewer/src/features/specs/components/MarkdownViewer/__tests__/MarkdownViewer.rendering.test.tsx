@@ -1,36 +1,19 @@
+import { createRef, type ReactNode } from "react";
 import { act } from "react";
-import type { ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-
+import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
+import type { RenderedDocumentPort } from "@/features/specs";
 import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
-import {
-  CommentOperationFailedState,
-  CommentOperationIdleState,
-  CommentOperationSavingState,
-  type CommentOperationKind,
-  type CommentOperationState,
-} from "@/features/comments/domain/commentOperation";
-import { createTextHash } from "@/features/comments/lib/comment-anchor-draft";
-import type {
-  Comment,
-  CommentAnchorResolution,
-  CommentBlockType,
-  CommentId,
-} from "@/features/comments/types/comment";
-import { CommentId as CommentIdValue } from "@/features/comments/types/comment";
 import type {
   MarkdownBlockMetadata,
   SpecDocument,
 } from "@/features/specs/types/spec";
-import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
-
-const commentId = CommentIdValue.fromString;
+import { createTestMarkdownBlocks } from "./markdownBlockFixture";
 
 const workspacePath = "/workspace/spec-reviewer";
 const selectedSpecLabel = "Phase 1 Viewer";
 const selectedFileLabel = "Tasks";
-const idleOperationState = CommentOperationIdleState.create();
 
 const richMarkdown = [
   "## Rendering Plan",
@@ -59,6 +42,8 @@ type RenderResult = Readonly<{
   unmount: () => void;
 }>;
 
+/** Updates a textarea through the same native input path React observes. */
+
 function renderComponent(component: ReactNode): RenderResult {
   const container = document.createElement("div");
   document.body.append(container);
@@ -86,12 +71,11 @@ function renderComponent(component: ReactNode): RenderResult {
 
 function createReadyState(
   contents: string | null,
-  blocks: readonly MarkdownBlockMetadata[] = [],
+  blocks?: readonly MarkdownBlockMetadata[],
   format: SpecDocument["format"] = "markdown",
-  documentPath: string =
-    format === "html"
-      ? "/workspace/spec-reviewer/docs/plans/tasks.html"
-      : "/workspace/spec-reviewer/docs/plans/tasks.md",
+  documentPath: string = format === "html"
+    ? "/workspace/spec-reviewer/docs/plans/tasks.html"
+    : "/workspace/spec-reviewer/docs/plans/tasks.md",
 ): SpecDocumentState {
   const document: SpecDocument = {
     key: "tasks",
@@ -99,7 +83,7 @@ function createReadyState(
     path: documentPath,
     contents,
     missing: false,
-    blocks,
+    blocks: blocks ?? createTestMarkdownBlocks(contents),
   };
 
   return {
@@ -112,137 +96,18 @@ function createReadyState(
   };
 }
 
-function createComment({
-  id,
-  blockIndex,
-  text,
-  resolved,
-  anchorResolution = null,
-  charRange = {
-    start: 0,
-    end: text.length,
-  },
-  blockType = "paragraph",
-}: Readonly<{
-  id: string;
-  blockIndex: number;
-  text: string;
-  resolved: boolean;
-  anchorResolution?: CommentAnchorResolution | null;
-  charRange?: Readonly<{
-    start: number;
-    end: number;
-  }>;
-  blockType?: CommentBlockType;
-}>): Comment {
-  return {
-    id: commentId(id),
-    anchor: {
-      fileKey: "tasks",
-      blockType,
-      blockIndex,
-      textHash: createTextHash(text),
-      textSnippet: text,
-      charRange,
-    },
-    body: `${id} body`,
-    status: resolved ? "resolved" : "open",
-    resolved,
-    anchorResolution,
-    createdAt: "2026-05-05T10:00:00Z",
-    updatedAt: "2026-05-05T10:00:00Z",
-  };
-}
-
 function renderViewer(
   state: SpecDocumentState,
   onReload = vi.fn(),
-  onAddComment = vi.fn().mockResolvedValue(true),
-  comments: readonly Comment[] = [],
-  activeCommentId: CommentId | null = null,
-  onSelectComment = vi.fn(),
-  onUpdateComment = vi.fn().mockResolvedValue(true),
-  operationState: CommentOperationState = idleOperationState,
-  onResolveComment = vi.fn().mockResolvedValue(true),
-  onReopenComment = vi.fn().mockResolvedValue(true),
-  onDeleteComment = vi.fn().mockResolvedValue(true),
 ): RenderResult {
   return renderComponent(
     <MarkdownViewer
       state={state}
       selectedSpecLabel={selectedSpecLabel}
       selectedFileLabel={selectedFileLabel}
-      comments={comments}
-      activeCommentId={activeCommentId}
       onReload={onReload}
-      onAddComment={onAddComment}
-      onUpdateComment={onUpdateComment}
-      operationState={operationState}
-      onResolveComment={onResolveComment}
-      onReopenComment={onReopenComment}
-      onDeleteComment={onDeleteComment}
-      onSelectComment={onSelectComment}
     />,
   );
-}
-
-function createClientRect({
-  top,
-  left,
-  width,
-  height,
-}: Readonly<{
-  top: number;
-  left: number;
-  width: number;
-  height: number;
-}>): DOMRect {
-  return {
-    top,
-    left,
-    width,
-    height,
-    right: left + width,
-    bottom: top + height,
-    x: left,
-    y: top,
-    toJSON: () => ({}),
-  } as DOMRect;
-}
-
-function createOperationErrorState(
-  operation: CommentOperationKind,
-  targetCommentId: CommentId,
-  message: string,
-): CommentOperationState {
-  return CommentOperationFailedState.create(operation, targetCommentId, {
-    code: "unknown",
-    message,
-    raw: null,
-  });
-}
-
-function openFirstCommentEditPopover(container: HTMLElement): HTMLElement {
-  const annotation = container.querySelector(
-    ".markdown-comment-annotation",
-  ) as HTMLElement;
-  const toggle = annotation.querySelector(
-    ".markdown-comment-annotation__toggle",
-  ) as HTMLButtonElement;
-
-  act(() => {
-    toggle.click();
-  });
-
-  const select = annotation.querySelector(
-    ".markdown-comment-annotation__select",
-  ) as HTMLButtonElement;
-
-  act(() => {
-    select.click();
-  });
-
-  return container.querySelector(".add-comment-popover") as HTMLElement;
 }
 
 test("MarkdownViewerはGFM要素を安全なHTMLとして表示する", () => {
@@ -478,6 +343,24 @@ test("MarkdownViewerはHTML文書の拡大率を変更できる", () => {
   result.unmount();
 });
 
+test("MarkdownViewerはUnderstanding Quiz HTMLをgenericなHTML文書として表示する", () => {
+  const result = renderViewer(
+    createReadyState(
+      '<main><button type="button">Check answer</button><script>window.quizReady = true;</script></main>',
+      [],
+      "html",
+      "/workspace/spec-reviewer/.plugin-workspace/.specs/reference/understanding-quiz-plan.html",
+    ),
+  );
+  const iframe = result.container.querySelector(
+    ".html-rendered",
+  ) as HTMLIFrameElement | null;
+
+  expect(iframe?.getAttribute("sandbox")).toBe("allow-scripts");
+  expect(iframe?.getAttribute("srcdoc")).toContain("window.quizReady = true;");
+  result.unmount();
+});
+
 test("MarkdownViewerは言語指定されたコードブロックにシンタックスハイライト用classを付与する", () => {
   const result = renderViewer(createReadyState(richMarkdown));
   const codeBlock = result.container.querySelector("pre code");
@@ -500,7 +383,7 @@ test("MarkdownViewerはタスクリストを読み取り専用として表示す
   result.unmount();
 });
 
-test("MarkdownViewerはコメントアンカー用のブロックメタデータを文書順で付与する", () => {
+test("MarkdownViewerは安定したブロックメタデータを文書順で付与する", () => {
   const result = renderViewer(createReadyState(richMarkdown));
   const renderedDocument = result.container.querySelector(".markdown-rendered");
   const blockElements = Array.from(
@@ -524,7 +407,12 @@ test("MarkdownViewerはコメントアンカー用のブロックメタデータ
   result.unmount();
 });
 
-test("MarkdownViewerはbackend block metadataをコメントアンカー用data属性に反映する", () => {
+test("MarkdownViewerはbackend block metadata欠落をcontract violationとして扱う", () => {
+  expect(() =>
+    renderViewer(createReadyState("Metadata is required.", [])),
+  ).toThrow(/Markdown block metadata contract violation/);
+});
+test("MarkdownViewerはbackend block metadataを公開data属性に反映する", () => {
   const blocks: readonly MarkdownBlockMetadata[] = [
     {
       blockType: "paragraph",
@@ -543,92 +431,64 @@ test("MarkdownViewerはbackend block metadataをコメントアンカー用data�
   const paragraph = result.container.querySelector(".markdown-rendered p");
 
   expect(paragraph?.getAttribute("data-block-index")).toBe("5");
-  expect(paragraph?.getAttribute("data-comment-block-type")).toBe("paragraph");
+  expect(paragraph?.getAttribute("data-rendered-block-type")).toBe("paragraph");
   expect(paragraph?.getAttribute("data-text-hash")).toBe("sha256:backend5");
   expect(paragraph?.getAttribute("data-source-start-byte-offset")).toBe("10");
   expect(paragraph?.getAttribute("data-source-end-byte-offset")).toBe("43");
   result.unmount();
 });
 
-test("MarkdownViewerはコメント付きブロックを状態別にハイライトする", () => {
-  const onSelectComment = vi.fn();
-  const contents = [
-    "## Highlight Plan",
-    "",
-    "Open comments should remain prominent.",
-    "",
-    "Resolved comments should stay quieter.",
-  ].join("\n");
-  const comments: readonly Comment[] = [
-    createComment({
-      id: "cmt_open",
-      blockIndex: 1,
-      text: "Open comments should remain prominent.",
-      resolved: false,
+test("MarkdownViewerはgeneric portのprojectionとcommit通知だけを適用する", () => {
+  const rootRef = createRef<HTMLDivElement>();
+  const onRenderedDocumentCommit = vi.fn();
+  const port: RenderedDocumentPort = {
+    rootRef,
+    isOverlayOpen: true,
+    projectBlock: (block) => ({
+      attributes: { "data-test-projection": block.key },
+      textDecorations: [
+        {
+          key: "test-decoration",
+          start: 2,
+          end: 11,
+          render: (children) => (
+            <mark data-test-decoration="true">{children}</mark>
+          ),
+        },
+      ],
+      renderContainer: (_block, children) => (
+        <section data-test-container="true">{children}</section>
+      ),
     }),
-    createComment({
-      id: "cmt_resolved",
-      blockIndex: 2,
-      text: "Resolved comments should stay quieter.",
-      resolved: true,
-    }),
-  ];
-  const result = renderViewer(
-    createReadyState(contents),
-    vi.fn(),
-    vi.fn().mockResolvedValue(true),
-    comments,
-    commentId("cmt_open"),
-    onSelectComment,
+    onRenderedDocumentCommit,
+    renderOverlay: () => <div data-test-overlay="true" />,
+  };
+  const result = renderComponent(
+    <MarkdownViewer
+      state={createReadyState("A projected paragraph.")}
+      selectedSpecLabel={selectedSpecLabel}
+      selectedFileLabel={selectedFileLabel}
+      renderedDocumentPort={port}
+      onReload={vi.fn()}
+    />,
   );
-  const highlightedBlocks = result.container.querySelectorAll(
-    '[data-comment-highlight="true"]',
-  );
-  const activeBlock = result.container.querySelector(
-    '[data-comment-highlight-state="active"]',
-  ) as HTMLElement;
-  const resolvedBlock = result.container.querySelector(
-    '[data-comment-highlight-state="resolved"]',
-  );
+  const paragraph = result.container.querySelector(".markdown-rendered p");
 
-  expect(highlightedBlocks).toHaveLength(1);
-  expect(activeBlock.textContent).toContain(
-    "Open comments should remain prominent.",
+  expect(paragraph?.getAttribute("data-test-projection")).toBe("paragraph:0");
+  expect(
+    result.container.querySelector("[data-test-decoration]")?.textContent,
+  ).toBe("projected");
+  expect(result.container.querySelector("[data-test-container] p")).toBe(
+    paragraph,
   );
-  expect(resolvedBlock).toBeNull();
-
-  expect(activeBlock.getAttribute("role")).toBeNull();
-  expect(activeBlock.getAttribute("tabindex")).toBeNull();
-  result.unmount();
-});
-
-test("MarkdownViewerはリスト項目の本文より前にコメントボタンを置かない", () => {
-  const result = renderViewer(createReadyState("- Selectable list text"));
-  const listItem = result.container.querySelector(
-    '.markdown-rendered li[data-block-type="list-item"]',
-  );
-  const blockCommentButton = listItem?.querySelector(
-    ".markdown-block-comment-button",
-  );
-
-  expect(blockCommentButton?.previousSibling).toBeInstanceOf(Text);
-  expect(blockCommentButton?.previousSibling?.textContent).toContain(
-    "Selectable list text",
-  );
-  expect(listItem?.textContent).toContain("Selectable list text");
-  result.unmount();
-});
-
-test("MarkdownViewerは段落本文より前にコメントボタンを置かない", () => {
-  const result = renderViewer(createReadyState("Selectable paragraph text."));
-  const target = result.container.querySelector(".markdown-comment-target");
-  const paragraph = target?.querySelector("p");
-  const blockCommentButton = target?.querySelector(
-    ".markdown-block-comment-button",
-  );
-
-  expect(paragraph?.textContent).toBe("Selectable paragraph text.");
-  expect(blockCommentButton?.previousElementSibling).toBe(paragraph);
+  expect(result.container.querySelector("[data-test-overlay]")).not.toBeNull();
+  expect(
+    result.container
+      .querySelector(".markdown-viewer")
+      ?.getAttribute("data-viewer-overlay-open"),
+  ).toBe("true");
+  expect(rootRef.current).not.toBeNull();
+  expect(onRenderedDocumentCommit).toHaveBeenCalledOnce();
   result.unmount();
 });
 
@@ -686,1094 +546,6 @@ test("MarkdownViewerは現在のMarkdown文書を検索して一致箇所を移�
   expect(
     result.container.querySelectorAll("[data-document-search-match]"),
   ).toHaveLength(0);
-  result.unmount();
-});
-
-test("MarkdownViewerは既存コメントを本文右側のカードから編集できる", async () => {
-  const onSelectComment = vi.fn();
-  const onUpdateComment = vi.fn().mockResolvedValue(true);
-  const contents = "Existing comments should be visible beside the paragraph.";
-  const comments: readonly Comment[] = [
-    createComment({
-      id: "cmt_open",
-      blockIndex: 0,
-      text: contents,
-      resolved: false,
-    }),
-    createComment({
-      id: "cmt_resolved",
-      blockIndex: 0,
-      text: contents,
-      resolved: true,
-    }),
-  ];
-  const result = renderViewer(
-    createReadyState(contents),
-    vi.fn(),
-    vi.fn().mockResolvedValue(true),
-    comments,
-    commentId("cmt_open"),
-    onSelectComment,
-    onUpdateComment,
-  );
-  const annotationCards = result.container.querySelectorAll(
-    ".markdown-comment-annotation",
-  );
-  const activeAnnotation = result.container.querySelector(
-    '.markdown-comment-annotation[data-active="true"]',
-  ) as HTMLElement;
-  const activeAnnotationToggle = activeAnnotation.querySelector(
-    ".markdown-comment-annotation__toggle",
-  ) as HTMLButtonElement;
-
-  expect(annotationCards).toHaveLength(1);
-  expect(annotationCards[0]?.textContent).toContain("未解決");
-  expect(annotationCards[0]?.textContent).not.toContain("cmt_open body");
-  expect(activeAnnotationToggle.getAttribute("aria-expanded")).toBe("false");
-  expect(result.container.textContent).not.toContain("解決済み");
-  expect(result.container.textContent).not.toContain("cmt_resolved body");
-
-  act(() => {
-    activeAnnotationToggle.click();
-  });
-
-  const activeAnnotationSelect = activeAnnotation.querySelector(
-    ".markdown-comment-annotation__select",
-  ) as HTMLButtonElement;
-
-  expect(activeAnnotationToggle.getAttribute("aria-expanded")).toBe("true");
-  expect(activeAnnotation.textContent).toContain("cmt_open body");
-
-  act(() => {
-    activeAnnotationSelect.click();
-  });
-
-  expect(onSelectComment).not.toHaveBeenCalled();
-  expect(result.container.textContent).toContain("コメント編集");
-
-  const editor = result.container.querySelector(
-    ".add-comment-popover textarea",
-  ) as HTMLTextAreaElement;
-
-  expect(editor.value).toBe("cmt_open body");
-
-  await act(async () => {
-    editor.value = "Updated inline comment body";
-    editor.dispatchEvent(new Event("input", { bubbles: true }));
-  });
-
-  const saveButton = Array.from(
-    result.container.querySelectorAll<HTMLButtonElement>(
-      ".add-comment-popover__actions button",
-    ),
-  )[1] as HTMLButtonElement;
-
-  await act(async () => {
-    saveButton.click();
-  });
-
-  expect(onUpdateComment).toHaveBeenCalledWith(
-    commentId("cmt_open"),
-    "Updated inline comment body",
-  );
-  expect(
-    result.container.querySelector(".markdown-block-comment-button"),
-  ).not.toBeNull();
-  result.unmount();
-});
-
-test("MarkdownViewerは編集ポップオーバーから未解決コメントを解決できる", async () => {
-  const onResolveComment = vi.fn().mockResolvedValue(true);
-  const contents = "Existing comments should be visible beside the paragraph.";
-  const comments: readonly Comment[] = [
-    createComment({
-      id: "cmt_open",
-      blockIndex: 0,
-      text: contents,
-      resolved: false,
-    }),
-  ];
-  const result = renderViewer(
-    createReadyState(contents),
-    vi.fn(),
-    vi.fn().mockResolvedValue(true),
-    comments,
-    commentId("cmt_open"),
-    vi.fn(),
-    vi.fn().mockResolvedValue(true),
-    idleOperationState,
-    onResolveComment,
-  );
-  const popover = openFirstCommentEditPopover(result.container);
-  const resolveButton = Array.from(
-    popover.querySelectorAll<HTMLButtonElement>("button"),
-  ).find((button) =>
-    button.textContent?.includes("解決する"),
-  ) as HTMLButtonElement;
-
-  await act(async () => {
-    resolveButton.click();
-  });
-
-  expect(onResolveComment).toHaveBeenCalledWith(commentId("cmt_open"));
-  result.unmount();
-});
-
-test("MarkdownViewerはコメント解決後に左ビューの表示から外す", async () => {
-  const onResolveComment = vi.fn().mockResolvedValue(true);
-  const contents = "Resolved comments should disappear from the viewer.";
-  const openComment = createComment({
-    id: "cmt_open",
-    blockIndex: 0,
-    text: contents,
-    resolved: false,
-  });
-  const resolvedComment = createComment({
-    id: "cmt_open",
-    blockIndex: 0,
-    text: contents,
-    resolved: true,
-  });
-  const renderMarkdownViewer = (comments: readonly Comment[]): ReactNode => (
-    <MarkdownViewer
-      state={createReadyState(contents)}
-      selectedSpecLabel={selectedSpecLabel}
-      selectedFileLabel={selectedFileLabel}
-      comments={comments}
-      activeCommentId={commentId("cmt_open")}
-      onReload={vi.fn()}
-      onAddComment={vi.fn().mockResolvedValue(true)}
-      onUpdateComment={vi.fn().mockResolvedValue(true)}
-      operationState={idleOperationState}
-      onResolveComment={onResolveComment}
-      onReopenComment={vi.fn().mockResolvedValue(true)}
-      onDeleteComment={vi.fn().mockResolvedValue(true)}
-      onSelectComment={vi.fn()}
-    />
-  );
-  const result = renderComponent(renderMarkdownViewer([openComment]));
-  const popover = openFirstCommentEditPopover(result.container);
-  const resolveButton = Array.from(
-    popover.querySelectorAll<HTMLButtonElement>("button"),
-  ).find((button) =>
-    button.textContent?.includes("解決する"),
-  ) as HTMLButtonElement;
-
-  await act(async () => {
-    resolveButton.click();
-  });
-
-  result.rerender(renderMarkdownViewer([resolvedComment]));
-
-  expect(
-    result.container.querySelectorAll(".markdown-comment-annotation"),
-  ).toHaveLength(0);
-  expect(result.container.querySelector(".add-comment-popover")).toBeNull();
-  result.unmount();
-});
-
-test("MarkdownViewerは親ビュー再描画後も編集中の本文を維持する", async () => {
-  const contents = "Existing comments should keep draft edits during rerender.";
-  const createDraftComment = (): Comment =>
-    createComment({
-      id: "cmt_draft",
-      blockIndex: 0,
-      text: contents,
-      resolved: false,
-    });
-  const renderMarkdownViewer = (comments: readonly Comment[]): ReactNode => (
-    <MarkdownViewer
-      state={createReadyState(contents)}
-      selectedSpecLabel={selectedSpecLabel}
-      selectedFileLabel={selectedFileLabel}
-      comments={comments}
-      activeCommentId={commentId("cmt_draft")}
-      onReload={vi.fn()}
-      onAddComment={vi.fn().mockResolvedValue(true)}
-      onUpdateComment={vi.fn().mockResolvedValue(true)}
-      operationState={idleOperationState}
-      onResolveComment={vi.fn().mockResolvedValue(true)}
-      onReopenComment={vi.fn().mockResolvedValue(true)}
-      onDeleteComment={vi.fn().mockResolvedValue(true)}
-      onSelectComment={vi.fn()}
-    />
-  );
-  const result = renderComponent(renderMarkdownViewer([createDraftComment()]));
-  const popover = openFirstCommentEditPopover(result.container);
-  const editor = popover.querySelector("textarea") as HTMLTextAreaElement;
-
-  await act(async () => {
-    editor.value = "Draft body in progress";
-    editor.dispatchEvent(new Event("input", { bubbles: true }));
-  });
-
-  result.rerender(renderMarkdownViewer([createDraftComment()]));
-
-  expect(editor.value).toBe("Draft body in progress");
-  result.unmount();
-});
-
-test("MarkdownViewerは初期表示の解決済みコメントを左ビューから非表示にする", () => {
-  const contents = "Resolved comments should be visible beside the paragraph.";
-  const comments: readonly Comment[] = [
-    createComment({
-      id: "cmt_resolved",
-      blockIndex: 0,
-      text: contents,
-      resolved: true,
-    }),
-  ];
-  const result = renderViewer(
-    createReadyState(contents),
-    vi.fn(),
-    vi.fn().mockResolvedValue(true),
-    comments,
-    commentId("cmt_resolved"),
-    vi.fn(),
-    vi.fn().mockResolvedValue(true),
-    idleOperationState,
-    vi.fn().mockResolvedValue(true),
-    vi.fn().mockResolvedValue(true),
-  );
-
-  expect(
-    result.container.querySelectorAll(".markdown-comment-annotation"),
-  ).toHaveLength(0);
-  expect(result.container.querySelector("[data-comment-highlight]")).toBeNull();
-  expect(result.container.textContent).not.toContain("解決済み");
-  result.unmount();
-});
-
-test("MarkdownViewerは編集ポップオーバーの削除初回クリックで確認UIだけを表示する", () => {
-  const onDeleteComment = vi.fn().mockResolvedValue(true);
-  const contents = "Delete confirmation should protect inline comments.";
-  const comments: readonly Comment[] = [
-    createComment({
-      id: "cmt_delete",
-      blockIndex: 0,
-      text: contents,
-      resolved: false,
-    }),
-  ];
-  const result = renderViewer(
-    createReadyState(contents),
-    vi.fn(),
-    vi.fn().mockResolvedValue(true),
-    comments,
-    commentId("cmt_delete"),
-    vi.fn(),
-    vi.fn().mockResolvedValue(true),
-    idleOperationState,
-    vi.fn().mockResolvedValue(true),
-    vi.fn().mockResolvedValue(true),
-    onDeleteComment,
-  );
-  const popover = openFirstCommentEditPopover(result.container);
-  const requestDeleteButton = Array.from(
-    popover.querySelectorAll<HTMLButtonElement>("button"),
-  ).find((button) => button.textContent === "削除") as HTMLButtonElement;
-
-  act(() => {
-    requestDeleteButton.click();
-  });
-
-  expect(onDeleteComment).not.toHaveBeenCalled();
-  expect(popover.textContent).toContain("このコメントを完全に削除しますか？");
-  result.unmount();
-});
-
-test("MarkdownViewerは編集ポップオーバーの削除確認後にコメントを削除できる", async () => {
-  const onDeleteComment = vi.fn().mockResolvedValue(true);
-  const contents = "Delete confirmation should call delete after confirmation.";
-  const comments: readonly Comment[] = [
-    createComment({
-      id: "cmt_delete",
-      blockIndex: 0,
-      text: contents,
-      resolved: false,
-    }),
-  ];
-  const result = renderViewer(
-    createReadyState(contents),
-    vi.fn(),
-    vi.fn().mockResolvedValue(true),
-    comments,
-    commentId("cmt_delete"),
-    vi.fn(),
-    vi.fn().mockResolvedValue(true),
-    idleOperationState,
-    vi.fn().mockResolvedValue(true),
-    vi.fn().mockResolvedValue(true),
-    onDeleteComment,
-  );
-  const popover = openFirstCommentEditPopover(result.container);
-  const requestDeleteButton = Array.from(
-    popover.querySelectorAll<HTMLButtonElement>("button"),
-  ).find((button) => button.textContent === "削除") as HTMLButtonElement;
-
-  act(() => {
-    requestDeleteButton.click();
-  });
-
-  const confirmDeleteButton = popover.querySelector(
-    '[aria-label="コメント削除を確定 cmt_delete"]',
-  ) as HTMLButtonElement;
-
-  await act(async () => {
-    confirmDeleteButton.click();
-  });
-
-  expect(onDeleteComment).toHaveBeenCalledWith(commentId("cmt_delete"));
-  result.unmount();
-});
-
-test("MarkdownViewerは対象コメントの操作中に編集ポップオーバーの操作を無効化する", () => {
-  const contents = "Busy comments should disable inline edit actions.";
-  const comments: readonly Comment[] = [
-    createComment({
-      id: "cmt_busy",
-      blockIndex: 0,
-      text: contents,
-      resolved: false,
-    }),
-  ];
-  const operationState = CommentOperationSavingState.create(
-    "resolve",
-    commentId("cmt_busy"),
-  );
-  const result = renderViewer(
-    createReadyState(contents),
-    vi.fn(),
-    vi.fn().mockResolvedValue(true),
-    comments,
-    commentId("cmt_busy"),
-    vi.fn(),
-    vi.fn().mockResolvedValue(true),
-    operationState,
-  );
-  const popover = openFirstCommentEditPopover(result.container);
-  const textarea = popover.querySelector("textarea") as HTMLTextAreaElement;
-  const closeButton = popover.querySelector(
-    '[aria-label="コメント編集をキャンセル"]',
-  ) as HTMLButtonElement;
-  const statusButton = Array.from(
-    popover.querySelectorAll<HTMLButtonElement>("button"),
-  ).find((button) =>
-    button.textContent?.includes("解決する"),
-  ) as HTMLButtonElement;
-  const deleteButton = Array.from(
-    popover.querySelectorAll<HTMLButtonElement>("button"),
-  ).find((button) => button.textContent === "削除") as HTMLButtonElement;
-  const saveButton = Array.from(
-    popover.querySelectorAll<HTMLButtonElement>("button"),
-  ).find((button) => button.textContent?.includes("保存")) as HTMLButtonElement;
-
-  expect(textarea.disabled).toBe(true);
-  expect(closeButton.disabled).toBe(true);
-  expect(statusButton.disabled).toBe(true);
-  expect(deleteButton.disabled).toBe(true);
-  expect(saveButton.disabled).toBe(true);
-  result.unmount();
-});
-
-test("MarkdownViewerは対象コメントの操作エラーを編集ポップオーバーに表示する", () => {
-  const contents = "Failed delete should surface in the inline edit popover.";
-  const comments: readonly Comment[] = [
-    createComment({
-      id: "cmt_error",
-      blockIndex: 0,
-      text: contents,
-      resolved: false,
-    }),
-  ];
-  const operationState = createOperationErrorState(
-    "delete",
-    commentId("cmt_error"),
-    "削除に失敗しました。",
-  );
-  const result = renderViewer(
-    createReadyState(contents),
-    vi.fn(),
-    vi.fn().mockResolvedValue(true),
-    comments,
-    commentId("cmt_error"),
-    vi.fn(),
-    vi.fn().mockResolvedValue(true),
-    operationState,
-  );
-  const popover = openFirstCommentEditPopover(result.container);
-
-  expect(popover.textContent).toContain("削除に失敗しました。");
-  result.unmount();
-});
-
-test("MarkdownViewerはstaleとorphanedのコメントアンカー状態を通知する", () => {
-  const onAnchorDisplayStatesChange = vi.fn();
-  const contents = "A paragraph with changed anchor text.";
-  const comments: readonly Comment[] = [
-    createComment({
-      id: "cmt_stale",
-      blockIndex: 0,
-      text: "The original anchor text.",
-      resolved: false,
-    }),
-    createComment({
-      id: "cmt_orphaned",
-      blockIndex: 4,
-      text: "A missing anchor.",
-      resolved: false,
-    }),
-  ];
-  const result = renderComponent(
-    <MarkdownViewer
-      state={createReadyState(contents)}
-      selectedSpecLabel={selectedSpecLabel}
-      selectedFileLabel={selectedFileLabel}
-      comments={comments}
-      activeCommentId={null}
-      onReload={vi.fn()}
-      onAddComment={vi.fn().mockResolvedValue(true)}
-      onSelectComment={vi.fn()}
-      onAnchorDisplayStatesChange={onAnchorDisplayStatesChange}
-    />,
-  );
-  const staleBlock = result.container.querySelector(
-    '[data-comment-highlight-state="stale"]',
-  );
-
-  expect(staleBlock?.textContent).toContain(
-    "A paragraph with changed anchor text.",
-  );
-  expect(onAnchorDisplayStatesChange).toHaveBeenLastCalledWith([
-    {
-      commentId: "cmt_stale",
-      status: "stale",
-    },
-    {
-      commentId: "cmt_orphaned",
-      status: "orphaned",
-    },
-  ]);
-  result.unmount();
-});
-
-test("MarkdownViewerはexact解決済みアンカーの選択範囲をハイライトする", () => {
-  const contents = "A paragraph with selectable text.";
-  const comments: readonly Comment[] = [
-    createComment({
-      id: "cmt_exact",
-      blockIndex: 0,
-      text: contents,
-      resolved: false,
-      charRange: {
-        start: 2,
-        end: 11,
-      },
-      anchorResolution: {
-        status: "resolved",
-        reason: "exact_match",
-        details: null,
-        target: {
-          blockType: "paragraph",
-          blockIndex: 0,
-          textHash: createTextHash(contents),
-          textSnippet: contents,
-          sourceRange: null,
-          score: 100,
-        },
-      },
-    }),
-  ];
-  const result = renderViewer(
-    createReadyState(contents),
-    vi.fn(),
-    vi.fn().mockResolvedValue(true),
-    comments,
-  );
-  const block = result.container.querySelector(
-    '[data-comment-highlight-mode="range"]',
-  );
-  const range = result.container.querySelector(
-    '[data-comment-highlight-range="true"]',
-  );
-
-  expect(block?.textContent).toContain(contents);
-  expect(range?.textContent).toBe("paragraph");
-  result.unmount();
-});
-
-test("MarkdownViewerはインラインコード内のコメント範囲に背景色を重ねない", () => {
-  const contents = "A paragraph with `inlineCode` and selectable text.";
-  const comments: readonly Comment[] = [
-    createComment({
-      id: "cmt_inline_code",
-      blockIndex: 0,
-      text: contents,
-      resolved: false,
-      charRange: {
-        start: contents.indexOf("inlineCode"),
-        end: contents.indexOf("inlineCode") + "inlineCode".length,
-      },
-      anchorResolution: {
-        status: "resolved",
-        reason: "exact_match",
-        details: null,
-        target: {
-          blockType: "paragraph",
-          blockIndex: 0,
-          textHash: createTextHash(contents),
-          textSnippet: contents,
-          sourceRange: null,
-          score: 100,
-        },
-      },
-    }),
-  ];
-  const result = renderViewer(
-    createReadyState(contents),
-    vi.fn(),
-    vi.fn().mockResolvedValue(true),
-    comments,
-  );
-  const inlineCode = result.container.querySelector(
-    ".markdown-rendered p code",
-  );
-
-  expect(inlineCode?.textContent).toBe("inlineCode");
-  expect(
-    inlineCode?.querySelector("[data-comment-highlight-range]"),
-  ).toBeNull();
-  result.unmount();
-});
-
-test("MarkdownViewerはコードブロックコメントを範囲色ではなくブロック目印で示す", () => {
-  const code = "const enabled = true;";
-  const contents = ["```ts", code, "```"].join("\n");
-  const comments: readonly Comment[] = [
-    createComment({
-      id: "cmt_code",
-      blockIndex: 0,
-      text: code,
-      resolved: false,
-      blockType: "code_block",
-      charRange: {
-        start: code.indexOf("enabled"),
-        end: code.indexOf("enabled") + "enabled".length,
-      },
-    }),
-  ];
-  const result = renderViewer(
-    createReadyState(contents),
-    vi.fn(),
-    vi.fn().mockResolvedValue(true),
-    comments,
-  );
-  const codeBlock = result.container.querySelector(".markdown-rendered pre");
-
-  expect(codeBlock?.getAttribute("data-comment-highlight")).toBe("true");
-  expect(codeBlock?.getAttribute("data-comment-highlight-mode")).toBe("block");
-  expect(codeBlock?.querySelector("[data-comment-highlight-range]")).toBeNull();
-  result.unmount();
-});
-
-test("MarkdownViewerはmoved/fuzzy/orphaned解決結果をtarget blockへ反映する", () => {
-  const onAnchorDisplayStatesChange = vi.fn();
-  const contents = [
-    "Original paragraph moved away.",
-    "",
-    "Exact target paragraph.",
-    "",
-    "Fuzzy target paragraph with edits.",
-  ].join("\n");
-  const comments: readonly Comment[] = [
-    createComment({
-      id: "cmt_moved",
-      blockIndex: 0,
-      text: "Original paragraph moved away.",
-      resolved: false,
-      anchorResolution: {
-        status: "moved",
-        reason: "moved_by_hash",
-        details: null,
-        target: {
-          blockType: "paragraph",
-          blockIndex: 1,
-          textHash: createTextHash("Exact target paragraph."),
-          textSnippet: "Exact target paragraph.",
-          sourceRange: null,
-          score: 100,
-        },
-      },
-    }),
-    createComment({
-      id: "cmt_fuzzy",
-      blockIndex: 0,
-      text: "Original fuzzy paragraph.",
-      resolved: false,
-      anchorResolution: {
-        status: "fuzzy",
-        reason: "fuzzy_match",
-        details: "score 82",
-        target: {
-          blockType: "paragraph",
-          blockIndex: 2,
-          textHash: createTextHash("Fuzzy target paragraph with edits."),
-          textSnippet: "Fuzzy target paragraph with edits.",
-          sourceRange: null,
-          score: 82,
-        },
-      },
-    }),
-    createComment({
-      id: "cmt_orphaned",
-      blockIndex: 9,
-      text: "Deleted paragraph.",
-      resolved: false,
-      anchorResolution: {
-        status: "orphaned",
-        reason: "deleted_text",
-        details: "deleted",
-        target: null,
-      },
-    }),
-  ];
-  const result = renderComponent(
-    <MarkdownViewer
-      state={createReadyState(contents)}
-      selectedSpecLabel={selectedSpecLabel}
-      selectedFileLabel={selectedFileLabel}
-      comments={comments}
-      activeCommentId={null}
-      onReload={vi.fn()}
-      onAddComment={vi.fn().mockResolvedValue(true)}
-      onSelectComment={vi.fn()}
-      onAnchorDisplayStatesChange={onAnchorDisplayStatesChange}
-    />,
-  );
-  const movedBlock = result.container.querySelector(
-    '[data-comment-highlight-state="moved"]',
-  );
-  const fuzzyBlock = result.container.querySelector(
-    '[data-comment-highlight-state="fuzzy"]',
-  );
-
-  expect(movedBlock?.textContent).toContain("Exact target paragraph.");
-  expect(fuzzyBlock?.textContent).toContain(
-    "Fuzzy target paragraph with edits.",
-  );
-  expect(onAnchorDisplayStatesChange).toHaveBeenLastCalledWith([
-    {
-      commentId: "cmt_moved",
-      status: "moved",
-    },
-    {
-      commentId: "cmt_fuzzy",
-      status: "fuzzy",
-    },
-    {
-      commentId: "cmt_orphaned",
-      status: "orphaned",
-    },
-  ]);
-  result.unmount();
-});
-
-test("MarkdownViewerはMarkdown内の選択から追加コメントを保存する", async () => {
-  const onAddComment = vi.fn().mockResolvedValue(true);
-  const result = renderViewer(
-    createReadyState("A paragraph with selectable text."),
-    vi.fn(),
-    onAddComment,
-  );
-  const commentTarget = result.container.querySelector(
-    ".markdown-comment-target",
-  ) as HTMLElement;
-  const targetRectSpy = vi
-    .spyOn(commentTarget, "getBoundingClientRect")
-    .mockReturnValue(
-      createClientRect({
-        top: 100,
-        left: 40,
-        width: 600,
-        height: 32,
-      }),
-    );
-  const innerWidthSpy = vi
-    .spyOn(window, "innerWidth", "get")
-    .mockReturnValue(700);
-  const textNode = result.container.querySelector(
-    ".markdown-rendered p",
-  )?.firstChild;
-  expect(textNode).toBeInstanceOf(Text);
-
-  const range = document.createRange();
-  range.setStart(textNode as Text, 2);
-  range.setEnd(textNode as Text, 11);
-  const selection = document.getSelection();
-  expect(selection).not.toBeNull();
-
-  const readySelection = selection as Selection;
-  readySelection.removeAllRanges();
-  readySelection.addRange(range);
-
-  act(() => {
-    document.dispatchEvent(new Event("selectionchange"));
-  });
-
-  expect(
-    result.container.querySelector(".text-selection-comment-button"),
-  ).toBeNull();
-
-  act(() => {
-    window.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
-  });
-
-  const addButton = result.container.querySelector(
-    ".text-selection-comment-button",
-  );
-  expect(addButton?.textContent).toContain("コメント追加");
-  expect((addButton as HTMLElement).style.left).toBe("552px");
-  expect((addButton as HTMLElement).style.transform).toBe("none");
-
-  act(() => {
-    addButton?.dispatchEvent(
-      new MouseEvent("mousedown", { bubbles: true, cancelable: true }),
-    );
-    (addButton as HTMLButtonElement).click();
-  });
-
-  expect(result.container.textContent).toContain("コメント追加");
-  expect(result.container.textContent).toContain(
-    "paragraphブロック 1, 文字 2-11",
-  );
-  expect(
-    (result.container.querySelector(".add-comment-popover") as HTMLElement)
-      .style.left,
-  ).toBe("310px");
-
-  const textarea = result.container.querySelector(
-    "textarea",
-  ) as HTMLTextAreaElement;
-  act(() => {
-    textarea.value = " Please clarify this. ";
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
-  });
-
-  await act(async () => {
-    (
-      Array.from(result.container.querySelectorAll("button")).find((button) =>
-        button.textContent?.includes("保存"),
-      ) as HTMLButtonElement
-    ).click();
-  });
-
-  expect(onAddComment).toHaveBeenCalledWith({
-    anchor: expect.objectContaining({
-      fileKey: "tasks",
-      blockType: "paragraph",
-      blockIndex: 0,
-      textSnippet: "paragraph",
-      charRange: {
-        start: 2,
-        end: 11,
-      },
-    }),
-    body: "Please clarify this.",
-  });
-  expect(result.container.querySelector("textarea")).toBeNull();
-  expect(document.getSelection()?.rangeCount).toBe(0);
-  innerWidthSpy.mockRestore();
-  targetRectSpy.mockRestore();
-  result.unmount();
-});
-
-test("MarkdownViewerはコードブロック内の選択から追加コメントを保存する", async () => {
-  const onAddComment = vi.fn().mockResolvedValue(true);
-  const result = renderViewer(
-    createReadyState(["```ts", "const enabled = true;", "```"].join("\n")),
-    vi.fn(),
-    onAddComment,
-  );
-  const textNode = result.container.querySelector("pre code")?.childNodes[1];
-  expect(textNode).toBeInstanceOf(Text);
-
-  const range = document.createRange();
-  range.setStart(textNode as Text, 1);
-  range.setEnd(textNode as Text, 8);
-  const selection = document.getSelection();
-  expect(selection).not.toBeNull();
-
-  const readySelection = selection as Selection;
-  readySelection.removeAllRanges();
-  readySelection.addRange(range);
-
-  act(() => {
-    document.dispatchEvent(new Event("selectionchange"));
-  });
-
-  expect(
-    result.container.querySelector(".text-selection-comment-button"),
-  ).toBeNull();
-
-  act(() => {
-    window.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
-  });
-
-  const addButton = result.container.querySelector(
-    ".text-selection-comment-button",
-  );
-  expect(addButton?.textContent).toContain("コメント追加");
-
-  act(() => {
-    addButton?.dispatchEvent(
-      new MouseEvent("mousedown", { bubbles: true, cancelable: true }),
-    );
-    (addButton as HTMLButtonElement).click();
-  });
-
-  expect(result.container.textContent).toContain("code blockブロック 1");
-
-  const textarea = result.container.querySelector(
-    "textarea",
-  ) as HTMLTextAreaElement;
-  act(() => {
-    textarea.value = " Keep this example selectable. ";
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
-  });
-
-  await act(async () => {
-    (
-      Array.from(result.container.querySelectorAll("button")).find((button) =>
-        button.textContent?.includes("保存"),
-      ) as HTMLButtonElement
-    ).click();
-  });
-
-  expect(onAddComment).toHaveBeenCalledWith({
-    anchor: expect.objectContaining({
-      fileKey: "tasks",
-      blockType: "code_block",
-      blockIndex: 0,
-      textSnippet: "enabled",
-      charRange: {
-        start: 6,
-        end: 13,
-      },
-    }),
-    body: "Keep this example selectable.",
-  });
-  expect(result.container.querySelector("textarea")).toBeNull();
-  result.unmount();
-});
-
-test("MarkdownViewerはハイライト内の部分選択をコメント選択クリックとして扱わない", () => {
-  const contents = "A paragraph with selectable text.";
-  const onSelectComment = vi.fn();
-  const result = renderViewer(
-    createReadyState(contents),
-    vi.fn(),
-    vi.fn().mockResolvedValue(true),
-    [
-      createComment({
-        id: "cmt_highlight",
-        blockIndex: 0,
-        text: contents,
-        resolved: false,
-        charRange: {
-          start: 2,
-          end: 11,
-        },
-      }),
-    ],
-    null,
-    onSelectComment,
-  );
-  const paragraph = result.container.querySelector(".markdown-rendered p");
-  const textNode = paragraph?.querySelector(
-    "[data-comment-highlight-range]",
-  )?.firstChild;
-  expect(paragraph).not.toBeNull();
-  expect(textNode).toBeInstanceOf(Text);
-
-  const range = document.createRange();
-  range.setStart(textNode as Text, 0);
-  range.setEnd(textNode as Text, 9);
-  const selection = document.getSelection();
-  expect(selection).not.toBeNull();
-
-  const readySelection = selection as Selection;
-  readySelection.removeAllRanges();
-  readySelection.addRange(range);
-
-  act(() => {
-    paragraph?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-  });
-
-  expect(readySelection.toString()).toBe("paragraph");
-  expect(onSelectComment).not.toHaveBeenCalled();
-  readySelection.removeAllRanges();
-  result.unmount();
-});
-
-test("MarkdownViewerはMarkdownブロックのコメントボタンから追加コメントを保存する", async () => {
-  const onAddComment = vi.fn().mockResolvedValue(true);
-  const result = renderViewer(
-    createReadyState("A paragraph with block comment affordance."),
-    vi.fn(),
-    onAddComment,
-  );
-  const addButton = result.container.querySelector(
-    ".markdown-block-comment-button",
-  ) as HTMLButtonElement;
-
-  act(() => {
-    addButton.click();
-  });
-
-  expect(result.container.textContent).toContain("コメント追加");
-  expect(result.container.textContent).toContain(
-    "paragraphブロック 1, 文字 0-42",
-  );
-
-  const textarea = result.container.querySelector(
-    "textarea",
-  ) as HTMLTextAreaElement;
-  act(() => {
-    textarea.value = " ブロック全体にコメントします。 ";
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
-  });
-
-  await act(async () => {
-    (
-      Array.from(result.container.querySelectorAll("button")).find((button) =>
-        button.textContent?.includes("保存"),
-      ) as HTMLButtonElement
-    ).click();
-  });
-
-  expect(onAddComment).toHaveBeenCalledWith({
-    anchor: expect.objectContaining({
-      fileKey: "tasks",
-      blockType: "paragraph",
-      blockIndex: 0,
-      textSnippet: "A paragraph with block comment affordance.",
-      charRange: {
-        start: 0,
-        end: 42,
-      },
-    }),
-    body: "ブロック全体にコメントします。",
-  });
-  result.unmount();
-});
-
-test("MarkdownViewerは別ブロックのコメントdraftへ切り替えると追加popoverを初期化する", async () => {
-  const result = renderViewer(
-    createReadyState(["First paragraph.", "", "Second paragraph."].join("\n")),
-  );
-  const addButtons = result.container.querySelectorAll(
-    ".markdown-block-comment-button",
-  );
-
-  act(() => {
-    (addButtons[0] as HTMLButtonElement).click();
-  });
-
-  const firstTextarea = result.container.querySelector(
-    ".add-comment-popover textarea",
-  ) as HTMLTextAreaElement;
-  act(() => {
-    firstTextarea.value = "   ";
-    firstTextarea.dispatchEvent(new Event("input", { bubbles: true }));
-  });
-
-  await act(async () => {
-    firstTextarea.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: "Enter",
-        ctrlKey: true,
-        bubbles: true,
-      }),
-    );
-  });
-
-  expect(result.container.textContent).toContain(
-    "保存するコメントを入力してください。",
-  );
-
-  const refreshedAddButtons = result.container.querySelectorAll(
-    ".markdown-block-comment-button",
-  );
-  act(() => {
-    (refreshedAddButtons[1] as HTMLButtonElement).click();
-  });
-
-  const nextTextarea = result.container.querySelector(
-    ".add-comment-popover textarea",
-  ) as HTMLTextAreaElement;
-  expect(nextTextarea.value).toBe("");
-  expect(result.container.textContent).toContain("paragraphブロック 2");
-  expect(result.container.textContent).not.toContain(
-    "保存するコメントを入力してください。",
-  );
-  result.unmount();
-});
-
-test("MarkdownViewerはコードブロックのコメントボタンから追加popoverを開く", () => {
-  const result = renderViewer(
-    createReadyState(["```ts", "const enabled = true;", "```"].join("\n")),
-  );
-  const codeBlock = result.container.querySelector("pre[data-block-type]");
-  const target = codeBlock?.closest(".markdown-comment-target");
-  const addButton = target?.querySelector(
-    ".markdown-block-comment-button",
-  ) as HTMLButtonElement | null;
-
-  expect(codeBlock).not.toBeNull();
-  expect(addButton).not.toBeNull();
-
-  act(() => {
-    addButton?.click();
-  });
-
-  expect(result.container.textContent).toContain("コメント追加");
-  expect(result.container.textContent).toContain("code blockブロック 1");
-  result.unmount();
-});
-
-test("MarkdownViewerはブロックコメント追加popoverを範囲外クリックで閉じる", () => {
-  const result = renderViewer(createReadyState("Close this draft outside."));
-  const addButton = result.container.querySelector(
-    ".markdown-block-comment-button",
-  ) as HTMLButtonElement;
-
-  act(() => {
-    addButton.click();
-  });
-
-  expect(result.container.querySelector("textarea")).not.toBeNull();
-
-  act(() => {
-    document.body.dispatchEvent(
-      new MouseEvent("mousedown", { bubbles: true, cancelable: true }),
-    );
-  });
-
-  expect(result.container.querySelector("textarea")).toBeNull();
-  result.unmount();
-});
-
-test("MarkdownViewerはコメント追加ボタンをキーボードでフォーカスできる", () => {
-  const result = renderViewer(createReadyState("Focusable paragraph."));
-  const addButton = result.container.querySelector(
-    '[aria-label="コメント追加"]',
-  ) as HTMLButtonElement;
-
-  act(() => {
-    addButton.focus();
-  });
-
-  expect(document.activeElement).toBe(addButton);
   result.unmount();
 });
 
@@ -1849,5 +621,28 @@ test("MarkdownViewerはerror状態で再読み込みイベントを発火する"
 
   expect(result.container.textContent).toContain("Markdownを読み込めません");
   expect(onReload).toHaveBeenCalledTimes(1);
+  result.unmount();
+});
+
+test("MarkdownViewerはmermaidコードブロックを図として表示する", () => {
+  const mermaidMarkdown = [
+    "```mermaid",
+    "flowchart LR",
+    "  Source --> Review",
+    "```",
+  ].join("\n");
+  const result = renderViewer(createReadyState(mermaidMarkdown));
+  const diagramBlock = result.container.querySelector(
+    '[data-block-type="code"]',
+  );
+
+  expect(diagramBlock?.classList.contains("markdown-rendered__mermaid")).toBe(
+    true,
+  );
+  expect(diagramBlock?.getAttribute("data-block-index")).toBe("0");
+  expect(
+    diagramBlock?.querySelector('figure[aria-label="Mermaid図"]'),
+  ).not.toBeNull();
+  expect(diagramBlock?.querySelector("pre code")).toBeNull();
   result.unmount();
 });

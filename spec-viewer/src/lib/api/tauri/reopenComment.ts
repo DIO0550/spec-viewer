@@ -1,0 +1,126 @@
+import type { Comment } from "@/features/comments/domain/comment";
+import type { CommentStatusRequest } from "@/features/comments/types/comment";
+
+import { invokeTauriCommand } from "./invokeTauriCommand";
+import { isRecord } from "./isRecord";
+
+export const REOPEN_COMMENT_COMMAND = "reopen_comment" as const;
+
+export type ReopenCommentCommandName = typeof REOPEN_COMMENT_COMMAND;
+export type ReopenCommentCommandRequest = CommentStatusRequest;
+export type ReopenCommentCommandResponse = Comment;
+export type ReopenCommentCommandErrorCode =
+  | "invalidRequest"
+  | "workspaceDetection"
+  | "configLoad"
+  | "markdownRead"
+  | "invalidComment"
+  | "commentRepository"
+  | "unexpected"
+  | "unknown";
+
+export type ReopenCommentCommandError = Readonly<{
+  command: ReopenCommentCommandName;
+  code: ReopenCommentCommandErrorCode;
+  message: string;
+  raw: unknown;
+}>;
+
+export type ReopenCommentCommandContract = Readonly<{
+  name: ReopenCommentCommandName;
+  request: ReopenCommentCommandRequest;
+  response: ReopenCommentCommandResponse;
+  error: ReopenCommentCommandError;
+}>;
+
+export const ReopenCommentCommandError = {
+  /** @returns A command-specific reopen_comment error parsed from an unknown value. */
+  fromUnknown(error: unknown): ReopenCommentCommandError {
+    if (
+      isRecord(error) &&
+      error.command === REOPEN_COMMENT_COMMAND &&
+      ReopenCommentCommandError.isCommandErrorCode(error.code) &&
+      typeof error.message === "string"
+    ) {
+      return {
+        command: REOPEN_COMMENT_COMMAND,
+        code: error.code,
+        message: error.message,
+        raw: error.raw,
+      };
+    }
+
+    if (
+      isRecord(error) &&
+      ReopenCommentCommandError.isCode(error.code) &&
+      typeof error.message === "string"
+    ) {
+      return {
+        command: REOPEN_COMMENT_COMMAND,
+        code: error.code,
+        message: error.message,
+        raw: error,
+      };
+    }
+
+    if (error instanceof Error) {
+      return ReopenCommentCommandError.unknown(error.message, error);
+    }
+
+    if (typeof error === "string") {
+      return ReopenCommentCommandError.unknown(error, error);
+    }
+
+    return ReopenCommentCommandError.unknown(
+      "Unknown reopen_comment failure",
+      error,
+    );
+  },
+
+  /** @returns An unknown reopen_comment command error preserving the raw payload. */
+  unknown(message: string, raw: unknown): ReopenCommentCommandError {
+    return {
+      command: REOPEN_COMMENT_COMMAND,
+      code: "unknown",
+      message,
+      raw,
+    };
+  },
+
+  /** @returns True when the value is a reopen_comment command error code. */
+  isCommandErrorCode(value: unknown): value is ReopenCommentCommandErrorCode {
+    return ReopenCommentCommandError.isCode(value) || value === "unknown";
+  },
+
+  /** @returns True when the value is a known reopen_comment backend error code. */
+  isCode(
+    value: unknown,
+  ): value is Exclude<ReopenCommentCommandErrorCode, "unknown"> {
+    return (
+      value === "invalidRequest" ||
+      value === "workspaceDetection" ||
+      value === "configLoad" ||
+      value === "markdownRead" ||
+      value === "invalidComment" ||
+      value === "commentRepository" ||
+      value === "unexpected"
+    );
+  },
+} as const;
+
+/** @returns The comment after reopening it. */
+export async function reopenComment(
+  request: CommentStatusRequest,
+): Promise<ReopenCommentCommandResponse> {
+  const commandRequest: ReopenCommentCommandRequest = request;
+
+  return invokeTauriCommand<
+    ReopenCommentCommandResponse,
+    ReopenCommentCommandRequest,
+    ReopenCommentCommandError
+  >(
+    REOPEN_COMMENT_COMMAND,
+    commandRequest,
+    ReopenCommentCommandError.fromUnknown,
+  );
+}

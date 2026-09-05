@@ -9,7 +9,7 @@ export type MarkdownViewerPanelProps = Readonly<{
   as?: MarkdownViewerPanelElement;
   variant?: MarkdownViewerPanelVariant;
   ariaLive?: "polite";
-  dataCommentDialogOpen?: "true";
+  interactionOverlayOpen?: boolean;
   children: ReactNode;
 }>;
 
@@ -19,7 +19,7 @@ export function MarkdownViewerPanel({
   as = "section",
   variant = "default",
   ariaLive,
-  dataCommentDialogOpen,
+  interactionOverlayOpen = false,
   children,
 }: MarkdownViewerPanelProps) {
   const className = getMarkdownViewerPanelClassName(variant);
@@ -29,7 +29,7 @@ export function MarkdownViewerPanel({
     className,
     role: "tabpanel",
     "aria-live": ariaLive,
-    "data-comment-dialog-open": dataCommentDialogOpen,
+    "data-viewer-overlay-open": interactionOverlayOpen ? "true" : undefined,
     tabIndex: -1,
   } as const;
 

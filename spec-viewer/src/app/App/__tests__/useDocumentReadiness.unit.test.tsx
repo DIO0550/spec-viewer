@@ -4,11 +4,11 @@ import { expect, test } from "vitest";
 
 import {
   createDocumentReadableKey,
-  useDocumentReadiness,
   type DocumentReadiness,
+  useDocumentReadiness,
 } from "@/app/App/useDocumentReadiness";
-import { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
 import type { SpecDocumentState as SpecDocumentStateType } from "@/features/specs";
+import { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
 
 const markdownDocument = {
   key: "tasks",
@@ -129,9 +129,15 @@ test.each([
   ],
   [
     SpecDocumentState.failed("/workspace/spec-reviewer", "phase-1", "tasks", {
+      feature: "specs",
       code: "unknown",
       message: "failed",
-      raw: "failed",
+      cause: {
+        command: "read_spec_file",
+        code: "unknown",
+        message: "failed",
+        raw: "failed",
+      },
     }),
     false,
     false,

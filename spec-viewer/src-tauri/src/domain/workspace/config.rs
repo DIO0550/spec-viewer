@@ -7,7 +7,7 @@ use std::{
 
 use thiserror::Error;
 
-use crate::domain::spec::SpecFileKey;
+use crate::domain::spec::{SpecFileKey, SpecNodeKind};
 
 use super::WorkspaceKind;
 
@@ -110,10 +110,9 @@ impl WorkspaceConfig {
 
     pub fn default_for(kind: WorkspaceKind) -> Self {
         match kind {
-            WorkspaceKind::PluginWorkspace | WorkspaceKind::PluginWorktree => {
-                Self::plugin_workspace_default()
-            }
-            WorkspaceKind::SpecSkill => Self::spec_skill_default(),
+            WorkspaceKind::PluginWorkspace
+            | WorkspaceKind::PluginWorktree
+            | WorkspaceKind::SpecSkill => Self::plugin_workspace_default(),
         }
     }
 
@@ -121,13 +120,6 @@ impl WorkspaceConfig {
         Self::from_default_keys(
             SpecFileKey::default_keys(),
             plugin_workspace_default_file_name,
-        )
-    }
-
-    pub fn spec_skill_default() -> Self {
-        Self::from_default_keys(
-            SpecFileKey::compatibility_keys(),
-            spec_skill_default_file_name,
         )
     }
 
@@ -201,20 +193,48 @@ impl WorkspaceConfig {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SpecOverrideNodeKind {
+    Spec,
+    Category,
+}
+
+impl From<SpecOverrideNodeKind> for SpecNodeKind {
+    fn from(value: SpecOverrideNodeKind) -> Self {
+        match value {
+            SpecOverrideNodeKind::Spec => Self::Spec,
+            SpecOverrideNodeKind::Category => Self::Category,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpecConfigOverride {
     config: WorkspaceConfig,
+    node_kind: Option<SpecOverrideNodeKind>,
 }
 
 impl SpecConfigOverride {
     pub fn new(files: Vec<WorkspaceFileMapping>) -> Result<Self, WorkspaceConfigError> {
+        Self::with_node_kind(files, None)
+    }
+
+    pub fn with_node_kind(
+        files: Vec<WorkspaceFileMapping>,
+        node_kind: Option<SpecOverrideNodeKind>,
+    ) -> Result<Self, WorkspaceConfigError> {
         Ok(Self {
             config: WorkspaceConfig::new(files)?,
+            node_kind,
         })
     }
 
     pub fn config(&self) -> &WorkspaceConfig {
         &self.config
+    }
+
+    pub fn node_kind(&self) -> Option<SpecOverrideNodeKind> {
+        self.node_kind
     }
 }
 
@@ -242,8 +262,9 @@ fn plugin_workspace_default_file_name(key: SpecFileKey) -> &'static str {
         SpecFileKey::Tasks => "tasks.md",
         SpecFileKey::Requirements => "requirements.html",
         SpecFileKey::TechReference => "tech-reference.html",
+        SpecFileKey::QuizPlan => "understanding-quiz-plan.html",
+        SpecFileKey::QuizImpl => "understanding-quiz-impl.html",
         SpecFileKey::TestCases => "test-cases.html",
-        SpecFileKey::Design => "design.md",
     }
 }
 
@@ -270,19 +291,6 @@ fn validate_scan_excluded_directory_names(
     }
 
     Ok(normalized)
-}
-
-fn spec_skill_default_file_name(key: SpecFileKey) -> &'static str {
-    match key {
-        SpecFileKey::Requirements => "requirements.md",
-        SpecFileKey::Design => "design.md",
-        SpecFileKey::Tasks => "tasks.md",
-        SpecFileKey::TechReference => "tech-reference.html",
-        SpecFileKey::TestCases => "test-cases.html",
-        SpecFileKey::Exploration => "exploration-report.md",
-        SpecFileKey::Hearing => "hearing-notes.md",
-        SpecFileKey::Impl => "implementation-plan.md",
-    }
 }
 
 fn validate_safe_file_name(key: SpecFileKey, file_name: &str) -> Result<(), WorkspaceConfigError> {
@@ -339,32 +347,14 @@ mod tests {
                 (SpecFileKey::TestCases, "test-cases.html"),
                 (SpecFileKey::Exploration, "exploration-report.md"),
                 (SpecFileKey::Hearing, "hearing-notes.md"),
+                (SpecFileKey::QuizPlan, "understanding-quiz-plan.html"),
+                (SpecFileKey::QuizImpl, "understanding-quiz-impl.html"),
             ],
             files
         );
         assert_eq!(
             vec!["plan-review".to_string(), "user-review".to_string()],
             config.scan_excluded_directory_names()
-        );
-    }
-
-    #[test]
-    fn workspace_config_defaults_spec_skill_files_in_tab_order() {
-        let config = WorkspaceConfig::default_for(WorkspaceKind::SpecSkill);
-
-        let files: Vec<(SpecFileKey, &str)> = config
-            .files()
-            .iter()
-            .map(|file| (file.key(), file.file_name()))
-            .collect();
-
-        assert_eq!(
-            vec![
-                (SpecFileKey::Requirements, "requirements.md"),
-                (SpecFileKey::Design, "design.md"),
-                (SpecFileKey::Tasks, "tasks.md"),
-            ],
-            files
         );
     }
 
@@ -394,11 +384,10 @@ mod tests {
     }
 
     #[test]
-    fn workspace_config_merge_overrides_default_file_names_and_appends_new_keys() {
+    fn workspace_config_merge_overrides_current_default_file_names() {
         let defaults = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
         let user_config = WorkspaceConfig::new(vec![
-            mapping(SpecFileKey::Hearing, "interview.md").expect("mapping should be valid"),
-            mapping(SpecFileKey::Design, "design.md").expect("mapping should be valid"),
+            mapping(SpecFileKey::Hearing, "interview.md").expect("mapping should be valid")
         ])
         .expect("config should be valid");
 
@@ -419,7 +408,8 @@ mod tests {
                 (SpecFileKey::TestCases, "test-cases.html"),
                 (SpecFileKey::Exploration, "exploration-report.md"),
                 (SpecFileKey::Hearing, "interview.md"),
-                (SpecFileKey::Design, "design.md"),
+                (SpecFileKey::QuizPlan, "understanding-quiz-plan.html"),
+                (SpecFileKey::QuizImpl, "understanding-quiz-impl.html"),
             ],
             files
         );
@@ -564,5 +554,18 @@ mod tests {
             .expect("impl mapping should exist");
 
         assert_eq!("implementation-plan.md", file.file_name());
+    }
+
+    #[test]
+    fn spec_override_node_kind_is_a_closed_spec_category_subset() {
+        for (override_kind, node_kind) in [
+            (SpecOverrideNodeKind::Spec, SpecNodeKind::Spec),
+            (SpecOverrideNodeKind::Category, SpecNodeKind::Category),
+        ] {
+            assert_eq!(SpecNodeKind::from(override_kind), node_kind);
+            let config = SpecConfigOverride::with_node_kind(vec![], Some(override_kind))
+                .expect("override kind should be valid");
+            assert_eq!(config.node_kind(), Some(override_kind));
+        }
     }
 }

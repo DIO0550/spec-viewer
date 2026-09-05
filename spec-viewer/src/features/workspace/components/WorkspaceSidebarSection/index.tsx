@@ -1,8 +1,8 @@
-import { ChevronDown, ChevronRight, Folder, FolderOpen, X } from "lucide-react";
+import { ChevronDown, ChevronRight, Folder, Plus, X } from "lucide-react";
 import { useId } from "react";
 
-import type { RecentWorkspace } from "@/shared/lib/recentWorkspaces";
-import { uiText } from "@/shared/lib/uiText";
+import type { RecentWorkspace } from "@/utils/recentWorkspaces";
+import { uiText } from "@/utils/uiText";
 
 type Props = Readonly<{
   currentWorkspacePath: string | null;
@@ -59,7 +59,9 @@ export function WorkspaceSidebarSection({
               <ChevronRight aria-hidden="true" size={16} />
             )}
           </button>
-          <h2>{uiText.workspace.switcher}</h2>
+          <h2>
+            {uiText.workspace.workspaceListHeading} {recentWorkspaces.length}
+          </h2>
         </div>
         <button
           className="icon-button"
@@ -69,7 +71,7 @@ export function WorkspaceSidebarSection({
           disabled={isBusy}
           onClick={onBrowse}
         >
-          <FolderOpen aria-hidden="true" size={16} />
+          <Plus aria-hidden="true" size={14} />
         </button>
       </div>
       <div className="workspace-sidebar-section__current">

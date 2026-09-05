@@ -1,0 +1,74 @@
+name: Storybook Visual Approval
+
+on:
+  workflow_run:
+    workflows: [Storybook Visual Candidate]
+    types: [completed]
+  issue_comment:
+    types: [created, edited]
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+
+permissions:
+  actions: read
+  checks: write
+  contents: read
+  issues: read
+  pull-requests: read
+
+concurrency:
+  group: trusted-visual-approval-${{ github.event.workflow_run.id || github.event.issue.number || github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  trusted-visual-approval:
+    if: >-
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request) ||
+      github.event_name == 'pull_request_review'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout trusted validator from the default branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          ref: ${{ github.event.repository.default_branch }}
+          sparse-checkout: |
+            spec-viewer/scripts/expand-vrt-leaves.mjs
+            spec-viewer/scripts/resolve-visual-approval-event.mjs
+            spec-viewer/scripts/validate-visual-approval.mjs
+            spec-viewer/src/tests/acceptance/review-vrt-cases.json
+          sparse-checkout-cone-mode: false
+
+      - name: Resolve authenticated PR and candidate run
+        id: context
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node spec-viewer/scripts/resolve-visual-approval-event.mjs
+
+      - name: Download candidate bytes without executing PR code
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: visual-candidate
+          path: visual-candidate
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.context.outputs.candidate-run-id }}
+          github-token: ${{ github.token }}
+
+      - name: Validate authenticated approvals and update the PR check
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node spec-viewer/scripts/validate-visual-approval.mjs
+
+      - name: Upload trusted approval evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: visual-approval-evidence
+          path: |
+            visual-context.json
+            visual-approval-evidence.json
+          if-no-files-found: warn
+          retention-days: 30

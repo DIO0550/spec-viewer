@@ -8,8 +8,8 @@ const loadWorkspaceMock = vi.hoisted(() =>
   vi.fn<(selectedDirectory: string) => Promise<Workspace>>(),
 );
 
-vi.mock("@/shared/api/tauri", async (importActual) => {
-  const actual = await importActual<typeof import("@/shared/api/tauri")>();
+vi.mock("@/lib/api/tauri", async (importActual) => {
+  const actual = await importActual<typeof import("@/lib/api/tauri")>();
 
   return {
     ...actual,
@@ -125,6 +125,32 @@ test("useWorkspaceStateは選択したworkspaceを読み込み成功状態にす
   expect(selectActiveWorkspaceRoot(result.current.state)).toBe(workspace.root);
   expect(loadWorkspaceMock).toHaveBeenCalledWith("/workspace/spec-reviewer");
   expect(onWorkspaceLoaded).toHaveBeenCalledWith(workspace);
+  result.unmount();
+});
+
+test("useWorkspaceStateは読み込み後callbackの例外をopen失敗状態にする", async () => {
+  loadWorkspaceMock.mockResolvedValue(workspace);
+  const onWorkspaceLoaded = vi.fn(() => {
+    throw new Error("recent workspace storage failed");
+  });
+  const result = renderHook(() => useWorkspaceState());
+
+  let isLoaded!: boolean;
+  await act(async () => {
+    isLoaded = await result.current.actions.load("/workspace/spec-reviewer", {
+      onWorkspaceLoaded,
+    });
+  });
+
+  expect(isLoaded).toBe(false);
+  expect(result.current.state).toMatchObject({
+    status: "failed",
+    requestedPath: "/workspace/spec-reviewer",
+    error: {
+      reason: "unknown",
+      message: "recent workspace storage failed",
+    },
+  });
   result.unmount();
 });
 

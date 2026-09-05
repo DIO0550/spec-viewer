@@ -1,33 +1,79 @@
+import type { OperationId } from "@/features/specs/domain/operationId";
+import type { SpecArtifactIdentity } from "@/features/specs/domain/specArtifact";
+import type { SpecBundleState } from "@/features/specs/domain/specBundleState";
 import type { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
 import type { SpecFeatureError } from "@/features/specs/domain/specError";
 import type { SpecTreeState } from "@/features/specs/domain/specTreeState";
 import type { SpecsSelectors } from "@/features/specs/hooks/useSpecs/selectors";
-import type { SpecFileKey } from "@/features/specs/types/spec";
+import type {
+  ArchiveSpecResponse,
+  SpecFileKey,
+} from "@/features/specs/types/spec";
+
+export type ArchiveFailure = Readonly<{
+  specId: string;
+  error: SpecFeatureError;
+}>;
+
+export type ArchiveRevealState = Readonly<{
+  status: "success" | "missing";
+  workspacePath: string;
+  response: ArchiveSpecResponse;
+}>;
 
 export type SpecSelectionState = Readonly<{
   specId: string | null;
+  artifactIdentity: SpecArtifactIdentity | null;
   fileKey: SpecFileKey | null;
 }>;
 
 export type SpecsState = Readonly<{
   specTreeState: SpecTreeState;
   documentState: SpecDocumentState;
+  bundleState: SpecBundleState;
   selection: SpecSelectionState;
   isLoading: boolean;
-  activeOperationId: string | null;
+  activeOperationId: OperationId | null;
   archivingSpecId: string | null;
   archiveSpecError: SpecFeatureError | null;
+  archiveFailure: ArchiveFailure | null;
+  archiveReveal: ArchiveRevealState | null;
 }>;
 
 export type SpecsActions = Readonly<{
-  /** Archives a spec. @param specId - ID of the spec to archive. */
+  /**
+   * Archives a spec.
+   * @param specId - ID of the spec to archive.
+   */
   archiveSpec: (specId: string) => Promise<boolean>;
+  /** Retries the failed archive operation for the same spec. */
+  retryArchiveSpec: () => Promise<boolean>;
+  /** Reloads after an archive destination could not be revealed. */
+  refreshArchiveReveal: () => Promise<boolean>;
   /** Reloads the spec tree. */
   reloadSpecs: () => Promise<boolean>;
-  /** Selects a spec. @param specId - ID of the spec to select. */
+  /**
+   * Selects a spec.
+   * @param specId - ID of the spec to select.
+   */
   selectSpec: (specId: string) => Promise<void>;
-  /** Selects a file. @param fileKey - Key of the file to select. */
+  /**
+   * Selects a spec's file by raw key, loading its bundle when the spec differs from the
+   * current selection.
+   * @param specId - ID of the spec that owns the file.
+   * @param fileKey - Raw file key to select; ignored when it is not a known `SpecFileKey`.
+   */
+  selectSpecFile: (specId: string, fileKey: string) => Promise<void>;
+  /**
+   * Selects a file within the currently selected spec.
+   * @param fileKey - Key of the file to select.
+   */
   selectFileKey: (fileKey: SpecFileKey) => Promise<void>;
+  /**
+   * Selects an already-loaded bundle artifact without IPC.
+   * @param identity - Identity of the artifact to select.
+   */
+  selectArtifact: (identity: SpecArtifactIdentity) => void;
   /** Reloads the current document. */
   reloadDocument: () => Promise<boolean>;
   /** Resets the current spec/file selection. */
