@@ -575,7 +575,7 @@ impl SpecNodeIdentity {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpecNode {
-    id: String,
+    id: SpecId,
     label: String,
     kind: SpecNodeKind,
     source_group_id: String,
@@ -589,30 +589,26 @@ pub struct SpecNode {
 
 impl SpecNode {
     pub fn new(
-        id: impl Into<String>,
+        id: SpecId,
         label: impl Into<String>,
         files: Vec<SpecFile>,
         children: Vec<SpecNode>,
     ) -> Result<Self, SpecDomainError> {
-        let id = id.into();
-        let trimmed_id = id.trim();
-        if trimmed_id.is_empty() {
-            return Err(SpecDomainError::MissingNodeId);
-        }
+        let relative_id = id.as_str().to_string();
 
         Self::build(
-            trimmed_id.to_string(),
+            id,
             label,
             SpecNodeKind::Spec,
             "legacy".to_string(),
-            trimmed_id.to_string(),
+            relative_id,
             files,
             children,
         )
     }
 
     pub fn leaf(
-        id: impl Into<String>,
+        id: SpecId,
         label: impl Into<String>,
         files: Vec<SpecFile>,
     ) -> Result<Self, SpecDomainError> {
@@ -683,7 +679,7 @@ impl SpecNode {
         files: Vec<SpecFile>,
         children: Vec<SpecNode>,
     ) -> Result<Self, SpecDomainError> {
-        let id = identity.global_id();
+        let id = SpecId::new(identity.global_id())?;
         Self::build(
             id,
             label,
@@ -696,7 +692,7 @@ impl SpecNode {
     }
 
     fn build(
-        id: String,
+        id: SpecId,
         label: impl Into<String>,
         kind: SpecNodeKind,
         source_group_id: String,
@@ -735,7 +731,7 @@ impl SpecNode {
         })
     }
 
-    pub fn id(&self) -> &str {
+    pub fn id(&self) -> &SpecId {
         &self.id
     }
 
@@ -810,7 +806,7 @@ impl SpecTree {
     }
 
     pub fn find(&self, spec_id: &SpecId) -> Option<&SpecNode> {
-        self.nodes().find(|node| node.id() == spec_id.as_str())
+        self.nodes().find(|node| node.id() == spec_id)
     }
 
     pub fn nodes(&self) -> SpecTreeNodeIter<'_> {
@@ -893,6 +889,54 @@ mod tests {
         let result = SpecId::new("   ");
 
         assert_eq!(Err(SpecDomainError::MissingSpecId), result);
+    }
+
+    #[test]
+    fn spec_id_rejects_unsafe_path_components() {
+        for value in [
+            "../escape",
+            "spec//child",
+            "spec/",
+            "spec:child",
+            "C:spec",
+            "/tmp/spec",
+            "spec\\path",
+            "spec\0path",
+            ".",
+            "./spec",
+            "spec/../escape",
+            "auth/../../outside",
+            "spec/./child",
+            "C:/tmp/spec",
+            "//server/spec",
+        ] {
+            assert_eq!(
+                Err(SpecDomainError::UnsafeSpecId {
+                    value: value.to_string(),
+                }),
+                SpecId::new(value),
+                "{value} should be rejected"
+            );
+        }
+    }
+
+    #[test]
+    fn spec_id_exposes_validated_segments() {
+        let id = SpecId::new("parent/child").expect("nested spec id should be valid");
+
+        assert_eq!(vec!["parent", "child"], id.segments().collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn spec_id_accepts_safe_dot_names() {
+        for value in [".hidden", "group/a..b", "COM10"] {
+            assert_eq!(
+                value,
+                SpecId::new(value)
+                    .expect("safe dot name should be valid")
+                    .as_str()
+            );
+        }
     }
 
     #[test]
@@ -1273,14 +1317,23 @@ mod tests {
     fn spec_node_keeps_tree_compatible_metadata() {
         let child_file = SpecFile::missing(SpecFileKey::Impl, "implementation-plan.md")
             .expect("file should be valid");
-        let child = SpecNode::leaf("auth/code-review", "code-review", vec![child_file])
-            .expect("child should be valid");
+        let child = SpecNode::leaf(
+            SpecId::new("auth/code-review").expect("child spec id should be valid"),
+            "code-review",
+            vec![child_file],
+        )
+        .expect("child should be valid");
         let root_file =
             SpecFile::present(SpecFileKey::Tasks, "tasks.md").expect("file should be valid");
-        let node = SpecNode::new(" auth ", " Auth ", vec![root_file], vec![child])
-            .expect("node should be valid");
+        let node = SpecNode::new(
+            SpecId::new(" auth ").expect("root spec id should be valid"),
+            " Auth ",
+            vec![root_file],
+            vec![child],
+        )
+        .expect("node should be valid");
 
-        assert_eq!("auth", node.id());
+        assert_eq!("auth", node.id().as_str());
         assert_eq!("Auth", node.label());
         assert_eq!(1, node.files().len());
         assert_eq!(1, node.children().len());
@@ -1290,15 +1343,12 @@ mod tests {
     }
 
     #[test]
-    fn spec_node_rejects_missing_identity() {
-        let result = SpecNode::leaf(" ", "Feature", Vec::new());
-
-        assert_eq!(Err(SpecDomainError::MissingNodeId), result);
-    }
-
-    #[test]
     fn spec_node_rejects_missing_label() {
-        let result = SpecNode::leaf("feature", " ", Vec::new());
+        let result = SpecNode::leaf(
+            SpecId::new("feature").expect("spec id should be valid"),
+            " ",
+            Vec::new(),
+        );
 
         assert_eq!(Err(SpecDomainError::MissingNodeLabel), result);
     }

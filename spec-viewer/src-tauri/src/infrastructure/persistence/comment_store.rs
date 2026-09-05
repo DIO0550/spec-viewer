@@ -408,9 +408,6 @@ fn write_via_temp_file(path: &Path, contents: &str) -> Result<(), CommentReposit
 
 fn storage_path_error(error: CommentStoragePathError) -> CommentRepositoryError {
     match error {
-        CommentStoragePathError::InvalidSpecId { spec_id } => CommentRepositoryError::invalid_data(
-            format!("invalid comment storage spec id: {spec_id}"),
-        ),
         CommentStoragePathError::PathEscapesSpecDirectory { path } => {
             CommentRepositoryError::invalid_data(format!(
                 "comment storage path escapes selected spec folder: {path}"

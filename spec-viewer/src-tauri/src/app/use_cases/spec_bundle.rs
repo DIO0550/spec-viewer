@@ -79,7 +79,8 @@ impl FilesystemAppUseCases {
             workspace.config(),
             spec_id,
         )?;
-        let spec_directory = spec_directory_path(workspace.layout(), spec_id)?;
+        let validated_spec_id = crate::domain::spec::SpecId::new(spec_id)?;
+        let spec_directory = spec_directory_path(workspace.layout(), &validated_spec_id);
         let artifacts =
             discover_spec_artifacts(&spec_directory, &effective_config).map_err(|source| {
                 AppUseCaseError::SpecTreeScan {

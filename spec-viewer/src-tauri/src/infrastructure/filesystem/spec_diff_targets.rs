@@ -14,7 +14,7 @@ use crate::{
     },
     domain::{
         repository::RepositoryRelativePath,
-        spec::{SpecId, SpecNode, SpecNodeKind},
+        spec::{SpecNode, SpecNodeKind},
         workspace::{WorkspaceKind, WorktreeId},
     },
     infrastructure::{
@@ -71,8 +71,7 @@ impl FilesystemSpecDiffTargetResolver {
     ) -> Result<(), SpecDiffTargetResolutionError> {
         for node in nodes {
             if node.kind() == SpecNodeKind::Spec && node.source_group_id() == primary_source_group {
-                let directory = spec_directory_path(layout, node.id())
-                    .map_err(|_| SpecDiffTargetResolutionError::RepositoryBoundaryEscape)?;
+                let directory = spec_directory_path(layout, node.id());
                 for file in node.files() {
                     let configured_path = directory.join(file.file_name());
                     let candidate_paths = spec_file_path_candidates(file.key(), &configured_path)
@@ -81,13 +80,9 @@ impl FilesystemSpecDiffTargetResolver {
                             Self::repository_relative_path(repository_root, candidate.path())
                         })
                         .collect::<Result<Vec<_>, _>>()?;
-                    let target = SpecDiffTarget::new(
-                        SpecId::new(node.id())
-                            .map_err(|_| SpecDiffTargetResolutionError::SpecTreeScan)?,
-                        file.key(),
-                        candidate_paths,
-                    )
-                    .map_err(SpecDiffTargetResolutionError::from_invariant)?;
+                    let target =
+                        SpecDiffTarget::new(node.id().clone(), file.key(), candidate_paths)
+                            .map_err(SpecDiffTargetResolutionError::from_invariant)?;
                     targets.push(target);
                 }
             }

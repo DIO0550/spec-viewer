@@ -58,7 +58,7 @@ impl SpecArchivePolicy {
 
         if tree
             .nodes()
-            .any(|node| is_strict_ancestor(spec_id, node.id()))
+            .any(|node| is_strict_ancestor(spec_id, node.id().as_str()))
         {
             return Err(SpecArchivePolicyError::Container {
                 spec_id: spec_id.clone(),

@@ -9,7 +9,7 @@ pub use spec_diff_targets::{FilesystemSpecDiffTargetResolver, SpecDiffTargetReso
 use std::{
     collections::HashMap,
     fs, io,
-    path::{Component, Path, PathBuf},
+    path::{Path, PathBuf},
     sync::{Arc, Mutex, OnceLock},
 };
 
@@ -240,55 +240,30 @@ pub fn spec_root_path(layout: &WorkspaceLayout) -> PathBuf {
     PathBuf::from(layout.root().as_str()).join(spec_root_directory_for_kind(layout.kind()))
 }
 
-pub fn safe_relative_spec_path(spec_id: &str) -> Result<PathBuf, SafeSpecPathError> {
-    let trimmed = spec_id.trim();
-
-    if trimmed.is_empty() || trimmed.contains('\\') || trimmed.contains('\0') {
-        return Err(SafeSpecPathError::InvalidSpecId {
-            spec_id: spec_id.to_string(),
-        });
-    }
-
+fn spec_relative_path(spec_id: &SpecId) -> PathBuf {
     let mut path = PathBuf::new();
-    let mut component_count = 0;
 
-    for component in Path::new(trimmed).components() {
-        let Component::Normal(name) = component else {
-            return Err(SafeSpecPathError::InvalidSpecId {
-                spec_id: spec_id.to_string(),
-            });
-        };
-
-        path.push(name);
-        component_count += 1;
+    for segment in spec_id.segments() {
+        path.push(segment);
     }
 
-    if component_count == 0 {
-        return Err(SafeSpecPathError::InvalidSpecId {
-            spec_id: spec_id.to_string(),
-        });
-    }
-
-    Ok(path)
+    path
 }
 
-pub fn spec_directory_path(
-    layout: &WorkspaceLayout,
-    spec_id: &str,
-) -> Result<PathBuf, SafeSpecPathError> {
-    let relative_spec_path = safe_relative_spec_path(spec_id)?;
+pub fn spec_directory_path(layout: &WorkspaceLayout, spec_id: &SpecId) -> PathBuf {
+    let relative_spec_path = spec_relative_path(spec_id);
 
     if let Ok(path_under_source_group) =
         relative_spec_path.strip_prefix(spec_root_directory_for_kind(layout.kind()))
     {
-        return Ok(spec_root_path(layout).join(path_under_source_group));
+        return spec_root_path(layout).join(path_under_source_group);
     }
 
     if is_claude_plugin_worktree_spec_path(&relative_spec_path) {
-        return Ok(PathBuf::from(layout.root().as_str()).join(relative_spec_path));
+        return PathBuf::from(layout.root().as_str()).join(relative_spec_path);
     }
 
-    Ok(spec_root_path(layout).join(relative_spec_path))
+    spec_root_path(layout).join(relative_spec_path)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1083,12 +1058,6 @@ pub enum SpecTreeScanError {
     },
 }
 
-#[derive(Debug, Error, Clone, PartialEq, Eq)]
-pub enum SafeSpecPathError {
-    #[error("spec id is invalid: {spec_id}")]
-    InvalidSpecId { spec_id: String },
-}
-
 #[derive(Debug, Error)]
 pub enum SpecArchiveError {
     #[error("spec id is already inside an archive: {spec_id}")]
@@ -1187,6 +1156,9 @@ mod tests {
         fn drop(&mut self) {
             let _ = fs::remove_dir_all(&self.root);
         }
+    }
+    fn spec_id(value: &str) -> SpecId {
+        SpecId::new(value).expect("test spec id should be valid")
     }
 
     #[test]
@@ -1928,7 +1900,10 @@ mod tests {
             .expect("spec-driven-dev tree should be scanned");
 
         let issue = &tree[0];
-        assert_eq!(".plugin-workspace/.specs/021-issue-262", issue.id());
+        assert_eq!(
+            ".plugin-workspace/.specs/021-issue-262",
+            issue.id().as_str()
+        );
         assert_eq!(
             vec![".plugin-workspace/.specs/021-issue-262/code-review"],
             node_ids(issue.children())
@@ -1979,7 +1954,7 @@ mod tests {
         let worktree = &tree[0];
         assert_eq!(
             ".claude/worktrees/feature-auth/.plugin-worktree/.specs",
-            worktree.id()
+            worktree.id().as_str()
         );
         assert_eq!("feature-auth (.plugin-worktree)", worktree.label());
         assert_eq!(
@@ -2036,7 +2011,7 @@ mod tests {
         let worktree = &tree[0];
         assert_eq!(
             ".claude/worktrees/doccom-be/.plugin-workspace/.specs",
-            worktree.id()
+            worktree.id().as_str()
         );
         assert_eq!("doccom-be (.plugin-workspace)", worktree.label());
         assert_eq!(
@@ -2069,9 +2044,8 @@ mod tests {
 
         let path = spec_directory_path(
             &layout,
-            ".claude/worktrees/feature-auth/.plugin-worktree/.specs/auth",
-        )
-        .expect("worktree spec id should resolve");
+            &spec_id(".claude/worktrees/feature-auth/.plugin-worktree/.specs/auth"),
+        );
 
         assert_eq!(
             workspace
@@ -2088,9 +2062,8 @@ mod tests {
 
         let path = spec_directory_path(
             &layout,
-            ".claude/worktrees/doccom-be/.plugin-workspace/.specs/019-be-doc-comments",
-        )
-        .expect("plugin workspace spec id should resolve");
+            &spec_id(".claude/worktrees/doccom-be/.plugin-workspace/.specs/019-be-doc-comments"),
+        );
 
         assert_eq!(
             workspace
@@ -2105,8 +2078,7 @@ mod tests {
         let workspace = TestWorkspace::new("root-plugin-workspace-source-group-spec-path");
         let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
 
-        let path = spec_directory_path(&layout, ".plugin-workspace/.specs/auth")
-            .expect("root source group spec id should resolve");
+        let path = spec_directory_path(&layout, &spec_id(".plugin-workspace/.specs/auth"));
 
         assert_eq!(workspace.root().join(".plugin-workspace/.specs/auth"), path);
     }
@@ -2162,7 +2134,7 @@ mod tests {
         let auth = &tree[0];
         let checkout = &tree[1];
 
-        assert_eq!(".plugin-workspace/.specs/auth", auth.id());
+        assert_eq!(".plugin-workspace/.specs/auth", auth.id().as_str());
         assert_eq!(
             Some(("auth-tasks.md", SpecFileStatus::Present)),
             auth.file_for_key(SpecFileKey::Tasks)
@@ -2256,7 +2228,7 @@ mod tests {
     }
 
     fn node_ids(nodes: &[SpecNode]) -> Vec<&str> {
-        nodes.iter().map(SpecNode::id).collect()
+        nodes.iter().map(|node| node.id().as_str()).collect()
     }
 
     fn file_statuses(node: &SpecNode) -> Vec<(SpecFileKey, SpecFileStatus)> {

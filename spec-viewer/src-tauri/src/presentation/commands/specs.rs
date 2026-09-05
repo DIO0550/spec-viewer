@@ -681,13 +681,13 @@ mod tests {
     };
     use crate::domain::spec::{
         MarkdownBlockHash, MarkdownBlockIndex, MarkdownBlockText, MarkdownBlockType,
-        SpecArtifactIdentity, SpecProgress,
+        SpecArtifactIdentity, SpecId, SpecProgress,
     };
 
     #[test]
     fn spec_tree_response_serializes_nested_nodes_and_file_statuses() {
         let child = SpecNode::leaf(
-            "auth/login",
+            SpecId::new("auth/login").expect("child spec id should be valid"),
             "login",
             vec![
                 SpecFile::new(SpecFileKey::Tasks, "tasks.md", SpecFileStatus::Missing)
@@ -696,7 +696,7 @@ mod tests {
         )
         .expect("child should be valid");
         let root = SpecNode::new(
-            "auth",
+            SpecId::new("auth").expect("root spec id should be valid"),
             "auth",
             vec![SpecFile::new(
                 SpecFileKey::Impl,

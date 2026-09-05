@@ -58,13 +58,13 @@ impl AddCommentCommandError {
             }
             AppUseCaseError::ConfigLoad { .. } => AddCommentCommandErrorCode::ConfigLoad,
             AppUseCaseError::InvalidComment { .. } => AddCommentCommandErrorCode::InvalidComment,
+            AppUseCaseError::InvalidSpec { .. } => AddCommentCommandErrorCode::InvalidRequest,
             AppUseCaseError::CommentRepository { .. } => {
                 AddCommentCommandErrorCode::CommentRepository
             }
             AppUseCaseError::SpecTreeScan { .. }
             | AppUseCaseError::SpecArchive { .. }
-            | AppUseCaseError::MarkdownRead { .. }
-            | AppUseCaseError::InvalidSpec { .. } => AddCommentCommandErrorCode::Unexpected,
+            | AppUseCaseError::MarkdownRead { .. } => AddCommentCommandErrorCode::Unexpected,
         };
 
         Self::new(code, error.to_string())
@@ -159,11 +159,12 @@ impl CommentCommandError {
             }
             AppUseCaseError::ConfigLoad { .. } => CommentCommandErrorCode::ConfigLoad,
             AppUseCaseError::MarkdownRead { .. } => CommentCommandErrorCode::MarkdownRead,
+            AppUseCaseError::InvalidSpec { .. } => CommentCommandErrorCode::InvalidRequest,
             AppUseCaseError::InvalidComment { .. } => CommentCommandErrorCode::InvalidComment,
             AppUseCaseError::CommentRepository { .. } => CommentCommandErrorCode::CommentRepository,
-            AppUseCaseError::SpecTreeScan { .. }
-            | AppUseCaseError::SpecArchive { .. }
-            | AppUseCaseError::InvalidSpec { .. } => CommentCommandErrorCode::Unexpected,
+            AppUseCaseError::SpecTreeScan { .. } | AppUseCaseError::SpecArchive { .. } => {
+                CommentCommandErrorCode::Unexpected
+            }
         };
 
         Self::new(code, error.to_string())
@@ -1076,7 +1077,7 @@ fn export_comment_files_for_spec(
             export_comment_file(
                 use_cases,
                 workspace,
-                spec.id(),
+                spec.id().as_str(),
                 spec.label(),
                 file.key(),
                 file.display_label(),
@@ -1096,7 +1097,7 @@ fn prompt_files_for_spec(
             prompt_file(
                 use_cases,
                 workspace,
-                spec.id(),
+                spec.id().as_str(),
                 spec.label(),
                 file.key(),
                 file.display_label(),
@@ -1176,7 +1177,7 @@ fn prompt_file(
 
 fn find_spec_node<'a>(specs: &'a [SpecNode], spec_id: &str) -> Option<&'a SpecNode> {
     specs.iter().find_map(|spec| {
-        if spec.id() == spec_id {
+        if spec.id().as_str() == spec_id {
             return Some(spec);
         }
 
@@ -2011,6 +2012,12 @@ mod tests {
     fn add_comment_command_error_maps_app_use_case_errors() {
         let cases = [
             (
+                AppUseCaseError::InvalidSpec {
+                    message: "unsafe spec id".to_string(),
+                },
+                AddCommentCommandErrorCode::InvalidRequest,
+            ),
+            (
                 AppUseCaseError::InvalidComment {
                     message: "comment body is required".to_string(),
                 },
@@ -2047,6 +2054,16 @@ mod tests {
 
             assert_eq!(expected_code, error.code());
         }
+    }
+
+    #[test]
+    fn comment_command_error_maps_invalid_spec_to_invalid_request() {
+        let error = CommentCommandError::from_app_error(AppUseCaseError::InvalidSpec {
+            message: "unsafe spec id".to_string(),
+        });
+
+        assert_eq!(CommentCommandErrorCode::InvalidRequest, error.code());
+        assert_eq!("invalid spec input: unsafe spec id", error.message);
     }
 
     #[test]

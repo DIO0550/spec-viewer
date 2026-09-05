@@ -35,12 +35,7 @@ impl CommentStoragePathResolver {
         layout: &WorkspaceLayout,
         scope: &CommentScope,
     ) -> Result<CommentStoragePath, CommentStoragePathError> {
-        let spec_directory =
-            spec_directory_path(layout, scope.spec_id().as_str()).map_err(|_| {
-                CommentStoragePathError::InvalidSpecId {
-                    spec_id: scope.spec_id().as_str().to_string(),
-                }
-            })?;
+        let spec_directory = spec_directory_path(layout, scope.spec_id());
         let comments_directory = spec_directory.join(COMMENT_STORAGE_DIRECTORY);
         let file_path = comments_directory.join(comment_storage_file_name(scope.file_key()));
         let storage_path = CommentStoragePath {
@@ -99,8 +94,6 @@ impl CommentStoragePath {
 
 #[derive(Debug, Error)]
 pub enum CommentStoragePathError {
-    #[error("comment spec id is invalid: {spec_id}")]
-    InvalidSpecId { spec_id: String },
     #[error("comment storage path escapes the selected spec folder: {path}")]
     PathEscapesSpecDirectory { path: String },
     #[error("failed to create comment storage directory: {path}")]

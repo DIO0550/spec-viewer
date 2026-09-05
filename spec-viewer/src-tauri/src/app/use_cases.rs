@@ -31,8 +31,8 @@ use crate::{
     infrastructure::{
         filesystem::{
             archive_spec_directory, spec_directory_path, with_archive_source_group_lock,
-            FilesystemSpecTreeScanner, FilesystemWorkspaceDetector, SafeSpecPathError,
-            SpecArchiveError, SpecTreeScanError, WorkspaceDetectionError,
+            FilesystemSpecTreeScanner, FilesystemWorkspaceDetector, SpecArchiveError,
+            SpecTreeScanError, WorkspaceDetectionError,
         },
         markdown::{
             FilesystemMarkdownReader, MarkdownDocument, MarkdownReadError, MarkdownReadResult,
@@ -292,7 +292,8 @@ fn spec_config_for_directory<ConfigLoader>(
 where
     ConfigLoader: LoadWorkspaceConfig,
 {
-    let spec_directory = spec_directory_path(layout, spec_id)?;
+    let spec_id = SpecId::new(spec_id)?;
+    let spec_directory = spec_directory_path(layout, &spec_id);
     let Some(spec_override) = config_loader.load_spec_config_override(&spec_directory)? else {
         return Ok(workspace_config.clone());
     };
@@ -636,14 +637,6 @@ impl From<SpecTreeScanError> for AppUseCaseError {
     }
 }
 
-impl From<SafeSpecPathError> for AppUseCaseError {
-    fn from(source: SafeSpecPathError) -> Self {
-        Self::InvalidSpec {
-            message: source.to_string(),
-        }
-    }
-}
-
 impl From<SpecArchiveError> for AppUseCaseError {
     fn from(source: SpecArchiveError) -> Self {
         Self::SpecArchive {
@@ -884,7 +877,7 @@ mod tests {
             config_with_mapping(SpecFileKey::Tasks, "tasks.md"),
         );
         let spec = SpecNode::leaf(
-            "auth",
+            SpecId::new("auth").expect("spec id should be valid"),
             "auth",
             vec![
                 SpecFile::new(SpecFileKey::Tasks, "tasks.md", SpecFileStatus::Present)
