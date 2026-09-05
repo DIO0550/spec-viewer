@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import type { SpecViewResetKeys } from "@/app/App/hooks/types";
+import { type SpecViewSelection as SpecViewSelectionType } from "@/features/specs/domain/specViewSelection";
 import { useSpecFileWatcher } from "@/features/specs";
 import type {
   SpecFileWatchSubscriber,
@@ -15,7 +15,7 @@ type RefreshCurrentViewOptions = Readonly<{
 }>;
 
 export type UseViewRefreshOptions = Readonly<{
-  selection: SpecViewResetKeys;
+  selection: SpecViewSelectionType;
   isCurrentViewLoading: boolean;
   /** Refreshes repository-wide diff when the diff view owns the source. */
   isRepositoryView?: boolean;
@@ -65,7 +65,7 @@ export function useViewRefresh(
     onError,
     watcher,
   } = options;
-  const workspaceRoot = selection.workspaceRoot;
+  const workspaceRoot = selection.workspacePath;
   const specId = selection.specId;
   const fileKey = selection.fileKey;
 
@@ -192,9 +192,7 @@ export function useViewRefresh(
   );
 
   useSpecFileWatcher({
-    workspacePath: workspaceRoot,
-    specId,
-    fileKey,
+    selection,
     onMarkdownChange: reloadCurrentMarkdownFromWatcher,
     onConfigChange: reloadWorkspaceConfigFromWatcher,
     onWatcherError: handleWatcherError,

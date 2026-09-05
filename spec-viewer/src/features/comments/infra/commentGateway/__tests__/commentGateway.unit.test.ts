@@ -2,7 +2,6 @@ import { expect, test, vi } from "vitest";
 import type { Comment } from "@/features/comments/domain/comment";
 import type { CommentAnchor } from "@/features/comments/domain/commentAnchor";
 import { CommentId } from "@/features/comments/domain/commentId";
-import type { CommentScope } from "@/features/comments/domain/commentScope";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import {
   addComment,
@@ -12,15 +11,25 @@ import {
   resolveComment,
   updateComment,
 } from "@/features/comments/infra/commentGateway";
+import {
+  CommentScope,
+  type CommentScope as CommentScopeType,
+} from "@/features/comments/domain/commentScope";
 import { createCommentCommandTestDouble } from "@/features/comments/testing/comment-command-test-double";
+import { SpecViewSelection } from "@/features/specs/domain/specViewSelection";
+import { WorkspacePath } from "@/domains/workspacePath";
 
 const commentId = CommentId.fromString;
 
-const scope: CommentScope = {
-  workspacePath: "/workspace/spec-reviewer",
-  specId: "phase-2-comments",
-  fileKey: "tasks",
-};
+const scopeSelection = SpecViewSelection.synchronize(
+  SpecViewSelection.empty(),
+  {
+    workspacePath: WorkspacePath.fromString("/workspace/spec-reviewer"),
+    specId: "phase-2-comments",
+    fileKey: "tasks",
+  },
+);
+const scope = CommentScope.fromSelection(scopeSelection) as CommentScopeType;
 
 const anchor: CommentAnchor = {
   fileKey: "tasks",

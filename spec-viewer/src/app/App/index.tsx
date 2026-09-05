@@ -175,10 +175,11 @@ function SpecViewAppContent(): ReactElement {
     useWorkspaceSidebarSectionPreference();
   const resizableLeftNavigation = useResizableLeftNavigation();
   const sidebarPreference = useSidebarPreference();
-  const { selectSpecView } = useSpecViewSelection();
+  const { selection: specViewSelection, synchronizeSelection } =
+    useSpecViewSelection();
   const selectCurrentSpecView = useCallback(
     (selection: SpecSelectionChange): void => {
-      selectSpecView({
+      synchronizeSelection({
         workspacePath:
           selection.workspacePath === null
             ? null
@@ -187,7 +188,7 @@ function SpecViewAppContent(): ReactElement {
         fileKey: selection.fileKey,
       });
     },
-    [selectSpecView],
+    [synchronizeSelection],
   );
   const specs = useSpecs({
     workspacePath: activeSpecWorkspacePath,
@@ -355,7 +356,7 @@ function SpecViewAppContent(): ReactElement {
   });
 
   const viewRefresh = useViewRefresh({
-    selection: resetKeys,
+    selection: specViewSelection,
     isCurrentViewLoading,
     isRepositoryView: isRepositoryDiffView,
     reload: {

@@ -1,17 +1,23 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
+
+import { createCommentCommandTestDouble } from "@/features/comments/testing/comment-command-test-double";
+import { configurePerformanceLoggerForTest } from "@/lib/performance";
+import type { CommentCommands } from "@/lib/api/tauri";
 import type { Comment } from "@/features/comments/domain/comment";
 import type { CommentAnchor } from "@/features/comments/domain/commentAnchor";
+import type { ListCommentsResponse } from "@/features/comments/types/comment";
 import { CommentId } from "@/features/comments/domain/commentId";
-import type { CommentScope } from "@/features/comments/domain/commentScope";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
+import {
+  CommentScope,
+  type CommentScope as CommentScopeType,
+} from "@/features/comments/domain/commentScope";
 import { useCommentOperations } from "@/features/comments/hooks/useCommentOperations";
 import { useComments } from "@/features/comments/hooks/useComments";
-import { createCommentCommandTestDouble } from "@/features/comments/testing/comment-command-test-double";
-import type { ListCommentsResponse } from "@/features/comments/types/comment";
-import type { CommentCommands } from "@/lib/api/tauri";
-import { configurePerformanceLoggerForTest } from "@/lib/performance";
+import { SpecViewSelection } from "@/features/specs/domain/specViewSelection";
+import { WorkspacePath } from "@/domains/workspacePath";
 
 const commentId = CommentId.fromString;
 
@@ -50,19 +56,23 @@ const resolvedComment: Comment = {
   updatedAt: "2026-05-05T10:10:00Z",
 };
 
-const tasksScope: CommentScope = {
-  workspacePath: "/workspace/spec-reviewer",
-  specId: "phase-2-comments",
-  fileKey: "tasks",
-};
+function createCommentScope(
+  fileKey: CommentScopeType["fileKey"],
+): CommentScopeType {
+  const selection = SpecViewSelection.synchronize(SpecViewSelection.empty(), {
+    workspacePath: WorkspacePath.fromString("/workspace/spec-reviewer"),
+    specId: "phase-2-comments",
+    fileKey,
+  });
 
-const designScope: CommentScope = {
-  ...tasksScope,
-  fileKey: "requirements",
-};
+  return CommentScope.fromSelection(selection) as CommentScopeType;
+}
+
+const tasksScope = createCommentScope("tasks");
+const designScope = createCommentScope("requirements");
 
 type HookProps = Readonly<{
-  scope: CommentScope | null;
+  scope: CommentScopeType | null;
   statusFilter?: CommentStatusFilter;
   commands: CommentCommands;
 }>;
@@ -647,12 +657,8 @@ test("useCommentOperationsはreloadComments変更時に進行中operationを無�
       reloadComments,
     }: Readonly<{ reloadComments: () => Promise<boolean> }>) =>
       useCommentOperations({
-        scope: {
-          workspacePath: "/workspace/spec-reviewer",
-          specId: "phase-2-comments",
-          fileKey: "tasks",
-        },
-        scopeKey: "/workspace/spec-reviewer:phase-2-comments:tasks",
+        scope: tasksScope,
+        selectionIdentity: tasksScope.selectionIdentity,
         statusFilter: CommentStatusFilter.All,
         commands,
         updateCurrentScopeComments,
