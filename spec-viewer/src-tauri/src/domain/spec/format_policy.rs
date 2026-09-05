@@ -49,6 +49,13 @@ impl SpecFileFormatPolicy {
 
 impl SpecFileKey {
     pub fn format_policy(self, configured_format: SpecDocumentFormat) -> SpecFileFormatPolicy {
+        if matches!(self, Self::QuizPlan | Self::QuizImpl) {
+            return SpecFileFormatPolicy::new(vec![SpecFileCandidateRule::new(
+                SpecDocumentFormat::Html,
+                SpecFileCandidateNameStrategy::ReplaceExtension,
+            )]);
+        }
+
         if matches!(
             self,
             Self::Requirements | Self::TechReference | Self::TestCases

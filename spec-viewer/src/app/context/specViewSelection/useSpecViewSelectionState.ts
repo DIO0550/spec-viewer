@@ -5,24 +5,19 @@ import type {
   SpecViewSelectionInput,
 } from "@/app/context/specViewSelection/types";
 import {
-  createSpecViewSelectionId,
-  type SpecViewSelection,
+  SelectionIdentity,
+  SpecViewSelection,
+  type SpecViewSelection as SpecViewSelectionType,
   type SpecViewTargetScope,
-} from "@/app/context/specViewSelection/selectionId";
+} from "@/features/specs/domain/specViewSelection";
 
-const defaultSelection: SpecViewSelection = {
-  workspacePath: null,
-  specId: null,
-  fileKey: null,
-  targetScope: "file",
-};
-
-/** @returns Review-run snapshot synchronized from the canonical specs selection. */
+/** @returns React adapter for the spec view selection aggregate. */
 export function useSpecViewSelectionState(): SpecViewSelectionContextValue {
-  const [selection, setSelection] =
-    useState<SpecViewSelection>(defaultSelection);
-  const selectionId = useMemo(
-    () => createSpecViewSelectionId(selection),
+  const [selection, setSelection] = useState<SpecViewSelectionType>(
+    SpecViewSelection.empty,
+  );
+  const selectionIdentity = useMemo(
+    () => SelectionIdentity.fromSelection(selection),
     [
       selection.fileKey,
       selection.specId,
@@ -30,22 +25,19 @@ export function useSpecViewSelectionState(): SpecViewSelectionContextValue {
       selection.workspacePath,
     ],
   );
-  const selectSpecView = useCallback(
-    (nextSpecViewSelection: SpecViewSelectionInput): void => {
-      setSelection((current) => ({
-        ...current,
-        ...nextSpecViewSelection,
-        targetScope: "file",
-      }));
+  const synchronizeSelection = useCallback(
+    (nextSelection: SpecViewSelectionInput): void => {
+      setSelection((current) =>
+        SpecViewSelection.synchronize(current, nextSelection),
+      );
     },
     [],
   );
-  const setTargetScope = useCallback(
+  const selectTargetScope = useCallback(
     (targetScope: SpecViewTargetScope): void => {
-      setSelection((current) => ({
-        ...current,
-        targetScope,
-      }));
+      setSelection((current) =>
+        SpecViewSelection.selectTargetScope(current, targetScope),
+      );
     },
     [],
   );
@@ -53,10 +45,10 @@ export function useSpecViewSelectionState(): SpecViewSelectionContextValue {
   return useMemo(
     () => ({
       selection,
-      selectionId,
-      selectSpecView,
-      setTargetScope,
+      selectionIdentity,
+      synchronizeSelection,
+      selectTargetScope,
     }),
-    [selection, setTargetScope, selectSpecView, selectionId],
+    [selection, selectionIdentity, selectTargetScope, synchronizeSelection],
   );
 }

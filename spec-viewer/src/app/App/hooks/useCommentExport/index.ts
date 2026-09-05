@@ -15,11 +15,11 @@ import {
   exportComments as defaultExportComments,
   generateLlmPrompt as defaultGenerateLlmPrompt,
   selectCommentExportDestination as defaultSelectCommentExportDestination,
-} from "@/shared/api/tauri";
-import { ExportCommentsCommandError } from "@/shared/api/tauri/exportComments";
-import { GenerateLlmPromptCommandError } from "@/shared/api/tauri/generateLlmPrompt";
-import { copyTextToClipboard } from "@/shared/lib/clipboard";
-import { getUnknownErrorMessage } from "@/shared/lib/errorMessage";
+} from "@/lib/api/tauri";
+import { ExportCommentsCommandError } from "@/lib/api/tauri/exportComments";
+import { GenerateLlmPromptCommandError } from "@/lib/api/tauri/generateLlmPrompt";
+import { copyTextToClipboard } from "@/lib/clipboard";
+import { getUnknownErrorMessage } from "@/utils/errorMessage";
 
 export type CommentExportState =
   | Readonly<{ status: "idle"; operation: null; message: null }>

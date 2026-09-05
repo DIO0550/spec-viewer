@@ -41,7 +41,7 @@ test("useResizableLeftNavigationは初期幅を返す", () => {
 
   const result = renderHook(() => useResizableLeftNavigation());
 
-  expect(result.current.leftNavigationWidth).toBe(268);
+  expect(result.current.leftNavigationWidth).toBe(240);
   result.unmount();
 });
 
@@ -74,6 +74,6 @@ test("useResizableLeftNavigationは保存幅がviewportに収まらない時に�
 
   const result = renderHook(() => useResizableLeftNavigation());
 
-  expect(result.current.leftNavigationWidth).toBe(268);
+  expect(result.current.leftNavigationWidth).toBe(240);
   result.unmount();
 });

@@ -1,8 +1,8 @@
 import { FolderClock, FolderOpen, X } from "lucide-react";
 
-import type { RecentWorkspace } from "@/shared/lib/recentWorkspaces";
-import { uiText } from "@/shared/lib/uiText";
-import { EmptyState } from "@/shared/ui/EmptyState";
+import type { RecentWorkspace } from "@/utils/recentWorkspaces";
+import { uiText } from "@/utils/uiText";
+import { EmptyState } from "@/components/EmptyState";
 
 type Props = Readonly<{
   isOpening: boolean;

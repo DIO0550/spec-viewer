@@ -1,13 +1,10 @@
-import { expect, expectTypeOf, test } from "vitest";
+import { expect, test } from "vitest";
 
 import { Comment } from "@/features/comments/domain/comment";
-import { Comments } from "@/features/comments/domain/comments";
+import type { CommentAnchor } from "@/features/comments/domain/commentAnchor";
+import { CommentId } from "@/features/comments/domain/commentId";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
-import type {
-  Comment as CompatComment,
-  CommentAnchor,
-} from "@/features/comments/types/comment";
-import { CommentId } from "@/features/comments/types/comment";
+import { Comments } from "@/features/comments/domain/comments";
 
 const commentId = CommentId.fromString;
 
@@ -28,7 +25,6 @@ const openComment: Comment = {
   anchor,
   body: "Clarify this task",
   status: "open",
-  resolved: false,
   createdAt: "2026-05-05T10:00:00Z",
   updatedAt: "2026-05-05T10:00:00Z",
 };
@@ -69,10 +65,6 @@ const fuzzyAnchorResolution = {
   },
 } as const;
 
-test("domain Commentと互換exportのCommentは同じ型として扱える", () => {
-  expectTypeOf<Comment>().toEqualTypeOf<CompatComment>();
-});
-
 test("Comment.createは既存のコメントshapeを維持する", () => {
   expect(Comment.create(openComment)).toEqual(openComment);
 });
@@ -84,43 +76,20 @@ test("Comment.updateBodyはbodyのみ更新する", () => {
   });
 });
 
-test("Comment.resolveはstatusとresolvedを解決済みへ同期する", () => {
+test("Comment.resolveはstatusだけを解決済みへ変更する", () => {
   expect(Comment.resolve(openComment)).toEqual({
     ...openComment,
     status: "resolved",
-    resolved: true,
   });
 });
 
-test("Comment.reopenはstatusとresolvedを未解決へ同期する", () => {
+test("Comment.reopenはstatusだけを未解決へ変更する", () => {
   const resolvedComment: Comment = {
     ...openComment,
     status: "resolved",
-    resolved: true,
   };
 
   expect(Comment.reopen(resolvedComment)).toEqual(openComment);
-});
-
-test.each([
-  [
-    openComment,
-    {
-      ...openComment,
-      status: "resolved",
-      resolved: true,
-    },
-  ],
-  [
-    {
-      ...openComment,
-      status: "resolved",
-      resolved: true,
-    },
-    openComment,
-  ],
-] as const)("Comment.toggleResolvedはstatusとresolvedを同期して反転する", (comment, expectedComment) => {
-  expect(Comment.toggleResolved(comment)).toEqual(expectedComment);
 });
 
 test("Comment.preserveAnchorResolutionはnextにresolutionがある場合nextを優先する", () => {
@@ -159,11 +128,7 @@ test.each([
   [openComment, CommentStatusFilter.All, true],
   [openComment, CommentStatusFilter.Open, true],
   [openComment, CommentStatusFilter.Resolved, false],
-  [
-    { ...openComment, status: "resolved", resolved: true },
-    CommentStatusFilter.Open,
-    false,
-  ],
+  [{ ...openComment, status: "resolved" }, CommentStatusFilter.Open, false],
 ] as const)("Comment.shouldDisplayはstatus filterに一致するコメントのみtrueにする", (comment, statusFilter, expectedResult) => {
   expect(Comment.shouldDisplay(comment, statusFilter)).toBe(expectedResult);
 });
@@ -199,7 +164,6 @@ test("Comment.appendDisplayableはfilter対象外なら元配列を返す", () =
   const resolvedComment: Comment = {
     ...secondOpenComment,
     status: "resolved",
-    resolved: true,
   };
 
   expect(
@@ -279,7 +243,6 @@ test("Comment.upsertDisplayableはfilter対象外になった既存コメント�
   const resolvedComment: Comment = {
     ...openComment,
     status: "resolved",
-    resolved: true,
   };
 
   expect(
@@ -296,7 +259,6 @@ test("Comment.upsertDisplayableはfilter対象外かつ未存在のコメント�
   const resolvedComment: Comment = {
     ...secondOpenComment,
     status: "resolved",
-    resolved: true,
   };
 
   expect(
@@ -355,58 +317,4 @@ test("Comment.upsertDisplayableはanchor resolutionがnullでも既存仕様と�
       anchorResolution: movedAnchorResolution,
     },
   ]);
-});
-
-test("Comment.upsertOptimisticToggleは既存コメントのresolved stateを反転する", () => {
-  expect(
-    Comment.upsertOptimisticToggle(
-      [openComment],
-      openComment.id,
-      CommentStatusFilter.All,
-    ),
-  ).toEqual([
-    {
-      ...openComment,
-      status: "resolved",
-      resolved: true,
-    },
-  ]);
-});
-
-test("Comment.upsertOptimisticToggleはCommentsと同じ結果を返す", () => {
-  expect(
-    Comment.upsertOptimisticToggle(
-      [openComment],
-      openComment.id,
-      CommentStatusFilter.All,
-    ),
-  ).toEqual(
-    Comments.upsertOptimisticToggle(
-      [openComment],
-      openComment.id,
-      CommentStatusFilter.All,
-    ),
-  );
-});
-
-test("Comment.upsertOptimisticToggleはfilter適用後に非表示のコメントを除外する", () => {
-  expect(
-    Comment.upsertOptimisticToggle(
-      [openComment, secondOpenComment],
-      openComment.id,
-      CommentStatusFilter.Open,
-    ),
-  ).toEqual([secondOpenComment]);
-});
-
-test("Comment.upsertOptimisticToggleは対象idがない場合に元配列を返す", () => {
-  const comments = [openComment] as const;
-
-  expect(
-    Comment.upsertOptimisticToggle(
-      comments,
-      commentId("cmt_missing"),
-      CommentStatusFilter.All,
-    ),
-  ).toBe(comments);
 });
