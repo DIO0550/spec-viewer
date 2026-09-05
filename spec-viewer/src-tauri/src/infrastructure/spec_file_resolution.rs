@@ -2,7 +2,9 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::domain::spec::{SpecDocumentFormat, SpecFileKey};
+use crate::domain::spec::{
+    SpecDocumentFormat, SpecFileCandidateNameStrategy, SpecFileCandidateRule, SpecFileKey,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpecFilePathCandidate {
@@ -28,57 +30,25 @@ pub fn spec_file_path_candidates(
     key: SpecFileKey,
     configured_path: &Path,
 ) -> Vec<SpecFilePathCandidate> {
-    if is_html_only_key(key) {
-        return vec![SpecFilePathCandidate::new(
-            configured_path.with_extension("html"),
-            SpecDocumentFormat::Html,
-        )];
-    }
+    let configured_format = SpecDocumentFormat::from_file_name(&configured_path.to_string_lossy());
+    let policy = key.format_policy(configured_format);
 
-    if is_html_first_key(key) {
-        return html_first_path_candidates(configured_path);
-    }
-
-    let preferred_format = SpecDocumentFormat::from_file_name(&configured_path.to_string_lossy());
-
-    if preferred_format == SpecDocumentFormat::Markdown {
-        return vec![
-            SpecFilePathCandidate::new(configured_path.to_path_buf(), SpecDocumentFormat::Markdown),
-            SpecFilePathCandidate::new(
-                configured_path.with_extension("html"),
-                SpecDocumentFormat::Html,
-            ),
-        ];
-    }
-
-    vec![SpecFilePathCandidate::new(
-        configured_path.to_path_buf(),
-        preferred_format,
-    )]
+    policy
+        .candidate_rules()
+        .iter()
+        .map(|rule| candidate_path(rule, configured_path))
+        .collect()
 }
 
-fn is_html_only_key(key: SpecFileKey) -> bool {
-    matches!(key, SpecFileKey::QuizPlan | SpecFileKey::QuizImpl)
-}
+fn candidate_path(rule: &SpecFileCandidateRule, configured_path: &Path) -> SpecFilePathCandidate {
+    let path = match rule.name_strategy() {
+        SpecFileCandidateNameStrategy::PreserveConfigured => configured_path.to_path_buf(),
+        SpecFileCandidateNameStrategy::ReplaceExtension => {
+            configured_path.with_extension(rule.format().extension())
+        }
+    };
 
-fn is_html_first_key(key: SpecFileKey) -> bool {
-    matches!(
-        key,
-        SpecFileKey::Requirements | SpecFileKey::TechReference | SpecFileKey::TestCases
-    )
-}
-
-fn html_first_path_candidates(configured_path: &Path) -> Vec<SpecFilePathCandidate> {
-    vec![
-        SpecFilePathCandidate::new(
-            configured_path.with_extension("html"),
-            SpecDocumentFormat::Html,
-        ),
-        SpecFilePathCandidate::new(
-            configured_path.with_extension("md"),
-            SpecDocumentFormat::Markdown,
-        ),
-    ]
+    SpecFilePathCandidate::new(path, rule.format())
 }
 
 #[cfg(test)]

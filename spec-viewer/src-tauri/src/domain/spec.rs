@@ -1,5 +1,10 @@
 //! Spec document and tree domain concepts.
 
+mod format_policy;
+
+pub use format_policy::{
+    SpecFileCandidateNameStrategy, SpecFileCandidateRule, SpecFileFormatPolicy,
+};
 mod archive_policy;
 mod artifact;
 mod progress;
