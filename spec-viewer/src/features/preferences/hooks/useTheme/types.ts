@@ -19,4 +19,5 @@ export type ThemeContextValue = Readonly<{
 
 export type ThemeProviderProps = Readonly<{
   children: ReactNode;
+  fixedTheme?: ResolvedTheme;
 }>;

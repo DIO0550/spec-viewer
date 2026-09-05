@@ -28,6 +28,13 @@ pub fn spec_file_path_candidates(
     key: SpecFileKey,
     configured_path: &Path,
 ) -> Vec<SpecFilePathCandidate> {
+    if is_html_only_key(key) {
+        return vec![SpecFilePathCandidate::new(
+            configured_path.with_extension("html"),
+            SpecDocumentFormat::Html,
+        )];
+    }
+
     if is_html_first_key(key) {
         return html_first_path_candidates(configured_path);
     }
@@ -48,6 +55,10 @@ pub fn spec_file_path_candidates(
         configured_path.to_path_buf(),
         preferred_format,
     )]
+}
+
+fn is_html_only_key(key: SpecFileKey) -> bool {
+    matches!(key, SpecFileKey::QuizPlan | SpecFileKey::QuizImpl)
 }
 
 fn is_html_first_key(key: SpecFileKey) -> bool {
@@ -175,6 +186,34 @@ mod tests {
         assert_eq!(
             vec![(PathBuf::from("preview.html"), SpecDocumentFormat::Html)],
             candidate_paths(SpecFileKey::Tasks, "preview.html")
+        );
+    }
+    #[test]
+    fn quiz_keys_use_html_only_candidates() {
+        let expected_plan = vec![(
+            PathBuf::from("understanding-quiz-plan.html"),
+            SpecDocumentFormat::Html,
+        )];
+        let expected_impl = vec![(
+            PathBuf::from("understanding-quiz-impl.html"),
+            SpecDocumentFormat::Html,
+        )];
+
+        assert_eq!(
+            expected_plan,
+            candidate_paths(SpecFileKey::QuizPlan, "understanding-quiz-plan.html")
+        );
+        assert_eq!(
+            expected_impl,
+            candidate_paths(SpecFileKey::QuizImpl, "understanding-quiz-impl.html")
+        );
+    }
+
+    #[test]
+    fn quiz_keys_normalize_override_to_html_without_markdown_fallback() {
+        assert_eq!(
+            vec![(PathBuf::from("guide.html"), SpecDocumentFormat::Html)],
+            candidate_paths(SpecFileKey::QuizPlan, "guide.md")
         );
     }
 }

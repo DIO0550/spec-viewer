@@ -1,3 +1,4 @@
+import { SpecBundleState } from "@/features/specs/domain/specBundleState";
 import { expect, test } from "vitest";
 
 import { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
@@ -11,6 +12,11 @@ const tree: SpecTreeData = {
     {
       id: "phase-1",
       label: "Phase 1",
+      kind: "spec",
+      sourceGroupId: "primary",
+      relativeId: "phase-1",
+      presentDocumentCount: 0,
+      descendantSpecCount: 0,
       files: [
         {
           key: "impl",
@@ -32,15 +38,19 @@ const tree: SpecTreeData = {
 
 const baseState: SpecsState = {
   specTreeState: SpecTreeState.loaded("/workspace/spec-reviewer", tree),
+  bundleState: SpecBundleState.idle(),
   documentState: SpecDocumentState.idle("/workspace/spec-reviewer"),
   selection: {
     specId: "phase-1",
+    artifactIdentity: { kind: "standard", fileKey: "tasks" },
     fileKey: "tasks",
   },
   isLoading: false,
   activeOperationId: null,
   archivingSpecId: null,
   archiveSpecError: null,
+  archiveFailure: null,
+  archiveReveal: null,
 };
 
 test("buildSpecsSelectorsはtreeとselectionからselected spec/fileを導出する", () => {
@@ -57,6 +67,7 @@ test("buildSpecsSelectorsは未選択やloading中にreload不可を返す", () 
     ...baseState,
     selection: {
       specId: null,
+      artifactIdentity: null,
       fileKey: null,
     },
     isLoading: true,

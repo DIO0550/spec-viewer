@@ -1,4 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { OperationId } from "@/features/specs/domain/operationId";
+import { resolveSpecFileSelection } from "@/features/specs/domain/resolveSpecFileSelection";
+import { SpecBundleState } from "@/features/specs/domain/specBundleState";
 import type { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
 import { SpecDocumentState as SpecDocumentStateFactory } from "@/features/specs/domain/specDocumentState";
 import { SpecFeatureError } from "@/features/specs/domain/specError";
@@ -16,15 +19,16 @@ import type {
   UseSpecsResult,
 } from "@/features/specs/hooks/useSpecs/types";
 import * as specGateway from "@/features/specs/infra/specGateway";
-import type { SpecFileKey } from "@/features/specs/types/spec";
-import { specCommands } from "@/shared/api/tauri";
-import { ArchiveSpecCommandError } from "@/shared/api/tauri/archiveSpec";
-import { ListSpecsCommandError } from "@/shared/api/tauri/listSpecs";
-import { ReadSpecFileCommandError } from "@/shared/api/tauri/readSpecFile";
-import {
-  createPerformanceCorrelationId,
-  startPerformanceSpan,
-} from "@/shared/lib/performance";
+import type {
+  SpecDocument,
+  SpecFileKey,
+  SpecFileScope,
+} from "@/features/specs/types/spec";
+import { specCommands } from "@/lib/api/tauri";
+import { ArchiveSpecCommandError } from "@/lib/api/tauri/archiveSpec";
+import { ListSpecsCommandError } from "@/lib/api/tauri/listSpecs";
+import { ReadSpecFileCommandError } from "@/lib/api/tauri/readSpecFile";
+import { createPerformanceCorrelationId } from "@/lib/performance";
 
 export type { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
 export type { SpecTreeState } from "@/features/specs/domain/specTreeState";
@@ -53,41 +57,99 @@ type PreferredSelection = Readonly<{
 type ResolvedSelection = ReturnType<typeof SpecTreeDomain.resolveSelection>;
 
 type ShouldCommitState = () => boolean;
+type OnSpecTreeLoaded = (tree: NonNullable<SpecTreeState["tree"]>) => void;
+
+type LoadDocumentContext = Readonly<{
+  operationId: OperationId;
+  target: SpecFileScope;
+}>;
+
+type ReadDocumentInput = Readonly<{
+  target: SpecFileScope;
+  correlationId: string;
+}>;
+
+type ReadDocumentResult = Readonly<
+  | {
+      status: "success";
+      document: SpecDocument;
+      correlationId: string;
+    }
+  | {
+      status: "error";
+      error: SpecFeatureError;
+      correlationId: string;
+    }
+>;
+
+/**
+ * Reads one spec document and normalizes the command boundary result.
+ * @param input - Document scope and correlation id for the read operation.
+ * @returns A successful document result or a normalized feature error.
+ */
+async function readDocument(
+  input: ReadDocumentInput,
+): Promise<ReadDocumentResult> {
+  const { correlationId, target } = input;
+
+  try {
+    const document = await specGateway.readSpecFile(
+      specCommands,
+      specGateway.createReadSpecFileRequest({
+        ...target,
+        correlationId,
+      }),
+    );
+
+    return {
+      status: "success",
+      document,
+      correlationId,
+    };
+  } catch (error) {
+    return {
+      status: "error",
+      error: SpecFeatureError.fromCommandError(
+        ReadSpecFileCommandError.fromUnknown(error),
+      ),
+      correlationId,
+    };
+  }
+}
 
 const initialSpecsState: SpecsState = {
   specTreeState: initialSpecTreeState,
   documentState: initialDocumentState,
+  bundleState: SpecBundleState.idle(),
   selection: {
     specId: null,
+    artifactIdentity: null,
     fileKey: null,
   },
   isLoading: false,
   activeOperationId: null,
   archivingSpecId: null,
   archiveSpecError: null,
+  archiveFailure: null,
+  archiveReveal: null,
 };
-
-/** @returns A unique id for guarding one spec load operation. */
-function createSpecLoadOperationId(): string {
-  return `spec-load-${Date.now().toString(36)}-${Math.random()
-    .toString(36)
-    .slice(2)}`;
-}
 
 /**
  * @param options - Hook options including the workspace path and selection callback.
  * @returns Spec tree, selection, and Markdown loading state for a workspace.
  */
-export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
+export function useSpecsLegacy(options: UseSpecsOptions): UseSpecsResult {
   const { onSelectionChange, workspacePath } = options;
   const [state, setState] = useState<SpecsState>(initialSpecsState);
+  const workspacePathRef = useRef(workspacePath);
+  workspacePathRef.current = workspacePath;
   const { isLoading, selection, specTreeState } = state;
   const selectedSpecId = selection.specId;
   const selectedFileKey = selection.fileKey;
 
   const commitLoadState = useCallback(
     (
-      operationId: string,
+      operationId: OperationId,
       updateState: (currentState: SpecsState) => SpecsState,
     ): void => {
       setState((currentState) => {
@@ -101,7 +163,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
     [],
   );
 
-  const finishLoad = useCallback((operationId: string): void => {
+  const finishLoad = useCallback((operationId: OperationId): void => {
     setState((currentState) => {
       if (currentState.activeOperationId !== operationId) {
         return currentState;
@@ -119,14 +181,14 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
 
   const runSpecLoad = useCallback(
     async (
-      load: (operationId: string) => Promise<boolean>,
+      load: (operationId: OperationId) => Promise<boolean>,
     ): Promise<boolean> => {
       if (isLoadStarting || isLoading) {
         return false;
       }
 
       isLoadStarting = true;
-      const operationId = createSpecLoadOperationId();
+      const operationId = OperationId.create();
       setState((currentState) => {
         if (currentState.isLoading) {
           return currentState;
@@ -156,6 +218,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
       documentState: SpecDocumentStateFactory.idle(workspacePath),
       selection: {
         specId: null,
+        artifactIdentity: null,
         fileKey: null,
       },
     }));
@@ -167,29 +230,8 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
   }, [onSelectionChange, workspacePath]);
 
   const loadDocument = useCallback(
-    async (
-      operationId: string,
-      specId: string,
-      fileKey: SpecFileKey,
-      activeWorkspacePath: string | null = workspacePath,
-      canCommit: ShouldCommitState = () => true,
-    ): Promise<boolean> => {
-      if (!canCommit()) {
-        return false;
-      }
-
-      if (activeWorkspacePath === null) {
-        commitLoadState(operationId, (currentState) => ({
-          ...currentState,
-          documentState: SpecDocumentStateFactory.idle(
-            activeWorkspacePath,
-            specId,
-            fileKey,
-          ),
-        }));
-        return true;
-      }
-
+    async ({ operationId, target }: LoadDocumentContext): Promise<boolean> => {
+      const { fileKey, specId, workspacePath: activeWorkspacePath } = target;
       const correlationId = createPerformanceCorrelationId("document-read");
       commitLoadState(operationId, (currentState) => ({
         ...currentState,
@@ -201,72 +243,40 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
         ),
       }));
 
-      const endSpan = startPerformanceSpan(correlationId, "document.read", {
-        specId,
-        fileKey,
-      });
+      const result = await readDocument({ target, correlationId });
 
-      try {
-        const document = await specGateway.readSpecFile(
-          specCommands,
-          specGateway.createReadSpecFileRequest({
-            workspacePath: activeWorkspacePath,
-            specId,
-            fileKey,
-            correlationId,
-          }),
-        );
-        endSpan({
-          bytes: document.contents?.length ?? 0,
-          blockCount: document.blocks.length,
-          missing: document.missing,
-        });
-
-        if (!canCommit()) {
-          return false;
-        }
-
+      if (result.status === "success") {
         commitLoadState(operationId, (currentState) => ({
           ...currentState,
           documentState: SpecDocumentStateFactory.loaded(
             activeWorkspacePath,
             specId,
             fileKey,
-            document,
+            result.document,
             correlationId,
           ),
         }));
         return true;
-      } catch (error) {
-        endSpan({
-          error: true,
-        });
-
-        if (!canCommit()) {
-          return false;
-        }
-
-        commitLoadState(operationId, (currentState) => ({
-          ...currentState,
-          documentState: SpecDocumentStateFactory.failed(
-            activeWorkspacePath,
-            specId,
-            fileKey,
-            SpecFeatureError.fromCommandError(
-              ReadSpecFileCommandError.fromUnknown(error),
-            ),
-            correlationId,
-          ),
-        }));
-        return false;
       }
+
+      commitLoadState(operationId, (currentState) => ({
+        ...currentState,
+        documentState: SpecDocumentStateFactory.failed(
+          activeWorkspacePath,
+          specId,
+          fileKey,
+          result.error,
+          correlationId,
+        ),
+      }));
+      return false;
     },
-    [commitLoadState, workspacePath],
+    [commitLoadState],
   );
 
   const loadResolvedSelection = useCallback(
     async (
-      operationId: string,
+      operationId: OperationId,
       activeWorkspacePath: string,
       selection: ResolvedSelection,
       canCommit: ShouldCommitState = () => true,
@@ -279,6 +289,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
         ...currentState,
         selection: {
           specId: selection.spec?.id ?? null,
+          artifactIdentity: null,
           fileKey: selection.fileKey,
         },
       }));
@@ -296,22 +307,24 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
         return true;
       }
 
-      return await loadDocument(
+      return await loadDocument({
         operationId,
-        selection.spec.id,
-        selection.fileKey,
-        activeWorkspacePath,
-        canCommit,
-      );
+        target: {
+          workspacePath: activeWorkspacePath,
+          specId: selection.spec.id,
+          fileKey: selection.fileKey,
+        },
+      });
     },
     [commitLoadState, loadDocument, onSelectionChange],
   );
 
   const loadSpecTree = useCallback(
     async (
-      operationId: string,
+      operationId: OperationId,
       preferredSelection: PreferredSelection,
       canCommit: ShouldCommitState = () => true,
+      onTreeLoaded?: OnSpecTreeLoaded,
     ): Promise<boolean> => {
       if (!canCommit()) {
         return false;
@@ -323,6 +336,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
           documentState: SpecDocumentStateFactory.idle(null),
           selection: {
             specId: null,
+            artifactIdentity: null,
             fileKey: null,
           },
           specTreeState: initialSpecTreeState,
@@ -355,6 +369,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
           ...currentState,
           specTreeState: SpecTreeStateFactory.loaded(activeWorkspacePath, tree),
         }));
+        onTreeLoaded?.(tree);
         const nextSelection = SpecTreeDomain.resolveSelection(
           tree,
           preferredSelection,
@@ -376,6 +391,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
           documentState: SpecDocumentStateFactory.idle(activeWorkspacePath),
           selection: {
             specId: null,
+            artifactIdentity: null,
             fileKey: null,
           },
           specTreeState: SpecTreeStateFactory.failed(
@@ -408,7 +424,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
   );
 
   useEffect(() => {
-    const operationId = createSpecLoadOperationId();
+    const operationId = OperationId.create();
     let cancelled = false;
     /** @returns Whether this effect run is still active and may commit state. */
     const canCommit = (): boolean => !cancelled;
@@ -417,11 +433,14 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
       ...currentState,
       activeOperationId: operationId,
       archiveSpecError: null,
+      archiveFailure: null,
+      archiveReveal: null,
       archivingSpecId: null,
       documentState: SpecDocumentStateFactory.idle(workspacePath),
       isLoading: workspacePath !== null,
       selection: {
         specId: null,
+        artifactIdentity: null,
         fileKey: null,
       },
       specTreeState:
@@ -477,6 +496,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
           ...currentState,
           selection: {
             specId,
+            artifactIdentity: null,
             fileKey: defaultFileKey,
           },
         }));
@@ -497,12 +517,26 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
           return true;
         }
 
-        return await loadDocument(
+        if (activeWorkspacePath === null) {
+          commitLoadState(operationId, (currentState) => ({
+            ...currentState,
+            documentState: SpecDocumentStateFactory.idle(
+              activeWorkspacePath,
+              specId,
+              defaultFileKey,
+            ),
+          }));
+          return true;
+        }
+
+        return await loadDocument({
           operationId,
-          specId,
-          defaultFileKey,
-          activeWorkspacePath,
-        );
+          target: {
+            workspacePath: activeWorkspacePath,
+            specId,
+            fileKey: defaultFileKey,
+          },
+        });
       });
     },
     [
@@ -513,6 +547,33 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
       tree,
       workspacePath,
     ],
+  );
+
+  const selectSpecFile = useCallback(
+    async (specId: string, fileKey: string): Promise<void> => {
+      await runSpecLoad(async (operationId) => {
+        const target = resolveSpecFileSelection(
+          tree,
+          workspacePath,
+          specId,
+          fileKey,
+        );
+        if (target === null || tree === null) {
+          return false;
+        }
+
+        const spec = SpecTreeDomain.findNode(tree, target.specId);
+        if (spec === null) {
+          return false;
+        }
+
+        return loadResolvedSelection(operationId, target.workspacePath, {
+          spec,
+          fileKey: target.fileKey,
+        });
+      });
+    },
+    [loadResolvedSelection, runSpecLoad, tree, workspacePath],
   );
 
   const selectFileKey = useCallback(
@@ -537,12 +598,26 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
           fileKey,
         });
 
-        return await loadDocument(
+        if (activeWorkspacePath === null) {
+          commitLoadState(operationId, (currentState) => ({
+            ...currentState,
+            documentState: SpecDocumentStateFactory.idle(
+              activeWorkspacePath,
+              selectedSpecId,
+              fileKey,
+            ),
+          }));
+          return true;
+        }
+
+        return await loadDocument({
           operationId,
-          selectedSpecId,
-          fileKey,
-          activeWorkspacePath,
-        );
+          target: {
+            workspacePath: activeWorkspacePath,
+            specId: selectedSpecId,
+            fileKey,
+          },
+        });
       });
     },
     [
@@ -560,10 +635,30 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
       return true;
     }
 
-    return await runSpecLoad((operationId) =>
-      loadDocument(operationId, selectedSpecId, selectedFileKey, workspacePath),
-    );
+    return await runSpecLoad(async (operationId) => {
+      if (workspacePath === null) {
+        commitLoadState(operationId, (currentState) => ({
+          ...currentState,
+          documentState: SpecDocumentStateFactory.idle(
+            workspacePath,
+            selectedSpecId,
+            selectedFileKey,
+          ),
+        }));
+        return true;
+      }
+
+      return loadDocument({
+        operationId,
+        target: {
+          workspacePath,
+          specId: selectedSpecId,
+          fileKey: selectedFileKey,
+        },
+      });
+    });
   }, [
+    commitLoadState,
     loadDocument,
     runSpecLoad,
     selectedFileKey,
@@ -583,25 +678,50 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
         commitLoadState(operationId, (currentState) => ({
           ...currentState,
           archiveSpecError: null,
+          archiveFailure: null,
+          archiveReveal: null,
           archivingSpecId: specId,
         }));
 
         try {
-          await specGateway.archiveSpec(specCommands, {
+          const response = await specGateway.archiveSpec(specCommands, {
             workspacePath: activeWorkspacePath,
             specId,
           });
 
-          return await loadSpecTree(operationId, {
-            specId: selectedSpecId,
-            fileKey: selectedFileKey,
-          });
+          return await loadSpecTree(
+            operationId,
+            {
+              specId: selectedSpecId,
+              fileKey: selectedFileKey,
+            },
+            () => workspacePathRef.current === activeWorkspacePath,
+            (loadedTree) => {
+              const destination = SpecTreeDomain.findNodeByIdentity(
+                loadedTree,
+                {
+                  sourceGroupId: response.sourceGroupId,
+                  relativeId: response.destinationNodeId,
+                },
+              );
+              commitLoadState(operationId, (currentState) => ({
+                ...currentState,
+                archiveReveal: {
+                  status: destination === null ? "missing" : "success",
+                  workspacePath: activeWorkspacePath,
+                  response,
+                },
+              }));
+            },
+          );
         } catch (error) {
+          const archiveError = SpecFeatureError.fromCommandError(
+            ArchiveSpecCommandError.fromUnknown(error),
+          );
           commitLoadState(operationId, (currentState) => ({
             ...currentState,
-            archiveSpecError: SpecFeatureError.fromCommandError(
-              ArchiveSpecCommandError.fromUnknown(error),
-            ),
+            archiveSpecError: archiveError,
+            archiveFailure: { specId, error: archiveError },
           }));
           return false;
         } finally {
@@ -622,26 +742,52 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
     ],
   );
 
+  const retryArchiveSpec = useCallback(async (): Promise<boolean> => {
+    if (state.archiveFailure === null) {
+      return false;
+    }
+
+    return await archiveSpec(state.archiveFailure.specId);
+  }, [archiveSpec, state.archiveFailure]);
+
+  const refreshArchiveReveal = useCallback(async (): Promise<boolean> => {
+    setState((currentState) => ({
+      ...currentState,
+      archiveFailure: null,
+      archiveReveal: null,
+      archiveSpecError: null,
+    }));
+    return await reloadSpecs();
+  }, [reloadSpecs]);
+
   const selectors: SpecsSelectors = useMemo(
     () => buildSpecsSelectors(state),
     [state],
   );
   const actions: SpecsActions = useMemo(
     () => ({
+      /** No-op: the legacy hook has no in-memory bundle to select artifacts from without IPC. */
+      selectArtifact: () => undefined,
       archiveSpec,
+      retryArchiveSpec,
+      refreshArchiveReveal,
       reloadSpecs,
       selectSpec,
+      selectSpecFile,
       selectFileKey,
       reloadDocument,
       resetSelection,
     }),
     [
       archiveSpec,
+      refreshArchiveReveal,
       reloadDocument,
       reloadSpecs,
       resetSelection,
+      retryArchiveSpec,
       selectFileKey,
       selectSpec,
+      selectSpecFile,
     ],
   );
 
@@ -651,3 +797,5 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
     selectors,
   };
 }
+
+export { useSpecs } from "../useSpecsV2";

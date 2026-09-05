@@ -1,8 +1,8 @@
 {
   "name": "spec-viewer",
   "private": true,
-  "version": "0.1.9",
-  "description": "Desktop reviewer for Spec Skill Markdown workspaces.",
+  "version": "0.1.11",
+  "description": "Desktop reviewer for spec-driven-dev plugin workspaces.",
   "author": "DIO0550",
   "license": "UNLICENSED",
   "type": "module",
@@ -21,6 +21,13 @@
     "test": "vitest",
     "test:run": "vitest run --passWithNoTests",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "pnpm test:e2e:app",
+    "test:e2e:app": "playwright test --config playwright.config.ts",
+    "test:e2e:storybook": "playwright test --config playwright.storybook.config.ts",
+    "test:e2e:native": "xvfb-run -a sh -c 'wdio run wdio.native.conf.ts && node scripts/run-native-crash-smoke.mjs'",
+    "test:acceptance:cargo": "node scripts/run-cargo-leaf.mjs",
+    "test:acceptance:evidence": "node scripts/generate-review-evidence.mjs",
+    "test:e2e:install": "playwright install chromium",
     "preview": "vite preview",
     "tauri": "tauri",
     "package": "tauri build --ci",
@@ -29,6 +36,8 @@
     "release:check": "pnpm check && pnpm test:run && cargo test --manifest-path src-tauri/Cargo.toml && pnpm build && pnpm package:debug:linux",
     "storybook": "storybook dev -p 6006 --no-open",
     "build-storybook": "storybook build",
+    "visual:capture": "node ./scripts/storybook-visual-regression.mjs capture",
+    "visual:compare": "node ./scripts/storybook-visual-regression.mjs compare",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "format": "biome format --write .",
@@ -39,8 +48,10 @@
     "@tauri-apps/api": "^2.11.0",
     "@tauri-apps/plugin-dialog": "~2.7.0",
     "@tauri-apps/plugin-opener": "^2.5.3",
+    "diff": "9.0.0",
     "highlight.js": "^11.11.1",
     "lucide-react": "^1.14.0",
+    "mermaid": "^10.9.8",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-markdown": "^10.1.0",
@@ -49,7 +60,9 @@
     "tailwindcss": "^4.2.4"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@biomejs/biome": "^2.4.13",
+    "@playwright/test": "1.62.1",
     "@storybook/addon-a11y": "^10.3.6",
     "@storybook/addon-themes": "^10.3.6",
     "@storybook/react-vite": "^10.3.6",
@@ -59,12 +72,23 @@
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^6.0.1",
     "@vitest/coverage-v8": "^4.1.5",
+    "@wdio/cli": "^9.30.1",
+    "@wdio/local-runner": "^9.30.1",
+    "@wdio/mocha-framework": "^9.30.1",
+    "@wdio/spec-reporter": "^9.30.1",
     "happy-dom": "^20.9.0",
+    "odiff-bin": "4.5.0",
     "oxlint": "^1.62.0",
     "oxlint-tsgolint": "^0.22.1",
     "storybook": "^10.3.6",
     "typescript": "~5.8.3",
     "vite": "^8.0.10",
-    "vitest": "^4.1.5"
+    "vitest": "^4.1.5",
+    "webdriverio": "^9.30.1"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "odiff-bin"
+    ]
   }
 }

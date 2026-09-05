@@ -1,3 +1,4 @@
+import type { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import type { SpecFileKey } from "@/features/specs/types/spec";
 
 export type CommentScope = Readonly<{
@@ -28,5 +29,13 @@ export const CommentScope = {
       specId: input.specId,
       fileKey: input.fileKey,
     };
+  },
+  /** @returns Scope identity for stale comment operation guards. */
+  toKey(scope: CommentScope | null, statusFilter: CommentStatusFilter): string {
+    if (scope === null) {
+      return `idle:${statusFilter}`;
+    }
+
+    return `${scope.workspacePath}:${scope.specId}:${scope.fileKey}:${statusFilter}`;
   },
 } as const;

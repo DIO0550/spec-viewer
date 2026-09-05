@@ -4,6 +4,7 @@ use std::{
     collections::{HashMap, HashSet},
     fs, io,
     path::Path,
+    sync::{Mutex, MutexGuard},
 };
 
 use serde_json::{Map, Value};
@@ -12,8 +13,8 @@ use uuid::Uuid;
 use crate::{
     domain::{
         comment::{
-            Comment, CommentId, CommentListQuery, CommentRepository, CommentRepositoryError,
-            CommentScope,
+            Comment, CommentDomainError, CommentId, CommentListQuery, CommentRepository,
+            CommentRepositoryError, CommentScope,
         },
         spec::SpecFileKey,
         workspace::WorkspaceLayout,
@@ -23,6 +24,8 @@ use crate::{
         comments::{deserialize_comments, serialize_comments, CommentJsonError},
     },
 };
+
+static COMMENT_STORE_LOCK: Mutex<()> = Mutex::new(());
 
 #[derive(Debug, Clone)]
 pub struct JsonCommentRepository {
@@ -109,6 +112,7 @@ impl JsonCommentRepository {
 
 impl CommentRepository for JsonCommentRepository {
     fn list(&self, query: &CommentListQuery) -> Result<Vec<Comment>, CommentRepositoryError> {
+        let _store_guard = lock_comment_store()?;
         let state = self.load(query.scope())?;
 
         Ok(state
@@ -123,6 +127,7 @@ impl CommentRepository for JsonCommentRepository {
         scope: &CommentScope,
         comment: Comment,
     ) -> Result<Comment, CommentRepositoryError> {
+        let _store_guard = lock_comment_store()?;
         ensure_scope_contains(scope, &comment)?;
 
         let mut state = self.load(scope)?;
@@ -145,6 +150,7 @@ impl CommentRepository for JsonCommentRepository {
         scope: &CommentScope,
         comment: Comment,
     ) -> Result<Comment, CommentRepositoryError> {
+        let _store_guard = lock_comment_store()?;
         ensure_scope_contains(scope, &comment)?;
 
         let mut state = self.load(scope)?;
@@ -153,6 +159,9 @@ impl CommentRepository for JsonCommentRepository {
             .iter_mut()
             .find(|existing| existing.id() == comment.id())
             .ok_or_else(|| CommentRepositoryError::not_found(comment.id().clone()))?;
+        existing
+            .ensure_update_time(comment.updated_at())
+            .map_err(|source| stale_update_error(existing, &comment, source))?;
 
         *existing = comment.clone();
         self.write(&state, &state.comments)?;
@@ -161,6 +170,7 @@ impl CommentRepository for JsonCommentRepository {
     }
 
     fn delete(&self, scope: &CommentScope, id: &CommentId) -> Result<(), CommentRepositoryError> {
+        let _store_guard = lock_comment_store()?;
         let mut state = self.load(scope)?;
         let initial_len = state.comments.len();
         state.comments.retain(|comment| comment.id() != id);
@@ -179,6 +189,32 @@ struct CommentFileState {
     file_key: SpecFileKey,
     comments: Vec<Comment>,
     previous_json: Option<Value>,
+}
+
+fn lock_comment_store() -> Result<MutexGuard<'static, ()>, CommentRepositoryError> {
+    COMMENT_STORE_LOCK
+        .lock()
+        .map_err(|_| CommentRepositoryError::unavailable("comment store lock is poisoned"))
+}
+
+fn stale_update_error(
+    existing: &Comment,
+    attempted: &Comment,
+    source: CommentDomainError,
+) -> CommentRepositoryError {
+    match source {
+        CommentDomainError::UpdatedAtRollback { current, attempted } => {
+            CommentRepositoryError::stale_update(existing.id().clone(), current, attempted)
+        }
+        CommentDomainError::UpdatedBeforeCreated => CommentRepositoryError::stale_update(
+            existing.id().clone(),
+            existing.updated_at(),
+            attempted.updated_at(),
+        ),
+        source => CommentRepositoryError::invalid_data(format!(
+            "comment replacement timestamp validation failed: {source}"
+        )),
+    }
 }
 
 fn ensure_scope_contains(
@@ -235,7 +271,7 @@ fn build_comment_document(
     };
 
     if let Value::Object(object) = &mut document {
-        object.insert("version".to_string(), Value::from(1));
+        object.insert("version".to_string(), Value::from(2));
         object.insert("comments".to_string(), Value::Array(comments));
     }
 
@@ -246,11 +282,10 @@ fn previous_comment_records_by_id(previous_json: Option<&Value>) -> HashMap<Stri
     let Some(previous_json) = previous_json else {
         return HashMap::new();
     };
-    let comments = match previous_json {
-        Value::Object(object) => object.get("comments").and_then(Value::as_array),
-        Value::Array(comments) => Some(comments),
-        _ => None,
-    };
+    let comments = previous_json
+        .as_object()
+        .and_then(|object| object.get("comments"))
+        .and_then(Value::as_array);
     let Some(comments) = comments else {
         return HashMap::new();
     };
@@ -269,6 +304,8 @@ fn previous_comment_records_by_id(previous_json: Option<&Value>) -> HashMap<Stri
 fn merge_known_fields(previous: Value, current: Value) -> Value {
     match (previous, current) {
         (Value::Object(mut previous_object), Value::Object(current_object)) => {
+            previous_object.remove("resolved");
+
             for (key, value) in current_object {
                 if key == "anchor" {
                     merge_anchor_field(&mut previous_object, value);
@@ -400,6 +437,8 @@ mod tests {
     use std::{
         env, fs,
         path::PathBuf,
+        sync::{Arc, Barrier},
+        thread,
         time::{SystemTime, UNIX_EPOCH},
     };
 
@@ -630,6 +669,129 @@ mod tests {
     }
 
     #[test]
+    fn update_rejects_older_timestamp_without_overwriting_newer_persisted_comment() {
+        let workspace = TestWorkspace::new("stale-update");
+        let repository = workspace.repository();
+        let scope = scope("auth-flow", SpecFileKey::Impl);
+        let initial = comment(
+            "cmt_stale",
+            SpecFileKey::Impl,
+            "Initial body",
+            CommentStatus::Open,
+            1,
+        );
+        let newer = comment(
+            "cmt_stale",
+            SpecFileKey::Impl,
+            "Newer body",
+            CommentStatus::Resolved,
+            3,
+        );
+        let stale = comment(
+            "cmt_stale",
+            SpecFileKey::Impl,
+            "Stale body",
+            CommentStatus::Open,
+            2,
+        );
+        repository
+            .add(&scope, initial)
+            .expect("initial comment should be added");
+        repository
+            .update(&scope, newer.clone())
+            .expect("newer comment should be persisted");
+
+        let result = repository.update(&scope, stale.clone());
+
+        assert_eq!(
+            Err(CommentRepositoryError::StaleUpdate {
+                id: stale.id().clone(),
+                current: timestamp(3),
+                attempted: timestamp(2),
+            }),
+            result
+        );
+        assert_eq!(
+            vec![newer],
+            repository
+                .list(&CommentListQuery::new(scope))
+                .expect("newer persisted comment should remain")
+        );
+    }
+
+    #[test]
+    fn concurrent_updates_keep_the_greatest_persisted_timestamp() {
+        let workspace = TestWorkspace::new("concurrent-update");
+        let repository = workspace.repository();
+        let scope = scope("auth-flow", SpecFileKey::Impl);
+        repository
+            .add(
+                &scope,
+                comment(
+                    "cmt_concurrent",
+                    SpecFileKey::Impl,
+                    "Initial body",
+                    CommentStatus::Open,
+                    1,
+                ),
+            )
+            .expect("initial comment should be added");
+
+        let barrier = Arc::new(Barrier::new(3));
+        let stale_repository = repository.clone();
+        let stale_scope = scope.clone();
+        let stale_barrier = barrier.clone();
+        let stale = comment(
+            "cmt_concurrent",
+            SpecFileKey::Impl,
+            "Stale body",
+            CommentStatus::Open,
+            2,
+        );
+        let stale_for_thread = stale.clone();
+        let stale_update = thread::spawn(move || {
+            stale_barrier.wait();
+            stale_repository.update(&stale_scope, stale_for_thread)
+        });
+        let newer_repository = repository.clone();
+        let newer_scope = scope.clone();
+        let newer_barrier = barrier.clone();
+        let newer = comment(
+            "cmt_concurrent",
+            SpecFileKey::Impl,
+            "Newer body",
+            CommentStatus::Resolved,
+            3,
+        );
+        let newer_for_thread = newer.clone();
+        let newer_update = thread::spawn(move || {
+            newer_barrier.wait();
+            newer_repository.update(&newer_scope, newer_for_thread)
+        });
+
+        barrier.wait();
+        let stale_result = stale_update.join().expect("stale thread should finish");
+        let newer_result = newer_update.join().expect("newer thread should finish");
+
+        assert!(
+            stale_result == Ok(stale.clone())
+                || stale_result
+                    == Err(CommentRepositoryError::StaleUpdate {
+                        id: stale.id().clone(),
+                        current: timestamp(3),
+                        attempted: timestamp(2),
+                    })
+        );
+        assert_eq!(Ok(newer.clone()), newer_result);
+        assert_eq!(
+            vec![newer],
+            repository
+                .list(&CommentListQuery::new(scope))
+                .expect("greatest timestamp should remain")
+        );
+    }
+
+    #[test]
     fn add_rejects_duplicate_ids_without_overwriting_file() {
         let workspace = TestWorkspace::new("duplicate-add");
         let repository = workspace.repository();
@@ -750,7 +912,7 @@ mod tests {
             SpecFileKey::Impl,
             r#"
 {
-  "version": 1,
+  "version": 2,
   "comments": [
     {
       "id": "cmt_duplicate",
@@ -762,7 +924,7 @@ mod tests {
         "charOffset": [3, 16]
       },
       "body": "First body",
-      "resolved": false,
+      "status": "open",
       "createdAt": "2026-05-05T12:00:01Z",
       "updatedAt": "2026-05-05T12:00:01Z"
     },
@@ -776,7 +938,7 @@ mod tests {
         "charOffset": [3, 16]
       },
       "body": "Second body",
-      "resolved": false,
+      "status": "open",
       "createdAt": "2026-05-05T12:00:01Z",
       "updatedAt": "2026-05-05T12:00:02Z"
     }
@@ -808,7 +970,7 @@ mod tests {
             SpecFileKey::Impl,
             r#"
 {
-  "version": 1,
+  "version": 2,
   "source": "external-tool",
   "comments": [
     {
@@ -823,7 +985,7 @@ mod tests {
         "externalAnchorField": "preserve"
       },
       "body": "Old body",
-      "resolved": false,
+      "status": "open",
       "createdAt": "2026-05-05T12:00:01Z",
       "updatedAt": "2026-05-05T12:00:01Z"
     }
@@ -856,7 +1018,8 @@ mod tests {
             json["comments"][0]["anchor"]["externalAnchorField"]
         );
         assert_eq!(serde_json::json!("New body"), json["comments"][0]["body"]);
-        assert_eq!(serde_json::json!(true), json["comments"][0]["resolved"]);
+        assert_eq!(serde_json::json!("resolved"), json["comments"][0]["status"]);
+        assert!(json["comments"][0].get("resolved").is_none());
         assert_eq!(
             vec!["impl.json".to_string(), "notes.txt".to_string()],
             workspace.comments_directory_entries("auth-flow")

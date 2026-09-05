@@ -21,8 +21,8 @@ import type {
 import {
   selectWorkspaceDirectory as defaultSelectWorkspaceDirectory,
   validateWorkspaceDirectory as defaultValidateWorkspaceDirectory,
-} from "@/shared/api/tauri";
-import { getUnknownErrorMessage } from "@/shared/lib/errorMessage";
+} from "@/lib/api/tauri";
+import { getUnknownErrorMessage } from "@/utils/errorMessage";
 
 const defaultWorkspaceLoaderCommands: WorkspaceLoaderCommands = {
   selectWorkspaceDirectory: defaultSelectWorkspaceDirectory,

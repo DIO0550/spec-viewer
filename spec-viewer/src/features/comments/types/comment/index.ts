@@ -1,38 +1,19 @@
-import type { SpecFileKey } from "@/features/specs/types/spec";
-import type { Comment as DomainComment } from "@/features/comments/domain/comment";
-import { CommentId as CommentIdValue } from "@/features/comments/types/commentId";
-import type { CommentId as BrandedCommentId } from "@/features/comments/types/commentId";
+import type {
+  Comment,
+  IsoDateTimeString,
+} from "@/features/comments/domain/comment";
+import type {
+  CommentAnchor,
+  CommentAnchorResolution,
+} from "@/features/comments/domain/commentAnchor";
+import type { CommentId } from "@/features/comments/domain/commentId";
 import type {
   CommentStatus,
   CommentStatusFilter,
 } from "@/features/comments/domain/commentStatusFilter";
+import type { SpecFileKey } from "@/features/specs/domain/specFile";
 
-export type CommentId = BrandedCommentId;
-export const CommentId = CommentIdValue;
-export type {
-  CommentStatus,
-  CommentStatusFilter,
-} from "@/features/comments/domain/commentStatusFilter";
-
-export type IsoDateTimeString = string;
-
-export type CommentBlockType =
-  | "paragraph"
-  | "heading"
-  | "list_item"
-  | "code_block"
-  | "block_quote"
-  | "table"
-  | "thematic_break"
-  | "html"
-  | "other";
-
-export type CommentDisplayFilter =
-  | CommentStatusFilter
-  | "moved"
-  | "fuzzy"
-  | "stale"
-  | "orphaned";
+export type CommentDisplayFilter = CommentStatusFilter;
 
 export type CommentDisplayState = CommentStatus | "orphaned";
 
@@ -42,37 +23,6 @@ export type CommentAnchorDisplayStatus =
   | "fuzzy"
   | "orphaned"
   | "stale";
-
-export type CommentAnchorResolutionStatus =
-  | "resolved"
-  | "moved"
-  | "fuzzy"
-  | "orphaned";
-
-export type CommentAnchorResolutionReason =
-  | "exact_match"
-  | "moved_by_hash"
-  | "stale_snippet"
-  | "fuzzy_match"
-  | "missing_original_block"
-  | "ambiguous_fuzzy_candidates"
-  | "below_threshold"
-  | "deleted_text"
-  | "unsupported_block_type";
-
-export type CommentCharRange = Readonly<{
-  start: number;
-  end: number;
-}>;
-
-export type CommentAnchor = Readonly<{
-  fileKey: SpecFileKey;
-  blockType: CommentBlockType;
-  blockIndex: number;
-  textHash: string;
-  textSnippet: string;
-  charRange: CommentCharRange;
-}>;
 
 export type CommentSelectionBounds = Readonly<{
   top: number;
@@ -92,31 +42,9 @@ export type AddCommentSubmitInput = Readonly<{
   body: string;
 }>;
 
-export type CommentAnchorResolutionTarget = Readonly<{
-  blockType: CommentBlockType;
-  blockIndex: number;
-  textHash: string;
-  textSnippet: string;
-  sourceRange: Readonly<{
-    startByteOffset: number;
-    endByteOffset: number;
-  }> | null;
-  score: number;
-}>;
-
-export type CommentAnchorResolution = Readonly<{
-  status: CommentAnchorResolutionStatus;
-  reason: CommentAnchorResolutionReason;
-  details: string | null;
-  target: CommentAnchorResolutionTarget | null;
-}>;
-
-export type Comment = DomainComment;
-
 export type CommentViewModel = Readonly<{
   comment: Comment;
   displayState: CommentDisplayState;
-  isResolved: boolean;
   isOrphaned: boolean;
   canJumpToAnchor: boolean;
 }>;
@@ -238,7 +166,6 @@ export type SpecSkillMcpFeedbackComment = Readonly<{
   fileKey: SpecFileKey;
   body: string;
   status: CommentStatus;
-  resolved: boolean;
   anchor: CommentAnchor;
   anchorResolution: CommentAnchorResolution | null;
   createdAt: IsoDateTimeString;
@@ -284,43 +211,4 @@ export type GenerateLlmPromptResponse = Readonly<{
   prompt: string;
   commentCount: number;
   contextFileCount: number;
-}>;
-
-export type CommentCommandPayloads = Readonly<{
-  list_comments: Readonly<{
-    request: ListCommentsRequest;
-    response: ListCommentsResponse;
-  }>;
-  add_comment: Readonly<{
-    request: AddCommentRequest;
-    response: Comment;
-  }>;
-  update_comment: Readonly<{
-    request: UpdateCommentRequest;
-    response: Comment;
-  }>;
-  delete_comment: Readonly<{
-    request: DeleteCommentRequest;
-    response: DeleteCommentResponse;
-  }>;
-  resolve_comment: Readonly<{
-    request: CommentStatusRequest;
-    response: Comment;
-  }>;
-  reopen_comment: Readonly<{
-    request: CommentStatusRequest;
-    response: Comment;
-  }>;
-  toggle_comment_resolved: Readonly<{
-    request: CommentStatusRequest;
-    response: Comment;
-  }>;
-  export_comments: Readonly<{
-    request: ExportCommentsRequest;
-    response: ExportCommentsResponse;
-  }>;
-  generate_llm_prompt: Readonly<{
-    request: GenerateLlmPromptRequest;
-    response: GenerateLlmPromptResponse;
-  }>;
 }>;

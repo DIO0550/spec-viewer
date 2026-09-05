@@ -11,8 +11,8 @@ import type {
   WorkspaceContextValue,
 } from "@/features/workspace/context/types";
 import { toWorkspaceError } from "@/features/workspace/domain/workspaceError";
-import { loadWorkspace as defaultLoadWorkspace } from "@/shared/api/tauri";
-import { LoadWorkspaceCommandError } from "@/shared/api/tauri/loadWorkspace";
+import { loadWorkspace as defaultLoadWorkspace } from "@/lib/api/tauri";
+import { LoadWorkspaceCommandError } from "@/lib/api/tauri/loadWorkspace";
 
 /** @returns Workspace loading state and actions for selecting/resetting a workspace. */
 export function useWorkspaceState(): WorkspaceContextValue {
