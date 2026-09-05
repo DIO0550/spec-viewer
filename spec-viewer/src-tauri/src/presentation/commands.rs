@@ -22,6 +22,11 @@ use crate::app::{
     },
 };
 use crate::domain::comment::diff::{CancellationToken, DiffReviewIdentity};
+use crate::{app::use_cases::AppUseCaseError, domain::spec::SpecId};
+
+pub(super) fn parse_spec_id(value: &str) -> Result<SpecId, AppUseCaseError> {
+    SpecId::new(value).map_err(AppUseCaseError::from)
+}
 use crate::infrastructure::{
     filesystem::FilesystemSpecDiffTargetResolver, git::GitRepositoryAdapter,
     persistence::diff_comment_backend::FilesystemDiffCommentBackend,

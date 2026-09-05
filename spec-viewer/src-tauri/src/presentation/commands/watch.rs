@@ -14,7 +14,7 @@ use crate::{
     domain::spec::SpecFileKey,
 };
 
-use super::CommandState;
+use super::{parse_spec_id, CommandState};
 
 pub type StartSpecFileWatchCommandResult<T> = Result<T, WatchCommandError>;
 pub type StopSpecFileWatchCommandResult<T> = Result<T, WatchCommandError>;
@@ -140,9 +140,10 @@ pub fn start_spec_file_watch(
         .use_cases()
         .load_workspace(&request.workspace_path)
         .map_err(WatchCommandError::from)?;
+    let spec_id = parse_spec_id(&request.spec_id)?;
     let plan = state
         .use_cases()
-        .plan_file_watch(&workspace, &request.spec_id, file_key)
+        .plan_file_watch(&workspace, &spec_id, file_key)
         .map_err(WatchCommandError::from)?;
     let use_cases = state.use_cases().clone();
     let registration = state
@@ -265,6 +266,15 @@ mod tests {
 
         assert_eq!("fileWatch", value["code"]);
         assert_eq!("watch failed", value["message"]);
+    }
+
+    #[test]
+    fn spec_id_parser_preserves_watch_invalid_spec_ipc_code() {
+        let error = parse_spec_id("../outside").expect_err("unsafe spec id should fail");
+        let error = WatchCommandError::from_app_error(error);
+        let value = serde_json::to_value(error).expect("error should serialize");
+
+        assert_eq!("invalidSpec", value["code"]);
     }
 
     #[test]

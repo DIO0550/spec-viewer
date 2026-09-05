@@ -108,18 +108,17 @@ impl FilesystemAppUseCases {
     pub fn plan_file_watch(
         &self,
         workspace: &LoadWorkspaceResult,
-        spec_id: &str,
+        spec_id: &SpecId,
         key: SpecFileKey,
     ) -> Result<FileWatchPlan, AppUseCaseError> {
-        let spec_id = SpecId::new(spec_id)?;
         let effective_config = spec_config_for_directory(
             &self.config_loader,
             workspace.layout(),
             workspace.config(),
-            &spec_id,
+            spec_id,
         )?;
 
-        plan_file_watch(workspace, &effective_config, spec_id.as_str(), key)
+        plan_file_watch(workspace, &effective_config, spec_id, key)
     }
 
     pub fn archive_spec(
@@ -156,15 +155,14 @@ impl FilesystemAppUseCases {
     pub fn read_spec_file_cached(
         &self,
         workspace: &LoadWorkspaceResult,
-        spec_id: &str,
+        spec_id: &SpecId,
         key: SpecFileKey,
     ) -> Result<ReadSpecFileResult, AppUseCaseError> {
-        let spec_id = SpecId::new(spec_id)?;
         let effective_config = spec_config_for_directory(
             &self.config_loader,
             workspace.layout(),
             workspace.config(),
-            &spec_id,
+            spec_id,
         )?;
 
         self.markdown_cache
@@ -172,7 +170,7 @@ impl FilesystemAppUseCases {
                 &self.markdown_reader,
                 workspace.layout(),
                 &effective_config,
-                spec_id.as_str(),
+                spec_id,
                 key,
             )
             .map(ReadSpecFileResult::from)
@@ -182,7 +180,7 @@ impl FilesystemAppUseCases {
     pub fn read_spec_blocks_cached(
         &self,
         workspace: &LoadWorkspaceResult,
-        spec_id: &str,
+        spec_id: &SpecId,
         key: SpecFileKey,
     ) -> Result<Vec<MarkdownBlock>, AppUseCaseError> {
         match self.read_spec_file_cached(workspace, spec_id, key)? {
@@ -226,19 +224,18 @@ where
     pub fn read_spec_file(
         &self,
         workspace: &LoadWorkspaceResult,
-        spec_id: &str,
+        spec_id: &SpecId,
         key: SpecFileKey,
     ) -> Result<ReadSpecFileResult, AppUseCaseError> {
-        let spec_id = SpecId::new(spec_id)?;
         let effective_config = spec_config_for_directory(
             &self.config_loader,
             workspace.layout(),
             workspace.config(),
-            &spec_id,
+            spec_id,
         )?;
 
         self.markdown_reader
-            .read_spec_file(workspace.layout(), &effective_config, &spec_id, key)
+            .read_spec_file(workspace.layout(), &effective_config, spec_id, key)
             .map_err(AppUseCaseError::from)
     }
 }
@@ -684,7 +681,7 @@ mod tests {
         );
 
         let result = use_cases
-            .read_spec_file(&workspace, "auth", SpecFileKey::Tasks)
+            .read_spec_file(&workspace, &spec_id("auth"), SpecFileKey::Tasks)
             .expect("spec file should be read");
 
         assert_eq!(ReadSpecFileResult::Found(document), result);
@@ -769,7 +766,7 @@ mod tests {
         );
 
         use_cases
-            .read_spec_file(&workspace, "auth", SpecFileKey::Tasks)
+            .read_spec_file(&workspace, &spec_id("auth"), SpecFileKey::Tasks)
             .expect("spec file read should resolve override");
 
         assert_eq!(
@@ -799,7 +796,7 @@ mod tests {
         );
 
         let result = use_cases
-            .read_spec_file(&workspace, "auth", SpecFileKey::Tasks)
+            .read_spec_file(&workspace, &spec_id("auth"), SpecFileKey::Tasks)
             .expect("missing file should be a result");
 
         assert_eq!(ReadSpecFileResult::Missing(missing), result);
@@ -836,6 +833,10 @@ mod tests {
         markdown_reader: MarkdownReader,
     ) -> AppUseCases<Detector, ConfigLoader, SpecTreeScanner, MarkdownReader> {
         AppUseCases::new(detector, config_loader, spec_tree_scanner, markdown_reader)
+    }
+
+    fn spec_id(value: &str) -> SpecId {
+        SpecId::new(value).expect("spec id should be valid")
     }
 
     fn workspace_layout(kind: WorkspaceKind) -> WorkspaceLayout {

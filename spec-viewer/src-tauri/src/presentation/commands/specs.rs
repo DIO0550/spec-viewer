@@ -14,11 +14,11 @@ use crate::{
     },
     domain::spec::{
         MarkdownBlock, MarkdownBlockSourceRange, SpecArtifactIdentity, SpecDocumentFormat,
-        SpecFile, SpecFileKey, SpecFileStatus, SpecId, SpecNode, SpecNodeKind,
+        SpecFile, SpecFileKey, SpecFileStatus, SpecNode, SpecNodeKind,
     },
 };
 
-use super::CommandState;
+use super::{parse_spec_id, CommandState};
 
 type SpecCommandResult<T> = Result<T, SpecCommandError>;
 
@@ -414,6 +414,7 @@ pub fn read_spec_file(
         SpecCommandError::invalid_request(format!("unsupported file key: {}", request.file_key))
     })?;
     let workspace = load_workspace(state.use_cases(), &request.workspace_path)?;
+    let spec_id = parse_spec_id(&request.spec_id)?;
     let performance_context = request
         .correlation_id
         .as_ref()
@@ -423,7 +424,7 @@ pub fn read_spec_file(
         .map(|context| start_span(context, "command.read_spec_file"));
     let result = state
         .use_cases()
-        .read_spec_file_cached(&workspace, &request.spec_id, key)
+        .read_spec_file_cached(&workspace, &spec_id, key)
         .map_err(SpecCommandError::from);
 
     if let (Some(context), Some(end_span)) = (performance_context.as_ref(), end_span) {
@@ -446,7 +447,7 @@ pub fn archive_spec(
     request: ArchiveSpecRequest,
 ) -> ArchiveSpecCommandResult<ArchiveSpecResponse> {
     let workspace = load_workspace(state.use_cases(), &request.workspace_path)?;
-    let spec_id = SpecId::new(&request.spec_id).map_err(AppUseCaseError::from)?;
+    let spec_id = parse_spec_id(&request.spec_id)?;
     let result = state.use_cases().archive_spec(&workspace, &spec_id)?;
 
     Ok(ArchiveSpecResponse::from(result))
@@ -959,6 +960,20 @@ mod tests {
         assert_eq!("/workspace/auth/tasks.html", response.path());
         assert!(response.blocks().is_empty());
     }
+
+    #[test]
+    fn spec_id_parser_preserves_invalid_spec_ipc_code() {
+        let error = parse_spec_id("../outside").expect_err("unsafe spec id should fail");
+        let error = SpecCommandError::from_app_error(error);
+        let value = serde_json::to_value(error).expect("error should serialize");
+
+        assert_eq!("invalidSpec", value["code"]);
+        assert_eq!(
+            "invalid spec input: unsafe spec id: ../outside",
+            value["message"]
+        );
+    }
+
     #[test]
     fn spec_archive_app_error_keeps_public_command_code() {
         let error = SpecCommandError::from(AppUseCaseError::SpecArchive {

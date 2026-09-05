@@ -22,7 +22,7 @@ use crate::{
     },
 };
 
-use super::CommandState;
+use super::{parse_spec_id, CommandState};
 
 pub type AddCommentCommandResult<T> = Result<T, AddCommentCommandError>;
 
@@ -534,7 +534,7 @@ pub fn list_comments(
     let result = (|| {
         let current_blocks = state
             .use_cases()
-            .read_spec_blocks_cached(&workspace, spec_id.as_str(), file_key)
+            .read_spec_blocks_cached(&workspace, &spec_id, file_key)
             .map_err(CommentCommandError::from)?;
         let resolutions = state
             .use_cases()
@@ -1125,8 +1125,7 @@ fn export_comment_file(
     file_key: SpecFileKey,
     file_label: &str,
 ) -> CommentCommandResult<ExportedCommentFile> {
-    let current_blocks =
-        read_current_markdown_blocks(use_cases, workspace, spec_id.as_str(), file_key)?;
+    let current_blocks = read_current_markdown_blocks(use_cases, workspace, spec_id, file_key)?;
     let resolutions = use_cases
         .comment_use_cases(workspace)
         .resolve_comment_anchors(spec_id, file_key, CommentStatusFilter::All, &current_blocks)?;
@@ -1152,8 +1151,7 @@ fn prompt_file(
     file_key: SpecFileKey,
     file_label: &str,
 ) -> CommentCommandResult<LlmPromptFile> {
-    let document =
-        read_current_markdown_document(use_cases, workspace, spec_id.as_str(), file_key)?;
+    let document = read_current_markdown_document(use_cases, workspace, spec_id, file_key)?;
     let resolutions = use_cases
         .comment_use_cases(workspace)
         .resolve_comment_anchors(
@@ -1557,7 +1555,7 @@ fn write_export_file(path: &str, contents: &str) -> CommentCommandResult<()> {
 fn read_current_markdown_document(
     use_cases: &crate::app::use_cases::FilesystemAppUseCases,
     workspace: &crate::app::use_cases::LoadWorkspaceResult,
-    spec_id: &str,
+    spec_id: &SpecId,
     file_key: SpecFileKey,
 ) -> CommentCommandResult<PromptMarkdownDocument> {
     let result = use_cases
@@ -1575,7 +1573,7 @@ fn read_current_markdown_document(
 fn read_current_markdown_blocks(
     use_cases: &crate::app::use_cases::FilesystemAppUseCases,
     workspace: &crate::app::use_cases::LoadWorkspaceResult,
-    spec_id: &str,
+    spec_id: &SpecId,
     file_key: SpecFileKey,
 ) -> CommentCommandResult<Vec<MarkdownBlock>> {
     let result = use_cases
@@ -1586,10 +1584,6 @@ fn read_current_markdown_blocks(
         ReadSpecFileResult::Found(document) => Ok(document.blocks().to_vec()),
         ReadSpecFileResult::Missing(_) => Ok(Vec::new()),
     }
-}
-
-fn parse_spec_id(value: &str) -> Result<SpecId, AppUseCaseError> {
-    SpecId::new(value).map_err(AppUseCaseError::from)
 }
 
 fn parse_comment_id(value: &str) -> Result<CommentId, AppUseCaseError> {
