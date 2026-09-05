@@ -7,7 +7,7 @@ use thiserror::Error;
 
 use crate::domain::spec::{
     MarkdownBlock, MarkdownBlockHash, MarkdownBlockIndex, MarkdownBlockSourceRange,
-    MarkdownBlockText, MarkdownBlockType, SpecDomainError,
+    MarkdownBlockText, MarkdownBlockType, SpecDomainError, TaskCounts,
 };
 use crate::infrastructure::markdown::hash::hash_normalized_block_text;
 use crate::infrastructure::markdown::normalizer::normalize_markdown_block_text;
@@ -87,6 +87,18 @@ pub fn parse_markdown_blocks(contents: &str) -> Result<Vec<MarkdownBlock>, Markd
         .enumerate()
         .map(|(index, pending)| pending.into_domain_block(index))
         .collect()
+}
+pub fn count_task_markers(contents: &str) -> Result<TaskCounts, MarkdownParseError> {
+    let (completed, total) = Parser::new_ext(contents, parser_options())
+        .filter_map(|event| match event {
+            Event::TaskListMarker(checked) => Some(checked),
+            _ => None,
+        })
+        .fold((0usize, 0usize), |(completed, total), checked| {
+            (completed + usize::from(checked), total + 1)
+        });
+
+    Ok(TaskCounts::new(completed, total)?)
 }
 
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
@@ -240,6 +252,32 @@ fn close_latest_block(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn counts_task_markers_from_markdown_events() {
+        let cases = [
+            ("empty", "", (0, 0)),
+            (
+                "nested and uppercase checked marker",
+                "- [ ] parent\n  - [X] child",
+                (1, 2),
+            ),
+            (
+                "code fence markers are ignored",
+                "~~~markdown\n- [x] example\n~~~\n\n- [ ] real",
+                (0, 1),
+            ),
+        ];
+
+        for (case_name, markdown, expected) in cases {
+            let counts = count_task_markers(markdown).expect("task markers should parse");
+
+            assert_eq!(
+                expected,
+                (counts.completed(), counts.total()),
+                "case failed: {case_name}",
+            );
+        }
+    }
 
     #[test]
     fn parses_common_markdown_blocks_in_stable_order() {

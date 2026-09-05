@@ -3,18 +3,21 @@ import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
 import { createCommentCommandTestDouble } from "@/features/comments/testing/comment-command-test-double";
-import { configurePerformanceLoggerForTest } from "@/shared/lib/performance";
-import type { CommentCommands } from "@/shared/api/tauri";
-import type {
-  Comment,
-  CommentAnchor,
-  ListCommentsResponse,
-} from "@/features/comments/types/comment";
-import { CommentId } from "@/features/comments/types/comment";
+import { configurePerformanceLoggerForTest } from "@/lib/performance";
+import type { CommentCommands } from "@/lib/api/tauri";
+import type { Comment } from "@/features/comments/domain/comment";
+import type { CommentAnchor } from "@/features/comments/domain/commentAnchor";
+import type { ListCommentsResponse } from "@/features/comments/types/comment";
+import { CommentId } from "@/features/comments/domain/commentId";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
-import type { CommentScope } from "@/features/comments/domain/commentScope";
+import {
+  CommentScope,
+  type CommentScope as CommentScopeType,
+} from "@/features/comments/domain/commentScope";
 import { useCommentOperations } from "@/features/comments/hooks/useCommentOperations";
 import { useComments } from "@/features/comments/hooks/useComments";
+import { SpecViewSelection } from "@/features/specs/domain/specViewSelection";
+import { WorkspacePath } from "@/domains/workspacePath";
 
 const commentId = CommentId.fromString;
 
@@ -35,7 +38,6 @@ const firstComment: Comment = {
   anchor,
   body: "Clarify this task",
   status: "open",
-  resolved: false,
   createdAt: "2026-05-05T10:00:00Z",
   updatedAt: "2026-05-05T10:00:00Z",
 };
@@ -51,29 +53,26 @@ const secondComment: Comment = {
 const resolvedComment: Comment = {
   ...firstComment,
   status: "resolved",
-  resolved: true,
   updatedAt: "2026-05-05T10:10:00Z",
 };
 
-const optimisticResolvedComment: Comment = {
-  ...firstComment,
-  status: "resolved",
-  resolved: true,
-};
+function createCommentScope(
+  fileKey: CommentScopeType["fileKey"],
+): CommentScopeType {
+  const selection = SpecViewSelection.synchronize(SpecViewSelection.empty(), {
+    workspacePath: WorkspacePath.fromString("/workspace/spec-reviewer"),
+    specId: "phase-2-comments",
+    fileKey,
+  });
 
-const tasksScope: CommentScope = {
-  workspacePath: "/workspace/spec-reviewer",
-  specId: "phase-2-comments",
-  fileKey: "tasks",
-};
+  return CommentScope.fromSelection(selection) as CommentScopeType;
+}
 
-const designScope: CommentScope = {
-  ...tasksScope,
-  fileKey: "design",
-};
+const tasksScope = createCommentScope("tasks");
+const designScope = createCommentScope("requirements");
 
 type HookProps = Readonly<{
-  scope: CommentScope | null;
+  scope: CommentScopeType | null;
   statusFilter?: CommentStatusFilter;
   commands: CommentCommands;
 }>;
@@ -173,7 +172,6 @@ function createCommands(
     },
     resolveComment: resolvedComment,
     reopenComment: firstComment,
-    toggleCommentResolved: resolvedComment,
   });
 
   return {
@@ -346,7 +344,7 @@ test("useCommentsはscope変更時にリセットして再読み込みする", a
   expect(listComments).toHaveBeenLastCalledWith({
     workspacePath: "/workspace/spec-reviewer",
     specId: "phase-2-comments",
-    fileKey: "design",
+    fileKey: "requirements",
     statusFilter: "all",
   });
   result.unmount();
@@ -386,6 +384,55 @@ test("useCommentsはコメント追加中のsaving状態と追加後の一覧を
 
   expect(result.current.comments).toEqual([firstComment, secondComment]);
   expect(result.current.operationState.status).toBe("idle");
+  result.unmount();
+});
+
+test("useCommentsはコメント追加失敗後の再試行でerrorからsavingを経てidleへ復旧する", async () => {
+  const retryDeferred = createDeferred<Comment>();
+  const addComment = vi
+    .fn()
+    .mockRejectedValueOnce("comment add failed")
+    .mockReturnValueOnce(retryDeferred.promise);
+  const result = renderUseComments({
+    scope: tasksScope,
+    commands: createCommands({ addComment }),
+  });
+
+  await flushAsyncEffects();
+  await act(async () => {
+    await expect(
+      result.current.addComment({
+        anchor: secondComment.anchor,
+        body: secondComment.body,
+      }),
+    ).resolves.toBeNull();
+  });
+
+  expect(result.current.operationState.status).toBe("error");
+  expect(result.current.isSaving).toBe(false);
+  expect(result.current.operationError).not.toBeNull();
+
+  let retryPromise: Promise<Comment | null> = Promise.resolve(null);
+  act(() => {
+    retryPromise = result.current.addComment({
+      anchor: secondComment.anchor,
+      body: secondComment.body,
+    });
+  });
+
+  expect(result.current.operationState.status).toBe("saving");
+  expect(result.current.isSaving).toBe(true);
+  expect(result.current.operationError).toBeNull();
+
+  await act(async () => {
+    retryDeferred.resolve(secondComment);
+    await expect(retryPromise).resolves.toEqual(secondComment);
+  });
+
+  expect(result.current.operationState.status).toBe("idle");
+  expect(result.current.isSaving).toBe(false);
+  expect(result.current.operationError).toBeNull();
+  expect(result.current.comments).toEqual([firstComment, secondComment]);
   result.unmount();
 });
 
@@ -597,69 +644,6 @@ test("useCommentsはresolveとreopenを一覧へ反映する", async () => {
   result.unmount();
 });
 
-test("useCommentsはresolve toggleを楽観更新して成功結果で確定する", async () => {
-  const toggleDeferred = createDeferred<Comment>();
-  const commands = createCommands({
-    toggleCommentResolved: vi.fn().mockReturnValue(toggleDeferred.promise),
-  });
-  const result = renderUseComments({
-    scope: tasksScope,
-    commands,
-  });
-
-  await flushAsyncEffects();
-
-  let togglePromise: Promise<Comment | null> = Promise.resolve(null);
-  act(() => {
-    togglePromise = result.current.toggleCommentResolved(commentId("cmt_1"));
-  });
-
-  expect(result.current.comments).toEqual([optimisticResolvedComment]);
-
-  toggleDeferred.resolve(resolvedComment);
-  await act(async () => {
-    await togglePromise;
-  });
-
-  expect(result.current.comments).toEqual([resolvedComment]);
-  expect(result.current.operationState.status).toBe("idle");
-  result.unmount();
-});
-
-test("useCommentOperationsはscope未選択時にtoggleの楽観更新を行わない", async () => {
-  const updateCurrentScopeComments = vi.fn();
-  const reloadComments = vi.fn().mockResolvedValue(true);
-  const commands = createCommands({
-    toggleCommentResolved: vi.fn().mockResolvedValue(resolvedComment),
-  });
-  const result = renderHook(
-    () =>
-      useCommentOperations({
-        scope: null,
-        scopeKey: "no-scope",
-        statusFilter: CommentStatusFilter.All,
-        commands,
-        currentComments: [firstComment],
-        updateCurrentScopeComments,
-        reloadComments,
-      }),
-    undefined,
-  );
-
-  let toggleResult: Comment | null = resolvedComment;
-  await act(async () => {
-    toggleResult = await result.current.toggleCommentResolved(
-      commentId("cmt_1"),
-    );
-  });
-
-  expect(toggleResult).toBeNull();
-  expect(result.current.operationState.status).toBe("idle");
-  expect(updateCurrentScopeComments).not.toHaveBeenCalled();
-  expect(commands.toggleCommentResolved).not.toHaveBeenCalled();
-  result.unmount();
-});
-
 test("useCommentOperationsはreloadComments変更時に進行中operationを無効化する", async () => {
   const addDeferred = createDeferred<Comment>();
   const commands = createCommands({
@@ -673,15 +657,10 @@ test("useCommentOperationsはreloadComments変更時に進行中operationを無�
       reloadComments,
     }: Readonly<{ reloadComments: () => Promise<boolean> }>) =>
       useCommentOperations({
-        scope: {
-          workspacePath: "/workspace/spec-reviewer",
-          specId: "phase-2-comments",
-          fileKey: "tasks",
-        },
-        scopeKey: "/workspace/spec-reviewer:phase-2-comments:tasks",
+        scope: tasksScope,
+        selectionIdentity: tasksScope.selectionIdentity,
         statusFilter: CommentStatusFilter.All,
         commands,
-        currentComments: [],
         updateCurrentScopeComments,
         reloadComments,
       }),
@@ -709,59 +688,15 @@ test("useCommentOperationsはreloadComments変更時に進行中operationを無�
   result.unmount();
 });
 
-test("useCommentsはresolve toggle失敗時に楽観更新を巻き戻す", async () => {
-  const toggleDeferred = createDeferred<Comment>();
-  const commands = createCommands({
-    toggleCommentResolved: vi.fn().mockReturnValue(toggleDeferred.promise),
-  });
-  const result = renderUseComments({
-    scope: tasksScope,
-    commands,
-  });
-
-  await flushAsyncEffects();
-
-  let togglePromise: Promise<Comment | null> = Promise.resolve(null);
-  act(() => {
-    togglePromise = result.current.toggleCommentResolved(commentId("cmt_1"));
-  });
-
-  expect(result.current.comments).toEqual([optimisticResolvedComment]);
-
-  toggleDeferred.reject("toggle failed");
-  await act(async () => {
-    await togglePromise;
-  });
-
-  expect(result.current.comments).toEqual([firstComment]);
-  expect(result.current.operationState).toEqual({
-    status: "error",
-    operation: "toggle",
-    commentId: commentId("cmt_1"),
-    error: {
-      feature: "comments",
-      code: "unknown",
-      message: "toggle failed",
-      cause: {
-        command: "toggle_comment_resolved",
-        code: "unknown",
-        message: "toggle failed",
-        raw: "toggle failed",
-      },
-    },
-  });
-  result.unmount();
-});
-
 test("useCommentsはscope変更後に失敗したoperation errorを表示しない", async () => {
-  const toggleDeferred = createDeferred<Comment>();
+  const resolveDeferred = createDeferred<Comment>();
   const listComments = vi
     .fn()
     .mockResolvedValueOnce({ comments: [firstComment] })
     .mockResolvedValueOnce({ comments: [secondComment] });
   const commands = createCommands({
     listComments,
-    toggleCommentResolved: vi.fn().mockReturnValue(toggleDeferred.promise),
+    resolveComment: vi.fn().mockReturnValue(resolveDeferred.promise),
   });
   const result = renderUseComments({
     scope: tasksScope,
@@ -770,9 +705,9 @@ test("useCommentsはscope変更後に失敗したoperation errorを表示しな�
 
   await flushAsyncEffects();
 
-  let togglePromise: Promise<Comment | null> = Promise.resolve(null);
+  let resolvePromise: Promise<Comment | null> = Promise.resolve(null);
   act(() => {
-    togglePromise = result.current.toggleCommentResolved(commentId("cmt_1"));
+    resolvePromise = result.current.resolveComment(commentId("cmt_1"));
   });
 
   result.rerender({
@@ -781,9 +716,9 @@ test("useCommentsはscope変更後に失敗したoperation errorを表示しな�
   });
   await flushAsyncEffects();
 
-  toggleDeferred.reject("toggle failed");
+  resolveDeferred.reject("resolve failed");
   await act(async () => {
-    await expect(togglePromise).resolves.toBeNull();
+    await expect(resolvePromise).resolves.toBeNull();
   });
 
   expect(result.current.comments).toEqual([secondComment]);

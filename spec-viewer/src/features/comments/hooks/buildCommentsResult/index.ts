@@ -45,6 +45,5 @@ export const buildCommentsResult: CommentsResultBuilder = (input) => {
     deleteComment: commentOperations.deleteComment,
     resolveComment: commentOperations.resolveComment,
     reopenComment: commentOperations.reopenComment,
-    toggleCommentResolved: commentOperations.toggleCommentResolved,
   };
 };

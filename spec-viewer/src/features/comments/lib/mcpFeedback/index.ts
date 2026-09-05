@@ -1,5 +1,5 @@
+import type { Comment } from "@/features/comments/domain/comment";
 import type {
-  Comment,
   SpecSkillMcpFeedbackComment,
   SpecSkillMcpFeedbackInterface,
   SpecSkillMcpFeedbackPayload,
@@ -98,7 +98,6 @@ function createSpecSkillMcpFeedbackComment(
     fileKey: comment.anchor.fileKey,
     body: comment.body,
     status: comment.status,
-    resolved: comment.resolved,
     anchor: comment.anchor,
     anchorResolution: comment.anchorResolution ?? null,
     createdAt: comment.createdAt,
