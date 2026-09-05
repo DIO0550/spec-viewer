@@ -1,4 +1,17 @@
-import type { SpecDocumentFormat, SpecFileKey } from "@/features/specs/domain/specFile";
+import type {
+  SpecDocumentFormat,
+  SpecFileKey,
+} from "@/features/specs/domain/specFile";
+
+import type {
+  SpecArtifactIdentity,
+  SpecProgress,
+} from "@/features/specs/domain/specArtifact";
+export type SpecFileScope = Readonly<{
+  workspacePath: string;
+  specId: string;
+  fileKey: SpecFileKey;
+}>;
 
 export type {
   ConfigSource,
@@ -7,7 +20,11 @@ export type {
   SpecFileKey,
   SpecFileStatus,
 } from "@/features/specs/domain/specFile";
-export type { SpecNode } from "@/features/specs/domain/specNode";
+export type {
+  SpecNode,
+  SpecNodeIdentity,
+  SpecNodeKind,
+} from "@/features/specs/domain/specNode";
 export type { SpecTree } from "@/features/specs/domain/specTree";
 
 export type MarkdownBlockType =
@@ -45,6 +62,11 @@ export type ReadSpecFileRequest = Readonly<{
   correlationId?: string;
 }>;
 
+export type LoadSpecBundleRequest = Readonly<{
+  workspacePath: string;
+  specId: string;
+}>;
+
 export type ArchiveSpecRequest = Readonly<{
   workspacePath: string;
   specId: string;
@@ -53,6 +75,8 @@ export type ArchiveSpecRequest = Readonly<{
 export type ArchiveSpecResponse = Readonly<{
   archivedSpecId: string;
   archivePath: string;
+  sourceGroupId: string;
+  destinationNodeId: string;
 }>;
 
 export type SpecDocument = Readonly<{
@@ -63,3 +87,34 @@ export type SpecDocument = Readonly<{
   missing: boolean;
   blocks: readonly MarkdownBlockMetadata[];
 }>;
+
+export type SpecArtifactErrorCode =
+  | "markdownRead"
+  | "markdownParse"
+  | "invalidArtifact";
+
+export type SpecArtifactError = Readonly<{
+  code: SpecArtifactErrorCode;
+  message: string;
+}>;
+
+export type SpecArtifact = Readonly<{
+  identity: SpecArtifactIdentity;
+  fileKey: SpecFileKey | null;
+  fileName: string;
+  label: string;
+  format: SpecDocumentFormat;
+  progress: SpecProgress;
+  path: string;
+  contents: string | null;
+  blocks: readonly MarkdownBlockMetadata[];
+  error: SpecArtifactError | null;
+}>;
+
+export type SpecBundle = Readonly<{
+  specId: string;
+  progress: SpecProgress;
+  artifacts: readonly SpecArtifact[];
+}>;
+
+export type { SpecArtifactIdentity, SpecProgress };

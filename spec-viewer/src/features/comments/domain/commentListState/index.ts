@@ -1,5 +1,5 @@
+import type { Comment } from "@/features/comments/domain/comment";
 import type { CommentFeatureError } from "@/features/comments/domain/commentError";
-import type { Comment } from "@/features/comments/types/comment";
 
 export type CommentListIdleState = Readonly<{
   status: "idle";

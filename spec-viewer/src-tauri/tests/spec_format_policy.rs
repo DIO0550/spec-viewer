@@ -70,7 +70,7 @@ fn html_policy_for_other_keys_preserves_only_the_configured_name() {
             SpecDocumentFormat::Html,
             SpecFileCandidateNameStrategy::PreserveConfigured,
         )],
-        candidate_rules(SpecFileKey::Design, SpecDocumentFormat::Html)
+        candidate_rules(SpecFileKey::Impl, SpecDocumentFormat::Html)
     );
 }
 
@@ -90,7 +90,7 @@ fn extensionless_markdown_name_remains_the_first_candidate() {
                 SpecDocumentFormat::Html,
             ),
         ],
-        candidate_paths(SpecFileKey::Design, "release-notes")
+        candidate_paths(SpecFileKey::Impl, "release-notes")
     );
 }
 
@@ -107,7 +107,7 @@ fn unknown_markdown_name_remains_the_first_candidate() {
                 SpecDocumentFormat::Html,
             ),
         ],
-        candidate_paths(SpecFileKey::Design, "release-notes.custom")
+        candidate_paths(SpecFileKey::Impl, "release-notes.custom")
     );
 }
 

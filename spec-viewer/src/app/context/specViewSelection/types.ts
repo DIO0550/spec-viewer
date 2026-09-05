@@ -1,30 +1,28 @@
 import type { ReactNode } from "react";
 
 import type {
+  SelectionIdentity,
   SpecViewSelection,
-  SpecViewSelectionId,
+  SpecViewSelectionInput,
   SpecViewTargetScope,
-} from "@/app/context/specViewSelection/selectionId";
-
-export type SpecViewSelectionInput = Pick<
-  SpecViewSelection,
-  "workspacePath" | "specId" | "fileKey"
->;
+} from "@/features/specs/domain/specViewSelection";
 
 export type SpecViewSelectionContextValue = Readonly<{
   selection: SpecViewSelection;
-  selectionId: SpecViewSelectionId;
+  selectionIdentity: SelectionIdentity;
   /**
-   * Selects the spec view for the given workspace, spec and file.
-   * @param selection - The spec view selection to activate.
+   * Synchronizes the aggregate from the canonical specs snapshot.
+   * @param selection - Latest workspace, spec, and file selection.
    */
-  selectSpecView: (selection: SpecViewSelectionInput) => void;
+  synchronizeSelection: (selection: SpecViewSelectionInput) => void;
   /**
-   * Sets the current target scope of the selection.
+   * Selects the current review target scope.
    * @param targetScope - The target scope to apply.
    */
-  setTargetScope: (targetScope: SpecViewTargetScope) => void;
+  selectTargetScope: (targetScope: SpecViewTargetScope) => void;
 }>;
+
+export type { SpecViewSelectionInput };
 
 export type SpecViewSelectionProviderProps = Readonly<{
   children: ReactNode;

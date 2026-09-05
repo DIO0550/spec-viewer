@@ -55,7 +55,7 @@ fn spec_read_result_is_owned_by_domain_and_keeps_body_and_blocks() {
     );
     let result = ReadSpecFileResult::Found(document.clone());
 
-    assert_eq!(SpecFileKey::Requirements, document.key());
+    assert_eq!(Some(SpecFileKey::Requirements), document.file_key());
     assert_eq!(SpecDocumentFormat::Html, document.format());
     assert_eq!("<h1>Requirements</h1>", document.contents());
     assert!(document.blocks().is_empty());

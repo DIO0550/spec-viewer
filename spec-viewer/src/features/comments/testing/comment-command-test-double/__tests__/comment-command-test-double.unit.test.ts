@@ -1,11 +1,11 @@
 import { expect, test } from "vitest";
 
+import { CommentId } from "@/features/comments/domain/commentId";
+import { createCommentCommandTestDouble } from "@/features/comments/testing/comment-command-test-double";
 import type {
   DeleteCommentRequest,
   ListCommentsRequest,
 } from "@/features/comments/types/comment";
-import { CommentId } from "@/features/comments/types/comment";
-import { createCommentCommandTestDouble } from "@/features/comments/testing/comment-command-test-double";
 
 const commentId = CommentId.fromString;
 

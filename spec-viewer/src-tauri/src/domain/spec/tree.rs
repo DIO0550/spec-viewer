@@ -1,11 +1,12 @@
 use thiserror::Error;
 
 use crate::domain::workspace::{
-    WorkspaceConfig, WorkspaceConfigSource, WorkspaceKind, WorkspaceTopology,
+    SpecOverrideNodeKind, WorkspaceConfig, WorkspaceConfigSource, WorkspaceKind, WorkspaceTopology,
 };
 
 use super::{
-    SpecDocumentFormat, SpecDomainError, SpecFile, SpecFileKey, SpecFileStatus, SpecId, SpecNode,
+    SpecDocumentFormat, SpecDomainError, SpecFile, SpecFileKey, SpecFileStatus, SpecNode,
+    SpecNodeIdentity, SpecProgress, SpecTree,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -60,31 +61,61 @@ pub struct SpecDirectoryFact {
     name: String,
     files: Vec<SpecFileFact>,
     children: Vec<SpecDirectoryFact>,
+    node_kind: Option<SpecOverrideNodeKind>,
+    progress: SpecProgress,
 }
 
 impl SpecDirectoryFact {
-    pub fn new(
-        name: impl Into<String>,
-        files: Vec<SpecFileFact>,
-        children: Vec<SpecDirectoryFact>,
-    ) -> Self {
+    pub fn new(name: impl Into<String>, files: Vec<SpecFileFact>, children: Vec<Self>) -> Self {
         Self {
             name: name.into(),
             files,
             children,
+            node_kind: None,
+            progress: SpecProgress::Unknown,
         }
+    }
+
+    pub fn with_metadata(
+        mut self,
+        node_kind: Option<SpecOverrideNodeKind>,
+        progress: SpecProgress,
+    ) -> Self {
+        self.node_kind = node_kind;
+        self.progress = progress;
+        self
     }
 
     pub fn name(&self) -> &str {
         &self.name
     }
-
     pub fn files(&self) -> &[SpecFileFact] {
         &self.files
     }
-
-    pub fn children(&self) -> &[SpecDirectoryFact] {
+    pub fn children(&self) -> &[Self] {
         &self.children
+    }
+
+    pub fn inferred_kind(&self) -> Result<SpecOverrideNodeKind, SpecTreeAssemblyError> {
+        let present = self
+            .files
+            .iter()
+            .any(|file| file.status == SpecFileStatus::Present);
+        if self.node_kind == Some(SpecOverrideNodeKind::Category) && present {
+            return Err(SpecTreeAssemblyError::ConflictingNodeKind {
+                name: self.name.clone(),
+            });
+        }
+        let bytes = self.name.as_bytes();
+        let numbered =
+            bytes.len() > 4 && bytes[..3].iter().all(u8::is_ascii_digit) && bytes[3] == b'-';
+        Ok(self
+            .node_kind
+            .unwrap_or(if present || numbered || self.children.is_empty() {
+                SpecOverrideNodeKind::Spec
+            } else {
+                SpecOverrideNodeKind::Category
+            }))
     }
 }
 
@@ -92,6 +123,7 @@ impl SpecDirectoryFact {
 pub struct SpecRootFact {
     relative_path: String,
     children: Vec<SpecDirectoryFact>,
+    archived_children: Vec<SpecDirectoryFact>,
 }
 
 impl SpecRootFact {
@@ -99,13 +131,16 @@ impl SpecRootFact {
         Self {
             relative_path: relative_path.into(),
             children,
+            archived_children: Vec::new(),
         }
     }
-
+    pub fn with_archive(mut self, children: Vec<SpecDirectoryFact>) -> Self {
+        self.archived_children = children;
+        self
+    }
     pub fn relative_path(&self) -> &str {
         &self.relative_path
     }
-
     pub fn children(&self) -> &[SpecDirectoryFact] {
         &self.children
     }
@@ -120,102 +155,11 @@ impl SpecTreeFacts {
     pub fn new(roots: Vec<SpecRootFact>) -> Self {
         Self { roots }
     }
-
     pub fn roots(&self) -> &[SpecRootFact] {
         &self.roots
     }
-
     pub fn into_roots(self) -> Vec<SpecRootFact> {
         self.roots
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SpecNodeKind {
-    SourceGroup,
-    Spec,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct SpecNodeCapabilities {
-    reviewable: bool,
-    archiveable: bool,
-}
-
-impl SpecNodeCapabilities {
-    pub const fn source_group() -> Self {
-        Self {
-            reviewable: false,
-            archiveable: false,
-        }
-    }
-
-    pub const fn spec(reviewable: bool) -> Self {
-        Self {
-            reviewable,
-            archiveable: true,
-        }
-    }
-
-    pub fn is_reviewable(self) -> bool {
-        self.reviewable
-    }
-
-    pub fn is_archiveable(self) -> bool {
-        self.archiveable
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct SpecTree {
-    roots: Vec<SpecNode>,
-}
-
-impl SpecTree {
-    pub fn new(roots: Vec<SpecNode>) -> Self {
-        Self { roots }
-    }
-
-    pub fn roots(&self) -> &[SpecNode] {
-        &self.roots
-    }
-
-    pub fn into_roots(self) -> Vec<SpecNode> {
-        self.roots
-    }
-
-    pub fn find(&self, spec_id: &SpecId) -> Option<&SpecNode> {
-        self.nodes().find(|node| node.id() == spec_id)
-    }
-
-    pub fn nodes(&self) -> SpecTreeNodeIter<'_> {
-        SpecTreeNodeIter::new(&self.roots)
-    }
-
-    pub fn reviewable_nodes(&self) -> impl Iterator<Item = &SpecNode> {
-        self.nodes().filter(|node| node.is_reviewable())
-    }
-}
-
-pub struct SpecTreeNodeIter<'a> {
-    pending: Vec<&'a SpecNode>,
-}
-
-impl<'a> SpecTreeNodeIter<'a> {
-    fn new(roots: &'a [SpecNode]) -> Self {
-        Self {
-            pending: roots.iter().rev().collect(),
-        }
-    }
-}
-
-impl<'a> Iterator for SpecTreeNodeIter<'a> {
-    type Item = &'a SpecNode;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let node = self.pending.pop()?;
-        self.pending.extend(node.children().iter().rev());
-        Some(node)
     }
 }
 
@@ -234,7 +178,7 @@ impl SpecTreeAssembler {
             && !config
                 .scan_excluded_directory_names()
                 .iter()
-                .any(|excluded_name| excluded_name == name)
+                .any(|excluded| excluded == name)
     }
 
     pub fn assemble(
@@ -243,43 +187,53 @@ impl SpecTreeAssembler {
         config: &WorkspaceConfig,
         facts: SpecTreeFacts,
     ) -> Result<SpecTree, SpecTreeAssemblyError> {
-        let primary_root = self.topology.primary_spec_root(kind);
+        let primary = self.topology.primary_spec_root(kind);
         let mut roots = facts.into_roots();
         roots.sort_by(|left, right| {
-            let left_primary = left.relative_path() == primary_root.as_str();
-            let right_primary = right.relative_path() == primary_root.as_str();
-            right_primary
-                .cmp(&left_primary)
-                .then_with(|| left.relative_path().cmp(right.relative_path()))
+            (right.relative_path == primary.as_str())
+                .cmp(&(left.relative_path == primary.as_str()))
+                .then_with(|| left.relative_path.cmp(&right.relative_path))
         });
         let mut nodes = Vec::new();
-
         for root in roots {
-            let relative_path = root.relative_path;
-            let group = self.topology.source_group_for_root(kind, &relative_path);
-            let parent_id = group
-                .as_ref()
-                .map_or("", |descriptor| descriptor.id_prefix());
-            let children = Self::assemble_directories(parent_id, root.children, config)?;
-
-            if let Some(group) = group {
+            let is_primary = root.relative_path == primary.as_str();
+            let group = self
+                .topology
+                .source_group_for_root(kind, &root.relative_path);
+            if !is_primary && group.is_none() {
+                return Err(SpecTreeAssemblyError::UnsupportedRoot {
+                    relative_path: root.relative_path,
+                });
+            }
+            let mut children =
+                Self::assemble_directories(&root.relative_path, "", root.children, config)?;
+            let archived = Self::assemble_directories(
+                &root.relative_path,
+                ".archive",
+                root.archived_children,
+                config,
+            )?;
+            children.push(SpecNode::archive(
+                SpecNodeIdentity::new(&root.relative_path, ".archive")?,
+                "Archive",
+                archived,
+            )?);
+            if is_primary {
+                nodes.extend(children);
+            } else if let Some(group) = group {
                 nodes.push(SpecNode::source_group(
-                    SpecId::new(group.id_prefix())?,
+                    SpecNodeIdentity::new(&root.relative_path, ".")?,
                     group.label(),
                     children,
                 )?);
-            } else if relative_path == primary_root.as_str() {
-                nodes.extend(children);
-            } else {
-                return Err(SpecTreeAssemblyError::UnsupportedRoot { relative_path });
             }
         }
-
         Ok(SpecTree::new(nodes))
     }
 
     fn assemble_directories(
-        parent_id: &str,
+        source_group_id: &str,
+        parent: &str,
         facts: Vec<SpecDirectoryFact>,
         config: &WorkspaceConfig,
     ) -> Result<Vec<SpecNode>, SpecTreeAssemblyError> {
@@ -287,42 +241,53 @@ impl SpecTreeAssembler {
             .into_iter()
             .filter(|fact| Self::includes_directory(config, fact.name()))
             .collect::<Vec<_>>();
-        included.sort_by(|left, right| left.name().cmp(right.name()));
-
+        included.sort_by(|left, right| left.name.cmp(&right.name));
         included
             .into_iter()
-            .map(|fact| Self::assemble_directory(parent_id, fact, config))
-            .collect()
-    }
-
-    fn assemble_directory(
-        parent_id: &str,
-        fact: SpecDirectoryFact,
-        config: &WorkspaceConfig,
-    ) -> Result<SpecNode, SpecTreeAssemblyError> {
-        let id = if parent_id.is_empty() {
-            fact.name.clone()
-        } else {
-            format!("{parent_id}/{}", fact.name)
-        };
-        let children = Self::assemble_directories(&id, fact.children, config)?;
-        let files = fact
-            .files
-            .into_iter()
-            .map(|file| {
-                SpecFile::with_resolved_format(
-                    file.key,
-                    file.file_name,
-                    file.status,
-                    file.config_source,
-                    file.format,
-                )
+            .map(|fact| {
+                let relative_id = if parent.is_empty() {
+                    fact.name.clone()
+                } else {
+                    format!("{parent}/{}", fact.name)
+                };
+                let kind = fact.inferred_kind()?;
+                let children = Self::assemble_directories(
+                    source_group_id,
+                    &relative_id,
+                    fact.children,
+                    config,
+                )?;
+                let identity = SpecNodeIdentity::new(source_group_id, &relative_id)?;
+                match kind {
+                    SpecOverrideNodeKind::Category => {
+                        SpecNode::category(identity, fact.name, children)
+                    }
+                    SpecOverrideNodeKind::Spec => {
+                        let files = fact
+                            .files
+                            .into_iter()
+                            .map(|file| {
+                                SpecFile::with_resolved_format(
+                                    file.key,
+                                    file.file_name,
+                                    file.status,
+                                    file.config_source,
+                                    file.format,
+                                )
+                            })
+                            .collect::<Result<Vec<_>, _>>()?;
+                        SpecNode::spec_with_progress(
+                            identity,
+                            fact.name,
+                            files,
+                            children,
+                            fact.progress,
+                        )
+                    }
+                }
                 .map_err(SpecTreeAssemblyError::from)
             })
-            .collect::<Result<Vec<_>, _>>()?;
-
-        SpecNode::spec(SpecId::new(id)?, fact.name, files, children)
-            .map_err(SpecTreeAssemblyError::from)
+            .collect()
     }
 }
 
@@ -330,6 +295,8 @@ impl SpecTreeAssembler {
 pub enum SpecTreeAssemblyError {
     #[error("unsupported observed spec root: {relative_path}")]
     UnsupportedRoot { relative_path: String },
+    #[error("explicit category contains configured documents: {name}")]
+    ConflictingNodeKind { name: String },
     #[error("observed spec tree is invalid: {0}")]
     InvalidSpec(#[from] SpecDomainError),
 }

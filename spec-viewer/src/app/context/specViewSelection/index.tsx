@@ -5,9 +5,9 @@ export type {
   SpecViewSelectionProviderProps,
   SpecViewSelectionInput,
 } from "@/app/context/specViewSelection/types";
-export type {
+export {
+  SelectionIdentity,
+  SpecId,
   SpecViewSelection,
-  SpecViewSelectionId,
-  SpecViewTargetScope,
-} from "@/app/context/specViewSelection/selectionId";
-export { createSpecViewSelectionId } from "@/app/context/specViewSelection/selectionId";
+} from "@/features/specs/domain/specViewSelection";
+export type { SpecViewTargetScope } from "@/features/specs/domain/specViewSelection";

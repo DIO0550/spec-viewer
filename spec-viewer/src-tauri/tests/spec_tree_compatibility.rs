@@ -90,7 +90,7 @@ fn observed_facts_assemble_to_the_compatible_tree_shape() {
     let layout = workspace.layout();
     let config = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
     let override_calls = Rc::new(Cell::new(0));
-    let facts = FilesystemSpecTreeScanner::new(RecordingOverrideLoader {
+    let facts = FilesystemSpecTreeScanner::with_config_loader(RecordingOverrideLoader {
         calls: Rc::clone(&override_calls),
     })
     .scan_spec_tree(&layout, &config)
@@ -101,23 +101,21 @@ fn observed_facts_assemble_to_the_compatible_tree_shape() {
 
     assert_eq!(
         vec![
-            (
-                ".plugin-workspace/.specs",
-                "ルート",
-                vec![
-                    ".plugin-workspace/.specs/alpha",
-                    ".plugin-workspace/.specs/zeta",
-                ],
-            ),
+            (".plugin-workspace/.specs/alpha", "alpha", vec![]),
+            (".plugin-workspace/.specs/zeta", "zeta", vec![]),
+            (".plugin-workspace/.specs/.archive", "Archive", vec![]),
             (
                 ".claude/worktrees/feature-auth/.plugin-workspace/.specs",
                 "feature-auth (.plugin-workspace)",
-                vec![],
+                vec![".claude/worktrees/feature-auth/.plugin-workspace/.specs/.archive"],
             ),
             (
                 ".claude/worktrees/feature-auth/.plugin-worktree/.specs",
                 "feature-auth (.plugin-worktree)",
-                vec![".claude/worktrees/feature-auth/.plugin-worktree/.specs/auth",],
+                vec![
+                    ".claude/worktrees/feature-auth/.plugin-worktree/.specs/auth",
+                    ".claude/worktrees/feature-auth/.plugin-worktree/.specs/.archive",
+                ],
             ),
         ],
         tree.roots()

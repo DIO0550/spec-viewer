@@ -1,8 +1,9 @@
 import { expect, test } from "vitest";
 
 import { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
+import { SpecFeatureError } from "@/features/specs/domain/specError";
 import type { SpecDocument } from "@/features/specs/types/spec";
-import type { IpcCommandError } from "@/shared/types/ipc";
+import { ReadSpecFileCommandError } from "@/lib/api/tauri/readSpecFile";
 
 const document: SpecDocument = {
   key: "impl",
@@ -19,11 +20,14 @@ const missingDocument: SpecDocument = {
   missing: true,
 };
 
-const error: IpcCommandError = {
-  code: "markdownRead",
-  message: "read failed",
-  raw: "read failed",
-};
+const error = SpecFeatureError.fromCommandError(
+  ReadSpecFileCommandError.fromUnknown({
+    command: "read_spec_file",
+    code: "markdownRead",
+    message: "read failed",
+    raw: "read failed",
+  }),
+);
 
 test("SpecDocumentState.idleは選択なし状態を生成する", () => {
   expect(SpecDocumentState.idle(null)).toEqual({

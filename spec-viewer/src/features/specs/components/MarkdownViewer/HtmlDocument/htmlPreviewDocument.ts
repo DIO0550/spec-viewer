@@ -8,6 +8,8 @@ export const HTML_ZOOM_STEP_PERCENT = 10;
 const SCRIPT_ENABLED_HTML_FILE_NAMES: readonly string[] = [
   "requirements.html",
   "test-cases.html",
+  "understanding-quiz-plan.html",
+  "understanding-quiz-impl.html",
 ];
 const HTML_PREVIEW_DEFAULT_SANDBOX = "";
 const HTML_PREVIEW_SCRIPT_SANDBOX = "allow-scripts";
@@ -37,7 +39,7 @@ export function createHtmlPreviewSandbox(path: string): string {
  * @returns Whether the HTML preview path is a generated document that needs scripts.
  */
 export function isScriptEnabledHtmlPath(path: string): boolean {
-  const fileName = getPathFileName(path).toLocaleLowerCase();
+  const fileName = getPathFileName(path).toLowerCase();
 
   return SCRIPT_ENABLED_HTML_FILE_NAMES.includes(fileName);
 }

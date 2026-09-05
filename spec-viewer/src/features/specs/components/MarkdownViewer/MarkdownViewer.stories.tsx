@@ -1,12 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
-import { createTextHash } from "@/features/comments/lib/comment-anchor-draft";
-import type { Comment } from "@/features/comments/types/comment";
-import { CommentId } from "@/features/comments/types/comment";
+
 import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
 import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
+import type { MarkdownBlockMetadata } from "@/features/specs/types/spec";
 
-const commentId = CommentId.fromString;
+const createTextHash = (value: string): string => value;
 
 const workspacePath = "/workspace/spec-reviewer";
 const markdownContents = [
@@ -22,6 +21,50 @@ const markdownContents = [
   "```",
 ].join("\n");
 
+const markdownBlocks: readonly MarkdownBlockMetadata[] = [
+  {
+    blockType: "heading",
+    blockIndex: 0,
+    textHash: createTextHash("Selection reliability"),
+    textSnippet: "Selection reliability",
+    sourceRange: null,
+  },
+  {
+    blockType: "paragraph",
+    blockIndex: 1,
+    textHash: createTextHash(
+      "Users can select only this paragraph fragment without activating the highlight.",
+    ),
+    textSnippet:
+      "Users can select only this paragraph fragment without activating the highlight.",
+    sourceRange: null,
+  },
+  {
+    blockType: "list_item",
+    blockIndex: 2,
+    textHash: createTextHash("Copy should keep the exact selected range."),
+    textSnippet: "Copy should keep the exact selected range.",
+    sourceRange: null,
+  },
+  {
+    blockType: "list_item",
+    blockIndex: 3,
+    textHash: createTextHash(
+      "Comment creation should still work from the selection button.",
+    ),
+    textSnippet:
+      "Comment creation should still work from the selection button.",
+    sourceRange: null,
+  },
+  {
+    blockType: "code_block",
+    blockIndex: 4,
+    textHash: createTextHash('const selectedText = "paragraph fragment";'),
+    textSnippet: 'const selectedText = "paragraph fragment";',
+    sourceRange: null,
+  },
+];
+
 const readyState: SpecDocumentState = {
   status: "ready",
   workspacePath,
@@ -32,7 +75,7 @@ const readyState: SpecDocumentState = {
     path: "/workspace/spec-reviewer/docs/plans/tasks/later-phases/p7-02-markdown-copy-selection-reliability.md",
     contents: markdownContents,
     missing: false,
-    blocks: [],
+    blocks: markdownBlocks,
   },
   error: null,
 };
@@ -105,75 +148,48 @@ const testCasesHtmlState: SpecDocumentState = {
   error: null,
 };
 
-const highlightedParagraph =
-  "Users can select only this paragraph fragment without activating the highlight.";
+const mermaidContents = [
+  "# Review flow",
+  "",
+  "```mermaid",
+  "flowchart LR",
+  "  Draft[Draft spec] --> Review{Review}",
+  "  Review -->|Approve| Done[Ready to implement]",
+  "  Review -->|Request changes| Draft",
+  "```",
+].join("\n");
 
-const comments: readonly Comment[] = [
-  {
-    id: commentId("cmt_active_selection"),
-    anchor: {
-      fileKey: "tasks",
-      blockType: "paragraph",
-      blockIndex: 1,
-      textHash: createTextHash(highlightedParagraph),
-      textSnippet: "paragraph fragment",
-      charRange: {
-        start: 27,
-        end: 45,
+const mermaidState: SpecDocumentState = {
+  status: "ready",
+  workspacePath,
+  specId: "mermaid-preview",
+  fileKey: "tasks",
+  document: {
+    key: "tasks",
+    path: "/workspace/spec-reviewer/docs/plans/mermaid-preview.md",
+    contents: mermaidContents,
+    missing: false,
+    blocks: [
+      {
+        blockType: "heading",
+        blockIndex: 0,
+        textHash: createTextHash("Review flow"),
+        textSnippet: "Review flow",
+        sourceRange: null,
       },
-    },
-    body: "Verify partial selection stays copyable inside this highlight.",
-    status: "open",
-    resolved: false,
-    anchorResolution: null,
-    createdAt: "2026-05-07T00:00:00Z",
-    updatedAt: "2026-05-07T00:00:00Z",
-  },
-];
-
-const commentCardComments: readonly Comment[] = [
-  ...comments,
-  {
-    id: commentId("cmt_resolved_card"),
-    anchor: {
-      fileKey: "tasks",
-      blockType: "paragraph",
-      blockIndex: 1,
-      textHash: createTextHash(highlightedParagraph),
-      textSnippet: highlightedParagraph,
-      charRange: {
-        start: 0,
-        end: highlightedParagraph.length,
+      {
+        blockType: "code_block",
+        blockIndex: 1,
+        textHash: createTextHash(
+          "flowchart LR\n  Draft[Draft spec] --> Review{Review}\n  Review -->|Approve| Done[Ready to implement]\n  Review -->|Request changes| Draft",
+        ),
+        textSnippet: "flowchart LR Draft spec Review Ready to implement",
+        sourceRange: null,
       },
-    },
-    body: "Resolved note stays visible without making the paragraph feel busy.",
-    status: "resolved",
-    resolved: true,
-    anchorResolution: null,
-    createdAt: "2026-05-07T00:10:00Z",
-    updatedAt: "2026-05-07T00:20:00Z",
+    ],
   },
-  {
-    id: commentId("cmt_code_card"),
-    anchor: {
-      fileKey: "tasks",
-      blockType: "code_block",
-      blockIndex: 4,
-      textHash: createTextHash('const selectedText = "paragraph fragment";'),
-      textSnippet: "selectedText",
-      charRange: {
-        start: 6,
-        end: 18,
-      },
-    },
-    body: "Code block comments keep the gutter add button available.",
-    status: "open",
-    resolved: false,
-    anchorResolution: null,
-    createdAt: "2026-05-07T00:30:00Z",
-    updatedAt: "2026-05-07T00:30:00Z",
-  },
-];
+  error: null,
+};
 
 const meta: Meta<typeof MarkdownViewer> = {
   component: MarkdownViewer,
@@ -181,16 +197,10 @@ const meta: Meta<typeof MarkdownViewer> = {
     state: readyState,
     selectedSpecLabel: "Later Phases",
     selectedFileLabel: "Tasks",
-    comments,
-    activeCommentId: commentId("cmt_active_selection"),
     onReload: fn(),
-    onSelectComment: fn(),
-    onAddComment: fn(),
   },
   argTypes: {
     onReload: { control: false },
-    onSelectComment: { control: false },
-    onAddComment: { control: false },
   },
 };
 
@@ -198,12 +208,13 @@ export default meta;
 
 type Story = StoryObj<typeof MarkdownViewer>;
 
-export const HighlightedSelectionSurface: Story = {};
+export const Default: Story = {};
 
-export const ExistingCommentCards: Story = {
+export const MermaidDiagram: Story = {
   args: {
-    comments: commentCardComments,
-    activeCommentId: commentId("cmt_active_selection"),
+    state: mermaidState,
+    selectedSpecLabel: "Diagram preview",
+    selectedFileLabel: "Review flow",
   },
 };
 
@@ -224,8 +235,6 @@ export const TechReferenceHtmlPreview: Story = {
     state: techReferenceHtmlState,
     selectedSpecLabel: "Tech Reference Tab",
     selectedFileLabel: "Tech Reference",
-    comments: [],
-    activeCommentId: null,
   },
 };
 
@@ -246,7 +255,5 @@ export const TestCasesHtml: Story = {
     state: testCasesHtmlState,
     selectedSpecLabel: "Test Cases Tab",
     selectedFileLabel: "Test Cases",
-    comments: [],
-    activeCommentId: null,
   },
 };

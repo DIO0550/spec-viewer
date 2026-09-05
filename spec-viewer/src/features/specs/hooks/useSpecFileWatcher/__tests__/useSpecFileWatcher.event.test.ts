@@ -1,15 +1,17 @@
 import { expect, test } from "vitest";
 
-import { isSpecFileWatchEventForScope } from "@/features/specs/hooks/useSpecFileWatcher";
+import { SpecViewSelection } from "@/features/specs/domain/specViewSelection";
+import { isSpecFileWatchEventForSelection } from "@/features/specs/hooks/useSpecFileWatcher";
 import type { SpecFileWatchChangedEvent } from "@/features/specs/types/watch";
+import { WorkspacePath } from "@/domains/workspacePath";
 
-const scope = {
-  workspacePath: "/workspace/project",
+const selection = SpecViewSelection.synchronize(SpecViewSelection.empty(), {
+  workspacePath: WorkspacePath.fromString("/workspace/project"),
   specId: "auth",
   fileKey: "tasks",
-} as const;
+});
 
-test("watch event が現在の scope と一致する場合 true を返す", () => {
+test("watch eventがselection identityと一致する場合trueを返す", () => {
   const event: SpecFileWatchChangedEvent = {
     workspacePath: "/workspace/project",
     specId: "auth",
@@ -18,7 +20,7 @@ test("watch event が現在の scope と一致する場合 true を返す", () =
     path: "/workspace/project/.plugin-workspace/.specs/auth/tasks.md",
   };
 
-  expect(isSpecFileWatchEventForScope(event, scope)).toBe(true);
+  expect(isSpecFileWatchEventForSelection(event, selection)).toBe(true);
 });
 
 test.each([
@@ -37,12 +39,34 @@ test.each([
     specId: "auth",
     fileKey: "impl",
   },
-] as const)("watch event が異なる scope の場合 false を返す", (partialEvent) => {
+] as const)("watch eventが異なるselection identityの場合falseを返す", (partialEvent) => {
   const event: SpecFileWatchChangedEvent = {
     ...partialEvent,
     changeKind: "markdown",
     path: "/workspace/project/.plugin-workspace/.specs/auth/tasks.md",
   };
 
-  expect(isSpecFileWatchEventForScope(event, scope)).toBe(false);
+  expect(isSpecFileWatchEventForSelection(event, selection)).toBe(false);
+});
+
+test("watch eventの区切り文字を含む値を構造として比較する", () => {
+  const delimiterSelection = SpecViewSelection.synchronize(
+    SpecViewSelection.empty(),
+    {
+      workspacePath: WorkspacePath.fromString("/workspace/project:a"),
+      specId: "b",
+      fileKey: "tasks",
+    },
+  );
+  const event: SpecFileWatchChangedEvent = {
+    workspacePath: "/workspace/project",
+    specId: "a:b",
+    fileKey: "tasks",
+    changeKind: "markdown",
+    path: "/workspace/project/.plugin-workspace/.specs/a:b/tasks.md",
+  };
+
+  expect(isSpecFileWatchEventForSelection(event, delimiterSelection)).toBe(
+    false,
+  );
 });

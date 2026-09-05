@@ -2,11 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import {
   subscribeWorkspaceDragDropEvents,
   type WorkspaceDragDropEvent,
-} from "@/shared/api/tauri";
+} from "@/lib/api/tauri";
 import {
   createWorkspaceDropCandidate,
   extractBrowserDropPaths,
-} from "@/shared/lib/workspaceDrop";
+} from "@/utils/workspaceDrop";
 
 export type WorkspaceDropStatus = "idle" | "dragging";
 

@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 
 import { CommentFeatureError } from "@/features/comments/domain/commentError";
-import { AddCommentCommandError } from "@/shared/api/tauri/addComment";
+import { AddCommentCommandError } from "@/lib/api/tauri/addComment";
 
 test.each([
   ["invalidComment", "invalidComment"],

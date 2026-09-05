@@ -1,9 +1,10 @@
 import { expect, test } from "vitest";
-
-import { createSpecSkillMcpFeedbackDryRunPayload } from "@/features/comments/lib/mcpFeedback";
-import { renderSpecSkillMcpFeedbackDryRunPayload } from "@/features/comments/lib/mcpFeedback";
-import type { Comment } from "@/features/comments/types/comment";
-import { CommentId } from "@/features/comments/types/comment";
+import type { Comment } from "@/features/comments/domain/comment";
+import { CommentId } from "@/features/comments/domain/commentId";
+import {
+  createSpecSkillMcpFeedbackDryRunPayload,
+  renderSpecSkillMcpFeedbackDryRunPayload,
+} from "@/features/comments/lib/mcpFeedback";
 
 const commentId = CommentId.fromString;
 
@@ -22,7 +23,6 @@ const anchoredComment: Comment = {
   },
   body: "Clarify the feedback handoff boundary.",
   status: "open",
-  resolved: false,
   anchorResolution: {
     status: "resolved",
     reason: "exact_match",
@@ -38,7 +38,6 @@ const orphanedComment: Comment = {
   id: commentId("cmt_orphaned"),
   body: "Carry orphaned comments into the Spec Skill feedback path.",
   status: "resolved",
-  resolved: true,
   anchorResolution: {
     status: "orphaned",
     reason: "deleted_text",

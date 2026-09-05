@@ -1,10 +1,10 @@
 import type { RefObject } from "react";
 
 import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
-import { uiText } from "@/shared/lib/uiText";
-import { CommandErrorDisplay } from "@/shared/ui/CommandErrorDisplay";
-import { EmptyState } from "@/shared/ui/EmptyState";
-import { LoadingSkeleton } from "@/shared/ui/LoadingSkeleton";
+import { uiText } from "@/utils/uiText";
+import { CommandErrorDisplay } from "@/components/CommandErrorDisplay";
+import { EmptyState } from "@/components/EmptyState";
+import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 
 import { MarkdownViewerPanel } from "../MarkdownViewerPanel";
 
