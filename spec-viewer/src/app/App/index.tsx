@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 
+import { SpecDocumentViewer } from "@/app/App/SpecDocumentViewer";
 import "../App.css";
 import type { SpecViewResetKeys } from "@/app/App/hooks/types";
 import { useCommentSelection } from "@/app/App/hooks/useCommentSelection";
@@ -25,7 +26,7 @@ import {
   SpecViewSelectionProvider,
   useSpecViewSelection,
 } from "@/app/context/specViewSelection";
-import { ErrorBoundary, WorkspaceLayout } from "@/components";
+import { WorkspaceLayout } from "@/components";
 import { WorkspacePath } from "@/domains/workspacePath";
 import {
   CommentOperationFailedState,
@@ -96,13 +97,11 @@ import {
 } from "@/features/sidebar";
 import {
   SpecArtifactTabs,
-  SpecArtifactViewer,
   type SpecSelectionChange,
   SpecTree,
   useSpecs,
 } from "@/features/specs";
 import {
-  OpenWorkspaceEmptyState,
   useWorkspaceLoader,
   useWorkspaceNavigationState,
   useWorkspaceSidebarSectionPreference,
@@ -324,6 +323,26 @@ function SpecViewAppContent(): ReactElement {
     openSidebar: sidebarPreference.openSidebar,
     resetKeys,
   });
+
+  const markdownViewerCommentActions = useMemo(
+    () => ({
+      add: commentSelection.addComment,
+      update: commentSelection.updateComment,
+      resolve: commentSelection.resolveInlineComment,
+      delete: commentSelection.deleteInlineComment,
+      select: commentSelection.selectComment,
+      reportAnchorDisplayStates:
+        commentSelection.updateCommentAnchorDisplayStates,
+    }),
+    [
+      commentSelection.addComment,
+      commentSelection.deleteInlineComment,
+      commentSelection.resolveInlineComment,
+      commentSelection.selectComment,
+      commentSelection.updateComment,
+      commentSelection.updateCommentAnchorDisplayStates,
+    ],
+  );
 
   const guardedSpecActions = useGuardedSpecActions({
     isCurrentViewLoading,
@@ -803,7 +822,6 @@ function SpecViewAppContent(): ReactElement {
         activeDiffReviewIdentity === null ? undefined : diffLineComments,
         diffCommentJump,
       );
-
   return (
     <div className="app-drop-root">
       <SidebarLayout
@@ -1090,59 +1108,53 @@ function SpecViewAppContent(): ReactElement {
                   onSelectArtifact={specActions.selectArtifact}
                 />
                 <div className="specs-workspace__viewer">
-                  {shouldShowOpenWorkspacePrompt ? (
-                    <OpenWorkspaceEmptyState
-                      isOpening={workspaceLoader.state.isBrowsingWorkspace}
-                      recentWorkspaces={
-                        workspaceLoader.recentWorkspaces.recentWorkspaces
-                      }
-                      onOpenWorkspace={() => {
+                  <SpecDocumentViewer
+                    showOpenWorkspacePrompt={shouldShowOpenWorkspacePrompt}
+                    openWorkspace={{
+                      isOpening: workspaceLoader.state.isBrowsingWorkspace,
+                      recentWorkspaces:
+                        workspaceLoader.recentWorkspaces.recentWorkspaces,
+                      onOpenWorkspace: () => {
                         void workspaceLoader.actions.browseWorkspace();
-                      }}
-                      onOpenRecentWorkspace={(path) => {
+                      },
+                      onOpenRecentWorkspace: (path) => {
                         void workspaceLoader.actions.openRecentWorkspacePath(
                           path,
                         );
-                      }}
-                      onRemoveRecentWorkspace={
-                        workspaceLoader.recentWorkspaces.removeWorkspace
-                      }
-                    />
-                  ) : (
-                    <ErrorBoundary
-                      key={`${specState.selection.specId ?? "no-spec"}:${specSelectors.selectedArtifact?.path ?? "no-artifact"}`}
-                      variant="dialog"
-                    >
-                      <SpecArtifactViewer
-                        bundleState={specState.bundleState}
-                        artifact={specSelectors.selectedArtifact}
-                        workspacePath={activeSpecWorkspacePath}
-                        selectedSpecLabel={
-                          specSelectors.selectedSpec?.label ?? null
-                        }
-                        comments={comments.comments}
-                        activeCommentId={commentSelection.activeCommentId}
-                        isAddingComment={isAddingComment}
-                        addCommentErrorMessage={addCommentErrorMessage}
-                        isUpdatingComment={isUpdatingComment}
-                        operationState={comments.operationState}
-                        isCommentScopeReady={isCommentScopeReady}
-                        onReload={guardedSpecActions.reloadDocumentFromViewer}
-                        onAddComment={commentSelection.addComment}
-                        onUpdateComment={commentSelection.updateComment}
-                        onResolveComment={commentSelection.resolveInlineComment}
-                        onReopenComment={commentSelection.reopenInlineComment}
-                        onDeleteComment={commentSelection.deleteInlineComment}
-                        onSelectComment={commentSelection.selectComment}
-                        onAnchorDisplayStatesChange={
-                          commentSelection.updateCommentAnchorDisplayStates
-                        }
-                        onFirstReadable={
-                          documentReadiness.markCurrentDocumentReadable
-                        }
-                      />
-                    </ErrorBoundary>
-                  )}
+                      },
+                      onRemoveRecentWorkspace:
+                        workspaceLoader.recentWorkspaces.removeWorkspace,
+                    }}
+                    viewer={{
+                      bundleState: specState.bundleState,
+                      artifact: specSelectors.selectedArtifact,
+                      workspacePath: activeSpecWorkspacePath,
+                      selectedSpecLabel:
+                        specSelectors.selectedSpec?.label ?? null,
+                      onReload: guardedSpecActions.reloadDocumentFromViewer,
+                      onFirstReadable:
+                        documentReadiness.markCurrentDocumentReadable,
+                    }}
+                    comments={{
+                      enabled:
+                        documentReadiness.isDocumentReadable &&
+                        !documentReadiness.isHtmlDocument,
+                      layer: {
+                        comments: comments.comments,
+                        activeCommentId: commentSelection.activeCommentId,
+                        addState: {
+                          isSaving: isAddingComment,
+                          errorMessage: addCommentErrorMessage,
+                          isScopeReady: isCommentScopeReady,
+                        },
+                        editState: {
+                          isSaving: isUpdatingComment,
+                          operationState: comments.operationState,
+                        },
+                        actions: markdownViewerCommentActions,
+                      },
+                    }}
+                  />
                 </div>
               </section>
             </div>

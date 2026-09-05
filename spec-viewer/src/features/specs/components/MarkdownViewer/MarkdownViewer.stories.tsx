@@ -1,14 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
-import type { Comment } from "@/features/comments/domain/comment";
-import { CommentId } from "@/features/comments/domain/commentId";
-import { createTextHash } from "@/features/comments/lib/comment-anchor-draft";
 
 import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
 import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
 import type { MarkdownBlockMetadata } from "@/features/specs/types/spec";
 
-const commentId = CommentId.fromString;
+const createTextHash = (value: string): string => value;
 
 const workspacePath = "/workspace/spec-reviewer";
 const markdownContents = [
@@ -151,73 +148,6 @@ const testCasesHtmlState: SpecDocumentState = {
   error: null,
 };
 
-const highlightedParagraph =
-  "Users can select only this paragraph fragment without activating the highlight.";
-
-const comments: readonly Comment[] = [
-  {
-    id: commentId("cmt_active_selection"),
-    anchor: {
-      fileKey: "tasks",
-      blockType: "paragraph",
-      blockIndex: 1,
-      textHash: createTextHash(highlightedParagraph),
-      textSnippet: "paragraph fragment",
-      charRange: {
-        start: 27,
-        end: 45,
-      },
-    },
-    body: "Verify partial selection stays copyable inside this highlight.",
-    status: "open",
-    anchorResolution: null,
-    createdAt: "2026-05-07T00:00:00Z",
-    updatedAt: "2026-05-07T00:00:00Z",
-  },
-];
-
-const commentCardComments: readonly Comment[] = [
-  ...comments,
-  {
-    id: commentId("cmt_resolved_card"),
-    anchor: {
-      fileKey: "tasks",
-      blockType: "paragraph",
-      blockIndex: 1,
-      textHash: createTextHash(highlightedParagraph),
-      textSnippet: highlightedParagraph,
-      charRange: {
-        start: 0,
-        end: highlightedParagraph.length,
-      },
-    },
-    body: "Resolved note stays visible without making the paragraph feel busy.",
-    status: "resolved",
-    anchorResolution: null,
-    createdAt: "2026-05-07T00:10:00Z",
-    updatedAt: "2026-05-07T00:20:00Z",
-  },
-  {
-    id: commentId("cmt_code_card"),
-    anchor: {
-      fileKey: "tasks",
-      blockType: "code_block",
-      blockIndex: 4,
-      textHash: createTextHash('const selectedText = "paragraph fragment";'),
-      textSnippet: "selectedText",
-      charRange: {
-        start: 6,
-        end: 18,
-      },
-    },
-    body: "Code block comments keep the gutter add button available.",
-    status: "open",
-    anchorResolution: null,
-    createdAt: "2026-05-07T00:30:00Z",
-    updatedAt: "2026-05-07T00:30:00Z",
-  },
-];
-
 const mermaidContents = [
   "# Review flow",
   "",
@@ -267,16 +197,10 @@ const meta: Meta<typeof MarkdownViewer> = {
     state: readyState,
     selectedSpecLabel: "Later Phases",
     selectedFileLabel: "Tasks",
-    comments,
-    activeCommentId: commentId("cmt_active_selection"),
     onReload: fn(),
-    onSelectComment: fn(),
-    onAddComment: fn(),
   },
   argTypes: {
     onReload: { control: false },
-    onSelectComment: { control: false },
-    onAddComment: { control: false },
   },
 };
 
@@ -284,21 +208,13 @@ export default meta;
 
 type Story = StoryObj<typeof MarkdownViewer>;
 
-export const HighlightedSelectionSurface: Story = {};
+export const Default: Story = {};
 
-export const ExistingCommentCards: Story = {
-  args: {
-    comments: commentCardComments,
-    activeCommentId: commentId("cmt_active_selection"),
-  },
-};
 export const MermaidDiagram: Story = {
   args: {
     state: mermaidState,
     selectedSpecLabel: "Diagram preview",
     selectedFileLabel: "Review flow",
-    comments: [],
-    activeCommentId: null,
   },
 };
 
@@ -319,8 +235,6 @@ export const TechReferenceHtmlPreview: Story = {
     state: techReferenceHtmlState,
     selectedSpecLabel: "Tech Reference Tab",
     selectedFileLabel: "Tech Reference",
-    comments: [],
-    activeCommentId: null,
   },
 };
 
@@ -341,7 +255,5 @@ export const TestCasesHtml: Story = {
     state: testCasesHtmlState,
     selectedSpecLabel: "Test Cases Tab",
     selectedFileLabel: "Test Cases",
-    comments: [],
-    activeCommentId: null,
   },
 };

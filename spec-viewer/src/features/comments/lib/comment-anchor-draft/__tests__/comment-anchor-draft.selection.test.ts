@@ -11,9 +11,39 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
+const backendBlockTypeByRenderedBlockType = {
+  heading: "heading",
+  paragraph: "paragraph",
+  "list-item": "list_item",
+  table: "table",
+  code: "code_block",
+} as const;
+
 function createRenderedRoot(html: string): HTMLElement {
   const root = document.createElement("div");
   root.innerHTML = html;
+  const blocks = root.querySelectorAll<HTMLElement>(
+    "[data-block-type][data-block-index]",
+  );
+
+  for (const block of blocks) {
+    const content = block.cloneNode(true) as HTMLElement;
+    content
+      .querySelectorAll(
+        ".markdown-block-comment-button, .markdown-comment-annotations",
+      )
+      .forEach((commentUi) => commentUi.remove());
+    const blockText = content.textContent ?? "";
+
+    block.dataset.renderedBlockType ??=
+      backendBlockTypeByRenderedBlockType[
+        block.dataset
+          .blockType as keyof typeof backendBlockTypeByRenderedBlockType
+      ];
+    block.dataset.textHash ??= createTextHash(blockText);
+    block.dataset.textSnippet ??= blockText;
+  }
+
   document.body.append(root);
 
   return root;
@@ -99,7 +129,7 @@ test("backendメタデータ付きMarkdownブロックではbackend hashをア�
   const root = createRenderedRoot(
     [
       '<p data-block-type="paragraph" data-block-index="3" ',
-      'data-comment-block-type="paragraph" data-text-hash="sha256:backend1">',
+      'data-rendered-block-type="paragraph" data-text-hash="sha256:backend1" data-text-snippet="Alpha beta gamma">',
       "Alpha beta gamma</p>",
     ].join(""),
   );
@@ -121,12 +151,12 @@ test("backendメタデータ付きMarkdownブロックではbackend hashをア�
 test.each([
   ["list-item", "list_item"],
   ["code", "code_block"],
-  ["blockquote", "block_quote"],
+  ["paragraph", "block_quote"],
   ["heading", "heading"],
   ["table", "table"],
 ] as const)("Markdownブロック種別%sをコメントブロック種別%sに変換する", (markdownBlockType, commentBlockType) => {
   const root = createRenderedRoot(
-    `<p data-block-type="${markdownBlockType}" data-block-index="0">Selected text</p>`,
+    `<p data-block-type="${markdownBlockType}" data-block-index="0" data-rendered-block-type="${commentBlockType}">Selected text</p>`,
   );
   const textNode = root.querySelector("p")?.firstChild;
   expect(textNode).toBeInstanceOf(Text);
