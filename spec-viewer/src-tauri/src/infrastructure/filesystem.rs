@@ -18,13 +18,14 @@ use thiserror::Error;
 use crate::domain::{
     spec::{
         artifact_progress, progress_without_tasks, ArtifactConfiguration, ArtifactEvaluation,
-        ArtifactEvaluationError, ArtifactPresence, SpecArchiveTarget, SpecArtifactFact,
-        SpecArtifactIdentity, SpecDocumentFormat, SpecDomainError, SpecFile, SpecFileKey,
-        SpecFileStatus, SpecId, SpecNode, SpecNodeIdentity, SpecProgress,
+        ArtifactEvaluationError, ArtifactPresence, ScanSpecTree, SpecArchiveTarget,
+        SpecArtifactFact, SpecArtifactIdentity, SpecDocumentFormat, SpecDomainError, SpecFile,
+        SpecFileKey, SpecFileStatus, SpecId, SpecNode, SpecNodeIdentity, SpecProgress,
+        SpecTreeScanPortError,
     },
     workspace::{
-        SpecOverrideNodeKind, WorkspaceConfig, WorkspaceDomainError, WorkspaceKind,
-        WorkspaceLayout, WorkspaceRoot, WorkspaceTopology,
+        DetectWorkspace, SpecOverrideNodeKind, WorkspaceConfig, WorkspaceDetectionPortError,
+        WorkspaceDomainError, WorkspaceKind, WorkspaceLayout, WorkspaceRoot, WorkspaceTopology,
     },
 };
 use crate::infrastructure::markdown::parser::count_task_markers;
@@ -107,6 +108,16 @@ impl FilesystemWorkspaceDetector {
     }
 }
 
+impl DetectWorkspace for FilesystemWorkspaceDetector {
+    fn detect_workspace(
+        &self,
+        selected_directory: &str,
+    ) -> Result<WorkspaceLayout, WorkspaceDetectionPortError> {
+        self.detect(selected_directory)
+            .map_err(|source| WorkspaceDetectionPortError::new(source.to_string()))
+    }
+}
+
 #[derive(Debug, Clone, Copy, Default)]
 pub struct FilesystemSpecTreeScanner;
 
@@ -150,6 +161,24 @@ impl FilesystemSpecTreeScanner {
         }
 
         Ok(nodes)
+    }
+}
+
+impl ScanSpecTree for FilesystemSpecTreeScanner {
+    fn scan_spec_tree(
+        &self,
+        layout: &WorkspaceLayout,
+        config: &WorkspaceConfig,
+    ) -> Result<Vec<SpecNode>, SpecTreeScanPortError> {
+        self.scan(layout, config).map_err(|source| {
+            let message = source.to_string();
+
+            if matches!(source, SpecTreeScanError::ConfigOverrideLoad { .. }) {
+                return SpecTreeScanPortError::config_load(message);
+            }
+
+            SpecTreeScanPortError::scan(message)
+        })
     }
 }
 

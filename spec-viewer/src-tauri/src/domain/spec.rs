@@ -1,9 +1,14 @@
 //! Spec document and tree domain concepts.
 
 mod format_policy;
+mod ports;
 
 pub use format_policy::{
     SpecFileCandidateNameStrategy, SpecFileCandidateRule, SpecFileFormatPolicy,
+};
+pub use ports::{
+    MissingSpecDocument, ReadSpecFile, ReadSpecFileResult, ScanSpecTree, SpecDocument,
+    SpecFileReadPortError, SpecTreeScanPortError,
 };
 mod archive_policy;
 mod artifact;

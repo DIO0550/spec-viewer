@@ -14,7 +14,11 @@ use thiserror::Error;
 
 use crate::{
     domain::{
-        spec::{MarkdownBlock, SpecArtifactIdentity, SpecDocumentFormat, SpecFileKey, SpecId},
+        spec::{
+            MarkdownBlock, MissingSpecDocument, ReadSpecFile, ReadSpecFileResult,
+            SpecArtifactIdentity, SpecDocument, SpecDocumentFormat, SpecFileKey,
+            SpecFileReadPortError, SpecId,
+        },
         workspace::{WorkspaceConfig, WorkspaceLayout},
     },
     infrastructure::{
@@ -134,6 +138,20 @@ fn read_existing_document(
     Ok((contents, blocks))
 }
 
+impl ReadSpecFile for FilesystemMarkdownReader {
+    fn read_spec_file(
+        &self,
+        layout: &WorkspaceLayout,
+        config: &WorkspaceConfig,
+        spec_id: &SpecId,
+        key: SpecFileKey,
+    ) -> Result<ReadSpecFileResult, SpecFileReadPortError> {
+        self.read(layout, config, spec_id.as_str(), key)
+            .map(ReadSpecFileResult::from)
+            .map_err(|source| SpecFileReadPortError::new(source.to_string()))
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MarkdownReadResult {
     Found(MarkdownDocument),
@@ -146,6 +164,17 @@ impl MarkdownReadResult {
     }
 }
 
+impl From<MarkdownReadResult> for ReadSpecFileResult {
+    fn from(result: MarkdownReadResult) -> Self {
+        match result {
+            MarkdownReadResult::Found(document) => Self::Found(document.into()),
+            MarkdownReadResult::Missing(missing) => Self::Missing(
+                MissingSpecDocument::with_format(missing.key(), missing.format(), missing.path()),
+            ),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MarkdownDocument {
     identity: SpecArtifactIdentity,
@@ -153,6 +182,18 @@ pub struct MarkdownDocument {
     path: String,
     contents: String,
     blocks: Vec<MarkdownBlock>,
+}
+
+impl From<MarkdownDocument> for SpecDocument {
+    fn from(document: MarkdownDocument) -> Self {
+        Self::with_artifact(
+            document.identity().clone(),
+            document.format(),
+            document.path(),
+            document.contents(),
+            document.blocks().to_vec(),
+        )
+    }
 }
 
 impl MarkdownDocument {

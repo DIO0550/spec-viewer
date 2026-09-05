@@ -11,8 +11,6 @@ pub use spec_bundle::{
     SpecArtifactOutcome,
 };
 
-use std::path::Path;
-
 use thiserror::Error;
 
 use crate::{
@@ -23,26 +21,30 @@ use crate::{
     domain::{
         comment::{CommentDomainError, CommentRepositoryError},
         spec::{
-            MarkdownBlock, SpecArchivePolicy, SpecArchivePolicyError, SpecDocumentFormat,
-            SpecDomainError, SpecFileKey, SpecId, SpecNode, SpecTree,
+            MarkdownBlock, ReadSpecFile, ScanSpecTree, SpecArchivePolicy, SpecArchivePolicyError,
+            SpecDomainError, SpecFileKey, SpecFileReadPortError, SpecId, SpecNode, SpecTree,
+            SpecTreeScanPortError,
         },
-        workspace::{WorkspaceConfig, WorkspaceLayout, WorkspaceTopology},
+        workspace::{
+            DetectWorkspace, LoadWorkspaceConfig, WorkspaceConfig, WorkspaceConfigLoadPortError,
+            WorkspaceDetectionPortError, WorkspaceLayout, WorkspaceTopology,
+        },
     },
     infrastructure::{
         filesystem::{
-            archive_spec_directory, spec_directory_path, with_archive_source_group_lock,
-            FilesystemSpecTreeScanner, FilesystemWorkspaceDetector, SpecArchiveError,
-            SpecTreeScanError, WorkspaceDetectionError,
+            archive_spec_directory, with_archive_source_group_lock, FilesystemSpecTreeScanner,
+            FilesystemWorkspaceDetector, SpecArchiveError,
         },
-        markdown::{
-            FilesystemMarkdownReader, MarkdownDocument, MarkdownReadError, MarkdownReadResult,
-            MissingMarkdownFile,
-        },
-        persistence::config::{ConfigLoadError, WorkspaceConfigLoader},
+        markdown::{FilesystemMarkdownReader, MarkdownReadError},
+        persistence::config::WorkspaceConfigLoader,
     },
 };
 
 pub use crate::domain::comment::{AnchorResolutionReason, AnchorResolutionStatus};
+pub use crate::domain::spec::{
+    MissingSpecDocument as AppMissingMarkdownFile, ReadSpecFileResult,
+    SpecDocument as AppMarkdownDocument,
+};
 pub use comments::{
     CommentAnchorResolution, CommentAnchorResolutionTarget, CommentUseCases,
     FilesystemCommentUseCases, GenerateCommentId, GetCurrentTime, ResolveCommentAnchorsResult,
@@ -109,14 +111,15 @@ impl FilesystemAppUseCases {
         spec_id: &str,
         key: SpecFileKey,
     ) -> Result<FileWatchPlan, AppUseCaseError> {
+        let spec_id = SpecId::new(spec_id)?;
         let effective_config = spec_config_for_directory(
             &self.config_loader,
             workspace.layout(),
             workspace.config(),
-            spec_id,
+            &spec_id,
         )?;
 
-        plan_file_watch(workspace, &effective_config, spec_id, key)
+        plan_file_watch(workspace, &effective_config, spec_id.as_str(), key)
     }
 
     pub fn archive_spec(
@@ -156,11 +159,12 @@ impl FilesystemAppUseCases {
         spec_id: &str,
         key: SpecFileKey,
     ) -> Result<ReadSpecFileResult, AppUseCaseError> {
+        let spec_id = SpecId::new(spec_id)?;
         let effective_config = spec_config_for_directory(
             &self.config_loader,
             workspace.layout(),
             workspace.config(),
-            spec_id,
+            &spec_id,
         )?;
 
         self.markdown_cache
@@ -168,7 +172,7 @@ impl FilesystemAppUseCases {
                 &self.markdown_reader,
                 workspace.layout(),
                 &effective_config,
-                spec_id,
+                spec_id.as_str(),
                 key,
             )
             .map(ReadSpecFileResult::from)
@@ -225,60 +229,16 @@ where
         spec_id: &str,
         key: SpecFileKey,
     ) -> Result<ReadSpecFileResult, AppUseCaseError> {
+        let spec_id = SpecId::new(spec_id)?;
         let effective_config = spec_config_for_directory(
             &self.config_loader,
             workspace.layout(),
             workspace.config(),
-            spec_id,
+            &spec_id,
         )?;
 
         self.markdown_reader
-            .read_spec_file(workspace.layout(), &effective_config, spec_id, key)
-    }
-}
-
-pub trait DetectWorkspace {
-    fn detect_workspace(
-        &self,
-        selected_directory: &str,
-    ) -> Result<WorkspaceLayout, AppUseCaseError>;
-}
-
-impl DetectWorkspace for FilesystemWorkspaceDetector {
-    fn detect_workspace(
-        &self,
-        selected_directory: &str,
-    ) -> Result<WorkspaceLayout, AppUseCaseError> {
-        self.detect(selected_directory)
-            .map_err(AppUseCaseError::from)
-    }
-}
-
-pub trait LoadWorkspaceConfig {
-    fn load_workspace_config(
-        &self,
-        layout: &WorkspaceLayout,
-    ) -> Result<WorkspaceConfig, AppUseCaseError>;
-
-    fn load_spec_config_override(
-        &self,
-        spec_directory: &Path,
-    ) -> Result<Option<crate::domain::workspace::SpecConfigOverride>, AppUseCaseError>;
-}
-
-impl LoadWorkspaceConfig for WorkspaceConfigLoader {
-    fn load_workspace_config(
-        &self,
-        layout: &WorkspaceLayout,
-    ) -> Result<WorkspaceConfig, AppUseCaseError> {
-        self.load(layout).map_err(AppUseCaseError::from)
-    }
-
-    fn load_spec_config_override(
-        &self,
-        spec_directory: &Path,
-    ) -> Result<Option<crate::domain::workspace::SpecConfigOverride>, AppUseCaseError> {
-        self.load_spec_override_from_directory(spec_directory)
+            .read_spec_file(workspace.layout(), &effective_config, &spec_id, key)
             .map_err(AppUseCaseError::from)
     }
 }
@@ -287,60 +247,16 @@ fn spec_config_for_directory<ConfigLoader>(
     config_loader: &ConfigLoader,
     layout: &WorkspaceLayout,
     workspace_config: &WorkspaceConfig,
-    spec_id: &str,
+    spec_id: &SpecId,
 ) -> Result<WorkspaceConfig, AppUseCaseError>
 where
     ConfigLoader: LoadWorkspaceConfig,
 {
-    let spec_id = SpecId::new(spec_id)?;
-    let spec_directory = spec_directory_path(layout, &spec_id);
-    let Some(spec_override) = config_loader.load_spec_config_override(&spec_directory)? else {
+    let Some(spec_override) = config_loader.load_spec_config_override(layout, spec_id)? else {
         return Ok(workspace_config.clone());
     };
 
     Ok(workspace_config.merge_spec_override(&spec_override))
-}
-
-pub trait ScanSpecTree {
-    fn scan_spec_tree(
-        &self,
-        layout: &WorkspaceLayout,
-        config: &WorkspaceConfig,
-    ) -> Result<Vec<SpecNode>, AppUseCaseError>;
-}
-
-impl ScanSpecTree for FilesystemSpecTreeScanner {
-    fn scan_spec_tree(
-        &self,
-        layout: &WorkspaceLayout,
-        config: &WorkspaceConfig,
-    ) -> Result<Vec<SpecNode>, AppUseCaseError> {
-        self.scan(layout, config).map_err(AppUseCaseError::from)
-    }
-}
-
-pub trait ReadSpecFile {
-    fn read_spec_file(
-        &self,
-        layout: &WorkspaceLayout,
-        config: &WorkspaceConfig,
-        spec_id: &str,
-        key: SpecFileKey,
-    ) -> Result<ReadSpecFileResult, AppUseCaseError>;
-}
-
-impl ReadSpecFile for FilesystemMarkdownReader {
-    fn read_spec_file(
-        &self,
-        layout: &WorkspaceLayout,
-        config: &WorkspaceConfig,
-        spec_id: &str,
-        key: SpecFileKey,
-    ) -> Result<ReadSpecFileResult, AppUseCaseError> {
-        self.read(layout, config, spec_id, key)
-            .map(ReadSpecFileResult::from)
-            .map_err(AppUseCaseError::from)
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -426,167 +342,6 @@ impl ArchiveSpecResult {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ReadSpecFileResult {
-    Found(AppMarkdownDocument),
-    Missing(AppMissingMarkdownFile),
-}
-
-impl ReadSpecFileResult {
-    pub fn is_missing(&self) -> bool {
-        matches!(self, Self::Missing(_))
-    }
-}
-
-impl From<MarkdownReadResult> for ReadSpecFileResult {
-    fn from(result: MarkdownReadResult) -> Self {
-        match result {
-            MarkdownReadResult::Found(document) => Self::Found(document.into()),
-            MarkdownReadResult::Missing(missing) => Self::Missing(missing.into()),
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AppMarkdownDocument {
-    identity: crate::domain::spec::SpecArtifactIdentity,
-    format: SpecDocumentFormat,
-    path: String,
-    contents: String,
-    blocks: Vec<MarkdownBlock>,
-}
-
-impl AppMarkdownDocument {
-    pub fn new(key: SpecFileKey, path: impl Into<String>, contents: impl Into<String>) -> Self {
-        Self::with_format_and_blocks(
-            key,
-            SpecDocumentFormat::Markdown,
-            path,
-            contents,
-            Vec::new(),
-        )
-    }
-
-    pub fn with_blocks(
-        key: SpecFileKey,
-        path: impl Into<String>,
-        contents: impl Into<String>,
-        blocks: Vec<MarkdownBlock>,
-    ) -> Self {
-        Self::with_format_and_blocks(key, SpecDocumentFormat::Markdown, path, contents, blocks)
-    }
-
-    pub fn with_format_and_blocks(
-        key: SpecFileKey,
-        format: SpecDocumentFormat,
-        path: impl Into<String>,
-        contents: impl Into<String>,
-        blocks: Vec<MarkdownBlock>,
-    ) -> Self {
-        Self::with_artifact(
-            crate::domain::spec::SpecArtifactIdentity::Standard(key),
-            format,
-            path,
-            contents,
-            blocks,
-        )
-    }
-
-    pub fn with_artifact(
-        identity: crate::domain::spec::SpecArtifactIdentity,
-        format: SpecDocumentFormat,
-        path: impl Into<String>,
-        contents: impl Into<String>,
-        blocks: Vec<MarkdownBlock>,
-    ) -> Self {
-        Self {
-            identity,
-            format,
-            path: path.into(),
-            contents: contents.into(),
-            blocks,
-        }
-    }
-
-    pub fn identity(&self) -> &crate::domain::spec::SpecArtifactIdentity {
-        &self.identity
-    }
-
-    pub fn file_key(&self) -> Option<SpecFileKey> {
-        self.identity.standard_key()
-    }
-
-    pub fn format(&self) -> SpecDocumentFormat {
-        self.format
-    }
-
-    pub fn path(&self) -> &str {
-        &self.path
-    }
-
-    pub fn contents(&self) -> &str {
-        &self.contents
-    }
-
-    pub fn blocks(&self) -> &[MarkdownBlock] {
-        &self.blocks
-    }
-}
-
-impl From<MarkdownDocument> for AppMarkdownDocument {
-    fn from(document: MarkdownDocument) -> Self {
-        Self::with_artifact(
-            document.identity().clone(),
-            document.format(),
-            document.path().to_string(),
-            document.contents().to_string(),
-            document.blocks().to_vec(),
-        )
-    }
-}
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AppMissingMarkdownFile {
-    key: SpecFileKey,
-    format: SpecDocumentFormat,
-    path: String,
-}
-
-impl AppMissingMarkdownFile {
-    pub fn new(key: SpecFileKey, path: impl Into<String>) -> Self {
-        Self::with_format(key, SpecDocumentFormat::Markdown, path)
-    }
-
-    pub fn with_format(
-        key: SpecFileKey,
-        format: SpecDocumentFormat,
-        path: impl Into<String>,
-    ) -> Self {
-        Self {
-            key,
-            format,
-            path: path.into(),
-        }
-    }
-
-    pub fn key(&self) -> SpecFileKey {
-        self.key
-    }
-
-    pub fn format(&self) -> SpecDocumentFormat {
-        self.format
-    }
-
-    pub fn path(&self) -> &str {
-        &self.path
-    }
-}
-
-impl From<MissingMarkdownFile> for AppMissingMarkdownFile {
-    fn from(missing: MissingMarkdownFile) -> Self {
-        Self::with_format(missing.key(), missing.format(), missing.path().to_string())
-    }
-}
-
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 pub enum AppUseCaseError {
     #[error("failed to detect workspace: {message}")]
@@ -607,31 +362,34 @@ pub enum AppUseCaseError {
     CommentRepository { message: String },
 }
 
-impl From<WorkspaceDetectionError> for AppUseCaseError {
-    fn from(source: WorkspaceDetectionError) -> Self {
+impl From<WorkspaceDetectionPortError> for AppUseCaseError {
+    fn from(source: WorkspaceDetectionPortError) -> Self {
         Self::WorkspaceDetection {
             message: source.to_string(),
         }
     }
 }
 
-impl From<ConfigLoadError> for AppUseCaseError {
-    fn from(source: ConfigLoadError) -> Self {
+impl From<WorkspaceConfigLoadPortError> for AppUseCaseError {
+    fn from(source: WorkspaceConfigLoadPortError) -> Self {
         Self::ConfigLoad {
             message: source.to_string(),
         }
     }
 }
 
-impl From<SpecTreeScanError> for AppUseCaseError {
-    fn from(source: SpecTreeScanError) -> Self {
-        if matches!(source, SpecTreeScanError::ConfigOverrideLoad { .. }) {
-            return Self::ConfigLoad {
-                message: source.to_string(),
-            };
+impl From<SpecTreeScanPortError> for AppUseCaseError {
+    fn from(source: SpecTreeScanPortError) -> Self {
+        match source {
+            SpecTreeScanPortError::ConfigLoad { message } => Self::ConfigLoad { message },
+            SpecTreeScanPortError::Scan { message } => Self::SpecTreeScan { message },
         }
+    }
+}
 
-        Self::SpecTreeScan {
+impl From<SpecFileReadPortError> for AppUseCaseError {
+    fn from(source: SpecFileReadPortError) -> Self {
+        Self::MarkdownRead {
             message: source.to_string(),
         }
     }
@@ -703,42 +461,43 @@ mod tests {
 
     #[derive(Debug, Clone)]
     struct FakeWorkspaceDetector {
-        result: Result<WorkspaceLayout, AppUseCaseError>,
+        result: Result<WorkspaceLayout, WorkspaceDetectionPortError>,
     }
 
     impl DetectWorkspace for FakeWorkspaceDetector {
         fn detect_workspace(
             &self,
             _selected_directory: &str,
-        ) -> Result<WorkspaceLayout, AppUseCaseError> {
+        ) -> Result<WorkspaceLayout, WorkspaceDetectionPortError> {
             self.result.clone()
         }
     }
 
     #[derive(Debug, Clone)]
     struct FakeConfigLoader {
-        result: Result<WorkspaceConfig, AppUseCaseError>,
+        result: Result<WorkspaceConfig, WorkspaceConfigLoadPortError>,
     }
 
     impl LoadWorkspaceConfig for FakeConfigLoader {
         fn load_workspace_config(
             &self,
             _layout: &WorkspaceLayout,
-        ) -> Result<WorkspaceConfig, AppUseCaseError> {
+        ) -> Result<WorkspaceConfig, WorkspaceConfigLoadPortError> {
             self.result.clone()
         }
 
         fn load_spec_config_override(
             &self,
-            _spec_directory: &Path,
-        ) -> Result<Option<crate::domain::workspace::SpecConfigOverride>, AppUseCaseError> {
+            _layout: &WorkspaceLayout,
+            _spec_id: &SpecId,
+        ) -> Result<Option<SpecConfigOverride>, WorkspaceConfigLoadPortError> {
             Ok(None)
         }
     }
 
     #[derive(Debug, Clone)]
     struct FakeSpecTreeScanner {
-        result: Result<Vec<SpecNode>, AppUseCaseError>,
+        result: Result<Vec<SpecNode>, SpecTreeScanPortError>,
     }
 
     impl ScanSpecTree for FakeSpecTreeScanner {
@@ -746,14 +505,14 @@ mod tests {
             &self,
             _layout: &WorkspaceLayout,
             _config: &WorkspaceConfig,
-        ) -> Result<Vec<SpecNode>, AppUseCaseError> {
+        ) -> Result<Vec<SpecNode>, SpecTreeScanPortError> {
             self.result.clone()
         }
     }
 
     #[derive(Debug, Clone)]
     struct FakeMarkdownReader {
-        result: Result<ReadSpecFileResult, AppUseCaseError>,
+        result: Result<ReadSpecFileResult, SpecFileReadPortError>,
     }
 
     impl ReadSpecFile for FakeMarkdownReader {
@@ -761,9 +520,9 @@ mod tests {
             &self,
             _layout: &WorkspaceLayout,
             _config: &WorkspaceConfig,
-            _spec_id: &str,
+            _spec_id: &SpecId,
             _key: SpecFileKey,
-        ) -> Result<ReadSpecFileResult, AppUseCaseError> {
+        ) -> Result<ReadSpecFileResult, SpecFileReadPortError> {
             self.result.clone()
         }
     }
@@ -776,7 +535,7 @@ mod tests {
             &self,
             _layout: &WorkspaceLayout,
             _config: &WorkspaceConfig,
-        ) -> Result<Vec<SpecNode>, AppUseCaseError> {
+        ) -> Result<Vec<SpecNode>, SpecTreeScanPortError> {
             panic!("spec tree scanner should not be called")
         }
     }
@@ -789,9 +548,9 @@ mod tests {
             &self,
             _layout: &WorkspaceLayout,
             _config: &WorkspaceConfig,
-            _spec_id: &str,
+            _spec_id: &SpecId,
             _key: SpecFileKey,
-        ) -> Result<ReadSpecFileResult, AppUseCaseError> {
+        ) -> Result<ReadSpecFileResult, SpecFileReadPortError> {
             panic!("markdown reader should not be called")
         }
     }
@@ -830,16 +589,16 @@ mod tests {
             fn load_workspace_config(
                 &self,
                 _layout: &WorkspaceLayout,
-            ) -> Result<WorkspaceConfig, AppUseCaseError> {
+            ) -> Result<WorkspaceConfig, WorkspaceConfigLoadPortError> {
                 self.call_count.set(self.call_count.get() + 1);
                 Ok(WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace))
             }
 
             fn load_spec_config_override(
                 &self,
-                _spec_directory: &Path,
-            ) -> Result<Option<crate::domain::workspace::SpecConfigOverride>, AppUseCaseError>
-            {
+                _layout: &WorkspaceLayout,
+                _spec_id: &SpecId,
+            ) -> Result<Option<SpecConfigOverride>, WorkspaceConfigLoadPortError> {
                 Ok(None)
             }
         }
@@ -850,9 +609,7 @@ mod tests {
         let call_count = Rc::clone(&config_loader.call_count);
         let use_cases = app_use_cases(
             FakeWorkspaceDetector {
-                result: Err(AppUseCaseError::WorkspaceDetection {
-                    message: "unsupported workspace".to_string(),
-                }),
+                result: Err(WorkspaceDetectionPortError::new("unsupported workspace")),
             },
             config_loader.clone(),
             PanicSpecTreeScanner,
@@ -945,14 +702,15 @@ mod tests {
             fn load_workspace_config(
                 &self,
                 _layout: &WorkspaceLayout,
-            ) -> Result<WorkspaceConfig, AppUseCaseError> {
+            ) -> Result<WorkspaceConfig, WorkspaceConfigLoadPortError> {
                 Ok(self.workspace_config.clone())
             }
 
             fn load_spec_config_override(
                 &self,
-                _spec_directory: &Path,
-            ) -> Result<Option<SpecConfigOverride>, AppUseCaseError> {
+                _layout: &WorkspaceLayout,
+                _spec_id: &SpecId,
+            ) -> Result<Option<SpecConfigOverride>, WorkspaceConfigLoadPortError> {
                 Ok(Some(self.spec_override.clone()))
             }
         }
@@ -967,9 +725,9 @@ mod tests {
                 &self,
                 _layout: &WorkspaceLayout,
                 config: &WorkspaceConfig,
-                _spec_id: &str,
+                _spec_id: &SpecId,
                 key: SpecFileKey,
-            ) -> Result<ReadSpecFileResult, AppUseCaseError> {
+            ) -> Result<ReadSpecFileResult, SpecFileReadPortError> {
                 let file_name = config
                     .file_for_key(key)
                     .map(|mapping| mapping.file_name().to_string());
@@ -1049,10 +807,10 @@ mod tests {
     }
 
     #[test]
-    fn infrastructure_errors_map_to_app_level_errors() {
-        let error = AppUseCaseError::from(WorkspaceDetectionError::UnsupportedWorkspace {
-            root: "/workspace/project".to_string(),
-        });
+    fn workspace_detection_port_errors_map_to_app_level_errors() {
+        let error = AppUseCaseError::from(WorkspaceDetectionPortError::new(
+            "unsupported workspace layout at: /workspace/project",
+        ));
 
         assert_eq!(
             AppUseCaseError::WorkspaceDetection {
@@ -1064,17 +822,7 @@ mod tests {
 
     #[test]
     fn spec_config_override_scan_errors_map_to_config_load_errors() {
-        let source = SpecTreeScanError::ConfigOverrideLoad {
-            path: "/workspace/project/.plugin-workspace/.specs/auth".to_string(),
-            source: ConfigLoadError::InvalidFileMapping {
-                path: "/workspace/project/.plugin-workspace/.specs/auth/.spec-reviewer/config.json"
-                    .to_string(),
-                source: crate::domain::workspace::WorkspaceConfigError::UnsafeFileName {
-                    key: SpecFileKey::Tasks,
-                    file_name: "../tasks.md".to_string(),
-                },
-            },
-        };
+        let source = SpecTreeScanPortError::config_load("failed to load spec config override");
 
         let error = AppUseCaseError::from(source);
 

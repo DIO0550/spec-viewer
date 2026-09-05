@@ -5,11 +5,15 @@ use std::fmt;
 use thiserror::Error;
 
 mod config;
+mod ports;
 mod topology;
 
 pub use config::{
     default_scan_excluded_directory_names, SpecConfigOverride, SpecOverrideNodeKind,
     WorkspaceConfig, WorkspaceConfigError, WorkspaceConfigSource, WorkspaceFileMapping,
+};
+pub use ports::{
+    DetectWorkspace, LoadWorkspaceConfig, WorkspaceConfigLoadPortError, WorkspaceDetectionPortError,
 };
 pub use topology::{
     SpecLocationDescriptor, SpecSourceGroupDescriptor, WorkspaceDetectionMode,
