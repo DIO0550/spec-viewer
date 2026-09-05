@@ -8,9 +8,10 @@ import {
   type UseCommentSelectionResult,
   useCommentSelection,
 } from "@/app/App/hooks/useCommentSelection";
+import type { Comment } from "@/features/comments/domain/comment";
+import type { CommentAnchor } from "@/features/comments/domain/commentAnchor";
+import { CommentId as CommentIdValue } from "@/features/comments/domain/commentId";
 import { CommentListState } from "@/features/comments/domain/commentListState";
-import type { Comment, CommentAnchor } from "@/features/comments/types/comment";
-import { CommentId as CommentIdValue } from "@/features/comments/types/comment";
 
 const commentId = CommentIdValue.fromString;
 
@@ -29,7 +30,6 @@ function makeComment(id: string): Comment {
     anchor,
     body: `body-${id}`,
     status: "open",
-    resolved: false,
     createdAt: "2026-05-05T10:00:00Z",
     updatedAt: "2026-05-05T10:00:00Z",
   };

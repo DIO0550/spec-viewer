@@ -2,7 +2,7 @@ import type { SpecFileKey } from "@/features/specs/domain/specFile";
 import {
   WorkspacePath,
   type WorkspacePath as WorkspacePathType,
-} from "@/shared/domain/workspacePath";
+} from "@/domains/workspacePath";
 
 declare const selectionIdentityBrand: unique symbol;
 declare const specIdBrand: unique symbol;

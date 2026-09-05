@@ -5,8 +5,10 @@ import {
   useRef,
   useState,
 } from "react";
+import type { Comment } from "@/features/comments/domain/comment";
 import type { CommentFeatureError as CommentFeatureErrorType } from "@/features/comments/domain/commentError";
 import { CommentFeatureError } from "@/features/comments/domain/commentError";
+import type { CommentId } from "@/features/comments/domain/commentId";
 import {
   CommentListState,
   type CommentListState as CommentListStateType,
@@ -25,18 +27,17 @@ import {
   useCommentOperations,
 } from "@/features/comments/hooks/useCommentOperations";
 import { listComments as listCommentsViaGateway } from "@/features/comments/infra/commentGateway";
-import type { Comment, CommentId } from "@/features/comments/types/comment";
 import {
   SelectionIdentity,
   type SelectionIdentity as SelectionIdentityType,
 } from "@/features/specs/domain/specViewSelection";
-import type { CommentCommands } from "@/shared/api/tauri";
-import { commentCommands as defaultCommentCommands } from "@/shared/api/tauri";
-import { ListCommentsCommandError } from "@/shared/api/tauri/listComments";
+import type { CommentCommands } from "@/lib/api/tauri";
+import { commentCommands as defaultCommentCommands } from "@/lib/api/tauri";
+import { ListCommentsCommandError } from "@/lib/api/tauri/listComments";
 import {
   resolvePerformanceCorrelationId,
   startPerformanceSpan,
-} from "@/shared/lib/performance";
+} from "@/lib/performance";
 
 export type { CommentListState } from "@/features/comments/domain/commentListState";
 export type {
@@ -57,12 +58,15 @@ export type UseCommentsOptions = Readonly<{
 
 export type UseCommentsResult = Readonly<{
   listState: CommentListStateType;
+  /** Canonical lifecycle state for the latest comment operation. */
   operationState: CommentOperationState;
   comments: readonly Comment[];
   isLoading: boolean;
+  /** Compatibility projection derived from operationState. */
   isSaving: boolean;
   isEmpty: boolean;
   error: CommentFeatureErrorType | null;
+  /** Compatibility projection of the error held by operationState. */
   operationError: CommentFeatureErrorType | null;
   /** Reloads comments for the active scope. */
   reloadComments: () => Promise<boolean>;
@@ -76,8 +80,6 @@ export type UseCommentsResult = Readonly<{
   resolveComment: (commentId: CommentId) => Promise<Comment | null>;
   /** @param commentId - Id of the comment to reopen. */
   reopenComment: (commentId: CommentId) => Promise<Comment | null>;
-  /** @param commentId - Id of the comment to toggle. */
-  toggleCommentResolved: (commentId: CommentId) => Promise<Comment | null>;
 }>;
 
 const defaultStatusFilter: CommentStatusFilter = CommentStatusFilter.All;
@@ -220,7 +222,6 @@ export function useComments({
     selectionIdentity,
     statusFilter,
     commands,
-    currentComments: listState.comments,
     updateCurrentScopeComments,
     reloadComments,
   });

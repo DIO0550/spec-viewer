@@ -14,7 +14,7 @@ import {
   useSpecFileWatcher,
 } from "@/features/specs/hooks/useSpecFileWatcher";
 import type { StartSpecFileWatchResponse } from "@/features/specs/types/watch";
-import { WorkspacePath } from "@/shared/domain/workspacePath";
+import { WorkspacePath } from "@/domains/workspacePath";
 
 type WatcherErrorHandler = NonNullable<
   UseSpecFileWatcherOptions["onWatcherError"]

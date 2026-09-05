@@ -1,5 +1,8 @@
 import { expect, test, vi } from "vitest";
-
+import type { Comment } from "@/features/comments/domain/comment";
+import type { CommentAnchor } from "@/features/comments/domain/commentAnchor";
+import type { CommentFeatureError } from "@/features/comments/domain/commentError";
+import { CommentId } from "@/features/comments/domain/commentId";
 import {
   CommentOperationFailedState,
   CommentOperationIdleState,
@@ -11,10 +14,7 @@ import type {
   CommentListState,
   UseCommentsResult,
 } from "@/features/comments/hooks/useComments";
-import type { Comment, CommentAnchor } from "@/features/comments/types/comment";
-import { CommentId } from "@/features/comments/types/comment";
-import { AddCommentCommandError } from "@/shared/api/tauri/addComment";
-import type { CommentFeatureError } from "@/features/comments/domain/commentError";
+import { AddCommentCommandError } from "@/lib/api/tauri/addComment";
 
 const commentId = CommentId.fromString;
 
@@ -35,7 +35,6 @@ const comment: Comment = {
   anchor,
   body: "Clarify this task",
   status: "open",
-  resolved: false,
   createdAt: "2026-05-05T10:00:00Z",
   updatedAt: "2026-05-05T10:00:00Z",
 };
@@ -52,6 +51,12 @@ const featureError: CommentFeatureError = {
   cause: commandError,
 };
 
+const readyListState: CommentListState = {
+  status: "ready",
+  comments: [comment],
+  error: null,
+};
+
 function createCommentOperations(
   operationState: UseCommentOperationsResult["operationState"] = CommentOperationIdleState.create(),
 ): UseCommentOperationsResult {
@@ -62,35 +67,27 @@ function createCommentOperations(
     deleteComment: vi.fn(),
     resolveComment: vi.fn(),
     reopenComment: vi.fn(),
-    toggleCommentResolved: vi.fn(),
   };
 }
 
 test("buildCommentsResultはlistStateとコメント操作結果からhook公開APIを組み立てる", () => {
   const reloadComments = vi.fn();
-  const listState: CommentListState = {
-    status: "ready",
-    comments: [comment],
-    error: null,
-  };
-  const commentOperations = createCommentOperations(
-    CommentOperationSavingState.create("add", null),
-  );
+  const commentOperations = createCommentOperations();
 
   const result = buildCommentsResult({
     list: {
-      listState,
+      listState: readyListState,
       reloadComments,
     },
     operations: commentOperations,
   });
 
   expect(result).toMatchObject<Partial<UseCommentsResult>>({
-    listState,
+    listState: readyListState,
     operationState: commentOperations.operationState,
     comments: [comment],
     isLoading: false,
-    isSaving: true,
+    isSaving: false,
     isEmpty: false,
     error: null,
     operationError: null,
@@ -100,27 +97,46 @@ test("buildCommentsResultはlistStateとコメント操作結果からhook公開
     deleteComment: commentOperations.deleteComment,
     resolveComment: commentOperations.resolveComment,
     reopenComment: commentOperations.reopenComment,
-    toggleCommentResolved: commentOperations.toggleCommentResolved,
   });
 });
 
-test("buildCommentsResultはoperation失敗時のエラーをoperationErrorとして公開する", () => {
-  const listState: CommentListState = {
-    status: "ready",
-    comments: [comment],
-    error: null,
-  };
-  const commentOperations = createCommentOperations(
-    CommentOperationFailedState.create("update", comment.id, featureError),
-  );
-
+test.each([
+  {
+    label: "idle",
+    operationState: CommentOperationIdleState.create(),
+    expectedIsSaving: false,
+    expectedOperationError: null,
+  },
+  {
+    label: "saving",
+    operationState: CommentOperationSavingState.create("add", null),
+    expectedIsSaving: true,
+    expectedOperationError: null,
+  },
+  {
+    label: "error",
+    operationState: CommentOperationFailedState.create(
+      "update",
+      comment.id,
+      featureError,
+    ),
+    expectedIsSaving: false,
+    expectedOperationError: featureError,
+  },
+] as const)("buildCommentsResultは$label状態から互換値を導出する", ({
+  operationState,
+  expectedIsSaving,
+  expectedOperationError,
+}) => {
   const result = buildCommentsResult({
     list: {
-      listState,
+      listState: readyListState,
       reloadComments: vi.fn(),
     },
-    operations: commentOperations,
+    operations: createCommentOperations(operationState),
   });
 
-  expect(result.operationError).toBe(featureError);
+  expect(result.operationState).toBe(operationState);
+  expect(result.isSaving).toBe(expectedIsSaving);
+  expect(result.operationError).toBe(expectedOperationError);
 });

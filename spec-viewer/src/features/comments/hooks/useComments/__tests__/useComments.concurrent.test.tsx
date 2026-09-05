@@ -22,7 +22,7 @@ import {
   flushAsyncEffects,
   tasksScope,
 } from "@/features/comments/hooks/useComments/__tests__/useComments.concurrent.fixture";
-import type { Comment } from "@/features/comments/types/comment";
+import type { Comment } from "@/features/comments/domain/comment";
 
 test.each([
   ["scope変更", designScope, CommentStatusFilter.All],

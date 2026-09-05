@@ -1,24 +1,23 @@
 import { expect, test, vi } from "vitest";
-
+import type { Comment } from "@/features/comments/domain/comment";
+import type { CommentAnchor } from "@/features/comments/domain/commentAnchor";
+import { CommentId } from "@/features/comments/domain/commentId";
+import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import {
   addComment,
   deleteComment,
   listComments,
   reopenComment,
   resolveComment,
-  toggleCommentResolved,
   updateComment,
 } from "@/features/comments/infra/commentGateway";
 import {
   CommentScope,
   type CommentScope as CommentScopeType,
 } from "@/features/comments/domain/commentScope";
-import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import { createCommentCommandTestDouble } from "@/features/comments/testing/comment-command-test-double";
-import type { Comment, CommentAnchor } from "@/features/comments/types/comment";
-import { CommentId } from "@/features/comments/types/comment";
 import { SpecViewSelection } from "@/features/specs/domain/specViewSelection";
-import { WorkspacePath } from "@/shared/domain/workspacePath";
+import { WorkspacePath } from "@/domains/workspacePath";
 
 const commentId = CommentId.fromString;
 
@@ -49,7 +48,6 @@ const comment: Comment = {
   anchor,
   body: "Clarify this task",
   status: "open",
-  resolved: false,
   createdAt: "2026-05-05T10:00:00Z",
   updatedAt: "2026-05-05T10:00:00Z",
 };
@@ -146,7 +144,6 @@ test.each([
   ["deleteComment", deleteComment, "deleteComment"],
   ["resolveComment", resolveComment, "resolveComment"],
   ["reopenComment", reopenComment, "reopenComment"],
-  ["toggleCommentResolved", toggleCommentResolved, "toggleCommentResolved"],
 ] as const)("%sはCommentCommandsへstatus request DTOを渡す", async (_label, gatewayFunction, callKey) => {
   const double = createCommentCommandTestDouble();
 

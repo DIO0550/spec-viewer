@@ -21,8 +21,8 @@ import {
 import {
   startSpecFileWatch as defaultStartSpecFileWatch,
   stopSpecFileWatch as defaultStopSpecFileWatch,
-} from "@/shared/api/tauri";
-import { WorkspacePath } from "@/shared/domain/workspacePath";
+} from "@/lib/api/tauri";
+import { WorkspacePath } from "@/domains/workspacePath";
 
 export type StartSpecFileWatchCommand = (
   request: StartSpecFileWatchRequest,

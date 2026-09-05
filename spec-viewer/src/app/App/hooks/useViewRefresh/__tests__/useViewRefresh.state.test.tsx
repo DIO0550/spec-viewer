@@ -17,8 +17,8 @@ import {
   SPEC_FILE_WATCH_ERROR_EVENT,
   type SpecFileWatchChangeKind,
 } from "@/features/specs/types/watch";
-import { WorkspacePath } from "@/shared/domain/workspacePath";
-import { getUnknownErrorMessage } from "@/shared/lib/errorMessage";
+import { WorkspacePath } from "@/domains/workspacePath";
+import { getUnknownErrorMessage } from "@/utils/errorMessage";
 
 const workspacePath = WorkspacePath.fromString("/workspace");
 const selection = SpecViewSelection.synchronize(SpecViewSelection.empty(), {
@@ -164,6 +164,52 @@ test("手動リフレッシュ成功でreloadSpecsとreloadCommentsが実行さ�
   expect(reload.comments).toHaveBeenCalledTimes(1);
   expect(onError).toHaveBeenCalledTimes(1);
   expect(onError).toHaveBeenCalledWith(null);
+  hook.unmount();
+});
+
+test("repository view の manual refresh は repository callback のみを実行する", async () => {
+  const repository = vi.fn(async () => true);
+  const repositoryInvalidate = vi.fn();
+  const reload = createReload({ repository, repositoryInvalidate });
+  const hook = renderHook({
+    selection: { ...selection, specId: null, fileKey: null },
+    isCurrentViewLoading: false,
+    isRepositoryView: true,
+    reload,
+    onError: vi.fn(),
+    watcher: createWatcher(new Map()),
+  });
+
+  await act(async () => {
+    await hook.current().refreshCurrentViewManually();
+  });
+
+  expect(repository).toHaveBeenCalledTimes(1);
+  expect(reload.specs).not.toHaveBeenCalled();
+  hook.unmount();
+});
+
+test("repository watcher event は invalidate 後に repository refresh を実行する", async () => {
+  const handlers: WatchHandlers = new Map();
+  const repository = vi.fn(async () => true);
+  const repositoryInvalidate = vi.fn();
+  const reload = createReload({ repository, repositoryInvalidate });
+  const hook = renderHook({
+    selection,
+    isCurrentViewLoading: false,
+    isRepositoryView: true,
+    reload,
+    onError: vi.fn(),
+    watcher: createWatcher(handlers),
+  });
+  await flush();
+
+  fireChanged(handlers, "markdown");
+  await flush();
+
+  expect(repositoryInvalidate).toHaveBeenCalledTimes(1);
+  expect(repository).toHaveBeenCalledTimes(1);
+  expect(reload.document).not.toHaveBeenCalled();
   hook.unmount();
 });
 

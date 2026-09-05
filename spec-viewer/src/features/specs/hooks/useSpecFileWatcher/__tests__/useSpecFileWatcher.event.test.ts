@@ -3,7 +3,7 @@ import { expect, test } from "vitest";
 import { SpecViewSelection } from "@/features/specs/domain/specViewSelection";
 import { isSpecFileWatchEventForSelection } from "@/features/specs/hooks/useSpecFileWatcher";
 import type { SpecFileWatchChangedEvent } from "@/features/specs/types/watch";
-import { WorkspacePath } from "@/shared/domain/workspacePath";
+import { WorkspacePath } from "@/domains/workspacePath";
 
 const selection = SpecViewSelection.synchronize(SpecViewSelection.empty(), {
   workspacePath: WorkspacePath.fromString("/workspace/project"),

@@ -1,10 +1,9 @@
-import { act } from "react";
 import type { ReactNode } from "react";
+import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-
-import type { CommentAnchorDraft } from "@/features/comments/types/comment";
 import { AddCommentPopover } from "@/features/comments/components/AddCommentPopover";
+import type { CommentAnchorDraft } from "@/features/comments/types/comment";
 
 const draft: CommentAnchorDraft = {
   anchor: {
@@ -72,6 +71,19 @@ function findTextarea(container: ParentNode): HTMLTextAreaElement {
   return container.querySelector("textarea") as HTMLTextAreaElement;
 }
 
+/** Updates a textarea through the same native input path React observes. */
+function inputTextarea(textarea: HTMLTextAreaElement, value: string): void {
+  const setter = Object.getOwnPropertyDescriptor(
+    HTMLTextAreaElement.prototype,
+    "value",
+  )?.set;
+  if (setter === undefined) {
+    throw new Error("textarea value setter not found");
+  }
+  setter.call(textarea, value);
+  textarea.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
 function findSaveButton(container: ParentNode): HTMLButtonElement {
   return Array.from(container.querySelectorAll("button")).find(
     (button) => button.textContent?.includes("保存") ?? false,
@@ -97,8 +109,7 @@ test("AddCommentPopoverはtrim済み本文とanchorを保存する", async () =>
   const textarea = findTextarea(result.container);
 
   act(() => {
-    textarea.value = "  Please clarify this requirement.  ";
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    inputTextarea(textarea, "  Please clarify this requirement.  ");
   });
 
   await act(async () => {
@@ -118,8 +129,7 @@ test("AddCommentPopoverは空白のみ本文を保存せず理由を表示する
   const textarea = findTextarea(result.container);
 
   act(() => {
-    textarea.value = "   ";
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    inputTextarea(textarea, "   ");
   });
 
   await act(async () => {
@@ -146,8 +156,7 @@ test("AddCommentPopoverはscope不足時に保存を止めて理由を表示す�
   const textarea = findTextarea(result.container);
 
   act(() => {
-    textarea.value = "Cannot save yet";
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    inputTextarea(textarea, "Cannot save yet");
   });
 
   expect(findSaveButton(result.container).disabled).toBe(true);
@@ -164,8 +173,7 @@ test("AddCommentPopoverはscope不足を本文validationより優先して表示
   const textarea = findTextarea(result.container);
 
   act(() => {
-    textarea.value = "   ";
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    inputTextarea(textarea, "   ");
   });
 
   await act(async () => {
@@ -207,8 +215,7 @@ test("AddCommentPopoverは保存結果falseで失敗メッセージを表示す�
   const textarea = findTextarea(result.container);
 
   act(() => {
-    textarea.value = "Save me";
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    inputTextarea(textarea, "Save me");
   });
 
   await act(async () => {
@@ -232,10 +239,8 @@ test("AddCommentPopoverは本文スクロール領域とfooter actionsを分け�
       },
     },
   });
-  const body = result.container.querySelector(".add-comment-popover__body");
-  const actions = result.container.querySelector(
-    ".add-comment-popover__actions",
-  );
+  const body = result.container.querySelector(".comment-composer__body");
+  const actions = result.container.querySelector(".comment-composer__actions");
 
   expect(body?.textContent).toContain("long selected text");
   expect(body?.contains(findTextarea(result.container))).toBe(true);
@@ -323,8 +328,7 @@ test("AddCommentPopoverはCtrl Enterで保存する", async () => {
   const textarea = findTextarea(result.container);
 
   act(() => {
-    textarea.value = "Keyboard submit";
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    inputTextarea(textarea, "Keyboard submit");
   });
 
   await act(async () => {
@@ -350,8 +354,7 @@ test("AddCommentPopoverはMeta Enterで保存する", async () => {
   const textarea = findTextarea(result.container);
 
   act(() => {
-    textarea.value = "Keyboard submit";
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    inputTextarea(textarea, "Keyboard submit");
   });
 
   await act(async () => {
@@ -377,8 +380,7 @@ test("AddCommentPopoverは追加modifierつきCtrl Enterで保存する", async 
   const textarea = findTextarea(result.container);
 
   act(() => {
-    textarea.value = "Keyboard submit";
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    inputTextarea(textarea, "Keyboard submit");
   });
 
   await act(async () => {
@@ -440,8 +442,7 @@ test("AddCommentPopoverは保存中のCtrl Enterで保存しない", async () =>
 
   const textarea = findTextarea(container);
   act(() => {
-    textarea.value = "Saving should block shortcut";
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    inputTextarea(textarea, "Saving should block shortcut");
   });
 
   act(() => {
@@ -544,8 +545,7 @@ test("AddCommentPopoverはkey変更remountで本文とvalidation errorを初期�
 
   const textarea = findTextarea(container);
   act(() => {
-    textarea.value = "   ";
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    inputTextarea(textarea, "   ");
   });
 
   await act(async () => {

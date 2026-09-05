@@ -16,7 +16,7 @@ import type {
   StartSpecFileWatchResponse,
   StopSpecFileWatchResponse,
 } from "@/features/specs/types/watch";
-import { WorkspacePath } from "@/shared/domain/workspacePath";
+import { WorkspacePath } from "@/domains/workspacePath";
 
 type Deferred<T> = Readonly<{
   promise: Promise<T>;

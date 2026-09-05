@@ -7,14 +7,12 @@ import {
 } from "@/features/comments/domain/commentScope";
 import type { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import { createCommentCommandTestDouble } from "@/features/comments/testing/comment-command-test-double";
-import type {
-  Comment,
-  ListCommentsResponse,
-} from "@/features/comments/types/comment";
-import { CommentId } from "@/features/comments/types/comment";
+import type { Comment } from "@/features/comments/domain/comment";
+import type { ListCommentsResponse } from "@/features/comments/types/comment";
+import { CommentId } from "@/features/comments/domain/commentId";
 import { SpecViewSelection } from "@/features/specs/domain/specViewSelection";
-import type { CommentCommands } from "@/shared/api/tauri";
-import { WorkspacePath } from "@/shared/domain/workspacePath";
+import type { CommentCommands } from "@/lib/api/tauri";
+import { WorkspacePath } from "@/domains/workspacePath";
 
 export type CommentsHostProps = Readonly<{
   commands: CommentCommands;
@@ -40,7 +38,6 @@ export const addedComment: Comment = {
   },
   body: "Keep the committed selection",
   status: "open",
-  resolved: false,
   createdAt: "2026-07-11T12:00:00Z",
   updatedAt: "2026-07-11T12:00:00Z",
 };
@@ -90,7 +87,9 @@ export async function flushAsyncEffects(): Promise<void> {
  * @param fileKey - File key selected by the test render.
  * @returns Complete comment scope for the selected file.
  */
-function createCommentScope(fileKey: "tasks" | "design"): CommentScopeType {
+function createCommentScope(
+  fileKey: "tasks" | "requirements",
+): CommentScopeType {
   const selection = SpecViewSelection.synchronize(SpecViewSelection.empty(), {
     workspacePath: WorkspacePath.fromString("/workspace/spec-reviewer"),
     specId: "phase-2-comments",
@@ -100,4 +99,4 @@ function createCommentScope(fileKey: "tasks" | "design"): CommentScopeType {
 }
 
 export const tasksScope = createCommentScope("tasks");
-export const designScope = createCommentScope("design");
+export const designScope = createCommentScope("requirements");

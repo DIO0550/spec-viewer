@@ -8,7 +8,7 @@ import {
   SelectionIdentity,
   SpecViewSelection,
 } from "@/features/specs/domain/specViewSelection";
-import { WorkspacePath } from "@/shared/domain/workspacePath";
+import { WorkspacePath } from "@/domains/workspacePath";
 
 const workspacePath = WorkspacePath.fromString("/workspace/spec-reviewer");
 

@@ -126,7 +126,7 @@ mod tests {
     use super::*;
     use crate::domain::{
         comment::CommentScope,
-        spec::{SpecFileKey, SpecId},
+        spec::{SpecDomainError, SpecFileKey, SpecId},
         workspace::{WorkspaceKind, WorkspaceRoot},
     };
 
@@ -201,24 +201,6 @@ mod tests {
     }
 
     #[test]
-    fn resolves_spec_skill_comment_file_with_compatibility_key() {
-        let workspace = TestWorkspace::new("spec-skill");
-        let layout = workspace.layout(WorkspaceKind::SpecSkill);
-        let scope = scope("checkout", SpecFileKey::Requirements);
-
-        let path = CommentStoragePathResolver::new()
-            .resolve(&layout, &scope)
-            .expect("comment storage path should resolve");
-
-        assert_eq!(
-            workspace
-                .root()
-                .join(".spec-skill/features/checkout/.comments/requirements.json"),
-            path.file_path()
-        );
-    }
-
-    #[test]
     fn keeps_nested_comment_storage_inside_selected_spec_folder() {
         let workspace = TestWorkspace::new("nested");
         let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
@@ -243,34 +225,20 @@ mod tests {
 
     #[test]
     fn rejects_traversal_and_absolute_spec_ids() {
-        let workspace = TestWorkspace::new("invalid");
-        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
-
         for spec_id in ["../outside", "auth/../../outside", "/tmp/spec"] {
-            let scope = scope(spec_id, SpecFileKey::Tasks);
-            let result = CommentStoragePathResolver::new().resolve(&layout, &scope);
-
             assert!(matches!(
-                result,
-                Err(CommentStoragePathError::InvalidSpecId { spec_id: actual })
-                    if actual == spec_id
+                SpecId::new(spec_id),
+                Err(SpecDomainError::UnsafeSpecId { value }) if value == spec_id
             ));
         }
     }
 
     #[test]
     fn rejects_backslash_and_nul_spec_ids() {
-        let workspace = TestWorkspace::new("invalid-separators");
-        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
-
         for spec_id in ["auth\\flow", "auth\0flow"] {
-            let scope = scope(spec_id, SpecFileKey::Tasks);
-            let result = CommentStoragePathResolver::new().resolve(&layout, &scope);
-
             assert!(matches!(
-                result,
-                Err(CommentStoragePathError::InvalidSpecId { spec_id: actual })
-                    if actual == spec_id
+                SpecId::new(spec_id),
+                Err(SpecDomainError::UnsafeSpecId { value }) if value == spec_id
             ));
         }
     }
