@@ -10,6 +10,31 @@
     "name": "Diff Integration"
   },
   {
+    "id": "app-app-specdocumentviewer--add-draft",
+    "title": "app/App/SpecDocumentViewer",
+    "name": "Add Draft"
+  },
+  {
+    "id": "app-app-specdocumentviewer--comment-integration",
+    "title": "app/App/SpecDocumentViewer",
+    "name": "Comment Integration"
+  },
+  {
+    "id": "app-app-specdocumentviewer--direct-artifact",
+    "title": "app/App/SpecDocumentViewer",
+    "name": "Direct Artifact"
+  },
+  {
+    "id": "app-app-specdocumentviewer--edit-draft",
+    "title": "app/App/SpecDocumentViewer",
+    "name": "Edit Draft"
+  },
+  {
+    "id": "app-app-specdocumentviewer--stale-anchor",
+    "title": "app/App/SpecDocumentViewer",
+    "name": "Stale Anchor"
+  },
+  {
     "id": "app-app-specviewcommentsidebar--default",
     "title": "app/App/SpecViewCommentSidebar",
     "name": "Default"
@@ -955,14 +980,9 @@
     "name": "Edge Cases"
   },
   {
-    "id": "features-specs-components-markdownviewer--existing-comment-cards",
+    "id": "features-specs-components-markdownviewer--default",
     "title": "features/specs/components/MarkdownViewer",
-    "name": "Existing Comment Cards"
-  },
-  {
-    "id": "features-specs-components-markdownviewer--highlighted-selection-surface",
-    "title": "features/specs/components/MarkdownViewer",
-    "name": "Highlighted Selection Surface"
+    "name": "Default"
   },
   {
     "id": "features-specs-components-markdownviewer--mermaid-diagram",
