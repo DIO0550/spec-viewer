@@ -271,7 +271,7 @@ fn build_comment_document(
     };
 
     if let Value::Object(object) = &mut document {
-        object.insert("version".to_string(), Value::from(1));
+        object.insert("version".to_string(), Value::from(2));
         object.insert("comments".to_string(), Value::Array(comments));
     }
 
@@ -282,11 +282,10 @@ fn previous_comment_records_by_id(previous_json: Option<&Value>) -> HashMap<Stri
     let Some(previous_json) = previous_json else {
         return HashMap::new();
     };
-    let comments = match previous_json {
-        Value::Object(object) => object.get("comments").and_then(Value::as_array),
-        Value::Array(comments) => Some(comments),
-        _ => None,
-    };
+    let comments = previous_json
+        .as_object()
+        .and_then(|object| object.get("comments"))
+        .and_then(Value::as_array);
     let Some(comments) = comments else {
         return HashMap::new();
     };
@@ -305,6 +304,8 @@ fn previous_comment_records_by_id(previous_json: Option<&Value>) -> HashMap<Stri
 fn merge_known_fields(previous: Value, current: Value) -> Value {
     match (previous, current) {
         (Value::Object(mut previous_object), Value::Object(current_object)) => {
+            previous_object.remove("resolved");
+
             for (key, value) in current_object {
                 if key == "anchor" {
                     merge_anchor_field(&mut previous_object, value);
@@ -908,7 +909,7 @@ mod tests {
             SpecFileKey::Impl,
             r#"
 {
-  "version": 1,
+  "version": 2,
   "comments": [
     {
       "id": "cmt_duplicate",
@@ -920,7 +921,7 @@ mod tests {
         "charOffset": [3, 16]
       },
       "body": "First body",
-      "resolved": false,
+      "status": "open",
       "createdAt": "2026-05-05T12:00:01Z",
       "updatedAt": "2026-05-05T12:00:01Z"
     },
@@ -934,7 +935,7 @@ mod tests {
         "charOffset": [3, 16]
       },
       "body": "Second body",
-      "resolved": false,
+      "status": "open",
       "createdAt": "2026-05-05T12:00:01Z",
       "updatedAt": "2026-05-05T12:00:02Z"
     }
@@ -966,7 +967,7 @@ mod tests {
             SpecFileKey::Impl,
             r#"
 {
-  "version": 1,
+  "version": 2,
   "source": "external-tool",
   "comments": [
     {
@@ -981,7 +982,7 @@ mod tests {
         "externalAnchorField": "preserve"
       },
       "body": "Old body",
-      "resolved": false,
+      "status": "open",
       "createdAt": "2026-05-05T12:00:01Z",
       "updatedAt": "2026-05-05T12:00:01Z"
     }
@@ -1014,7 +1015,8 @@ mod tests {
             json["comments"][0]["anchor"]["externalAnchorField"]
         );
         assert_eq!(serde_json::json!("New body"), json["comments"][0]["body"]);
-        assert_eq!(serde_json::json!(true), json["comments"][0]["resolved"]);
+        assert_eq!(serde_json::json!("resolved"), json["comments"][0]["status"]);
+        assert!(json["comments"][0].get("resolved").is_none());
         assert_eq!(
             vec!["impl.json".to_string(), "notes.txt".to_string()],
             workspace.comments_directory_entries("auth-flow")

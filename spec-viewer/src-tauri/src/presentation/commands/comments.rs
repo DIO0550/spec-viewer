@@ -21,7 +21,7 @@ use crate::{
     },
 };
 
-use super::{CommandError, CommandResult, CommandState};
+use super::CommandState;
 
 pub type AddCommentCommandResult<T> = Result<T, AddCommentCommandError>;
 
@@ -64,21 +64,24 @@ impl AddCommentCommandError {
             }
             AppUseCaseError::SpecTreeScan { .. }
             | AppUseCaseError::SpecArchive { .. }
-            | AppUseCaseError::MarkdownRead { .. }
-            | AppUseCaseError::ReviewRunExport { .. } => AddCommentCommandErrorCode::Unexpected,
+            | AppUseCaseError::MarkdownRead { .. } => AddCommentCommandErrorCode::Unexpected,
         };
 
         Self::new(code, error.to_string())
     }
 
-    fn from_command_error(error: CommandError) -> Self {
-        let code = match error.code() {
-            "invalidRequest" => AddCommentCommandErrorCode::InvalidRequest,
-            "invalidComment" => AddCommentCommandErrorCode::InvalidComment,
-            _ => AddCommentCommandErrorCode::Unexpected,
+    fn from_comment_error(error: CommentCommandError) -> Self {
+        let code = match error.code {
+            CommentCommandErrorCode::InvalidRequest => AddCommentCommandErrorCode::InvalidRequest,
+            CommentCommandErrorCode::InvalidComment => AddCommentCommandErrorCode::InvalidComment,
+            CommentCommandErrorCode::WorkspaceDetection
+            | CommentCommandErrorCode::ConfigLoad
+            | CommentCommandErrorCode::MarkdownRead
+            | CommentCommandErrorCode::CommentRepository
+            | CommentCommandErrorCode::Unexpected => AddCommentCommandErrorCode::Unexpected,
         };
 
-        Self::new(code, error.message())
+        Self::new(code, error.message)
     }
 
     pub fn code(&self) -> AddCommentCommandErrorCode {
@@ -123,12 +126,30 @@ pub enum CommentCommandErrorCode {
     Unexpected,
 }
 
+impl CommentCommandErrorCode {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::InvalidRequest => "invalidRequest",
+            Self::WorkspaceDetection => "workspaceDetection",
+            Self::ConfigLoad => "configLoad",
+            Self::MarkdownRead => "markdownRead",
+            Self::InvalidComment => "invalidComment",
+            Self::CommentRepository => "commentRepository",
+            Self::Unexpected => "unexpected",
+        }
+    }
+}
+
 impl CommentCommandError {
     fn new(code: CommentCommandErrorCode, message: impl Into<String>) -> Self {
         Self {
             code,
             message: message.into(),
         }
+    }
+
+    fn invalid_request(message: impl Into<String>) -> Self {
+        Self::new(CommentCommandErrorCode::InvalidRequest, message)
     }
 
     fn from_app_error(error: AppUseCaseError) -> Self {
@@ -141,42 +162,26 @@ impl CommentCommandError {
             AppUseCaseError::InvalidSpec { .. } => CommentCommandErrorCode::InvalidRequest,
             AppUseCaseError::InvalidComment { .. } => CommentCommandErrorCode::InvalidComment,
             AppUseCaseError::CommentRepository { .. } => CommentCommandErrorCode::CommentRepository,
-            AppUseCaseError::SpecTreeScan { .. }
-            | AppUseCaseError::SpecArchive { .. }
-            | AppUseCaseError::ReviewRunExport { .. } => CommentCommandErrorCode::Unexpected,
+            AppUseCaseError::SpecTreeScan { .. } | AppUseCaseError::SpecArchive { .. } => {
+                CommentCommandErrorCode::Unexpected
+            }
         };
 
         Self::new(code, error.to_string())
     }
 
-    fn from_command_error(error: CommandError) -> Self {
-        let code = match error.code() {
-            "invalidRequest" => CommentCommandErrorCode::InvalidRequest,
-            "workspaceDetection" => CommentCommandErrorCode::WorkspaceDetection,
-            "configLoad" => CommentCommandErrorCode::ConfigLoad,
-            "markdownRead" => CommentCommandErrorCode::MarkdownRead,
-            "invalidComment" => CommentCommandErrorCode::InvalidComment,
-            "commentRepository" => CommentCommandErrorCode::CommentRepository,
-            _ => CommentCommandErrorCode::Unexpected,
-        };
-
-        Self::new(code, error.message())
-    }
-
     pub fn code(&self) -> CommentCommandErrorCode {
         self.code
+    }
+
+    pub fn message(&self) -> &str {
+        &self.message
     }
 }
 
 impl From<AppUseCaseError> for CommentCommandError {
     fn from(error: AppUseCaseError) -> Self {
         Self::from_app_error(error)
-    }
-}
-
-impl From<CommandError> for CommentCommandError {
-    fn from(error: CommandError) -> Self {
-        Self::from_command_error(error)
     }
 }
 
@@ -280,7 +285,6 @@ pub struct CommentResponse {
     anchor: CommentAnchorResponse,
     body: String,
     status: String,
-    resolved: bool,
     anchor_resolution: Option<CommentAnchorResolutionResponse>,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
@@ -301,10 +305,6 @@ impl CommentResponse {
 
     pub fn status(&self) -> &str {
         &self.status
-    }
-
-    pub fn resolved(&self) -> bool {
-        self.resolved
     }
 
     pub fn anchor_resolution(&self) -> Option<&CommentAnchorResolutionResponse> {
@@ -521,7 +521,7 @@ pub fn list_comments(
     let workspace = state
         .use_cases()
         .load_workspace(&request.workspace_path)
-        .map_err(CommandError::from)?;
+        .map_err(CommentCommandError::from)?;
     let performance_context = request
         .correlation_id
         .as_ref()
@@ -533,13 +533,13 @@ pub fn list_comments(
         let current_blocks = state
             .use_cases()
             .read_spec_blocks_cached(&workspace, &request.spec_id, file_key)
-            .map_err(CommandError::from)?;
+            .map_err(CommentCommandError::from)?;
         let resolutions = state
             .use_cases()
             .comment_use_cases(&workspace)
             .resolve_comment_anchors(&request.spec_id, file_key, status_filter, &current_blocks)?;
 
-        Ok::<_, CommandError>((current_blocks.len(), resolutions))
+        Ok::<_, CommentCommandError>((current_blocks.len(), resolutions))
     })();
 
     if let (Some(context), Some(end_span)) = (performance_context.as_ref(), end_span) {
@@ -553,7 +553,7 @@ pub fn list_comments(
             }
             Err(error) => {
                 metadata.insert("error", "true".to_string());
-                metadata.insert("error_code", error.code().to_string());
+                metadata.insert("error_code", error.code().as_str().to_string());
             }
         }
         emit_span(context, end_span(metadata));
@@ -571,7 +571,7 @@ pub fn add_comment(
     let anchor = request
         .anchor
         .into_domain()
-        .map_err(AddCommentCommandError::from_command_error)?;
+        .map_err(AddCommentCommandError::from_comment_error)?;
     let workspace = state
         .use_cases()
         .load_workspace(&request.workspace_path)
@@ -594,7 +594,7 @@ pub fn update_comment(
     let workspace = state
         .use_cases()
         .load_workspace(&request.workspace_path)
-        .map_err(CommandError::from)?;
+        .map_err(CommentCommandError::from)?;
     let comment = state
         .use_cases()
         .comment_use_cases(&workspace)
@@ -617,7 +617,7 @@ pub fn delete_comment(
     let workspace = state
         .use_cases()
         .load_workspace(&request.workspace_path)
-        .map_err(CommandError::from)?;
+        .map_err(CommentCommandError::from)?;
 
     state
         .use_cases()
@@ -644,14 +644,6 @@ pub fn reopen_comment(
 }
 
 #[tauri::command]
-pub fn toggle_comment_resolved(
-    state: State<'_, CommandState>,
-    request: CommentStatusRequest,
-) -> CommentStatusCommandResult<CommentResponse> {
-    update_comment_status(state, request, CommentStatusAction::Toggle)
-}
-
-#[tauri::command]
 pub fn export_comments(
     state: State<'_, CommandState>,
     request: ExportCommentsRequest,
@@ -659,7 +651,7 @@ pub fn export_comments(
     let workspace = state
         .use_cases()
         .load_workspace(&request.workspace_path)
-        .map_err(CommandError::from)?;
+        .map_err(CommentCommandError::from)?;
     let generated_at = Utc::now();
     let export = build_comment_export(state.use_cases(), &workspace, &request, generated_at)?;
     write_export_file(&request.destination_path, &export.contents)?;
@@ -679,7 +671,7 @@ pub fn generate_llm_prompt(
     let workspace = state
         .use_cases()
         .load_workspace(&request.workspace_path)
-        .map_err(CommandError::from)?;
+        .map_err(CommentCommandError::from)?;
     let generated_at = Utc::now();
 
     build_llm_prompt(state.use_cases(), &workspace, &request, generated_at)
@@ -700,7 +692,6 @@ impl From<&Comment> for CommentResponse {
             anchor: CommentAnchorResponse::from(comment.anchor()),
             body: comment.body().as_str().to_string(),
             status: status_to_response(comment.status()).to_string(),
-            resolved: comment.is_resolved(),
             anchor_resolution: None,
             created_at: comment.created_at(),
             updated_at: comment.updated_at(),
@@ -773,7 +764,7 @@ impl From<MarkdownBlockSourceRange> for CommentSourceRangeResponse {
 }
 
 impl CommentAnchorRequest {
-    fn into_domain(self) -> CommandResult<CommentAnchor> {
+    fn into_domain(self) -> CommentCommandResult<CommentAnchor> {
         let file_key = parse_file_key(&self.file_key)?;
         let block_type = parse_block_type(&self.block_type)?;
         let char_range =
@@ -794,7 +785,6 @@ impl CommentAnchorRequest {
 enum CommentStatusAction {
     Resolve,
     Reopen,
-    Toggle,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -923,7 +913,7 @@ fn update_comment_status(
     let workspace = state
         .use_cases()
         .load_workspace(&request.workspace_path)
-        .map_err(CommandError::from)?;
+        .map_err(CommentCommandError::from)?;
     let comment_use_cases = state.use_cases().comment_use_cases(&workspace);
     let comment = match action {
         CommentStatusAction::Resolve => {
@@ -932,11 +922,6 @@ fn update_comment_status(
         CommentStatusAction::Reopen => {
             comment_use_cases.reopen_comment(&request.spec_id, file_key, &request.comment_id)?
         }
-        CommentStatusAction::Toggle => comment_use_cases.toggle_comment_resolved(
-            &request.spec_id,
-            file_key,
-            &request.comment_id,
-        )?,
     };
 
     Ok(CommentResponse::from(&comment))
@@ -947,7 +932,7 @@ fn build_comment_export(
     workspace: &crate::app::use_cases::LoadWorkspaceResult,
     request: &ExportCommentsRequest,
     generated_at: DateTime<Utc>,
-) -> CommandResult<CommentExport> {
+) -> CommentCommandResult<CommentExport> {
     match &request.target {
         ExportCommentsTargetRequest::File { spec_id, file_key } => {
             let file_key = parse_file_key(file_key)?;
@@ -977,7 +962,7 @@ fn build_comment_export(
         ExportCommentsTargetRequest::Spec { spec_id } => {
             let specs = use_cases.list_specs(workspace)?.into_specs();
             let spec = find_spec_node(&specs, spec_id).ok_or_else(|| {
-                CommandError::invalid_request(format!("unknown spec id: {spec_id}"))
+                CommentCommandError::invalid_request(format!("unknown spec id: {spec_id}"))
             })?;
             let files = export_comment_files_for_spec(use_cases, workspace, spec)?;
             let comment_count = count_exported_comments(&files);
@@ -1001,7 +986,7 @@ fn build_comment_export(
                 .iter()
                 .flat_map(|spec| collect_spec_nodes(spec).into_iter())
                 .map(|spec| export_comment_files_for_spec(use_cases, workspace, spec))
-                .collect::<CommandResult<Vec<_>>>()?
+                .collect::<CommentCommandResult<Vec<_>>>()?
                 .into_iter()
                 .flatten()
                 .collect::<Vec<_>>();
@@ -1013,7 +998,7 @@ fn build_comment_export(
                 comment_count,
             );
             let contents = serde_json::to_string_pretty(&document).map_err(|source| {
-                CommandError::from(AppUseCaseError::CommentRepository {
+                CommentCommandError::from(AppUseCaseError::CommentRepository {
                     message: format!("failed to serialize comment export: {source}"),
                 })
             })?;
@@ -1048,7 +1033,7 @@ fn build_llm_prompt(
         ExportCommentsTargetRequest::Spec { spec_id } => {
             let specs = use_cases.list_specs(workspace)?.into_specs();
             let spec = find_spec_node(&specs, spec_id).ok_or_else(|| {
-                CommandError::invalid_request(format!("unknown spec id: {spec_id}"))
+                CommentCommandError::invalid_request(format!("unknown spec id: {spec_id}"))
             })?;
 
             prompt_files_for_spec(use_cases, workspace, spec)?
@@ -1059,7 +1044,7 @@ fn build_llm_prompt(
                 .iter()
                 .flat_map(|spec| collect_spec_nodes(spec).into_iter())
                 .map(|spec| prompt_files_for_spec(use_cases, workspace, spec))
-                .collect::<CommandResult<Vec<_>>>()?
+                .collect::<CommentCommandResult<Vec<_>>>()?
                 .into_iter()
                 .flatten()
                 .collect()
@@ -1085,7 +1070,7 @@ fn export_comment_files_for_spec(
     use_cases: &crate::app::use_cases::FilesystemAppUseCases,
     workspace: &crate::app::use_cases::LoadWorkspaceResult,
     spec: &SpecNode,
-) -> CommandResult<Vec<ExportedCommentFile>> {
+) -> CommentCommandResult<Vec<ExportedCommentFile>> {
     spec.files()
         .iter()
         .map(|file| {
@@ -1105,7 +1090,7 @@ fn prompt_files_for_spec(
     use_cases: &crate::app::use_cases::FilesystemAppUseCases,
     workspace: &crate::app::use_cases::LoadWorkspaceResult,
     spec: &SpecNode,
-) -> CommandResult<Vec<LlmPromptFile>> {
+) -> CommentCommandResult<Vec<LlmPromptFile>> {
     spec.files()
         .iter()
         .map(|file| {
@@ -1128,7 +1113,7 @@ fn export_comment_file(
     spec_label: &str,
     file_key: SpecFileKey,
     file_label: &str,
-) -> CommandResult<ExportedCommentFile> {
+) -> CommentCommandResult<ExportedCommentFile> {
     let current_blocks = read_current_markdown_blocks(use_cases, workspace, spec_id, file_key)?;
     let resolutions = use_cases
         .comment_use_cases(workspace)
@@ -1154,7 +1139,7 @@ fn prompt_file(
     spec_label: &str,
     file_key: SpecFileKey,
     file_label: &str,
-) -> CommandResult<LlmPromptFile> {
+) -> CommentCommandResult<LlmPromptFile> {
     let document = read_current_markdown_document(use_cases, workspace, spec_id, file_key)?;
     let resolutions = use_cases
         .comment_use_cases(workspace)
@@ -1542,15 +1527,15 @@ fn build_workspace_json_export(
     }
 }
 
-fn write_export_file(path: &str, contents: &str) -> CommandResult<()> {
+fn write_export_file(path: &str, contents: &str) -> CommentCommandResult<()> {
     if path.trim().is_empty() {
-        return Err(CommandError::invalid_request(
+        return Err(CommentCommandError::invalid_request(
             "comment export destination path is required",
         ));
     }
 
     fs::write(Path::new(path), contents).map_err(|source| {
-        CommandError::from(AppUseCaseError::CommentRepository {
+        CommentCommandError::from(AppUseCaseError::CommentRepository {
             message: format!("failed to write comment export {path}: {source}"),
         })
     })
@@ -1561,10 +1546,10 @@ fn read_current_markdown_document(
     workspace: &crate::app::use_cases::LoadWorkspaceResult,
     spec_id: &str,
     file_key: SpecFileKey,
-) -> CommandResult<PromptMarkdownDocument> {
+) -> CommentCommandResult<PromptMarkdownDocument> {
     let result = use_cases
         .read_spec_file_cached(workspace, spec_id, file_key)
-        .map_err(CommandError::from)?;
+        .map_err(CommentCommandError::from)?;
 
     match result {
         ReadSpecFileResult::Found(document) => Ok(PromptMarkdownDocument::from_found(document)),
@@ -1579,10 +1564,10 @@ fn read_current_markdown_blocks(
     workspace: &crate::app::use_cases::LoadWorkspaceResult,
     spec_id: &str,
     file_key: SpecFileKey,
-) -> CommandResult<Vec<MarkdownBlock>> {
+) -> CommentCommandResult<Vec<MarkdownBlock>> {
     let result = use_cases
         .read_spec_file_cached(workspace, spec_id, file_key)
-        .map_err(CommandError::from)?;
+        .map_err(CommentCommandError::from)?;
 
     match result {
         ReadSpecFileResult::Found(document) => Ok(document.blocks().to_vec()),
@@ -1590,23 +1575,23 @@ fn read_current_markdown_blocks(
     }
 }
 
-fn parse_file_key(value: &str) -> CommandResult<SpecFileKey> {
+fn parse_file_key(value: &str) -> CommentCommandResult<SpecFileKey> {
     SpecFileKey::from_str(value)
-        .map_err(|_| CommandError::invalid_request(format!("unsupported file key: {value}")))
+        .map_err(|_| CommentCommandError::invalid_request(format!("unsupported file key: {value}")))
 }
 
-fn parse_status_filter(value: Option<&str>) -> CommandResult<CommentStatusFilter> {
+fn parse_status_filter(value: Option<&str>) -> CommentCommandResult<CommentStatusFilter> {
     match value.unwrap_or("all") {
         "all" => Ok(CommentStatusFilter::All),
         "open" => Ok(CommentStatusFilter::Open),
         "resolved" => Ok(CommentStatusFilter::Resolved),
-        unsupported => Err(CommandError::invalid_request(format!(
+        unsupported => Err(CommentCommandError::invalid_request(format!(
             "unsupported comment status filter: {unsupported}"
         ))),
     }
 }
 
-fn parse_block_type(value: &str) -> CommandResult<BlockType> {
+fn parse_block_type(value: &str) -> CommentCommandResult<BlockType> {
     match value {
         "paragraph" => Ok(BlockType::Paragraph),
         "heading" => Ok(BlockType::Heading),
@@ -1617,7 +1602,7 @@ fn parse_block_type(value: &str) -> CommandResult<BlockType> {
         "thematic_break" => Ok(BlockType::ThematicBreak),
         "html" => Ok(BlockType::Html),
         "other" => Ok(BlockType::Other),
-        unsupported => Err(CommandError::invalid_request(format!(
+        unsupported => Err(CommentCommandError::invalid_request(format!(
             "unsupported comment anchor block type: {unsupported}"
         ))),
     }
@@ -1673,8 +1658,8 @@ fn create_block_text_snippet(text: &str) -> String {
     text.chars().take(MAX_BLOCK_TEXT_SNIPPET_LENGTH).collect()
 }
 
-fn invalid_comment(error: CommentDomainError) -> CommandError {
-    CommandError::from(AppUseCaseError::from(error))
+fn invalid_comment(error: CommentDomainError) -> CommentCommandError {
+    CommentCommandError::from(AppUseCaseError::from(error))
 }
 
 #[cfg(test)]
@@ -1723,7 +1708,6 @@ mod tests {
         assert_eq!(24, response.anchor().char_range().end());
         assert_eq!("Define refresh token expiry", response.body());
         assert_eq!("resolved", response.status());
-        assert!(response.resolved());
         assert_eq!(timestamp(1), response.created_at());
         assert_eq!(timestamp(2), response.updated_at());
     }
@@ -1747,7 +1731,6 @@ mod tests {
         assert_eq!("cmt_1", response.comments()[0].id());
         assert_eq!("tasks", response.comments()[0].anchor().file_key());
         assert_eq!("open", response.comments()[0].status());
-        assert!(!response.comments()[0].resolved());
     }
 
     #[test]
@@ -1757,7 +1740,6 @@ mod tests {
             anchor: CommentAnchorResponse::from(&anchor(SpecFileKey::Tasks, BlockType::Paragraph)),
             body: "Explain what happens when the source paragraph is deleted.".to_string(),
             status: "resolved".to_string(),
-            resolved: true,
             anchor_resolution: Some(CommentAnchorResolutionResponse {
                 status: "orphaned".to_string(),
                 reason: "deleted_text".to_string(),
@@ -1843,7 +1825,6 @@ mod tests {
             anchor: CommentAnchorResponse::from(&anchor(SpecFileKey::Tasks, BlockType::Paragraph)),
             body: "Recover this deleted note before asking the LLM.".to_string(),
             status: "open".to_string(),
-            resolved: false,
             anchor_resolution: Some(CommentAnchorResolutionResponse {
                 status: "orphaned".to_string(),
                 reason: "deleted_text".to_string(),
@@ -1944,16 +1925,15 @@ mod tests {
     }
 
     #[test]
-    fn comment_command_error_maps_command_error_codes() {
-        let error = CommentCommandError::from_command_error(CommandError::invalid_request(
-            "unsupported file key: notes",
-        ));
+    fn comment_command_error_builds_invalid_request_directly() {
+        let error = CommentCommandError::invalid_request("unsupported file key: notes");
 
         assert_eq!(CommentCommandErrorCode::InvalidRequest, error.code());
+        assert_eq!("unsupported file key: notes", error.message());
     }
 
     #[test]
-    fn comment_command_error_maps_timestamp_rollback_to_compatible_invalid_comment_error() {
+    fn comment_command_error_maps_timestamp_rollback_to_invalid_comment_error() {
         let error = CommentCommandError::from(AppUseCaseError::from(
             CommentDomainError::UpdatedAtRollback {
                 current: timestamp(6),
@@ -1990,7 +1970,7 @@ mod tests {
 
     #[test]
     fn add_comment_command_error_maps_invalid_comment_command_error() {
-        let error = AddCommentCommandError::from_command_error(CommandError::from(
+        let error = AddCommentCommandError::from_comment_error(CommentCommandError::from(
             AppUseCaseError::InvalidComment {
                 message: "anchor text hash is empty".to_string(),
             },
@@ -2123,7 +2103,7 @@ mod tests {
             .into_domain()
             .expect_err("block type should be rejected");
 
-        assert_eq!("invalidRequest", error.code());
+        assert_eq!(CommentCommandErrorCode::InvalidRequest, error.code());
         assert_eq!(
             "unsupported comment anchor block type: diagram",
             error.message()
@@ -2150,7 +2130,7 @@ mod tests {
     fn parse_status_filter_rejects_unknown_values() {
         let error = parse_status_filter(Some("closed")).expect_err("status should be rejected");
 
-        assert_eq!("invalidRequest", error.code());
+        assert_eq!(CommentCommandErrorCode::InvalidRequest, error.code());
         assert_eq!("unsupported comment status filter: closed", error.message());
     }
 

@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import { type KeyboardEvent, useId } from "react";
 
-import { uiText } from "@/shared/lib/uiText";
+import { uiText } from "@/utils/uiText";
 
 export type DocumentSearchControlProps = Readonly<{
   query: string;

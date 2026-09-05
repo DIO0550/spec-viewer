@@ -1,0 +1,115 @@
+.diff-workspace {
+  display: flex;
+  min-height: 0;
+  height: 100%;
+  flex-direction: column;
+}
+
+.diff-workspace__content {
+  min-height: 0;
+  flex: 1;
+}
+
+.revision-selector {
+  position: relative;
+  z-index: 20;
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-panel);
+}
+
+.revision-selector__trigger {
+  max-width: min(32rem, 100%);
+  overflow: hidden;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 0.45rem;
+  background: var(--color-control);
+  color: var(--color-text);
+  font: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.revision-selector__trigger:hover:not(:disabled),
+.revision-selector__option:hover,
+.revision-selector__option--active {
+  border-color: var(--color-border-hover);
+  background: var(--color-control-hover);
+}
+
+.revision-selector__trigger:focus-visible,
+.revision-selector__option:focus-visible {
+  outline: 2px solid var(--color-accent-ring);
+  outline-offset: 2px;
+}
+
+.revision-selector__trigger:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.revision-selector__listbox {
+  position: absolute;
+  top: calc(100% - 0.25rem);
+  left: 0.75rem;
+  width: min(34rem, calc(100vw - 2rem));
+  max-height: min(32rem, calc(100vh - 10rem));
+  overflow: auto;
+  padding: 0.5rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 0.55rem;
+  background: var(--color-raised);
+  box-shadow: var(--shadow-popover);
+}
+
+.revision-selector__group + .revision-selector__group {
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.revision-selector__group h3 {
+  margin: 0 0 0.3rem;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.revision-selector__group p {
+  margin: 0.35rem 0;
+  color: var(--color-text-body);
+}
+
+.revision-selector__option {
+  display: block;
+  width: 100%;
+  overflow-wrap: anywhere;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid transparent;
+  border-radius: 0.35rem;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+}
+
+.revision-selector__option[aria-selected="true"] {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.revision-selector__error {
+  margin: 0.5rem 0 0;
+  color: var(--color-danger);
+}
+
+@media (max-width: 520px) {
+  .revision-selector__listbox {
+    right: 0.5rem;
+    left: 0.5rem;
+    width: auto;
+  }
+}

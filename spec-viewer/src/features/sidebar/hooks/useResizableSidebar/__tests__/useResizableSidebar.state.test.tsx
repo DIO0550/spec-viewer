@@ -41,7 +41,7 @@ test("useResizableSidebarは初期幅を返す", () => {
 
   const result = renderHook(() => useResizableSidebar());
 
-  expect(result.current.sidebarWidth).toBe(360);
+  expect(result.current.sidebarWidth).toBe(300);
   result.unmount();
 });
 

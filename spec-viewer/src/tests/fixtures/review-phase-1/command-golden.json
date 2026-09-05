@@ -1,0 +1,9 @@
+{
+  "repositoryId": "<REPOSITORY_ID:1>",
+  "worktreeId": "<WORKTREE_ID:1>",
+  "baseSha": "<SHA:1>",
+  "currentSnapshotId": "<SNAPSHOT_ID:1>",
+  "path": "specs/implementation-plan.md",
+  "side": "current",
+  "revision": "1"
+}

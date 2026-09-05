@@ -3,10 +3,12 @@ import type { SpecTree } from "@/features/specs/domain/specTree";
 import type {
   ArchiveSpecRequest,
   ArchiveSpecResponse,
+  LoadSpecBundleRequest,
   ReadSpecFileRequest,
+  SpecBundle,
   SpecDocument,
 } from "@/features/specs/types/spec";
-import type { SpecCommands } from "@/shared/api/tauri";
+import type { SpecCommands } from "@/lib/api/tauri";
 
 /**
  * @param commands - Spec command boundary
@@ -30,6 +32,16 @@ export async function readSpecFile(
   request: ReadSpecFileRequest,
 ): Promise<SpecDocument> {
   return commands.readSpecFile(request);
+}
+
+/**
+ * Loads all present artifacts for one spec through the command boundary.
+ */
+export async function loadSpecBundle(
+  commands: SpecCommands,
+  request: LoadSpecBundleRequest,
+): Promise<SpecBundle> {
+  return commands.loadSpecBundle(request);
 }
 
 /**

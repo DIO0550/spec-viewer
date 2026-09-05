@@ -1,12 +1,12 @@
 import { useCallback } from "react";
-import type { SpecViewResetKeys } from "@/app/App/hooks/types";
+import { type SpecViewSelection as SpecViewSelectionType } from "@/features/specs/domain/specViewSelection";
 import { useSpecFileWatcher } from "@/features/specs";
 import type {
   SpecFileWatchSubscriber,
   StartSpecFileWatchCommand,
   StopSpecFileWatchCommand,
 } from "@/features/specs/hooks/useSpecFileWatcher";
-import { getUnknownErrorMessage } from "@/shared/lib/errorMessage";
+import { getUnknownErrorMessage } from "@/utils/errorMessage";
 
 type RefreshCurrentViewOptions = Readonly<{
   failureMessage: string;
@@ -15,8 +15,10 @@ type RefreshCurrentViewOptions = Readonly<{
 }>;
 
 export type UseViewRefreshOptions = Readonly<{
-  selection: SpecViewResetKeys;
+  selection: SpecViewSelectionType;
   isCurrentViewLoading: boolean;
+  /** Refreshes repository-wide diff when the diff view owns the source. */
+  isRepositoryView?: boolean;
   reload: Readonly<{
     /** Reloads the current document. */
     document: () => Promise<boolean>;
@@ -24,6 +26,10 @@ export type UseViewRefreshOptions = Readonly<{
     specs: () => Promise<boolean>;
     /** Reloads the comments. */
     comments: () => Promise<boolean>;
+    /** Reloads the diff overview and selected detail when connected. */
+    diff?: () => Promise<boolean>;
+    repository?: () => Promise<boolean>;
+    repositoryInvalidate?: () => void;
   }>;
   /** Reports an error message, or clears it. @param message - Error message, or null to clear. */
   onError: (message: string | null) => void;
@@ -51,8 +57,15 @@ const manualReloadFailureMessage =
 export function useViewRefresh(
   options: UseViewRefreshOptions,
 ): UseViewRefreshResult {
-  const { selection, isCurrentViewLoading, reload, onError, watcher } = options;
-  const workspaceRoot = selection.workspaceRoot;
+  const {
+    selection,
+    isCurrentViewLoading,
+    isRepositoryView = false,
+    reload,
+    onError,
+    watcher,
+  } = options;
+  const workspaceRoot = selection.workspacePath;
   const specId = selection.specId;
   const fileKey = selection.fileKey;
 
@@ -85,6 +98,14 @@ export function useViewRefresh(
       if (isCurrentViewLoading) {
         return;
       }
+      if (isRepositoryView) {
+        reload.repositoryInvalidate?.();
+        await refreshCurrentView({
+          failureMessage: autoReloadFailureMessage,
+          run: reload.repository ?? (async () => true),
+        });
+        return;
+      }
 
       await refreshCurrentView({
         failureMessage: autoReloadFailureMessage,
@@ -92,14 +113,24 @@ export function useViewRefresh(
         run: async () => {
           const isDocumentReloaded = await reload.document();
           const areCommentsReloaded = await reload.comments();
-          return isDocumentReloaded && areCommentsReloaded;
+          const isDiffReloaded = await (reload.diff?.() ??
+            Promise.resolve(true));
+          return isDocumentReloaded && areCommentsReloaded && isDiffReloaded;
         },
       });
-    }, [isCurrentViewLoading, refreshCurrentView, reload]);
+    }, [isCurrentViewLoading, isRepositoryView, refreshCurrentView, reload]);
 
   const reloadWorkspaceConfigFromWatcher =
     useCallback(async (): Promise<void> => {
       if (isCurrentViewLoading) {
+        return;
+      }
+      if (isRepositoryView) {
+        reload.repositoryInvalidate?.();
+        await refreshCurrentView({
+          failureMessage: autoReloadFailureMessage,
+          run: reload.repository ?? (async () => true),
+        });
         return;
       }
 
@@ -109,18 +140,25 @@ export function useViewRefresh(
         run: async () => {
           const areSpecsReloaded = await reload.specs();
           const areCommentsReloaded = await reload.comments();
-          return areSpecsReloaded && areCommentsReloaded;
+          const isDiffReloaded = await (reload.diff?.() ??
+            Promise.resolve(true));
+          return areSpecsReloaded && areCommentsReloaded && isDiffReloaded;
         },
       });
-    }, [isCurrentViewLoading, refreshCurrentView, reload]);
+    }, [isCurrentViewLoading, isRepositoryView, refreshCurrentView, reload]);
 
   const refreshCurrentViewManually = useCallback(async (): Promise<void> => {
-    if (
-      workspaceRoot === null ||
-      specId === null ||
-      fileKey === null ||
-      isCurrentViewLoading
-    ) {
+    if (workspaceRoot === null || isCurrentViewLoading) {
+      return;
+    }
+    if (isRepositoryView) {
+      await refreshCurrentView({
+        failureMessage: manualReloadFailureMessage,
+        run: reload.repository ?? (async () => true),
+      });
+      return;
+    }
+    if (specId === null || fileKey === null) {
       return;
     }
 
@@ -130,12 +168,14 @@ export function useViewRefresh(
       run: async () => {
         const areSpecsReloaded = await reload.specs();
         const areCommentsReloaded = await reload.comments();
-        return areSpecsReloaded && areCommentsReloaded;
+        const isDiffReloaded = await (reload.diff?.() ?? Promise.resolve(true));
+        return areSpecsReloaded && areCommentsReloaded && isDiffReloaded;
       },
     });
   }, [
     fileKey,
     isCurrentViewLoading,
+    isRepositoryView,
     refreshCurrentView,
     reload,
     specId,
@@ -152,9 +192,7 @@ export function useViewRefresh(
   );
 
   useSpecFileWatcher({
-    workspacePath: workspaceRoot,
-    specId,
-    fileKey,
+    selection,
     onMarkdownChange: reloadCurrentMarkdownFromWatcher,
     onConfigChange: reloadWorkspaceConfigFromWatcher,
     onWatcherError: handleWatcherError,

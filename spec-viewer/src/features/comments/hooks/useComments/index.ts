@@ -1,12 +1,23 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import type { Comment } from "@/features/comments/domain/comment";
 import type { CommentFeatureError as CommentFeatureErrorType } from "@/features/comments/domain/commentError";
 import { CommentFeatureError } from "@/features/comments/domain/commentError";
+import type { CommentId } from "@/features/comments/domain/commentId";
 import {
   CommentListState,
   type CommentListState as CommentListStateType,
 } from "@/features/comments/domain/commentListState";
 import type { CommentOperationState } from "@/features/comments/domain/commentOperation";
-import type { CommentScope } from "@/features/comments/domain/commentScope";
+import {
+  CommentScope,
+  type CommentScope as CommentScopeType,
+} from "@/features/comments/domain/commentScope";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
 import { buildCommentsResult } from "@/features/comments/hooks/buildCommentsResult";
 import {
@@ -16,14 +27,17 @@ import {
   useCommentOperations,
 } from "@/features/comments/hooks/useCommentOperations";
 import { listComments as listCommentsViaGateway } from "@/features/comments/infra/commentGateway";
-import type { Comment, CommentId } from "@/features/comments/types/comment";
-import type { CommentCommands } from "@/shared/api/tauri";
-import { commentCommands as defaultCommentCommands } from "@/shared/api/tauri";
-import { ListCommentsCommandError } from "@/shared/api/tauri/listComments";
+import {
+  SelectionIdentity,
+  type SelectionIdentity as SelectionIdentityType,
+} from "@/features/specs/domain/specViewSelection";
+import type { CommentCommands } from "@/lib/api/tauri";
+import { commentCommands as defaultCommentCommands } from "@/lib/api/tauri";
+import { ListCommentsCommandError } from "@/lib/api/tauri/listComments";
 import {
   resolvePerformanceCorrelationId,
   startPerformanceSpan,
-} from "@/shared/lib/performance";
+} from "@/lib/performance";
 
 export type { CommentListState } from "@/features/comments/domain/commentListState";
 export type {
@@ -36,7 +50,7 @@ export type {
 } from "@/features/comments/hooks/useCommentOperations";
 
 export type UseCommentsOptions = Readonly<{
-  scope: CommentScope | null;
+  scope: CommentScopeType | null;
   statusFilter?: CommentStatusFilter;
   correlationId?: string | null;
   commands?: CommentCommands;
@@ -44,12 +58,15 @@ export type UseCommentsOptions = Readonly<{
 
 export type UseCommentsResult = Readonly<{
   listState: CommentListStateType;
+  /** Canonical lifecycle state for the latest comment operation. */
   operationState: CommentOperationState;
   comments: readonly Comment[];
   isLoading: boolean;
+  /** Compatibility projection derived from operationState. */
   isSaving: boolean;
   isEmpty: boolean;
   error: CommentFeatureErrorType | null;
+  /** Compatibility projection of the error held by operationState. */
   operationError: CommentFeatureErrorType | null;
   /** Reloads comments for the active scope. */
   reloadComments: () => Promise<boolean>;
@@ -63,8 +80,6 @@ export type UseCommentsResult = Readonly<{
   resolveComment: (commentId: CommentId) => Promise<Comment | null>;
   /** @param commentId - Id of the comment to reopen. */
   reopenComment: (commentId: CommentId) => Promise<Comment | null>;
-  /** @param commentId - Id of the comment to toggle. */
-  toggleCommentResolved: (commentId: CommentId) => Promise<Comment | null>;
 }>;
 
 const defaultStatusFilter: CommentStatusFilter = CommentStatusFilter.All;
@@ -76,22 +91,35 @@ export function useComments({
   scope,
   statusFilter = defaultStatusFilter,
 }: UseCommentsOptions): UseCommentsResult {
-  const scopeKey = createScopeKey(scope, statusFilter);
+  const selectionIdentity =
+    scope === null ? null : CommentScope.selectionIdentity(scope);
   const listRequestIdRef = useRef(0);
-  const activeListScopeKeyRef = useRef(scopeKey);
+  const activeListSelectionIdentityRef = useRef(selectionIdentity);
+  const activeListStatusFilterRef = useRef(statusFilter);
   const [listState, setListState] = useState<CommentListStateType>(
     CommentListState.idle(),
   );
 
-  activeListScopeKeyRef.current = scopeKey;
+  useLayoutEffect(() => {
+    activeListSelectionIdentityRef.current = selectionIdentity;
+    activeListStatusFilterRef.current = statusFilter;
+  }, [selectionIdentity, statusFilter]);
 
   const isLatestListRequest = useCallback(
     (requestId: number): boolean => listRequestIdRef.current === requestId,
     [],
   );
   const isSameListScopeResult = useCallback(
-    (expectedScopeKey: string): boolean =>
-      activeListScopeKeyRef.current === expectedScopeKey,
+    (
+      expectedIdentity: SelectionIdentityType,
+      expectedStatusFilter: CommentStatusFilter,
+    ): boolean =>
+      activeListStatusFilterRef.current === expectedStatusFilter &&
+      activeListSelectionIdentityRef.current !== null &&
+      SelectionIdentity.equals(
+        activeListSelectionIdentityRef.current,
+        expectedIdentity,
+      ),
     [],
   );
   const updateCurrentScopeComments = useCallback(
@@ -119,7 +147,9 @@ export function useComments({
     }
 
     const requestId = listRequestIdRef.current + 1;
-    const requestScopeKey = scopeKey;
+    const requestSelectionIdentity =
+      CommentScope.selectionIdentity(activeScope);
+    const requestStatusFilter = statusFilter;
     listRequestIdRef.current = requestId;
     setListState(CommentListState.loading());
 
@@ -146,7 +176,7 @@ export function useComments({
 
       if (
         !isLatestListRequest(requestId) ||
-        !isSameListScopeResult(requestScopeKey)
+        !isSameListScopeResult(requestSelectionIdentity, requestStatusFilter)
       ) {
         return false;
       }
@@ -160,7 +190,7 @@ export function useComments({
 
       if (
         !isLatestListRequest(requestId) ||
-        !isSameListScopeResult(requestScopeKey)
+        !isSameListScopeResult(requestSelectionIdentity, requestStatusFilter)
       ) {
         return false;
       }
@@ -180,7 +210,6 @@ export function useComments({
     isLatestListRequest,
     isSameListScopeResult,
     scope,
-    scopeKey,
     statusFilter,
   ]);
 
@@ -190,10 +219,9 @@ export function useComments({
 
   const commentOperations = useCommentOperations({
     scope,
-    scopeKey,
+    selectionIdentity,
     statusFilter,
     commands,
-    currentComments: listState.comments,
     updateCurrentScopeComments,
     reloadComments,
   });
@@ -205,16 +233,4 @@ export function useComments({
     },
     operations: commentOperations,
   });
-}
-
-/** @returns Scope identity for stale operation guards. */
-function createScopeKey(
-  scope: CommentScope | null,
-  statusFilter: CommentStatusFilter,
-): string {
-  if (scope === null) {
-    return `idle:${statusFilter}`;
-  }
-
-  return `${scope.workspacePath}:${scope.specId}:${scope.fileKey}:${statusFilter}`;
 }

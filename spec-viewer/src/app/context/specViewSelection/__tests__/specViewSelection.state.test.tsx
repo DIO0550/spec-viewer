@@ -7,8 +7,12 @@ import {
   useSpecViewSelection,
   type SpecViewSelectionContextValue,
 } from "@/app/context/specViewSelection";
+import {
+  SelectionIdentity,
+  SpecViewSelection,
+} from "@/features/specs/domain/specViewSelection";
 import type { SpecFileKey } from "@/features/specs/types/spec";
-import { WorkspacePath } from "@/shared/domain/workspacePath";
+import { WorkspacePath } from "@/domains/workspacePath";
 
 function createContainerRoot(): Readonly<{
   container: HTMLDivElement;
@@ -20,7 +24,7 @@ function createContainerRoot(): Readonly<{
   return { container, root };
 }
 
-test("SpecViewSelectionProviderはselection propなしで選択状態とselectionIdを保持する", () => {
+test("SpecViewSelectionProviderはaggregate stateとderived identityだけを保持する", () => {
   const values: SpecViewSelectionContextValue[] = [];
   const workspacePath = WorkspacePath.fromString("/workspace/spec-reviewer");
   const { container, root } = createContainerRoot();
@@ -40,7 +44,7 @@ test("SpecViewSelectionProviderはselection propなしで選択状態とselectio
     );
   });
   act(() => {
-    currentValue?.selectSpecView({
+    currentValue?.synchronizeSelection({
       workspacePath,
       specId: "auth",
       fileKey: "tasks" as SpecFileKey,
@@ -54,15 +58,23 @@ test("SpecViewSelectionProviderはselection propなしで選択状態とselectio
     );
   });
 
-  expect(values[0]?.selectionId).toBe("none:none");
+  expect(values[0]?.selectionIdentity).toBe(
+    SelectionIdentity.fromSelection(SpecViewSelection.empty()),
+  );
   expect(values[values.length - 1]?.selection).toMatchObject({
     workspacePath,
     specId: "auth",
     fileKey: "tasks",
     targetScope: "file",
   });
-  expect(values[values.length - 1]?.selectionId).toBe(
-    "/workspace/spec-reviewer:file:auth:tasks",
+  expect(values[values.length - 1]?.selectionIdentity).toBe(
+    SelectionIdentity.fromSelection(
+      SpecViewSelection.synchronize(SpecViewSelection.empty(), {
+        workspacePath,
+        specId: "auth",
+        fileKey: "tasks",
+      }),
+    ),
   );
   expect(values[values.length - 1]).toBe(values[values.length - 2]);
   root.unmount();
@@ -78,7 +90,6 @@ test.each([
       fileKey: "tasks" as SpecFileKey,
     },
     targetScope: "file" as const,
-    expected: "/workspace/other:file:auth:tasks",
   },
   {
     name: "spec変更",
@@ -88,7 +99,6 @@ test.each([
       fileKey: "tasks" as SpecFileKey,
     },
     targetScope: "file" as const,
-    expected: "/workspace/spec-reviewer:file:billing:tasks",
   },
   {
     name: "file変更",
@@ -98,7 +108,6 @@ test.each([
       fileKey: "implementation" as SpecFileKey,
     },
     targetScope: "file" as const,
-    expected: "/workspace/spec-reviewer:file:auth:implementation",
   },
   {
     name: "spec scope変更",
@@ -108,7 +117,6 @@ test.each([
       fileKey: "tasks" as SpecFileKey,
     },
     targetScope: "spec" as const,
-    expected: "/workspace/spec-reviewer:spec:auth",
   },
   {
     name: "fileKey未確定",
@@ -118,12 +126,10 @@ test.each([
       fileKey: null,
     },
     targetScope: "file" as const,
-    expected: "/workspace/spec-reviewer:none",
   },
-])("SpecViewSelectionProviderは内部selectionの$nameでselectionIdを更新する", ({
+])("SpecViewSelectionProviderは内部aggregateの$nameでidentityを更新する", ({
   workspaceSelection,
   targetScope,
-  expected,
 }) => {
   const values: SpecViewSelectionContextValue[] = [];
   const { container, root } = createContainerRoot();
@@ -143,13 +149,22 @@ test.each([
     );
   });
   act(() => {
-    currentValue?.selectSpecView(workspaceSelection);
+    currentValue?.synchronizeSelection(workspaceSelection);
   });
   act(() => {
-    currentValue?.setTargetScope(targetScope);
+    currentValue?.selectTargetScope(targetScope);
   });
 
-  expect(values[values.length - 1]?.selectionId).toBe(expected);
+  const expectedSelection = SpecViewSelection.selectTargetScope(
+    SpecViewSelection.synchronize(
+      SpecViewSelection.empty(),
+      workspaceSelection,
+    ),
+    targetScope,
+  );
+  expect(values[values.length - 1]?.selectionIdentity).toBe(
+    SelectionIdentity.fromSelection(expectedSelection),
+  );
   root.unmount();
   container.remove();
 });
