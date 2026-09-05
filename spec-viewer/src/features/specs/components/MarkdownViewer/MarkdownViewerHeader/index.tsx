@@ -1,7 +1,7 @@
 import { RefreshCcw } from "lucide-react";
 
 import type { SpecFileKey } from "@/features/specs/types/spec";
-import { uiText } from "@/shared/lib/uiText";
+import { uiText } from "@/utils/uiText";
 import {
   DocumentSearchControl,
   type DocumentSearchControlProps,
@@ -12,6 +12,7 @@ export type MarkdownViewerHeaderProps = Readonly<{
   selectedSpecLabel: string | null;
   selectedFileLabel: string | null;
   fileKey: SpecFileKey;
+  fileTypeLabel?: string;
   path: string;
   htmlZoom: HtmlZoomControlProps | null;
   documentSearch: DocumentSearchControlProps;
@@ -24,6 +25,7 @@ export function MarkdownViewerHeader({
   selectedSpecLabel,
   selectedFileLabel,
   fileKey,
+  fileTypeLabel,
   path,
   htmlZoom,
   documentSearch,
@@ -32,8 +34,15 @@ export function MarkdownViewerHeader({
   return (
     <header className="markdown-viewer__header">
       <div>
-        <p className="markdown-viewer__eyebrow">{selectedSpecLabel}</p>
+        <nav className="markdown-viewer__breadcrumb" aria-label="Breadcrumb">
+          <span className="markdown-viewer__eyebrow">{selectedSpecLabel}</span>
+          <span aria-hidden="true"> / </span>
+          <span aria-current="page">{selectedFileLabel ?? fileKey}</span>
+        </nav>
         <h1>{selectedFileLabel ?? fileKey}</h1>
+        <p className="markdown-viewer__subtitle">
+          {selectedSpecLabel} · {fileTypeLabel ?? fileKey}
+        </p>
         <p className="markdown-viewer__path">{path}</p>
       </div>
       <div className="markdown-viewer__actions">

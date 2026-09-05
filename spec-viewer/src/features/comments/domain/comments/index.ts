@@ -1,8 +1,8 @@
+import type { Comment } from "@/features/comments/domain/comment";
 import {
   CommentStatusFilter,
   type CommentStatusFilter as CommentStatusFilterType,
 } from "@/features/comments/domain/commentStatusFilter";
-import type { Comment, CommentId } from "@/features/comments/types/comment";
 
 declare const commentsBrand: unique symbol;
 
@@ -11,7 +11,7 @@ export type Comments = readonly Comment[] & {
 };
 
 export const Comments = {
-  /** @returns Branded comments collection while preserving readonly array compatibility. */
+  /** @returns Branded comments collection with a readonly array shape. */
   create(comments: readonly Comment[]): Comments {
     return comments as Comments;
   },
@@ -83,29 +83,6 @@ export const Comments = {
       ),
     );
   },
-  /**
-   * @param comments - Current visible comments
-   * @param commentId - Comment id to toggle locally
-   * @param statusFilter - Active status filter
-   * @returns Comments after an optimistic resolved-state toggle.
-   */
-  upsertOptimisticToggle(
-    comments: readonly Comment[],
-    commentId: CommentId,
-    statusFilter: CommentStatusFilterType,
-  ): readonly Comment[] {
-    const currentComment = comments.find((comment) => comment.id === commentId);
-
-    if (currentComment === undefined) {
-      return comments;
-    }
-
-    return Comments.upsertDisplayable(
-      comments,
-      toggleResolved(currentComment),
-      statusFilter,
-    );
-  },
 } as const;
 
 /** @returns Incoming comment with known anchor resolution preserved when omitted. */
@@ -130,16 +107,4 @@ function shouldDisplay(
   statusFilter: CommentStatusFilterType,
 ): boolean {
   return CommentStatusFilter.matches(statusFilter, comment.status);
-}
-
-/**
- * @param comment - Comment whose resolved state should be inverted.
- * @returns Comment with resolved state inverted.
- */
-function toggleResolved(comment: Comment): Comment {
-  if (comment.resolved) {
-    return { ...comment, status: "open", resolved: false };
-  }
-
-  return { ...comment, status: "resolved", resolved: true };
 }

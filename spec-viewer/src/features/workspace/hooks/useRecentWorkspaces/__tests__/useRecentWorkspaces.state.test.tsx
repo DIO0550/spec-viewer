@@ -1,9 +1,8 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test } from "vitest";
-
-import type { RecentWorkspaceStorage } from "@/shared/lib/recentWorkspaces";
 import { useRecentWorkspaces } from "@/features/workspace/hooks/useRecentWorkspaces";
+import type { RecentWorkspaceStorage } from "@/lib/recentWorkspaces";
 
 class MemoryStorage implements RecentWorkspaceStorage {
   private readonly values = new Map<string, string>();
@@ -64,7 +63,7 @@ test("useRecentWorkspacesは保存済みworkspaceの追加と削除をstorageへ
     });
     result.current.recordWorkspace({
       root: "/workspace/beta",
-      kind: "spec-skill",
+      kind: "plugin-worktree",
       files: [],
     });
     result.current.removeWorkspace("/workspace/alpha");

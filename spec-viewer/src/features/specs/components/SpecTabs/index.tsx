@@ -1,7 +1,7 @@
 import { type KeyboardEvent, useRef } from "react";
 
 import type { SpecFileKey, SpecNode } from "@/features/specs/types/spec";
-import { EmptyState } from "@/shared/ui/EmptyState";
+import { EmptyState } from "@/components/EmptyState";
 
 type Props = Readonly<{
   spec: SpecNode | null;
@@ -122,9 +122,10 @@ export function SpecTabs({
             }}
           >
             <span className="spec-tabs__label">{file.label}</span>
-            <span className={`file-status file-status--${file.status}`}>
-              {file.status}
-            </span>
+            <span
+              className={`file-status file-status--${file.status}`}
+              aria-hidden="true"
+            />
           </button>
         );
       })}

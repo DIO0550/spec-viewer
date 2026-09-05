@@ -10,7 +10,7 @@ use std::{
 
 use crate::{
     domain::{
-        spec::{MarkdownBlock, SpecDocumentFormat, SpecFileKey, SpecId},
+        spec::{MarkdownBlock, SpecArtifactIdentity, SpecDocumentFormat, SpecFileKey, SpecId},
         workspace::{WorkspaceConfig, WorkspaceLayout},
     },
     infrastructure::markdown::{
@@ -41,7 +41,7 @@ pub struct FileStamp {
 
 #[derive(Clone, Debug)]
 pub struct CachedMarkdownDocument {
-    key: SpecFileKey,
+    identity: SpecArtifactIdentity,
     format: SpecDocumentFormat,
     path: String,
     contents: String,
@@ -57,7 +57,7 @@ impl CachedMarkdownDocument {
         let size_bytes = contents.len();
 
         Self {
-            key: document.key(),
+            identity: document.identity().clone(),
             format: document.format(),
             path: document.path().to_string(),
             contents,
@@ -69,7 +69,13 @@ impl CachedMarkdownDocument {
     }
 
     fn into_document(self) -> MarkdownDocument {
-        MarkdownDocument::new(self.key, self.format, self.path, self.contents, self.blocks)
+        MarkdownDocument::new_artifact(
+            self.identity,
+            self.format,
+            self.path,
+            self.contents,
+            self.blocks,
+        )
     }
 }
 
@@ -327,6 +333,33 @@ mod tests {
         fn drop(&mut self) {
             let _ = fs::remove_dir_all(&self.root);
         }
+    }
+
+    #[test]
+    fn cached_document_round_trip_preserves_artifact_identity() {
+        let identity = crate::domain::spec::SpecArtifactIdentity::direct_markdown("notes.md")
+            .expect("direct artifact identity should be valid");
+        let document = MarkdownDocument::new_artifact(
+            identity.clone(),
+            SpecDocumentFormat::Markdown,
+            "/workspace/auth/notes.md",
+            "# Notes",
+            Vec::new(),
+        );
+        let cached = CachedMarkdownDocument::from_document(
+            document,
+            FileStamp {
+                modified: UNIX_EPOCH,
+                size_bytes: 7,
+            },
+            1,
+        );
+
+        let restored = cached.into_document();
+
+        assert_eq!(&identity, restored.identity());
+        assert_eq!(None, restored.file_key());
+        assert_eq!("# Notes", restored.contents());
     }
 
     #[test]

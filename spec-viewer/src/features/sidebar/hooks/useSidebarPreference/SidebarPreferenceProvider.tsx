@@ -14,5 +14,9 @@ export function SidebarPreferenceProvider(
   const { children } = props;
   const value = useSidebarPreferenceState();
 
-  return <SidebarPreferenceContext value={value}>{children}</SidebarPreferenceContext>;
+  return (
+    <SidebarPreferenceContext value={value}>
+      {children}
+    </SidebarPreferenceContext>
+  );
 }

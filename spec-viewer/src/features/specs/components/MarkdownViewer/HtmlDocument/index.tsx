@@ -1,4 +1,4 @@
-import { uiText } from "@/shared/lib/uiText";
+import { uiText } from "@/utils/uiText";
 
 import {
   createHtmlPreviewDocument,

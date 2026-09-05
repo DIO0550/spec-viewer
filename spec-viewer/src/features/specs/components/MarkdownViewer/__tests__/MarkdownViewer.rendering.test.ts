@@ -11,8 +11,12 @@ const cssFilePath = resolve(
 /** @returns The declaration body for one CSS selector in App.css. */
 function readCssRule(selector: string): string {
   const css = readFileSync(cssFilePath, "utf8");
-  const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = css.match(new RegExp(`${escapedSelector}\\s*{(?<body>[^}]*)}`));
+  const selectorPattern = selector
+    .trim()
+    .split(/\s+/)
+    .map((selectorPart) => selectorPart.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("\\s+");
+  const match = css.match(new RegExp(`${selectorPattern}\\s*{(?<body>[^}]*)}`));
 
   return match?.groups?.body ?? "";
 }
@@ -117,7 +121,7 @@ test("MarkdownViewerのコメント付き本文は背景色や枠線を変えな
 test("MarkdownViewerのコメントダイアログはhoverの追加ボタンより前面に出る", () => {
   const popoverRule = readCssRule(".add-comment-popover");
   const dialogOpenRule = readCssRule(
-    '.markdown-viewer[data-comment-dialog-open="true"] .text-selection-comment-button,\n.markdown-viewer[data-comment-dialog-open="true"] .markdown-block-comment-button,\n.markdown-viewer[data-comment-dialog-open="true"]\n  .markdown-comment-target:hover\n  > .markdown-block-comment-button,\n.markdown-viewer[data-comment-dialog-open="true"]\n  .markdown-comment-target:focus-within\n  > .markdown-block-comment-button,\n.markdown-viewer[data-comment-dialog-open="true"]\n  .markdown-rendered\n  li:hover\n  > .markdown-block-comment-button,\n.markdown-viewer[data-comment-dialog-open="true"]\n  .markdown-rendered\n  li:focus-within\n  > .markdown-block-comment-button',
+    '.markdown-viewer[data-viewer-overlay-open="true"] .text-selection-comment-button,\n.markdown-viewer[data-viewer-overlay-open="true"] .markdown-block-comment-button,\n.markdown-viewer[data-viewer-overlay-open="true"]\n  .markdown-comment-target:hover\n  > .markdown-block-comment-button,\n.markdown-viewer[data-viewer-overlay-open="true"]\n  .markdown-comment-target:focus-within\n  > .markdown-block-comment-button,\n.markdown-viewer[data-viewer-overlay-open="true"]\n  .markdown-rendered\n  li:hover\n  > .markdown-block-comment-button,\n.markdown-viewer[data-viewer-overlay-open="true"]\n  .markdown-rendered\n  li:focus-within\n  > .markdown-block-comment-button',
   );
 
   expect(popoverRule).toContain("z-index: 50;");

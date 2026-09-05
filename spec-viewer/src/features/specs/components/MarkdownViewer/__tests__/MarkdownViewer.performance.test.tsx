@@ -1,11 +1,10 @@
-import { act } from "react";
 import type { ReactNode } from "react";
+import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-
+import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
 import type { SpecDocumentState } from "@/features/specs/hooks/useSpecs";
 import type { SpecDocument } from "@/features/specs/types/spec";
-import { MarkdownViewer } from "@/features/specs/components/MarkdownViewer";
 
 const workspacePath = "/workspace/spec-reviewer";
 
@@ -59,7 +58,25 @@ function createReadyState(contents: string): SpecDocumentState {
     path: "/workspace/spec-reviewer/docs/plans/tasks.md",
     contents,
     missing: false,
-    blocks: [],
+    blocks: contents.startsWith("#")
+      ? [
+          {
+            blockType: "heading",
+            blockIndex: 0,
+            textHash: "sha256:test-heading",
+            textSnippet: "Tasks",
+            sourceRange: null,
+          },
+        ]
+      : [
+          {
+            blockType: "code_block",
+            blockIndex: 0,
+            textHash: "sha256:test-code",
+            textSnippet: "oversized code",
+            sourceRange: null,
+          },
+        ],
   };
 
   return {
@@ -145,9 +162,11 @@ test("MarkdownViewerは巨大Markdownでsyntax highlightを無効にする", () 
 });
 
 test("MarkdownViewerは非ASCIIの実バイト数が大きいMarkdownでsyntax highlightを無効にする", () => {
-  const oversizedCode = ["```ts", `const value = "${"あ".repeat(70_000)}";`, "```"].join(
-    "\n",
-  );
+  const oversizedCode = [
+    "```ts",
+    `const value = "${"あ".repeat(70_000)}";`,
+    "```",
+  ].join("\n");
   const result = renderComponent(
     <MarkdownViewer
       state={createReadyState(oversizedCode)}

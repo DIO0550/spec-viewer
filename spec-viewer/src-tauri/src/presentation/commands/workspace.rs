@@ -10,7 +10,7 @@ use crate::{
     domain::workspace::{WorkspaceConfig, WorkspaceFileMapping, WorkspaceLayout},
 };
 
-use super::{CommandError, CommandState};
+use super::CommandState;
 
 pub type LoadWorkspaceCommandResult<T> = Result<T, WorkspaceCommandError>;
 pub type ValidateWorkspaceDirectoryCommandResult<T> = Result<T, WorkspaceCommandError>;
@@ -39,6 +39,10 @@ impl WorkspaceCommandError {
         }
     }
 
+    fn invalid_request(message: impl Into<String>) -> Self {
+        Self::new(WorkspaceCommandErrorCode::InvalidRequest, message)
+    }
+
     fn from_app_error(error: AppUseCaseError) -> Self {
         let code = match error {
             AppUseCaseError::WorkspaceDetection { .. } => {
@@ -50,34 +54,16 @@ impl WorkspaceCommandError {
             | AppUseCaseError::MarkdownRead { .. }
             | AppUseCaseError::InvalidSpec { .. }
             | AppUseCaseError::InvalidComment { .. }
-            | AppUseCaseError::CommentRepository { .. }
-            | AppUseCaseError::ReviewRunExport { .. } => WorkspaceCommandErrorCode::Unexpected,
+            | AppUseCaseError::CommentRepository { .. } => WorkspaceCommandErrorCode::Unexpected,
         };
 
         Self::new(code, error.to_string())
-    }
-
-    fn from_command_error(error: CommandError) -> Self {
-        let code = match error.code() {
-            "invalidRequest" => WorkspaceCommandErrorCode::InvalidRequest,
-            "workspaceDetection" => WorkspaceCommandErrorCode::WorkspaceDetection,
-            "configLoad" => WorkspaceCommandErrorCode::ConfigLoad,
-            _ => WorkspaceCommandErrorCode::Unexpected,
-        };
-
-        Self::new(code, error.message())
     }
 }
 
 impl From<AppUseCaseError> for WorkspaceCommandError {
     fn from(error: AppUseCaseError) -> Self {
         Self::from_app_error(error)
-    }
-}
-
-impl From<CommandError> for WorkspaceCommandError {
-    fn from(error: CommandError) -> Self {
-        Self::from_command_error(error)
     }
 }
 
@@ -189,9 +175,10 @@ pub fn validate_workspace_directory(
                 is_directory: false,
             })
         }
-        Err(error) => Err(WorkspaceCommandError::from_command_error(
-            CommandError::invalid_request(format!("failed to inspect dropped path: {}", error)),
-        )),
+        Err(error) => Err(WorkspaceCommandError::invalid_request(format!(
+            "failed to inspect dropped path: {}",
+            error
+        ))),
     }
 }
 
