@@ -1,0 +1,32 @@
+{
+  "schemaVersion": "spec-reviewer.user-review.v1",
+  "id": "urv_018f4c2e6f0a4b18a9d41f72c3e5b607",
+  "status": "active",
+  "createdAt": "2026-05-06T12:40:00.000Z",
+  "updatedAt": "2026-05-06T12:40:00.000Z",
+  "archivedAt": null,
+  "target": {
+    "scope": "file",
+    "specId": "001-auth-flow",
+    "fileKey": "tasks"
+  },
+  "comments": [
+    {
+      "id": "cmt_1",
+      "status": "open",
+      "source": {
+        "specId": "001-auth-flow",
+        "fileKey": "tasks",
+        "filePath": ".plugin-workspace/.specs/001-auth-flow/tasks.md"
+      },
+      "blockType": "paragraph",
+      "lineStart": 42,
+      "lineEnd": 48,
+      "textSnippet": "Target text",
+      "textHash": "sha256:d4b1ea57",
+      "body": "Split this into separate tasks",
+      "createdAt": "2026-05-06T12:39:00.000Z",
+      "updatedAt": "2026-05-06T12:39:00.000Z"
+    }
+  ]
+}
