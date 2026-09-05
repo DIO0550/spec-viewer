@@ -9,6 +9,7 @@ This folder contains implementation tasks split into small, commit-sized Markdow
 - [phase-3-anchors](./phase-3-anchors/): Markdown block parsing, anchor resolution, orphan handling, and refresh.
 - [later-phases](./later-phases/): UX polish, export, AI integration, and release tasks.
 - [review-loop](./review-loop/): user review bundles, active review runs, and archive workflow.
+- [review](./review/): Specs / Repository Diff integrated review, anchors, persistence, and navigation.
 - [done](./done/): completed task files moved out of active task groups.
 
 ## Completion Rule

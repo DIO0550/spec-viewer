@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { readStorageValue, writeStorageValue } from "@/lib/storage";
 
 const SidebarWidthStorageKey = "spec-reviewer.comment-sidebar-width";
-const DefaultSidebarWidth = 360;
+const DefaultSidebarWidth = 300;
 const MinSidebarWidth = 280;
 const MaxSidebarWidth = 560;
 const ViewportWidthRatio = 0.45;

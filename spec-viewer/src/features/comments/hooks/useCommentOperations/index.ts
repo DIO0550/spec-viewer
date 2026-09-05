@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
+import type { Comment } from "@/features/comments/domain/comment";
+import type { CommentAnchor } from "@/features/comments/domain/commentAnchor";
 import type { CommentFeatureError as CommentFeatureErrorType } from "@/features/comments/domain/commentError";
 import { CommentFeatureError } from "@/features/comments/domain/commentError";
+import type { CommentId } from "@/features/comments/domain/commentId";
 import {
   CommentOperationFailedState,
   CommentOperationIdleState,
@@ -16,21 +19,15 @@ import {
   deleteComment as deleteCommentViaGateway,
   reopenComment as reopenCommentViaGateway,
   resolveComment as resolveCommentViaGateway,
-  toggleCommentResolved as toggleCommentResolvedViaGateway,
   updateComment as updateCommentViaGateway,
 } from "@/features/comments/infra/commentGateway";
-import type {
-  Comment,
-  CommentAnchor,
-  CommentId,
-} from "@/features/comments/types/comment";
-import type { CommentCommands } from "@/shared/api/tauri";
-import { AddCommentCommandError } from "@/shared/api/tauri/addComment";
-import { DeleteCommentCommandError } from "@/shared/api/tauri/deleteComment";
-import { ReopenCommentCommandError } from "@/shared/api/tauri/reopenComment";
-import { ResolveCommentCommandError } from "@/shared/api/tauri/resolveComment";
-import { ToggleCommentResolvedCommandError } from "@/shared/api/tauri/toggleCommentResolved";
-import { UpdateCommentCommandError } from "@/shared/api/tauri/updateComment";
+
+import type { CommentCommands } from "@/lib/api/tauri";
+import { AddCommentCommandError } from "@/lib/api/tauri/addComment";
+import { DeleteCommentCommandError } from "@/lib/api/tauri/deleteComment";
+import { ReopenCommentCommandError } from "@/lib/api/tauri/reopenComment";
+import { ResolveCommentCommandError } from "@/lib/api/tauri/resolveComment";
+import { UpdateCommentCommandError } from "@/lib/api/tauri/updateComment";
 
 export type AddCommentInput = Readonly<{
   anchor: CommentAnchor;
@@ -51,7 +48,6 @@ export type UseCommentOperationsOptions = Readonly<{
   scopeKey: string;
   statusFilter: CommentStatusFilter;
   commands: CommentCommands;
-  currentComments: readonly Comment[];
   /** @param transform - Transform applied to the active scope comment list. */
   updateCurrentScopeComments: (transform: CommentListTransform) => void;
   /** Reloads comments for the active scope. */
@@ -70,8 +66,6 @@ export type UseCommentOperationsResult = Readonly<{
   resolveComment: (commentId: CommentId) => Promise<Comment | null>;
   /** @param commentId - Id of the comment to reopen. */
   reopenComment: (commentId: CommentId) => Promise<Comment | null>;
-  /** @param commentId - Id of the comment to toggle. */
-  toggleCommentResolved: (commentId: CommentId) => Promise<Comment | null>;
 }>;
 
 type CommentOperationEvent =
@@ -106,7 +100,6 @@ export function useCommentOperations(
 ): UseCommentOperationsResult {
   const {
     commands,
-    currentComments,
     reloadComments,
     scope,
     scopeKey,
@@ -403,57 +396,6 @@ export function useCommentOperations(
     ],
   );
 
-  const toggleCommentResolved = useCallback(
-    async (commentId: CommentId): Promise<Comment | null> => {
-      const token = beginOperation("toggle", commentId);
-      if (token === null || scope === null) {
-        return null;
-      }
-
-      const previousComments = currentComments;
-      updateCurrentScopeComments((comments) =>
-        Comments.upsertOptimisticToggle(comments, commentId, statusFilter),
-      );
-
-      try {
-        const comment = await toggleCommentResolvedViaGateway(
-          commands,
-          scope,
-          commentId,
-        );
-
-        if (!canApplyOperationResult(token)) {
-          return null;
-        }
-
-        updateCurrentScopeComments((comments) =>
-          Comments.upsertDisplayable(comments, comment, statusFilter),
-        );
-        markOperationSucceeded();
-        return comment;
-      } catch (error) {
-        if (!canApplyOperationResult(token)) {
-          return null;
-        }
-
-        updateCurrentScopeComments(() => previousComments);
-        markOperationFailed("toggle", commentId, error);
-        return null;
-      }
-    },
-    [
-      beginOperation,
-      canApplyOperationResult,
-      commands,
-      currentComments,
-      markOperationFailed,
-      markOperationSucceeded,
-      scope,
-      statusFilter,
-      updateCurrentScopeComments,
-    ],
-  );
-
   return {
     operationState,
     addComment,
@@ -461,7 +403,6 @@ export function useCommentOperations(
     deleteComment,
     resolveComment,
     reopenComment,
-    toggleCommentResolved,
   };
 }
 
@@ -523,10 +464,6 @@ function toCommentFeatureError(
     case "reopen":
       return CommentFeatureError.fromCommandError(
         ReopenCommentCommandError.fromUnknown(error),
-      );
-    case "toggle":
-      return CommentFeatureError.fromCommandError(
-        ToggleCommentResolvedCommandError.fromUnknown(error),
       );
     default:
       return assertNever(operation);

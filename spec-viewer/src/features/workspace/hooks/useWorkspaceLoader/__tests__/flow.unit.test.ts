@@ -8,7 +8,7 @@ import {
   openWorkspacePath,
 } from "@/features/workspace/hooks/useWorkspaceLoader/flow";
 import type { WorkspaceLoaderFlowIo } from "@/features/workspace/hooks/useWorkspaceLoader/types";
-import { ValidateWorkspaceDirectoryCommandError } from "@/shared/api/tauri/validateWorkspaceDirectory";
+import { ValidateWorkspaceDirectoryCommandError } from "@/lib/api/tauri/validateWorkspaceDirectory";
 
 const invalidDroppedDirectoryMessage =
   "ワークスペースフォルダをドロップしてください。ファイルはワークスペースとして開けません。";

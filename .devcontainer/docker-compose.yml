@@ -1,5 +1,6 @@
 services:
   app:
+    container_name: spec-viewer
     build:
       context: ./node
       dockerfile: Dockerfile
@@ -11,3 +12,7 @@ services:
       - "16080:16080"
       - "15901:15901"
     command: sleep infinity
+    tmpfs:
+      - /var/tmp/codex-sqlite:size=1g
+    environment:
+      CODEX_SQLITE_HOME: /var/tmp/codex-sqlite

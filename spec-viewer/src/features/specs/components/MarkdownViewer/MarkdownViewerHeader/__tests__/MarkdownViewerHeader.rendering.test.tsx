@@ -43,12 +43,13 @@ function createDocumentSearchProps() {
   };
 }
 
-test("MarkdownViewerHeaderはlabelとfileKey fallbackとpathを表示する", () => {
+test("MarkdownViewerHeaderはsemantic breadcrumb、h1、specとfile種別subtitle、pathを表示する", () => {
   const result = renderComponent(
     <MarkdownViewerHeader
       selectedSpecLabel="Phase 1 Viewer"
-      selectedFileLabel={null}
+      selectedFileLabel="Notes"
       fileKey="tasks"
+      fileTypeLabel="Direct Markdown"
       path="/workspace/spec-reviewer/docs/plans/tasks.md"
       htmlZoom={null}
       documentSearch={createDocumentSearchProps()}
@@ -57,9 +58,12 @@ test("MarkdownViewerHeaderはlabelとfileKey fallbackとpathを表示する", ()
   );
 
   expect(
-    result.container.querySelector(".markdown-viewer__eyebrow")?.textContent,
-  ).toBe("Phase 1 Viewer");
-  expect(result.container.querySelector("h1")?.textContent).toBe("tasks");
+    result.container.querySelector('nav[aria-label="Breadcrumb"]')?.textContent,
+  ).toContain("Phase 1 Viewer / Notes");
+  expect(result.container.querySelector("h1")?.textContent).toBe("Notes");
+  expect(
+    result.container.querySelector(".markdown-viewer__subtitle")?.textContent,
+  ).toBe("Phase 1 Viewer · Direct Markdown");
   expect(
     result.container.querySelector(".markdown-viewer__path")?.textContent,
   ).toBe("/workspace/spec-reviewer/docs/plans/tasks.md");

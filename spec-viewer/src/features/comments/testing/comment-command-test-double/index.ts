@@ -1,7 +1,10 @@
+import type { Comment } from "@/features/comments/domain/comment";
+import {
+  type CommentId,
+  CommentId as CommentIdValue,
+} from "@/features/comments/domain/commentId";
 import type {
   AddCommentRequest,
-  Comment,
-  CommentId,
   CommentStatusRequest,
   DeleteCommentRequest,
   DeleteCommentResponse,
@@ -9,8 +12,8 @@ import type {
   ListCommentsResponse,
   UpdateCommentRequest,
 } from "@/features/comments/types/comment";
-import { CommentId as CommentIdValue } from "@/features/comments/types/comment";
-import type { CommentCommands } from "@/shared/api/tauri";
+
+import type { CommentCommands } from "@/lib/api/tauri";
 
 const commentId: (value: string) => CommentId = CommentIdValue.fromString;
 
@@ -21,7 +24,6 @@ export type CommentCommandTestDoubleResponses = Readonly<{
   deleteComment?: DeleteCommentResponse;
   resolveComment?: Comment;
   reopenComment?: Comment;
-  toggleCommentResolved?: Comment;
 }>;
 
 export type CommentCommandTestDoubleCalls = Readonly<{
@@ -31,7 +33,6 @@ export type CommentCommandTestDoubleCalls = Readonly<{
   deleteComment: readonly DeleteCommentRequest[];
   resolveComment: readonly CommentStatusRequest[];
   reopenComment: readonly CommentStatusRequest[];
-  toggleCommentResolved: readonly CommentStatusRequest[];
 }>;
 
 export type CommentCommandTestDouble = Readonly<{
@@ -54,7 +55,6 @@ const defaultComment: Comment = {
   },
   body: "Clarify this task",
   status: "open",
-  resolved: false,
   createdAt: "2026-05-05T10:00:00Z",
   updatedAt: "2026-05-05T10:00:00Z",
 };
@@ -70,7 +70,6 @@ export function createCommentCommandTestDouble(
   const deleteCommentCalls: DeleteCommentRequest[] = [];
   const resolveCommentCalls: CommentStatusRequest[] = [];
   const reopenCommentCalls: CommentStatusRequest[] = [];
-  const toggleCommentResolvedCalls: CommentStatusRequest[] = [];
 
   return {
     calls: {
@@ -80,7 +79,6 @@ export function createCommentCommandTestDouble(
       deleteComment: deleteCommentCalls,
       resolveComment: resolveCommentCalls,
       reopenComment: reopenCommentCalls,
-      toggleCommentResolved: toggleCommentResolvedCalls,
     },
     commands: {
       /**
@@ -125,7 +123,6 @@ export function createCommentCommandTestDouble(
           responses.resolveComment ?? {
             ...comment,
             status: "resolved",
-            resolved: true,
           }
         );
       },
@@ -139,21 +136,6 @@ export function createCommentCommandTestDouble(
           responses.reopenComment ?? {
             ...comment,
             status: "open",
-            resolved: false,
-          }
-        );
-      },
-      /**
-       * Records the toggle request and returns the stubbed toggled comment.
-       * @param request - Comment status request to record.
-       */
-      toggleCommentResolved: async (request) => {
-        toggleCommentResolvedCalls.push(request);
-        return (
-          responses.toggleCommentResolved ?? {
-            ...comment,
-            status: "resolved",
-            resolved: true,
           }
         );
       },

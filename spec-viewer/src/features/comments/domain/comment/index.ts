@@ -1,32 +1,30 @@
-import {
-  CommentStatusFilter,
-  type CommentStatus,
-  type CommentStatusFilter as CommentStatusFilterType,
-} from "@/features/comments/domain/commentStatusFilter";
-import { Comments } from "@/features/comments/domain/comments";
 import type {
   CommentAnchor,
   CommentAnchorResolution,
-  CommentId,
-  IsoDateTimeString,
-} from "@/features/comments/types/comment";
+} from "@/features/comments/domain/commentAnchor";
+import type { CommentId } from "@/features/comments/domain/commentId";
+import {
+  type CommentStatus,
+  CommentStatusFilter,
+  type CommentStatusFilter as CommentStatusFilterType,
+} from "@/features/comments/domain/commentStatusFilter";
+import { Comments } from "@/features/comments/domain/comments";
+
+export type IsoDateTimeString = string;
 
 export type Comment = Readonly<{
   id: CommentId;
   anchor: CommentAnchor;
   body: string;
   status: CommentStatus;
-  resolved: boolean;
   anchorResolution?: CommentAnchorResolution | null;
   createdAt: IsoDateTimeString;
   updatedAt: IsoDateTimeString;
 }>;
 
-export type CreateCommentInput = Comment;
-
 export const Comment = {
-  /** @returns New comment value preserving the existing IPC-compatible shape. */
-  create(input: CreateCommentInput): Comment {
+  /** @returns A new immutable comment value. */
+  create(input: Comment): Comment {
     return { ...input };
   },
   /**
@@ -37,21 +35,13 @@ export const Comment = {
   updateBody(comment: Comment, body: string): Comment {
     return { ...comment, body };
   },
-  /** @returns Comment with resolved status and flag synchronized. */
+  /** @returns Comment with resolved status. */
   resolve(comment: Comment): Comment {
-    return { ...comment, status: "resolved", resolved: true };
+    return { ...comment, status: "resolved" };
   },
-  /** @returns Comment with open status and unresolved flag synchronized. */
+  /** @returns Comment with open status. */
   reopen(comment: Comment): Comment {
-    return { ...comment, status: "open", resolved: false };
-  },
-  /** @returns Comment with resolved state inverted. */
-  toggleResolved(comment: Comment): Comment {
-    if (comment.resolved) {
-      return Comment.reopen(comment);
-    }
-
-    return Comment.resolve(comment);
+    return { ...comment, status: "open" };
   },
   /**
    * @param current - Existing comment in local state
@@ -108,18 +98,5 @@ export const Comment = {
     statusFilter: CommentStatusFilterType,
   ): readonly Comment[] {
     return Comments.upsertDisplayable(comments, comment, statusFilter);
-  },
-  /**
-   * @param comments - Current visible comments
-   * @param commentId - Comment id to toggle locally
-   * @param statusFilter - Active status filter
-   * @returns Comments after an optimistic resolved-state toggle.
-   */
-  upsertOptimisticToggle(
-    comments: readonly Comment[],
-    commentId: CommentId,
-    statusFilter: CommentStatusFilterType,
-  ): readonly Comment[] {
-    return Comments.upsertOptimisticToggle(comments, commentId, statusFilter);
   },
 } as const;
