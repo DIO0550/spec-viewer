@@ -14,6 +14,7 @@ import {
 test.each([
   ["docs/notes.html"],
   ["docs/requirements-copy.html"],
+  ["docs/understanding-quiz-impl.md"],
   ["docs/test-cases-copy.html"],
 ])("createHtmlPreviewSandboxは%sでscriptを許可しない", (path) => {
   expect(createHtmlPreviewSandbox(path)).toBe("");
@@ -23,6 +24,8 @@ test.each([
 test.each([
   ["docs/requirements.html"],
   ["docs/REQUIREMENTS.HTML"],
+  ["docs/understanding-quiz-plan.html"],
+  ["docs/UNDERSTANDING-QUIZ-IMPL.HTML?version=1#quiz"],
   ["docs/test-cases.html#cases"],
   ["docs/test-cases.html?version=1#cases"],
 ])("createHtmlPreviewSandboxは%sでscriptを許可する", (path) => {

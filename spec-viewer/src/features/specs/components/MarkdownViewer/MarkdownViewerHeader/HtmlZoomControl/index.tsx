@@ -1,6 +1,6 @@
 import { ZoomIn, ZoomOut } from "lucide-react";
 
-import { uiText } from "@/shared/lib/uiText";
+import { uiText } from "@/utils/uiText";
 
 export type HtmlZoomControlProps = Readonly<{
   zoomPercentLabel: string;

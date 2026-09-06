@@ -1,9 +1,10 @@
 [package]
 name = "spec-viewer"
-version = "0.1.9"
+version = "0.1.11"
 description = "Desktop reviewer for Spec Skill Markdown workspaces."
 authors = ["DIO0550"]
 edition = "2021"
+rust-version = "1.89"
 license = "UNLICENSED"
 publish = false
 repository = "https://github.com/DIO0550/spec-viewer"
@@ -16,6 +17,10 @@ repository = "https://github.com/DIO0550/spec-viewer"
 # This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
 name = "spec_reviewer_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
+
+[features]
+default = []
+native-test-control = []
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
@@ -34,3 +39,6 @@ chrono = { version = "0.4.44", features = ["serde"] }
 thiserror = "2.0.18"
 anyhow = "1.0.102"
 notify = "8"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Storage_FileSystem", "Win32_Security", "Win32_Security_Authorization", "Win32_System_Threading"] }

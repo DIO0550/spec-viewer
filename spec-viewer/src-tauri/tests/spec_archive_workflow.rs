@@ -82,10 +82,13 @@ fn archive_workflow_moves_scanned_spec_to_hidden_archive() {
         .archive_spec(&workspace, &spec_id(".plugin-workspace/.specs/auth"))
         .expect("scanned spec should archive");
 
+    assert_eq!(".plugin-workspace/.specs/auth", result.archived_spec_id());
     assert_eq!(
         test_workspace.path(".plugin-workspace/.specs/.archive/auth"),
         PathBuf::from(result.archive_path())
     );
+    assert_eq!(".plugin-workspace/.specs", result.source_group_id());
+    assert_eq!(".archive/auth", result.destination_node_id());
     assert!(!test_workspace
         .path(".plugin-workspace/.specs/auth")
         .exists());
@@ -109,6 +112,8 @@ fn archive_workflow_keeps_collision_suffix_compatibility() {
         test_workspace.path(".plugin-workspace/.specs/.archive/auth-1"),
         PathBuf::from(result.archive_path())
     );
+    assert_eq!(".plugin-workspace/.specs", result.source_group_id());
+    assert_eq!(".archive/auth-1", result.destination_node_id());
     assert!(test_workspace
         .path(".plugin-workspace/.specs/.archive/auth")
         .exists());
@@ -121,12 +126,16 @@ fn archive_workflow_keeps_collision_suffix_compatibility() {
 fn archive_workflow_does_not_move_unapproved_directories_or_unknown_id() {
     let test_workspace = TestWorkspace::new("rejected");
     test_workspace.write_file(".plugin-workspace/.specs/auth/tasks.md");
+    test_workspace.write_file(".plugin-workspace/.specs/container/child/tasks.md");
+    test_workspace.create_dir(".plugin-workspace/.specs/empty");
     test_workspace.create_dir(".plugin-workspace/.specs/.hidden");
     test_workspace.create_dir("misc");
     let (use_cases, workspace) = loaded_workspace(&test_workspace);
     let rejected = [
         ".plugin-workspace/.specs",
         ".plugin-workspace",
+        ".plugin-workspace/.specs/container",
+        ".plugin-workspace/.specs/empty",
         ".plugin-workspace/.specs/.hidden",
         "misc",
         "missing",
@@ -142,6 +151,12 @@ fn archive_workflow_does_not_move_unapproved_directories_or_unknown_id() {
     }
 
     assert!(test_workspace.path(".plugin-workspace/.specs").exists());
+    assert!(test_workspace
+        .path(".plugin-workspace/.specs/container/child/tasks.md")
+        .exists());
+    assert!(test_workspace
+        .path(".plugin-workspace/.specs/empty")
+        .exists());
     assert!(test_workspace
         .path(".plugin-workspace/.specs/.hidden")
         .exists());

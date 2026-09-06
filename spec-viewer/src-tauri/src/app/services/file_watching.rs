@@ -846,23 +846,21 @@ mod tests {
 
     #[test]
     fn select_watch_parent_paths_skips_optional_missing_parent() {
+        let existing_parent = env::temp_dir();
+        let missing_config = existing_parent
+            .join("spec-viewer-missing-watch-parent")
+            .join("config.json");
         let targets = vec![
             FileWatchTarget::required(
                 FileWatchTargetKind::Markdown,
-                PathBuf::from("/tmp/tasks.md"),
+                existing_parent.join("tasks.md"),
             ),
-            FileWatchTarget::optional(
-                FileWatchTargetKind::Config,
-                PathBuf::from("/path/that/does/not/exist/config.json"),
-            ),
+            FileWatchTarget::optional(FileWatchTargetKind::Config, missing_config.clone()),
         ];
 
         let result = select_watch_parent_paths(&targets).expect("required parent should exist");
 
-        assert_eq!(vec![PathBuf::from("/tmp")], result.watched_paths);
-        assert_eq!(
-            vec![PathBuf::from("/path/that/does/not/exist/config.json")],
-            result.skipped_paths
-        );
+        assert_eq!(vec![existing_parent], result.watched_paths);
+        assert_eq!(vec![missing_config], result.skipped_paths);
     }
 }

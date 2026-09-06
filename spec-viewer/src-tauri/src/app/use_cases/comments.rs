@@ -9,7 +9,7 @@ use crate::{
         comment::{
             AnchorResolutionReason, AnchorResolutionStatus, Comment, CommentAnchor, CommentBody,
             CommentId, CommentListQuery, CommentRepository, CommentRepositoryError, CommentScope,
-            CommentStatusFilter,
+            CommentStatus, CommentStatusFilter,
         },
         spec::{MarkdownBlock, SpecFileKey, SpecId},
     },
@@ -155,7 +155,7 @@ where
         file_key: SpecFileKey,
         id: &CommentId,
     ) -> Result<Comment, AppUseCaseError> {
-        self.set_comment_resolved(spec_id, file_key, id, true)
+        self.set_comment_status(spec_id, file_key, id, CommentStatus::Resolved)
     }
 
     pub fn reopen_comment(
@@ -164,36 +164,23 @@ where
         file_key: SpecFileKey,
         id: &CommentId,
     ) -> Result<Comment, AppUseCaseError> {
-        self.set_comment_resolved(spec_id, file_key, id, false)
+        self.set_comment_status(spec_id, file_key, id, CommentStatus::Open)
     }
 
-    pub fn toggle_comment_resolved(
+    fn set_comment_status(
         &self,
         spec_id: &SpecId,
         file_key: SpecFileKey,
         id: &CommentId,
-    ) -> Result<Comment, AppUseCaseError> {
-        let scope = CommentScope::new(spec_id.clone(), file_key);
-        let comment = self.get_comment(&scope, id)?;
-
-        self.set_comment_resolved(spec_id, file_key, id, !comment.is_resolved())
-    }
-
-    fn set_comment_resolved(
-        &self,
-        spec_id: &SpecId,
-        file_key: SpecFileKey,
-        id: &CommentId,
-        resolved: bool,
+        status: CommentStatus,
     ) -> Result<Comment, AppUseCaseError> {
         let scope = CommentScope::new(spec_id.clone(), file_key);
         let mut comment = self.get_comment(&scope, id)?;
         let now = self.clock.now();
 
-        if resolved {
-            comment.resolve(now)?;
-        } else {
-            comment.reopen(now)?;
+        match status {
+            CommentStatus::Open => comment.reopen(now)?,
+            CommentStatus::Resolved => comment.resolve(now)?,
         }
 
         let updated = comment.clone();
@@ -203,7 +190,6 @@ where
 
         Ok(updated)
     }
-
     fn get_comment(
         &self,
         scope: &CommentScope,
@@ -1015,7 +1001,7 @@ mod tests {
     }
 
     #[test]
-    fn resolve_reopen_and_toggle_comment_status() {
+    fn resolve_and_reopen_are_idempotent_status_operations() {
         let repository = FakeCommentRepository::default();
         repository.comments.borrow_mut().push(comment(
             "cmt_existing",
@@ -1033,6 +1019,13 @@ mod tests {
                 &comment_id("cmt_existing"),
             )
             .expect("comment should resolve");
+        let resolved_again = use_cases
+            .resolve_comment(
+                &spec_id("auth-flow"),
+                SpecFileKey::Impl,
+                &comment_id("cmt_existing"),
+            )
+            .expect("resolved comment should remain resolved");
         let reopened = use_cases
             .reopen_comment(
                 &spec_id("auth-flow"),
@@ -1040,21 +1033,20 @@ mod tests {
                 &comment_id("cmt_existing"),
             )
             .expect("comment should reopen");
-        let toggled = use_cases
-            .toggle_comment_resolved(
+        let reopened_again = use_cases
+            .reopen_comment(
                 &spec_id("auth-flow"),
                 SpecFileKey::Impl,
                 &comment_id("cmt_existing"),
             )
-            .expect("comment should toggle");
+            .expect("open comment should remain open");
 
         assert_eq!(CommentStatus::Resolved, resolved.status());
+        assert_eq!(CommentStatus::Resolved, resolved_again.status());
         assert_eq!(CommentStatus::Open, reopened.status());
-        assert_eq!(CommentStatus::Resolved, toggled.status());
-        assert_eq!(timestamp(5), toggled.updated_at());
-        assert_eq!(vec![toggled], *repository.comments.borrow());
+        assert_eq!(CommentStatus::Open, reopened_again.status());
+        assert_eq!(vec![reopened_again], *repository.comments.borrow());
     }
-
     #[test]
     fn resolve_comment_anchors_returns_exact_match_when_index_type_and_hash_match() {
         let repository = FakeCommentRepository::default();

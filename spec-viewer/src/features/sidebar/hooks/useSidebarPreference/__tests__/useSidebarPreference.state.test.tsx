@@ -140,8 +140,12 @@ test("storage writeが失敗してもUI状態は更新される", () => {
 test("同一Provider配下の複数consumerは開閉状態を共有する", () => {
   const container = document.createElement("div");
   const root = createRoot(container);
-  const first = { current: undefined as SidebarPreferenceContextValue | undefined };
-  const second = { current: undefined as SidebarPreferenceContextValue | undefined };
+  const first = {
+    current: undefined as SidebarPreferenceContextValue | undefined,
+  };
+  const second = {
+    current: undefined as SidebarPreferenceContextValue | undefined,
+  };
 
   function FirstConsumer(): null {
     first.current = useSidebarPreference();
@@ -183,7 +187,9 @@ test("同一Provider配下の複数consumerは開閉状態を共有する", () =
 test("状態が変わらない再renderではcallbackとContext valueの参照が安定する", () => {
   const container = document.createElement("div");
   const root = createRoot(container);
-  const captured = { current: undefined as SidebarPreferenceContextValue | undefined };
+  const captured = {
+    current: undefined as SidebarPreferenceContextValue | undefined,
+  };
   const forceRender = { current: () => {} };
 
   function Consumer(): null {

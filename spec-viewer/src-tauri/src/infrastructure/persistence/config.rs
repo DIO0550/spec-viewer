@@ -14,9 +14,9 @@ use crate::domain::{
     spec::{SpecDomainError, SpecFileKey, SpecId},
     workspace::{
         default_scan_excluded_directory_names, LoadSpecConfigOverride, LoadWorkspaceConfig,
-        SpecConfigOverride, WorkspaceConfig, WorkspaceConfigError, WorkspaceConfigLoadPortError,
-        WorkspaceConfigSource, WorkspaceFileMapping, WorkspaceKind, WorkspaceLayout,
-        WorkspaceRelativePath,
+        SpecConfigOverride, SpecOverrideNodeKind, WorkspaceConfig, WorkspaceConfigError,
+        WorkspaceConfigLoadPortError, WorkspaceConfigSource, WorkspaceFileMapping, WorkspaceKind,
+        WorkspaceLayout, WorkspaceRelativePath,
     },
 };
 use crate::infrastructure::filesystem::spec_directory_path;
@@ -138,6 +138,12 @@ fn parse_workspace_config(
             source,
         })?;
 
+    if raw_config.node_kind.is_some() {
+        return Err(ConfigLoadError::UnexpectedNodeKind {
+            path: display_path(path),
+        });
+    }
+
     let mut files = Vec::with_capacity(raw_config.files.len());
 
     for (raw_key, file_name) in raw_config.files {
@@ -199,9 +205,23 @@ fn parse_spec_config_override(
         files.push(mapping);
     }
 
-    SpecConfigOverride::new(files).map_err(|source| ConfigLoadError::InvalidFileMapping {
-        path: display_path(path),
-        source,
+    let node_kind = raw_config
+        .node_kind
+        .map(|value| {
+            SpecOverrideNodeKind::try_from(value).map_err(|value| {
+                ConfigLoadError::InvalidNodeKind {
+                    path: display_path(path),
+                    value,
+                }
+            })
+        })
+        .transpose()?;
+
+    SpecConfigOverride::with_node_kind(files, node_kind).map_err(|source| {
+        ConfigLoadError::InvalidFileMapping {
+            path: display_path(path),
+            source,
+        }
     })
 }
 
@@ -211,6 +231,26 @@ struct RawWorkspaceConfig {
     files: BTreeMap<String, String>,
     #[serde(rename = "scanExcludedDirectoryNames")]
     scan_excluded_directory_names: Option<Vec<String>>,
+    #[serde(rename = "nodeKind")]
+    node_kind: Option<RawSpecOverrideNodeKind>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(transparent)]
+struct RawSpecOverrideNodeKind(String);
+
+impl TryFrom<RawSpecOverrideNodeKind> for SpecOverrideNodeKind {
+    type Error = String;
+
+    fn try_from(value: RawSpecOverrideNodeKind) -> Result<Self, Self::Error> {
+        let RawSpecOverrideNodeKind(value) = value;
+
+        match value.as_str() {
+            "spec" => Ok(Self::Spec),
+            "category" => Ok(Self::Category),
+            _ => Err(value),
+        }
+    }
 }
 
 #[derive(Debug, Error)]
@@ -222,6 +262,10 @@ pub enum ConfigLoadError {
         path: String,
         source: serde_json::Error,
     },
+    #[error("nodeKind is only supported in spec override config: {path}")]
+    UnexpectedNodeKind { path: String },
+    #[error("spec override nodeKind is invalid in {path}: {value}")]
+    InvalidNodeKind { path: String, value: String },
     #[error("workspace config file key is invalid in {path}: {key}")]
     InvalidFileKey {
         path: String,
@@ -310,17 +354,6 @@ mod tests {
     }
 
     #[test]
-    fn config_file_path_uses_spec_skill_location() {
-        let workspace = TestWorkspace::new("spec-skill-location");
-        let layout = workspace.layout(WorkspaceKind::SpecSkill);
-
-        assert_eq!(
-            workspace.root().join(SPEC_SKILL_CONFIG_FILE),
-            config_file_path(&layout)
-        );
-    }
-
-    #[test]
     fn spec_override_config_file_path_uses_hidden_spec_reviewer_location() {
         let workspace = TestWorkspace::new("override-location");
         let spec_directory = workspace.spec_directory(".plugin-workspace/.specs/auth");
@@ -355,6 +388,8 @@ mod tests {
                 (SpecFileKey::TestCases, "test-cases.html"),
                 (SpecFileKey::Exploration, "exploration-report.md"),
                 (SpecFileKey::Hearing, "hearing-notes.md"),
+                (SpecFileKey::QuizPlan, "understanding-quiz-plan.html"),
+                (SpecFileKey::QuizImpl, "understanding-quiz-impl.html"),
             ],
             files
         );
@@ -388,44 +423,6 @@ mod tests {
             Some("interview.md"),
             config
                 .file_for_key(SpecFileKey::Hearing)
-                .map(WorkspaceFileMapping::file_name)
-        );
-        assert_eq!(
-            Some("todo.md"),
-            config
-                .file_for_key(SpecFileKey::Tasks)
-                .map(WorkspaceFileMapping::file_name)
-        );
-    }
-
-    #[test]
-    fn config_loader_merges_valid_spec_skill_config_over_defaults() {
-        let workspace = TestWorkspace::new("valid-spec-skill");
-        workspace.write_config(
-            SPEC_SKILL_CONFIG_FILE,
-            r#"{
-                "files": {
-                    "design": "implementation-plan.md",
-                    "tasks": "todo.md"
-                }
-            }"#,
-        );
-        let layout = workspace.layout(WorkspaceKind::SpecSkill);
-
-        let config = WorkspaceConfigLoader::new()
-            .load(&layout)
-            .expect("valid config should be loaded");
-
-        assert_eq!(
-            Some("requirements.md"),
-            config
-                .file_for_key(SpecFileKey::Requirements)
-                .map(WorkspaceFileMapping::file_name)
-        );
-        assert_eq!(
-            Some("implementation-plan.md"),
-            config
-                .file_for_key(SpecFileKey::Design)
                 .map(WorkspaceFileMapping::file_name)
         );
         assert_eq!(
@@ -533,7 +530,7 @@ mod tests {
             r#"{
                 "files": {
                     "tasks": "auth-tasks.md",
-                    "design": "auth-design.md"
+                    "requirements": "auth-requirements.html"
                 }
             }"#,
         );
@@ -562,11 +559,119 @@ mod tests {
                 .map(WorkspaceFileMapping::source)
         );
         assert_eq!(
-            Some("auth-design.md"),
+            Some("auth-requirements.html"),
             config
-                .file_for_key(SpecFileKey::Design)
+                .file_for_key(SpecFileKey::Requirements)
                 .map(WorkspaceFileMapping::file_name)
         );
+    }
+
+    #[test]
+    fn raw_spec_override_node_kind_preserves_unknown_string_for_typed_conversion() {
+        let raw: RawSpecOverrideNodeKind =
+            serde_json::from_str(r#""archive""#).expect("raw string should deserialize");
+
+        assert_eq!(
+            SpecOverrideNodeKind::try_from(raw),
+            Err("archive".to_string())
+        );
+        assert!(serde_json::from_str::<RawSpecOverrideNodeKind>("1").is_err());
+    }
+
+    #[test]
+    fn config_loader_reads_explicit_spec_node_kind_override() {
+        let workspace = TestWorkspace::new("node-kind-spec");
+        workspace.write_config(
+            ".plugin-workspace/.specs/auth/.spec-reviewer/config.json",
+            r#"{ "nodeKind": "spec" }"#,
+        );
+        let spec_directory = workspace.spec_directory(".plugin-workspace/.specs/auth");
+
+        let spec_override = WorkspaceConfigLoader::new()
+            .load_spec_override_from_directory(&spec_directory)
+            .expect("override should load")
+            .expect("override should exist");
+
+        assert_eq!(Some(SpecOverrideNodeKind::Spec), spec_override.node_kind());
+    }
+
+    #[test]
+    fn config_loader_reads_explicit_category_node_kind_override() {
+        let workspace = TestWorkspace::new("node-kind-category");
+        workspace.write_config(
+            ".plugin-workspace/.specs/planning/.spec-reviewer/config.json",
+            r#"{ "nodeKind": "category" }"#,
+        );
+        let spec_directory = workspace.spec_directory(".plugin-workspace/.specs/planning");
+
+        let spec_override = WorkspaceConfigLoader::new()
+            .load_spec_override_from_directory(&spec_directory)
+            .expect("override should load")
+            .expect("override should exist");
+
+        assert_eq!(
+            Some(SpecOverrideNodeKind::Category),
+            spec_override.node_kind()
+        );
+    }
+
+    #[test]
+    fn config_loader_rejects_invalid_spec_node_kind_override() {
+        let workspace = TestWorkspace::new("invalid-node-kind");
+        workspace.write_config(
+            ".plugin-workspace/.specs/auth/.spec-reviewer/config.json",
+            r#"{ "nodeKind": "archive" }"#,
+        );
+        let spec_directory = workspace.spec_directory(".plugin-workspace/.specs/auth");
+
+        let result =
+            WorkspaceConfigLoader::new().load_spec_override_from_directory(&spec_directory);
+
+        assert!(matches!(
+            result,
+            Err(ConfigLoadError::InvalidNodeKind { value, .. }) if value == "archive"
+        ));
+    }
+
+    #[test]
+    fn config_loader_classifies_non_string_node_kind_as_malformed_json() {
+        let workspace = TestWorkspace::new("non-string-node-kind");
+        workspace.write_config(
+            ".plugin-workspace/.specs/auth/.spec-reviewer/config.json",
+            r#"{ "nodeKind": 1 }"#,
+        );
+        let spec_directory = workspace.spec_directory(".plugin-workspace/.specs/auth");
+
+        let result =
+            WorkspaceConfigLoader::new().load_spec_override_from_directory(&spec_directory);
+
+        assert!(matches!(
+            result,
+            Err(ConfigLoadError::MalformedJson { path, .. })
+                if path.ends_with(SPEC_OVERRIDE_CONFIG_FILE)
+        ));
+    }
+
+    #[test]
+    fn config_loader_rejects_node_kind_in_workspace_config() {
+        for (name, node_kind) in [
+            ("workspace-category-node-kind", "category"),
+            ("workspace-unknown-node-kind", "archive"),
+        ] {
+            let workspace = TestWorkspace::new(name);
+            workspace.write_config(
+                PLUGIN_WORKSPACE_CONFIG_FILE,
+                &format!(r#"{{ "nodeKind": "{node_kind}" }}"#),
+            );
+            let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
+
+            let result = WorkspaceConfigLoader::new().load(&layout);
+
+            assert!(matches!(
+                result,
+                Err(ConfigLoadError::UnexpectedNodeKind { .. })
+            ));
+        }
     }
 
     #[test]
@@ -597,13 +702,13 @@ mod tests {
     }
 
     #[test]
-    fn config_loader_returns_typed_error_for_unsupported_file_key() {
+    fn config_loader_rejects_retired_design_file_key() {
         let workspace = TestWorkspace::new("unsupported-key");
         workspace.write_config(
             PLUGIN_WORKSPACE_CONFIG_FILE,
             r#"{
                 "files": {
-                    "unknown": "unknown.md"
+                    "design": "design.md"
                 }
             }"#,
         );
@@ -613,7 +718,7 @@ mod tests {
 
         assert!(matches!(
             result,
-            Err(ConfigLoadError::InvalidFileKey { key, .. }) if key == "unknown"
+            Err(ConfigLoadError::InvalidFileKey { key, .. }) if key == "design"
         ));
     }
 

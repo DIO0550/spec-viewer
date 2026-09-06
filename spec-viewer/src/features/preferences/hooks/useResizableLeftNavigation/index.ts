@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const leftNavigationWidthStorageKey = "spec-reviewer.left-navigation-width";
-const defaultLeftNavigationWidth = 268;
+const defaultLeftNavigationWidth = 240;
 const minLeftNavigationWidth = 216;
 const maxLeftNavigationWidth = 420;
 const viewportWidthRatio = 0.42;
