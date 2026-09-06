@@ -1,39 +1,16 @@
 import { act } from "react";
-import { createRoot } from "react-dom/client";
-import { expect, test } from "vitest";
+import { afterEach, expect, test } from "vitest";
 
 import { useResizableSidebar } from "@/features/sidebar";
 
-type HookResult<Result> = Readonly<{
-  current: Result;
-  unmount: () => void;
-}>;
+import { renderHook } from "./renderHook";
 
-function renderHook<Result>(hook: () => Result): HookResult<Result> {
-  const container = document.createElement("div");
-  const root = createRoot(container);
-  const result = { current: undefined as Result };
+const initialViewportWidth = window.innerWidth;
 
-  function TestComponent(): null {
-    result.current = hook();
-    return null;
-  }
-
-  act(() => {
-    root.render(<TestComponent />);
-  });
-
-  return {
-    get current() {
-      return result.current;
-    },
-    unmount: () => {
-      act(() => {
-        root.unmount();
-      });
-    },
-  };
-}
+afterEach(() => {
+  window.innerWidth = initialViewportWidth;
+  window.localStorage.clear();
+});
 
 test("useResizableSidebarは初期幅を返す", () => {
   window.localStorage.clear();
