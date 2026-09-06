@@ -1,6 +1,6 @@
 import { expectTypeOf, test } from "vitest";
 
-import type { ArrayValueOf, ValueOf } from "@/types/utilityTypes";
+import type { ArrayValueOf, Brand, ValueOf } from "@/types/utilityTypes";
 
 test("ArrayValueOfはreadonly配列から要素のunionを導出する", () => {
   const values = ["system", "light", "dark"] as const;
@@ -20,4 +20,14 @@ test("ValueOfはreadonly objectから値のunionを導出する", () => {
   expectTypeOf<ValueOf<typeof labels>>().toEqualTypeOf<
     "System" | "Light" | "Dark"
   >();
+});
+
+test("Brandは同じ基底型と名前の型だけを互換にする", () => {
+  type SidebarWidth = Brand<number, "SidebarWidth">;
+
+  expectTypeOf<SidebarWidth>().toEqualTypeOf<Brand<number, "SidebarWidth">>();
+  expectTypeOf<number>().not.toExtend<SidebarWidth>();
+  expectTypeOf<Brand<number, "ViewportWidth">>().not.toExtend<SidebarWidth>();
+  expectTypeOf<Brand<string, "SidebarWidth">>().not.toExtend<SidebarWidth>();
+  expectTypeOf<SidebarWidth>().toExtend<number>();
 });
