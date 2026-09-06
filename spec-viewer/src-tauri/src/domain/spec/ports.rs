@@ -2,14 +2,14 @@ use thiserror::Error;
 
 use crate::domain::workspace::{WorkspaceConfig, WorkspaceLayout};
 
-use super::{MarkdownBlock, SpecDocumentFormat, SpecFileKey, SpecId, SpecNode};
+use super::{MarkdownBlock, SpecDocumentFormat, SpecFileKey, SpecId, SpecTreeFacts};
 
 pub trait ScanSpecTree {
     fn scan_spec_tree(
         &self,
         layout: &WorkspaceLayout,
         config: &WorkspaceConfig,
-    ) -> Result<Vec<SpecNode>, SpecTreeScanPortError>;
+    ) -> Result<SpecTreeFacts, SpecTreeScanPortError>;
 }
 
 pub trait ReadSpecFile {

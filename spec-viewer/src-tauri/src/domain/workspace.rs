@@ -13,7 +13,8 @@ pub use config::{
     WorkspaceConfig, WorkspaceConfigError, WorkspaceConfigSource, WorkspaceFileMapping,
 };
 pub use ports::{
-    DetectWorkspace, LoadWorkspaceConfig, WorkspaceConfigLoadPortError, WorkspaceDetectionPortError,
+    DetectWorkspace, LoadSpecConfigOverride, LoadWorkspaceConfig, WorkspaceConfigLoadPortError,
+    WorkspaceDetectionPortError,
 };
 pub use topology::{
     SpecLocationDescriptor, SpecSourceGroupDescriptor, WorkspaceDetectionMode,

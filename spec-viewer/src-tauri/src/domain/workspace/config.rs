@@ -1,9 +1,6 @@
 //! Workspace config domain concepts.
 
-use std::{
-    collections::HashSet,
-    path::{Component, Path},
-};
+use std::collections::HashSet;
 
 use thiserror::Error;
 
@@ -277,12 +274,11 @@ fn validate_scan_excluded_directory_names(
         let trimmed = name.trim();
 
         if trimmed.is_empty()
+            || matches!(trimmed, "." | "..")
             || trimmed.contains('/')
             || trimmed.contains('\\')
+            || trimmed.contains(':')
             || trimmed.contains('\0')
-            || Path::new(trimmed)
-                .components()
-                .any(|component| !matches!(component, Component::Normal(_)))
         {
             return Err(WorkspaceConfigError::UnsafeScanExcludedDirectoryName { name });
         }
@@ -294,18 +290,11 @@ fn validate_scan_excluded_directory_names(
 }
 
 fn validate_safe_file_name(key: SpecFileKey, file_name: &str) -> Result<(), WorkspaceConfigError> {
-    let is_single_plain_name = matches!(
-        Path::new(file_name)
-            .components()
-            .collect::<Vec<Component<'_>>>()
-            .as_slice(),
-        [Component::Normal(_)]
-    );
-
-    if !is_single_plain_name
-        || Path::new(file_name).is_absolute()
+    if file_name.is_empty()
+        || matches!(file_name, "." | "..")
         || file_name.contains('/')
         || file_name.contains('\\')
+        || file_name.contains(':')
         || file_name.contains('\0')
     {
         return Err(WorkspaceConfigError::UnsafeFileName {

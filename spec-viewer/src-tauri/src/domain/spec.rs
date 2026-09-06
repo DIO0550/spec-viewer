@@ -2,6 +2,11 @@
 
 mod format_policy;
 mod ports;
+mod tree;
+pub use tree::{
+    SpecDirectoryFact, SpecFileFact, SpecRootFact, SpecTreeAssembler, SpecTreeAssemblyError,
+    SpecTreeFacts,
+};
 
 pub use format_policy::{
     SpecFileCandidateNameStrategy, SpecFileCandidateRule, SpecFileFormatPolicy,
@@ -821,6 +826,10 @@ impl SpecTree {
 
     pub fn nodes(&self) -> SpecTreeNodeIter<'_> {
         SpecTreeNodeIter::new(&self.roots)
+    }
+
+    pub fn reviewable_nodes(&self) -> impl Iterator<Item = &SpecNode> {
+        self.nodes().filter(|node| node.is_reviewable())
     }
 }
 

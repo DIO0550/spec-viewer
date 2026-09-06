@@ -19,18 +19,20 @@ use crate::domain::{
     spec::{
         artifact_progress, progress_without_tasks, ArtifactConfiguration, ArtifactEvaluation,
         ArtifactEvaluationError, ArtifactPresence, ScanSpecTree, SpecArchiveTarget,
-        SpecArtifactFact, SpecArtifactIdentity, SpecDocumentFormat, SpecDomainError, SpecFile,
-        SpecFileKey, SpecFileStatus, SpecId, SpecNode, SpecNodeIdentity, SpecProgress,
+        SpecArtifactFact, SpecArtifactIdentity, SpecDirectoryFact, SpecDocumentFormat,
+        SpecDomainError, SpecFileFact, SpecFileKey, SpecFileStatus, SpecId, SpecNode, SpecProgress,
+        SpecRootFact, SpecTreeAssembler, SpecTreeAssemblyError, SpecTreeFacts,
         SpecTreeScanPortError,
     },
     workspace::{
-        DetectWorkspace, SpecOverrideNodeKind, WorkspaceConfig, WorkspaceDetectionPortError,
-        WorkspaceDomainError, WorkspaceKind, WorkspaceLayout, WorkspaceRoot, WorkspaceTopology,
+        DetectWorkspace, LoadSpecConfigOverride, SpecOverrideNodeKind, WorkspaceConfig,
+        WorkspaceConfigLoadPortError, WorkspaceDetectionPortError, WorkspaceDomainError,
+        WorkspaceKind, WorkspaceLayout, WorkspaceRelativePath, WorkspaceRoot, WorkspaceTopology,
     },
 };
 use crate::infrastructure::markdown::parser::count_task_markers;
 use crate::infrastructure::markdown::FilesystemMarkdownReader;
-use crate::infrastructure::persistence::config::{ConfigLoadError, WorkspaceConfigLoader};
+use crate::infrastructure::persistence::config::WorkspaceConfigLoader;
 use crate::infrastructure::spec_file_resolution::{
     spec_file_path_candidates, SpecFilePathCandidate,
 };
@@ -118,65 +120,77 @@ impl DetectWorkspace for FilesystemWorkspaceDetector {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default)]
-pub struct FilesystemSpecTreeScanner;
+#[derive(Debug, Clone, Default)]
+pub struct FilesystemSpecTreeScanner<ConfigLoader = WorkspaceConfigLoader> {
+    config_loader: ConfigLoader,
+}
 
-impl FilesystemSpecTreeScanner {
+impl FilesystemSpecTreeScanner<WorkspaceConfigLoader> {
     pub fn new() -> Self {
-        Self
+        Self::default()
     }
+}
 
+impl<ConfigLoader: LoadSpecConfigOverride> FilesystemSpecTreeScanner<ConfigLoader> {
+    pub fn with_config_loader(config_loader: ConfigLoader) -> Self {
+        Self { config_loader }
+    }
     pub fn scan(
         &self,
         layout: &WorkspaceLayout,
         config: &WorkspaceConfig,
     ) -> Result<Vec<SpecNode>, SpecTreeScanError> {
-        let mut nodes = Vec::new();
-
+        let facts = self.observe(layout, config)?;
+        SpecTreeAssembler::new(WorkspaceTopology::default())
+            .assemble(layout.kind(), config, facts)
+            .map(|tree| tree.into_roots())
+            .map_err(SpecTreeScanError::Assembly)
+    }
+    fn observe(
+        &self,
+        layout: &WorkspaceLayout,
+        config: &WorkspaceConfig,
+    ) -> Result<SpecTreeFacts, SpecTreeScanError> {
+        let mut facts = Vec::new();
         for root in spec_scan_roots(layout)? {
-            let children = scan_source_group(&root, config)?;
-
-            if root.is_primary {
-                nodes.extend(children);
-                continue;
-            }
-
-            let source_group_id = root.source_group_id().to_string();
-            let identity = SpecNodeIdentity::new(&source_group_id, ".").map_err(|source| {
-                SpecTreeScanError::InvalidNode {
-                    id: source_group_id.clone(),
-                    path: display_path(&root.path),
-                    source,
-                }
-            })?;
-            let label = root.label.as_deref().unwrap_or(&source_group_id);
-            let node = SpecNode::source_group(identity, label, children).map_err(|source| {
-                SpecTreeScanError::InvalidNode {
-                    id: source_group_id.clone(),
-                    path: display_path(&root.path),
-                    source,
-                }
-            })?;
-            nodes.push(node);
+            let relative = WorkspaceRelativePath::new(root.source_group_id())
+                .map_err(|source| SpecTreeScanError::InvalidRoot { source })?;
+            let children =
+                scan_directory_facts(&root.path, &relative, layout, config, &self.config_loader)?;
+            let archive_path = root.path.join(SPEC_ARCHIVE_DIRECTORY);
+            let archived = if directory_exists_for_scan(&archive_path)? {
+                let relative_archive = relative
+                    .join(SPEC_ARCHIVE_DIRECTORY)
+                    .map_err(|source| SpecTreeScanError::InvalidRoot { source })?;
+                scan_directory_facts(
+                    &archive_path,
+                    &relative_archive,
+                    layout,
+                    config,
+                    &self.config_loader,
+                )?
+            } else {
+                Vec::new()
+            };
+            facts.push(SpecRootFact::new(relative.as_str(), children).with_archive(archived));
         }
-
-        Ok(nodes)
+        Ok(SpecTreeFacts::new(facts))
     }
 }
 
-impl ScanSpecTree for FilesystemSpecTreeScanner {
+impl<ConfigLoader: LoadSpecConfigOverride> ScanSpecTree
+    for FilesystemSpecTreeScanner<ConfigLoader>
+{
     fn scan_spec_tree(
         &self,
         layout: &WorkspaceLayout,
         config: &WorkspaceConfig,
-    ) -> Result<Vec<SpecNode>, SpecTreeScanPortError> {
-        self.scan(layout, config).map_err(|source| {
+    ) -> Result<SpecTreeFacts, SpecTreeScanPortError> {
+        self.observe(layout, config).map_err(|source| {
             let message = source.to_string();
-
             if matches!(source, SpecTreeScanError::ConfigOverrideLoad { .. }) {
                 return SpecTreeScanPortError::config_load(message);
             }
-
             SpecTreeScanPortError::scan(message)
         })
     }
@@ -711,57 +725,42 @@ fn relative_spec_path_components(relative_spec_path: &Path) -> Vec<String> {
     components
 }
 
-fn scan_source_group(
-    root: &SpecScanRoot,
-    config: &WorkspaceConfig,
-) -> Result<Vec<SpecNode>, SpecTreeScanError> {
-    let source_group_id = root.source_group_id();
-    let mut nodes = scan_directory_children(&root.path, source_group_id, "", config)?;
-    let archive_path = root.path.join(SPEC_ARCHIVE_DIRECTORY);
-    let archive_children = if directory_exists_for_scan(&archive_path)? {
-        scan_directory_children(
-            &archive_path,
-            source_group_id,
-            SPEC_ARCHIVE_DIRECTORY,
-            config,
-        )?
-    } else {
-        Vec::new()
-    };
-    let archive_identity =
-        SpecNodeIdentity::new(source_group_id, SPEC_ARCHIVE_DIRECTORY).map_err(|source| {
-            SpecTreeScanError::InvalidNode {
-                id: spec_node_id(source_group_id, SPEC_ARCHIVE_DIRECTORY),
-                path: display_path(&archive_path),
-                source,
-            }
-        })?;
-    let archive =
-        SpecNode::archive(archive_identity, "Archive", archive_children).map_err(|source| {
-            SpecTreeScanError::InvalidNode {
-                id: spec_node_id(source_group_id, SPEC_ARCHIVE_DIRECTORY),
-                path: display_path(&archive_path),
-                source,
-            }
-        })?;
-    nodes.push(archive);
-
-    Ok(nodes)
-}
-
-fn scan_directory_children(
+fn scan_directory_facts<ConfigLoader: LoadSpecConfigOverride>(
     directory: &Path,
-    source_group_id: &str,
-    parent_relative_id: &str,
+    relative_directory: &WorkspaceRelativePath,
+    layout: &WorkspaceLayout,
     config: &WorkspaceConfig,
-) -> Result<Vec<SpecNode>, SpecTreeScanError> {
-    let child_directories = visible_child_directories(directory, config)?;
-
-    child_directories
+    config_loader: &ConfigLoader,
+) -> Result<Vec<SpecDirectoryFact>, SpecTreeScanError> {
+    visible_child_directories(directory, config)?
         .into_iter()
         .map(|(label, path)| {
-            let relative_id = relative_node_id(parent_relative_id, &label);
-            scan_directory_projection(&path, source_group_id, &relative_id, &label, config)
+            let relative = relative_directory
+                .join(&label)
+                .map_err(|source| SpecTreeScanError::InvalidRoot { source })?;
+            let spec_override = config_loader
+                .load_spec_config_override_at(layout, &relative)
+                .map_err(|source| SpecTreeScanError::ConfigOverrideLoad {
+                    path: display_path(&path),
+                    source,
+                })?;
+            let effective = spec_override
+                .as_ref()
+                .map_or_else(|| config.clone(), |value| config.merge_spec_override(value));
+            let node_kind = spec_override.as_ref().and_then(|value| value.node_kind());
+            let files = scan_spec_files(&path, &effective)?;
+            let children = scan_directory_facts(&path, &relative, layout, config, config_loader)?;
+            let mut fact = SpecDirectoryFact::new(label, files, children)
+                .with_metadata(node_kind, SpecProgress::Unknown);
+            let kind =
+                fact.inferred_kind()
+                    .map_err(|_| SpecTreeScanError::ConflictingNodeKind {
+                        path: display_path(&path),
+                    })?;
+            if kind == SpecOverrideNodeKind::Spec {
+                fact = fact.with_metadata(node_kind, calculate_spec_progress(&path, &effective)?);
+            }
+            Ok(fact)
         })
         .collect()
 }
@@ -810,119 +809,23 @@ fn is_scan_excluded_name(file_name: &str, config: &WorkspaceConfig) -> bool {
         .any(|excluded_name| excluded_name == file_name)
 }
 
-fn scan_directory_projection(
-    directory: &Path,
-    source_group_id: &str,
-    relative_id: &str,
-    label: &str,
-    config: &WorkspaceConfig,
-) -> Result<SpecNode, SpecTreeScanError> {
-    let effective = effective_directory_config(directory, config)?;
-    let children = scan_directory_children(directory, source_group_id, relative_id, config)?;
-    let files = scan_spec_files(directory, &effective.config)?;
-    let present_document_count = files
-        .iter()
-        .filter(|file| file.status() == SpecFileStatus::Present)
-        .count();
-
-    if effective.node_kind == Some(SpecOverrideNodeKind::Category) && present_document_count > 0 {
-        return Err(SpecTreeScanError::ConflictingNodeKind {
-            path: display_path(directory),
-        });
-    }
-
-    let inferred_kind =
-        if present_document_count > 0 || has_numbered_spec_name(label) || children.is_empty() {
-            SpecOverrideNodeKind::Spec
-        } else {
-            SpecOverrideNodeKind::Category
-        };
-    let kind = effective.node_kind.unwrap_or(inferred_kind);
-    let identity = SpecNodeIdentity::new(source_group_id, relative_id).map_err(|source| {
-        SpecTreeScanError::InvalidNode {
-            id: spec_node_id(source_group_id, relative_id),
-            path: display_path(directory),
-            source,
-        }
-    })?;
-
-    match kind {
-        SpecOverrideNodeKind::Spec => {
-            let progress = calculate_spec_progress(directory, &effective.config)?;
-            SpecNode::spec_with_progress(identity, label, files, children, progress)
-        }
-        SpecOverrideNodeKind::Category => SpecNode::category(identity, label, children),
-    }
-    .map_err(|source| SpecTreeScanError::InvalidNode {
-        id: spec_node_id(source_group_id, relative_id),
-        path: display_path(directory),
-        source,
-    })
-}
-
-fn has_numbered_spec_name(label: &str) -> bool {
-    let bytes = label.as_bytes();
-    bytes.len() > 4 && bytes[..3].iter().all(u8::is_ascii_digit) && bytes[3] == b'-'
-}
-
-fn relative_node_id(parent_relative_id: &str, label: &str) -> String {
-    if parent_relative_id.is_empty() {
-        return label.to_string();
-    }
-
-    format!("{parent_relative_id}/{label}")
-}
-
-struct EffectiveDirectoryConfig {
-    config: WorkspaceConfig,
-    node_kind: Option<SpecOverrideNodeKind>,
-}
-
-fn effective_directory_config(
-    directory: &Path,
-    config: &WorkspaceConfig,
-) -> Result<EffectiveDirectoryConfig, SpecTreeScanError> {
-    let Some(spec_override) = WorkspaceConfigLoader::new()
-        .load_spec_override_from_directory(directory)
-        .map_err(|source| SpecTreeScanError::ConfigOverrideLoad {
-            path: display_path(directory),
-            source,
-        })?
-    else {
-        return Ok(EffectiveDirectoryConfig {
-            config: config.clone(),
-            node_kind: None,
-        });
-    };
-
-    Ok(EffectiveDirectoryConfig {
-        config: config.merge_spec_override(&spec_override),
-        node_kind: spec_override.node_kind(),
-    })
-}
-
 fn scan_spec_files(
     directory: &Path,
     config: &WorkspaceConfig,
-) -> Result<Vec<SpecFile>, SpecTreeScanError> {
+) -> Result<Vec<SpecFileFact>, SpecTreeScanError> {
     config
         .files()
         .iter()
         .map(|mapping| {
             let file_path = directory.join(mapping.file_name());
-            let resolved_file = resolve_spec_file_for_scan(mapping.key(), &file_path)?;
-
-            SpecFile::with_resolved_format(
+            let resolved = resolve_spec_file_for_scan(mapping.key(), &file_path)?;
+            Ok(SpecFileFact::new(
                 mapping.key(),
                 mapping.file_name(),
-                resolved_file.status,
+                resolved.status,
+                resolved.format,
                 mapping.source(),
-                resolved_file.format,
-            )
-            .map_err(|source| SpecTreeScanError::InvalidFile {
-                path: display_path(&file_path),
-                source,
-            })
+            ))
         })
         .collect()
 }
@@ -1043,20 +946,16 @@ fn spec_file_status(path: &Path) -> Result<SpecFileStatus, SpecTreeScanError> {
     }
 }
 
-fn spec_node_id(parent_id: &str, label: &str) -> String {
-    if parent_id.is_empty() {
-        return label.to_string();
-    }
-
-    format!("{parent_id}/{label}")
-}
-
 fn is_hidden_name(name: &str) -> bool {
     name.starts_with('.')
 }
 
 #[derive(Debug, Error)]
 pub enum SpecTreeScanError {
+    #[error("invalid spec source root: {source}")]
+    InvalidRoot { source: WorkspaceDomainError },
+    #[error("{0}")]
+    Assembly(SpecTreeAssemblyError),
     #[error("failed to discover spec artifacts for {path}")]
     ArtifactDiscovery {
         path: String,
@@ -1083,7 +982,7 @@ pub enum SpecTreeScanError {
     #[error("failed to load spec config override for {path}")]
     ConfigOverrideLoad {
         path: String,
-        source: ConfigLoadError,
+        source: WorkspaceConfigLoadPortError,
     },
 }
 
@@ -1402,15 +1301,18 @@ mod tests {
             ".plugin-workspace/.specs/category/.spec-reviewer/config.json",
             r#"{ "nodeKind": "category" }"#,
         );
-        let directory = workspace.root().join(".plugin-workspace/.specs/category");
+        let layout = workspace.layout(WorkspaceKind::PluginWorkspace);
         let config = WorkspaceConfig::default_for(WorkspaceKind::PluginWorkspace);
 
-        let effective = effective_directory_config(&directory, &config)
-            .expect("override config should be projected");
+        let facts = FilesystemSpecTreeScanner::new()
+            .scan_spec_tree(&layout, &config)
+            .expect("override config should be observed");
 
         assert_eq!(
-            Some(crate::domain::workspace::SpecOverrideNodeKind::Category),
-            effective.node_kind
+            crate::domain::workspace::SpecOverrideNodeKind::Category,
+            facts.roots()[0].children()[0]
+                .inferred_kind()
+                .expect("valid observed category")
         );
     }
 

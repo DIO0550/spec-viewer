@@ -2,7 +2,7 @@ use thiserror::Error;
 
 use crate::domain::spec::SpecId;
 
-use super::{SpecConfigOverride, WorkspaceConfig, WorkspaceLayout};
+use super::{SpecConfigOverride, WorkspaceConfig, WorkspaceLayout, WorkspaceRelativePath};
 
 pub trait DetectWorkspace {
     fn detect_workspace(
@@ -21,6 +21,14 @@ pub trait LoadWorkspaceConfig {
         &self,
         layout: &WorkspaceLayout,
         spec_id: &SpecId,
+    ) -> Result<Option<SpecConfigOverride>, WorkspaceConfigLoadPortError>;
+}
+
+pub trait LoadSpecConfigOverride {
+    fn load_spec_config_override_at(
+        &self,
+        layout: &WorkspaceLayout,
+        relative_spec_directory: &WorkspaceRelativePath,
     ) -> Result<Option<SpecConfigOverride>, WorkspaceConfigLoadPortError>;
 }
 

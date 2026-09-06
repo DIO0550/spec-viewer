@@ -13,9 +13,10 @@ use thiserror::Error;
 use crate::domain::{
     spec::{SpecDomainError, SpecFileKey, SpecId},
     workspace::{
-        default_scan_excluded_directory_names, LoadWorkspaceConfig, SpecConfigOverride,
-        SpecOverrideNodeKind, WorkspaceConfig, WorkspaceConfigError, WorkspaceConfigLoadPortError,
-        WorkspaceConfigSource, WorkspaceFileMapping, WorkspaceKind, WorkspaceLayout,
+        default_scan_excluded_directory_names, LoadSpecConfigOverride, LoadWorkspaceConfig,
+        SpecConfigOverride, SpecOverrideNodeKind, WorkspaceConfig, WorkspaceConfigError,
+        WorkspaceConfigLoadPortError, WorkspaceConfigSource, WorkspaceFileMapping, WorkspaceKind,
+        WorkspaceLayout, WorkspaceRelativePath,
     },
 };
 use crate::infrastructure::filesystem::spec_directory_path;
@@ -92,6 +93,20 @@ impl LoadWorkspaceConfig for WorkspaceConfigLoader {
         let spec_directory = spec_directory_path(layout, spec_id);
 
         self.load_spec_override_from_directory(&spec_directory)
+            .map_err(|source| WorkspaceConfigLoadPortError::new(source.to_string()))
+    }
+}
+
+impl LoadSpecConfigOverride for WorkspaceConfigLoader {
+    fn load_spec_config_override_at(
+        &self,
+        layout: &WorkspaceLayout,
+        relative_spec_directory: &WorkspaceRelativePath,
+    ) -> Result<Option<SpecConfigOverride>, WorkspaceConfigLoadPortError> {
+        let directory =
+            PathBuf::from(layout.root().as_str()).join(relative_spec_directory.as_str());
+
+        self.load_spec_override_from_directory(&directory)
             .map_err(|source| WorkspaceConfigLoadPortError::new(source.to_string()))
     }
 }
