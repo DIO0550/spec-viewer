@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { readStorageValue, writeStorageValue } from "@/lib/storage";
-
-const SidebarWidthStorageKey = "spec-reviewer.comment-sidebar-width";
-const DefaultSidebarWidth = 300;
-const MinSidebarWidth = 280;
-const MaxSidebarWidth = 560;
-const ViewportWidthRatio = 0.45;
+import { SidebarWidth } from "@/domains/sidebarWidth";
+import {
+  readStoredSidebarWidth,
+  writeStoredSidebarWidth,
+} from "@/lib/storage/sidebar";
+import { readViewportWidth, subscribeViewportWidth } from "@/lib/viewport";
 
 type UseResizableSidebarResult = Readonly<{
   sidebarWidth: number;
@@ -30,38 +29,31 @@ type UseResizableSidebarResult = Readonly<{
 export function useResizableSidebar(): UseResizableSidebarResult {
   const [viewportWidth, setViewportWidth] = useState(readViewportWidth);
   const [sidebarWidth, setSidebarWidth] = useState(() =>
-    readStoredSidebarWidth(viewportWidth),
+    SidebarWidth.fromNumber(
+      readStoredSidebarWidth(),
+      SidebarWidth.constraints(viewportWidth),
+    ),
   );
   const constraints = useMemo(
-    () => createSidebarWidthConstraints(viewportWidth),
+    () => SidebarWidth.constraints(viewportWidth),
     [viewportWidth],
   );
 
-  useEffect(() => {
-    const updateViewportWidth = (): void => {
-      setViewportWidth(readViewportWidth());
-    };
-
-    window.addEventListener("resize", updateViewportWidth);
-
-    return () => {
-      window.removeEventListener("resize", updateViewportWidth);
-    };
-  }, []);
+  useEffect(() => subscribeViewportWidth(setViewportWidth), []);
 
   useEffect(() => {
     setSidebarWidth((currentWidth) =>
-      clampSidebarWidth(currentWidth, constraints),
+      SidebarWidth.fromNumber(currentWidth, constraints),
     );
   }, [constraints]);
 
   useEffect(() => {
-    writeStorageValue(SidebarWidthStorageKey, String(sidebarWidth));
+    writeStoredSidebarWidth(SidebarWidth.toNumber(sidebarWidth));
   }, [sidebarWidth]);
 
   const resizeSidebarTo = useCallback(
     (width: number): void => {
-      setSidebarWidth(clampSidebarWidth(width, constraints));
+      setSidebarWidth(SidebarWidth.fromNumber(width, constraints));
     },
     [constraints],
   );
@@ -69,79 +61,24 @@ export function useResizableSidebar(): UseResizableSidebarResult {
   const resizeSidebarBy = useCallback(
     (delta: number): void => {
       setSidebarWidth((currentWidth) =>
-        clampSidebarWidth(currentWidth + delta, constraints),
+        SidebarWidth.fromNumber(currentWidth + delta, constraints),
       );
     },
     [constraints],
   );
 
   const resetSidebarWidth = useCallback((): void => {
-    setSidebarWidth(clampSidebarWidth(DefaultSidebarWidth, constraints));
+    setSidebarWidth(
+      SidebarWidth.fromNumber(SidebarWidth.defaultValue, constraints),
+    );
   }, [constraints]);
 
   return {
-    sidebarWidth,
+    sidebarWidth: SidebarWidth.toNumber(sidebarWidth),
     minSidebarWidth: constraints.min,
     maxSidebarWidth: constraints.max,
     resizeSidebarTo,
     resizeSidebarBy,
     resetSidebarWidth,
   };
-}
-
-type SidebarWidthConstraints = Readonly<{
-  min: number;
-  max: number;
-}>;
-
-/** @returns Sidebar width constraints for the current viewport. */
-function createSidebarWidthConstraints(
-  viewportWidth: number,
-): SidebarWidthConstraints {
-  const viewportMaxWidth = Math.floor(viewportWidth * ViewportWidthRatio);
-  const max = Math.max(
-    MinSidebarWidth,
-    Math.min(MaxSidebarWidth, viewportMaxWidth),
-  );
-
-  return {
-    min: MinSidebarWidth,
-    max,
-  };
-}
-
-/** @returns Width clamped to the given sidebar constraints. */
-function clampSidebarWidth(
-  width: number,
-  constraints: SidebarWidthConstraints,
-): number {
-  if (!Number.isFinite(width)) {
-    return DefaultSidebarWidth;
-  }
-
-  return Math.min(
-    constraints.max,
-    Math.max(constraints.min, Math.round(width)),
-  );
-}
-
-/**
- * @param viewportWidth - Current viewport width in pixels.
- * @returns Stored sidebar width constrained to the current viewport.
- */
-function readStoredSidebarWidth(viewportWidth: number): number {
-  const constraints = createSidebarWidthConstraints(viewportWidth);
-  const storedWidth = readStorageValue(SidebarWidthStorageKey);
-  const parsedWidth = Number.parseInt(storedWidth ?? "", 10);
-
-  return clampSidebarWidth(parsedWidth, constraints);
-}
-
-/** @returns Current viewport width with a desktop fallback for non-browser tests. */
-function readViewportWidth(): number {
-  if (typeof window === "undefined") {
-    return 1440;
-  }
-
-  return window.innerWidth;
 }
