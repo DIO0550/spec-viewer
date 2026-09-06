@@ -13,10 +13,14 @@ pub mod diff_repository;
 #[cfg(test)]
 mod id_tests;
 mod repository;
+mod scoped_comments;
+#[cfg(test)]
+mod scoped_comments_tests;
 
 pub use repository::{
     CommentListQuery, CommentRepository, CommentRepositoryError, CommentScope, CommentStatusFilter,
 };
+pub use scoped_comments::{ScopedComments, ScopedCommentsError};
 
 const COMMENT_ID_PREFIX: &str = "cmt_";
 

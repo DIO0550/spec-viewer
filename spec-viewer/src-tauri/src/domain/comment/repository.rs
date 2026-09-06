@@ -5,7 +5,7 @@ use thiserror::Error;
 
 use crate::domain::spec::{SpecFileKey, SpecId};
 
-use super::{Comment, CommentId, CommentStatus};
+use super::{Comment, CommentId, CommentStatus, ScopedComments, ScopedCommentsError};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CommentScope {
@@ -92,21 +92,20 @@ impl CommentListQuery {
 }
 
 pub trait CommentRepository {
-    fn list(&self, query: &CommentListQuery) -> Result<Vec<Comment>, CommentRepositoryError>;
+    fn load(&self, scope: &CommentScope) -> Result<ScopedComments, CommentRepositoryError>;
 
-    fn add(
+    fn save(&self, comments: &ScopedComments) -> Result<(), CommentRepositoryError>;
+
+    fn transaction(
         &self,
         scope: &CommentScope,
-        comment: Comment,
-    ) -> Result<Comment, CommentRepositoryError>;
+        operation: &mut dyn FnMut(&mut ScopedComments) -> Result<(), ScopedCommentsError>,
+    ) -> Result<(), CommentRepositoryError> {
+        let mut comments = self.load(scope)?;
+        operation(&mut comments).map_err(CommentRepositoryError::from)?;
 
-    fn update(
-        &self,
-        scope: &CommentScope,
-        comment: Comment,
-    ) -> Result<Comment, CommentRepositoryError>;
-
-    fn delete(&self, scope: &CommentScope, id: &CommentId) -> Result<(), CommentRepositoryError>;
+        self.save(&comments)
+    }
 }
 
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
@@ -167,6 +166,31 @@ impl CommentRepositoryError {
     pub fn unavailable(message: impl Into<String>) -> Self {
         Self::Unavailable {
             message: message.into(),
+        }
+    }
+}
+
+impl From<ScopedCommentsError> for CommentRepositoryError {
+    fn from(error: ScopedCommentsError) -> Self {
+        match error {
+            ScopedCommentsError::DuplicateComment { id } => Self::DuplicateComment { id },
+            ScopedCommentsError::CommentNotFound { id } => Self::CommentNotFound { id },
+            ScopedCommentsError::StaleUpdate {
+                id,
+                current,
+                attempted,
+            } => Self::StaleUpdate {
+                id,
+                current,
+                attempted,
+            },
+            ScopedCommentsError::ScopeMismatch {
+                expected_file_key,
+                actual_file_key,
+            } => Self::ScopeMismatch {
+                expected_file_key,
+                actual_file_key,
+            },
         }
     }
 }

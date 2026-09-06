@@ -65,7 +65,14 @@ where
         let scope = CommentScope::new(spec_id.clone(), file_key);
         let query = CommentListQuery::with_status_filter(scope, status_filter);
 
-        self.repository.list(&query).map_err(AppUseCaseError::from)
+        let comments = self.repository.load(query.scope())?;
+
+        Ok(comments
+            .comments()
+            .iter()
+            .filter(|comment| query.includes(comment))
+            .cloned()
+            .collect())
     }
 
     pub fn resolve_comment_anchors(
@@ -100,9 +107,12 @@ where
             now,
         )?;
 
-        self.repository
-            .add(&scope, comment)
-            .map_err(AppUseCaseError::from)
+        let added = comment.clone();
+        self.repository.transaction(&scope, &mut |comments| {
+            comments.add(comment.clone()).map(drop)
+        })?;
+
+        Ok(added)
     }
 
     pub fn update_comment(
@@ -117,9 +127,12 @@ where
 
         comment.update_body(body, self.clock.now())?;
 
-        self.repository
-            .update(&scope, comment)
-            .map_err(AppUseCaseError::from)
+        let updated = comment.clone();
+        self.repository.transaction(&scope, &mut |comments| {
+            comments.update(comment.clone()).map(drop)
+        })?;
+
+        Ok(updated)
     }
 
     pub fn delete_comment(
@@ -131,8 +144,9 @@ where
         let scope = CommentScope::new(spec_id.clone(), file_key);
 
         self.repository
-            .delete(&scope, id)
-            .map_err(AppUseCaseError::from)
+            .transaction(&scope, &mut |comments| comments.delete(id).map(drop))?;
+
+        Ok(())
     }
 
     pub fn resolve_comment(
@@ -169,19 +183,25 @@ where
             CommentStatus::Resolved => comment.resolve(now)?,
         }
 
-        self.repository
-            .update(&scope, comment)
-            .map_err(AppUseCaseError::from)
+        let updated = comment.clone();
+        self.repository.transaction(&scope, &mut |comments| {
+            comments.update(comment.clone()).map(drop)
+        })?;
+
+        Ok(updated)
     }
     fn get_comment(
         &self,
         scope: &CommentScope,
         id: &CommentId,
     ) -> Result<Comment, AppUseCaseError> {
-        self.repository
-            .list(&CommentListQuery::new(scope.clone()))?
-            .into_iter()
+        let comments = self.repository.load(scope)?;
+
+        comments
+            .comments()
+            .iter()
             .find(|comment| comment.id() == id)
+            .cloned()
             .ok_or_else(|| CommentRepositoryError::not_found(id.clone()).into())
     }
 }
@@ -690,7 +710,7 @@ mod tests {
 
     use super::*;
     use crate::domain::comment::{
-        BlockIndex, BlockType, CharRange, CommentStatus, TextHash, TextSnippet,
+        BlockIndex, BlockType, CharRange, CommentStatus, ScopedComments, TextHash, TextSnippet,
     };
     use crate::domain::spec::{
         MarkdownBlockHash, MarkdownBlockIndex, MarkdownBlockText, MarkdownBlockType,
@@ -702,77 +722,22 @@ mod tests {
     }
 
     impl CommentRepository for FakeCommentRepository {
-        fn list(&self, query: &CommentListQuery) -> Result<Vec<Comment>, CommentRepositoryError> {
-            Ok(self
+        fn load(&self, scope: &CommentScope) -> Result<ScopedComments, CommentRepositoryError> {
+            let comments = self
                 .comments
                 .borrow()
                 .iter()
-                .filter(|comment| query.includes(comment))
+                .filter(|comment| scope.contains_comment(comment))
                 .cloned()
-                .collect())
+                .collect();
+
+            ScopedComments::restore(scope.clone(), comments).map_err(CommentRepositoryError::from)
         }
 
-        fn add(
-            &self,
-            scope: &CommentScope,
-            comment: Comment,
-        ) -> Result<Comment, CommentRepositoryError> {
-            if !scope.contains_comment(&comment) {
-                return Err(CommentRepositoryError::scope_mismatch(
-                    scope.file_key(),
-                    comment.anchor().file_key(),
-                ));
-            }
-
-            if self
-                .comments
-                .borrow()
-                .iter()
-                .any(|existing| existing.id() == comment.id())
-            {
-                return Err(CommentRepositoryError::duplicate(comment.id().clone()));
-            }
-
-            self.comments.borrow_mut().push(comment.clone());
-
-            Ok(comment)
-        }
-
-        fn update(
-            &self,
-            scope: &CommentScope,
-            comment: Comment,
-        ) -> Result<Comment, CommentRepositoryError> {
-            if !scope.contains_comment(&comment) {
-                return Err(CommentRepositoryError::scope_mismatch(
-                    scope.file_key(),
-                    comment.anchor().file_key(),
-                ));
-            }
-
+        fn save(&self, scoped_comments: &ScopedComments) -> Result<(), CommentRepositoryError> {
             let mut comments = self.comments.borrow_mut();
-            let existing = comments
-                .iter_mut()
-                .find(|existing| existing.id() == comment.id())
-                .ok_or_else(|| CommentRepositoryError::not_found(comment.id().clone()))?;
-
-            *existing = comment.clone();
-
-            Ok(comment)
-        }
-
-        fn delete(
-            &self,
-            _scope: &CommentScope,
-            id: &CommentId,
-        ) -> Result<(), CommentRepositoryError> {
-            let mut comments = self.comments.borrow_mut();
-            let initial_len = comments.len();
-            comments.retain(|comment| comment.id() != id);
-
-            if comments.len() == initial_len {
-                return Err(CommentRepositoryError::not_found(id.clone()));
-            }
+            comments.retain(|comment| !scoped_comments.scope().contains_comment(comment));
+            comments.extend_from_slice(scoped_comments.comments());
 
             Ok(())
         }
@@ -806,31 +771,11 @@ mod tests {
     }
 
     impl CommentRepository for FailingCommentRepository {
-        fn list(&self, _query: &CommentListQuery) -> Result<Vec<Comment>, CommentRepositoryError> {
+        fn load(&self, _scope: &CommentScope) -> Result<ScopedComments, CommentRepositoryError> {
             Err(CommentRepositoryError::invalid_data(self.message.clone()))
         }
 
-        fn add(
-            &self,
-            _scope: &CommentScope,
-            _comment: Comment,
-        ) -> Result<Comment, CommentRepositoryError> {
-            unreachable!("failing repository is only used for list")
-        }
-
-        fn update(
-            &self,
-            _scope: &CommentScope,
-            _comment: Comment,
-        ) -> Result<Comment, CommentRepositoryError> {
-            unreachable!("failing repository is only used for list")
-        }
-
-        fn delete(
-            &self,
-            _scope: &CommentScope,
-            _id: &CommentId,
-        ) -> Result<(), CommentRepositoryError> {
+        fn save(&self, _comments: &ScopedComments) -> Result<(), CommentRepositoryError> {
             unreachable!("failing repository is only used for list")
         }
     }
