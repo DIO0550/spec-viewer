@@ -1,0 +1,1 @@
+import{n as e}from"./chunk-DnJy8xQt.js";var t,n,r=e((()=>{t=e=>e.kind===`head`?`head`:e.kind===`commit`?e.sha:e.name,n={head(){return{kind:`head`}},equals(e,n){return e.kind===n.kind&&t(e)===t(n)},idOf(e){return e.kind===`head`?`head`:`${e.kind}:${t(e)}`}}}));export{r as n,n as t};
