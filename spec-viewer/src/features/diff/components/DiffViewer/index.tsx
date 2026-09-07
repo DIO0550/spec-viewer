@@ -39,7 +39,7 @@ import {
   type DiffLineCommentsController,
 } from "@/features/diffComments/components/DiffLineCommentSlot";
 
-import { focusCommentTarget } from "@/features/diffComments/components/commentNavigation";
+import { CommentTargets } from "@/features/diffComments/components/DiffLineCommentSlot/CommentTargets";
 export type DiffViewerProps = Readonly<{
   fileDiff: FileDiff;
   mode: DiffProjectionViewMode;
@@ -218,18 +218,15 @@ export function DiffViewer(props: DiffViewerProps): ReactElement {
     if (pendingKey === null) {
       return;
     }
-    const hasTarget = Array.from(
-      scrollSurfaceRef.current?.querySelectorAll<HTMLElement>(
-        "[data-comment-target-key]",
-      ) ?? [],
-    ).some((candidate) => candidate.dataset.commentTargetKey === pendingKey);
+    const hasTarget =
+      CommentTargets.find(scrollSurfaceRef.current, pendingKey) !== null;
     if (!hasTarget) {
       const frameId = requestAnimationFrame(() => {
         setCommentFocusAttempt((current) => current + 1);
       });
       return () => cancelAnimationFrame(frameId);
     }
-    focusCommentTarget(scrollSurfaceRef.current, pendingKey);
+    CommentTargets.focus(scrollSurfaceRef.current, pendingKey);
     setPendingCommentFocusKey(null);
     setCommentFocusAttempt(0);
   }, [commentFocusAttempt, pendingCommentFocusKey, rows, scrollTop]);
