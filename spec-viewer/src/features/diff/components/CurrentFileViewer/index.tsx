@@ -33,7 +33,7 @@ import {
   type DiffCommentJumpTarget,
   type DiffLineCommentsController,
 } from "@/features/diffComments/components/DiffLineCommentSlot";
-import { focusCommentTarget } from "@/features/diffComments/components/commentNavigation";
+import { CommentTargets } from "@/features/diffComments/components/DiffLineCommentSlot/CommentTargets";
 
 export type CurrentFileViewerProps = Readonly<{
   fileDiff: FileDiff;
@@ -172,7 +172,7 @@ export function CurrentFileViewer(props: CurrentFileViewerProps): ReactElement {
     }
     setProgrammaticScrollTop(offsets[targetIndex] ?? 0);
     const frameId = requestAnimationFrame(() => {
-      focusCommentTarget(scrollSurfaceRef.current, commentJumpTarget.key);
+      CommentTargets.focus(scrollSurfaceRef.current, commentJumpTarget.key);
     });
     return () => cancelAnimationFrame(frameId);
   }, [commentJumpTarget?.requestId, offsets, rows, setProgrammaticScrollTop]);
