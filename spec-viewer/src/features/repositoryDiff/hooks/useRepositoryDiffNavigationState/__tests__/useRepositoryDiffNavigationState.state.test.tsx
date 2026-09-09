@@ -129,13 +129,16 @@ test("同じrepositoryのrefresh相当rerender後もtab・mode・jump targetを�
   hook.unmount();
 });
 
-test("null keyのactionはstateを変更しない", () => {
-  const hook = renderNavigationHook({
-    workspaceId: null,
-    worktreeId: null,
-  });
+test.each([
+  { workspaceId: null, worktreeId: "worktree-a" },
+  { workspaceId: "/workspace", worktreeId: null },
+  { workspaceId: null, worktreeId: null },
+])("IDが欠けた場合は全actionが無操作になる: $workspaceId/$worktreeId", (options) => {
+  const hook = renderNavigationHook(options);
   const initial = hook.current().state;
   act(() => {
+    hook.current().actions.changeFilter("all");
+    hook.current().actions.toggleDirectory("src");
     hook.current().actions.openPath("a.ts");
     hook.current().actions.activateTab("a.ts");
     hook.current().actions.closeTab("a.ts");
@@ -146,6 +149,14 @@ test("null keyのactionはstateを変更しない", () => {
 
   expect(hook.current().key).toBeNull();
   expect(hook.current().state).toBe(initial);
+  expect(hook.current().entry).toMatchObject({
+    filter: "changed",
+    openPaths: [],
+    activePath: null,
+    expandedPaths: [],
+    viewerMode: "unified",
+    jumpTargetsByPath: {},
+  });
   hook.unmount();
 });
 
@@ -175,4 +186,44 @@ test("unmount後に保持したactionを呼んでも例外にならない", () =
     actions.toggleDirectory("src");
     actions.reconcile([], []);
   }).not.toThrow();
+});
+
+test.each([
+  { workspaceId: null, worktreeId: "worktree-a" },
+  { workspaceId: "/workspace", worktreeId: null },
+])("一時的なID解除後も同じ履歴へ復帰する: $workspaceId/$worktreeId", (unavailable) => {
+  const hook = renderNavigationHook(repository("worktree-a"));
+  act(() => {
+    hook.current().actions.openPath("a.ts");
+    hook.current().actions.changeViewerMode("editor");
+  });
+  const savedState = hook.current().state;
+  hook.rerender(unavailable);
+  expect(hook.current().key).toBeNull();
+  expect(hook.current().entry.activePath).toBeNull();
+  expect(hook.current().entry.viewerMode).toBe("unified");
+  expect(hook.current().state).toBe(savedState);
+  hook.rerender(repository("worktree-a"));
+  expect(hook.current().entry.activePath).toBe("a.ts");
+  expect(hook.current().entry.viewerMode).toBe("editor");
+  hook.unmount();
+});
+
+test("同名worktreeでもworkspaceごとの履歴を復元する", () => {
+  const first = { workspaceId: "/first", worktreeId: "main" };
+  const second = { workspaceId: "/second", worktreeId: "main" };
+  const hook = renderNavigationHook(first);
+  act(() => {
+    hook.current().actions.openPath("a.ts");
+  });
+  hook.rerender(second);
+  expect(hook.current().entry.openPaths).toEqual([]);
+  act(() => {
+    hook.current().actions.openPath("b.ts");
+  });
+  hook.rerender(first);
+  expect(hook.current().entry.activePath).toBe("a.ts");
+  hook.rerender(second);
+  expect(hook.current().entry.activePath).toBe("b.ts");
+  hook.unmount();
 });
