@@ -9,7 +9,10 @@ import {
   type RepositoryDiffNavigationState,
   reduceRepositoryDiffNavigationState,
 } from "@/features/repositoryDiff/domain/repositoryDiffNavigationState";
-import { createRepositoryDiffNavigationKey } from "@/features/workspace/lib/createNavigationHistoryKey";
+import {
+  NavigationHistory,
+  NavigationHistoryKey,
+} from "@/features/workspace/domain/navigationHistory";
 
 export type UseRepositoryDiffNavigationStateOptions = Readonly<{
   workspaceId: string | null;
@@ -17,7 +20,7 @@ export type UseRepositoryDiffNavigationStateOptions = Readonly<{
 }>;
 
 export type UseRepositoryDiffNavigationStateResult = Readonly<{
-  key: string | null;
+  key: NavigationHistoryKey | null;
   state: RepositoryDiffNavigationState;
   entry: RepositoryDiffNavigationEntry;
   actions: Readonly<{
@@ -53,17 +56,18 @@ export function useRepositoryDiffNavigationState(
     () =>
       options.workspaceId === null || options.worktreeId === null
         ? null
-        : createRepositoryDiffNavigationKey(
-            options.workspaceId,
-            options.worktreeId,
-          ),
+        : NavigationHistoryKey.create({
+            workspaceId: options.workspaceId,
+            worktreeId: options.worktreeId,
+            mode: "diff",
+          }),
     [options.workspaceId, options.worktreeId],
   );
   const entry = useMemo(
     () =>
       key === null
         ? createInitialRepositoryDiffNavigationEntry()
-        : (state.entriesByKey[key] ??
+        : (NavigationHistory.get(state.entriesByKey, key) ??
           createInitialRepositoryDiffNavigationEntry()),
     [key, state.entriesByKey],
   );

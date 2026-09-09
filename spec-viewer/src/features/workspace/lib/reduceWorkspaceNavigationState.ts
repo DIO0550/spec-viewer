@@ -1,13 +1,16 @@
 import type { WorkspaceNavigationAction } from "@/features/workspace/types/workspaceNavigationAction";
 import type { WorkspaceNavigationState } from "@/features/workspace/types/workspaceNavigationState";
-import { createNavigationHistoryKey } from "./createNavigationHistoryKey";
+import {
+  NavigationHistory,
+  NavigationHistoryKey,
+} from "@/features/workspace/domain/navigationHistory";
 
 export const initialWorkspaceNavigationState: WorkspaceNavigationState = {
   workspaceId: null,
   activeWorktreeId: null,
   mode: "specs",
   selectedItemId: null,
-  selectedItemIdBySelectionKey: {},
+  selectedItemIdBySelectionKey: NavigationHistory.empty<string | null>(),
 };
 
 /**
@@ -75,9 +78,16 @@ function reduceSourceChanged(
   const key =
     activeWorktreeId === null
       ? null
-      : createNavigationHistoryKey(workspaceId, activeWorktreeId, state.mode);
+      : NavigationHistoryKey.create({
+          workspaceId,
+          worktreeId: activeWorktreeId,
+          mode: state.mode,
+        });
   const preferredItemId =
-    key === null ? null : (state.selectedItemIdBySelectionKey[key] ?? null);
+    key === null
+      ? null
+      : (NavigationHistory.get(state.selectedItemIdBySelectionKey, key) ??
+        null);
   const availableItemIds =
     activeWorktree === undefined
       ? []
@@ -99,10 +109,11 @@ function reduceSourceChanged(
     selectedItemIdBySelectionKey:
       key === null
         ? state.selectedItemIdBySelectionKey
-        : {
-            ...state.selectedItemIdBySelectionKey,
-            [key]: selectedItemId,
-          },
+        : NavigationHistory.set(
+            state.selectedItemIdBySelectionKey,
+            key,
+            selectedItemId,
+          ),
   };
 }
 
@@ -128,9 +139,14 @@ function activateWorktree(
     ...state,
     activeWorktreeId: worktreeId,
     selectedItemId:
-      state.selectedItemIdBySelectionKey[
-        createNavigationHistoryKey(state.workspaceId, worktreeId, state.mode)
-      ] ?? null,
+      NavigationHistory.get(
+        state.selectedItemIdBySelectionKey,
+        NavigationHistoryKey.create({
+          workspaceId: state.workspaceId,
+          worktreeId,
+          mode: state.mode,
+        }),
+      ) ?? null,
   };
 }
 
@@ -155,13 +171,14 @@ function activateMode(
     ...state,
     mode,
     selectedItemId:
-      state.selectedItemIdBySelectionKey[
-        createNavigationHistoryKey(
-          state.workspaceId,
-          state.activeWorktreeId,
+      NavigationHistory.get(
+        state.selectedItemIdBySelectionKey,
+        NavigationHistoryKey.create({
+          workspaceId: state.workspaceId,
+          worktreeId: state.activeWorktreeId,
           mode,
-        )
-      ] ?? null,
+        }),
+      ) ?? null,
   };
 }
 
@@ -182,18 +199,19 @@ function selectItem(
     return { ...state, selectedItemId: itemId };
   }
 
-  const key = createNavigationHistoryKey(
-    state.workspaceId,
-    state.activeWorktreeId,
-    state.mode,
-  );
+  const key = NavigationHistoryKey.create({
+    workspaceId: state.workspaceId,
+    worktreeId: state.activeWorktreeId,
+    mode: state.mode,
+  });
 
   return {
     ...state,
     selectedItemId: itemId,
-    selectedItemIdBySelectionKey: {
-      ...state.selectedItemIdBySelectionKey,
-      [key]: itemId,
-    },
+    selectedItemIdBySelectionKey: NavigationHistory.set(
+      state.selectedItemIdBySelectionKey,
+      key,
+      itemId,
+    ),
   };
 }

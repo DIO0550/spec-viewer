@@ -1,3 +1,7 @@
+import {
+  NavigationHistory,
+  type NavigationHistoryKey,
+} from "@/features/workspace/domain/navigationHistory";
 import type { FileReviewViewMode } from "@/features/diff/domain/fileDiff";
 import type { RepositoryDiffFilter } from "./repositoryDiff";
 
@@ -11,33 +15,37 @@ export type RepositoryDiffNavigationEntry = Readonly<{
 }>;
 
 export type RepositoryDiffNavigationState = Readonly<{
-  entriesByKey: Readonly<Record<string, RepositoryDiffNavigationEntry>>;
+  entriesByKey: NavigationHistory<RepositoryDiffNavigationEntry>;
 }>;
 
 export type RepositoryDiffNavigationAction =
   | Readonly<{
       type: "filterChanged";
-      key: string;
+      key: NavigationHistoryKey;
       filter: RepositoryDiffFilter;
     }>
-  | Readonly<{ type: "directoryToggled"; key: string; path: string }>
-  | Readonly<{ type: "pathOpened"; key: string; path: string }>
-  | Readonly<{ type: "tabActivated"; key: string; path: string }>
-  | Readonly<{ type: "tabClosed"; key: string; path: string }>
+  | Readonly<{
+      type: "directoryToggled";
+      key: NavigationHistoryKey;
+      path: string;
+    }>
+  | Readonly<{ type: "pathOpened"; key: NavigationHistoryKey; path: string }>
+  | Readonly<{ type: "tabActivated"; key: NavigationHistoryKey; path: string }>
+  | Readonly<{ type: "tabClosed"; key: NavigationHistoryKey; path: string }>
   | Readonly<{
       type: "viewerModeChanged";
-      key: string;
+      key: NavigationHistoryKey;
       mode: FileReviewViewMode;
     }>
   | Readonly<{
       type: "jumpTargetChanged";
-      key: string;
+      key: NavigationHistoryKey;
       path: string;
       changeId: string | null;
     }>
   | Readonly<{
       type: "reconciled";
-      key: string;
+      key: NavigationHistoryKey;
       validFilePaths: readonly string[];
       directoryPaths: readonly string[];
     }>;
@@ -64,7 +72,9 @@ export function createInitialRepositoryDiffNavigationEntry(): RepositoryDiffNavi
  * @returns Empty navigation state.
  */
 export function createInitialRepositoryDiffNavigationState(): RepositoryDiffNavigationState {
-  return { entriesByKey: {} };
+  return {
+    entriesByKey: NavigationHistory.empty<RepositoryDiffNavigationEntry>(),
+  };
 }
 
 /**
@@ -79,7 +89,7 @@ export function reduceRepositoryDiffNavigationState(
   action: RepositoryDiffNavigationAction,
 ): RepositoryDiffNavigationState {
   const entry =
-    state.entriesByKey[action.key] ??
+    NavigationHistory.get(state.entriesByKey, action.key) ??
     createInitialRepositoryDiffNavigationEntry();
   const nextEntry = reduceEntry(entry, action);
   if (nextEntry === entry) {
@@ -87,7 +97,11 @@ export function reduceRepositoryDiffNavigationState(
   }
 
   return {
-    entriesByKey: { ...state.entriesByKey, [action.key]: nextEntry },
+    entriesByKey: NavigationHistory.set(
+      state.entriesByKey,
+      action.key,
+      nextEntry,
+    ),
   };
 }
 
