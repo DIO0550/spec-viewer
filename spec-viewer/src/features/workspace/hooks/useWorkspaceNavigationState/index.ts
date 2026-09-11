@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer } from "react";
 
 import type { WorktreeId } from "@/features/workspace/domain/worktree";
-import { projectWorktreeTree } from "@/features/workspace/lib/projectWorktreeTree";
+import { WorktreeTree } from "@/features/workspace/application/worktreeTree";
 import {
   initialWorkspaceNavigationState,
   reduceWorkspaceNavigationState,
@@ -69,7 +69,9 @@ export function useWorkspaceNavigationState(
   }, [readyData, unavailableReason]);
   const navigationNodes = useMemo(
     () =>
-      readyData === null ? [] : projectWorktreeTree(readyData, state.mode),
+      readyData === null
+        ? []
+        : WorktreeTree.fromWorkspace(readyData, state.mode),
     [readyData, state.mode],
   );
 
