@@ -1,1 +1,0 @@
-import{n as e}from"./chunk-DnJy8xQt.js";function t(e){let t=`&`+e+`;`;n.innerHTML=t;let r=n.textContent;return r.charCodeAt(r.length-1)===59&&e!==`semi`||r===t?!1:r}var n,r=e((()=>{n=document.createElement(`i`)}));export{r as n,t};
