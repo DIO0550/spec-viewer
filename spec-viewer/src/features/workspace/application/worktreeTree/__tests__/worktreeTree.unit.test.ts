@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 
 import type { WorkspaceWorktrees } from "@/features/workspace/domain/worktree";
-import { projectWorktreeTree } from "@/features/workspace/lib/projectWorktreeTree";
+import { WorktreeTree } from "@/features/workspace/application/worktreeTree";
 
 const source: WorkspaceWorktrees = {
   workspaceId: "workspace-a",
@@ -30,7 +30,7 @@ const source: WorkspaceWorktrees = {
 };
 
 test("Specs は categoryPath を入力順の階層へ投影する", () => {
-  expect(projectWorktreeTree(source, "specs")).toEqual([
+  expect(WorktreeTree.fromWorkspace(source, "specs")).toEqual([
     {
       kind: "category",
       id: "category:Agents",
@@ -61,7 +61,7 @@ test("Specs は categoryPath を入力順の階層へ投影する", () => {
 });
 
 test("Diff は category 行を作らず変更ファイル件数を投影する", () => {
-  expect(projectWorktreeTree(source, "diff")).toEqual([
+  expect(WorktreeTree.fromWorkspace(source, "diff")).toEqual([
     {
       kind: "worktree",
       id: "agent-one",
@@ -77,14 +77,17 @@ test("Diff は category 行を作らず変更ファイル件数を投影する",
   ]);
 });
 
-test("空の workspace は空の projection になる", () => {
+test.each([
+  "specs",
+  "diff",
+] as const)("空の workspace は %s で空になる", (mode) => {
   expect(
-    projectWorktreeTree({ workspaceId: "empty", worktrees: [] }, "specs"),
+    WorktreeTree.fromWorkspace({ workspaceId: "empty", worktrees: [] }, mode),
   ).toEqual([]);
 });
 
 test("projection と入力の nested 参照は共有されない", () => {
-  const projected = projectWorktreeTree(source, "specs");
+  const projected = WorktreeTree.fromWorkspace(source, "specs");
   const firstCategory = projected[0];
 
   expect(firstCategory).not.toBe(source.worktrees[0]);
@@ -104,13 +107,15 @@ test("1000 worktree の表示順を維持する", () => {
     })),
   };
 
-  const nodes = projectWorktreeTree(largeSource, "diff");
-  const specsNodes = projectWorktreeTree(largeSource, "specs");
+  const nodes = WorktreeTree.fromWorkspace(largeSource, "diff");
+  const specsNodes = WorktreeTree.fromWorkspace(largeSource, "specs");
 
   expect(nodes).toHaveLength(1000);
   expect(specsNodes).toHaveLength(1000);
   expect(nodes[0]?.id).toBe("worktree-0");
   expect(nodes[999]?.id).toBe("worktree-999");
+  expect(specsNodes[0]?.label).toBe("Category 0");
+  expect(specsNodes[999]?.label).toBe("Category 999");
 });
 
 test("入力変更後とmutable出力copy変更後も既存projectionは不変である", () => {
@@ -126,11 +131,11 @@ test("入力変更後とmutable出力copy変更後も既存projectionは不変�
       },
     ],
   };
-  const projected = projectWorktreeTree(mutableSource, "diff");
+  const projected = WorktreeTree.fromWorkspace(mutableSource, "diff");
   const mutableOutputCopy = projected.map((node) => ({ ...node }));
 
-  mutableSource.worktrees[0]!.name = "Changed input";
-  mutableSource.worktrees[0]!.categoryPath.push("Nested");
+  mutableSource.worktrees[0].name = "Changed input";
+  mutableSource.worktrees[0].categoryPath.push("Nested");
   mutableOutputCopy[0] = {
     kind: "worktree",
     id: "changed-copy",

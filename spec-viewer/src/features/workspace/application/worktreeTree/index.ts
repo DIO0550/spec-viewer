@@ -3,7 +3,7 @@ import type {
   Worktree,
 } from "@/features/workspace/domain/worktree";
 import type { ViewMode } from "@/features/workspace/types/viewMode";
-import type { WorktreeTreeNode } from "@/features/workspace/types/worktreeTreeNode";
+import { WorktreeTreeNode } from "@/features/workspace/types/worktreeTreeNode";
 
 type MutableCategoryNode = {
   kind: "category";
@@ -12,37 +12,38 @@ type MutableCategoryNode = {
   children: Array<MutableCategoryNode | WorktreeTreeNode>;
 };
 
-/**
- * Projects one workspace snapshot into the navigation tree for a view mode.
- *
- * @param source - Immutable worktree facts.
- * @param mode - Active Specs or Diff mode.
- * @returns A detached readonly tree in display order.
- */
-export function projectWorktreeTree(
-  source: WorkspaceWorktrees,
-  mode: ViewMode,
-): readonly WorktreeTreeNode[] {
-  if (mode === "diff") {
-    return source.worktrees.map((worktree) =>
-      createWorktreeNode(worktree, mode),
-    );
-  }
+export type WorktreeTree = readonly WorktreeTreeNode[];
 
-  const roots: Array<MutableCategoryNode | WorktreeTreeNode> = [];
-  const categoriesById = new Map<string, MutableCategoryNode>();
+export const WorktreeTree = {
+  /**
+   * Projects one workspace snapshot into a navigation tree.
+   * @param source - Immutable worktree facts.
+   * @param mode - Active Specs or Diff mode.
+   * @returns A detached tree in display order.
+   */
+  fromWorkspace(source: WorkspaceWorktrees, mode: ViewMode): WorktreeTree {
+    if (mode === "diff") {
+      return source.worktrees.map((worktree) =>
+        WorktreeTreeNode.fromWorktree(worktree, mode),
+      );
+    }
 
-  for (const worktree of source.worktrees) {
-    appendSpecsWorktree(roots, categoriesById, worktree);
-  }
+    const roots: Array<MutableCategoryNode | WorktreeTreeNode> = [];
+    const categoriesById = new Map<string, MutableCategoryNode>();
 
-  return freezeNodes(roots);
-}
+    for (const worktree of source.worktrees) {
+      appendSpecsWorktree(roots, categoriesById, worktree);
+    }
+
+    return copySnapshots(roots);
+  },
+} as const;
 
 /**
  * Adds a worktree to its ordered category path.
  *
  * @param roots - Mutable projection builder roots.
+ * @param categoriesById - Categories already created for this projection.
  * @param worktree - Worktree to append.
  */
 function appendSpecsWorktree(
@@ -74,34 +75,7 @@ function appendSpecsWorktree(
     siblings = category.children;
   }
 
-  siblings.push(createWorktreeNode(worktree, "specs"));
-}
-
-/**
- * Creates a detached leaf node.
- *
- * @param worktree - Source worktree.
- * @param mode - Projection mode.
- * @returns A worktree navigation leaf.
- */
-function createWorktreeNode(
-  worktree: Worktree,
-  mode: ViewMode,
-): WorktreeTreeNode {
-  const value =
-    mode === "specs"
-      ? worktree.specs.filter((spec) => !spec.isArchived).length
-      : worktree.changedFiles.length;
-
-  return {
-    kind: "worktree",
-    id: worktree.id,
-    label: worktree.name,
-    count: {
-      kind: mode === "specs" ? "spec-count" : "changed-file-count",
-      value,
-    },
-  };
+  siblings.push(WorktreeTreeNode.fromWorktree(worktree, "specs"));
 }
 
 /**
@@ -110,7 +84,7 @@ function createWorktreeNode(
  * @param nodes - Projection builder nodes.
  * @returns Recursively copied UI nodes.
  */
-function freezeNodes(
+function copySnapshots(
   nodes: readonly (MutableCategoryNode | WorktreeTreeNode)[],
 ): readonly WorktreeTreeNode[] {
   return nodes.map((node) => {
@@ -125,7 +99,7 @@ function freezeNodes(
       kind: "category",
       id: node.id,
       label: node.label,
-      children: freezeNodes(node.children),
+      children: copySnapshots(node.children),
     };
   });
 }
