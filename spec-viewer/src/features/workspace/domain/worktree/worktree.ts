@@ -18,7 +18,13 @@ export const Worktree = {
    * @returns The number of active specs.
    */
   countActiveSpecs(worktree: Worktree): number {
-    return worktree.specs.filter((spec) => !spec.isArchived).length;
+    let count = 0;
+    for (const spec of worktree.specs) {
+      if (!spec.isArchived) {
+        count += 1;
+      }
+    }
+    return count;
   },
   /**
    * Counts the changed file entries in this worktree.
