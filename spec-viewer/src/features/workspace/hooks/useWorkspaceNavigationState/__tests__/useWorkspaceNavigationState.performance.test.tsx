@@ -11,20 +11,23 @@ import {
 const projectionCalls = vi.hoisted(() => vi.fn());
 
 vi.mock(
-  "@/features/workspace/lib/projectWorktreeTree",
+  "@/features/workspace/application/worktreeTree",
   async (importOriginal) => {
     const actual =
       await importOriginal<
-        typeof import("@/features/workspace/lib/projectWorktreeTree")
+        typeof import("@/features/workspace/application/worktreeTree")
       >();
 
     return {
       ...actual,
-      projectWorktreeTree: (
-        ...args: Parameters<typeof actual.projectWorktreeTree>
-      ) => {
-        projectionCalls();
-        return actual.projectWorktreeTree(...args);
+      WorktreeTree: {
+        ...actual.WorktreeTree,
+        fromWorkspace: (
+          ...args: Parameters<typeof actual.WorktreeTree.fromWorkspace>
+        ) => {
+          projectionCalls();
+          return actual.WorktreeTree.fromWorkspace(...args);
+        },
       },
     };
   },
