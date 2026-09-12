@@ -2,10 +2,8 @@ import { useCallback, useEffect, useMemo, useReducer } from "react";
 
 import type { WorktreeId } from "@/features/workspace/domain/worktree";
 import { WorktreeTree } from "@/features/workspace/application/worktreeTree";
-import {
-  initialWorkspaceNavigationState,
-  reduceWorkspaceNavigationState,
-} from "@/features/workspace/lib/reduceWorkspaceNavigationState";
+import { WorkspaceNavigation } from "@/features/workspace/domain/workspaceNavigation";
+import { navigationReducer } from "./navigationReducer";
 import type { ViewMode } from "@/features/workspace/types/viewMode";
 import type { WorkspaceNavigationState } from "@/features/workspace/types/workspaceNavigationState";
 import type { WorkspaceWorktreesLoadState } from "@/features/workspace/types/workspaceWorktreesLoadState";
@@ -37,7 +35,7 @@ export type UseWorkspaceNavigationStateResult = Readonly<{
 }>;
 
 /**
- * Connects the pure navigation reducer to one worktree source snapshot.
+ * Connects session navigation to one worktree source snapshot.
  *
  * @param source - Ready worktree data or an explicit unavailable reason.
  * @returns Navigation state, projected nodes, and stable action callbacks.
@@ -46,12 +44,12 @@ export function useWorkspaceNavigationState(
   source: WorkspaceWorktreesLoadState,
 ): UseWorkspaceNavigationStateResult {
   const [state, dispatch] = useReducer(
-    reduceWorkspaceNavigationState,
-    initialWorkspaceNavigationState,
-    (initialState) =>
-      reduceWorkspaceNavigationState(initialState, {
-        type: "sourceChanged",
-        source,
+    navigationReducer,
+    source,
+    (initialSource) =>
+      navigationReducer(WorkspaceNavigation.create(), {
+        type: "worktreesUpdated",
+        source: initialSource,
       }),
   );
   const readyData = source.status === "ready" ? source.data : null;
@@ -76,20 +74,20 @@ export function useWorkspaceNavigationState(
   );
 
   useEffect(() => {
-    dispatch({ type: "sourceChanged", source: stableSource });
+    dispatch({ type: "worktreesUpdated", source: stableSource });
   }, [stableSource]);
 
   const selectWorktree = useCallback(
     (worktreeId: WorktreeId): void => {
       dispatch({ type: "worktreeSelected", worktreeId });
-      dispatch({ type: "sourceChanged", source: stableSource });
+      dispatch({ type: "worktreesUpdated", source: stableSource });
     },
     [stableSource],
   );
   const changeMode = useCallback(
     (mode: ViewMode): void => {
       dispatch({ type: "modeChanged", mode });
-      dispatch({ type: "sourceChanged", source: stableSource });
+      dispatch({ type: "worktreesUpdated", source: stableSource });
     },
     [stableSource],
   );

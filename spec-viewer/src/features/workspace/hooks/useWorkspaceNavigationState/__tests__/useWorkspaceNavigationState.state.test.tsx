@@ -70,9 +70,49 @@ test("選択履歴を workspace・worktree・mode ごとに復元する", () => 
   result.unmount();
 });
 
+test("sourceが未接続になっても復帰時に先頭以外の選択を復元する", () => {
+  const source: WorkspaceWorktreesLoadState = {
+    status: "ready",
+    data: {
+      workspaceId: "workspace-a",
+      worktrees: [
+        {
+          id: "one",
+          name: "One",
+          categoryPath: [],
+          changedFiles: [],
+          specs: [
+            { id: "first", title: "First", isArchived: false },
+            { id: "second", title: "Second", isArchived: false },
+          ],
+        },
+      ],
+    },
+  };
+  const result = renderHook(source);
+  act(() => result.current.actions.selectItem("second"));
+  const history = result.current.state.selectedItemIdBySelectionKey;
+
+  result.rerender({
+    status: "unavailable",
+    reason: "data-source-not-connected",
+  });
+  expect(result.current.state.workspaceId).toBeNull();
+  expect(result.current.state.activeWorktreeId).toBeNull();
+  expect(result.current.state.selectedItemId).toBeNull();
+  expect(result.current.state.selectedItemIdBySelectionKey).toBe(history);
+  expect(result.current.navigationNodes).toEqual([]);
+
+  result.rerender(source);
+  expect(result.current.state.activeWorktreeId).toBe("one");
+  expect(result.current.state.selectedItemId).toBe("second");
+  result.unmount();
+});
+
 type HookResult = Readonly<{
   current: UseWorkspaceNavigationStateResult;
   unmount: () => void;
+  rerender: (source: WorkspaceWorktreesLoadState) => void;
 }>;
 
 /**
@@ -99,18 +139,28 @@ function renderHook(source: WorkspaceWorktreesLoadState): HookResult {
     current: null,
   };
 
-  function Probe(): ReactElement | null {
-    holder.current = useWorkspaceNavigationState(source);
+  function Probe(
+    props: Readonly<{ source: WorkspaceWorktreesLoadState }>,
+  ): ReactElement | null {
+    holder.current = useWorkspaceNavigationState(props.source);
     return null;
   }
 
   act(() => {
-    root.render(<Probe />);
+    root.render(<Probe source={source} />);
   });
 
   return {
     get current() {
       return holder.current ?? raiseHookNotRendered();
+    },
+    /**
+     * @param nextSource - Snapshot to deliver to the mounted hook.
+     */
+    rerender: (nextSource) => {
+      act(() => {
+        root.render(<Probe source={nextSource} />);
+      });
     },
     unmount: () => {
       act(() => {
