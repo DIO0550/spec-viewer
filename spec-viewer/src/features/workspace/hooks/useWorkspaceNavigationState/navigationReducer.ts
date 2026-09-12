@@ -14,6 +14,7 @@ export type NavigationAction =
  * @param state - Current session navigation.
  * @param action - Hook event to translate into a navigation operation.
  * @returns The next navigation state.
+ * @throws Error when an unhandled action reaches runtime.
  */
 export function navigationReducer(
   state: WorkspaceNavigation,
@@ -34,7 +35,11 @@ export function navigationReducer(
       return WorkspaceNavigation.selectMode(state, action.mode);
     case "itemSelected":
       return WorkspaceNavigation.selectItem(state, action.itemId);
-    default:
-      return action satisfies never;
+    default: {
+      const unhandledAction: never = action;
+      throw new Error(
+        `Unhandled navigation action: ${JSON.stringify(unhandledAction)}`,
+      );
+    }
   }
 }
