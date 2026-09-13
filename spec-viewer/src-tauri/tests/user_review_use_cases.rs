@@ -1,5 +1,8 @@
+mod support;
+
 use std::{
     collections::VecDeque,
+    fs,
     sync::{Arc, Mutex},
 };
 
@@ -24,14 +27,16 @@ use spec_reviewer_lib::{
             MarkdownBlockText, MarkdownBlockType, SpecFileKey, SpecId,
         },
         user_review::{
-            UserReview, UserReviewArchiveOutcome, UserReviewCreateOutcome, UserReviewId,
-            UserReviewListOutcome, UserReviewRecordLocator, UserReviewRecordProblem,
+            UserReview, UserReviewArchiveOutcome, UserReviewCreateOutcome, UserReviewDomainError,
+            UserReviewId, UserReviewListOutcome, UserReviewRecordLocator, UserReviewRecordProblem,
             UserReviewRecordProblemKind, UserReviewRepository, UserReviewRepositoryError,
             UserReviewTarget,
         },
         workspace::WorkspaceRelativePath,
     },
 };
+
+use support::user_review_repository::TestWorkspace;
 
 #[derive(Clone)]
 struct FakeCommentRepository {
@@ -89,27 +94,30 @@ impl LoadUserReviewSources for FakeSourceLoader {
 
 #[derive(Clone)]
 struct SequenceIdGenerator {
-    ids: Arc<Mutex<VecDeque<UserReviewId>>>,
+    results: Arc<Mutex<VecDeque<Result<UserReviewId, UserReviewDomainError>>>>,
 }
 
 impl SequenceIdGenerator {
     fn new(ids: impl IntoIterator<Item = UserReviewId>) -> Self {
+        Self::with_results(ids.into_iter().map(Ok))
+    }
+
+    fn with_results(
+        results: impl IntoIterator<Item = Result<UserReviewId, UserReviewDomainError>>,
+    ) -> Self {
         Self {
-            ids: Arc::new(Mutex::new(ids.into_iter().collect())),
+            results: Arc::new(Mutex::new(results.into_iter().collect())),
         }
     }
 }
 
 impl GenerateUserReviewId for SequenceIdGenerator {
-    fn generate_user_review_id(
-        &self,
-    ) -> Result<UserReviewId, spec_reviewer_lib::domain::user_review::UserReviewDomainError> {
-        Ok(self
-            .ids
+    fn generate_user_review_id(&self) -> Result<UserReviewId, UserReviewDomainError> {
+        self.results
             .lock()
             .expect("ID queue should not be poisoned")
             .pop_front()
-            .expect("test should provide enough IDs"))
+            .expect("test should provide enough generator results")
     }
 }
 
@@ -125,6 +133,7 @@ impl GetCurrentTime for FixedClock {
 #[derive(Default)]
 struct RepositoryState {
     create_collisions_remaining: usize,
+    create_error: Option<UserReviewRepositoryError>,
     create_calls: Vec<UserReviewId>,
     archive_calls: Vec<UserReviewId>,
     list_outcome: Option<UserReviewListOutcome>,
@@ -157,6 +166,13 @@ impl FakeUserReviewRepository {
         repository
     }
 
+    fn set_create_error(&self, error: UserReviewRepositoryError) {
+        self.state
+            .lock()
+            .expect("repository state should not be poisoned")
+            .create_error = Some(error);
+    }
+
     fn set_archive_problems(&self, problems: Vec<UserReviewRecordProblem>) {
         self.state
             .lock()
@@ -181,6 +197,10 @@ impl UserReviewRepository for FakeUserReviewRepository {
             return Err(UserReviewRepositoryError::AlreadyExists {
                 id: review.id().clone(),
             });
+        }
+
+        if let Some(error) = &state.create_error {
+            return Err(error.clone());
         }
 
         Ok(UserReviewCreateOutcome::new(review))
@@ -326,34 +346,24 @@ fn comment_at(
     .expect("comment should be valid")
 }
 
-fn use_cases(
-    repository: FakeUserReviewRepository,
+fn use_cases<R: UserReviewRepository>(
+    repository: R,
     comments: Vec<Comment>,
     ids: impl IntoIterator<Item = UserReviewId>,
     now: DateTime<Utc>,
-) -> UserReviewUseCases<
-    FakeUserReviewRepository,
-    FakeCommentRepository,
-    FakeSourceLoader,
-    SequenceIdGenerator,
-    FixedClock,
-> {
+) -> UserReviewUseCases<R, FakeCommentRepository, FakeSourceLoader, SequenceIdGenerator, FixedClock>
+{
     use_cases_with_documents(repository, comments, vec![source_document()], ids, now)
 }
 
-fn use_cases_with_documents(
-    repository: FakeUserReviewRepository,
+fn use_cases_with_documents<R: UserReviewRepository>(
+    repository: R,
     comments: Vec<Comment>,
     documents: Vec<UserReviewSourceDocument>,
     ids: impl IntoIterator<Item = UserReviewId>,
     now: DateTime<Utc>,
-) -> UserReviewUseCases<
-    FakeUserReviewRepository,
-    FakeCommentRepository,
-    FakeSourceLoader,
-    SequenceIdGenerator,
-    FixedClock,
-> {
+) -> UserReviewUseCases<R, FakeCommentRepository, FakeSourceLoader, SequenceIdGenerator, FixedClock>
+{
     UserReviewUseCases::new(
         repository,
         FakeCommentRepository { comments },
@@ -511,6 +521,264 @@ fn create_returns_typed_collision_after_three_failed_attempts() {
         }),
         result
     );
+}
+
+#[test]
+fn create_stops_on_non_collision_repository_errors() {
+    let errors = [
+        UserReviewRepositoryError::Unavailable,
+        UserReviewRepositoryError::InvalidState { id: review_id(1) },
+        UserReviewRepositoryError::LegacyRecord { id: review_id(1) },
+    ];
+
+    for error in errors {
+        let repository = FakeUserReviewRepository::default();
+        repository.set_create_error(error.clone());
+        let state = Arc::clone(&repository.state);
+        let service = use_cases(
+            repository,
+            vec![comment("cmt_retry", CommentStatus::Open)],
+            [review_id(1)],
+            timestamp(40),
+        );
+
+        let result = service.create_user_review(CreateUserReviewInput::new(
+            target(),
+            vec![CommentId::new("cmt_retry").expect("comment ID should be valid")],
+        ));
+
+        assert_eq!(
+            Err(AppUseCaseError::UserReview {
+                source: UserReviewUseCaseError::Repository(error.clone()),
+            }),
+            result,
+            "repository error {error:?} should be preserved",
+        );
+        assert_eq!(
+            vec![review_id(1)],
+            state
+                .lock()
+                .expect("repository state should not be poisoned")
+                .create_calls,
+            "repository error {error:?} should stop creation",
+        );
+    }
+}
+
+#[test]
+fn create_stops_on_repository_error_after_collision() {
+    let repository = FakeUserReviewRepository::with_create_collisions(1);
+    repository.set_create_error(UserReviewRepositoryError::Unavailable);
+    let state = Arc::clone(&repository.state);
+    let service = use_cases(
+        repository,
+        vec![comment("cmt_retry", CommentStatus::Open)],
+        [review_id(1), review_id(2)],
+        timestamp(40),
+    );
+
+    let result = service.create_user_review(CreateUserReviewInput::new(
+        target(),
+        vec![CommentId::new("cmt_retry").expect("comment ID should be valid")],
+    ));
+
+    assert_eq!(
+        Err(AppUseCaseError::UserReview {
+            source: UserReviewUseCaseError::Repository(UserReviewRepositoryError::Unavailable),
+        }),
+        result,
+    );
+    assert_eq!(
+        vec![review_id(1), review_id(2)],
+        state
+            .lock()
+            .expect("repository state should not be poisoned")
+            .create_calls,
+    );
+}
+
+#[test]
+fn create_stops_when_initial_id_generation_fails() {
+    let repository = FakeUserReviewRepository::default();
+    let state = Arc::clone(&repository.state);
+    let error = UserReviewDomainError::InvalidUserReviewId {
+        value: "injected-invalid-id".into(),
+    };
+    let service = UserReviewUseCases::new(
+        repository,
+        FakeCommentRepository {
+            comments: vec![comment("cmt_retry", CommentStatus::Open)],
+        },
+        FakeSourceLoader {
+            documents: vec![source_document()],
+        },
+        SequenceIdGenerator::with_results([Err(error.clone())]),
+        FixedClock(timestamp(40)),
+    );
+
+    let result = service.create_user_review(CreateUserReviewInput::new(
+        target(),
+        vec![CommentId::new("cmt_retry").expect("comment ID should be valid")],
+    ));
+
+    assert_eq!(
+        Err(AppUseCaseError::UserReview {
+            source: UserReviewUseCaseError::Domain(error),
+        }),
+        result,
+    );
+    assert!(state
+        .lock()
+        .expect("repository state should not be poisoned")
+        .create_calls
+        .is_empty());
+}
+
+#[test]
+fn create_stops_when_retry_id_generation_fails() {
+    let repository = FakeUserReviewRepository::with_create_collisions(1);
+    let state = Arc::clone(&repository.state);
+    let error = UserReviewDomainError::InvalidUserReviewId {
+        value: "injected-invalid-id".into(),
+    };
+    let service = UserReviewUseCases::new(
+        repository,
+        FakeCommentRepository {
+            comments: vec![comment("cmt_retry", CommentStatus::Open)],
+        },
+        FakeSourceLoader {
+            documents: vec![source_document()],
+        },
+        SequenceIdGenerator::with_results([Ok(review_id(1)), Err(error.clone())]),
+        FixedClock(timestamp(40)),
+    );
+
+    let result = service.create_user_review(CreateUserReviewInput::new(
+        target(),
+        vec![CommentId::new("cmt_retry").expect("comment ID should be valid")],
+    ));
+
+    assert_eq!(
+        Err(AppUseCaseError::UserReview {
+            source: UserReviewUseCaseError::Domain(error),
+        }),
+        result,
+    );
+    assert_eq!(
+        vec![review_id(1)],
+        state
+            .lock()
+            .expect("repository state should not be poisoned")
+            .create_calls,
+    );
+}
+
+#[test]
+fn create_with_json_repository_preserves_collisions_before_success() {
+    let workspace = TestWorkspace::new("application-collisions_before_success");
+    let repository = workspace.repository();
+    let before: Vec<_> = [1_u128, 2]
+        .into_iter()
+        .map(|value| {
+            let id = review_id(value);
+            repository
+                .create(active_review(id.clone()))
+                .expect("fixture should persist");
+            let path = workspace.active_record_path(&id);
+            let bytes = fs::read(&path).expect("fixture should be readable");
+            (path, bytes)
+        })
+        .collect();
+    let service = use_cases(
+        repository,
+        vec![comment("cmt_retry", CommentStatus::Open)],
+        [review_id(1), review_id(2), review_id(3)],
+        timestamp(40),
+    );
+
+    let result = service.create_user_review(CreateUserReviewInput::new(
+        target(),
+        vec![CommentId::new("cmt_retry").expect("comment ID should be valid")],
+    ));
+
+    let created = result.expect("third ID should persist");
+    assert_eq!(review_id(3), *created.user_review().id());
+    for (path, bytes) in before {
+        assert_eq!(
+            bytes,
+            fs::read(&path).expect("existing record should remain"),
+            "existing record {path:?} should be unchanged"
+        );
+    }
+    let listed = workspace
+        .repository()
+        .list(&target())
+        .expect("records should list");
+    let mut active_ids: Vec<_> = listed
+        .active()
+        .iter()
+        .map(|review| review.id().clone())
+        .collect();
+    active_ids.sort();
+    assert_eq!(vec![review_id(1), review_id(2), review_id(3)], active_ids);
+    assert!(listed.archived().is_empty());
+    assert!(listed.problems().is_empty());
+}
+
+#[test]
+fn create_with_json_repository_preserves_records_after_three_collisions() {
+    let workspace = TestWorkspace::new("application-records_after_three_collisions");
+    let repository = workspace.repository();
+    let before: Vec<_> = [1_u128, 2, 3]
+        .into_iter()
+        .map(|value| {
+            let id = review_id(value);
+            repository
+                .create(active_review(id.clone()))
+                .expect("fixture should persist");
+            let path = workspace.active_record_path(&id);
+            let bytes = fs::read(&path).expect("fixture should be readable");
+            (path, bytes)
+        })
+        .collect();
+    let service = use_cases(
+        repository,
+        vec![comment("cmt_retry", CommentStatus::Open)],
+        [review_id(1), review_id(2), review_id(3)],
+        timestamp(40),
+    );
+
+    let result = service.create_user_review(CreateUserReviewInput::new(
+        target(),
+        vec![CommentId::new("cmt_retry").expect("comment ID should be valid")],
+    ));
+
+    assert_eq!(
+        Err(AppUseCaseError::UserReview {
+            source: UserReviewUseCaseError::CreateIdCollision { attempts: 3 },
+        }),
+        result,
+    );
+    for (path, bytes) in before {
+        assert_eq!(
+            bytes,
+            fs::read(&path).expect("existing record should remain"),
+            "existing record {path:?} should be unchanged"
+        );
+    }
+    let listed = workspace
+        .repository()
+        .list(&target())
+        .expect("records should list");
+    let mut active_ids: Vec<_> = listed
+        .active()
+        .iter()
+        .map(|review| review.id().clone())
+        .collect();
+    active_ids.sort();
+    assert_eq!(vec![review_id(1), review_id(2), review_id(3)], active_ids);
+    assert!(listed.archived().is_empty());
+    assert!(listed.problems().is_empty());
 }
 
 #[test]
