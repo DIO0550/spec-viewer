@@ -5,6 +5,9 @@ This folder contains current product contracts and the source material that shap
 
 ## Current contracts
 
+- [Frontend architecture guidelines](./frontend-architecture-guidelines.md):
+  layer responsibilities, public APIs, Shared Kernel, and import checks.
+
 - [Specs / Diff integrated review Phase 1 contract](./integrated-review-contract.md):
   canonical ADR mapping, domain boundaries, frontend state, IPC, persistence, errors,
   scope, and test fixtures.
