@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, within } from "storybook/test";
-import type { WorktreeTreeNode } from "@/features/workspace/types/worktreeTreeNode";
+import type { WorktreeTreeNode } from "@/features/workspace/domain/worktreeTreeNode";
 import { WorktreeTree } from ".";
 
 const specsNodes: readonly WorktreeTreeNode[] = [

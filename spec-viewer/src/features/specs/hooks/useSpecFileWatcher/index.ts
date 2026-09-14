@@ -17,7 +17,7 @@ import type {
 import {
   SPEC_FILE_WATCH_CHANGED_EVENT,
   SPEC_FILE_WATCH_ERROR_EVENT,
-} from "@/features/specs/types/watch";
+} from "@/lib/api/tauri/specFileWatchEvents";
 import {
   startSpecFileWatch as defaultStartSpecFileWatch,
   stopSpecFileWatch as defaultStopSpecFileWatch,

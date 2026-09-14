@@ -1,4 +1,4 @@
-export { Workspace } from "@/features/workspace/domain/workspace";
+export type { Workspace } from "@/features/workspace/domain/workspace";
 export type {
   WorkspaceConfigSource,
   WorkspaceFileMapping,

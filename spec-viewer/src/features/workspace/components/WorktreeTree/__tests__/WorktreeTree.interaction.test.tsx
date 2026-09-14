@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
 import { WorktreeTree } from "@/features/workspace/components/WorktreeTree";
-import type { WorktreeTreeNode } from "@/features/workspace/types/worktreeTreeNode";
+import type { WorktreeTreeNode } from "@/features/workspace/domain/worktreeTreeNode";
 
 const nodes: readonly WorktreeTreeNode[] = [
   {

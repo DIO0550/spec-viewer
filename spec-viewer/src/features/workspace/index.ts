@@ -30,7 +30,7 @@ export type {
 export type {
   WorktreeRowCount,
   WorktreeTreeNode,
-} from "@/features/workspace/types/worktreeTreeNode";
+} from "@/features/workspace/domain/worktreeTreeNode";
 export type {
   Workspace,
   WorkspaceKind,

@@ -11,7 +11,7 @@ import type { WorktreeId } from "@/features/workspace/domain/worktree";
 import type {
   WorktreeRowCount,
   WorktreeTreeNode,
-} from "@/features/workspace/types/worktreeTreeNode";
+} from "@/features/workspace/domain/worktreeTreeNode";
 
 const BaseTreeItemIndent = 10;
 const TreeItemIndentStep = 16;
