@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "domainPublicApis": [],
+  "kernelEntries": [
+    {
+      "entry": "src/domains/workspacePath/index.ts",
+      "reason": "Stable workspace identity shared by comments, specs and app composition; no UI or transport dependencies. Value validation remains owned by #112.",
+      "issue": 105
+    },
+    {
+      "entry": "src/types/utilityTypes/index.ts",
+      "reason": "Pure type operations shared by workspace navigation and preferences; no runtime, feature or transport dependencies.",
+      "issue": 105
+    }
+  ],
+  "pureExternals": []
+}
