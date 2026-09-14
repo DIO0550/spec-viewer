@@ -45,6 +45,12 @@ jobs:
       - name: oxlint
         run: pnpm exec oxlint
 
+      - name: Test architecture checker
+        run: pnpm test:architecture
+
+      - name: Check frontend architecture
+        run: pnpm lint:architecture
+
       - name: Test with coverage
         run: >-
           pnpm vitest run --coverage
