@@ -7,7 +7,7 @@ import { navigationReducer } from "./navigationReducer";
 import type { ViewMode } from "@/features/workspace/types/viewMode";
 import type { WorkspaceNavigationState } from "@/features/workspace/types/workspaceNavigationState";
 import type { WorkspaceWorktreesLoadState } from "@/features/workspace/types/workspaceWorktreesLoadState";
-import type { WorktreeTreeNode } from "@/features/workspace/types/worktreeTreeNode";
+import type { WorktreeTreeNode } from "@/features/workspace/domain/worktreeTreeNode";
 
 export type UseWorkspaceNavigationStateResult = Readonly<{
   state: WorkspaceNavigationState;

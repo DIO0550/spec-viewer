@@ -15,8 +15,8 @@ import type {
 import {
   SPEC_FILE_WATCH_CHANGED_EVENT,
   SPEC_FILE_WATCH_ERROR_EVENT,
-  type SpecFileWatchChangeKind,
-} from "@/features/specs/types/watch";
+} from "@/lib/api/tauri/specFileWatchEvents";
+import { SpecFileWatchChangeKind } from "@/features/specs/types/watch";
 import { WorkspacePath } from "@/domains/workspacePath";
 import { getUnknownErrorMessage } from "@/utils/errorMessage";
 

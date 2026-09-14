@@ -3,7 +3,7 @@ import type {
   Worktree,
 } from "@/features/workspace/domain/worktree";
 import type { ViewMode } from "@/features/workspace/types/viewMode";
-import { WorktreeTreeNode } from "@/features/workspace/types/worktreeTreeNode";
+import { WorktreeTreeNode } from "@/features/workspace/domain/worktreeTreeNode";
 
 type MutableCategoryNode = {
   kind: "category";

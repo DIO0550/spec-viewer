@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 
 import { WorktreeTree } from "@/features/workspace/application/worktreeTree";
-import type { WorktreeTreeNode } from "@/features/workspace/types/worktreeTreeNode";
+import type { WorktreeTreeNode } from "@/features/workspace/domain/worktreeTreeNode";
 
 /**
  * Collects all object references in a projection for isolation assertions.

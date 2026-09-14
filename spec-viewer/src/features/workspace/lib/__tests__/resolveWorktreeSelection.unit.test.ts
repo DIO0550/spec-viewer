@@ -4,7 +4,7 @@ import {
   listWorktreeIdsDepthFirst,
   resolveWorktreeSelection,
 } from "@/features/workspace/lib/resolveWorktreeSelection";
-import type { WorktreeTreeNode } from "@/features/workspace/types/worktreeTreeNode";
+import type { WorktreeTreeNode } from "@/features/workspace/domain/worktreeTreeNode";
 
 const nodes: readonly WorktreeTreeNode[] = [
   {

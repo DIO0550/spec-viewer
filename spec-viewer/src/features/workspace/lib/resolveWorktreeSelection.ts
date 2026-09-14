@@ -1,5 +1,5 @@
 import type { WorktreeId } from "@/features/workspace/domain/worktree";
-import type { WorktreeTreeNode } from "@/features/workspace/types/worktreeTreeNode";
+import type { WorktreeTreeNode } from "@/features/workspace/domain/worktreeTreeNode";
 
 /**
  * Lists leaf IDs in depth-first pre-order.
