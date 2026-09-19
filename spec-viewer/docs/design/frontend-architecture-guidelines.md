@@ -30,7 +30,7 @@ application が具体的な adapter を import して生成しない。公開 AP
 ### 実際の配置との対応
 
 - `src/features/<name>/domain|application|infra|presentation/` は上表の層。
-- 既存 `components/`、`hooks/`、`presenters/` は presentation。
+- 既存 `components/`、`context/`、`hooks/`、`presenters/` は presentation。
 - feature 内の `lib/`、`types/`、その他は legacy。名前だけで純粋性を認定しない。横断公開 API 規則を適用し、domain からは参照しない。
 - `src/App.tsx`、`src/main.tsx`、`src/app/**` は composition。
 - `src/shared/` と既存 `src/lib/`、`src/hooks/`、`src/components/`、`src/types/`、`src/domains/` は共通領域。`lib/api/tauri` は transport であり、domain の共通ライブラリではない。
