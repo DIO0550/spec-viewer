@@ -151,38 +151,3 @@ glob、件数だけの baseline、重複、未知キー、不正な型を拒否�
 4. 不要な例外が残ると検査に失敗する。`from` と `to` が現在の依存グラフに存在し、対応する違反だけがなくなった場合は `stale-exception` となる。ファイル削除や外部 module への全 import の削除などで `from` または `to` がグラフから消えた場合は、例外設定の検証で `invalid-config` となる。どちらの場合も不要になった例外を削除する。
 
 検査コマンドは policy / exceptions / src を書き換えない。baseline を自動更新する機能は提供しない。
-
-## Epic 子 Issue の適用規則と移行担当
-
-各子 Issue はこのガイドの該当節を実装・レビューの基準にする。
-この表は担当の対応表であり、各 Issue 本文からのリンク反映は別途確認する。
-
-| Issue / 移行担当 | 対象 | 適用規則・節 |
-| --- | --- | --- |
-| #105 | ガイド・CI・移行台帳 | 全節、自動検査・移行例外 |
-| #106 | Shared Kernel・公開 API | Shared Kernel の認定、feature 公開 API |
-| #107 | IPC wrapper の feature infra 移動 | shared-to-feature、infra |
-| #109 | domain error の transport 分離 | domain-dependency、domain に置かないもの |
-| #110 | runtime decode・DTO/domain 分離 | infra、domain に置かないもの |
-| #111 | identity/timestamp | domain、Kernel 認定 |
-| #112 | WorkspacePath | domain、Kernel 認定 |
-| #113 | Workspace aggregate | domain |
-| #114 | workspace open/recent/drop | application、layer-direction |
-| #115 | RecentWorkspaces | domain、application port / infra adapter |
-| #116 | specs use cases | application、layer-direction |
-| #117 | SpecTree query | domain、feature 公開 API |
-| #118 | SpecDocument policy | domain |
-| #119 | FileWatchScope/RefreshPlan | domain/application と infra の分離 |
-| #120 | Comment aggregate | domain |
-| #121 | CommentBody | domain |
-| #122 | CommentAnchor/CharRange/BlockIdentity | domain、Kernel 認定 |
-| #123 | anchor fingerprint 契約 | domain と infra 変換 |
-| #124 | anchor reconciliation/highlight | domain と presentation の分離 |
-| #125 | comments use cases | application、layer-direction |
-| #126 | export/output/MCP policy | domain |
-| #127 | export/LLM/MCP use cases | application、infra |
-| #89 | CommentSidebar query | domain と presentation の分離 |
-| #108 | MarkdownViewer composition | feature-public-api、shared-to-feature |
-| #128 | Selection/ReviewTarget | Kernel、feature 公開 API |
-| #129 | UserReview lifecycle | domain |
-| #130 | review use cases | application、layer-direction |
