@@ -4,6 +4,7 @@ import { isBuiltin } from "node:module";
 const presentationFolders = new Set([
   "presentation",
   "components",
+  "context",
   "hooks",
   "presenters",
 ]);
