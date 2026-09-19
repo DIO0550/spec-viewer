@@ -198,6 +198,21 @@ for (const [from, to, rule] of [
   ],
   ["src/features/a/infra/x.ts", "src/features/a/hooks/y.ts", "layer-direction"],
   [
+    "src/features/a/application/x.ts",
+    "src/features/a/context/y.tsx",
+    "layer-direction",
+  ],
+  [
+    "src/features/a/infra/x.ts",
+    "src/features/a/context/y.tsx",
+    "layer-direction",
+  ],
+  [
+    "src/features/a/context/x.tsx",
+    "src/features/a/infra/y.ts",
+    "layer-direction",
+  ],
+  [
     "src/features/a/components/x.tsx",
     "src/features/a/infra/y.ts",
     "layer-direction",
@@ -243,6 +258,9 @@ for (const [from, to] of [
   ["src/features/a/application/x.ts", "src/features/a/domain/y.ts"],
   ["src/features/a/infra/x.ts", "src/features/a/application/y.ts"],
   ["src/features/a/hooks/x.ts", "src/features/a/application/y.ts"],
+  ["src/features/a/context/x.tsx", "src/features/a/application/y.ts"],
+  ["src/features/a/context/x.tsx", "src/features/a/domain/y.ts"],
+  ["src/features/a/context/x.tsx", "npm:react"],
   ["src/features/a/domain/x.test.ts", "npm:vitest"],
 ]) {
   test(`${from} → ${to} の正方向を許可する`, async () => {
