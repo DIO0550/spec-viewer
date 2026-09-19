@@ -40,6 +40,8 @@
     "visual:compare": "node ./scripts/storybook-visual-regression.mjs compare",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
+    "lint:architecture": "node scripts/architecture/check.mjs",
+    "test:architecture": "node --test scripts/architecture/architecture.test.mjs",
     "format": "biome format --write .",
     "format:check": "biome format ."
   },

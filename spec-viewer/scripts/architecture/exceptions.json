@@ -1,0 +1,2511 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/comment/index.ts",
+      "to": "src/features/specs/domain/specFile/index.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentAnchor/index.ts",
+      "to": "src/features/specs/domain/specFile/index.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentError/index.ts",
+      "to": "npm:@tauri-apps/api/core",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentError/index.ts",
+      "to": "src/features/comments/types/comment/index.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentError/index.ts",
+      "to": "src/features/specs/domain/specFile/index.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentError/index.ts",
+      "to": "src/lib/api/tauri/addComment.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentError/index.ts",
+      "to": "src/lib/api/tauri/deleteComment.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentError/index.ts",
+      "to": "src/lib/api/tauri/exportComments.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentError/index.ts",
+      "to": "src/lib/api/tauri/generateLlmPrompt.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentError/index.ts",
+      "to": "src/lib/api/tauri/invokeTauriCommand.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentError/index.ts",
+      "to": "src/lib/api/tauri/isRecord.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentError/index.ts",
+      "to": "src/lib/api/tauri/listComments.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentError/index.ts",
+      "to": "src/lib/api/tauri/reopenComment.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentError/index.ts",
+      "to": "src/lib/api/tauri/resolveComment.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentError/index.ts",
+      "to": "src/lib/api/tauri/updateComment.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentListState/index.ts",
+      "to": "npm:@tauri-apps/api/core",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentListState/index.ts",
+      "to": "src/features/comments/types/comment/index.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentListState/index.ts",
+      "to": "src/features/specs/domain/specFile/index.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentListState/index.ts",
+      "to": "src/lib/api/tauri/addComment.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentListState/index.ts",
+      "to": "src/lib/api/tauri/deleteComment.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentListState/index.ts",
+      "to": "src/lib/api/tauri/exportComments.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentListState/index.ts",
+      "to": "src/lib/api/tauri/generateLlmPrompt.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentListState/index.ts",
+      "to": "src/lib/api/tauri/invokeTauriCommand.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentListState/index.ts",
+      "to": "src/lib/api/tauri/isRecord.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentListState/index.ts",
+      "to": "src/lib/api/tauri/listComments.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentListState/index.ts",
+      "to": "src/lib/api/tauri/reopenComment.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentListState/index.ts",
+      "to": "src/lib/api/tauri/resolveComment.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentListState/index.ts",
+      "to": "src/lib/api/tauri/updateComment.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentOperation/index.ts",
+      "to": "npm:@tauri-apps/api/core",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentOperation/index.ts",
+      "to": "src/features/comments/types/comment/index.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentOperation/index.ts",
+      "to": "src/features/specs/domain/specFile/index.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentOperation/index.ts",
+      "to": "src/lib/api/tauri/addComment.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentOperation/index.ts",
+      "to": "src/lib/api/tauri/deleteComment.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentOperation/index.ts",
+      "to": "src/lib/api/tauri/exportComments.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentOperation/index.ts",
+      "to": "src/lib/api/tauri/generateLlmPrompt.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentOperation/index.ts",
+      "to": "src/lib/api/tauri/invokeTauriCommand.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentOperation/index.ts",
+      "to": "src/lib/api/tauri/isRecord.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentOperation/index.ts",
+      "to": "src/lib/api/tauri/listComments.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentOperation/index.ts",
+      "to": "src/lib/api/tauri/reopenComment.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentOperation/index.ts",
+      "to": "src/lib/api/tauri/resolveComment.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentOperation/index.ts",
+      "to": "src/lib/api/tauri/updateComment.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentScope/index.ts",
+      "to": "src/features/specs/domain/specArtifact/index.ts",
+      "reason": "Existing domain reaches unapproved feature domain internals through legacy types or a mixed public barrel; introduce a pure domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentScope/index.ts",
+      "to": "src/features/specs/domain/specFile/index.ts",
+      "reason": "Existing domain reaches unapproved feature domain internals through legacy types or a mixed public barrel; introduce a pure domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentScope/index.ts",
+      "to": "src/features/specs/domain/specNode/index.ts",
+      "reason": "Existing domain reaches unapproved feature domain internals through legacy types or a mixed public barrel; introduce a pure domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentScope/index.ts",
+      "to": "src/features/specs/domain/specTree/index.ts",
+      "reason": "Existing domain reaches unapproved feature domain internals through legacy types or a mixed public barrel; introduce a pure domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentScope/index.ts",
+      "to": "src/features/specs/domain/specViewSelection/index.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/commentScope/index.ts",
+      "to": "src/features/specs/types/spec/index.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/comments/domain/comments/index.ts",
+      "to": "src/features/specs/domain/specFile/index.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "npm:@tauri-apps/api/core",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "npm:@tauri-apps/api/webview",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "npm:@tauri-apps/plugin-dialog",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "npm:react",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/features/comments/domain/comment/index.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/features/comments/domain/commentAnchor/index.ts",
+      "reason": "Existing domain reaches unapproved feature domain internals through legacy types or a mixed public barrel; introduce a pure domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/features/comments/domain/commentId/index.ts",
+      "reason": "Existing domain reaches unapproved feature domain internals through legacy types or a mixed public barrel; introduce a pure domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/features/comments/domain/commentStatusFilter/index.ts",
+      "reason": "Existing domain reaches unapproved feature domain internals through legacy types or a mixed public barrel; introduce a pure domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/features/comments/domain/comments/index.ts",
+      "reason": "Existing domain reaches unapproved feature domain internals through legacy types or a mixed public barrel; introduce a pure domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/features/comments/types/comment/index.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/features/diffComments/domain/diffComment.ts",
+      "reason": "Existing domain reaches unapproved feature domain internals through legacy types or a mixed public barrel; introduce a pure domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/features/diffComments/hooks/useDiffComments/index.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/features/diffComments/index.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/features/diffComments/lib/diffCommentSession.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/features/repositoryDiff/domain/repositoryDiff.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/features/specs/domain/specArtifact/index.ts",
+      "reason": "Existing domain reaches unapproved feature domain internals through legacy types or a mixed public barrel; introduce a pure domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/features/specs/domain/specFile/index.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/features/specs/domain/specNode/index.ts",
+      "reason": "Existing domain reaches unapproved feature domain internals through legacy types or a mixed public barrel; introduce a pure domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/features/specs/domain/specTree/index.ts",
+      "reason": "Existing domain reaches unapproved feature domain internals through legacy types or a mixed public barrel; introduce a pure domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/features/specs/types/spec/index.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/features/specs/types/watch/index.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/features/workspace/domain/workspace/index.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/features/workspace/domain/worktree/changedFile.ts",
+      "reason": "Existing domain reaches unapproved feature domain internals through legacy types or a mixed public barrel; introduce a pure domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/features/workspace/domain/worktree/index.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/features/workspace/domain/worktree/workspaceWorktrees.ts",
+      "reason": "Existing domain reaches unapproved feature domain internals through legacy types or a mixed public barrel; introduce a pure domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/features/workspace/domain/worktree/worktree.ts",
+      "reason": "Existing domain reaches unapproved feature domain internals through legacy types or a mixed public barrel; introduce a pure domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/features/workspace/domain/worktree/worktreeSpec.ts",
+      "reason": "Existing domain reaches unapproved feature domain internals through legacy types or a mixed public barrel; introduce a pure domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/features/workspace/types/workspace/index.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/addComment.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/archiveSpec.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/commentCommands.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/deleteComment.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/diffCommentDecoder.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/diffComments.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/exportComments.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/generateLlmPrompt.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/getSpecFileDiff.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/index.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/invokeTauriCommand.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/isRecord.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/listChangedSpecFiles.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/listComments.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/listSpecDiffRevisions.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/listSpecFileCommitHistory.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/listSpecs.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/listWorktrees.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/loadSpecBundle.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/loadWorkspace.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/readSpecFile.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/reopenComment.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/repositoryDiff.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/repositoryDiffDecoder.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/resolveComment.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/selectCommentExportDestination.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/selectWorkspaceDirectory.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/specCommands.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/specDiffCatalogDecoder.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/specDiffDecoder.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/startSpecFileWatch.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/stopSpecFileWatch.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/subscribeWorkspaceDragDropEvents.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/updateComment.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/lib/api/tauri/validateWorkspaceDirectory.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/repositoryDiff/domain/repositoryDiff.ts",
+      "to": "src/features/diff/domain/fileDiff/index.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/repositoryDiff/domain/repositoryDiffNavigationState.ts",
+      "to": "src/features/diff/domain/fileDiff/index.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/repositoryDiff/domain/repositoryDiffNavigationState.ts",
+      "to": "src/features/workspace/domain/navigationHistory/index.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/repositoryDiff/domain/repositoryDiffNavigationState.ts",
+      "to": "src/features/workspace/domain/worktree/changedFile.ts",
+      "reason": "Existing domain reaches unapproved feature domain internals through legacy types or a mixed public barrel; introduce a pure domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/repositoryDiff/domain/repositoryDiffNavigationState.ts",
+      "to": "src/features/workspace/domain/worktree/index.ts",
+      "reason": "Existing domain reaches unapproved feature domain internals through legacy types or a mixed public barrel; introduce a pure domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/repositoryDiff/domain/repositoryDiffNavigationState.ts",
+      "to": "src/features/workspace/domain/worktree/workspaceWorktrees.ts",
+      "reason": "Existing domain reaches unapproved feature domain internals through legacy types or a mixed public barrel; introduce a pure domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/repositoryDiff/domain/repositoryDiffNavigationState.ts",
+      "to": "src/features/workspace/domain/worktree/worktree.ts",
+      "reason": "Existing domain reaches unapproved feature domain internals through legacy types or a mixed public barrel; introduce a pure domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/repositoryDiff/domain/repositoryDiffNavigationState.ts",
+      "to": "src/features/workspace/domain/worktree/worktreeSpec.ts",
+      "reason": "Existing domain reaches unapproved feature domain internals through legacy types or a mixed public barrel; introduce a pure domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/repositoryDiff/domain/repositoryDiffNavigationState.ts",
+      "to": "src/features/workspace/types/viewMode.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/repositoryDiff/domain/repositoryDiffWorkspaceState.ts",
+      "to": "src/features/diff/domain/fileDiff/index.ts",
+      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/resolveSpecFileSelection/index.ts",
+      "to": "src/features/specs/types/spec/index.ts",
+      "reason": "Existing specs domain uses the legacy spec DTO/type module; separate decoded domain values from transport shapes in #110.",
+      "issue": 110
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specBundleState/index.ts",
+      "to": "npm:@tauri-apps/api/core",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specBundleState/index.ts",
+      "to": "src/features/specs/types/spec/index.ts",
+      "reason": "Existing specs domain uses the legacy spec DTO/type module; separate decoded domain values from transport shapes in #110.",
+      "issue": 110
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specBundleState/index.ts",
+      "to": "src/lib/api/tauri/archiveSpec.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specBundleState/index.ts",
+      "to": "src/lib/api/tauri/invokeTauriCommand.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specBundleState/index.ts",
+      "to": "src/lib/api/tauri/isRecord.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specBundleState/index.ts",
+      "to": "src/lib/api/tauri/listSpecs.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specBundleState/index.ts",
+      "to": "src/lib/api/tauri/loadSpecBundle.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specBundleState/index.ts",
+      "to": "src/lib/api/tauri/readSpecFile.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specDocumentState/index.ts",
+      "to": "npm:@tauri-apps/api/core",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specDocumentState/index.ts",
+      "to": "src/features/specs/types/spec/index.ts",
+      "reason": "Existing specs domain uses the legacy spec DTO/type module; separate decoded domain values from transport shapes in #110.",
+      "issue": 110
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specDocumentState/index.ts",
+      "to": "src/lib/api/tauri/archiveSpec.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specDocumentState/index.ts",
+      "to": "src/lib/api/tauri/invokeTauriCommand.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specDocumentState/index.ts",
+      "to": "src/lib/api/tauri/isRecord.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specDocumentState/index.ts",
+      "to": "src/lib/api/tauri/listSpecs.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specDocumentState/index.ts",
+      "to": "src/lib/api/tauri/loadSpecBundle.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specDocumentState/index.ts",
+      "to": "src/lib/api/tauri/readSpecFile.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specError/index.ts",
+      "to": "npm:@tauri-apps/api/core",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specError/index.ts",
+      "to": "src/features/specs/types/spec/index.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specError/index.ts",
+      "to": "src/lib/api/tauri/archiveSpec.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specError/index.ts",
+      "to": "src/lib/api/tauri/invokeTauriCommand.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specError/index.ts",
+      "to": "src/lib/api/tauri/isRecord.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specError/index.ts",
+      "to": "src/lib/api/tauri/listSpecs.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specError/index.ts",
+      "to": "src/lib/api/tauri/loadSpecBundle.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specError/index.ts",
+      "to": "src/lib/api/tauri/readSpecFile.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specTreeState/index.ts",
+      "to": "npm:@tauri-apps/api/core",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specTreeState/index.ts",
+      "to": "src/features/specs/types/spec/index.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specTreeState/index.ts",
+      "to": "src/lib/api/tauri/archiveSpec.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specTreeState/index.ts",
+      "to": "src/lib/api/tauri/invokeTauriCommand.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specTreeState/index.ts",
+      "to": "src/lib/api/tauri/isRecord.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specTreeState/index.ts",
+      "to": "src/lib/api/tauri/listSpecs.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specTreeState/index.ts",
+      "to": "src/lib/api/tauri/loadSpecBundle.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/specs/domain/specTreeState/index.ts",
+      "to": "src/lib/api/tauri/readSpecFile.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/workspace/domain/navigationHistory/index.ts",
+      "to": "src/features/workspace/types/viewMode.ts",
+      "reason": "Existing workspace domain depends on a legacy workspace presentation type; move the semantic state into the workspace domain in #113.",
+      "issue": 113
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/workspace/domain/workspaceError/index.ts",
+      "to": "npm:@tauri-apps/api/core",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/workspace/domain/workspaceError/index.ts",
+      "to": "src/features/workspace/types/workspace/index.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/workspace/domain/workspaceError/index.ts",
+      "to": "src/lib/api/tauri/invokeTauriCommand.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/workspace/domain/workspaceError/index.ts",
+      "to": "src/lib/api/tauri/isRecord.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/workspace/domain/workspaceError/index.ts",
+      "to": "src/lib/api/tauri/loadWorkspace.ts",
+      "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
+      "issue": 109
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/workspace/domain/workspaceNavigation/index.ts",
+      "to": "src/features/workspace/types/viewMode.ts",
+      "reason": "Existing workspace domain depends on a legacy workspace presentation type; move the semantic state into the workspace domain in #113.",
+      "issue": 113
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/workspace/domain/workspaceNavigation/updateNavigationFromWorktrees.ts",
+      "to": "src/features/workspace/types/viewMode.ts",
+      "reason": "Existing workspace domain depends on a legacy workspace presentation type; move the semantic state into the workspace domain in #113.",
+      "issue": 113
+    },
+    {
+      "rule": "domain-dependency",
+      "from": "src/features/workspace/domain/worktreeTreeNode/index.ts",
+      "to": "src/features/workspace/types/viewMode.ts",
+      "reason": "Existing workspace domain depends on a legacy workspace presentation type; move the semantic state into the workspace domain in #113.",
+      "issue": 113
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/SpecDocumentViewer/__tests__/SpecDocumentViewer.state.test.tsx",
+      "to": "src/features/specs/domain/specBundleState/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/SpecDocumentViewer/__tests__/SpecDocumentViewer.state.test.tsx",
+      "to": "src/features/specs/types/spec/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/SpecViewCommentSidebar/SpecViewCommentSidebar.stories.tsx",
+      "to": "src/features/comments/domain/comment/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/SpecViewCommentSidebar/SpecViewCommentSidebar.stories.tsx",
+      "to": "src/features/comments/domain/commentId/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/SpecViewCommentSidebar/SpecViewCommentSidebar.stories.tsx",
+      "to": "src/features/comments/domain/commentListState/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/SpecViewCommentSidebar/SpecViewCommentSidebar.stories.tsx",
+      "to": "src/features/comments/domain/commentOperation/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/SpecViewCommentSidebar/SpecViewCommentSidebar.stories.tsx",
+      "to": "src/features/comments/lib/comment-anchor-draft/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/SpecViewCommentSidebar/SpecViewCommentSidebar.stories.tsx",
+      "to": "src/features/comments/types/comment/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/SpecViewCommentSidebar/index.tsx",
+      "to": "src/features/comments/domain/commentListState/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/__tests__/App.state.test.tsx",
+      "to": "src/features/diff/components/DiffViewer/testFixtures.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/__tests__/App.state.test.tsx",
+      "to": "src/features/repositoryDiff/components/RepositoryFileTabs/index.tsx",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/__tests__/App.state.test.tsx",
+      "to": "src/features/repositoryDiff/hooks/useRepositoryDiffNavigationState/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/__tests__/App.state.test.tsx",
+      "to": "src/features/repositoryDiff/lib/projectRepositoryDiff.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/__tests__/useDocumentReadiness.unit.test.tsx",
+      "to": "src/features/specs/domain/specDocumentState/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/hooks/useCommentExport/__tests__/useCommentExport.state.test.tsx",
+      "to": "src/features/comments/domain/comment/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/hooks/useCommentExport/__tests__/useCommentExport.state.test.tsx",
+      "to": "src/features/comments/domain/commentAnchor/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/hooks/useCommentExport/__tests__/useCommentExport.state.test.tsx",
+      "to": "src/features/comments/domain/commentId/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/hooks/useCommentExport/__tests__/useCommentExport.state.test.tsx",
+      "to": "src/features/comments/types/comment/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/hooks/useCommentSelection/__tests__/useCommentSelection.state.test.tsx",
+      "to": "src/features/comments/domain/comment/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/hooks/useCommentSelection/__tests__/useCommentSelection.state.test.tsx",
+      "to": "src/features/comments/domain/commentAnchor/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/hooks/useCommentSelection/__tests__/useCommentSelection.state.test.tsx",
+      "to": "src/features/comments/domain/commentId/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/hooks/useCommentSelection/__tests__/useCommentSelection.state.test.tsx",
+      "to": "src/features/comments/domain/commentListState/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/hooks/useCommentSelection/index.ts",
+      "to": "src/features/comments/domain/commentListState/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/hooks/useViewRefresh/__tests__/useViewRefresh.state.test.tsx",
+      "to": "src/features/specs/domain/specViewSelection/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/hooks/useViewRefresh/__tests__/useViewRefresh.state.test.tsx",
+      "to": "src/features/specs/hooks/useSpecFileWatcher/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/hooks/useViewRefresh/__tests__/useViewRefresh.state.test.tsx",
+      "to": "src/features/specs/types/watch/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/hooks/useViewRefresh/index.ts",
+      "to": "src/features/specs/domain/specViewSelection/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/hooks/useViewRefresh/index.ts",
+      "to": "src/features/specs/hooks/useSpecFileWatcher/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/index.tsx",
+      "to": "src/features/comments/domain/commentScope/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/index.tsx",
+      "to": "src/features/comments/domain/commentStatusFilter/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/index.tsx",
+      "to": "src/features/diffComments/components/DiffLineCommentSlot/index.tsx",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/index.tsx",
+      "to": "src/features/diffComments/components/DiffReviewPanel/index.tsx",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/index.tsx",
+      "to": "src/features/diffComments/components/presentation.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/index.tsx",
+      "to": "src/features/repositoryDiff/domain/repositoryDiff.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/index.tsx",
+      "to": "src/features/repositoryDiff/domain/repositoryDiffWorkspaceState.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/index.tsx",
+      "to": "src/features/repositoryDiff/hooks/useRepositoryDiffWorkspace/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/index.tsx",
+      "to": "src/features/workspace/lib/resolveActiveWorktreePath.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/resolveDiffWorkspaceLoadPaths.ts",
+      "to": "src/features/repositoryDiff/domain/repositoryDiffWorkspaceState.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/App/resolveDiffWorkspaceLoadPaths.ts",
+      "to": "src/features/workspace/types/viewMode.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/context/specViewSelection/__tests__/specViewSelection.state.test.tsx",
+      "to": "src/features/specs/domain/specViewSelection/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/context/specViewSelection/__tests__/specViewSelection.state.test.tsx",
+      "to": "src/features/specs/types/spec/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/context/specViewSelection/index.tsx",
+      "to": "src/features/specs/domain/specViewSelection/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/context/specViewSelection/types.ts",
+      "to": "src/features/specs/domain/specViewSelection/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/app/context/specViewSelection/useSpecViewSelectionState.ts",
+      "to": "src/features/specs/domain/specViewSelection/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/components/WorkspaceLayout/WorkspaceLayout.stories.tsx",
+      "to": "src/features/comments/domain/commentId/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/components/WorkspaceLayout/WorkspaceLayout.stories.tsx",
+      "to": "src/features/diff/components/DiffViewer/testFixtures.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/comments/domain/commentAnchor/index.ts",
+      "to": "src/features/specs/domain/specFile/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/comments/domain/commentScope/__tests__/commentScope.unit.test.ts",
+      "to": "src/features/specs/domain/specViewSelection/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/comments/domain/commentScope/index.ts",
+      "to": "src/features/specs/domain/specViewSelection/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/comments/domain/commentScope/index.ts",
+      "to": "src/features/specs/types/spec/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/comments/hooks/useCommentOperations/index.ts",
+      "to": "src/features/specs/domain/specViewSelection/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/comments/hooks/useComments/__tests__/useComments.concurrent.fixture.ts",
+      "to": "src/features/specs/domain/specViewSelection/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/comments/hooks/useComments/__tests__/useComments.state.test.tsx",
+      "to": "src/features/specs/domain/specViewSelection/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/comments/hooks/useComments/index.ts",
+      "to": "src/features/specs/domain/specViewSelection/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/comments/hooks/useMarkdownTextSelection/index.ts",
+      "to": "src/features/specs/types/spec/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/comments/infra/commentGateway/__tests__/commentGateway.unit.test.ts",
+      "to": "src/features/specs/domain/specViewSelection/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/comments/lib/mcpFeedback/index.ts",
+      "to": "src/features/specs/types/spec/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/comments/types/comment/index.ts",
+      "to": "src/features/specs/domain/specFile/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/diff/components/CurrentFileViewer/__tests__/CurrentFileViewer.comments.test.tsx",
+      "to": "src/features/diffComments/components/DiffLineCommentSlot/index.tsx",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/diff/components/CurrentFileViewer/__tests__/CurrentFileViewer.editor.test.tsx",
+      "to": "src/features/diffComments/components/DiffLineCommentSlot/index.tsx",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/diff/components/CurrentFileViewer/index.tsx",
+      "to": "src/features/diffComments/components/DiffLineCommentSlot/CommentTargets.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/diff/components/CurrentFileViewer/index.tsx",
+      "to": "src/features/diffComments/components/DiffLineCommentSlot/index.tsx",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/diff/components/DiffViewer/__tests__/DiffViewer.comment-focus.test.tsx",
+      "to": "src/features/diffComments/components/DiffLineCommentSlot/index.tsx",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/diff/components/DiffViewer/__tests__/DiffViewer.comment-navigation.test.tsx",
+      "to": "src/features/diffComments/components/DiffLineCommentSlot/index.tsx",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/diff/components/DiffViewer/__tests__/DiffViewer.comments.test.tsx",
+      "to": "src/features/diffComments/components/DiffLineCommentSlot/index.tsx",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/diff/components/DiffViewer/__tests__/DiffViewer.mixed-height.test.tsx",
+      "to": "src/features/diffComments/components/DiffLineCommentControl/index.tsx",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/diff/components/DiffViewer/__tests__/DiffViewer.mixed-height.test.tsx",
+      "to": "src/features/diffComments/components/DiffLineCommentSlot/index.tsx",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/diff/components/DiffViewer/__tests__/DiffViewer.performance.test.tsx",
+      "to": "src/features/diffComments/components/DiffLineCommentSlot/index.tsx",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/diff/components/DiffViewer/index.tsx",
+      "to": "src/features/diffComments/components/DiffLineCommentControl/index.tsx",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/diff/components/DiffViewer/index.tsx",
+      "to": "src/features/diffComments/components/DiffLineCommentSlot/CommentTargets.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/diff/components/DiffViewer/index.tsx",
+      "to": "src/features/diffComments/components/DiffLineCommentSlot/index.tsx",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/diff/components/DiffWorkspace/index.tsx",
+      "to": "src/features/workspace/types/workspaceWorktreesLoadState.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/diff/components/ViewModeToolbar/index.tsx",
+      "to": "src/features/workspace/types/viewMode.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
+      "to": "src/features/specs/types/spec/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/diff/index.ts",
+      "to": "src/features/workspace/types/viewMode.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/diffComments/components/DiffCommentComposer/index.tsx",
+      "to": "src/features/comments/components/CommentComposer/index.tsx",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/diffComments/components/DiffCommentWorkspace.stories.tsx",
+      "to": "src/features/diff/components/CurrentFileViewer/index.tsx",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/diffComments/components/DiffCommentWorkspace.stories.tsx",
+      "to": "src/features/diff/components/DiffViewer/index.tsx",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/diffComments/components/DiffCommentWorkspace.stories.tsx",
+      "to": "src/features/diff/components/DiffViewer/testFixtures.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/diffComments/components/DiffReviewSidebar/index.tsx",
+      "to": "src/features/comments/components/ReviewComment/index.tsx",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/repositoryDiff/components/RepositoryDiffFileHeader/index.tsx",
+      "to": "src/features/diff/domain/fileDiff/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/repositoryDiff/components/RepositoryDiffFileHeader/index.tsx",
+      "to": "src/features/diff/lib/fileChangePresentation.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/repositoryDiff/components/RepositoryDiffSummary/index.tsx",
+      "to": "src/features/diff/domain/fileDiff/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/repositoryDiff/components/RepositoryDiffSummary/index.tsx",
+      "to": "src/features/diff/lib/fileChangePresentation.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/repositoryDiff/components/RepositoryDiffTree/index.tsx",
+      "to": "src/features/diff/lib/fileChangePresentation.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/repositoryDiff/components/RepositoryFileTabs/index.tsx",
+      "to": "src/features/diff/domain/fileDiff/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/repositoryDiff/components/RepositoryFileTabs/index.tsx",
+      "to": "src/features/diff/lib/fileChangePresentation.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/repositoryDiff/domain/__tests__/repositoryDiffNavigationState.unit.test.ts",
+      "to": "src/features/workspace/domain/navigationHistory/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/repositoryDiff/domain/repositoryDiff.ts",
+      "to": "src/features/diff/domain/fileDiff/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/repositoryDiff/domain/repositoryDiffNavigationState.ts",
+      "to": "src/features/diff/domain/fileDiff/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/repositoryDiff/domain/repositoryDiffNavigationState.ts",
+      "to": "src/features/workspace/domain/navigationHistory/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/repositoryDiff/hooks/useRepositoryDiffNavigationState/index.ts",
+      "to": "src/features/diff/domain/fileDiff/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/repositoryDiff/hooks/useRepositoryDiffNavigationState/index.ts",
+      "to": "src/features/workspace/domain/navigationHistory/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/repositoryDiff/lib/__tests__/repositoryDiffFilePresentation.test.ts",
+      "to": "src/features/diff/domain/fileDiff/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/repositoryDiff/lib/projectRepositoryDiff.ts",
+      "to": "src/features/diff/domain/fileDiff/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/repositoryDiff/lib/repositoryDiffFilePresentation.ts",
+      "to": "src/features/diff/domain/fileDiff/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/specs/components/MarkdownViewer/__tests__/markdownBlockFixture.ts",
+      "to": "src/features/comments/lib/comment-anchor-draft/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/workspace/domain/navigationHistory/__tests__/navigationHistory.type.test.ts",
+      "to": "src/features/repositoryDiff/domain/repositoryDiffNavigationState.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/features/workspace/domain/navigationHistory/__tests__/navigationHistory.type.test.ts",
+      "to": "src/features/repositoryDiff/hooks/useRepositoryDiffNavigationState/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/__tests__/tauri.comment-export.test.ts",
+      "to": "src/features/comments/types/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/__tests__/tauri.comment-status.test.ts",
+      "to": "src/features/comments/domain/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/__tests__/tauri.comment-status.test.ts",
+      "to": "src/features/comments/domain/commentId/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/__tests__/tauri.comment-status.test.ts",
+      "to": "src/features/comments/types/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/__tests__/tauri.comments.test.ts",
+      "to": "src/features/comments/domain/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/__tests__/tauri.comments.test.ts",
+      "to": "src/features/comments/domain/commentId/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/__tests__/tauri.comments.test.ts",
+      "to": "src/features/comments/types/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/addComment.ts",
+      "to": "src/features/comments/domain/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/addComment.ts",
+      "to": "src/features/comments/types/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/archiveSpec.ts",
+      "to": "src/features/specs/types/spec/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/deleteComment.ts",
+      "to": "src/features/comments/types/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/exportComments.ts",
+      "to": "src/features/comments/types/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/generateLlmPrompt.ts",
+      "to": "src/features/comments/types/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/getSpecFileDiff.ts",
+      "to": "src/features/diff/domain/fileDiff/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/listChangedSpecFiles.ts",
+      "to": "src/features/diff/domain/comparisonRevision/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/listComments.ts",
+      "to": "src/features/comments/types/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/listSpecDiffRevisions.ts",
+      "to": "src/features/diff/domain/comparisonRevision/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/listSpecFileCommitHistory.ts",
+      "to": "src/features/diff/domain/comparisonRevision/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/listSpecs.ts",
+      "to": "src/features/specs/types/spec/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/listWorktrees.ts",
+      "to": "src/features/workspace/domain/worktree/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/loadSpecBundle.ts",
+      "to": "src/features/specs/types/spec/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/loadWorkspace.ts",
+      "to": "src/features/workspace/domain/workspace/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/loadWorkspace.ts",
+      "to": "src/features/workspace/types/workspace/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/readSpecFile.ts",
+      "to": "src/features/specs/types/spec/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/reopenComment.ts",
+      "to": "src/features/comments/domain/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/reopenComment.ts",
+      "to": "src/features/comments/types/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/repositoryDiffDecoder.ts",
+      "to": "src/features/diff/domain/fileDiff/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/repositoryDiffDecoder.ts",
+      "to": "src/features/repositoryDiff/domain/repositoryDiff.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/resolveComment.ts",
+      "to": "src/features/comments/domain/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/resolveComment.ts",
+      "to": "src/features/comments/types/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/selectCommentExportDestination.ts",
+      "to": "src/features/comments/types/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/specCommands.ts",
+      "to": "src/features/specs/types/spec/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/specDiffCatalogDecoder.ts",
+      "to": "src/features/diff/domain/comparisonRevision/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/specDiffDecoder.ts",
+      "to": "src/features/diff/domain/fileDiff/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/startSpecFileWatch.ts",
+      "to": "src/features/specs/types/watch/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/stopSpecFileWatch.ts",
+      "to": "src/features/specs/types/watch/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/updateComment.ts",
+      "to": "src/features/comments/domain/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/updateComment.ts",
+      "to": "src/features/comments/types/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/lib/api/tauri/validateWorkspaceDirectory.ts",
+      "to": "src/features/workspace/types/workspace/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "feature-public-api",
+      "from": "src/utils/recentWorkspaces/index.ts",
+      "to": "src/features/workspace/types/workspace/index.ts",
+      "reason": "Existing cross-feature dependency; expose a reviewed public API or move shared vocabulary to an approved Kernel in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "layer-direction",
+      "from": "src/features/comments/hooks/useCommentOperations/index.ts",
+      "to": "src/features/comments/infra/commentGateway/index.ts",
+      "reason": "Existing presentation hook constructs its infra adapter; introduce the application port and compose the adapter through public APIs in #125.",
+      "issue": 125
+    },
+    {
+      "rule": "layer-direction",
+      "from": "src/features/comments/hooks/useComments/index.ts",
+      "to": "src/features/comments/infra/commentGateway/index.ts",
+      "reason": "Existing presentation hook constructs its infra adapter; introduce the application port and compose the adapter through public APIs in #125.",
+      "issue": 125
+    },
+    {
+      "rule": "layer-direction",
+      "from": "src/features/specs/hooks/useSpecs/index.ts",
+      "to": "src/features/specs/infra/specGateway/index.ts",
+      "reason": "Existing presentation hook constructs its infra adapter; introduce the application port and compose the adapter through public APIs in #116.",
+      "issue": 116
+    },
+    {
+      "rule": "layer-direction",
+      "from": "src/features/specs/hooks/useSpecsV2/index.ts",
+      "to": "src/features/specs/infra/specGateway/index.ts",
+      "reason": "Existing presentation hook constructs its infra adapter; introduce the application port and compose the adapter through public APIs in #116.",
+      "issue": 116
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/components/WorkspaceLayout/WorkspaceLayout.stories.tsx",
+      "to": "src/features/comments/domain/commentId/index.ts",
+      "reason": "Existing shared layout story/test composes feature APIs; move this composition to the app boundary as part of the public API migration in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/components/WorkspaceLayout/WorkspaceLayout.stories.tsx",
+      "to": "src/features/comments/index.ts",
+      "reason": "Existing shared layout story/test composes feature APIs; move this composition to the app boundary as part of the public API migration in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/components/WorkspaceLayout/WorkspaceLayout.stories.tsx",
+      "to": "src/features/diff/components/DiffViewer/testFixtures.ts",
+      "reason": "Existing shared layout story/test composes feature APIs; move this composition to the app boundary as part of the public API migration in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/components/WorkspaceLayout/WorkspaceLayout.stories.tsx",
+      "to": "src/features/diff/index.ts",
+      "reason": "Existing shared layout story/test composes feature APIs; move this composition to the app boundary as part of the public API migration in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/components/WorkspaceLayout/WorkspaceLayout.stories.tsx",
+      "to": "src/features/preferences/index.ts",
+      "reason": "Existing shared layout story/test composes feature APIs; move this composition to the app boundary as part of the public API migration in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/components/WorkspaceLayout/WorkspaceLayout.stories.tsx",
+      "to": "src/features/specs/index.ts",
+      "reason": "Existing shared layout story/test composes feature APIs; move this composition to the app boundary as part of the public API migration in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/components/WorkspaceLayout/WorkspaceLayout.stories.tsx",
+      "to": "src/features/workspace/index.ts",
+      "reason": "Existing shared layout story/test composes feature APIs; move this composition to the app boundary as part of the public API migration in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/components/WorkspaceLayout/__tests__/WorkspaceLayout.state.test.tsx",
+      "to": "src/features/preferences/index.ts",
+      "reason": "Existing shared layout story/test composes feature APIs; move this composition to the app boundary as part of the public API migration in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/components/WorkspaceLayout/__tests__/WorkspaceLayout.state.test.tsx",
+      "to": "src/features/specs/index.ts",
+      "reason": "Existing shared layout story/test composes feature APIs; move this composition to the app boundary as part of the public API migration in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/components/WorkspaceLayout/__tests__/WorkspaceLayout.state.test.tsx",
+      "to": "src/features/workspace/index.ts",
+      "reason": "Existing shared layout story/test composes feature APIs; move this composition to the app boundary as part of the public API migration in #106.",
+      "issue": 106
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/__tests__/tauri.comment-export.test.ts",
+      "to": "src/features/comments/types/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/__tests__/tauri.comment-status.test.ts",
+      "to": "src/features/comments/domain/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/__tests__/tauri.comment-status.test.ts",
+      "to": "src/features/comments/domain/commentId/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/__tests__/tauri.comment-status.test.ts",
+      "to": "src/features/comments/types/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/__tests__/tauri.comments.test.ts",
+      "to": "src/features/comments/domain/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/__tests__/tauri.comments.test.ts",
+      "to": "src/features/comments/domain/commentId/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/__tests__/tauri.comments.test.ts",
+      "to": "src/features/comments/types/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/addComment.ts",
+      "to": "src/features/comments/domain/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/addComment.ts",
+      "to": "src/features/comments/types/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/archiveSpec.ts",
+      "to": "src/features/specs/types/spec/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/deleteComment.ts",
+      "to": "src/features/comments/types/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/diffCommentDecoder.ts",
+      "to": "src/features/diffComments/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/diffComments.ts",
+      "to": "src/features/diffComments/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/exportComments.ts",
+      "to": "src/features/comments/types/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/generateLlmPrompt.ts",
+      "to": "src/features/comments/types/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/getSpecFileDiff.ts",
+      "to": "src/features/diff/domain/fileDiff/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/listChangedSpecFiles.ts",
+      "to": "src/features/diff/domain/comparisonRevision/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/listComments.ts",
+      "to": "src/features/comments/types/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/listSpecDiffRevisions.ts",
+      "to": "src/features/diff/domain/comparisonRevision/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/listSpecFileCommitHistory.ts",
+      "to": "src/features/diff/domain/comparisonRevision/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/listSpecs.ts",
+      "to": "src/features/specs/types/spec/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/listWorktrees.ts",
+      "to": "src/features/workspace/domain/worktree/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/loadSpecBundle.ts",
+      "to": "src/features/specs/types/spec/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/loadWorkspace.ts",
+      "to": "src/features/workspace/domain/workspace/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/loadWorkspace.ts",
+      "to": "src/features/workspace/types/workspace/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/readSpecFile.ts",
+      "to": "src/features/specs/types/spec/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/reopenComment.ts",
+      "to": "src/features/comments/domain/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/reopenComment.ts",
+      "to": "src/features/comments/types/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/repositoryDiffDecoder.ts",
+      "to": "src/features/diff/domain/fileDiff/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/repositoryDiffDecoder.ts",
+      "to": "src/features/repositoryDiff/domain/repositoryDiff.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/resolveComment.ts",
+      "to": "src/features/comments/domain/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/resolveComment.ts",
+      "to": "src/features/comments/types/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/selectCommentExportDestination.ts",
+      "to": "src/features/comments/types/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/specCommands.ts",
+      "to": "src/features/specs/types/spec/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/specDiffCatalogDecoder.ts",
+      "to": "src/features/diff/domain/comparisonRevision/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/specDiffDecoder.ts",
+      "to": "src/features/diff/domain/fileDiff/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/specDiffDecoder.ts",
+      "to": "src/features/diffComments/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/startSpecFileWatch.ts",
+      "to": "src/features/specs/types/watch/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/stopSpecFileWatch.ts",
+      "to": "src/features/specs/types/watch/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/updateComment.ts",
+      "to": "src/features/comments/domain/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/updateComment.ts",
+      "to": "src/features/comments/types/comment/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    },
+    {
+      "rule": "shared-to-feature",
+      "from": "src/lib/api/tauri/validateWorkspaceDirectory.ts",
+      "to": "src/features/workspace/types/workspace/index.ts",
+      "reason": "Legacy shared IPC adapter (or its test) imports feature-owned values; move the adapter and tests into feature infra in #107.",
+      "issue": 107
+    }
+  ]
+}
