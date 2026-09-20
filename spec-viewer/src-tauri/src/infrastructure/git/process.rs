@@ -85,6 +85,8 @@ pub enum GitOperation {
     WorkingTreeSymbolicHead,
     WorktreeList,
     #[cfg(test)]
+    FixtureSetup,
+    #[cfg(test)]
     TimeoutTest,
     #[cfg(test)]
     BoundedOutputTest,
@@ -145,6 +147,8 @@ impl GitOperation {
             Self::WorkingTreeHeadReference => "working-tree-head-reference",
             Self::WorkingTreeSymbolicHead => "working-tree-symbolic-head",
             Self::WorktreeList => "worktree-list",
+            #[cfg(test)]
+            Self::FixtureSetup => "fixture-setup",
             #[cfg(test)]
             Self::TimeoutTest => "timeout-test",
             #[cfg(test)]
@@ -525,6 +529,7 @@ mod tests {
                 "working-tree-symbolic-head",
             ),
             (GitOperation::WorktreeList, "worktree-list"),
+            (GitOperation::FixtureSetup, "fixture-setup"),
             (GitOperation::TimeoutTest, "timeout-test"),
             (GitOperation::BoundedOutputTest, "bounded-output-test"),
         ] {
