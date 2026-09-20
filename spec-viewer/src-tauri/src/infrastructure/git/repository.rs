@@ -3570,13 +3570,14 @@ mod tests {
     };
 
     fn git(root: &Path, args: &[&str]) {
-        let status = Command::new("git")
-            .arg("-C")
-            .arg(root)
-            .args(args)
-            .status()
-            .expect("git starts");
-        assert!(status.success(), "git {args:?}");
+        GitRunner::default()
+            .run(
+                root,
+                GitOperation::FixtureSetup,
+                args,
+                GitCommandKind::Metadata,
+            )
+            .unwrap_or_else(|error| panic!("fixture git {args:?} failed: {error:?}"));
     }
     fn write(root: &Path, path: &str, text: &str) {
         let target = root.join(path);
