@@ -1,11 +1,8 @@
 import { expect, test } from "vitest";
 
 import {
-  createInitialSpecDiffWorkspaceState,
-  createSpecChangeId,
-  projectSpecChangeBadges,
-  reduceSpecDiffWorkspaceState,
-  type SpecChange,
+  SpecDiffWorkspaceState,
+  SpecChange,
   type SpecChangeOverview,
 } from "@/features/diff/domain/specDiffWorkspaceState";
 
@@ -21,7 +18,7 @@ const createSpecChange = (overrides: Partial<SpecChange> = {}): SpecChange => ({
 
 test("Spec変更IDはspecIdとfileKeyを衝突しない形式で結合する", () => {
   expect(
-    createSpecChangeId(
+    SpecChange.createId(
       createSpecChange({ specId: "079/issue 168", fileKey: "tech-reference" }),
     ),
   ).toBe("079%2Fissue%20168:tech-reference");
@@ -34,7 +31,7 @@ test.each([
   "copied",
   "typeChanged",
 ] as const)("Spec変更badgeは%sをMへ写像する", (change) => {
-  const badges = projectSpecChangeBadges([createSpecChange({ change })]);
+  const badges = SpecChange.projectBadges([createSpecChange({ change })]);
 
   expect(badges.get("079-issue-168")).toBe("M");
 });
@@ -43,13 +40,13 @@ test.each([
   "added",
   "untracked",
 ] as const)("Spec変更badgeは%sをUへ写像する", (change) => {
-  const badges = projectSpecChangeBadges([createSpecChange({ change })]);
+  const badges = SpecChange.projectBadges([createSpecChange({ change })]);
 
   expect(badges.get("079-issue-168")).toBe("U");
 });
 
 test("Spec変更badgeは同一SpecのMとUが混在するとUを1つだけ保持する", () => {
-  const badges = projectSpecChangeBadges([
+  const badges = SpecChange.projectBadges([
     createSpecChange({ change: "untracked", fileKey: "tasks" }),
     createSpecChange({ change: "modified", fileKey: "impl" }),
   ]);
@@ -58,7 +55,7 @@ test("Spec変更badgeは同一SpecのMとUが混在するとUを1つだけ保持
 });
 
 test("Spec diff stateはworkspaceなしでidleから始まる", () => {
-  expect(createInitialSpecDiffWorkspaceState()).toEqual({
+  expect(SpecDiffWorkspaceState.initial()).toEqual({
     status: "idle",
     workspacePath: null,
     cycleId: 0,
@@ -67,8 +64,8 @@ test("Spec diff stateはworkspaceなしでidleから始まる", () => {
 });
 
 test("Spec diff stateはoverview取得開始でloadingへ遷移する", () => {
-  const state = reduceSpecDiffWorkspaceState(
-    createInitialSpecDiffWorkspaceState(),
+  const state = SpecDiffWorkspaceState.reduce(
+    SpecDiffWorkspaceState.initial(),
     {
       type: "overviewStarted",
       workspacePath: "/workspace",
@@ -92,8 +89,8 @@ test("Spec diff stateはoverview成功でreadyへ遷移する", () => {
     diffReviewIdentity: null,
     files: [],
   };
-  const loading = reduceSpecDiffWorkspaceState(
-    createInitialSpecDiffWorkspaceState(),
+  const loading = SpecDiffWorkspaceState.reduce(
+    SpecDiffWorkspaceState.initial(),
     {
       type: "overviewStarted",
       workspacePath: "/workspace",
@@ -102,7 +99,7 @@ test("Spec diff stateはoverview成功でreadyへ遷移する", () => {
     },
   );
 
-  const ready = reduceSpecDiffWorkspaceState(loading, {
+  const ready = SpecDiffWorkspaceState.reduce(loading, {
     type: "overviewSucceeded",
     workspacePath: "/workspace",
     cycleId: 1,
@@ -128,8 +125,8 @@ test.each([
   "gitUnavailable",
   "unbornHead",
 ] as const)("Spec diff stateはrepository不可code=%sをunavailableへ遷移する", (code) => {
-  const loading = reduceSpecDiffWorkspaceState(
-    createInitialSpecDiffWorkspaceState(),
+  const loading = SpecDiffWorkspaceState.reduce(
+    SpecDiffWorkspaceState.initial(),
     {
       type: "overviewStarted",
       workspacePath: "/workspace",
@@ -138,7 +135,7 @@ test.each([
     },
   );
 
-  const state = reduceSpecDiffWorkspaceState(loading, {
+  const state = SpecDiffWorkspaceState.reduce(loading, {
     type: "overviewFailed",
     workspacePath: "/workspace",
     cycleId: 2,
@@ -157,8 +154,8 @@ test.each([
 });
 
 test("Spec diff stateは一般overview errorをretry可能なfailedへ遷移する", () => {
-  const loading = reduceSpecDiffWorkspaceState(
-    createInitialSpecDiffWorkspaceState(),
+  const loading = SpecDiffWorkspaceState.reduce(
+    SpecDiffWorkspaceState.initial(),
     {
       type: "overviewStarted",
       workspacePath: "/workspace",
@@ -167,7 +164,7 @@ test("Spec diff stateは一般overview errorをretry可能なfailedへ遷移す�
     },
   );
 
-  const state = reduceSpecDiffWorkspaceState(loading, {
+  const state = SpecDiffWorkspaceState.reduce(loading, {
     type: "overviewFailed",
     workspacePath: "/workspace",
     cycleId: 2,
@@ -186,8 +183,8 @@ test("Spec diff stateは一般overview errorをretry可能なfailedへ遷移す�
 });
 
 test("Spec diff stateは選択中logical fileが変更一覧にあればdetail loadingへ遷移する", () => {
-  const loading = reduceSpecDiffWorkspaceState(
-    createInitialSpecDiffWorkspaceState(),
+  const loading = SpecDiffWorkspaceState.reduce(
+    SpecDiffWorkspaceState.initial(),
     {
       type: "overviewStarted",
       workspacePath: "/workspace",
@@ -197,7 +194,7 @@ test("Spec diff stateは選択中logical fileが変更一覧にあればdetail l
   );
   const change = createSpecChange();
 
-  const state = reduceSpecDiffWorkspaceState(loading, {
+  const state = SpecDiffWorkspaceState.reduce(loading, {
     type: "overviewSucceeded",
     workspacePath: "/workspace",
     cycleId: 4,
@@ -219,8 +216,8 @@ test("Spec diff stateは選択中logical fileが変更一覧にあればdetail l
 });
 
 test("Spec diff stateは古いrequest generationのoverview結果を無視する", () => {
-  const loading = reduceSpecDiffWorkspaceState(
-    createInitialSpecDiffWorkspaceState(),
+  const loading = SpecDiffWorkspaceState.reduce(
+    SpecDiffWorkspaceState.initial(),
     {
       type: "overviewStarted",
       workspacePath: "/workspace",
@@ -229,7 +226,7 @@ test("Spec diff stateは古いrequest generationのoverview結果を無視する
     },
   );
 
-  const state = reduceSpecDiffWorkspaceState(loading, {
+  const state = SpecDiffWorkspaceState.reduce(loading, {
     type: "overviewSucceeded",
     workspacePath: "/workspace",
     cycleId: 4,

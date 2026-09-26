@@ -2,8 +2,7 @@ import { expect, test } from "vitest";
 
 import {
   DiffCommentSessionState,
-  diffCommentIdentityKey,
-  type DiffReviewIdentity,
+  DiffReviewIdentity,
 } from "@/features/diffComments";
 
 const identityA: DiffReviewIdentity = {
@@ -19,8 +18,8 @@ const identityB: DiffReviewIdentity = {
 };
 
 test("identity keyは4値すべてを区別する", () => {
-  expect(diffCommentIdentityKey(identityA)).not.toBe(
-    diffCommentIdentityKey(identityB),
+  expect(DiffReviewIdentity.key(identityA)).not.toBe(
+    DiffReviewIdentity.key(identityB),
   );
 });
 

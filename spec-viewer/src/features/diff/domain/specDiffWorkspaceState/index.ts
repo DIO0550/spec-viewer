@@ -21,7 +21,7 @@ export type SpecChange = Readonly<{
  * @param file - Changed Spec file returned by the diff overview.
  * @returns An encoded identity that cannot confuse separators in a Spec ID.
  */
-export function createSpecChangeId(file: SpecChange): string {
+function createSpecChangeId(file: SpecChange): string {
   return `${encodeURIComponent(file.specId)}:${encodeURIComponent(file.fileKey)}`;
 }
 
@@ -43,7 +43,7 @@ const SPEC_CHANGE_BADGES = {
  * @param files - Changed Spec files in overview order.
  * @returns A detached badge map keyed by Spec ID.
  */
-export function projectSpecChangeBadges(
+function projectSpecChangeBadges(
   files: readonly SpecChange[],
 ): ReadonlyMap<string, SpecChangeBadge> {
   const badges = new Map<string, SpecChangeBadge>();
@@ -138,7 +138,7 @@ export type SpecDiffWorkspaceAction =
  *
  * @returns The idle state with a zeroed request identity.
  */
-export function createInitialSpecDiffWorkspaceState(): SpecDiffWorkspaceState {
+function createInitialSpecDiffWorkspaceState(): SpecDiffWorkspaceState {
   return {
     status: "idle",
     workspacePath: null,
@@ -154,7 +154,7 @@ export function createInitialSpecDiffWorkspaceState(): SpecDiffWorkspaceState {
  * @param selection - Shared Markdown and Diff logical file selection.
  * @returns The matching change, or null when the selected file is unchanged.
  */
-export function findSpecChange(
+function findSpecChange(
   files: readonly SpecChange[],
   selection: SpecDiffSelection,
 ): SpecChange | null {
@@ -177,7 +177,7 @@ export function findSpecChange(
  * @param action - Request lifecycle event.
  * @returns The next immutable state.
  */
-export function reduceSpecDiffWorkspaceState(
+function reduceSpecDiffWorkspaceState(
   state: SpecDiffWorkspaceState,
   action: SpecDiffWorkspaceAction,
 ): SpecDiffWorkspaceState {
@@ -309,3 +309,14 @@ function isCurrentRequest(
     state.requestGeneration === action.requestGeneration
   );
 }
+
+export const SpecChange = {
+  createId: createSpecChangeId,
+  projectBadges: projectSpecChangeBadges,
+  find: findSpecChange,
+} as const;
+
+export const SpecDiffWorkspaceState = {
+  initial: createInitialSpecDiffWorkspaceState,
+  reduce: reduceSpecDiffWorkspaceState,
+} as const;

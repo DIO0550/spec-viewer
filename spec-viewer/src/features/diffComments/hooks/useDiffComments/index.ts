@@ -3,10 +3,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   DiffAnchorTarget,
   DiffCommentStatusFilter,
-  DiffReviewIdentity,
   ResolvedDiffComment,
 } from "@/features/diffComments/domain/diffComment";
-import { diffCommentIdentityKey } from "@/features/diffComments/domain/diffComment";
+import { DiffReviewIdentity } from "@/features/diffComments/domain/diffComment";
 import type {
   DiffCommentSession,
   DiffCommentSessionAction,
@@ -184,7 +183,7 @@ export function useDiffComments({
   const [errors, setErrors] = useState<ErrorMap>({});
   sessionsRef.current = sessions;
 
-  const activeKey = identity === null ? null : diffCommentIdentityKey(identity);
+  const activeKey = identity === null ? null : DiffReviewIdentity.key(identity);
   const activeSession =
     activeKey === null ? null : (sessions[activeKey] ?? null);
   const error = activeKey === null ? null : (errors[activeKey] ?? null);
@@ -219,7 +218,7 @@ export function useDiffComments({
 
   const loadIdentity = useCallback(
     async (targetIdentity: DiffReviewIdentity): Promise<boolean> => {
-      const key = diffCommentIdentityKey(targetIdentity);
+      const key = DiffReviewIdentity.key(targetIdentity);
       if (mutationInFlightRef.current.has(key)) {
         return false;
       }
@@ -262,9 +261,9 @@ export function useDiffComments({
       return;
     }
 
-    const key = diffCommentIdentityKey(identity);
+    const key = DiffReviewIdentity.key(identity);
     if (previousIdentity !== null) {
-      const previousKey = diffCommentIdentityKey(previousIdentity);
+      const previousKey = DiffReviewIdentity.key(previousIdentity);
       if (previousKey !== key) {
         loadGenerationRef.current.set(
           previousKey,
@@ -275,7 +274,7 @@ export function useDiffComments({
     const previousKey =
       previousIdentity === null
         ? null
-        : diffCommentIdentityKey(previousIdentity);
+        : DiffReviewIdentity.key(previousIdentity);
     const shouldRecoverDraft =
       previousKey !== null &&
       identityRecoveryKeysRef.current.delete(previousKey);
@@ -375,7 +374,7 @@ export function useDiffComments({
       command: "save_diff_comment" | "update_diff_comment",
       operation: () => ReturnType<DiffCommentCommands["save"]>,
     ): Promise<boolean> => {
-      const originKey = diffCommentIdentityKey(originIdentity);
+      const originKey = DiffReviewIdentity.key(originIdentity);
       if (mutationInFlightRef.current.has(originKey)) {
         return false;
       }

@@ -1,10 +1,9 @@
 import type {
   FileChangeStatus,
-  FileDiff,
   FileReview,
   OmissionReason,
 } from "@/features/diff/domain/fileDiff";
-import { deriveDiffAvailability } from "@/features/diff/domain/fileDiff";
+import { FileDiff } from "@/features/diff/domain/fileDiff";
 import type {
   IgnoredPage,
   RepositoryDiffFilter,
@@ -131,7 +130,7 @@ export function toDiffViewerFileDiff(
       path: selection.path,
     },
     review: viewerReview,
-    availability: deriveDiffAvailability(viewerReview),
+    availability: FileDiff.deriveAvailability(viewerReview),
   };
 }
 
