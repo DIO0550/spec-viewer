@@ -44,3 +44,4 @@ export type {
   SpecTree as SpecTreeData,
 } from "@/features/specs/types/spec";
 export { useSpecFileWatcher } from "./hooks/useSpecFileWatcher";
+export type { SpecFileWatchNotification } from "./domain/specFileWatchNotification";

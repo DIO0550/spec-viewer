@@ -1,4 +1,3 @@
-import type { Event as TauriEvent } from "@tauri-apps/api/event";
 import { act, useLayoutEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
@@ -7,15 +6,12 @@ import {
   useViewRefresh,
 } from "@/app/App/hooks/useViewRefresh";
 import { SpecViewSelection } from "@/features/specs/domain/specViewSelection";
+import type { SpecFileWatchNotification } from "@/features/specs";
 import type {
   SpecFileWatchSubscriber,
   StartSpecFileWatchCommand,
   StopSpecFileWatchCommand,
 } from "@/features/specs/hooks/useSpecFileWatcher";
-import {
-  SPEC_FILE_WATCH_CHANGED_EVENT,
-  SPEC_FILE_WATCH_ERROR_EVENT,
-} from "@/lib/api/tauri/specFileWatchEvents";
 import { SpecFileWatchChangeKind } from "@/features/specs/types/watch";
 import { WorkspacePath } from "@/domains/workspacePath";
 import { getUnknownErrorMessage } from "@/utils/errorMessage";
@@ -37,17 +33,23 @@ const startResponse = {
   debounceMs: 100,
 };
 
-type WatchHandlers = Map<string, (event: TauriEvent<unknown>) => void>;
+type WatchHandlers = Map<
+  string,
+  (notification: SpecFileWatchNotification) => void
+>;
+const watchNotificationKey = "notification";
 
 function createWatcher(handlers: WatchHandlers): {
   startWatch: StartSpecFileWatchCommand;
   stopWatch: StopSpecFileWatchCommand;
   subscribe: SpecFileWatchSubscriber;
 } {
-  const subscribe = vi.fn(async (eventName, handler) => {
-    handlers.set(eventName, handler as (event: TauriEvent<unknown>) => void);
-    return vi.fn();
-  }) as unknown as SpecFileWatchSubscriber;
+  const subscribe = vi.fn(
+    async (handler: (notification: SpecFileWatchNotification) => void) => {
+      handlers.set(watchNotificationKey, handler);
+      return vi.fn();
+    },
+  ) satisfies SpecFileWatchSubscriber;
 
   return {
     startWatch: vi.fn(async () => startResponse),
@@ -133,15 +135,11 @@ function fireChanged(
   changeKind: SpecFileWatchChangeKind,
 ): void {
   act(() => {
-    handlers.get(SPEC_FILE_WATCH_CHANGED_EVENT)?.({
-      payload: {
-        workspacePath: "/workspace",
-        specId: "spec-1",
-        fileKey: "impl",
-        changeKind,
-        path: "/workspace/spec-1/impl.md",
-      },
-    } as TauriEvent<unknown>);
+    handlers.get(watchNotificationKey)?.({
+      type: changeKind === "markdown" ? "markdownChanged" : "configChanged",
+      scope: { workspacePath, specId: "spec-1", fileKey: "impl" },
+      path: "/workspace/spec-1/impl.md",
+    });
   });
 }
 
@@ -393,14 +391,11 @@ test("watcherエラーイベントで監視失敗メッセージとevent.message
   await flush();
 
   act(() => {
-    handlers.get(SPEC_FILE_WATCH_ERROR_EVENT)?.({
-      payload: {
-        workspacePath: "/workspace",
-        specId: "spec-1",
-        fileKey: "impl",
-        message: "watch died",
-      },
-    } as TauriEvent<unknown>);
+    handlers.get(watchNotificationKey)?.({
+      type: "watchFailed",
+      scope: { workspacePath, specId: "spec-1", fileKey: "impl" },
+      message: "watch died",
+    });
   });
 
   expect(onError).toHaveBeenCalledWith(
@@ -421,7 +416,7 @@ test("selection変更commit後のpassive effect前に旧watch eventを受けて�
     watcher,
   });
   await flush();
-  const previousChangedHandler = handlers.get(SPEC_FILE_WATCH_CHANGED_EVENT);
+  const previousChangedHandler = handlers.get(watchNotificationKey);
   const nextSelection = SpecViewSelection.synchronize(
     SpecViewSelection.empty(),
     {
@@ -441,14 +436,10 @@ test("selection変更commit後のpassive effect前に旧watch eventを受けて�
     },
     () => {
       previousChangedHandler?.({
-        payload: {
-          workspacePath: "/workspace",
-          specId: "spec-1",
-          fileKey: "impl",
-          changeKind: "markdown",
-          path: "/workspace/spec-1/impl.md",
-        },
-      } as TauriEvent<unknown>);
+        type: "markdownChanged",
+        scope: { workspacePath, specId: "spec-1", fileKey: "impl" },
+        path: "/workspace/spec-1/impl.md",
+      });
     },
   );
   await flush();

@@ -15,6 +15,7 @@ import {
 } from "@/features/specs/hooks/useSpecFileWatcher";
 import type { StartSpecFileWatchResponse } from "@/features/specs/types/watch";
 import { WorkspacePath } from "@/domains/workspacePath";
+import type { SpecFileWatchNotification } from "@/features/specs/domain/specFileWatchNotification";
 
 type WatcherErrorHandler = NonNullable<
   UseSpecFileWatcherOptions["onWatcherError"]
@@ -56,11 +57,18 @@ async function flush(): Promise<void> {
 
 function renderWatcher(commands: WatcherCommands): {
   rerender: (specId: string) => void;
+  notify: (notification: SpecFileWatchNotification) => void;
+  onMarkdownChange: ReturnType<typeof vi.fn>;
   unmount: () => void;
 } {
   const container = document.createElement("div");
   const root = createRoot(container);
-  const subscribe = vi.fn(async () => vi.fn()) as SpecFileWatchSubscriber;
+  let notify: (notification: SpecFileWatchNotification) => void = () =>
+    undefined;
+  const subscribe: SpecFileWatchSubscriber = async (handler) => {
+    notify = handler;
+    return () => undefined;
+  };
   const onMarkdownChange = vi.fn();
 
   function TestComponent({ specId }: Readonly<{ specId: string }>): null {
@@ -80,6 +88,10 @@ function renderWatcher(commands: WatcherCommands): {
   });
 
   return {
+    notify: (notification) => {
+      notify(notification);
+    },
+    onMarkdownChange,
     rerender: (specId) => {
       act(() => {
         root.render(<TestComponent specId={specId} />);
@@ -123,6 +135,52 @@ test("start失敗後もqueueを回復して次generationを開始する", async 
   expect(onWatcherError).toHaveBeenCalledWith(
     expect.objectContaining({ message: "spec-a start failed" }),
   );
+});
+
+test("監視中の失敗を通知し次の選択で変更通知を処理できる", async () => {
+  const onWatcherError = vi.fn<WatcherErrorHandler>();
+  const startWatch = vi.fn<StartSpecFileWatchCommand>(async (request) =>
+    createStartResponse(request.specId),
+  );
+  const stopWatch = vi.fn<StopSpecFileWatchCommand>(async () => ({
+    stopped: true,
+  }));
+  const watcher = renderWatcher({ onWatcherError, startWatch, stopWatch });
+  await flush();
+
+  act(() => {
+    watcher.notify({
+      type: "watchFailed",
+      scope: {
+        workspacePath: WorkspacePath.fromString("/workspace"),
+        specId: "spec-a",
+        fileKey: "impl",
+      },
+      message: "watch died",
+    });
+  });
+  expect(onWatcherError).toHaveBeenCalledWith(
+    expect.objectContaining({ message: "watch died" }),
+  );
+
+  watcher.rerender("spec-b");
+  await flush();
+  act(() => {
+    watcher.notify({
+      type: "markdownChanged",
+      scope: {
+        workspacePath: WorkspacePath.fromString("/workspace"),
+        specId: "spec-b",
+        fileKey: "impl",
+      },
+      path: "/workspace/spec-b/impl.md",
+    });
+  });
+
+  expect(startWatch).toHaveBeenCalledTimes(2);
+  expect(watcher.onMarkdownChange).toHaveBeenCalledTimes(1);
+  watcher.unmount();
+  await flush();
 });
 
 test("stop失敗後もqueueを回復して次generationを開始する", async () => {

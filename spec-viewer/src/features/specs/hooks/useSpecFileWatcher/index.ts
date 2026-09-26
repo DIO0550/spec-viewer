@@ -1,23 +1,24 @@
-import { listen, type Event as TauriEvent } from "@tauri-apps/api/event";
+import { listen } from "@tauri-apps/api/event";
 import { useEffect, useLayoutEffect, useRef } from "react";
 import {
   SelectionIdentity,
   type SelectionIdentity as SelectionIdentityType,
   SpecViewSelection,
   type SpecViewSelection as SpecViewSelectionType,
-  type SpecViewTargetScope,
 } from "@/features/specs/domain/specViewSelection";
+import {
+  SpecFileWatchNotification,
+  type SpecFileWatchNotification as WatchNotification,
+} from "@/features/specs/domain/specFileWatchNotification";
 import type {
-  SpecFileWatchChangedEvent,
-  SpecFileWatchErrorEvent,
   StartSpecFileWatchRequest,
   StartSpecFileWatchResponse,
   StopSpecFileWatchResponse,
 } from "@/features/specs/types/watch";
 import {
-  SPEC_FILE_WATCH_CHANGED_EVENT,
-  SPEC_FILE_WATCH_ERROR_EVENT,
-} from "@/lib/api/tauri/specFileWatchEvents";
+  createSpecWatchSubscriber,
+  type SpecWatchSubscriber,
+} from "@/features/specs/services/specFileWatchEvents";
 import {
   startSpecFileWatch as defaultStartSpecFileWatch,
   stopSpecFileWatch as defaultStopSpecFileWatch,
@@ -30,26 +31,29 @@ export type StartSpecFileWatchCommand = (
 
 export type StopSpecFileWatchCommand = () => Promise<StopSpecFileWatchResponse>;
 
-export type SpecFileWatchSubscriber = <Payload>(
-  eventName: string,
-  /** Handles a received event. @param event - The received Tauri event. */
-  handler: (event: TauriEvent<Payload>) => void,
-) => Promise<() => void>;
+export type SpecFileWatchSubscriber = SpecWatchSubscriber;
 
 export type SpecFileWatchScope = StartSpecFileWatchRequest;
 
 export type UseSpecFileWatcherOptions = Readonly<{
   selection: SpecViewSelectionType;
   /** Called on Markdown change. @param event - The file watch change event. */
-  onMarkdownChange: (event: SpecFileWatchChangedEvent) => void | Promise<void>;
-  onConfigChange?: (event: SpecFileWatchChangedEvent) => void | Promise<void>;
-  onWatcherError?: (event: SpecFileWatchErrorEvent) => void;
+  onMarkdownChange: (
+    event: Extract<WatchNotification, { type: "markdownChanged" }>,
+  ) => void | Promise<void>;
+  onConfigChange?: (
+    event: Extract<WatchNotification, { type: "configChanged" }>,
+  ) => void | Promise<void>;
+  onWatcherError?: (
+    event: Extract<WatchNotification, { type: "watchFailed" }>,
+  ) => void;
   startWatch?: StartSpecFileWatchCommand;
   stopWatch?: StopSpecFileWatchCommand;
   subscribe?: SpecFileWatchSubscriber;
 }>;
 
 let specFileWatchLifecycleQueue: Promise<void> = Promise.resolve();
+const defaultSubscribe = createSpecWatchSubscriber(listen);
 
 /**
  * Serializes commands that mutate the backend's single global watcher.
@@ -71,7 +75,7 @@ function enqueueSpecFileWatchLifecycleOperation(
 export function useSpecFileWatcher(options: UseSpecFileWatcherOptions): void {
   const startWatch = options.startWatch ?? defaultStartSpecFileWatch;
   const stopWatch = options.stopWatch ?? defaultStopSpecFileWatch;
-  const subscribe = options.subscribe ?? listen;
+  const subscribe = options.subscribe ?? defaultSubscribe;
   const { fileKey, specId, targetScope, workspacePath } = options.selection;
   const activeWatchTarget = SpecViewSelection.watchTarget(options.selection);
   const activeSelectionIdentity = activeWatchTarget?.selectionIdentity ?? null;
@@ -99,52 +103,34 @@ export function useSpecFileWatcher(options: UseSpecFileWatcherOptions): void {
     let cleanupListeners: (() => void) | null = null;
 
     const startCurrentWatch = async (): Promise<void> => {
-      let unlistenChanged: (() => void) | null = null;
-      let unlistenError: (() => void) | null = null;
       try {
-        unlistenChanged = await subscribe<SpecFileWatchChangedEvent>(
-          SPEC_FILE_WATCH_CHANGED_EVENT,
-          (event) => {
-            if (
-              !isActive ||
-              !isSpecFileWatchEventForSelectionIdentity(
-                event.payload,
-                targetScope,
-                activeSelectionIdentityRef.current,
-              )
-            ) {
-              return;
-            }
+        cleanupListeners = await subscribe((notification) => {
+          const currentIdentity = activeSelectionIdentityRef.current;
+          if (
+            !isActive ||
+            currentIdentity === null ||
+            !SelectionIdentity.equals(
+              currentIdentity,
+              SpecFileWatchNotification.identityOf(notification, targetScope),
+            )
+          ) {
+            return;
+          }
 
-            if (event.payload.changeKind === "markdown") {
-              void options.onMarkdownChange(event.payload);
-              return;
-            }
-
-            void options.onConfigChange?.(event.payload);
-          },
-        );
-        unlistenError = await subscribe<SpecFileWatchErrorEvent>(
-          SPEC_FILE_WATCH_ERROR_EVENT,
-          (event) => {
-            if (
-              !isActive ||
-              !isSpecFileWatchEventForSelectionIdentity(
-                event.payload,
-                targetScope,
-                activeSelectionIdentityRef.current,
-              )
-            ) {
-              return;
-            }
-
-            options.onWatcherError?.(event.payload);
-          },
-        );
-        cleanupListeners = () => {
-          unlistenChanged?.();
-          unlistenError?.();
-        };
+          switch (notification.type) {
+            case "markdownChanged":
+              void options.onMarkdownChange(notification);
+              break;
+            case "configChanged":
+              void options.onConfigChange?.(notification);
+              break;
+            case "watchFailed":
+              options.onWatcherError?.(notification);
+              break;
+            default:
+              notification satisfies never;
+          }
+        });
 
         if (!isActive) {
           cleanupListeners();
@@ -159,8 +145,7 @@ export function useSpecFileWatcher(options: UseSpecFileWatcherOptions): void {
           await startWatch(scope);
         });
       } catch (error) {
-        unlistenChanged?.();
-        unlistenError?.();
+        cleanupListeners?.();
         cleanupListeners = null;
 
         if (!isActive) {
@@ -168,7 +153,12 @@ export function useSpecFileWatcher(options: UseSpecFileWatcherOptions): void {
         }
 
         options.onWatcherError?.({
-          ...scope,
+          type: "watchFailed",
+          scope: {
+            workspacePath: WorkspacePath.fromString(scope.workspacePath),
+            specId: scope.specId,
+            fileKey: scope.fileKey,
+          },
           message:
             error instanceof Error
               ? error.message
@@ -198,61 +188,6 @@ export function useSpecFileWatcher(options: UseSpecFileWatcherOptions): void {
     targetScope,
     workspacePath,
   ]);
-}
-
-/**
- * @param event - Watch event to validate.
- * @param selection - Current selection aggregate.
- * @returns True when the event belongs to the same branded selection identity.
- */
-export function isSpecFileWatchEventForSelection(
-  event: SpecFileWatchChangedEvent | SpecFileWatchErrorEvent,
-  selection: SpecViewSelectionType,
-): boolean {
-  const watchTarget = SpecViewSelection.watchTarget(selection);
-  if (watchTarget === null) {
-    return false;
-  }
-
-  return isSpecFileWatchEventForSelectionIdentity(
-    event,
-    selection.targetScope,
-    watchTarget.selectionIdentity,
-  );
-}
-
-/**
- * @param event - Watch event to validate.
- * @param targetScope - Scope captured by the listener generation.
- * @param currentSelectionIdentity - Latest identity from a committed selection.
- * @returns True when the listener is still aligned with the committed selection.
- */
-function isSpecFileWatchEventForSelectionIdentity(
-  event: SpecFileWatchChangedEvent | SpecFileWatchErrorEvent,
-  targetScope: SpecViewTargetScope,
-  currentSelectionIdentity: SelectionIdentityType | null,
-): boolean {
-  if (currentSelectionIdentity === null) {
-    return false;
-  }
-
-  const eventFileSelection = SpecViewSelection.synchronize(
-    SpecViewSelection.empty(),
-    {
-      workspacePath: WorkspacePath.fromString(event.workspacePath),
-      specId: event.specId,
-      fileKey: event.fileKey,
-    },
-  );
-  const eventSelection = SpecViewSelection.selectTargetScope(
-    eventFileSelection,
-    targetScope,
-  );
-
-  return SelectionIdentity.equals(
-    currentSelectionIdentity,
-    SelectionIdentity.fromSelection(eventSelection),
-  );
 }
 
 /**
