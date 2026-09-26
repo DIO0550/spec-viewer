@@ -85,10 +85,6 @@ export type { SpecCommands } from "./specCommands";
 export { specCommands } from "./specCommands";
 export { startSpecFileWatch } from "./startSpecFileWatch";
 export { stopSpecFileWatch } from "./stopSpecFileWatch";
-export {
-  subscribeWorkspaceDragDropEvents,
-  type WorkspaceDragDropEvent,
-} from "./subscribeWorkspaceDragDropEvents";
 export { updateComment } from "./updateComment";
 export { validateWorkspaceDirectory } from "./validateWorkspaceDirectory";
 
