@@ -21,14 +21,7 @@ import { CommandErrorDisplay } from "@/components/CommandErrorDisplay";
 import { EmptyState } from "@/components/EmptyState";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { SpecNode as SpecNodeDomain } from "@/features/specs/domain/specNode";
-import {
-  createSpecTreePresentationState,
-  pruneSpecTreeExpansion,
-  revealSpecTreeDestination,
-  type SpecTreePresentationState,
-  specNodeIdentityKey,
-  toggleSpecTreeNode,
-} from "@/features/specs/domain/specTreePresentation";
+import { SpecTreePresentationState } from "@/features/specs/domain/specTreePresentation";
 import type { SpecTreeState } from "@/features/specs/hooks/useSpecs";
 import type {
   ArchiveFailure,
@@ -77,14 +70,14 @@ export function SpecTree({
   onReload,
 }: Props) {
   const [presentation, setPresentation] = useState<SpecTreePresentationState>(
-    () => createSpecTreePresentationState(state.workspacePath, 0),
+    () => SpecTreePresentationState.create(state.workspacePath, 0),
   );
   const rowRefs = useRef(new Map<string, HTMLDivElement>());
 
   useEffect(() => {
     if (state.status === "loading" || state.status === "idle") {
       setPresentation((current) =>
-        createSpecTreePresentationState(
+        SpecTreePresentationState.create(
           state.workspacePath,
           current.loadGeneration + 1,
         ),
@@ -93,7 +86,9 @@ export function SpecTree({
     }
 
     if (state.tree !== null) {
-      setPresentation((current) => pruneSpecTreeExpansion(current, state.tree));
+      setPresentation((current) =>
+        SpecTreePresentationState.pruneExpansion(current, state.tree),
+      );
     }
   }, [state]);
 
@@ -107,7 +102,7 @@ export function SpecTree({
       const expandedNodeKeys = new Set(current.expandedNodeKeys);
       path.slice(0, -1).forEach((node) => {
         if (node.kind !== "archive" && node.children.length > 0) {
-          expandedNodeKeys.add(specNodeIdentityKey(node));
+          expandedNodeKeys.add(SpecTreePresentationState.nodeKey(node));
         }
       });
       return { ...current, expandedNodeKeys };
@@ -128,14 +123,16 @@ export function SpecTree({
       relativeId: archiveReveal.response.destinationNodeId,
     };
     setPresentation((current) =>
-      revealSpecTreeDestination(current, state.tree, {
+      SpecTreePresentationState.revealDestination(current, state.tree, {
         workspacePath: archiveReveal.workspacePath,
         loadGeneration: current.loadGeneration,
         target,
       }),
     );
     requestAnimationFrame(() => {
-      const row = rowRefs.current.get(specNodeIdentityKey(target));
+      const row = rowRefs.current.get(
+        SpecTreePresentationState.nodeKey(target),
+      );
       row?.focus();
       row?.scrollIntoView?.({ block: "nearest" });
     });
@@ -249,7 +246,7 @@ export function SpecTree({
       <div className="spec-tree__list" role="tree">
         {state.tree.specs.map((node) => (
           <SpecTreeItem
-            key={specNodeIdentityKey(node)}
+            key={SpecTreePresentationState.nodeKey(node)}
             node={node}
             depth={0}
             insideArchive={false}
@@ -264,7 +261,9 @@ export function SpecTree({
             onArchiveSpec={onArchiveSpec}
             onRetryArchive={onRetryArchive}
             onToggle={(target) => {
-              setPresentation((current) => toggleSpecTreeNode(current, target));
+              setPresentation((current) =>
+                SpecTreePresentationState.toggleNode(current, target),
+              );
             }}
             registerRow={(key, row) => {
               if (row === null) {
@@ -333,7 +332,7 @@ function SpecTreeItem(props: SpecTreeItemProps) {
     onToggle,
     registerRow,
   } = props;
-  const key = specNodeIdentityKey(node);
+  const key = SpecTreePresentationState.nodeKey(node);
   const isSpec = SpecNodeDomain.isOpenable(node);
   const isSelected = isSpec && selectedSpecId === node.id;
   const hasChildren = node.children.length > 0;
@@ -485,7 +484,7 @@ function SpecTreeItem(props: SpecTreeItemProps) {
           {node.children.map((child) => (
             <SpecTreeItem
               {...props}
-              key={specNodeIdentityKey(child)}
+              key={SpecTreePresentationState.nodeKey(child)}
               node={child}
               depth={depth + 1}
               insideArchive={descendantsAreArchived}

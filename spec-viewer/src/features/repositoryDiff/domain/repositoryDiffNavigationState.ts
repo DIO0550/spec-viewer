@@ -55,7 +55,7 @@ export type RepositoryDiffNavigationAction =
  *
  * @returns A Changed entry with no open files.
  */
-export function createInitialRepositoryDiffNavigationEntry(): RepositoryDiffNavigationEntry {
+function createInitialRepositoryDiffNavigationEntry(): RepositoryDiffNavigationEntry {
   return {
     filter: "changed",
     openPaths: [],
@@ -71,7 +71,7 @@ export function createInitialRepositoryDiffNavigationEntry(): RepositoryDiffNavi
  *
  * @returns Empty navigation state.
  */
-export function createInitialRepositoryDiffNavigationState(): RepositoryDiffNavigationState {
+function createInitialRepositoryDiffNavigationState(): RepositoryDiffNavigationState {
   return {
     entriesByKey: NavigationHistory.empty<RepositoryDiffNavigationEntry>(),
   };
@@ -84,7 +84,7 @@ export function createInitialRepositoryDiffNavigationState(): RepositoryDiffNavi
  * @param action - Key-scoped transition.
  * @returns Updated state or the original reference for a no-op.
  */
-export function reduceRepositoryDiffNavigationState(
+function reduceRepositoryDiffNavigationState(
   state: RepositoryDiffNavigationState,
   action: RepositoryDiffNavigationAction,
 ): RepositoryDiffNavigationState {
@@ -113,7 +113,7 @@ export function reduceRepositoryDiffNavigationState(
  * @param closed - Removed active path.
  * @returns The fallback path, or null.
  */
-export function selectCloseFallback(
+function selectCloseFallback(
   previous: readonly string[],
   remaining: readonly string[],
   closed: string,
@@ -334,3 +334,13 @@ function normalizePath(path: string): string | null {
 function normalizePathValue(path: string): string {
   return path.replace(/\\/g, "/").replace(/^\/+/, "").replace(/\/+/g, "/");
 }
+
+export const RepositoryDiffNavigationEntry = {
+  initial: createInitialRepositoryDiffNavigationEntry,
+  selectCloseFallback: selectCloseFallback,
+} as const;
+
+export const RepositoryDiffNavigationState = {
+  initial: createInitialRepositoryDiffNavigationState,
+  reduce: reduceRepositoryDiffNavigationState,
+} as const;

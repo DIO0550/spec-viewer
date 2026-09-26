@@ -120,9 +120,7 @@ export type FileDiff = Readonly<{
  * @param review - Decoded file review to classify.
  * @returns The safe top-level state for the diff viewer.
  */
-export function deriveDiffAvailability(
-  review: FileReview,
-): FileDiffAvailability {
+function deriveDiffAvailability(review: FileReview): FileDiffAvailability {
   if (review.file.contentClassification === "binary") {
     return { kind: "omitted", reason: "binary" };
   }
@@ -300,4 +298,8 @@ export const StructuredDiff = {
   ): value is Extract<StructuredDiff, { state: "omitted" }> {
     return value.state === "omitted";
   },
+} as const;
+
+export const FileDiff = {
+  deriveAvailability: deriveDiffAvailability,
 } as const;

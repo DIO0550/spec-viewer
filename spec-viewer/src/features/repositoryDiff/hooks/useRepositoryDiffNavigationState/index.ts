@@ -3,11 +3,8 @@ import { useCallback, useMemo, useReducer } from "react";
 import type { FileReviewViewMode } from "@/features/diff/domain/fileDiff";
 import type { RepositoryDiffFilter } from "@/features/repositoryDiff/domain/repositoryDiff";
 import {
-  createInitialRepositoryDiffNavigationEntry,
-  createInitialRepositoryDiffNavigationState,
-  type RepositoryDiffNavigationEntry,
-  type RepositoryDiffNavigationState,
-  reduceRepositoryDiffNavigationState,
+  RepositoryDiffNavigationEntry,
+  RepositoryDiffNavigationState,
 } from "@/features/repositoryDiff/domain/repositoryDiffNavigationState";
 import {
   NavigationHistory,
@@ -48,9 +45,9 @@ export function useRepositoryDiffNavigationState(
   options: UseRepositoryDiffNavigationStateOptions,
 ): UseRepositoryDiffNavigationStateResult {
   const [state, dispatch] = useReducer(
-    reduceRepositoryDiffNavigationState,
+    RepositoryDiffNavigationState.reduce,
     undefined,
-    createInitialRepositoryDiffNavigationState,
+    RepositoryDiffNavigationState.initial,
   );
   const key = useMemo(
     () =>
@@ -66,9 +63,9 @@ export function useRepositoryDiffNavigationState(
   const entry = useMemo(
     () =>
       key === null
-        ? createInitialRepositoryDiffNavigationEntry()
+        ? RepositoryDiffNavigationEntry.initial()
         : (NavigationHistory.get(state.entriesByKey, key) ??
-          createInitialRepositoryDiffNavigationEntry()),
+          RepositoryDiffNavigationEntry.initial()),
     [key, state.entriesByKey],
   );
 

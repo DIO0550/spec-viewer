@@ -13,9 +13,7 @@ export type WorkspaceError = Readonly<{
 }>;
 
 /** @returns A workspace-domain error converted from a load_workspace command error. */
-export function toWorkspaceError(
-  error: LoadWorkspaceCommandError,
-): WorkspaceError {
+function toWorkspaceError(error: LoadWorkspaceCommandError): WorkspaceError {
   return {
     reason: toWorkspaceErrorReason(error.code),
     message: error.message,
@@ -42,3 +40,7 @@ function toWorkspaceErrorReason(
 
   return "unknown";
 }
+
+export const WorkspaceError = {
+  fromCommand: toWorkspaceError,
+} as const;

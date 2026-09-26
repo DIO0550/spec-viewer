@@ -1,10 +1,8 @@
 import { expect, test } from "vitest";
 
 import {
-  createInitialRepositoryDiffNavigationEntry,
-  createInitialRepositoryDiffNavigationState,
-  type RepositoryDiffNavigationState,
-  reduceRepositoryDiffNavigationState,
+  RepositoryDiffNavigationEntry,
+  RepositoryDiffNavigationState,
 } from "@/features/repositoryDiff/domain/repositoryDiffNavigationState";
 import {
   NavigationHistory,
@@ -51,7 +49,7 @@ test("repository navigation keyはbaseとsnapshotに依存しない", () => {
 });
 
 test("未訪問repositoryはChanged・tabなし・Unifiedで始まる", () => {
-  expect(createInitialRepositoryDiffNavigationEntry()).toEqual({
+  expect(RepositoryDiffNavigationEntry.initial()).toEqual({
     filter: "changed",
     openPaths: [],
     activePath: null,
@@ -74,12 +72,12 @@ test("openは順序を保って重複せず既存tabをactiveにする", () => {
 
 test("activateはopen中のpathだけをactiveにする", () => {
   let state = openPaths(["a.ts", "b.ts"]);
-  state = reduceRepositoryDiffNavigationState(state, {
+  state = RepositoryDiffNavigationState.reduce(state, {
     type: "tabActivated",
     key: worktreeAKey,
     path: "a.ts",
   });
-  const unchanged = reduceRepositoryDiffNavigationState(state, {
+  const unchanged = RepositoryDiffNavigationState.reduce(state, {
     type: "tabActivated",
     key: worktreeAKey,
     path: "missing.ts",
@@ -93,12 +91,12 @@ test("activateはopen中のpathだけをactiveにする", () => {
 
 test("inactive tabを閉じてもactiveを維持する", () => {
   let state = openPaths(["a.ts", "b.ts", "c.ts"]);
-  state = reduceRepositoryDiffNavigationState(state, {
+  state = RepositoryDiffNavigationState.reduce(state, {
     type: "tabActivated",
     key: worktreeAKey,
     path: "b.ts",
   });
-  state = reduceRepositoryDiffNavigationState(state, {
+  state = RepositoryDiffNavigationState.reduce(state, {
     type: "tabClosed",
     key: worktreeAKey,
     path: "a.ts",
@@ -117,7 +115,7 @@ test.each([
   [["a.ts", "b.ts", "c.ts"], "c.ts", "b.ts"],
   [["a.ts"], "a.ts", null],
 ] as const)("active closeは右、左、nullの順でfallbackする", (paths, closed, expected) => {
-  const state = reduceRepositoryDiffNavigationState(openPaths(paths), {
+  const state = RepositoryDiffNavigationState.reduce(openPaths(paths), {
     type: "tabClosed",
     key: worktreeAKey,
     path: closed,
@@ -130,18 +128,18 @@ test.each([
 
 test("[R199-VIEW-004] viewer modeとpath別jump targetをworktreeごとに復元する", () => {
   let state = openPaths(["a.ts"]);
-  state = reduceRepositoryDiffNavigationState(state, {
+  state = RepositoryDiffNavigationState.reduce(state, {
     type: "viewerModeChanged",
     key: worktreeAKey,
     mode: "editor",
   });
-  state = reduceRepositoryDiffNavigationState(state, {
+  state = RepositoryDiffNavigationState.reduce(state, {
     type: "jumpTargetChanged",
     key: worktreeAKey,
     path: "a.ts",
     changeId: "hunk-1",
   });
-  state = reduceRepositoryDiffNavigationState(state, {
+  state = RepositoryDiffNavigationState.reduce(state, {
     type: "pathOpened",
     key: worktreeBKey,
     path: "b.ts",
@@ -165,13 +163,13 @@ test("[R199-VIEW-004] viewer modeとpath別jump targetをworktreeごとに復元
 
 test("null jumpは保存値をclearしclosed pathのjumpもpruneする", () => {
   let state = openPaths(["a.ts"]);
-  state = reduceRepositoryDiffNavigationState(state, {
+  state = RepositoryDiffNavigationState.reduce(state, {
     type: "jumpTargetChanged",
     key: worktreeAKey,
     path: "a.ts",
     changeId: "hunk-1",
   });
-  state = reduceRepositoryDiffNavigationState(state, {
+  state = RepositoryDiffNavigationState.reduce(state, {
     type: "jumpTargetChanged",
     key: worktreeAKey,
     path: "a.ts",
@@ -185,18 +183,18 @@ test("null jumpは保存値をclearしclosed pathのjumpもpruneする", () => {
 
 test("reconcileはrepository全体のvalid fileだけを残してfallbackする", () => {
   let state = openPaths(["a.ts", "b.ts", "c.ts"]);
-  state = reduceRepositoryDiffNavigationState(state, {
+  state = RepositoryDiffNavigationState.reduce(state, {
     type: "jumpTargetChanged",
     key: worktreeAKey,
     path: "b.ts",
     changeId: "hunk-b",
   });
-  state = reduceRepositoryDiffNavigationState(state, {
+  state = RepositoryDiffNavigationState.reduce(state, {
     type: "directoryToggled",
     key: worktreeAKey,
     path: "vendor",
   });
-  state = reduceRepositoryDiffNavigationState(state, {
+  state = RepositoryDiffNavigationState.reduce(state, {
     type: "reconciled",
     key: worktreeAKey,
     validFilePaths: ["a.ts", "c.ts"],
@@ -219,7 +217,7 @@ test("reconcileはrepository全体のvalid fileだけを残してfallbackする"
 
 test("[R199-TREE-003] filter切替はopen tabsをpruneしない", () => {
   const opened = openPaths(["vendor/ignored.log"]);
-  const state = reduceRepositoryDiffNavigationState(opened, {
+  const state = RepositoryDiffNavigationState.reduce(opened, {
     type: "filterChanged",
     key: worktreeAKey,
     filter: "all",
@@ -234,14 +232,14 @@ test("[R199-TREE-003] filter切替はopen tabsをpruneしない", () => {
 });
 
 test("不正pathと未open path操作は参照同一のno-opになる", () => {
-  const initial = createInitialRepositoryDiffNavigationState();
-  const invalid = reduceRepositoryDiffNavigationState(initial, {
+  const initial = RepositoryDiffNavigationState.initial();
+  const invalid = RepositoryDiffNavigationState.reduce(initial, {
     type: "pathOpened",
     key: worktreeAKey,
     path: "../outside",
   });
   const opened = openPaths(["a.ts"]);
-  const missing = reduceRepositoryDiffNavigationState(opened, {
+  const missing = RepositoryDiffNavigationState.reduce(opened, {
     type: "tabClosed",
     key: worktreeAKey,
     path: "missing.ts",
@@ -253,12 +251,12 @@ test("不正pathと未open path操作は参照同一のno-opになる", () => {
 
 test("同値actionと同値reconcileはimmutable identityを維持する", () => {
   const opened = openPaths(["a.ts"]);
-  const duplicate = reduceRepositoryDiffNavigationState(opened, {
+  const duplicate = RepositoryDiffNavigationState.reduce(opened, {
     type: "pathOpened",
     key: worktreeAKey,
     path: "a.ts",
   });
-  const reconciled = reduceRepositoryDiffNavigationState(opened, {
+  const reconciled = RepositoryDiffNavigationState.reduce(opened, {
     type: "reconciled",
     key: worktreeAKey,
     validFilePaths: ["a.ts"],
@@ -272,23 +270,23 @@ test("同値actionと同値reconcileはimmutable identityを維持する", () =>
 function openPaths(paths: readonly string[]): RepositoryDiffNavigationState {
   return paths.reduce(
     (state, path) =>
-      reduceRepositoryDiffNavigationState(state, {
+      RepositoryDiffNavigationState.reduce(state, {
         type: "pathOpened",
         key: worktreeAKey,
         path,
       }),
-    createInitialRepositoryDiffNavigationState(),
+    RepositoryDiffNavigationState.initial(),
   );
 }
 
 test("directoryは同じpathの再操作で展開を解除する", () => {
-  const initial = createInitialRepositoryDiffNavigationState();
-  const expanded = reduceRepositoryDiffNavigationState(initial, {
+  const initial = RepositoryDiffNavigationState.initial();
+  const expanded = RepositoryDiffNavigationState.reduce(initial, {
     type: "directoryToggled",
     key: worktreeAKey,
     path: "src",
   });
-  const collapsed = reduceRepositoryDiffNavigationState(expanded, {
+  const collapsed = RepositoryDiffNavigationState.reduce(expanded, {
     type: "directoryToggled",
     key: worktreeAKey,
     path: "src",

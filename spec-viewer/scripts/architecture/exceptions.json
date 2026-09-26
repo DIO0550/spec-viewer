@@ -850,13 +850,6 @@
     },
     {
       "rule": "domain-dependency",
-      "from": "src/features/specs/domain/resolveSpecFileSelection/index.ts",
-      "to": "src/features/specs/types/spec/index.ts",
-      "reason": "Existing specs domain uses the legacy spec DTO/type module; separate decoded domain values from transport shapes in #110.",
-      "issue": 110
-    },
-    {
-      "rule": "domain-dependency",
       "from": "src/features/specs/domain/specBundleState/index.ts",
       "to": "npm:@tauri-apps/api/core",
       "reason": "Existing domain error imports transport types, making this target reachable; replace transport-dependent errors and translate them at the infra boundary in #109.",
@@ -1124,13 +1117,6 @@
     {
       "rule": "domain-dependency",
       "from": "src/features/workspace/domain/workspaceNavigation/index.ts",
-      "to": "src/features/workspace/types/viewMode.ts",
-      "reason": "Existing workspace domain depends on a legacy workspace presentation type; move the semantic state into the workspace domain in #113.",
-      "issue": 113
-    },
-    {
-      "rule": "domain-dependency",
-      "from": "src/features/workspace/domain/workspaceNavigation/updateNavigationFromWorktrees.ts",
       "to": "src/features/workspace/types/viewMode.ts",
       "reason": "Existing workspace domain depends on a legacy workspace presentation type; move the semantic state into the workspace domain in #113.",
       "issue": 113

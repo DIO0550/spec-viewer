@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { resolveSpecFileSelection } from "@/features/specs/domain/resolveSpecFileSelection";
+import { SpecTree as SpecTreeDomain } from "@/features/specs/domain/specTree";
 import { createSpecNodeFixture } from "@/features/specs/testing/specNodeFixture";
 import type { SpecTree } from "@/features/specs/types/spec";
 
@@ -22,7 +22,12 @@ const tree: SpecTree = {
 
 test("外部string keyを実在fileのSpecFileKeyへ絞る", () => {
   expect(
-    resolveSpecFileSelection(tree, "/workspace", "079-issue-168", "impl"),
+    SpecTreeDomain.resolveFileSelection(
+      tree,
+      "/workspace",
+      "079-issue-168",
+      "impl",
+    ),
   ).toEqual({
     workspacePath: "/workspace",
     specId: "079-issue-168",
@@ -37,6 +42,11 @@ test.each([
   [tree, "/workspace", "079-issue-168", "unknown-key"],
 ] as const)("未解決のworkspace/spec/fileはnullになる", (candidateTree, workspacePath, specId, fileKey) => {
   expect(
-    resolveSpecFileSelection(candidateTree, workspacePath, specId, fileKey),
+    SpecTreeDomain.resolveFileSelection(
+      candidateTree,
+      workspacePath,
+      specId,
+      fileKey,
+    ),
   ).toBeNull();
 });

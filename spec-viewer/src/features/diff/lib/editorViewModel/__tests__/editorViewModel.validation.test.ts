@@ -1,10 +1,10 @@
 import { expect, test } from "vitest";
 
-import type {
+import {
   FileDiff,
+  Hunk,
   Hunk as HunkType,
 } from "@/features/diff/domain/fileDiff";
-import { deriveDiffAvailability, Hunk } from "@/features/diff/domain/fileDiff";
 import { buildEditorViewModel } from "@/features/diff/lib/editorViewModel";
 
 test("非先頭のremoved-only 0行new rangeを有効なEOF境界として扱う", () => {
@@ -147,6 +147,6 @@ function createFileDiff(
   return {
     identity: { sourceId: "source:snapshot", path: "file.ts" },
     review,
-    availability: deriveDiffAvailability(review),
+    availability: FileDiff.deriveAvailability(review),
   };
 }
