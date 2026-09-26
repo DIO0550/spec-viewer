@@ -207,7 +207,6 @@ spec-reviewer/
 
 - [ ] コメント群をプロンプトとしてLLMに送信 → md修正提案
 - [ ] "Apply with AI" ボタン: 選択コメント → 修正diff生成
-- [ ] MCP連携: spec skill側への修正フィードバック
 
 ---
 

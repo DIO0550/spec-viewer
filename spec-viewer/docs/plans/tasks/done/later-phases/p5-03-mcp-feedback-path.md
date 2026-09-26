@@ -1,5 +1,7 @@
 # P5.3 MCP Feedback Path
 
+> 2026-09-26: MCP機能の計画はなくなり、このdry-runコピー機能は削除されました。以下は実装当時の記録です。
+
 ## Tasks
 
 - [x] Identify target Spec Skill MCP interface.

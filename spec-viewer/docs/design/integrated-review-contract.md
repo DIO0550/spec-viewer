@@ -35,7 +35,7 @@ domain -> no Tauri / filesystem path / serde JSON detail
 ```
 
 Spec と Diff は `ReviewComment` presentation を共有しますが、anchor、domain model、
-command、store は union 化しません。Spec v2 の export / MCP / unknown-field compatibility
+command、store は union 化しません。Spec v2 の export / unknown-field compatibility
 を Diff v1 が変更しないことが rollback boundary です。
 
 Rust の配置は次の責務を持ちます。

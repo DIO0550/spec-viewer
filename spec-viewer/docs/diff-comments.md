@@ -5,7 +5,7 @@ Repository Diff と Spec Diff の comment は、特定の base / current snapsho
 できない fallback 表示でも同じ Diff comment 経路を使います。
 
 Diff comment は Spec Markdown comment と presentation を共有しますが、anchor、command、
-persistence は分離されています。Spec export、MCP、LLM、JSON v2 の互換性を変更しません。
+persistence は分離されています。Spec export、LLM、JSON v2 の互換性を変更しません。
 
 Spec Diff の比較元を変更すると runtime identity が切り替わり、保存済み comment は
 その base / current snapshot に対して再解決されます。Diff Review panel と行 jump は

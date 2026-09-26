@@ -71,7 +71,7 @@ Markdown が tab に並びます。tab 切替は取得済み bundle を使うた
 Markdown の対象 section / block を選んで comment を作成します。Spec comment は
 Markdown block anchor を使い、右 sidebar から本文更新、返信、resolve / reopen、
 削除、anchor 位置への移動を行えます。Spec comment は Diff comment とは別の
-JSON v2 store、command、export / MCP 契約を使います。
+JSON v2 store、command、export 契約を使います。
 
 ## 3. Repository Diff をレビューする
 

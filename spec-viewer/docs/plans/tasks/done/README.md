@@ -77,7 +77,7 @@ Completed task files are moved here from the active task groups.
 - [P4.15 Secondary Export Actions](./later-phases/p4-15-secondary-export-actions.md)
 - [P5.1 LLM Prompt Export](./later-phases/p5-01-llm-prompt-export.md)
 - [P5.2 Apply With AI Placeholder](./later-phases/p5-02-apply-with-ai-placeholder.md)
-- [P5.3 MCP Feedback Path](./later-phases/p5-03-mcp-feedback-path.md)
+- [P5.3 MCP Feedback Path（廃止済みの履歴）](./later-phases/p5-03-mcp-feedback-path.md)
 - [P6.1 Packaging And Release](./later-phases/p6-01-packaging-and-release.md)
 - [P7.1 Worktree Plugin Worktree Discovery](./later-phases/p7-01-worktree-plugin-worktree-discovery.md)
 - [P7.2 Markdown Copy Selection Reliability](./later-phases/p7-02-markdown-copy-selection-reliability.md)

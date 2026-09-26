@@ -180,7 +180,7 @@ paths and raw control characters are not included in command error messages.
 ## Issue #198 Diff comment contract
 
 Diff comments are an additive v1 store and command family. They do not reuse or migrate
-the Spec comment v2 document, command DTOs, anchors, export payload, MCP surface, or
+the Spec comment v2 document, command DTOs, anchors, export payload, or
 unknown-field preservation behavior. Existing Spec v2 golden read-update-write tests
 remain the compatibility authority.
 
