@@ -347,13 +347,6 @@
     {
       "rule": "domain-dependency",
       "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
-      "to": "npm:@tauri-apps/api/webview",
-      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
-      "issue": 106
-    },
-    {
-      "rule": "domain-dependency",
-      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
       "to": "npm:@tauri-apps/plugin-dialog",
       "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
       "issue": 106
@@ -754,13 +747,6 @@
       "rule": "domain-dependency",
       "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
       "to": "src/lib/api/tauri/stopSpecFileWatch.ts",
-      "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
-      "issue": 106
-    },
-    {
-      "rule": "domain-dependency",
-      "from": "src/features/diff/domain/specDiffWorkspaceState/index.ts",
-      "to": "src/lib/api/tauri/subscribeWorkspaceDragDropEvents.ts",
       "reason": "Existing domain reaches another feature or a mixed barrel; introduce a pure public domain API or approved shared vocabulary in #106.",
       "issue": 106
     },

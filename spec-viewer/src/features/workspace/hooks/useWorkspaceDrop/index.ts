@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  subscribeWorkspaceDragDropEvents,
-  type WorkspaceDragDropEvent,
-} from "@/lib/api/tauri";
+  WorkspaceDropIntent,
+  type WorkspaceDropIntent as WorkspaceDropIntentType,
+} from "@/features/workspace/domain/workspaceDropIntent";
+import { subscribeWorkspaceDragDropEvents } from "@/features/workspace/services/subscribeWorkspaceDragDropEvents";
 import {
   createWorkspaceDropCandidate,
   extractBrowserDropPaths,
@@ -12,7 +13,7 @@ export type WorkspaceDropStatus = "idle" | "dragging";
 
 export type SubscribeWorkspaceDragDropEvents = (
   /** @param handler - 各ドラッグ&ドロップイベントを受け取るコールバック。 */
-  handler: (event: WorkspaceDragDropEvent) => void,
+  handler: (event: WorkspaceDropIntentType) => void,
 ) => Promise<() => void>;
 
 export type UseWorkspaceDropOptions = Readonly<{
@@ -52,6 +53,25 @@ export function useWorkspaceDrop({
     [onDropWorkspacePath, onInvalidDrop],
   );
 
+  const handleDropIntent = useCallback(
+    (intent: WorkspaceDropIntentType): void => {
+      switch (intent.type) {
+        case "enter":
+          setStatus("dragging");
+          break;
+        case "leave":
+          setStatus("idle");
+          break;
+        case "drop":
+          openDroppedPaths(intent.paths);
+          break;
+        default:
+          intent satisfies never;
+      }
+    },
+    [openDroppedPaths],
+  );
+
   useEffect(() => {
     if (isDisabled) {
       setStatus("idle");
@@ -62,19 +82,7 @@ export function useWorkspaceDrop({
     let unlisten: (() => void) | null = null;
 
     void subscribeDragDropEvents((event) => {
-      if (event.type === "enter") {
-        setStatus("dragging");
-        return;
-      }
-
-      if (event.type === "leave") {
-        setStatus("idle");
-        return;
-      }
-
-      if (event.type === "drop") {
-        openDroppedPaths(event.paths);
-      }
+      handleDropIntent(event);
     })
       .then((nextUnlisten) => {
         if (!isSubscribed) {
@@ -95,7 +103,7 @@ export function useWorkspaceDrop({
         unlisten();
       }
     };
-  }, [isDisabled, openDroppedPaths, subscribeDragDropEvents]);
+  }, [handleDropIntent, isDisabled, subscribeDragDropEvents]);
 
   useEffect(() => {
     if (isDisabled) {
@@ -130,7 +138,11 @@ export function useWorkspaceDrop({
     const dropWorkspace = (event: DragEvent): void => {
       event.preventDefault();
       dragDepth = 0;
-      openDroppedPaths(extractBrowserDropPaths(event.dataTransfer));
+      handleDropIntent(
+        WorkspaceDropIntent.fromPaths(
+          extractBrowserDropPaths(event.dataTransfer),
+        ),
+      );
     };
 
     document.addEventListener("dragenter", showDropTarget);
@@ -144,7 +156,7 @@ export function useWorkspaceDrop({
       document.removeEventListener("dragleave", hideDropTarget);
       document.removeEventListener("drop", dropWorkspace);
     };
-  }, [isDisabled, openDroppedPaths]);
+  }, [handleDropIntent, isDisabled]);
 
   return { status };
 }
