@@ -45,7 +45,6 @@ const meta: Meta<typeof SpecViewCommentSidebar> = {
     ),
   ],
   args: {
-    comments: [comment],
     resetKeys: {
       workspaceRoot,
       specId: "phase-1-viewer",
@@ -63,7 +62,6 @@ const meta: Meta<typeof SpecViewCommentSidebar> = {
     onReloadComments: fn(),
   },
   argTypes: {
-    comments: { control: false },
     resetKeys: { control: false },
     listState: { control: false },
     operationState: { control: false },
@@ -85,7 +83,6 @@ export const Default: Story = {};
 
 export const Empty: Story = {
   args: {
-    comments: [],
     listState: CommentListState.loaded([]),
     activeCommentId: null,
     anchorDisplayStates: [],
@@ -94,7 +91,6 @@ export const Empty: Story = {
 
 export const Loading: Story = {
   args: {
-    comments: [],
     listState: CommentListState.loading(),
     activeCommentId: null,
     anchorDisplayStates: [],
@@ -103,7 +99,6 @@ export const Loading: Story = {
 
 export const EdgeCases: Story = {
   args: {
-    comments: [comment],
     listState: CommentListState.error({
       feature: "comments",
       code: "commentRepository",

@@ -17,7 +17,6 @@ export type {
   ExportCommentsResponse,
   ExportCommentsTarget,
   GenerateLlmPromptResponse,
-  SpecSkillMcpFeedbackPayload,
 } from "@/features/comments/types/comment";
 export { CommentThread } from "./components/CommentThread";
 export {
@@ -35,7 +34,3 @@ export {
   useMarkdownViewerComments,
 } from "./hooks/useMarkdownViewerComments";
 export { createTextHash } from "./lib/comment-anchor-draft";
-export {
-  createSpecSkillMcpFeedbackDryRunPayload,
-  renderSpecSkillMcpFeedbackDryRunPayload,
-} from "./lib/mcpFeedback";

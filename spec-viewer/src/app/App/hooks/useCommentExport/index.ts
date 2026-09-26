@@ -1,15 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import type { SpecViewResetKeys } from "@/app/App/hooks/types";
 import {
-  type Comment,
   type CommentExportOperation,
   type CommentExportScope,
-  createSpecSkillMcpFeedbackDryRunPayload,
   type ExportCommentsResponse,
   type ExportCommentsTarget,
   type GenerateLlmPromptResponse,
-  renderSpecSkillMcpFeedbackDryRunPayload,
-  type SpecSkillMcpFeedbackPayload,
 } from "@/features/comments";
 import {
   exportComments as defaultExportComments,
@@ -19,7 +15,6 @@ import {
 import { ExportCommentsCommandError } from "@/lib/api/tauri/exportComments";
 import { GenerateLlmPromptCommandError } from "@/lib/api/tauri/generateLlmPrompt";
 import { copyTextToClipboard } from "@/lib/clipboard";
-import { getUnknownErrorMessage } from "@/utils/errorMessage";
 
 export type CommentExportState =
   | Readonly<{ status: "idle"; operation: null; message: null }>
@@ -48,7 +43,6 @@ export type CommentExportCommands = Readonly<{
 
 export type UseCommentExportOptions = Readonly<{
   resetKeys: SpecViewResetKeys;
-  comments: readonly Comment[];
   commands?: CommentExportCommands;
   copyText?: (text: string) => Promise<void>;
 }>;
@@ -59,8 +53,6 @@ export type UseCommentExportResult = Readonly<{
   exportCommentScope: (scope: CommentExportScope) => void;
   /** Copies the LLM prompt for a scope. @param scope - Export scope (workspace/spec/file). */
   copyLlmPromptScope: (scope: CommentExportScope) => void;
-  /** Copies the MCP feedback dry-run payload for the current file. */
-  copyMcpFeedbackPayload: () => Promise<void>;
 }>;
 
 const idleCommentExportState: CommentExportState = {
@@ -76,13 +68,13 @@ const defaultCommentExportCommands: CommentExportCommands = {
 };
 
 /**
- * @param options - Reset keys, current comments and injectable commands / clipboard writer.
- * @returns Comment export / LLM prompt / MCP feedback progress state and triggers.
+ * @param options - Reset keys and injectable commands / clipboard writer.
+ * @returns Comment export / LLM prompt progress state and triggers.
  */
 export function useCommentExport(
   options: UseCommentExportOptions,
 ): UseCommentExportResult {
-  const { resetKeys, comments } = options;
+  const { resetKeys } = options;
   const commands = options.commands ?? defaultCommentExportCommands;
   const copyText = options.copyText ?? copyTextToClipboard;
   const workspaceRoot = resetKeys.workspaceRoot;
@@ -230,47 +222,10 @@ export function useCommentExport(
     [fileKey, runLlmPromptCopy, specId],
   );
 
-  const copyMcpFeedbackPayload = useCallback(async (): Promise<void> => {
-    if (workspaceRoot === null || specId === null || fileKey === null) {
-      return;
-    }
-
-    setCommentExportState({
-      status: "saving",
-      operation: "mcpFeedback",
-      message: "MCP feedback dry-run payloadを準備中",
-    });
-
-    try {
-      const payload = createSpecSkillMcpFeedbackDryRunPayload({
-        workspacePath: workspaceRoot,
-        specId,
-        fileKey,
-        comments,
-        generatedAt: new Date().toISOString(),
-      });
-
-      await copyText(renderSpecSkillMcpFeedbackDryRunPayload(payload));
-
-      setCommentExportState({
-        status: "success",
-        operation: "mcpFeedback",
-        message: formatMcpFeedbackCopySuccessMessage(payload),
-      });
-    } catch (error) {
-      setCommentExportState({
-        status: "error",
-        operation: "mcpFeedback",
-        message: getUnknownErrorMessage(error),
-      });
-    }
-  }, [comments, copyText, fileKey, specId, workspaceRoot]);
-
   return {
     commentExportState,
     exportCommentScope,
     copyLlmPromptScope,
-    copyMcpFeedbackPayload,
   };
 }
 
@@ -286,11 +241,4 @@ function formatLlmPromptCopySuccessMessage(
   response: GenerateLlmPromptResponse,
 ): string {
   return `${response.contextFileCount}ファイル / ${response.commentCount}件のコメントを含むLLM promptをコピーしました。`;
-}
-
-/** @returns A compact success message for copied Spec Skill MCP feedback dry-runs. */
-function formatMcpFeedbackCopySuccessMessage(
-  payload: SpecSkillMcpFeedbackPayload,
-): string {
-  return `${payload.summary.commentCount}件のコメントを${payload.interface.toolName}向けdry-run MCP feedback payloadとしてコピーしました。`;
 }

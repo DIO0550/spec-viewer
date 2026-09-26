@@ -83,7 +83,6 @@ const meta: Meta<typeof CommentSidebar> = {
     onReload: fn(),
     onExportComments: fn(),
     onCopyLlmPrompt: fn(),
-    onCopyMcpFeedback: fn(),
   },
   argTypes: {
     listState: { control: false },
@@ -99,7 +98,6 @@ const meta: Meta<typeof CommentSidebar> = {
     onReload: { control: false },
     onExportComments: { control: false },
     onCopyLlmPrompt: { control: false },
-    onCopyMcpFeedback: { control: false },
   },
 };
 

@@ -55,7 +55,6 @@ export const uiText = {
     exportWorkspaceComments: "ワークスペースのコメントを書き出す",
     copyPrompt: "AI用プロンプトをコピー",
     prompt: "AI用プロンプト",
-    mcpFeedback: "MCP Feedback",
     applyAi: "AI適用",
     applyAiLabel: "コメントをAIで適用",
     applyAiPlaceholder:

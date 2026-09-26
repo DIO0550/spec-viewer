@@ -117,7 +117,6 @@ function renderReadySidebar(
     exportState?: CommentExportState;
     onExportComments?: (scope: CommentExportScope) => void;
     onCopyLlmPrompt?: (scope: CommentExportScope) => void;
-    onCopyMcpFeedback?: () => void;
     onReload?: () => void;
   }> = {},
 ): RenderResult {
@@ -151,7 +150,6 @@ function renderReadySidebar(
       onReload={options.onReload ?? vi.fn()}
       onExportComments={options.onExportComments}
       onCopyLlmPrompt={options.onCopyLlmPrompt}
-      onCopyMcpFeedback={options.onCopyMcpFeedback}
     />,
   );
 }
@@ -161,7 +159,6 @@ function renderEmptySidebar(
     exportState?: CommentExportState;
     onExportComments?: (scope: CommentExportScope) => void;
     onCopyLlmPrompt?: (scope: CommentExportScope) => void;
-    onCopyMcpFeedback?: () => void;
   }> = {},
 ): RenderResult {
   return renderComponent(
@@ -193,7 +190,6 @@ function renderEmptySidebar(
       onReload={vi.fn()}
       onExportComments={options.onExportComments}
       onCopyLlmPrompt={options.onCopyLlmPrompt}
-      onCopyMcpFeedback={options.onCopyMcpFeedback}
     />,
   );
 }
@@ -346,7 +342,6 @@ test("CommentSidebarは空状態でexport操作を常設表示しない", () => 
   const result = renderEmptySidebar({
     onExportComments: vi.fn(),
     onCopyLlmPrompt: vi.fn(),
-    onCopyMcpFeedback: vi.fn(),
   });
 
   expect(result.container.textContent).toContain("コメントはまだありません");
@@ -430,7 +425,6 @@ test("CommentSidebarは矢印キーで隣のcomment threadを選択する", () =
 test("CommentSidebarはコメントexport操作を発火して状態を表示する", () => {
   const onExportComments = vi.fn();
   const onCopyLlmPrompt = vi.fn();
-  const onCopyMcpFeedback = vi.fn();
   const result = renderReadySidebar({
     exportState: {
       status: "success",
@@ -439,7 +433,6 @@ test("CommentSidebarはコメントexport操作を発火して状態を表示す
     },
     onExportComments,
     onCopyLlmPrompt,
-    onCopyMcpFeedback,
   });
 
   expect(
@@ -449,6 +442,8 @@ test("CommentSidebarはコメントexport操作を発火して状態を表示す
   ).toBeNull();
 
   openSecondaryActions(result);
+
+  expect(result.container.textContent).not.toContain("MCP Feedback");
 
   const fileExportButton = result.container.querySelector(
     '[aria-label="このファイルのコメントを書き出す"]',
@@ -462,47 +457,21 @@ test("CommentSidebarはコメントexport操作を発火して状態を表示す
   const filePromptButton = result.container.querySelector(
     '[aria-label="ファイルのAI用プロンプトをコピー"]',
   ) as HTMLButtonElement;
-  const mcpFeedbackButton = result.container.querySelector(
-    '[aria-label="現在のファイルのMCP feedback payloadをコピー"]',
-  ) as HTMLButtonElement;
 
   act(() => {
     fileExportButton.click();
     specExportButton.click();
     workspaceExportButton.click();
     filePromptButton.click();
-    mcpFeedbackButton.click();
   });
 
   expect(onExportComments).toHaveBeenNthCalledWith(1, "file");
   expect(onExportComments).toHaveBeenNthCalledWith(2, "spec");
   expect(onExportComments).toHaveBeenNthCalledWith(3, "workspace");
   expect(onCopyLlmPrompt).toHaveBeenCalledWith("file");
-  expect(onCopyMcpFeedback).toHaveBeenCalledTimes(1);
   expect(result.container.querySelector('[role="status"]')?.textContent).toBe(
     "Exported 2 comments to /tmp/tasks-comments.md",
   );
-  result.unmount();
-});
-
-test("CommentSidebarはMCP feedback dry-runコピー中状態を表示する", () => {
-  const result = renderReadySidebar({
-    exportState: {
-      status: "saving",
-      operation: "mcpFeedback",
-      message: "Preparing MCP feedback dry-run payload",
-    },
-    onCopyMcpFeedback: vi.fn(),
-  });
-
-  openSecondaryActions(result);
-
-  const mcpFeedbackButton = result.container.querySelector(
-    '[aria-label="現在のファイルのMCP feedback payloadをコピー"]',
-  ) as HTMLButtonElement;
-
-  expect(mcpFeedbackButton.disabled).toBe(true);
-  expect(mcpFeedbackButton.textContent).toContain("コピー中");
   result.unmount();
 });
 

@@ -1,11 +1,5 @@
-import type {
-  Comment,
-  IsoDateTimeString,
-} from "@/features/comments/domain/comment";
-import type {
-  CommentAnchor,
-  CommentAnchorResolution,
-} from "@/features/comments/domain/commentAnchor";
+import type { Comment } from "@/features/comments/domain/comment";
+import type { CommentAnchor } from "@/features/comments/domain/commentAnchor";
 import type { CommentId } from "@/features/comments/domain/commentId";
 import type {
   CommentStatus,
@@ -107,7 +101,7 @@ export type ExportCommentsTarget =
 
 export type CommentExportScope = ExportCommentsTarget["scope"];
 
-export type CommentExportOperation = CommentExportScope | "mcpFeedback";
+export type CommentExportOperation = CommentExportScope;
 
 export type ExportCommentsRequest = Readonly<{
   workspacePath: string;
@@ -152,45 +146,6 @@ export type ApplyWithAiPlaceholderState = Readonly<{
   requiresExplicitUserConfirmationBeforeWrite: true;
   markdownWriteSupport: "notConnected";
   explanation: string;
-}>;
-
-export type SpecSkillMcpFeedbackInterface = Readonly<{
-  protocol: "mcp";
-  serverName: "spec-skill";
-  toolName: "spec_skill.feedback.submit";
-  transport: "manual-copy";
-}>;
-
-export type SpecSkillMcpFeedbackComment = Readonly<{
-  id: CommentId;
-  fileKey: SpecFileKey;
-  body: string;
-  status: CommentStatus;
-  anchor: CommentAnchor;
-  anchorResolution: CommentAnchorResolution | null;
-  createdAt: IsoDateTimeString;
-  updatedAt: IsoDateTimeString;
-}>;
-
-export type SpecSkillMcpFeedbackPayload = Readonly<{
-  schemaVersion: "spec-reviewer.mcp-feedback.v1";
-  interface: SpecSkillMcpFeedbackInterface;
-  mode: "dryRun";
-  workspacePath: string;
-  target: Extract<ExportCommentsTarget, { scope: "file" }>;
-  generatedAt: IsoDateTimeString;
-  dryRun: Readonly<{
-    callProvider: false;
-    writeMarkdown: false;
-    userVisibleSummary: string;
-  }>;
-  summary: Readonly<{
-    commentCount: number;
-    openCommentCount: number;
-    resolvedCommentCount: number;
-    orphanedCommentCount: number;
-  }>;
-  comments: readonly SpecSkillMcpFeedbackComment[];
 }>;
 
 export type ListCommentsResponse = Readonly<{

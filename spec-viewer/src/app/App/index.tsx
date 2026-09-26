@@ -1164,7 +1164,6 @@ function SpecViewAppContent(): ReactElement {
         {workspaceNavigation.state.mode === "specs" ? (
           <WorkspaceLayout.Comments>
             <SpecViewCommentSidebar
-              comments={comments.comments}
               resetKeys={resetKeys}
               listState={comments.listState}
               operationState={comments.operationState}

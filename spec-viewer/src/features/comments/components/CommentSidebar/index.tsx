@@ -65,7 +65,6 @@ type Props = Readonly<{
   onReload: () => void;
   onExportComments?: (scope: CommentExportScope) => void;
   onCopyLlmPrompt?: (scope: CommentExportScope) => void;
-  onCopyMcpFeedback?: () => void;
 }>;
 
 type CommentGroups = Readonly<{
@@ -144,7 +143,6 @@ export function CommentSidebar({
   onReload,
   onExportComments,
   onCopyLlmPrompt,
-  onCopyMcpFeedback,
 }: Props) {
   const [activeFilter, setActiveFilter] =
     useState<CommentDisplayFilter>(defaultDisplayFilter);
@@ -166,7 +164,6 @@ export function CommentSidebar({
           onFilterChange={setActiveFilter}
           onReload={onReload}
           onCopyLlmPrompt={onCopyLlmPrompt}
-          onCopyMcpFeedback={onCopyMcpFeedback}
         />
         <EmptyState
           title={uiText.sidebar.idleTitle}
@@ -244,7 +241,6 @@ export function CommentSidebar({
           onReload={onReload}
           onExportComments={onExportComments}
           onCopyLlmPrompt={onCopyLlmPrompt}
-          onCopyMcpFeedback={onCopyMcpFeedback}
         />
         <CommentExportFeedback exportState={exportState} />
         <EmptyState
@@ -289,7 +285,6 @@ export function CommentSidebar({
         onReload={onReload}
         onExportComments={onExportComments}
         onCopyLlmPrompt={onCopyLlmPrompt}
-        onCopyMcpFeedback={onCopyMcpFeedback}
       />
       <CommentExportFeedback exportState={exportState} />
       <CommentSearchControl
@@ -410,7 +405,6 @@ type HeaderProps = Readonly<{
   onReload: () => void;
   onExportComments?: (scope: CommentExportScope) => void;
   onCopyLlmPrompt?: (scope: CommentExportScope) => void;
-  onCopyMcpFeedback?: () => void;
 }>;
 
 /** @returns Sidebar title and total count badges. */
@@ -426,7 +420,6 @@ function CommentSidebarHeader({
   onReload,
   onExportComments,
   onCopyLlmPrompt,
-  onCopyMcpFeedback,
 }: HeaderProps) {
   return (
     <header className="comment-sidebar__header">
@@ -446,14 +439,11 @@ function CommentSidebarHeader({
             <RefreshCw aria-hidden="true" size={14} />
           </button>
           {showExportControls &&
-          (onExportComments !== undefined ||
-            onCopyLlmPrompt !== undefined ||
-            onCopyMcpFeedback !== undefined) ? (
+          (onExportComments !== undefined || onCopyLlmPrompt !== undefined) ? (
             <CommentExportControls
               exportState={exportState}
               onExportComments={onExportComments}
               onCopyLlmPrompt={onCopyLlmPrompt}
-              onCopyMcpFeedback={onCopyMcpFeedback}
             />
           ) : null}
         </div>
@@ -501,7 +491,6 @@ type CommentExportControlsProps = Readonly<{
   exportState: CommentExportState;
   onExportComments?: (scope: CommentExportScope) => void;
   onCopyLlmPrompt?: (scope: CommentExportScope) => void;
-  onCopyMcpFeedback?: () => void;
 }>;
 
 const idleCommentExportState: CommentExportState = {
@@ -558,13 +547,10 @@ function CommentExportControls({
   exportState,
   onExportComments,
   onCopyLlmPrompt,
-  onCopyMcpFeedback,
 }: CommentExportControlsProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuId = useId();
   const placeholderDescriptionId = useId();
-  const isCopyingMcpFeedback =
-    exportState.status === "saving" && exportState.operation === "mcpFeedback";
 
   return (
     <div className="comment-sidebar__secondary-actions">
@@ -638,23 +624,6 @@ function CommentExportControls({
                   <span>{option.promptLabel}</span>
                 </button>
               ))}
-          {onCopyMcpFeedback === undefined ? null : (
-            <button
-              className="comment-sidebar__export"
-              type="button"
-              role="menuitem"
-              aria-label="現在のファイルのMCP feedback payloadをコピー"
-              disabled={exportState.status === "saving"}
-              onClick={onCopyMcpFeedback}
-            >
-              <Clipboard aria-hidden="true" size={14} />
-              <span>
-                {isCopyingMcpFeedback
-                  ? uiText.sidebar.copying
-                  : uiText.sidebar.mcpFeedback}
-              </span>
-            </button>
-          )}
           <button
             className="comment-sidebar__export comment-sidebar__export--placeholder"
             type="button"

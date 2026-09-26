@@ -8,9 +8,6 @@ import {
   type UseCommentExportResult,
   useCommentExport,
 } from "@/app/App/hooks/useCommentExport";
-import type { Comment } from "@/features/comments/domain/comment";
-import type { CommentAnchor } from "@/features/comments/domain/commentAnchor";
-import { CommentId as CommentIdValue } from "@/features/comments/domain/commentId";
 import type {
   CommentExportScope,
   ExportCommentsResponse,
@@ -19,27 +16,6 @@ import type {
 
 import { ExportCommentsCommandError } from "@/lib/api/tauri/exportComments";
 import { GenerateLlmPromptCommandError } from "@/lib/api/tauri/generateLlmPrompt";
-import { getUnknownErrorMessage } from "@/utils/errorMessage";
-
-const commentId = CommentIdValue.fromString;
-
-const anchor: CommentAnchor = {
-  fileKey: "impl",
-  blockType: "paragraph",
-  blockIndex: 0,
-  textHash: "sha256:anchor",
-  textSnippet: "snippet",
-  charRange: { start: 0, end: 7 },
-};
-
-const openComment: Comment = {
-  id: commentId("cmt_1"),
-  anchor,
-  body: "body",
-  status: "open",
-  createdAt: "2026-05-05T10:00:00Z",
-  updatedAt: "2026-05-05T10:00:00Z",
-};
 
 const baseKeys: SpecViewResetKeys = {
   workspaceRoot: "/workspace",
@@ -136,7 +112,6 @@ function baseOptions(
 ): UseCommentExportOptions {
   return {
     resetKeys: baseKeys,
-    comments: [openComment],
     commands: createCommands(),
     copyText: vi.fn(async () => {}),
     ...overrides,
@@ -284,39 +259,6 @@ test("LLM prompt生成失敗でerror状態とGenerateLlmPromptCommandErrorのメ
   hook.unmount();
 });
 
-test("MCP feedbackコピー成功でcopyTextが呼ばれsuccessになる", async () => {
-  const copyText = vi.fn(async () => {});
-  const hook = renderHook(baseOptions({ copyText }));
-
-  await act(async () => {
-    await hook.current.copyMcpFeedbackPayload();
-  });
-
-  expect(copyText).toHaveBeenCalledTimes(1);
-  expect(hook.current.commentExportState.status).toBe("success");
-  expect(hook.current.commentExportState.operation).toBe("mcpFeedback");
-  hook.unmount();
-});
-
-test("MCP feedbackのcopyText失敗でerror状態とgetUnknownErrorMessageのメッセージになる", async () => {
-  const failure = new Error("copy boom");
-  const copyText = vi.fn(async () => {
-    throw failure;
-  });
-  const hook = renderHook(baseOptions({ copyText }));
-
-  await act(async () => {
-    await hook.current.copyMcpFeedbackPayload();
-  });
-
-  expect(hook.current.commentExportState).toEqual({
-    status: "error",
-    operation: "mcpFeedback",
-    message: getUnknownErrorMessage(failure),
-  });
-  hook.unmount();
-});
-
 test.each([
   [
     "export",
@@ -325,12 +267,6 @@ test.each([
   [
     "llm",
     (r: UseCommentExportResult): void => r.copyLlmPromptScope("workspace"),
-  ],
-  [
-    "mcp",
-    (r: UseCommentExportResult): void => {
-      void r.copyMcpFeedbackPayload();
-    },
   ],
 ] as const)("workspace未選択（%s）では状態遷移せずコマンド未呼び出し", async (_label, invoke) => {
   const commands = createCommands();

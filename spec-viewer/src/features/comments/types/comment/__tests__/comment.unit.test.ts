@@ -9,8 +9,6 @@ import type {
   CommentAnchorDisplayStatus,
   CommentDisplayFilter,
   CommentDisplayState,
-  CommentExportOperation,
-  SpecSkillMcpFeedbackPayload,
 } from "@/features/comments/types/comment";
 import type {
   AddCommentCommandRequest,
@@ -66,25 +64,5 @@ test("apply with AI placeholderは選択コメント入力と確認必須diff pr
   expectTypeOf<ApplyWithAiPlaceholderState>().toMatchTypeOf<{
     enabled: false;
     requiresExplicitUserConfirmationBeforeWrite: true;
-  }>();
-});
-
-test("MCP feedback pathはdry-run payloadとmanual copy operationを表現する", () => {
-  expectTypeOf<CommentExportOperation>().toEqualTypeOf<
-    "file" | "spec" | "workspace" | "mcpFeedback"
-  >();
-  expectTypeOf<SpecSkillMcpFeedbackPayload>().toMatchTypeOf<{
-    schemaVersion: "spec-reviewer.mcp-feedback.v1";
-    mode: "dryRun";
-    interface: {
-      protocol: "mcp";
-      serverName: "spec-skill";
-      toolName: "spec_skill.feedback.submit";
-      transport: "manual-copy";
-    };
-    dryRun: {
-      callProvider: false;
-      writeMarkdown: false;
-    };
   }>();
 });
