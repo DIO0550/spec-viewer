@@ -15,7 +15,7 @@ import {
   type UseWorkspaceLoaderResult,
   useWorkspaceLoader,
 } from "@/features/workspace/hooks/useWorkspaceLoader";
-import type { WorkspaceDragDropEvent } from "@/lib/api/tauri";
+import type { WorkspaceDropIntent } from "@/features/workspace/domain/workspaceDropIntent";
 import { getUnknownErrorMessage } from "@/utils/errorMessage";
 import type { RecentWorkspaceStorage } from "@/lib/recentWorkspaces";
 import { writeLastActiveWorkspacePath } from "@/lib/recentWorkspaces";
@@ -202,7 +202,7 @@ test("io.validateラッパーの2段クリア（validate pending中に書いたd
     selectWorkspaceDirectory: vi.fn(async () => "/selected"),
     validateWorkspaceDirectory: vi.fn(() => validateDeferred.promise),
   };
-  let dropHandler: ((event: WorkspaceDragDropEvent) => void) | null = null;
+  let dropHandler: ((event: WorkspaceDropIntent) => void) | null = null;
   const subscribeDragDropEvents: SubscribeWorkspaceDragDropEvents = vi.fn(
     async (handler) => {
       dropHandler = handler;
@@ -374,7 +374,7 @@ test("drop失敗outcomeはdropErrorMessageへ固定文言を設定する", async
     selectWorkspaceDirectory: vi.fn(async () => "/selected"),
     validateWorkspaceDirectory: vi.fn(async () => ({ isDirectory: false })),
   };
-  let dropHandler: ((event: WorkspaceDragDropEvent) => void) | null = null;
+  let dropHandler: ((event: WorkspaceDropIntent) => void) | null = null;
   const subscribeDragDropEvents: SubscribeWorkspaceDragDropEvents = vi.fn(
     async (handler) => {
       dropHandler = handler;
@@ -470,7 +470,7 @@ test("recentWorkspacesは所有する単一インスタンスを再露出しreco
 });
 
 test("drop統合: invalid dropでdropErrorMessageが設定される", async () => {
-  let dropHandler: ((event: WorkspaceDragDropEvent) => void) | null = null;
+  let dropHandler: ((event: WorkspaceDropIntent) => void) | null = null;
   const subscribeDragDropEvents: SubscribeWorkspaceDragDropEvents = vi.fn(
     async (handler) => {
       dropHandler = handler;
@@ -494,7 +494,7 @@ test("drop統合: invalid dropでdropErrorMessageが設定される", async () =
 });
 
 test("drop統合: draggingでisDraggingWorkspaceがtrueになる", async () => {
-  let dropHandler: ((event: WorkspaceDragDropEvent) => void) | null = null;
+  let dropHandler: ((event: WorkspaceDropIntent) => void) | null = null;
   const subscribeDragDropEvents: SubscribeWorkspaceDragDropEvents = vi.fn(
     async (handler) => {
       dropHandler = handler;
@@ -510,7 +510,7 @@ test("drop統合: draggingでisDraggingWorkspaceがtrueになる", async () => {
   await flush();
 
   act(() => {
-    dropHandler?.({ type: "enter", paths: ["/workspace"] });
+    dropHandler?.({ type: "enter" });
   });
 
   expect(hook.current.state.isDraggingWorkspace).toBe(true);
