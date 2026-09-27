@@ -7,7 +7,7 @@ import type { LoadWorkspaceRequest } from "@/features/workspace/types/workspace"
 import { invokeTauriCommand } from "./invokeTauriCommand";
 import { isRecord } from "./isRecord";
 
-export const LOAD_WORKSPACE_COMMAND = "load_workspace" as const;
+export const LoadWorkspaceCommand = "load_workspace" as const;
 
 export type WorkspaceFileMappingDto = Readonly<{
   key: string;
@@ -22,7 +22,7 @@ export type WorkspaceDto = Readonly<{
   files: readonly WorkspaceFileMappingDto[];
 }>;
 
-export type LoadWorkspaceCommandName = typeof LOAD_WORKSPACE_COMMAND;
+export type LoadWorkspaceCommandName = typeof LoadWorkspaceCommand;
 export type LoadWorkspaceCommandRequest = LoadWorkspaceRequest;
 export type LoadWorkspaceCommandResponse = WorkspaceDto;
 export type LoadWorkspaceCommandErrorCode =
@@ -51,12 +51,12 @@ export const LoadWorkspaceCommandError = {
   fromUnknown(error: unknown): LoadWorkspaceCommandError {
     if (
       isRecord(error) &&
-      error.command === LOAD_WORKSPACE_COMMAND &&
+      error.command === LoadWorkspaceCommand &&
       LoadWorkspaceCommandError.isCommandErrorCode(error.code) &&
       typeof error.message === "string"
     ) {
       return {
-        command: LOAD_WORKSPACE_COMMAND,
+        command: LoadWorkspaceCommand,
         code: error.code,
         message: error.message,
         raw: error.raw,
@@ -69,7 +69,7 @@ export const LoadWorkspaceCommandError = {
       typeof error.message === "string"
     ) {
       return {
-        command: LOAD_WORKSPACE_COMMAND,
+        command: LoadWorkspaceCommand,
         code: error.code,
         message: error.message,
         raw: error,
@@ -93,7 +93,7 @@ export const LoadWorkspaceCommandError = {
   /** @returns An unknown load_workspace command error preserving the raw payload. */
   unknown(message: string, raw: unknown): LoadWorkspaceCommandError {
     return {
-      command: LOAD_WORKSPACE_COMMAND,
+      command: LoadWorkspaceCommand,
       code: "unknown",
       message,
       raw,
@@ -128,7 +128,7 @@ export async function loadWorkspace(
     LoadWorkspaceCommandRequest,
     LoadWorkspaceCommandError
   >(
-    LOAD_WORKSPACE_COMMAND,
+    LoadWorkspaceCommand,
     commandRequest,
     LoadWorkspaceCommandError.fromUnknown,
   );

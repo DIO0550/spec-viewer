@@ -6,9 +6,9 @@ import type {
 import { invokeTauriCommand } from "./invokeTauriCommand";
 import { isRecord } from "./isRecord";
 
-export const LIST_WORKTREES_COMMAND = "list_worktrees" as const;
+export const ListWorktreesCommand = "list_worktrees" as const;
 
-export type ListWorktreesCommandName = typeof LIST_WORKTREES_COMMAND;
+export type ListWorktreesCommandName = typeof ListWorktreesCommand;
 export type ListWorktreesCommandRequest = Readonly<{
   workspacePath: string;
 }>;
@@ -70,12 +70,12 @@ export const ListWorktreesCommandError = {
   fromUnknown(error: unknown): ListWorktreesCommandError {
     if (
       isRecord(error) &&
-      error.command === LIST_WORKTREES_COMMAND &&
+      error.command === ListWorktreesCommand &&
       ListWorktreesCommandError.isCommandErrorCode(error.code) &&
       typeof error.message === "string"
     ) {
       return {
-        command: LIST_WORKTREES_COMMAND,
+        command: ListWorktreesCommand,
         code: error.code,
         message: error.message,
         raw: error.raw,
@@ -88,7 +88,7 @@ export const ListWorktreesCommandError = {
       typeof error.message === "string"
     ) {
       return {
-        command: LIST_WORKTREES_COMMAND,
+        command: ListWorktreesCommand,
         code: error.code,
         message: error.message,
         raw: error,
@@ -112,7 +112,7 @@ export const ListWorktreesCommandError = {
   /** @returns An unknown list_worktrees command error preserving the raw payload. */
   unknown(message: string, raw: unknown): ListWorktreesCommandError {
     return {
-      command: LIST_WORKTREES_COMMAND,
+      command: ListWorktreesCommand,
       code: "unknown",
       message,
       raw,
@@ -238,7 +238,7 @@ export async function listWorktrees(
     ListWorktreesCommandRequest,
     ListWorktreesCommandError
   >(
-    LIST_WORKTREES_COMMAND,
+    ListWorktreesCommand,
     commandRequest,
     ListWorktreesCommandError.fromUnknown,
   );

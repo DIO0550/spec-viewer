@@ -4,9 +4,9 @@ import type { CommentStatusRequest } from "@/features/comments/types/comment";
 import { invokeTauriCommand } from "./invokeTauriCommand";
 import { isRecord } from "./isRecord";
 
-export const REOPEN_COMMENT_COMMAND = "reopen_comment" as const;
+export const ReopenCommentCommand = "reopen_comment" as const;
 
-export type ReopenCommentCommandName = typeof REOPEN_COMMENT_COMMAND;
+export type ReopenCommentCommandName = typeof ReopenCommentCommand;
 export type ReopenCommentCommandRequest = CommentStatusRequest;
 export type ReopenCommentCommandResponse = Comment;
 export type ReopenCommentCommandErrorCode =
@@ -38,12 +38,12 @@ export const ReopenCommentCommandError = {
   fromUnknown(error: unknown): ReopenCommentCommandError {
     if (
       isRecord(error) &&
-      error.command === REOPEN_COMMENT_COMMAND &&
+      error.command === ReopenCommentCommand &&
       ReopenCommentCommandError.isCommandErrorCode(error.code) &&
       typeof error.message === "string"
     ) {
       return {
-        command: REOPEN_COMMENT_COMMAND,
+        command: ReopenCommentCommand,
         code: error.code,
         message: error.message,
         raw: error.raw,
@@ -56,7 +56,7 @@ export const ReopenCommentCommandError = {
       typeof error.message === "string"
     ) {
       return {
-        command: REOPEN_COMMENT_COMMAND,
+        command: ReopenCommentCommand,
         code: error.code,
         message: error.message,
         raw: error,
@@ -80,7 +80,7 @@ export const ReopenCommentCommandError = {
   /** @returns An unknown reopen_comment command error preserving the raw payload. */
   unknown(message: string, raw: unknown): ReopenCommentCommandError {
     return {
-      command: REOPEN_COMMENT_COMMAND,
+      command: ReopenCommentCommand,
       code: "unknown",
       message,
       raw,
@@ -119,7 +119,7 @@ export async function reopenComment(
     ReopenCommentCommandRequest,
     ReopenCommentCommandError
   >(
-    REOPEN_COMMENT_COMMAND,
+    ReopenCommentCommand,
     commandRequest,
     ReopenCommentCommandError.fromUnknown,
   );

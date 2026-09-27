@@ -4,9 +4,9 @@ import type { CommentStatusRequest } from "@/features/comments/types/comment";
 import { invokeTauriCommand } from "./invokeTauriCommand";
 import { isRecord } from "./isRecord";
 
-export const RESOLVE_COMMENT_COMMAND = "resolve_comment" as const;
+export const ResolveCommentCommand = "resolve_comment" as const;
 
-export type ResolveCommentCommandName = typeof RESOLVE_COMMENT_COMMAND;
+export type ResolveCommentCommandName = typeof ResolveCommentCommand;
 export type ResolveCommentCommandRequest = CommentStatusRequest;
 export type ResolveCommentCommandResponse = Comment;
 export type ResolveCommentCommandErrorCode =
@@ -38,12 +38,12 @@ export const ResolveCommentCommandError = {
   fromUnknown(error: unknown): ResolveCommentCommandError {
     if (
       isRecord(error) &&
-      error.command === RESOLVE_COMMENT_COMMAND &&
+      error.command === ResolveCommentCommand &&
       ResolveCommentCommandError.isCommandErrorCode(error.code) &&
       typeof error.message === "string"
     ) {
       return {
-        command: RESOLVE_COMMENT_COMMAND,
+        command: ResolveCommentCommand,
         code: error.code,
         message: error.message,
         raw: error.raw,
@@ -56,7 +56,7 @@ export const ResolveCommentCommandError = {
       typeof error.message === "string"
     ) {
       return {
-        command: RESOLVE_COMMENT_COMMAND,
+        command: ResolveCommentCommand,
         code: error.code,
         message: error.message,
         raw: error,
@@ -80,7 +80,7 @@ export const ResolveCommentCommandError = {
   /** @returns An unknown resolve_comment command error preserving the raw payload. */
   unknown(message: string, raw: unknown): ResolveCommentCommandError {
     return {
-      command: RESOLVE_COMMENT_COMMAND,
+      command: ResolveCommentCommand,
       code: "unknown",
       message,
       raw,
@@ -119,7 +119,7 @@ export async function resolveComment(
     ResolveCommentCommandRequest,
     ResolveCommentCommandError
   >(
-    RESOLVE_COMMENT_COMMAND,
+    ResolveCommentCommand,
     commandRequest,
     ResolveCommentCommandError.fromUnknown,
   );

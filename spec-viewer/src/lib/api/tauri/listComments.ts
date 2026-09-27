@@ -6,9 +6,9 @@ import type {
 import { invokeTauriCommand } from "./invokeTauriCommand";
 import { isRecord } from "./isRecord";
 
-export const LIST_COMMENTS_COMMAND = "list_comments" as const;
+export const ListCommentsCommand = "list_comments" as const;
 
-export type ListCommentsCommandName = typeof LIST_COMMENTS_COMMAND;
+export type ListCommentsCommandName = typeof ListCommentsCommand;
 export type ListCommentsCommandRequest = ListCommentsRequest;
 export type ListCommentsCommandResponse = ListCommentsResponse;
 export type ListCommentsCommandErrorCode =
@@ -40,12 +40,12 @@ export const ListCommentsCommandError = {
   fromUnknown(error: unknown): ListCommentsCommandError {
     if (
       isRecord(error) &&
-      error.command === LIST_COMMENTS_COMMAND &&
+      error.command === ListCommentsCommand &&
       ListCommentsCommandError.isCommandErrorCode(error.code) &&
       typeof error.message === "string"
     ) {
       return {
-        command: LIST_COMMENTS_COMMAND,
+        command: ListCommentsCommand,
         code: error.code,
         message: error.message,
         raw: error.raw,
@@ -58,7 +58,7 @@ export const ListCommentsCommandError = {
       typeof error.message === "string"
     ) {
       return {
-        command: LIST_COMMENTS_COMMAND,
+        command: ListCommentsCommand,
         code: error.code,
         message: error.message,
         raw: error,
@@ -82,7 +82,7 @@ export const ListCommentsCommandError = {
   /** @returns An unknown list_comments command error preserving the raw payload. */
   unknown(message: string, raw: unknown): ListCommentsCommandError {
     return {
-      command: LIST_COMMENTS_COMMAND,
+      command: ListCommentsCommand,
       code: "unknown",
       message,
       raw,
@@ -121,7 +121,7 @@ export async function listComments(
     ListCommentsCommandRequest,
     ListCommentsCommandError
   >(
-    LIST_COMMENTS_COMMAND,
+    ListCommentsCommand,
     commandRequest,
     ListCommentsCommandError.fromUnknown,
   );

@@ -1,11 +1,10 @@
 import type { DiffReviewIdentity } from "@/features/diffComments";
-import { deriveDiffAvailability } from "@/features/diff/domain/fileDiff";
+import { FileDiff } from "@/features/diff/domain/fileDiff";
 import {
   type DiffLineSource,
   type FileChange,
   type FileChangeStatus,
   type FileContent,
-  type FileDiff,
   type FileReview,
   Hunk,
   type StructuredDiff,
@@ -179,7 +178,7 @@ const decodeBoolean = (value: unknown, path: string, raw: unknown): boolean => {
   return value;
 };
 
-const FILE_CHANGE_STATUSES = [
+const FileChangeStatuses = [
   "added",
   "modified",
   "deleted",
@@ -188,15 +187,15 @@ const FILE_CHANGE_STATUSES = [
   "typeChanged",
   "untracked",
 ] as const;
-const DIFF_LINE_KINDS = ["context", "added", "removed", "noNewline"] as const;
-const ENTRY_KINDS = ["regular", "symlink", "submodule"] as const;
-const CONTENT_CLASSIFICATIONS = [
+const DiffLineKinds = ["context", "added", "removed", "noNewline"] as const;
+const EntryKinds = ["regular", "symlink", "submodule"] as const;
+const ContentClassifications = [
   "text",
   "binary",
   "notApplicable",
   "unknown",
 ] as const;
-const OMISSION_REASONS = [
+const OmissionReasons = [
   "binary",
   "largeFile",
   "diffLimit",
@@ -261,7 +260,7 @@ const decodeContent = (
         record.reason,
         `${path}.reason`,
         raw,
-        OMISSION_REASONS,
+        OmissionReasons,
       ),
       byteLength: decodeNullableSafeInteger(
         record.byteLength,
@@ -289,19 +288,19 @@ const decodeFileChange = (
       record.change,
       `${path}.change`,
       raw,
-      FILE_CHANGE_STATUSES,
+      FileChangeStatuses,
     ),
     entryKind: decodeLiteral(
       record.entryKind,
       `${path}.entryKind`,
       raw,
-      ENTRY_KINDS,
+      EntryKinds,
     ),
     contentClassification: decodeLiteral(
       record.contentClassification,
       `${path}.contentClassification`,
       raw,
-      CONTENT_CLASSIFICATIONS,
+      ContentClassifications,
     ),
     similarity: decodeSimilarity(record.similarity, `${path}.similarity`, raw),
     oldMode: decodeNullableString(record.oldMode, `${path}.oldMode`, raw),
@@ -318,7 +317,7 @@ const decodeDiffLine = (
   const record = decodeRecord(value, path, raw);
 
   return {
-    kind: decodeLiteral(record.kind, `${path}.kind`, raw, DIFF_LINE_KINDS),
+    kind: decodeLiteral(record.kind, `${path}.kind`, raw, DiffLineKinds),
     text: decodeString(record.text, `${path}.text`, raw),
   };
 };
@@ -383,7 +382,7 @@ const decodeStructuredDiff = (
         record.reason,
         `${path}.reason`,
         raw,
-        OMISSION_REASONS,
+        OmissionReasons,
       ),
     };
   }
@@ -555,7 +554,7 @@ export function decodeChangedSpecFiles(value: unknown): ChangedSpecFiles {
           file.change,
           `files[${index}].change`,
           value,
-          FILE_CHANGE_STATUSES,
+          FileChangeStatuses,
         ),
       };
     }),
@@ -579,6 +578,6 @@ export function decodeSpecFileDiff(value: unknown): FileDiff {
       path: fileKey,
     },
     review,
-    availability: deriveDiffAvailability(review),
+    availability: FileDiff.deriveAvailability(review),
   };
 }

@@ -34,10 +34,10 @@ import { HtmlDocument } from "./HtmlDocument";
 import {
   clampHtmlZoomPercent,
   formatHtmlZoomPercent,
-  HTML_ZOOM_DEFAULT_PERCENT,
-  HTML_ZOOM_MAX_PERCENT,
-  HTML_ZOOM_MIN_PERCENT,
-  HTML_ZOOM_STEP_PERCENT,
+  HtmlZoomDefaultPercent,
+  HtmlZoomMaxPercent,
+  HtmlZoomMinPercent,
+  HtmlZoomStepPercent,
 } from "./HtmlDocument/htmlPreviewDocument";
 import { MarkdownViewerHeader } from "./MarkdownViewerHeader";
 import { MarkdownViewerPanel } from "./MarkdownViewerPanel";
@@ -87,7 +87,7 @@ type DocumentSearchCursor = {
   matchIndex: number;
 };
 
-const SYNTAX_HIGHLIGHT_MAX_BYTES = 200_000;
+const SyntaxHighlightMaxBytes = 200_000;
 
 export type MarkdownViewerProps = Readonly<{
   state: SpecDocumentState;
@@ -118,7 +118,7 @@ export function MarkdownViewer({
   const [activeDocumentSearchIndex, setActiveDocumentSearchIndex] = useState(0);
   const [documentSearchMatchCount, setDocumentSearchMatchCount] = useState(0);
   const [htmlZoomPercent, setHtmlZoomPercent] = useState(
-    HTML_ZOOM_DEFAULT_PERCENT,
+    HtmlZoomDefaultPercent,
   );
   const resetKey = createViewerResetKey(state);
   const isHtmlDocument =
@@ -155,7 +155,7 @@ export function MarkdownViewer({
     setDocumentSearchQuery("");
     setActiveDocumentSearchIndex(0);
     setDocumentSearchMatchCount(0);
-    setHtmlZoomPercent(HTML_ZOOM_DEFAULT_PERCENT);
+    setHtmlZoomPercent(HtmlZoomDefaultPercent);
   }, [resetKey]);
   useLayoutEffect(() => {
     if (state.status !== "ready" || readyContents === null) {
@@ -174,7 +174,7 @@ export function MarkdownViewer({
       "document.firstReadable",
       {
         bytes: byteLength,
-        syntaxHighlight: byteLength <= SYNTAX_HIGHLIGHT_MAX_BYTES,
+        syntaxHighlight: byteLength <= SyntaxHighlightMaxBytes,
       },
     );
     onFirstReadable?.();
@@ -251,14 +251,14 @@ export function MarkdownViewer({
   /** Decreases the HTML preview zoom by one step. */
   const decreaseHtmlZoom = (): void => {
     setHtmlZoomPercent((currentZoomPercent) =>
-      clampHtmlZoomPercent(currentZoomPercent - HTML_ZOOM_STEP_PERCENT),
+      clampHtmlZoomPercent(currentZoomPercent - HtmlZoomStepPercent),
     );
   };
 
   /** Increases the HTML preview zoom by one step. */
   const increaseHtmlZoom = (): void => {
     setHtmlZoomPercent((currentZoomPercent) =>
-      clampHtmlZoomPercent(currentZoomPercent + HTML_ZOOM_STEP_PERCENT),
+      clampHtmlZoomPercent(currentZoomPercent + HtmlZoomStepPercent),
     );
   };
 
@@ -296,8 +296,8 @@ export function MarkdownViewer({
           isHtmlDocument
             ? {
                 zoomPercentLabel: formatHtmlZoomPercent(htmlZoomPercent),
-                canDecrease: htmlZoomPercent > HTML_ZOOM_MIN_PERCENT,
-                canIncrease: htmlZoomPercent < HTML_ZOOM_MAX_PERCENT,
+                canDecrease: htmlZoomPercent > HtmlZoomMinPercent,
+                canIncrease: htmlZoomPercent < HtmlZoomMaxPercent,
                 onDecrease: decreaseHtmlZoom,
                 onIncrease: increaseHtmlZoom,
               }
@@ -335,7 +335,7 @@ export function MarkdownViewer({
           renderedDocumentPort={renderedDocumentPort}
           documentSearchQuery={normalizedDocumentSearchQuery}
           activeDocumentSearchIndex={activeDocumentSearchIndex}
-          syntaxHighlightMaxBytes={SYNTAX_HIGHLIGHT_MAX_BYTES}
+          syntaxHighlightMaxBytes={SyntaxHighlightMaxBytes}
         />
       )}
       {renderedDocumentPort?.renderOverlay() ?? null}

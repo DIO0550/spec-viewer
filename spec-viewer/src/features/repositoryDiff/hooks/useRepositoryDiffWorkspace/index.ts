@@ -7,12 +7,10 @@ import type {
   RepositoryFileReview,
 } from "@/features/repositoryDiff/domain/repositoryDiff";
 import {
-  createInitialRepositoryDiffWorkspaceState,
+  RepositoryDiffWorkspaceState,
   type RepositoryDiffDetailIdentity,
   type RepositoryDiffIgnoredPageIdentity,
   type RepositoryDiffRequestIdentity,
-  type RepositoryDiffWorkspaceState,
-  repositoryDiffWorkspaceReducer,
 } from "@/features/repositoryDiff/domain/repositoryDiffWorkspaceState";
 import {
   normalizeRepositoryDiffFileFailure,
@@ -67,7 +65,7 @@ export type UseRepositoryDiffWorkspaceResult = Readonly<{
   invalidate: () => void;
 }>;
 
-const DEFAULT_API: RepositoryDiffWorkspaceApi = {
+const DefaultApi: RepositoryDiffWorkspaceApi = {
   loadRepositoryDiff,
   loadRepositoryFile,
   traverseRepositoryIgnored,
@@ -99,13 +97,13 @@ const createIgnoredPageRequestKey = (
     cursor,
   ]);
 
-const STALE_DETAIL_ERROR_CODES = new Set([
+const StaleDetailErrorCodes = new Set([
   "staleSnapshot",
   "staleBase",
   "entryChangedDuringRead",
   "headChangedDuringRead",
 ]);
-const DETAIL_CACHE_LIMIT = 8;
+const DetailCacheLimit = 8;
 
 /**
  * @param worktreeId - Active worktree identity.
@@ -135,7 +133,7 @@ function rememberDetail(
 ): void {
   cache.delete(key);
   cache.set(key, review);
-  if (cache.size <= DETAIL_CACHE_LIMIT) {
+  if (cache.size <= DetailCacheLimit) {
     return;
   }
   const oldestKey = cache.keys().next().value;
@@ -176,12 +174,12 @@ export function useRepositoryDiffWorkspace({
   worktreeId,
   baseOverride = null,
   selection: requestedSelection = null,
-  api = DEFAULT_API,
+  api = DefaultApi,
 }: UseRepositoryDiffWorkspaceOptions): UseRepositoryDiffWorkspaceResult {
   const [state, dispatch] = useReducer(
-    repositoryDiffWorkspaceReducer,
+    RepositoryDiffWorkspaceState.reduce,
     undefined,
-    createInitialRepositoryDiffWorkspaceState,
+    RepositoryDiffWorkspaceState.initial,
   );
   const [selection, setSelection] = useState<RepositoryDiffSelection | null>(
     isSnapshotSelection(requestedSelection) ? requestedSelection : null,
@@ -326,7 +324,7 @@ export function useRepositoryDiffWorkspace({
         ) {
           return false;
         }
-        if (allowStaleRecovery && STALE_DETAIL_ERROR_CODES.has(failure.code)) {
+        if (allowStaleRecovery && StaleDetailErrorCodes.has(failure.code)) {
           return recoverOverview();
         }
         dispatch({ type: "detailFailed", identity, error: failure });

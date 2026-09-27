@@ -8,7 +8,7 @@ import type {
   ResolvedDiffComment,
   ResolvedDiffComments,
 } from "@/features/diffComments";
-import { isCanonicalDiffCommentRevision } from "@/features/diffComments";
+import { DiffCommentRevision } from "@/features/diffComments";
 
 import { isRecord } from "./isRecord";
 
@@ -33,13 +33,13 @@ export class InvalidDiffCommentResponseError extends Error {
   }
 }
 
-const U32_MAX = 4_294_967_295;
-const REPOSITORY_ID_PATTERN = /^rr1_[0-9a-f]{64}$/;
-const WORKTREE_ID_PATTERN = /^rw1_[0-9a-f]{64}$/;
-const SNAPSHOT_ID_PATTERN = /^rs1_[0-9a-f]{64}$/;
-const COMMIT_SHA_PATTERN = /^[0-9a-f]{40}$/;
-const LINE_HASH_PATTERN = /^sha256:[0-9a-f]{64}$/;
-const RESOLUTION_WARNING_CODES = [
+const U32Max = 4_294_967_295;
+const RepositoryIdPattern = /^rr1_[0-9a-f]{64}$/;
+const WorktreeIdPattern = /^rw1_[0-9a-f]{64}$/;
+const SnapshotIdPattern = /^rs1_[0-9a-f]{64}$/;
+const CommitShaPattern = /^[0-9a-f]{40}$/;
+const LineHashPattern = /^sha256:[0-9a-f]{64}$/;
+const ResolutionWarningCodes = [
   "io",
   "permission",
   "budgetExceeded",
@@ -47,14 +47,14 @@ const RESOLUTION_WARNING_CODES = [
   "repositoryChanged",
   "durabilityUncertain",
 ] as const;
-const UNAVAILABLE_REASONS = [
+const UnavailableReasons = [
   "io",
   "permission",
   "budgetExceeded",
   "cancelled",
   "repositoryChanged",
 ] as const;
-const STALE_REASONS = [
+const StaleReasons = [
   "snapshotChanged",
   "pathMissing",
   "ambiguousRename",
@@ -183,7 +183,7 @@ function positiveLine(value: unknown, path: string, raw: unknown): number {
     typeof value !== "number" ||
     !Number.isSafeInteger(value) ||
     value < 1 ||
-    value > U32_MAX
+    value > U32Max
   ) {
     return fail(path, "an integer from 1 through u32::MAX", raw);
   }
@@ -197,7 +197,7 @@ function candidateCount(value: unknown, path: string, raw: unknown): number {
     typeof value !== "number" ||
     !Number.isSafeInteger(value) ||
     value < 0 ||
-    value > U32_MAX
+    value > U32Max
   ) {
     return fail(path, "an integer from 0 through u32::MAX", raw);
   }
@@ -239,7 +239,7 @@ export function decodeDiffCommentRevision(
   raw: unknown,
 ): string {
   const revision = string(value, path, raw);
-  if (!isCanonicalDiffCommentRevision(revision)) {
+  if (!DiffCommentRevision.isCanonical(revision)) {
     return fail(
       path,
       "a canonical unsigned u64 decimal",
@@ -277,28 +277,28 @@ function decodeIdentityFields(
       decoded.repositoryId,
       `${path}.repositoryId`,
       raw,
-      REPOSITORY_ID_PATTERN,
+      RepositoryIdPattern,
       "a canonical repository id",
     ),
     worktreeId: canonicalString(
       decoded.worktreeId,
       `${path}.worktreeId`,
       raw,
-      WORKTREE_ID_PATTERN,
+      WorktreeIdPattern,
       "a canonical worktree id",
     ),
     baseSha: canonicalString(
       decoded.baseSha,
       `${path}.baseSha`,
       raw,
-      COMMIT_SHA_PATTERN,
+      CommitShaPattern,
       "a canonical commit SHA",
     ),
     currentSnapshotId: canonicalString(
       decoded.currentSnapshotId,
       `${path}.currentSnapshotId`,
       raw,
-      SNAPSHOT_ID_PATTERN,
+      SnapshotIdPattern,
       "a canonical snapshot id",
     ),
   };
@@ -346,7 +346,7 @@ function decodeAnchor(
       decoded.lineHash,
       `${path}.lineHash`,
       raw,
-      LINE_HASH_PATTERN,
+      LineHashPattern,
       "a canonical SHA-256 line hash",
     ),
     snippet: string(decoded.snippet, `${path}.snippet`, raw),
@@ -403,7 +403,7 @@ function decodeResolution(
     exactRecord(value, path, raw, ["status", "reason", "candidateCount"]);
     return {
       status,
-      reason: literal(decoded.reason, `${path}.reason`, raw, STALE_REASONS),
+      reason: literal(decoded.reason, `${path}.reason`, raw, StaleReasons),
       candidateCount: candidateCount(
         decoded.candidateCount,
         `${path}.candidateCount`,
@@ -424,7 +424,7 @@ function decodeResolution(
         decoded.reason,
         `${path}.reason`,
         raw,
-        UNAVAILABLE_REASONS,
+        UnavailableReasons,
       ),
       canJump: false,
     };
@@ -523,7 +523,7 @@ function decodeWarning(
 ): ResolutionWarning {
   const decoded = exactRecord(value, path, raw, ["code", "message"]);
   return {
-    code: literal(decoded.code, `${path}.code`, raw, RESOLUTION_WARNING_CODES),
+    code: literal(decoded.code, `${path}.code`, raw, ResolutionWarningCodes),
     message: nonEmptyString(decoded.message, `${path}.message`, raw),
   };
 }
@@ -553,14 +553,14 @@ export function decodeDiffCommentDocument(
       decoded.repositoryId,
       "response.repositoryId",
       value,
-      REPOSITORY_ID_PATTERN,
+      RepositoryIdPattern,
       "a canonical repository id",
     ),
     worktreeId: canonicalString(
       decoded.worktreeId,
       "response.worktreeId",
       value,
-      WORKTREE_ID_PATTERN,
+      WorktreeIdPattern,
       "a canonical worktree id",
     ),
   };

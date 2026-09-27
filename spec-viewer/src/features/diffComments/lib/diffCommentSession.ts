@@ -2,11 +2,10 @@ import type {
   DiffAnchorTarget,
   DiffCommentMutationOutcome,
   DiffCommentStatusFilter,
-  DiffReviewIdentity,
   ResolvedDiffComment,
   ResolutionWarning,
 } from "@/features/diffComments/domain/diffComment";
-import { diffCommentIdentityKey } from "@/features/diffComments/domain/diffComment";
+import { DiffReviewIdentity } from "@/features/diffComments/domain/diffComment";
 
 export type DiffCommentDraftDisabledReason =
   | "staleTarget"
@@ -138,7 +137,7 @@ function switchIdentity(
   identity: DiffReviewIdentity,
 ): DiffCommentSession {
   if (
-    diffCommentIdentityKey(state.identity) === diffCommentIdentityKey(identity)
+    DiffReviewIdentity.key(state.identity) === DiffReviewIdentity.key(identity)
   ) {
     return state;
   }

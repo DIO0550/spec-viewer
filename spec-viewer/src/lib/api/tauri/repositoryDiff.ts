@@ -11,10 +11,10 @@ import {
   type RepositoryFileReview,
 } from "./repositoryDiffDecoder";
 
-export const LOAD_REPOSITORY_DIFF_COMMAND = "load_repository_diff" as const;
-export const TRAVERSE_REPOSITORY_IGNORED_COMMAND =
+export const LoadRepositoryDiffCommand = "load_repository_diff" as const;
+export const TraverseRepositoryIgnoredCommand =
   "traverse_repository_ignored" as const;
-export const LOAD_REPOSITORY_FILE_COMMAND = "load_repository_file" as const;
+export const LoadRepositoryFileCommand = "load_repository_file" as const;
 
 export type LoadRepositoryDiffRequest = Readonly<{
   worktreeId: string;
@@ -67,9 +67,9 @@ export type RepositoryDiffCommandErrorCode =
   | "unknown";
 
 export type RepositoryDiffCommandName =
-  | typeof LOAD_REPOSITORY_DIFF_COMMAND
-  | typeof TRAVERSE_REPOSITORY_IGNORED_COMMAND
-  | typeof LOAD_REPOSITORY_FILE_COMMAND;
+  | typeof LoadRepositoryDiffCommand
+  | typeof TraverseRepositoryIgnoredCommand
+  | typeof LoadRepositoryFileCommand;
 
 export type RepositoryDiffCommandError = Readonly<{
   command: RepositoryDiffCommandName;
@@ -83,7 +83,7 @@ export type LoadRepositoryDiffResponse = RepositoryDiffOverview;
 export type TraverseRepositoryIgnoredResponse = IgnoredPage;
 export type LoadRepositoryFileResponse = RepositoryFileReview;
 
-const BACKEND_ERROR_CODES = [
+const BackendErrorCodes = [
   "invalidInput",
   "invalidOverride",
   "unbornHead",
@@ -118,7 +118,7 @@ const isBackendErrorCode = (
   value: unknown,
 ): value is RepositoryDiffBackendErrorCode =>
   typeof value === "string" &&
-  BACKEND_ERROR_CODES.includes(value as RepositoryDiffBackendErrorCode);
+  BackendErrorCodes.includes(value as RepositoryDiffBackendErrorCode);
 
 /**
  * @param value - Candidate command error code.
@@ -228,15 +228,15 @@ export async function loadRepositoryDiff(
     unknown,
     LoadRepositoryDiffRequest,
     RepositoryDiffCommandError
-  >(LOAD_REPOSITORY_DIFF_COMMAND, request, (error) =>
-    fromUnknown(LOAD_REPOSITORY_DIFF_COMMAND, error),
+  >(LoadRepositoryDiffCommand, request, (error) =>
+    fromUnknown(LoadRepositoryDiffCommand, error),
   );
 
   try {
     return decodeRepositoryOverview(response);
   } catch (error) {
     if (error instanceof InvalidRepositoryDiffResponseError) {
-      throw invalidResponse(LOAD_REPOSITORY_DIFF_COMMAND, error);
+      throw invalidResponse(LoadRepositoryDiffCommand, error);
     }
 
     throw error;
@@ -255,15 +255,15 @@ export async function traverseRepositoryIgnored(
     unknown,
     TraverseRepositoryIgnoredRequest,
     RepositoryDiffCommandError
-  >(TRAVERSE_REPOSITORY_IGNORED_COMMAND, request, (error) =>
-    fromUnknown(TRAVERSE_REPOSITORY_IGNORED_COMMAND, error),
+  >(TraverseRepositoryIgnoredCommand, request, (error) =>
+    fromUnknown(TraverseRepositoryIgnoredCommand, error),
   );
 
   try {
     return decodeIgnoredPage(response);
   } catch (error) {
     if (error instanceof InvalidRepositoryDiffResponseError) {
-      throw invalidResponse(TRAVERSE_REPOSITORY_IGNORED_COMMAND, error);
+      throw invalidResponse(TraverseRepositoryIgnoredCommand, error);
     }
 
     throw error;
@@ -282,15 +282,15 @@ export async function loadRepositoryFile(
     unknown,
     LoadRepositoryFileRequest,
     RepositoryDiffCommandError
-  >(LOAD_REPOSITORY_FILE_COMMAND, request, (error) =>
-    fromUnknown(LOAD_REPOSITORY_FILE_COMMAND, error),
+  >(LoadRepositoryFileCommand, request, (error) =>
+    fromUnknown(LoadRepositoryFileCommand, error),
   );
 
   try {
     return decodeRepositoryFileReview(response);
   } catch (error) {
     if (error instanceof InvalidRepositoryDiffResponseError) {
-      throw invalidResponse(LOAD_REPOSITORY_FILE_COMMAND, error);
+      throw invalidResponse(LoadRepositoryFileCommand, error);
     }
 
     throw error;

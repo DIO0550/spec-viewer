@@ -6,9 +6,9 @@ import type {
 import { invokeTauriCommand } from "./invokeTauriCommand";
 import { isRecord } from "./isRecord";
 
-export const DELETE_COMMENT_COMMAND = "delete_comment" as const;
+export const DeleteCommentCommand = "delete_comment" as const;
 
-export type DeleteCommentCommandName = typeof DELETE_COMMENT_COMMAND;
+export type DeleteCommentCommandName = typeof DeleteCommentCommand;
 export type DeleteCommentCommandRequest = DeleteCommentRequest;
 export type DeleteCommentCommandResponse = DeleteCommentResponse;
 export type DeleteCommentCommandErrorCode =
@@ -40,12 +40,12 @@ export const DeleteCommentCommandError = {
   fromUnknown(error: unknown): DeleteCommentCommandError {
     if (
       isRecord(error) &&
-      error.command === DELETE_COMMENT_COMMAND &&
+      error.command === DeleteCommentCommand &&
       DeleteCommentCommandError.isCommandErrorCode(error.code) &&
       typeof error.message === "string"
     ) {
       return {
-        command: DELETE_COMMENT_COMMAND,
+        command: DeleteCommentCommand,
         code: error.code,
         message: error.message,
         raw: error.raw,
@@ -58,7 +58,7 @@ export const DeleteCommentCommandError = {
       typeof error.message === "string"
     ) {
       return {
-        command: DELETE_COMMENT_COMMAND,
+        command: DeleteCommentCommand,
         code: error.code,
         message: error.message,
         raw: error,
@@ -82,7 +82,7 @@ export const DeleteCommentCommandError = {
   /** @returns An unknown delete_comment command error preserving the raw payload. */
   unknown(message: string, raw: unknown): DeleteCommentCommandError {
     return {
-      command: DELETE_COMMENT_COMMAND,
+      command: DeleteCommentCommand,
       code: "unknown",
       message,
       raw,
@@ -121,7 +121,7 @@ export async function deleteComment(
     DeleteCommentCommandRequest,
     DeleteCommentCommandError
   >(
-    DELETE_COMMENT_COMMAND,
+    DeleteCommentCommand,
     commandRequest,
     DeleteCommentCommandError.fromUnknown,
   );

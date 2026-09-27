@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 
 import {
-  deriveDiffAvailability,
+  FileDiff,
   Hunk,
   type FileChangeStatus,
   type FileContent,
@@ -109,7 +109,7 @@ test.each([
 });
 
 test("deriveDiffAvailabilityはhunkを持つtext reviewをreadyにする", () => {
-  const availability = deriveDiffAvailability(
+  const availability = FileDiff.deriveAvailability(
     createReview({
       structuredDiff: {
         state: "available",
@@ -128,7 +128,7 @@ test("deriveDiffAvailabilityはhunkを持つtext reviewをreadyにする", () =>
 });
 
 test("deriveDiffAvailabilityはhunkがないavailable reviewをemptyにする", () => {
-  const availability = deriveDiffAvailability(createReview());
+  const availability = FileDiff.deriveAvailability(createReview());
 
   expect(availability).toEqual({ kind: "empty" });
 });
@@ -151,7 +151,7 @@ test("deriveDiffAvailabilityはbinary classificationをhunkより優先してomi
     file: { ...review.file, contentClassification: "binary" as const },
   };
 
-  expect(deriveDiffAvailability(binaryReview)).toEqual({
+  expect(FileDiff.deriveAvailability(binaryReview)).toEqual({
     kind: "omitted",
     reason: "binary",
   });
@@ -163,7 +163,7 @@ test.each([
   "diffLimit",
   "unsupportedEntryKind",
 ] as const)("deriveDiffAvailabilityはstructured diff omission=%sをomittedにする", (reason) => {
-  const availability = deriveDiffAvailability(
+  const availability = FileDiff.deriveAvailability(
     createReview({
       structuredDiff: { state: "omitted", hunks: [], reason },
     }),
@@ -176,7 +176,7 @@ test.each([
   "added",
   "deleted",
 ] as const)("deriveDiffAvailabilityは%sのmissingSideをreadyとして扱う", (change) => {
-  const availability = deriveDiffAvailability(
+  const availability = FileDiff.deriveAvailability(
     createReview({
       change,
       oldContent:
@@ -203,7 +203,7 @@ test.each([
 });
 
 test("deriveDiffAvailabilityは予期しないmissingSideをmissingとして返す", () => {
-  const availability = deriveDiffAvailability(
+  const availability = FileDiff.deriveAvailability(
     createReview({
       oldContent: omittedContent("missingSide"),
       structuredDiff: {

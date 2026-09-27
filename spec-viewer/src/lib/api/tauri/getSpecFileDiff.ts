@@ -11,7 +11,7 @@ import {
   InvalidSpecDiffResponseError,
 } from "./specDiffDecoder";
 
-export const GET_SPEC_FILE_DIFF_COMMAND = "get_spec_file_diff" as const;
+export const GetSpecFileDiffCommand = "get_spec_file_diff" as const;
 
 export type GetSpecFileDiffCommandRequest = Readonly<{
   workspacePath: string;
@@ -27,13 +27,13 @@ export type GetSpecFileDiffCommandErrorCode =
   | "invalidResponse"
   | "unknown";
 export type GetSpecFileDiffCommandError = Readonly<{
-  command: typeof GET_SPEC_FILE_DIFF_COMMAND;
+  command: typeof GetSpecFileDiffCommand;
   code: GetSpecFileDiffCommandErrorCode;
   message: string;
   raw: unknown;
 }>;
 export type GetSpecFileDiffCommandContract = Readonly<{
-  name: typeof GET_SPEC_FILE_DIFF_COMMAND;
+  name: typeof GetSpecFileDiffCommand;
   request: GetSpecFileDiffCommandRequest;
   response: GetSpecFileDiffCommandResponse;
   error: GetSpecFileDiffCommandError;
@@ -47,12 +47,12 @@ export const GetSpecFileDiffCommandError = {
   fromUnknown(error: unknown): GetSpecFileDiffCommandError {
     if (
       isRecord(error) &&
-      error.command === GET_SPEC_FILE_DIFF_COMMAND &&
+      error.command === GetSpecFileDiffCommand &&
       GetSpecFileDiffCommandError.isCommandErrorCode(error.code) &&
       typeof error.message === "string"
     ) {
       return {
-        command: GET_SPEC_FILE_DIFF_COMMAND,
+        command: GetSpecFileDiffCommand,
         code: error.code,
         message: error.message,
         raw: error.raw,
@@ -65,7 +65,7 @@ export const GetSpecFileDiffCommandError = {
       typeof error.message === "string"
     ) {
       return {
-        command: GET_SPEC_FILE_DIFF_COMMAND,
+        command: GetSpecFileDiffCommand,
         code: error.code,
         message: error.message,
         raw: error,
@@ -93,7 +93,7 @@ export const GetSpecFileDiffCommandError = {
     error: InvalidSpecDiffResponseError,
   ): GetSpecFileDiffCommandError {
     return {
-      command: GET_SPEC_FILE_DIFF_COMMAND,
+      command: GetSpecFileDiffCommand,
       code: "invalidResponse",
       message: error.message,
       raw: error.raw,
@@ -107,7 +107,7 @@ export const GetSpecFileDiffCommandError = {
    */
   unknown(message: string, raw: unknown): GetSpecFileDiffCommandError {
     return {
-      command: GET_SPEC_FILE_DIFF_COMMAND,
+      command: GetSpecFileDiffCommand,
       code: "unknown",
       message,
       raw,
@@ -148,7 +148,7 @@ export async function getSpecFileDiff(
     GetSpecFileDiffCommandRequest,
     GetSpecFileDiffCommandError
   >(
-    GET_SPEC_FILE_DIFF_COMMAND,
+    GetSpecFileDiffCommand,
     request,
     GetSpecFileDiffCommandError.fromUnknown,
   );

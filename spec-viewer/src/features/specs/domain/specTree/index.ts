@@ -14,7 +14,47 @@ export type SpecSelection = Readonly<{
   fileKey: SpecFileKey | null;
 }>;
 
+export type SpecFileScope = Readonly<{
+  workspacePath: string;
+  specId: string;
+  fileKey: SpecFileKey;
+}>;
+
 export const SpecTree = {
+  /**
+   * Resolves an external changed-file identity through the loaded Spec tree.
+   * @param tree - Current authoritative Spec tree.
+   * @param workspacePath - Active workspace, or null while closed.
+   * @param specId - External Spec ID.
+   * @param fileKey - External logical file key.
+   * @returns A typed selection using the actual file key, or null when invalid.
+   */
+  resolveFileSelection(
+    tree: SpecTree | null,
+    workspacePath: string | null,
+    specId: string,
+    fileKey: string,
+  ): SpecFileScope | null {
+    if (tree === null || workspacePath === null) {
+      return null;
+    }
+
+    const spec = SpecTree.findNode(tree, specId);
+    if (spec === null) {
+      return null;
+    }
+
+    const file = spec.files.find((candidate) => candidate.key === fileKey);
+    if (file === undefined) {
+      return null;
+    }
+
+    return {
+      workspacePath,
+      specId: spec.id,
+      fileKey: file.key satisfies SpecFileKey,
+    };
+  },
   /**
    * Returns true when no openable spec exists in the projection.
    * @param tree - Spec tree to inspect.

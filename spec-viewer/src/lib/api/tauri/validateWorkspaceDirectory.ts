@@ -6,11 +6,11 @@ import type {
 import { invokeTauriCommand } from "./invokeTauriCommand";
 import { isRecord } from "./isRecord";
 
-export const VALIDATE_WORKSPACE_DIRECTORY_COMMAND =
+export const ValidateWorkspaceDirectoryCommand =
   "validate_workspace_directory" as const;
 
 export type ValidateWorkspaceDirectoryCommandName =
-  typeof VALIDATE_WORKSPACE_DIRECTORY_COMMAND;
+  typeof ValidateWorkspaceDirectoryCommand;
 export type ValidateWorkspaceDirectoryCommandRequest =
   ValidateWorkspaceDirectoryRequest;
 export type ValidateWorkspaceDirectoryCommandResponse =
@@ -41,12 +41,12 @@ export const ValidateWorkspaceDirectoryCommandError = {
   fromUnknown(error: unknown): ValidateWorkspaceDirectoryCommandError {
     if (
       isRecord(error) &&
-      error.command === VALIDATE_WORKSPACE_DIRECTORY_COMMAND &&
+      error.command === ValidateWorkspaceDirectoryCommand &&
       ValidateWorkspaceDirectoryCommandError.isCommandErrorCode(error.code) &&
       typeof error.message === "string"
     ) {
       return {
-        command: VALIDATE_WORKSPACE_DIRECTORY_COMMAND,
+        command: ValidateWorkspaceDirectoryCommand,
         code: error.code,
         message: error.message,
         raw: error.raw,
@@ -59,7 +59,7 @@ export const ValidateWorkspaceDirectoryCommandError = {
       typeof error.message === "string"
     ) {
       return {
-        command: VALIDATE_WORKSPACE_DIRECTORY_COMMAND,
+        command: ValidateWorkspaceDirectoryCommand,
         code: error.code,
         message: error.message,
         raw: error,
@@ -89,7 +89,7 @@ export const ValidateWorkspaceDirectoryCommandError = {
     raw: unknown,
   ): ValidateWorkspaceDirectoryCommandError {
     return {
-      command: VALIDATE_WORKSPACE_DIRECTORY_COMMAND,
+      command: ValidateWorkspaceDirectoryCommand,
       code: "unknown",
       message,
       raw,
@@ -130,7 +130,7 @@ export async function validateWorkspaceDirectory(
     ValidateWorkspaceDirectoryCommandRequest,
     ValidateWorkspaceDirectoryCommandError
   >(
-    VALIDATE_WORKSPACE_DIRECTORY_COMMAND,
+    ValidateWorkspaceDirectoryCommand,
     commandRequest,
     ValidateWorkspaceDirectoryCommandError.fromUnknown,
   );

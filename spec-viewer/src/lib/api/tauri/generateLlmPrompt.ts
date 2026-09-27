@@ -6,9 +6,9 @@ import type {
 import { invokeTauriCommand } from "./invokeTauriCommand";
 import { isRecord } from "./isRecord";
 
-export const GENERATE_LLM_PROMPT_COMMAND = "generate_llm_prompt" as const;
+export const GenerateLlmPromptCommand = "generate_llm_prompt" as const;
 
-export type GenerateLlmPromptCommandName = typeof GENERATE_LLM_PROMPT_COMMAND;
+export type GenerateLlmPromptCommandName = typeof GenerateLlmPromptCommand;
 export type GenerateLlmPromptCommandRequest = GenerateLlmPromptRequest;
 export type GenerateLlmPromptCommandResponse = GenerateLlmPromptResponse;
 export type GenerateLlmPromptCommandErrorCode =
@@ -40,12 +40,12 @@ export const GenerateLlmPromptCommandError = {
   fromUnknown(error: unknown): GenerateLlmPromptCommandError {
     if (
       isRecord(error) &&
-      error.command === GENERATE_LLM_PROMPT_COMMAND &&
+      error.command === GenerateLlmPromptCommand &&
       GenerateLlmPromptCommandError.isCommandErrorCode(error.code) &&
       typeof error.message === "string"
     ) {
       return {
-        command: GENERATE_LLM_PROMPT_COMMAND,
+        command: GenerateLlmPromptCommand,
         code: error.code,
         message: error.message,
         raw: error.raw,
@@ -58,7 +58,7 @@ export const GenerateLlmPromptCommandError = {
       typeof error.message === "string"
     ) {
       return {
-        command: GENERATE_LLM_PROMPT_COMMAND,
+        command: GenerateLlmPromptCommand,
         code: error.code,
         message: error.message,
         raw: error,
@@ -82,7 +82,7 @@ export const GenerateLlmPromptCommandError = {
   /** @returns An unknown generate_llm_prompt command error preserving the raw payload. */
   unknown(message: string, raw: unknown): GenerateLlmPromptCommandError {
     return {
-      command: GENERATE_LLM_PROMPT_COMMAND,
+      command: GenerateLlmPromptCommand,
       code: "unknown",
       message,
       raw,
@@ -123,7 +123,7 @@ export async function generateLlmPrompt(
     GenerateLlmPromptCommandRequest,
     GenerateLlmPromptCommandError
   >(
-    GENERATE_LLM_PROMPT_COMMAND,
+    GenerateLlmPromptCommand,
     commandRequest,
     GenerateLlmPromptCommandError.fromUnknown,
   );

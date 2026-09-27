@@ -6,9 +6,9 @@ import type {
 import { invokeTauriCommand } from "./invokeTauriCommand";
 import { isRecord } from "./isRecord";
 
-export const EXPORT_COMMENTS_COMMAND = "export_comments" as const;
+export const ExportCommentsCommand = "export_comments" as const;
 
-export type ExportCommentsCommandName = typeof EXPORT_COMMENTS_COMMAND;
+export type ExportCommentsCommandName = typeof ExportCommentsCommand;
 export type ExportCommentsCommandRequest = ExportCommentsRequest;
 export type ExportCommentsCommandResponse = ExportCommentsResponse;
 export type ExportCommentsCommandErrorCode =
@@ -40,12 +40,12 @@ export const ExportCommentsCommandError = {
   fromUnknown(error: unknown): ExportCommentsCommandError {
     if (
       isRecord(error) &&
-      error.command === EXPORT_COMMENTS_COMMAND &&
+      error.command === ExportCommentsCommand &&
       ExportCommentsCommandError.isCommandErrorCode(error.code) &&
       typeof error.message === "string"
     ) {
       return {
-        command: EXPORT_COMMENTS_COMMAND,
+        command: ExportCommentsCommand,
         code: error.code,
         message: error.message,
         raw: error.raw,
@@ -58,7 +58,7 @@ export const ExportCommentsCommandError = {
       typeof error.message === "string"
     ) {
       return {
-        command: EXPORT_COMMENTS_COMMAND,
+        command: ExportCommentsCommand,
         code: error.code,
         message: error.message,
         raw: error,
@@ -82,7 +82,7 @@ export const ExportCommentsCommandError = {
   /** @returns An unknown export_comments command error preserving the raw payload. */
   unknown(message: string, raw: unknown): ExportCommentsCommandError {
     return {
-      command: EXPORT_COMMENTS_COMMAND,
+      command: ExportCommentsCommand,
       code: "unknown",
       message,
       raw,
@@ -121,7 +121,7 @@ export async function exportComments(
     ExportCommentsCommandRequest,
     ExportCommentsCommandError
   >(
-    EXPORT_COMMENTS_COMMAND,
+    ExportCommentsCommand,
     commandRequest,
     ExportCommentsCommandError.fromUnknown,
   );
