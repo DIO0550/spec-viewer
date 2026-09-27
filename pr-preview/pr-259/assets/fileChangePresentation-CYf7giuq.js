@@ -1,0 +1,1 @@
+import{n as e}from"./chunk-DnJy8xQt.js";function t(e){return e===null?r:n[e]}var n,r,i=e((()=>{n={added:{token:`A`,label:`追加`},modified:{token:`M`,label:`変更`},deleted:{token:`D`,label:`削除`},renamed:{token:`R`,label:`名前変更`},copied:{token:`C`,label:`コピー`},typeChanged:{token:`T`,label:`種別変更`},untracked:{token:`U`,label:`未追跡`}},r={token:`—`,label:`変更なし`}}));export{i as n,t};
