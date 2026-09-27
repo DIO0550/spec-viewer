@@ -6,7 +6,7 @@ export type {
   AddCommentCommandResponse,
 } from "./addComment";
 export {
-  ADD_COMMENT_COMMAND,
+  AddCommentCommand,
   AddCommentCommandError,
   addComment,
 } from "./addComment";
@@ -23,7 +23,7 @@ export type {
   GetSpecFileDiffCommandResponse,
 } from "./getSpecFileDiff";
 export {
-  GET_SPEC_FILE_DIFF_COMMAND,
+  GetSpecFileDiffCommand,
   GetSpecFileDiffCommandError,
   getSpecFileDiff,
 } from "./getSpecFileDiff";
@@ -36,18 +36,18 @@ export type {
   SpecDiffBackendErrorCode,
 } from "./listChangedSpecFiles";
 export {
-  LIST_CHANGED_SPEC_FILES_COMMAND,
+  ListChangedSpecFilesCommand,
   ListChangedSpecFilesCommandError,
   listChangedSpecFiles,
 } from "./listChangedSpecFiles";
 export type { ListSpecDiffRevisionsRequest } from "./listSpecDiffRevisions";
 export {
-  LIST_SPEC_DIFF_REVISIONS_COMMAND,
+  ListSpecDiffRevisionsCommand,
   listSpecDiffRevisions,
 } from "./listSpecDiffRevisions";
 export type { ListSpecFileCommitHistoryRequest } from "./listSpecFileCommitHistory";
 export {
-  LIST_SPEC_FILE_COMMIT_HISTORY_COMMAND,
+  ListSpecFileCommitHistoryCommand,
   listSpecFileCommitHistory,
 } from "./listSpecFileCommitHistory";
 export { listSpecs } from "./listSpecs";
@@ -60,7 +60,7 @@ export type {
 } from "./listWorktrees";
 export {
   InvalidListWorktreesResponseError,
-  LIST_WORKTREES_COMMAND,
+  ListWorktreesCommand,
   ListWorktreesCommandError,
   listWorktrees,
 } from "./listWorktrees";
@@ -72,7 +72,7 @@ export type {
   LoadSpecBundleCommandResponse,
 } from "./loadSpecBundle";
 export {
-  LOAD_SPEC_BUNDLE_COMMAND,
+  LoadSpecBundleCommand,
   LoadSpecBundleCommandError,
   loadSpecBundle,
 } from "./loadSpecBundle";
@@ -103,9 +103,9 @@ export type {
   UpdateDiffCommentRequest,
 } from "./diffComments";
 export {
-  LOAD_DIFF_COMMENTS_COMMAND,
-  SAVE_DIFF_COMMENT_COMMAND,
-  UPDATE_DIFF_COMMENT_COMMAND,
+  LoadDiffCommentsCommand,
+  SaveDiffCommentCommand,
+  UpdateDiffCommentCommand,
   diffCommentCommands,
   getDiffReviewIdentity,
   loadDiffComments,
@@ -133,10 +133,10 @@ export type {
   TraverseRepositoryIgnoredResponse,
 } from "./repositoryDiff";
 export {
-  LOAD_REPOSITORY_DIFF_COMMAND,
-  LOAD_REPOSITORY_FILE_COMMAND,
+  LoadRepositoryDiffCommand,
+  LoadRepositoryFileCommand,
   RepositoryDiffCommandError,
-  TRAVERSE_REPOSITORY_IGNORED_COMMAND,
+  TraverseRepositoryIgnoredCommand,
   loadRepositoryDiff,
   loadRepositoryFile,
   traverseRepositoryIgnored,

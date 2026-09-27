@@ -5,7 +5,7 @@ import { ListChangedSpecFilesCommandError } from "./listChangedSpecFiles";
 import { decodeRevisionOptions } from "./specDiffCatalogDecoder";
 import { InvalidSpecDiffResponseError } from "./specDiffDecoder";
 
-export const LIST_SPEC_DIFF_REVISIONS_COMMAND =
+export const ListSpecDiffRevisionsCommand =
   "list_spec_diff_revisions" as const;
 
 export type ListSpecDiffRevisionsRequest = Readonly<{ workspacePath: string }>;
@@ -24,16 +24,16 @@ export async function listSpecDiffRevisions(
     unknown,
     ListSpecDiffRevisionsRequest,
     unknown
-  >(LIST_SPEC_DIFF_REVISIONS_COMMAND, request, (error) => ({
+  >(ListSpecDiffRevisionsCommand, request, (error) => ({
     ...ListChangedSpecFilesCommandError.fromUnknown(error),
-    command: LIST_SPEC_DIFF_REVISIONS_COMMAND,
+    command: ListSpecDiffRevisionsCommand,
   }));
   try {
     return decodeRevisionOptions(response);
   } catch (error) {
     if (error instanceof InvalidSpecDiffResponseError) {
       throw {
-        command: LIST_SPEC_DIFF_REVISIONS_COMMAND,
+        command: ListSpecDiffRevisionsCommand,
         code: "invalidResponse",
         message: error.message,
         raw: error.raw,

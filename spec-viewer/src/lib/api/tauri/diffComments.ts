@@ -13,13 +13,13 @@ import {
 import { invokeTauriCommand } from "./invokeTauriCommand";
 import { isRecord } from "./isRecord";
 
-export const LOAD_DIFF_COMMENTS_COMMAND = "load_diff_comments" as const;
-export const SAVE_DIFF_COMMENT_COMMAND = "save_diff_comment" as const;
-export const UPDATE_DIFF_COMMENT_COMMAND = "update_diff_comment" as const;
+export const LoadDiffCommentsCommand = "load_diff_comments" as const;
+export const SaveDiffCommentCommand = "save_diff_comment" as const;
+export const UpdateDiffCommentCommand = "update_diff_comment" as const;
 export type DiffCommentCommandName =
-  | typeof LOAD_DIFF_COMMENTS_COMMAND
-  | typeof SAVE_DIFF_COMMENT_COMMAND
-  | typeof UPDATE_DIFF_COMMENT_COMMAND;
+  | typeof LoadDiffCommentsCommand
+  | typeof SaveDiffCommentCommand
+  | typeof UpdateDiffCommentCommand;
 export type LoadDiffCommentsRequest = Readonly<{
   identity: DiffReviewIdentity;
 }>;
@@ -69,7 +69,7 @@ export type DiffCommentCommands = Readonly<{
   ) => Promise<DiffCommentMutationOutcome>;
 }>;
 
-const BACKEND_ERROR_CODES = [
+const BackendErrorCodes = [
   "invalidRequest",
   "invalidRevision",
   "identityMismatch",
@@ -88,7 +88,7 @@ function isBackendErrorCode(
 ): value is DiffCommentBackendErrorCode {
   return (
     typeof value === "string" &&
-    BACKEND_ERROR_CODES.includes(value as DiffCommentBackendErrorCode)
+    BackendErrorCodes.includes(value as DiffCommentBackendErrorCode)
   );
 }
 
@@ -174,7 +174,7 @@ function assertOutcomeScope(
 export async function loadDiffComments(
   request: LoadDiffCommentsRequest,
 ): Promise<ResolvedDiffComments> {
-  return invokeAndDecode(LOAD_DIFF_COMMENTS_COMMAND, request, (value) => {
+  return invokeAndDecode(LoadDiffCommentsCommand, request, (value) => {
     const document = decodeDiffCommentDocument(value);
     assertDocumentScope(request.identity, document, value);
     return document;
@@ -185,7 +185,7 @@ export async function loadDiffComments(
 export async function saveDiffComment(
   request: SaveDiffCommentRequest,
 ): Promise<DiffCommentMutationOutcome> {
-  return invokeAndDecode(SAVE_DIFF_COMMENT_COMMAND, request, (value) => {
+  return invokeAndDecode(SaveDiffCommentCommand, request, (value) => {
     const outcome = decodeDiffCommentMutationOutcome(value);
     assertOutcomeScope(request.identity, outcome);
     return outcome;
@@ -196,7 +196,7 @@ export async function saveDiffComment(
 export async function updateDiffComment(
   request: UpdateDiffCommentRequest,
 ): Promise<DiffCommentMutationOutcome> {
-  return invokeAndDecode(UPDATE_DIFF_COMMENT_COMMAND, request, (value) => {
+  return invokeAndDecode(UpdateDiffCommentCommand, request, (value) => {
     const outcome = decodeDiffCommentMutationOutcome(value);
     assertOutcomeScope(request.identity, outcome);
     return outcome;

@@ -3,9 +3,9 @@ import type { ListSpecsRequest, SpecTree } from "@/features/specs/types/spec";
 import { invokeTauriCommand } from "./invokeTauriCommand";
 import { isRecord } from "./isRecord";
 
-export const LIST_SPECS_COMMAND = "list_specs" as const;
+export const ListSpecsCommand = "list_specs" as const;
 
-export type ListSpecsCommandName = typeof LIST_SPECS_COMMAND;
+export type ListSpecsCommandName = typeof ListSpecsCommand;
 export type ListSpecsCommandRequest = ListSpecsRequest;
 export type ListSpecsCommandResponse = SpecTree;
 export type ListSpecsCommandErrorCode =
@@ -35,12 +35,12 @@ export const ListSpecsCommandError = {
   fromUnknown(error: unknown): ListSpecsCommandError {
     if (
       isRecord(error) &&
-      error.command === LIST_SPECS_COMMAND &&
+      error.command === ListSpecsCommand &&
       ListSpecsCommandError.isCommandErrorCode(error.code) &&
       typeof error.message === "string"
     ) {
       return {
-        command: LIST_SPECS_COMMAND,
+        command: ListSpecsCommand,
         code: error.code,
         message: error.message,
         raw: error.raw,
@@ -53,7 +53,7 @@ export const ListSpecsCommandError = {
       typeof error.message === "string"
     ) {
       return {
-        command: LIST_SPECS_COMMAND,
+        command: ListSpecsCommand,
         code: error.code,
         message: error.message,
         raw: error,
@@ -74,7 +74,7 @@ export const ListSpecsCommandError = {
   /** @returns An unknown list_specs command error preserving the raw payload. */
   unknown(message: string, raw: unknown): ListSpecsCommandError {
     return {
-      command: LIST_SPECS_COMMAND,
+      command: ListSpecsCommand,
       code: "unknown",
       message,
       raw,
@@ -110,5 +110,5 @@ export async function listSpecs(
     ListSpecsCommandResponse,
     ListSpecsCommandRequest,
     ListSpecsCommandError
-  >(LIST_SPECS_COMMAND, commandRequest, ListSpecsCommandError.fromUnknown);
+  >(ListSpecsCommand, commandRequest, ListSpecsCommandError.fromUnknown);
 }

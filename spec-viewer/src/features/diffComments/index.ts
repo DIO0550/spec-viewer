@@ -9,7 +9,6 @@ export type {
   DiffCommentSide,
   DiffCommentStatusFilter,
   DiffLineAnchor,
-  DiffReviewIdentity,
   ResolutionWarning,
   ResolutionWarningCode,
   ResolvedDiffComment,
@@ -18,10 +17,7 @@ export type {
   StoredDiffComment,
   UnavailableReason,
 } from "./domain/diffComment";
-export {
-  diffCommentIdentityKey,
-  isCanonicalDiffCommentRevision,
-} from "./domain/diffComment";
+export { DiffReviewIdentity, DiffCommentRevision } from "./domain/diffComment";
 export type {
   CreateDiffCommentDraftInput,
   UpdateDiffCommentInput,

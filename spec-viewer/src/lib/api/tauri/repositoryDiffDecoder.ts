@@ -234,7 +234,7 @@ const decodeNullableLiteral = <const Values extends readonly string[]>(
   return decodeLiteral(value, path, raw, values);
 };
 
-const FILE_CHANGE_STATUSES = [
+const FileChangeStatuses = [
   "added",
   "modified",
   "deleted",
@@ -243,27 +243,27 @@ const FILE_CHANGE_STATUSES = [
   "typeChanged",
   "untracked",
 ] as const satisfies readonly FileChangeStatus[];
-const ENTRY_KINDS = ["regular", "symlink", "submodule"] as const;
-const CONTENT_CLASSIFICATIONS = [
+const EntryKinds = ["regular", "symlink", "submodule"] as const;
+const ContentClassifications = [
   "text",
   "binary",
   "notApplicable",
   "unknown",
 ] as const satisfies readonly ContentClassification[];
-const DIFF_LINE_KINDS = [
+const DiffLineKinds = [
   "context",
   "added",
   "removed",
   "noNewline",
 ] as const satisfies readonly DiffLineKind[];
-const OMISSION_REASONS = [
+const OmissionReasons = [
   "binary",
   "largeFile",
   "diffLimit",
   "missingSide",
   "unsupportedEntryKind",
 ] as const satisfies readonly OmissionReason[];
-const BASE_SOURCES = [
+const BaseSources = [
   "explicit",
   "ghMergeBase",
   "currentRemoteHead",
@@ -272,7 +272,7 @@ const BASE_SOURCES = [
   "main",
   "master",
 ] as const satisfies readonly BaseResolutionSource[];
-const BASE_FAILURES = [
+const BaseFailures = [
   "notFound",
   "ambiguousRemoteHead",
   "detachedHead",
@@ -280,7 +280,7 @@ const BASE_FAILURES = [
   "unbornHead",
   "noCommonAncestor",
 ] as const satisfies readonly BaseResolutionFailure[];
-const BASE_OVERRIDE_REASONS = ["missingRef", "invalidRef"] as const;
+const BaseOverrideReasons = ["missingRef", "invalidRef"] as const;
 
 const decodeArray = (
   value: unknown,
@@ -407,7 +407,7 @@ const decodeBase = (
     record.source,
     path + ".source",
     raw,
-    BASE_SOURCES,
+    BaseSources,
   );
   const branchRef = decodeNullableString(
     record.branchRef,
@@ -484,7 +484,7 @@ const decodeBase = (
 
     return {
       state,
-      reason: decodeLiteral(reason, path + ".reason", raw, BASE_FAILURES),
+      reason: decodeLiteral(reason, path + ".reason", raw, BaseFailures),
       candidates,
     };
   }
@@ -508,7 +508,7 @@ const decodeBase = (
 
   return {
     state,
-    reason: decodeLiteral(reason, path + ".reason", raw, BASE_OVERRIDE_REASONS),
+    reason: decodeLiteral(reason, path + ".reason", raw, BaseOverrideReasons),
     overrideRef,
   };
 };
@@ -537,19 +537,19 @@ const decodeFileChange = (
           record.change,
           path + ".change",
           raw,
-          FILE_CHANGE_STATUSES,
+          FileChangeStatuses,
         );
   const entryKind = decodeLiteral(
     record.entryKind,
     path + ".entryKind",
     raw,
-    ENTRY_KINDS,
+    EntryKinds,
   );
   const contentClassification = decodeLiteral(
     record.contentClassification,
     path + ".contentClassification",
     raw,
-    CONTENT_CLASSIFICATIONS,
+    ContentClassifications,
   );
   const similarity = decodeNullableSafeInteger(
     record.similarity,
@@ -682,7 +682,7 @@ const decodeContent = (
       record.reason,
       path + ".reason",
       raw,
-      OMISSION_REASONS,
+      OmissionReasons,
     ),
     byteLength: decodeNullableSafeInteger(
       record.byteLength,
@@ -699,7 +699,7 @@ const decodeDiffLine = (
 ): DiffLineSource => {
   const record = decodeRecord(value, path, raw);
   return {
-    kind: decodeLiteral(record.kind, path + ".kind", raw, DIFF_LINE_KINDS),
+    kind: decodeLiteral(record.kind, path + ".kind", raw, DiffLineKinds),
     text: decodeString(record.text, path + ".text", raw),
   };
 };
@@ -728,7 +728,7 @@ const decodeStructuredDiff = (
         record.reason,
         path + ".reason",
         raw,
-        OMISSION_REASONS,
+        OmissionReasons,
       ),
     };
   }
@@ -890,13 +890,13 @@ const decodeTreeNode = (
       record.entryKind,
       path + ".entryKind",
       raw,
-      ENTRY_KINDS,
+      EntryKinds,
     ),
     change: decodeNullableLiteral(
       record.change,
       path + ".change",
       raw,
-      FILE_CHANGE_STATUSES,
+      FileChangeStatuses,
     ),
     ignored: decodeBoolean(record.ignored, path + ".ignored", raw),
     children: decodeTreeChildren(record.children, path + ".children", raw),
@@ -1062,7 +1062,7 @@ export type DiffAnchor = Readonly<{
   context: string;
 }>;
 
-const MAX_U64_DECIMAL = "18446744073709551615";
+const MaxU64Decimal = "18446744073709551615";
 
 /**
  * @param value - Candidate canonical decimal revision.
@@ -1079,8 +1079,8 @@ export function decodeCanonicalRevision(
   const revision = decodeString(value, path, raw);
   const isCanonical = revision === "0" || /^[1-9][0-9]*$/.test(revision);
   const exceedsU64 =
-    revision.length > MAX_U64_DECIMAL.length ||
-    (revision.length === MAX_U64_DECIMAL.length && revision > MAX_U64_DECIMAL);
+    revision.length > MaxU64Decimal.length ||
+    (revision.length === MaxU64Decimal.length && revision > MaxU64Decimal);
 
   if (!isCanonical || exceedsU64) {
     throw invalid(

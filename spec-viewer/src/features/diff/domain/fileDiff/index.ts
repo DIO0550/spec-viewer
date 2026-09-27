@@ -120,9 +120,7 @@ export type FileDiff = Readonly<{
  * @param review - Decoded file review to classify.
  * @returns The safe top-level state for the diff viewer.
  */
-export function deriveDiffAvailability(
-  review: FileReview,
-): FileDiffAvailability {
+function deriveDiffAvailability(review: FileReview): FileDiffAvailability {
   if (review.file.contentClassification === "binary") {
     return { kind: "omitted", reason: "binary" };
   }
@@ -202,7 +200,7 @@ function isExpectedOneSidedMissing(
   return false;
 }
 
-const HUNK_HEADER_PATTERN =
+const HunkHeaderPattern =
   /^@@ -([0-9]+)(?:,([0-9]+))? \+([0-9]+)(?:,([0-9]+))? @@(?: .*)?$/;
 
 /**
@@ -213,7 +211,7 @@ const HUNK_HEADER_PATTERN =
 const parseHunkStartLines = (
   header: string,
 ): Readonly<{ oldStart: number; newStart: number }> => {
-  const match = HUNK_HEADER_PATTERN.exec(header);
+  const match = HunkHeaderPattern.exec(header);
   if (!match) {
     throw new Error(`Invalid unified diff hunk header: ${header}`);
   }
@@ -300,4 +298,8 @@ export const StructuredDiff = {
   ): value is Extract<StructuredDiff, { state: "omitted" }> {
     return value.state === "omitted";
   },
+} as const;
+
+export const FileDiff = {
+  deriveAvailability: deriveDiffAvailability,
 } as const;

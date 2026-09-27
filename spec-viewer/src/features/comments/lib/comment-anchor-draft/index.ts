@@ -15,15 +15,15 @@ type CreateCommentAnchorDraftFromBlockOptions = Readonly<{
   fileKey: SpecFileKey;
 }>;
 
-const RENDERED_BLOCK_SELECTOR =
+const RenderedBlockSelector =
   "[data-block-type][data-block-index][data-rendered-block-type][data-text-hash][data-text-snippet]";
-const COMMENT_TARGET_SELECTOR = ".markdown-comment-target";
-const COMMENT_UI_SELECTOR =
+const CommentTargetSelector = ".markdown-comment-target";
+const CommentUiSelector =
   ".markdown-block-comment-button, .markdown-comment-annotations";
-const COMMENT_LANE_WIDTH = 88;
-const MAX_SNIPPET_LENGTH = 160;
-const FNV_32_OFFSET = 0x811c9dc5;
-const FNV_32_PRIME = 0x01000193;
+const CommentLaneWidth = 88;
+const MaxSnippetLength = 160;
+const Fnv32Offset = 0x811c9dc5;
+const Fnv32Prime = 0x01000193;
 
 /** @returns A comment anchor draft for a single Markdown block selection. */
 export function createCommentAnchorDraftFromSelection({
@@ -122,11 +122,11 @@ export function createCommentAnchorDraftFromBlock({
  * @returns A stable non-cryptographic hash for the rendered block text.
  */
 export function createTextHash(text: string): string {
-  let hash = FNV_32_OFFSET;
+  let hash = Fnv32Offset;
 
   for (const character of normalizeWhitespace(text)) {
     hash ^= character.codePointAt(0) ?? 0;
-    hash = Math.imul(hash, FNV_32_PRIME);
+    hash = Math.imul(hash, Fnv32Prime);
   }
 
   return `fnv1a:${(hash >>> 0).toString(16).padStart(8, "0")}`;
@@ -143,7 +143,7 @@ export function createTextSnippet(text: string): string | null {
     return null;
   }
 
-  return snippet.slice(0, MAX_SNIPPET_LENGTH);
+  return snippet.slice(0, MaxSnippetLength);
 }
 
 /**
@@ -185,11 +185,11 @@ function findSelectionBlock(
     return null;
   }
 
-  if (element.closest(COMMENT_UI_SELECTOR) !== null) {
+  if (element.closest(CommentUiSelector) !== null) {
     return null;
   }
 
-  const block = element.closest<HTMLElement>(RENDERED_BLOCK_SELECTOR);
+  const block = element.closest<HTMLElement>(RenderedBlockSelector);
 
   if (block === null || !renderedRoot.contains(block)) {
     return null;
@@ -288,7 +288,7 @@ function isCommentUiNode(node: Node): boolean {
       ? (node as Element)
       : node.parentElement;
 
-  return element?.closest(COMMENT_UI_SELECTOR) !== null;
+  return element?.closest(CommentUiSelector) !== null;
 }
 
 /**
@@ -358,7 +358,7 @@ function createBlockSelectionBounds(
  * @returns The viewport x-coordinate for the left edge of the comment lane.
  */
 function createCommentLaneLeft(block: HTMLElement): number | undefined {
-  const target = block.closest<HTMLElement>(COMMENT_TARGET_SELECTOR) ?? block;
+  const target = block.closest<HTMLElement>(CommentTargetSelector) ?? block;
 
   const rect = target.getBoundingClientRect();
 
@@ -366,7 +366,7 @@ function createCommentLaneLeft(block: HTMLElement): number | undefined {
     return undefined;
   }
 
-  return rect.right - COMMENT_LANE_WIDTH;
+  return rect.right - CommentLaneWidth;
 }
 
 /**

@@ -21,7 +21,7 @@ export type SpecArtifactViewerProps = Readonly<{
  * App composition never attaches an interaction port to direct artifacts, so
  * this key cannot escape into persistence. Standard artifacts always carry their real key.
  */
-const DIRECT_ARTIFACT_PLACEHOLDER_KEY = "impl" as const;
+const DirectArtifactPlaceholderKey = "impl" as const;
 
 /**
  * Adapts bundle artifacts to the established secure Markdown renderer.
@@ -112,7 +112,7 @@ export function SpecArtifactViewer({
   }
 
   const isStandardArtifact = artifact.fileKey !== null;
-  const fileKey = artifact.fileKey ?? DIRECT_ARTIFACT_PLACEHOLDER_KEY;
+  const fileKey = artifact.fileKey ?? DirectArtifactPlaceholderKey;
   const state = SpecDocumentState.loaded(
     workspacePath ?? "",
     bundleState.bundle === null ? "" : bundleState.bundle.specId,

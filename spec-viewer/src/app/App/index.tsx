@@ -38,13 +38,12 @@ import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFil
 import {
   ChangesNavigation,
   CurrentFileViewer,
-  createSpecChangeId,
+  SpecChange,
   DiffViewer,
   DiffViewModeControls,
   DiffWorkspace,
   type DiffWorkspaceState,
   type FileDiff,
-  findSpecChange,
   RevisionSelector,
   type SpecDiffWorkspaceState,
   useSpecDiffWorkspace,
@@ -427,17 +426,17 @@ function SpecViewAppContent(): ReactElement {
   const currentSpecChange = useMemo(
     () =>
       specDiff.state.status === "ready"
-        ? findSpecChange(specDiff.state.overview.files, specState.selection)
+        ? SpecChange.find(specDiff.state.overview.files, specState.selection)
         : null,
     [specDiff.state, specState.selection],
   );
   const selectedChangeId =
-    currentSpecChange === null ? null : createSpecChangeId(currentSpecChange);
+    currentSpecChange === null ? null : SpecChange.createId(currentSpecChange);
   const changesItems = useMemo(
     () =>
       specDiff.state.status === "ready"
         ? specDiff.state.overview.files.map((file) => ({
-            id: createSpecChangeId(file),
+            id: SpecChange.createId(file),
             path: file.targetPath,
             change: file.change,
           }))
@@ -1017,7 +1016,7 @@ function SpecViewAppContent(): ReactElement {
                 const change =
                   specDiff.state.status === "ready"
                     ? (specDiff.state.overview.files.find(
-                        (file) => createSpecChangeId(file) === id,
+                        (file) => SpecChange.createId(file) === id,
                       ) ?? null)
                     : null;
                 if (change === null) {

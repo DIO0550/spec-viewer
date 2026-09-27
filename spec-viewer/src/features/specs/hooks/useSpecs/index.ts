@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { OperationId } from "@/features/specs/domain/operationId";
-import { resolveSpecFileSelection } from "@/features/specs/domain/resolveSpecFileSelection";
 import { SpecBundleState } from "@/features/specs/domain/specBundleState";
 import type { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
 import { SpecDocumentState as SpecDocumentStateFactory } from "@/features/specs/domain/specDocumentState";
@@ -552,7 +551,7 @@ export function useSpecsLegacy(options: UseSpecsOptions): UseSpecsResult {
   const selectSpecFile = useCallback(
     async (specId: string, fileKey: string): Promise<void> => {
       await runSpecLoad(async (operationId) => {
-        const target = resolveSpecFileSelection(
+        const target = SpecTreeDomain.resolveFileSelection(
           tree,
           workspacePath,
           specId,

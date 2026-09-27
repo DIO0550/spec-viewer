@@ -163,30 +163,32 @@ export type DiffCommentMutationOutcome =
 
 export type DiffCommentStatusFilter = "open" | "resolved" | "all";
 
-const MAX_U64_DECIMAL = "18446744073709551615";
+export type DiffCommentRevision = string;
+
+const MaxU64Decimal = "18446744073709551615";
 
 /**
  * @param revision - Candidate document revision.
  * @returns Whether the value is canonical unsigned u64 decimal.
  */
-export function isCanonicalDiffCommentRevision(revision: string): boolean {
+function isCanonicalDiffCommentRevision(revision: string): boolean {
   const isCanonical = revision === "0" || /^[1-9][0-9]*$/.test(revision);
   if (!isCanonical) {
     return false;
   }
 
-  if (revision.length !== MAX_U64_DECIMAL.length) {
-    return revision.length < MAX_U64_DECIMAL.length;
+  if (revision.length !== MaxU64Decimal.length) {
+    return revision.length < MaxU64Decimal.length;
   }
 
-  return revision <= MAX_U64_DECIMAL;
+  return revision <= MaxU64Decimal;
 }
 
 /**
  * @param identity - Complete repository Diff identity.
  * @returns A collision-safe in-memory key containing all identity values.
  */
-export function diffCommentIdentityKey(identity: DiffReviewIdentity): string {
+function diffCommentIdentityKey(identity: DiffReviewIdentity): string {
   return [
     identity.repositoryId,
     identity.worktreeId,
@@ -196,3 +198,11 @@ export function diffCommentIdentityKey(identity: DiffReviewIdentity): string {
     .map((value) => `${value.length}:${value}`)
     .join("|");
 }
+
+export const DiffCommentRevision = {
+  isCanonical: isCanonicalDiffCommentRevision,
+} as const;
+
+export const DiffReviewIdentity = {
+  key: diffCommentIdentityKey,
+} as const;

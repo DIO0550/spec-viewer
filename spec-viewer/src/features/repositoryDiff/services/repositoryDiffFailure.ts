@@ -1,13 +1,13 @@
 import {
-  LOAD_REPOSITORY_DIFF_COMMAND,
-  LOAD_REPOSITORY_FILE_COMMAND,
+  LoadRepositoryDiffCommand,
+  LoadRepositoryFileCommand,
   RepositoryDiffCommandError,
-  TRAVERSE_REPOSITORY_IGNORED_COMMAND,
+  TraverseRepositoryIgnoredCommand,
   type RepositoryDiffCommandName,
 } from "@/lib/api/tauri";
 import type { RepositoryDiffFailure } from "@/features/repositoryDiff/domain/repositoryDiffWorkspaceState";
 
-const NON_RETRYABLE_CODES = new Set([
+const NonRetryableCodes = new Set([
   "invalidInput",
   "invalidOverride",
   "invalidResponse",
@@ -30,7 +30,7 @@ export function normalizeRepositoryDiffFailure(
   return {
     code: normalized.code,
     message: normalized.message,
-    retryable: !NON_RETRYABLE_CODES.has(normalized.code),
+    retryable: !NonRetryableCodes.has(normalized.code),
   };
 }
 
@@ -38,14 +38,14 @@ export function normalizeRepositoryDiffFailure(
 export function normalizeRepositoryDiffOverviewFailure(
   error: unknown,
 ): RepositoryDiffFailure {
-  return normalizeRepositoryDiffFailure(LOAD_REPOSITORY_DIFF_COMMAND, error);
+  return normalizeRepositoryDiffFailure(LoadRepositoryDiffCommand, error);
 }
 
 /** @param error - Unknown file command rejection. @returns Normalized file failure. */
 export function normalizeRepositoryDiffFileFailure(
   error: unknown,
 ): RepositoryDiffFailure {
-  return normalizeRepositoryDiffFailure(LOAD_REPOSITORY_FILE_COMMAND, error);
+  return normalizeRepositoryDiffFailure(LoadRepositoryFileCommand, error);
 }
 
 /** @param error - Unknown ignored-page command rejection. @returns Normalized page failure. */
@@ -53,7 +53,7 @@ export function normalizeRepositoryDiffIgnoredPageFailure(
   error: unknown,
 ): RepositoryDiffFailure {
   return normalizeRepositoryDiffFailure(
-    TRAVERSE_REPOSITORY_IGNORED_COMMAND,
+    TraverseRepositoryIgnoredCommand,
     error,
   );
 }

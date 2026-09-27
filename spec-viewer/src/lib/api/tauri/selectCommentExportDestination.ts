@@ -2,8 +2,8 @@ import { type SaveDialogOptions, save } from "@tauri-apps/plugin-dialog";
 
 import type { ExportCommentsTarget } from "@/features/comments/types/comment";
 
-const COMMENT_EXPORT_DEFAULT_SPEC_ID = "spec";
-const INVALID_PATH_CHARS_PATTERN = /[^A-Za-z0-9._-]+/g;
+const CommentExportDefaultSpecId = "spec";
+const InvalidPathCharsPattern = /[^A-Za-z0-9._-]+/g;
 
 /** @returns A destination path for the requested comment export, or null. */
 export async function selectCommentExportDestination(
@@ -55,10 +55,10 @@ function createCommentExportDefaultFileName(
  * @returns A file-system-safe path component for save dialog defaults.
  */
 function sanitizeExportPathPart(value: string): string {
-  const sanitized = value.trim().replace(INVALID_PATH_CHARS_PATTERN, "-");
+  const sanitized = value.trim().replace(InvalidPathCharsPattern, "-");
 
   if (sanitized.length === 0) {
-    return COMMENT_EXPORT_DEFAULT_SPEC_ID;
+    return CommentExportDefaultSpecId;
   }
 
   return sanitized;

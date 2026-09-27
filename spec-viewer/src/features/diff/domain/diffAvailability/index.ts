@@ -5,7 +5,7 @@ export type RepositoryUnavailableCode =
   | "gitUnavailable"
   | "unbornHead";
 
-const REPOSITORY_UNAVAILABLE_CODES = [
+const RepositoryUnavailableCodes = [
   "notRepository",
   "bareRepository",
   "worktreeUnavailable",
@@ -19,7 +19,7 @@ export const DiffAvailability = {
    * @returns True only when repository diff is unavailable at its source.
    */
   isRepositoryUnavailable(code: string): code is RepositoryUnavailableCode {
-    return REPOSITORY_UNAVAILABLE_CODES.includes(
+    return RepositoryUnavailableCodes.includes(
       code as RepositoryUnavailableCode,
     );
   },

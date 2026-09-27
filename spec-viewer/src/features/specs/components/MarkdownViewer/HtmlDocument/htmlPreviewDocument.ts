@@ -1,18 +1,18 @@
 import { highlightHtmlDocument } from "@/lib/htmlDocumentSearch";
 
-export const HTML_ZOOM_DEFAULT_PERCENT = 100;
-export const HTML_ZOOM_MIN_PERCENT = 50;
-export const HTML_ZOOM_MAX_PERCENT = 160;
-export const HTML_ZOOM_STEP_PERCENT = 10;
+export const HtmlZoomDefaultPercent = 100;
+export const HtmlZoomMinPercent = 50;
+export const HtmlZoomMaxPercent = 160;
+export const HtmlZoomStepPercent = 10;
 
-const SCRIPT_ENABLED_HTML_FILE_NAMES: readonly string[] = [
+const ScriptEnabledHtmlFileNames: readonly string[] = [
   "requirements.html",
   "test-cases.html",
   "understanding-quiz-plan.html",
   "understanding-quiz-impl.html",
 ];
-const HTML_PREVIEW_DEFAULT_SANDBOX = "";
-const HTML_PREVIEW_SCRIPT_SANDBOX = "allow-scripts";
+const HtmlPreviewDefaultSandbox = "";
+const HtmlPreviewScriptSandbox = "allow-scripts";
 
 export type CreateHtmlPreviewDocumentInput = Readonly<{
   contents: string;
@@ -28,10 +28,10 @@ export type CreateHtmlPreviewDocumentInput = Readonly<{
  */
 export function createHtmlPreviewSandbox(path: string): string {
   if (isScriptEnabledHtmlPath(path)) {
-    return HTML_PREVIEW_SCRIPT_SANDBOX;
+    return HtmlPreviewScriptSandbox;
   }
 
-  return HTML_PREVIEW_DEFAULT_SANDBOX;
+  return HtmlPreviewDefaultSandbox;
 }
 
 /**
@@ -41,7 +41,7 @@ export function createHtmlPreviewSandbox(path: string): string {
 export function isScriptEnabledHtmlPath(path: string): boolean {
   const fileName = getPathFileName(path).toLowerCase();
 
-  return SCRIPT_ENABLED_HTML_FILE_NAMES.includes(fileName);
+  return ScriptEnabledHtmlFileNames.includes(fileName);
 }
 
 /**
@@ -205,8 +205,8 @@ export function createHtmlPreviewHead(zoomPercent: number): string {
  */
 export function clampHtmlZoomPercent(zoomPercent: number): number {
   return Math.min(
-    HTML_ZOOM_MAX_PERCENT,
-    Math.max(HTML_ZOOM_MIN_PERCENT, zoomPercent),
+    HtmlZoomMaxPercent,
+    Math.max(HtmlZoomMinPercent, zoomPercent),
   );
 }
 

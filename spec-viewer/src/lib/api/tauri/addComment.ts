@@ -4,9 +4,9 @@ import type { AddCommentRequest } from "@/features/comments/types/comment";
 import { invokeTauriCommand } from "./invokeTauriCommand";
 import { isRecord } from "./isRecord";
 
-export const ADD_COMMENT_COMMAND = "add_comment" as const;
+export const AddCommentCommand = "add_comment" as const;
 
-export type AddCommentCommandName = typeof ADD_COMMENT_COMMAND;
+export type AddCommentCommandName = typeof AddCommentCommand;
 export type AddCommentCommandRequest = AddCommentRequest;
 export type AddCommentCommandResponse = Comment;
 export type AddCommentCommandErrorCode =
@@ -37,12 +37,12 @@ export const AddCommentCommandError = {
   fromUnknown(error: unknown): AddCommentCommandError {
     if (
       isRecord(error) &&
-      error.command === ADD_COMMENT_COMMAND &&
+      error.command === AddCommentCommand &&
       AddCommentCommandError.isCommandErrorCode(error.code) &&
       typeof error.message === "string"
     ) {
       return {
-        command: ADD_COMMENT_COMMAND,
+        command: AddCommentCommand,
         code: error.code,
         message: error.message,
         raw: error.raw,
@@ -55,7 +55,7 @@ export const AddCommentCommandError = {
       typeof error.message === "string"
     ) {
       return {
-        command: ADD_COMMENT_COMMAND,
+        command: AddCommentCommand,
         code: error.code,
         message: error.message,
         raw: error,
@@ -76,7 +76,7 @@ export const AddCommentCommandError = {
   /** @returns An unknown add_comment command error preserving the raw payload. */
   unknown(message: string, raw: unknown): AddCommentCommandError {
     return {
-      command: ADD_COMMENT_COMMAND,
+      command: AddCommentCommand,
       code: "unknown",
       message,
       raw,
@@ -111,5 +111,5 @@ export async function addComment(
     AddCommentCommandResponse,
     AddCommentCommandRequest,
     AddCommentCommandError
-  >(ADD_COMMENT_COMMAND, request, AddCommentCommandError.fromUnknown);
+  >(AddCommentCommand, request, AddCommentCommandError.fromUnknown);
 }

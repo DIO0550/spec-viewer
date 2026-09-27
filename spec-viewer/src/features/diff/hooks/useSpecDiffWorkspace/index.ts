@@ -8,19 +8,15 @@ import {
 } from "react";
 import {
   ComparisonRevision,
-  type ComparisonRevision as ComparisonRevisionValue,
   type RevisionOption,
   type SpecFileHistory,
+  type ComparisonRevision as ComparisonRevisionValue,
 } from "@/features/diff/domain/comparisonRevision";
 import {
-  createInitialSpecDiffWorkspaceState,
-  createSpecChangeId,
-  findSpecChange,
-  projectSpecChangeBadges,
-  reduceSpecDiffWorkspaceState,
+  SpecDiffWorkspaceState,
+  SpecChange,
   type SpecChangeOverview,
   type SpecDiffSelection,
-  type SpecDiffWorkspaceState,
 } from "@/features/diff/domain/specDiffWorkspaceState";
 import {
   GetSpecFileDiffCommandError,
@@ -128,22 +124,22 @@ type RequestIdentity = Readonly<{
   requestGeneration: number;
 }>;
 
-const DEFAULT_API: SpecDiffWorkspaceApi = {
+const DefaultApi: SpecDiffWorkspaceApi = {
   listChangedSpecFiles,
   getSpecFileDiff,
   listSpecDiffRevisions,
   listSpecFileCommitHistory,
 };
 
-const HEAD_OPTION: RevisionOption = {
+const HeadOption: RevisionOption = {
   id: "head",
   revision: ComparisonRevision.head(),
   label: "HEAD",
   resolvedCommitSha: "",
 };
-const EMPTY_HISTORY: SpecFileHistory = { items: [], truncated: false };
+const EmptyHistory: SpecFileHistory = { items: [], truncated: false };
 
-const STALE_DETAIL_ERROR_CODES = new Set([
+const StaleDetailErrorCodes = new Set([
   "staleSnapshot",
   "headChangedDuringRead",
   "staleBase",
@@ -171,22 +167,22 @@ export function toSpecChangeOverview(
 export function useSpecDiffWorkspace({
   workspacePath,
   selection,
-  api = DEFAULT_API,
+  api = DefaultApi,
 }: UseSpecDiffWorkspaceOptions): UseSpecDiffWorkspaceResult {
   const [state, dispatch] = useReducer(
-    reduceSpecDiffWorkspaceState,
+    SpecDiffWorkspaceState.reduce,
     undefined,
-    createInitialSpecDiffWorkspaceState,
+    SpecDiffWorkspaceState.initial,
   );
   const [comparison, setComparison] = useState<ComparisonRevisionValue>(
     ComparisonRevision.head,
   );
   const [revisionOptions, setRevisionOptions] = useState<
     AsyncCatalogState<readonly RevisionOption[]>
-  >({ status: "loading", value: [HEAD_OPTION] });
+  >({ status: "loading", value: [HeadOption] });
   const [fileHistory, setFileHistory] = useState<
     AsyncCatalogState<SpecFileHistory>
-  >({ status: "loading", value: EMPTY_HISTORY });
+  >({ status: "loading", value: EmptyHistory });
   const [comparisonOperation, setComparisonOperation] =
     useState<ComparisonOperation>({ status: "idle" });
   const mountedRef = useRef(true);
@@ -224,14 +220,14 @@ export function useSpecDiffWorkspace({
       allowStaleRecovery: boolean,
       recoverOverview: () => Promise<boolean>,
     ): Promise<boolean> => {
-      const change = findSpecChange(overview.files, detailSelection);
+      const change = SpecChange.find(overview.files, detailSelection);
       if (change === null) {
         return true;
       }
 
       const detailGeneration = detailGenerationRef.current + 1;
       detailGenerationRef.current = detailGeneration;
-      const fileId = createSpecChangeId(change);
+      const fileId = SpecChange.createId(change);
 
       try {
         const value = await api.getSpecFileDiff({
@@ -261,7 +257,7 @@ export function useSpecDiffWorkspace({
         }
         if (
           allowStaleRecovery &&
-          STALE_DETAIL_ERROR_CODES.has(normalized.code)
+          StaleDetailErrorCodes.has(normalized.code)
         ) {
           return recoverOverview();
         }
@@ -356,7 +352,7 @@ export function useSpecDiffWorkspace({
       activeWorkspacePath === null ||
       api.listSpecDiffRevisions === undefined
     ) {
-      setRevisionOptions({ status: "ready", value: [HEAD_OPTION] });
+      setRevisionOptions({ status: "ready", value: [HeadOption] });
       return false;
     }
     try {
@@ -372,7 +368,7 @@ export function useSpecDiffWorkspace({
       }
       const headOption =
         options.find((option) => option.revision.kind === "head") ??
-        HEAD_OPTION;
+        HeadOption;
       const withoutDuplicateHead = options.filter(
         (option) => option.revision.kind !== "head",
       );
@@ -404,7 +400,7 @@ export function useSpecDiffWorkspace({
     const currentState = stateRef.current;
     const change =
       currentState.status === "ready"
-        ? findSpecChange(currentState.overview.files, selectionRef.current)
+        ? SpecChange.find(currentState.overview.files, selectionRef.current)
         : null;
     const token = Symbol();
     historyRequestTokenRef.current = token;
@@ -414,7 +410,7 @@ export function useSpecDiffWorkspace({
       change === null ||
       api.listSpecFileCommitHistory === undefined
     ) {
-      setFileHistory({ status: "ready", value: EMPTY_HISTORY });
+      setFileHistory({ status: "ready", value: EmptyHistory });
       return false;
     }
     try {
@@ -484,7 +480,7 @@ export function useSpecDiffWorkspace({
           });
           const overview = toSpecChangeOverview(response);
           const currentSelection = selectionRef.current;
-          const change = findSpecChange(overview.files, currentSelection);
+          const change = SpecChange.find(overview.files, currentSelection);
           const detail =
             change === null
               ? null
@@ -512,7 +508,7 @@ export function useSpecDiffWorkspace({
             dispatch({
               type: "detailSucceeded",
               ...identity,
-              fileId: createSpecChangeId(change),
+              fileId: SpecChange.createId(change),
               value: detail,
             });
           }
@@ -531,7 +527,7 @@ export function useSpecDiffWorkspace({
           }
           if (
             allowStaleRecovery &&
-            STALE_DETAIL_ERROR_CODES.has(normalized.code)
+            StaleDetailErrorCodes.has(normalized.code)
           ) {
             return attempt(false);
           }
@@ -591,8 +587,8 @@ export function useSpecDiffWorkspace({
     comparisonRef.current = ComparisonRevision.head();
     setComparison(ComparisonRevision.head());
     setComparisonOperation({ status: "idle" });
-    setRevisionOptions({ status: "loading", value: [HEAD_OPTION] });
-    setFileHistory({ status: "loading", value: EMPTY_HISTORY });
+    setRevisionOptions({ status: "loading", value: [HeadOption] });
+    setFileHistory({ status: "loading", value: EmptyHistory });
     if (workspacePath === null) {
       detailGenerationRef.current += 1;
       requestGenerationRef.current += 1;
@@ -663,7 +659,7 @@ export function useSpecDiffWorkspace({
   const badges = useMemo(
     () =>
       state.status === "ready"
-        ? projectSpecChangeBadges(state.overview.files)
+        ? SpecChange.projectBadges(state.overview.files)
         : new Map<string, "U" | "M">(),
     [state],
   );

@@ -6,9 +6,9 @@ import type {
 import { invokeTauriCommand } from "./invokeTauriCommand";
 import { isRecord } from "./isRecord";
 
-export const LOAD_SPEC_BUNDLE_COMMAND = "load_spec_bundle" as const;
+export const LoadSpecBundleCommand = "load_spec_bundle" as const;
 
-export type LoadSpecBundleCommandName = typeof LOAD_SPEC_BUNDLE_COMMAND;
+export type LoadSpecBundleCommandName = typeof LoadSpecBundleCommand;
 export type LoadSpecBundleCommandRequest = LoadSpecBundleRequest;
 export type LoadSpecBundleCommandResponse = SpecBundle;
 export type LoadSpecBundleCommandErrorCode =
@@ -40,12 +40,12 @@ export const LoadSpecBundleCommandError = {
   fromUnknown(error: unknown): LoadSpecBundleCommandError {
     if (
       isRecord(error) &&
-      error.command === LOAD_SPEC_BUNDLE_COMMAND &&
+      error.command === LoadSpecBundleCommand &&
       LoadSpecBundleCommandError.isCommandErrorCode(error.code) &&
       typeof error.message === "string"
     ) {
       return {
-        command: LOAD_SPEC_BUNDLE_COMMAND,
+        command: LoadSpecBundleCommand,
         code: error.code,
         message: error.message,
         raw: error.raw,
@@ -58,7 +58,7 @@ export const LoadSpecBundleCommandError = {
       typeof error.message === "string"
     ) {
       return {
-        command: LOAD_SPEC_BUNDLE_COMMAND,
+        command: LoadSpecBundleCommand,
         code: error.code,
         message: error.message,
         raw: error,
@@ -82,7 +82,7 @@ export const LoadSpecBundleCommandError = {
   /** Creates a normalized unknown bundle command error. */
   unknown(message: string, raw: unknown): LoadSpecBundleCommandError {
     return {
-      command: LOAD_SPEC_BUNDLE_COMMAND,
+      command: LoadSpecBundleCommand,
       code: "unknown",
       message,
       raw,
@@ -116,5 +116,5 @@ export async function loadSpecBundle(
     SpecBundle,
     LoadSpecBundleRequest,
     LoadSpecBundleCommandError
-  >(LOAD_SPEC_BUNDLE_COMMAND, request, LoadSpecBundleCommandError.fromUnknown);
+  >(LoadSpecBundleCommand, request, LoadSpecBundleCommandError.fromUnknown);
 }

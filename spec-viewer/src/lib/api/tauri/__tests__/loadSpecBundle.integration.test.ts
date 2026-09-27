@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { expect, test, vi } from "vitest";
 
 import {
-  LOAD_SPEC_BUNDLE_COMMAND,
+  LoadSpecBundleCommand,
   LoadSpecBundleCommandError,
   loadSpecBundle,
 } from "@/lib/api/tauri/loadSpecBundle";
@@ -56,7 +56,7 @@ test("loadSpecBundleは1回のinvokeでrequestとpartial artifact payloadを維�
   ).resolves.toBe(partialBundle);
 
   expect(invokeMock).toHaveBeenCalledTimes(1);
-  expect(invokeMock).toHaveBeenCalledWith(LOAD_SPEC_BUNDLE_COMMAND, {
+  expect(invokeMock).toHaveBeenCalledWith(LoadSpecBundleCommand, {
     request: {
       workspacePath: "/workspace/spec-viewer",
       specId: "081-issue-194",
@@ -72,7 +72,7 @@ test("loadSpecBundleはcommand rejectionをbundle-level errorへ正規化する"
   await expect(
     loadSpecBundle({ workspacePath: "/workspace", specId: "spec-1" }),
   ).rejects.toEqual({
-    command: LOAD_SPEC_BUNDLE_COMMAND,
+    command: LoadSpecBundleCommand,
     code: "configLoad",
     message: "config is invalid",
     raw: rawError,

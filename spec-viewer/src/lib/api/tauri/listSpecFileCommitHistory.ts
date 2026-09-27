@@ -5,7 +5,7 @@ import { ListChangedSpecFilesCommandError } from "./listChangedSpecFiles";
 import { decodeSpecFileHistory } from "./specDiffCatalogDecoder";
 import { InvalidSpecDiffResponseError } from "./specDiffDecoder";
 
-export const LIST_SPEC_FILE_COMMIT_HISTORY_COMMAND =
+export const ListSpecFileCommitHistoryCommand =
   "list_spec_file_commit_history" as const;
 
 export type ListSpecFileCommitHistoryRequest = Readonly<{
@@ -29,16 +29,16 @@ export async function listSpecFileCommitHistory(
     unknown,
     ListSpecFileCommitHistoryRequest,
     unknown
-  >(LIST_SPEC_FILE_COMMIT_HISTORY_COMMAND, request, (error) => ({
+  >(ListSpecFileCommitHistoryCommand, request, (error) => ({
     ...ListChangedSpecFilesCommandError.fromUnknown(error),
-    command: LIST_SPEC_FILE_COMMIT_HISTORY_COMMAND,
+    command: ListSpecFileCommitHistoryCommand,
   }));
   try {
     return decodeSpecFileHistory(response);
   } catch (error) {
     if (error instanceof InvalidSpecDiffResponseError) {
       throw {
-        command: LIST_SPEC_FILE_COMMIT_HISTORY_COMMAND,
+        command: ListSpecFileCommitHistoryCommand,
         code: "invalidResponse",
         message: error.message,
         raw: error.raw,

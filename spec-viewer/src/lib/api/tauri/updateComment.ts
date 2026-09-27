@@ -4,9 +4,9 @@ import type { UpdateCommentRequest } from "@/features/comments/types/comment";
 import { invokeTauriCommand } from "./invokeTauriCommand";
 import { isRecord } from "./isRecord";
 
-export const UPDATE_COMMENT_COMMAND = "update_comment" as const;
+export const UpdateCommentCommand = "update_comment" as const;
 
-export type UpdateCommentCommandName = typeof UPDATE_COMMENT_COMMAND;
+export type UpdateCommentCommandName = typeof UpdateCommentCommand;
 export type UpdateCommentCommandRequest = UpdateCommentRequest;
 export type UpdateCommentCommandResponse = Comment;
 export type UpdateCommentCommandErrorCode =
@@ -38,12 +38,12 @@ export const UpdateCommentCommandError = {
   fromUnknown(error: unknown): UpdateCommentCommandError {
     if (
       isRecord(error) &&
-      error.command === UPDATE_COMMENT_COMMAND &&
+      error.command === UpdateCommentCommand &&
       UpdateCommentCommandError.isCommandErrorCode(error.code) &&
       typeof error.message === "string"
     ) {
       return {
-        command: UPDATE_COMMENT_COMMAND,
+        command: UpdateCommentCommand,
         code: error.code,
         message: error.message,
         raw: error.raw,
@@ -56,7 +56,7 @@ export const UpdateCommentCommandError = {
       typeof error.message === "string"
     ) {
       return {
-        command: UPDATE_COMMENT_COMMAND,
+        command: UpdateCommentCommand,
         code: error.code,
         message: error.message,
         raw: error,
@@ -80,7 +80,7 @@ export const UpdateCommentCommandError = {
   /** @returns An unknown update_comment command error preserving the raw payload. */
   unknown(message: string, raw: unknown): UpdateCommentCommandError {
     return {
-      command: UPDATE_COMMENT_COMMAND,
+      command: UpdateCommentCommand,
       code: "unknown",
       message,
       raw,
@@ -119,7 +119,7 @@ export async function updateComment(
     UpdateCommentCommandRequest,
     UpdateCommentCommandError
   >(
-    UPDATE_COMMENT_COMMAND,
+    UpdateCommentCommand,
     commandRequest,
     UpdateCommentCommandError.fromUnknown,
   );

@@ -8,7 +8,7 @@ import {
   InvalidSpecDiffResponseError,
 } from "./specDiffDecoder";
 
-export const LIST_CHANGED_SPEC_FILES_COMMAND =
+export const ListChangedSpecFilesCommand =
   "list_changed_spec_files" as const;
 
 export type ListChangedSpecFilesCommandRequest = Readonly<{
@@ -46,19 +46,19 @@ export type ListChangedSpecFilesCommandErrorCode =
   | "invalidResponse"
   | "unknown";
 export type ListChangedSpecFilesCommandError = Readonly<{
-  command: typeof LIST_CHANGED_SPEC_FILES_COMMAND;
+  command: typeof ListChangedSpecFilesCommand;
   code: ListChangedSpecFilesCommandErrorCode;
   message: string;
   raw: unknown;
 }>;
 export type ListChangedSpecFilesCommandContract = Readonly<{
-  name: typeof LIST_CHANGED_SPEC_FILES_COMMAND;
+  name: typeof ListChangedSpecFilesCommand;
   request: ListChangedSpecFilesCommandRequest;
   response: ListChangedSpecFilesCommandResponse;
   error: ListChangedSpecFilesCommandError;
 }>;
 
-const SPEC_DIFF_BACKEND_ERROR_CODES = [
+const SpecDiffBackendErrorCodes = [
   "invalidInput",
   "workspaceDetection",
   "configLoad",
@@ -93,12 +93,12 @@ export const ListChangedSpecFilesCommandError = {
   fromUnknown(error: unknown): ListChangedSpecFilesCommandError {
     if (
       isRecord(error) &&
-      error.command === LIST_CHANGED_SPEC_FILES_COMMAND &&
+      error.command === ListChangedSpecFilesCommand &&
       ListChangedSpecFilesCommandError.isCommandErrorCode(error.code) &&
       typeof error.message === "string"
     ) {
       return {
-        command: LIST_CHANGED_SPEC_FILES_COMMAND,
+        command: ListChangedSpecFilesCommand,
         code: error.code,
         message: error.message,
         raw: error.raw,
@@ -111,7 +111,7 @@ export const ListChangedSpecFilesCommandError = {
       typeof error.message === "string"
     ) {
       return {
-        command: LIST_CHANGED_SPEC_FILES_COMMAND,
+        command: ListChangedSpecFilesCommand,
         code: error.code,
         message: error.message,
         raw: error,
@@ -139,7 +139,7 @@ export const ListChangedSpecFilesCommandError = {
     error: InvalidSpecDiffResponseError,
   ): ListChangedSpecFilesCommandError {
     return {
-      command: LIST_CHANGED_SPEC_FILES_COMMAND,
+      command: ListChangedSpecFilesCommand,
       code: "invalidResponse",
       message: error.message,
       raw: error.raw,
@@ -153,7 +153,7 @@ export const ListChangedSpecFilesCommandError = {
    */
   unknown(message: string, raw: unknown): ListChangedSpecFilesCommandError {
     return {
-      command: LIST_CHANGED_SPEC_FILES_COMMAND,
+      command: ListChangedSpecFilesCommand,
       code: "unknown",
       message,
       raw,
@@ -181,7 +181,7 @@ export const ListChangedSpecFilesCommandError = {
   isCode(value: unknown): value is SpecDiffBackendErrorCode {
     return (
       typeof value === "string" &&
-      SPEC_DIFF_BACKEND_ERROR_CODES.includes(value as SpecDiffBackendErrorCode)
+      SpecDiffBackendErrorCodes.includes(value as SpecDiffBackendErrorCode)
     );
   },
 } as const;
@@ -199,7 +199,7 @@ export async function listChangedSpecFiles(
     ListChangedSpecFilesCommandRequest,
     ListChangedSpecFilesCommandError
   >(
-    LIST_CHANGED_SPEC_FILES_COMMAND,
+    ListChangedSpecFilesCommand,
     request,
     ListChangedSpecFilesCommandError.fromUnknown,
   );

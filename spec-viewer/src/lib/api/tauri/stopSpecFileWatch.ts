@@ -6,9 +6,9 @@ import type {
 import { invokeTauriCommand } from "./invokeTauriCommand";
 import { isRecord } from "./isRecord";
 
-export const STOP_SPEC_FILE_WATCH_COMMAND = "stop_spec_file_watch" as const;
+export const StopSpecFileWatchCommand = "stop_spec_file_watch" as const;
 
-export type StopSpecFileWatchCommandName = typeof STOP_SPEC_FILE_WATCH_COMMAND;
+export type StopSpecFileWatchCommandName = typeof StopSpecFileWatchCommand;
 export type StopSpecFileWatchCommandRequest = StopSpecFileWatchRequest;
 export type StopSpecFileWatchCommandResponse = StopSpecFileWatchResponse;
 export type StopSpecFileWatchCommandErrorCode =
@@ -39,12 +39,12 @@ export const StopSpecFileWatchCommandError = {
   fromUnknown(error: unknown): StopSpecFileWatchCommandError {
     if (
       isRecord(error) &&
-      error.command === STOP_SPEC_FILE_WATCH_COMMAND &&
+      error.command === StopSpecFileWatchCommand &&
       StopSpecFileWatchCommandError.isCommandErrorCode(error.code) &&
       typeof error.message === "string"
     ) {
       return {
-        command: STOP_SPEC_FILE_WATCH_COMMAND,
+        command: StopSpecFileWatchCommand,
         code: error.code,
         message: error.message,
         raw: error.raw,
@@ -57,7 +57,7 @@ export const StopSpecFileWatchCommandError = {
       typeof error.message === "string"
     ) {
       return {
-        command: STOP_SPEC_FILE_WATCH_COMMAND,
+        command: StopSpecFileWatchCommand,
         code: error.code,
         message: error.message,
         raw: error,
@@ -81,7 +81,7 @@ export const StopSpecFileWatchCommandError = {
   /** @returns An unknown stop_spec_file_watch command error preserving the raw payload. */
   unknown(message: string, raw: unknown): StopSpecFileWatchCommandError {
     return {
-      command: STOP_SPEC_FILE_WATCH_COMMAND,
+      command: StopSpecFileWatchCommand,
       code: "unknown",
       message,
       raw,
@@ -119,7 +119,7 @@ export async function stopSpecFileWatch(): Promise<StopSpecFileWatchCommandRespo
     StopSpecFileWatchCommandRequest,
     StopSpecFileWatchCommandError
   >(
-    STOP_SPEC_FILE_WATCH_COMMAND,
+    StopSpecFileWatchCommand,
     commandRequest,
     StopSpecFileWatchCommandError.fromUnknown,
   );

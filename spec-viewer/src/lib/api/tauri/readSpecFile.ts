@@ -6,9 +6,9 @@ import type {
 import { invokeTauriCommand } from "./invokeTauriCommand";
 import { isRecord } from "./isRecord";
 
-export const READ_SPEC_FILE_COMMAND = "read_spec_file" as const;
+export const ReadSpecFileCommand = "read_spec_file" as const;
 
-export type ReadSpecFileCommandName = typeof READ_SPEC_FILE_COMMAND;
+export type ReadSpecFileCommandName = typeof ReadSpecFileCommand;
 export type ReadSpecFileCommandRequest = ReadSpecFileRequest;
 export type ReadSpecFileCommandResponse = SpecDocument;
 export type ReadSpecFileCommandErrorCode =
@@ -39,12 +39,12 @@ export const ReadSpecFileCommandError = {
   fromUnknown(error: unknown): ReadSpecFileCommandError {
     if (
       isRecord(error) &&
-      error.command === READ_SPEC_FILE_COMMAND &&
+      error.command === ReadSpecFileCommand &&
       ReadSpecFileCommandError.isCommandErrorCode(error.code) &&
       typeof error.message === "string"
     ) {
       return {
-        command: READ_SPEC_FILE_COMMAND,
+        command: ReadSpecFileCommand,
         code: error.code,
         message: error.message,
         raw: error.raw,
@@ -57,7 +57,7 @@ export const ReadSpecFileCommandError = {
       typeof error.message === "string"
     ) {
       return {
-        command: READ_SPEC_FILE_COMMAND,
+        command: ReadSpecFileCommand,
         code: error.code,
         message: error.message,
         raw: error,
@@ -81,7 +81,7 @@ export const ReadSpecFileCommandError = {
   /** @returns An unknown read_spec_file command error preserving the raw payload. */
   unknown(message: string, raw: unknown): ReadSpecFileCommandError {
     return {
-      command: READ_SPEC_FILE_COMMAND,
+      command: ReadSpecFileCommand,
       code: "unknown",
       message,
       raw,
@@ -119,7 +119,7 @@ export async function readSpecFile(
     ReadSpecFileCommandRequest,
     ReadSpecFileCommandError
   >(
-    READ_SPEC_FILE_COMMAND,
+    ReadSpecFileCommand,
     commandRequest,
     ReadSpecFileCommandError.fromUnknown,
   );

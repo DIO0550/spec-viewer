@@ -25,12 +25,12 @@ export type SpecTreeRevealRequest = Readonly<{
  * @param identity - Source-group-relative node identity to encode.
  * @returns A JSON-encoded string suitable for use as a Set/Map key.
  */
-export function specNodeIdentityKey(identity: SpecNodeIdentity): string {
+function specNodeIdentityKey(identity: SpecNodeIdentity): string {
   return JSON.stringify([identity.sourceGroupId, identity.relativeId]);
 }
 
 /** Creates collapsed presentation state for a load generation. */
-export function createSpecTreePresentationState(
+function createSpecTreePresentationState(
   workspacePath: string | null,
   loadGeneration: number,
 ): SpecTreePresentationState {
@@ -43,7 +43,7 @@ export function createSpecTreePresentationState(
 }
 
 /** Toggles one container without mutating the current expansion set. */
-export function toggleSpecTreeNode(
+function toggleSpecTreeNode(
   state: SpecTreePresentationState,
   identity: SpecNodeIdentity,
 ): SpecTreePresentationState {
@@ -60,7 +60,7 @@ export function toggleSpecTreeNode(
 }
 
 /** Reveals a destination only when workspace and load generation still match. */
-export function revealSpecTreeDestination(
+function revealSpecTreeDestination(
   state: SpecTreePresentationState,
   tree: SpecTreeType,
   request: SpecTreeRevealRequest,
@@ -94,7 +94,7 @@ export function revealSpecTreeDestination(
 }
 
 /** Removes expansion keys that no longer exist in the authoritative tree. */
-export function pruneSpecTreeExpansion(
+function pruneSpecTreeExpansion(
   state: SpecTreePresentationState,
   tree: SpecTreeType,
 ): SpecTreePresentationState {
@@ -107,7 +107,7 @@ export function pruneSpecTreeExpansion(
 }
 
 /** Returns whether one node is expanded in the presentation state. */
-export function isSpecTreeNodeExpanded(
+function isSpecTreeNodeExpanded(
   state: SpecTreePresentationState,
   identity: SpecNodeIdentity,
 ): boolean {
@@ -135,3 +135,12 @@ function collectNodeKeys(nodes: readonly SpecNode[]): ReadonlySet<string> {
   visit(nodes);
   return keys;
 }
+
+export const SpecTreePresentationState = {
+  nodeKey: specNodeIdentityKey,
+  create: createSpecTreePresentationState,
+  toggleNode: toggleSpecTreeNode,
+  revealDestination: revealSpecTreeDestination,
+  pruneExpansion: pruneSpecTreeExpansion,
+  isNodeExpanded: isSpecTreeNodeExpanded,
+} as const;

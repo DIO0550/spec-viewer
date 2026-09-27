@@ -15,8 +15,8 @@ import type {
   StopSpecFileWatchResponse,
 } from "@/features/specs/types/watch";
 import {
-  SPEC_FILE_WATCH_CHANGED_EVENT,
-  SPEC_FILE_WATCH_ERROR_EVENT,
+  SpecFileWatchChangedEventName,
+  SpecFileWatchErrorEventName,
 } from "@/lib/api/tauri/specFileWatchEvents";
 import {
   startSpecFileWatch as defaultStartSpecFileWatch,
@@ -103,7 +103,7 @@ export function useSpecFileWatcher(options: UseSpecFileWatcherOptions): void {
       let unlistenError: (() => void) | null = null;
       try {
         unlistenChanged = await subscribe<SpecFileWatchChangedEvent>(
-          SPEC_FILE_WATCH_CHANGED_EVENT,
+          SpecFileWatchChangedEventName,
           (event) => {
             if (
               !isActive ||
@@ -125,7 +125,7 @@ export function useSpecFileWatcher(options: UseSpecFileWatcherOptions): void {
           },
         );
         unlistenError = await subscribe<SpecFileWatchErrorEvent>(
-          SPEC_FILE_WATCH_ERROR_EVENT,
+          SpecFileWatchErrorEventName,
           (event) => {
             if (
               !isActive ||

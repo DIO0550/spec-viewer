@@ -6,10 +6,10 @@ import type {
 import { invokeTauriCommand } from "./invokeTauriCommand";
 import { isRecord } from "./isRecord";
 
-export const START_SPEC_FILE_WATCH_COMMAND = "start_spec_file_watch" as const;
+export const StartSpecFileWatchCommand = "start_spec_file_watch" as const;
 
 export type StartSpecFileWatchCommandName =
-  typeof START_SPEC_FILE_WATCH_COMMAND;
+  typeof StartSpecFileWatchCommand;
 export type StartSpecFileWatchCommandRequest = StartSpecFileWatchRequest;
 export type StartSpecFileWatchCommandResponse = StartSpecFileWatchResponse;
 export type StartSpecFileWatchCommandErrorCode =
@@ -40,12 +40,12 @@ export const StartSpecFileWatchCommandError = {
   fromUnknown(error: unknown): StartSpecFileWatchCommandError {
     if (
       isRecord(error) &&
-      error.command === START_SPEC_FILE_WATCH_COMMAND &&
+      error.command === StartSpecFileWatchCommand &&
       StartSpecFileWatchCommandError.isCommandErrorCode(error.code) &&
       typeof error.message === "string"
     ) {
       return {
-        command: START_SPEC_FILE_WATCH_COMMAND,
+        command: StartSpecFileWatchCommand,
         code: error.code,
         message: error.message,
         raw: error.raw,
@@ -58,7 +58,7 @@ export const StartSpecFileWatchCommandError = {
       typeof error.message === "string"
     ) {
       return {
-        command: START_SPEC_FILE_WATCH_COMMAND,
+        command: StartSpecFileWatchCommand,
         code: error.code,
         message: error.message,
         raw: error,
@@ -82,7 +82,7 @@ export const StartSpecFileWatchCommandError = {
   /** @returns An unknown start_spec_file_watch command error preserving the raw payload. */
   unknown(message: string, raw: unknown): StartSpecFileWatchCommandError {
     return {
-      command: START_SPEC_FILE_WATCH_COMMAND,
+      command: StartSpecFileWatchCommand,
       code: "unknown",
       message,
       raw,
@@ -122,7 +122,7 @@ export async function startSpecFileWatch(
     StartSpecFileWatchCommandRequest,
     StartSpecFileWatchCommandError
   >(
-    START_SPEC_FILE_WATCH_COMMAND,
+    StartSpecFileWatchCommand,
     commandRequest,
     StartSpecFileWatchCommandError.fromUnknown,
   );

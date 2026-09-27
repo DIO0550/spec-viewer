@@ -40,10 +40,10 @@ type VisibleNode = Readonly<{
   depth: number;
 }>;
 
-const TREE_ITEM_INDENT = 10;
-const TREE_ITEM_INDENT_STEP = 16;
-const MAX_RENDERED_TREE_ITEMS = 500;
-const REPOSITORY_TREE_SKELETON_ROWS = [
+const TreeItemIndent = 10;
+const TreeItemIndentStep = 16;
+const MaxRenderedTreeItems = 500;
+const RepositoryTreeSkeletonRows = [
   { width: "long" },
   { width: "medium" },
   { width: "full" },
@@ -196,7 +196,7 @@ export function RepositoryDiffTree(
       <LoadingSkeleton
         className="repository-diff-tree__skeleton"
         label="変更ファイルを読み込んでいます。"
-        rows={REPOSITORY_TREE_SKELETON_ROWS}
+        rows={RepositoryTreeSkeletonRows}
         showLabel={false}
       />
     );
@@ -259,7 +259,7 @@ export function RepositoryDiffTree(
       }
       aria-busy={false}
     >
-      {visibleNodes.length > MAX_RENDERED_TREE_ITEMS ? (
+      {visibleNodes.length > MaxRenderedTreeItems ? (
         <WindowedTree
           visibleNodes={windowVisibleNodes(visibleNodes, tabbableId)}
           expandedSet={expandedSet}
@@ -340,7 +340,7 @@ function WindowedTree(props: WindowedTreeProps): ReactElement {
             className="repository-diff-tree__item"
             style={{
               paddingInlineStart:
-                TREE_ITEM_INDENT + depth * TREE_ITEM_INDENT_STEP,
+                TreeItemIndent + depth * TreeItemIndentStep,
             }}
             type="button"
             role="treeitem"
@@ -417,7 +417,7 @@ function TreeLevel(props: TreeLevelProps): ReactElement {
         const expandable = isExpandable(node);
         const isExpanded = expandable && expandedSet.has(node.path);
         const isSelected = node.path === selectedPath && node.kind === "file";
-        const indentation = TREE_ITEM_INDENT + depth * TREE_ITEM_INDENT_STEP;
+        const indentation = TreeItemIndent + depth * TreeItemIndentStep;
         const visibleNode = { node, parentId, depth };
 
         return (
@@ -575,11 +575,11 @@ function windowVisibleNodes(
     0,
     visibleNodes.findIndex(({ node }) => node.id === targetId),
   );
-  const halfWindow = Math.floor(MAX_RENDERED_TREE_ITEMS / 2);
-  const maximumStart = visibleNodes.length - MAX_RENDERED_TREE_ITEMS;
+  const halfWindow = Math.floor(MaxRenderedTreeItems / 2);
+  const maximumStart = visibleNodes.length - MaxRenderedTreeItems;
   const start = Math.min(Math.max(0, targetIndex - halfWindow), maximumStart);
   return visibleNodes
-    .slice(start, start + MAX_RENDERED_TREE_ITEMS)
+    .slice(start, start + MaxRenderedTreeItems)
     .map((visibleNode, offset) => ({
       visibleNode,
       index: start + offset,

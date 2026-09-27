@@ -13,8 +13,8 @@ import type {
   StopSpecFileWatchCommand,
 } from "@/features/specs/hooks/useSpecFileWatcher";
 import {
-  SPEC_FILE_WATCH_CHANGED_EVENT,
-  SPEC_FILE_WATCH_ERROR_EVENT,
+  SpecFileWatchChangedEventName,
+  SpecFileWatchErrorEventName,
 } from "@/lib/api/tauri/specFileWatchEvents";
 import { SpecFileWatchChangeKind } from "@/features/specs/types/watch";
 import { WorkspacePath } from "@/domains/workspacePath";
@@ -133,7 +133,7 @@ function fireChanged(
   changeKind: SpecFileWatchChangeKind,
 ): void {
   act(() => {
-    handlers.get(SPEC_FILE_WATCH_CHANGED_EVENT)?.({
+    handlers.get(SpecFileWatchChangedEventName)?.({
       payload: {
         workspacePath: "/workspace",
         specId: "spec-1",
@@ -393,7 +393,7 @@ test("watcherエラーイベントで監視失敗メッセージとevent.message
   await flush();
 
   act(() => {
-    handlers.get(SPEC_FILE_WATCH_ERROR_EVENT)?.({
+    handlers.get(SpecFileWatchErrorEventName)?.({
       payload: {
         workspacePath: "/workspace",
         specId: "spec-1",
@@ -421,7 +421,7 @@ test("selection変更commit後のpassive effect前に旧watch eventを受けて�
     watcher,
   });
   await flush();
-  const previousChangedHandler = handlers.get(SPEC_FILE_WATCH_CHANGED_EVENT);
+  const previousChangedHandler = handlers.get(SpecFileWatchChangedEventName);
   const nextSelection = SpecViewSelection.synchronize(
     SpecViewSelection.empty(),
     {

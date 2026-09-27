@@ -6,9 +6,9 @@ import type {
 import { invokeTauriCommand } from "./invokeTauriCommand";
 import { isRecord } from "./isRecord";
 
-export const ARCHIVE_SPEC_COMMAND = "archive_spec" as const;
+export const ArchiveSpecCommand = "archive_spec" as const;
 
-export type ArchiveSpecCommandName = typeof ARCHIVE_SPEC_COMMAND;
+export type ArchiveSpecCommandName = typeof ArchiveSpecCommand;
 export type ArchiveSpecCommandRequest = ArchiveSpecRequest;
 export type ArchiveSpecCommandResponse = ArchiveSpecResponse;
 export type ArchiveSpecCommandErrorCode =
@@ -39,12 +39,12 @@ export const ArchiveSpecCommandError = {
   fromUnknown(error: unknown): ArchiveSpecCommandError {
     if (
       isRecord(error) &&
-      error.command === ARCHIVE_SPEC_COMMAND &&
+      error.command === ArchiveSpecCommand &&
       ArchiveSpecCommandError.isCommandErrorCode(error.code) &&
       typeof error.message === "string"
     ) {
       return {
-        command: ARCHIVE_SPEC_COMMAND,
+        command: ArchiveSpecCommand,
         code: error.code,
         message: error.message,
         raw: error.raw,
@@ -57,7 +57,7 @@ export const ArchiveSpecCommandError = {
       typeof error.message === "string"
     ) {
       return {
-        command: ARCHIVE_SPEC_COMMAND,
+        command: ArchiveSpecCommand,
         code: error.code,
         message: error.message,
         raw: error,
@@ -81,7 +81,7 @@ export const ArchiveSpecCommandError = {
   /** @returns An unknown archive_spec command error preserving the raw payload. */
   unknown(message: string, raw: unknown): ArchiveSpecCommandError {
     return {
-      command: ARCHIVE_SPEC_COMMAND,
+      command: ArchiveSpecCommand,
       code: "unknown",
       message,
       raw,
@@ -118,5 +118,5 @@ export async function archiveSpec(
     ArchiveSpecCommandResponse,
     ArchiveSpecCommandRequest,
     ArchiveSpecCommandError
-  >(ARCHIVE_SPEC_COMMAND, commandRequest, ArchiveSpecCommandError.fromUnknown);
+  >(ArchiveSpecCommand, commandRequest, ArchiveSpecCommandError.fromUnknown);
 }
