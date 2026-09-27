@@ -3,7 +3,7 @@ import { expect, test } from "vitest";
 import {
   FileDiff,
   Hunk,
-  Hunk as HunkType,
+  type Hunk as HunkType,
 } from "@/features/diff/domain/fileDiff";
 import { buildEditorViewModel } from "@/features/diff/lib/editorViewModel";
 
