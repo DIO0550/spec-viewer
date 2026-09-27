@@ -27,13 +27,8 @@ export {
 } from "./components/ViewModeToolbar";
 export { DiffAvailability } from "./domain/diffAvailability";
 export type { RepositoryUnavailableCode } from "./domain/diffAvailability";
-export {
-  createSpecChangeId,
-  findSpecChange,
-  projectSpecChangeBadges,
-} from "./domain/specDiffWorkspaceState";
+export { SpecChange } from "./domain/specDiffWorkspaceState";
 export type {
-  SpecChange,
   SpecChangeOverview,
   SpecDiffSelection,
   SpecDiffWorkspaceState,
@@ -45,16 +40,12 @@ export type {
 } from "./hooks/useSpecDiffWorkspace";
 export { ComparisonRevision } from "./domain/comparisonRevision";
 export type {
-  ComparisonRevision as ComparisonRevisionValue,
   RevisionOption,
   SpecFileCommit,
   SpecFileHistory,
+  ComparisonRevision as ComparisonRevisionValue,
 } from "./domain/comparisonRevision";
-export {
-  deriveDiffAvailability,
-  Hunk,
-  StructuredDiff,
-} from "./domain/fileDiff";
+export { FileDiff, Hunk, StructuredDiff } from "./domain/fileDiff";
 export type {
   ContentClassification,
   DiffLine,
@@ -65,7 +56,6 @@ export type {
   FileChange,
   FileChangeStatus,
   FileContent,
-  FileDiff,
   FileDiffAvailability,
   FileReview,
   DiffProjectionViewMode,

@@ -3,10 +3,9 @@ import { expect, test } from "vitest";
 import type {
   DiffLineSource,
   FileChangeStatus,
-  FileDiff,
   OmissionReason,
 } from "@/features/diff/domain/fileDiff";
-import { deriveDiffAvailability, Hunk } from "@/features/diff/domain/fileDiff";
+import { FileDiff, Hunk } from "@/features/diff/domain/fileDiff";
 import {
   buildEditorViewModel,
   materializeEditorRows,
@@ -348,7 +347,7 @@ function createFileDiff(
   return {
     identity: { sourceId: "worktree:snapshot", path: "file.ts" },
     review,
-    availability: deriveDiffAvailability(review),
+    availability: FileDiff.deriveAvailability(review),
   };
 }
 

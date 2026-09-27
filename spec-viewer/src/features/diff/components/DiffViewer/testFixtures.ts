@@ -3,12 +3,11 @@ import type {
   DiffLineSource,
   FileChangeStatus,
   FileContent,
-  FileDiff,
   FileReview,
   OmissionReason,
   StructuredDiff,
 } from "@/features/diff/domain/fileDiff";
-import { deriveDiffAvailability, Hunk } from "@/features/diff/domain/fileDiff";
+import { FileDiff, Hunk } from "@/features/diff/domain/fileDiff";
 
 export type DiffViewerFixtureOptions = Readonly<{
   status?: FileChangeStatus;
@@ -102,7 +101,7 @@ export function createDiffViewerFixture(
       path: options.fileKey ?? "implementation-plan",
     },
     review,
-    availability: deriveDiffAvailability(review),
+    availability: FileDiff.deriveAvailability(review),
   };
 }
 

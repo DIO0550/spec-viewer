@@ -8,7 +8,7 @@ import type {
   ResolvedDiffComment,
   ResolvedDiffComments,
 } from "@/features/diffComments";
-import { isCanonicalDiffCommentRevision } from "@/features/diffComments";
+import { DiffCommentRevision } from "@/features/diffComments";
 
 import { isRecord } from "./isRecord";
 
@@ -239,7 +239,7 @@ export function decodeDiffCommentRevision(
   raw: unknown,
 ): string {
   const revision = string(value, path, raw);
-  if (!isCanonicalDiffCommentRevision(revision)) {
+  if (!DiffCommentRevision.isCanonical(revision)) {
     return fail(
       path,
       "a canonical unsigned u64 decimal",

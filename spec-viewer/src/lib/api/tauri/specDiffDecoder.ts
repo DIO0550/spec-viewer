@@ -1,11 +1,10 @@
 import type { DiffReviewIdentity } from "@/features/diffComments";
-import { deriveDiffAvailability } from "@/features/diff/domain/fileDiff";
+import { FileDiff } from "@/features/diff/domain/fileDiff";
 import {
   type DiffLineSource,
   type FileChange,
   type FileChangeStatus,
   type FileContent,
-  type FileDiff,
   type FileReview,
   Hunk,
   type StructuredDiff,
@@ -579,6 +578,6 @@ export function decodeSpecFileDiff(value: unknown): FileDiff {
       path: fileKey,
     },
     review,
-    availability: deriveDiffAvailability(review),
+    availability: FileDiff.deriveAvailability(review),
   };
 }

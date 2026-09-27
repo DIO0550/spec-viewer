@@ -146,7 +146,7 @@ const UNAVAILABLE_CODES = new Set([
 /**
  * @returns A fresh idle repository diff workspace state.
  */
-export function createInitialRepositoryDiffWorkspaceState(): RepositoryDiffWorkspaceState {
+function createInitialRepositoryDiffWorkspaceState(): RepositoryDiffWorkspaceState {
   return {
     status: "idle",
     request: null,
@@ -217,7 +217,7 @@ const statusForFailure = (
  * @param action - Incoming state transition.
  * @returns The next immutable repository diff state.
  */
-export function repositoryDiffWorkspaceReducer(
+function repositoryDiffWorkspaceReducer(
   state: RepositoryDiffWorkspaceState,
   action: RepositoryDiffWorkspaceAction,
 ): RepositoryDiffWorkspaceState {
@@ -412,3 +412,8 @@ export function repositoryDiffWorkspaceReducer(
 
   return state;
 }
+
+export const RepositoryDiffWorkspaceState = {
+  initial: createInitialRepositoryDiffWorkspaceState,
+  reduce: repositoryDiffWorkspaceReducer,
+} as const;

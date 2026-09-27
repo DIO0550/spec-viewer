@@ -1,13 +1,6 @@
 import { expect, test } from "vitest";
 
-import {
-  createSpecTreePresentationState,
-  isSpecTreeNodeExpanded,
-  pruneSpecTreeExpansion,
-  revealSpecTreeDestination,
-  specNodeIdentityKey,
-  toggleSpecTreeNode,
-} from "@/features/specs/domain/specTreePresentation";
+import { SpecTreePresentationState } from "@/features/specs/domain/specTreePresentation";
 import { createSpecNodeFixture } from "@/features/specs/testing/specNodeFixture";
 
 const archivedSpec = createSpecNodeFixture({
@@ -53,15 +46,15 @@ test.each([
   ["workspace switch", "/other", 2],
   ["reload generation", "/workspace", 3],
 ] as const)("%sはArchiveをcollapsedへresetする", (_name, workspacePath, generation) => {
-  const state = createSpecTreePresentationState(workspacePath, generation);
+  const state = SpecTreePresentationState.create(workspacePath, generation);
 
   expect(state.expandedNodeKeys.size).toBe(0);
   expect(state.revealTarget).toBeNull();
 });
 
 test("success revealはdestinationのcontainer ancestorsだけを展開する", () => {
-  const state = createSpecTreePresentationState("/workspace", 1);
-  const revealed = revealSpecTreeDestination(state, tree, {
+  const state = SpecTreePresentationState.create("/workspace", 1);
+  const revealed = SpecTreePresentationState.revealDestination(state, tree, {
     workspacePath: "/workspace",
     loadGeneration: 1,
     target: {
@@ -70,9 +63,15 @@ test("success revealはdestinationのcontainer ancestorsだけを展開する", 
     },
   });
 
-  expect(isSpecTreeNodeExpanded(revealed, sourceGroup)).toBe(true);
-  expect(isSpecTreeNodeExpanded(revealed, secondaryArchive)).toBe(true);
-  expect(isSpecTreeNodeExpanded(revealed, archive)).toBe(false);
+  expect(SpecTreePresentationState.isNodeExpanded(revealed, sourceGroup)).toBe(
+    true,
+  );
+  expect(
+    SpecTreePresentationState.isNodeExpanded(revealed, secondaryArchive),
+  ).toBe(true);
+  expect(SpecTreePresentationState.isNodeExpanded(revealed, archive)).toBe(
+    false,
+  );
   expect(revealed.revealTarget).toEqual({
     sourceGroupId: "secondary",
     relativeId: ".archive/auth",
@@ -84,8 +83,8 @@ test.each([
   ["other workspace", "/other", 1, ".archive/auth"],
   ["stale generation", "/workspace", 2, ".archive/auth"],
 ] as const)("%sのrevealを無視する", (_name, workspacePath, generation, relativeId) => {
-  const state = createSpecTreePresentationState("/workspace", 1);
-  const next = revealSpecTreeDestination(state, tree, {
+  const state = SpecTreePresentationState.create("/workspace", 1);
+  const next = SpecTreePresentationState.revealDestination(state, tree, {
     workspacePath,
     loadGeneration: generation,
     target: { sourceGroupId: "primary", relativeId },
@@ -95,14 +94,16 @@ test.each([
 });
 
 test("tree更新時に存在しないexpanded identityをpruneする", () => {
-  const initial = createSpecTreePresentationState("/workspace", 1);
-  const expanded = toggleSpecTreeNode(
-    toggleSpecTreeNode(initial, archive),
+  const initial = SpecTreePresentationState.create("/workspace", 1);
+  const expanded = SpecTreePresentationState.toggleNode(
+    SpecTreePresentationState.toggleNode(initial, archive),
     sourceGroup,
   );
-  const pruned = pruneSpecTreeExpansion(expanded, { specs: [archive] });
+  const pruned = SpecTreePresentationState.pruneExpansion(expanded, {
+    specs: [archive],
+  });
 
   expect(pruned.expandedNodeKeys).toEqual(
-    new Set([specNodeIdentityKey(archive)]),
+    new Set([SpecTreePresentationState.nodeKey(archive)]),
   );
 });

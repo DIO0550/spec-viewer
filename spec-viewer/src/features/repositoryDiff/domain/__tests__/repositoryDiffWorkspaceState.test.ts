@@ -6,10 +6,8 @@ import {
   type RepositoryFileReview,
 } from "@/features/repositoryDiff/domain/repositoryDiff";
 import {
-  createInitialRepositoryDiffWorkspaceState,
-  repositoryDiffWorkspaceReducer,
+  RepositoryDiffWorkspaceState,
   type RepositoryDiffRequestIdentity,
-  type RepositoryDiffWorkspaceState,
 } from "@/features/repositoryDiff/domain/repositoryDiffWorkspaceState";
 
 const request: RepositoryDiffRequestIdentity = {
@@ -37,7 +35,7 @@ const overview = (
 });
 
 test("初期 state は idle と unchanged detail になる", () => {
-  expect(createInitialRepositoryDiffWorkspaceState()).toEqual({
+  expect(RepositoryDiffWorkspaceState.initial()).toEqual({
     status: "idle",
     request: null,
     overview: null,
@@ -49,11 +47,11 @@ test("初期 state は idle と unchanged detail になる", () => {
 });
 
 test("overview request の後に resolved overview は ready になる", () => {
-  const loading = repositoryDiffWorkspaceReducer(
-    createInitialRepositoryDiffWorkspaceState(),
+  const loading = RepositoryDiffWorkspaceState.reduce(
+    RepositoryDiffWorkspaceState.initial(),
     { type: "overviewRequested", request },
   );
-  const ready = repositoryDiffWorkspaceReducer(loading, {
+  const ready = RepositoryDiffWorkspaceState.reduce(loading, {
     type: "overviewSucceeded",
     request,
     overview: overview({
@@ -81,11 +79,11 @@ test.each([
     overrideRef: "refs/heads/missing",
   },
 ] as const)("base state=%sは snapshotなしの選択状態になる", (base) => {
-  const loading = repositoryDiffWorkspaceReducer(
-    createInitialRepositoryDiffWorkspaceState(),
+  const loading = RepositoryDiffWorkspaceState.reduce(
+    RepositoryDiffWorkspaceState.initial(),
     { type: "overviewRequested", request },
   );
-  const state = repositoryDiffWorkspaceReducer(loading, {
+  const state = RepositoryDiffWorkspaceState.reduce(loading, {
     type: "overviewSucceeded",
     request,
     overview: overview(base),
@@ -95,12 +93,12 @@ test.each([
 });
 
 test("request identity が古い overview success は state を変更しない", () => {
-  const loading = repositoryDiffWorkspaceReducer(
-    createInitialRepositoryDiffWorkspaceState(),
+  const loading = RepositoryDiffWorkspaceState.reduce(
+    RepositoryDiffWorkspaceState.initial(),
     { type: "overviewRequested", request },
   );
   const staleRequest = { ...request, requestGeneration: 2 };
-  const state = repositoryDiffWorkspaceReducer(loading, {
+  const state = RepositoryDiffWorkspaceState.reduce(loading, {
     type: "overviewSucceeded",
     request: staleRequest,
     overview: overview({
@@ -156,12 +154,12 @@ const review: RepositoryFileReview = {
 };
 
 const createReadyState = (): RepositoryDiffWorkspaceState => {
-  const loading = repositoryDiffWorkspaceReducer(
-    createInitialRepositoryDiffWorkspaceState(),
+  const loading = RepositoryDiffWorkspaceState.reduce(
+    RepositoryDiffWorkspaceState.initial(),
     { type: "overviewRequested", request },
   );
 
-  return repositoryDiffWorkspaceReducer(loading, {
+  return RepositoryDiffWorkspaceState.reduce(loading, {
     type: "overviewSucceeded",
     request,
     overview: overview(
@@ -184,7 +182,7 @@ test("detail request は ready overview の snapshot identity で loading にな
     path: "src/file.ts",
     detailGeneration: 1,
   };
-  const loading = repositoryDiffWorkspaceReducer(createReadyState(), {
+  const loading = RepositoryDiffWorkspaceState.reduce(createReadyState(), {
     type: "detailRequested",
     identity,
   });
@@ -199,11 +197,11 @@ test("detail success は同一 identity の review を ready にする", () => {
     path: "src/file.ts",
     detailGeneration: 1,
   };
-  const loading = repositoryDiffWorkspaceReducer(createReadyState(), {
+  const loading = RepositoryDiffWorkspaceState.reduce(createReadyState(), {
     type: "detailRequested",
     identity,
   });
-  const ready = repositoryDiffWorkspaceReducer(loading, {
+  const ready = RepositoryDiffWorkspaceState.reduce(loading, {
     type: "detailSucceeded",
     identity,
     review,
@@ -219,12 +217,12 @@ test("古い detail success は現在の loading state を変更しない", () =
     path: "src/file.ts",
     detailGeneration: 1,
   };
-  const loading = repositoryDiffWorkspaceReducer(createReadyState(), {
+  const loading = RepositoryDiffWorkspaceState.reduce(createReadyState(), {
     type: "detailRequested",
     identity,
   });
   const staleIdentity = { ...identity, detailGeneration: 2 };
-  const state = repositoryDiffWorkspaceReducer(loading, {
+  const state = RepositoryDiffWorkspaceState.reduce(loading, {
     type: "detailSucceeded",
     identity: staleIdentity,
     review,
@@ -246,11 +244,11 @@ test("ignored page は loading から ready へ遷移し page を保持する", 
     cursor: null,
     pageGeneration: 1,
   };
-  const loading = repositoryDiffWorkspaceReducer(createReadyState(), {
+  const loading = RepositoryDiffWorkspaceState.reduce(createReadyState(), {
     type: "ignoredPageRequested",
     identity,
   });
-  const state = repositoryDiffWorkspaceReducer(loading, {
+  const state = RepositoryDiffWorkspaceState.reduce(loading, {
     type: "ignoredPageSucceeded",
     identity,
     page,
@@ -278,11 +276,11 @@ test("ignored page の次 cursor は先行 page に append する", () => {
     cursor: null,
     pageGeneration: 1,
   };
-  const firstLoading = repositoryDiffWorkspaceReducer(createReadyState(), {
+  const firstLoading = RepositoryDiffWorkspaceState.reduce(createReadyState(), {
     type: "ignoredPageRequested",
     identity: firstIdentity,
   });
-  const firstReady = repositoryDiffWorkspaceReducer(firstLoading, {
+  const firstReady = RepositoryDiffWorkspaceState.reduce(firstLoading, {
     type: "ignoredPageSucceeded",
     identity: firstIdentity,
     page: firstPage,
@@ -292,11 +290,11 @@ test("ignored page の次 cursor は先行 page に append する", () => {
     cursor: firstPage.nextCursor,
     pageGeneration: 2,
   };
-  const secondLoading = repositoryDiffWorkspaceReducer(firstReady, {
+  const secondLoading = RepositoryDiffWorkspaceState.reduce(firstReady, {
     type: "ignoredPageRequested",
     identity: secondIdentity,
   });
-  const state = repositoryDiffWorkspaceReducer(secondLoading, {
+  const state = RepositoryDiffWorkspaceState.reduce(secondLoading, {
     type: "ignoredPageSucceeded",
     identity: secondIdentity,
     page: { nodeId, entries: [], nextCursor: null },
@@ -316,11 +314,11 @@ test("古い cursor の ignored page success は現在の loading state を変�
     pageGeneration: 2,
   };
   const staleIdentity = { ...currentIdentity, cursor: null, pageGeneration: 1 };
-  const loading = repositoryDiffWorkspaceReducer(createReadyState(), {
+  const loading = RepositoryDiffWorkspaceState.reduce(createReadyState(), {
     type: "ignoredPageRequested",
     identity: currentIdentity,
   });
-  const state = repositoryDiffWorkspaceReducer(loading, {
+  const state = RepositoryDiffWorkspaceState.reduce(loading, {
     type: "ignoredPageSucceeded",
     identity: staleIdentity,
     page: { nodeId, entries: [], nextCursor: null },
@@ -341,11 +339,11 @@ test("ignored page failure は page state に retryable error を保持する", 
     cursor: null,
     pageGeneration: 1,
   };
-  const loading = repositoryDiffWorkspaceReducer(createReadyState(), {
+  const loading = RepositoryDiffWorkspaceState.reduce(createReadyState(), {
     type: "ignoredPageRequested",
     identity,
   });
-  const state = repositoryDiffWorkspaceReducer(loading, {
+  const state = RepositoryDiffWorkspaceState.reduce(loading, {
     type: "ignoredPageFailed",
     identity,
     error: { code: "staleCursor", message: "stale", retryable: true },
@@ -370,7 +368,7 @@ test("古い request の ignored page success は merge しない", () => {
     pageGeneration: 1,
   };
   const ready = createReadyState();
-  const state = repositoryDiffWorkspaceReducer(ready, {
+  const state = RepositoryDiffWorkspaceState.reduce(ready, {
     type: "ignoredPageSucceeded",
     identity,
     page: { nodeId, entries: [], nextCursor: null },

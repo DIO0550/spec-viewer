@@ -7,12 +7,10 @@ import type {
   RepositoryFileReview,
 } from "@/features/repositoryDiff/domain/repositoryDiff";
 import {
-  createInitialRepositoryDiffWorkspaceState,
+  RepositoryDiffWorkspaceState,
   type RepositoryDiffDetailIdentity,
   type RepositoryDiffIgnoredPageIdentity,
   type RepositoryDiffRequestIdentity,
-  type RepositoryDiffWorkspaceState,
-  repositoryDiffWorkspaceReducer,
 } from "@/features/repositoryDiff/domain/repositoryDiffWorkspaceState";
 import {
   normalizeRepositoryDiffFileFailure,
@@ -179,9 +177,9 @@ export function useRepositoryDiffWorkspace({
   api = DEFAULT_API,
 }: UseRepositoryDiffWorkspaceOptions): UseRepositoryDiffWorkspaceResult {
   const [state, dispatch] = useReducer(
-    repositoryDiffWorkspaceReducer,
+    RepositoryDiffWorkspaceState.reduce,
     undefined,
-    createInitialRepositoryDiffWorkspaceState,
+    RepositoryDiffWorkspaceState.initial,
   );
   const [selection, setSelection] = useState<RepositoryDiffSelection | null>(
     isSnapshotSelection(requestedSelection) ? requestedSelection : null,

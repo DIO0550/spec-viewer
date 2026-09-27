@@ -1,9 +1,6 @@
 import { expect, expectTypeOf, test } from "vitest";
 
-import {
-  toWorkspaceError,
-  type WorkspaceError,
-} from "@/features/workspace/domain/workspaceError";
+import { WorkspaceError } from "@/features/workspace/domain/workspaceError";
 import {
   LoadWorkspaceCommandError,
   type LoadWorkspaceCommandError as LoadWorkspaceCommandErrorType,
@@ -28,7 +25,7 @@ test.each([
     raw: { code },
   });
 
-  expect(toWorkspaceError(cause)).toEqual({
+  expect(WorkspaceError.fromCommand(cause)).toEqual({
     reason: expectedReason,
     message: "workspace failed",
     cause,

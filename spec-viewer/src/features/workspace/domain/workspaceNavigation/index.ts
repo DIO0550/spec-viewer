@@ -2,7 +2,10 @@ import {
   NavigationHistory,
   NavigationHistoryKey,
 } from "@/features/workspace/domain/navigationHistory";
-import type { WorktreeId } from "@/features/workspace/domain/worktree";
+import type {
+  WorktreeId,
+  WorkspaceWorktrees,
+} from "@/features/workspace/domain/worktree";
 import type { ViewMode } from "@/features/workspace/types/viewMode";
 
 export type WorkspaceNavigation = Readonly<{
@@ -14,6 +17,58 @@ export type WorkspaceNavigation = Readonly<{
 }>;
 
 export const WorkspaceNavigation = {
+  /**
+   * @param state - Navigation and saved selections before the snapshot update.
+   * @param worktrees - Available worktrees in fallback order.
+   * @returns Navigation with an available saved item or the first eligible item.
+   */
+  updateFromWorktrees(
+    state: WorkspaceNavigation,
+    worktrees: WorkspaceWorktrees,
+  ): WorkspaceNavigation {
+    const workspaceId = worktrees.workspaceId;
+    const currentWorktree = worktrees.worktrees.find(
+      (worktree) =>
+        workspaceId === state.workspaceId &&
+        worktree.id === state.activeWorktreeId,
+    );
+    const activeWorktree = currentWorktree ?? worktrees.worktrees[0];
+    if (activeWorktree === undefined) {
+      return WorkspaceNavigation.selectItem(
+        { ...state, workspaceId, activeWorktreeId: null },
+        null,
+      );
+    }
+
+    const activeWorktreeId = activeWorktree.id;
+    const navigation = { ...state, workspaceId, activeWorktreeId };
+    const key = NavigationHistoryKey.create({
+      workspaceId,
+      worktreeId: activeWorktreeId,
+      mode: state.mode,
+    });
+    const preferredItemId =
+      NavigationHistory.get(state.selectedItemIdBySelectionKey, key) ?? null;
+
+    const availableItemIds =
+      state.mode === "specs"
+        ? activeWorktree.specs
+            .filter((spec) => !spec.isArchived)
+            .map((spec) => spec.id)
+        : activeWorktree.changedFiles.map((file) => file.id);
+
+    if (
+      preferredItemId !== null &&
+      availableItemIds.includes(preferredItemId)
+    ) {
+      return WorkspaceNavigation.selectItem(navigation, preferredItemId);
+    }
+
+    return WorkspaceNavigation.selectItem(
+      navigation,
+      availableItemIds[0] ?? null,
+    );
+  },
   /** @returns A fresh session navigation with no selected workspace. */
   create(): WorkspaceNavigation {
     return {

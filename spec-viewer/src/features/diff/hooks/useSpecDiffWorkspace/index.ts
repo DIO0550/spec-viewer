@@ -8,19 +8,15 @@ import {
 } from "react";
 import {
   ComparisonRevision,
-  type ComparisonRevision as ComparisonRevisionValue,
   type RevisionOption,
   type SpecFileHistory,
+  type ComparisonRevision as ComparisonRevisionValue,
 } from "@/features/diff/domain/comparisonRevision";
 import {
-  createInitialSpecDiffWorkspaceState,
-  createSpecChangeId,
-  findSpecChange,
-  projectSpecChangeBadges,
-  reduceSpecDiffWorkspaceState,
+  SpecDiffWorkspaceState,
+  SpecChange,
   type SpecChangeOverview,
   type SpecDiffSelection,
-  type SpecDiffWorkspaceState,
 } from "@/features/diff/domain/specDiffWorkspaceState";
 import {
   GetSpecFileDiffCommandError,
@@ -174,9 +170,9 @@ export function useSpecDiffWorkspace({
   api = DEFAULT_API,
 }: UseSpecDiffWorkspaceOptions): UseSpecDiffWorkspaceResult {
   const [state, dispatch] = useReducer(
-    reduceSpecDiffWorkspaceState,
+    SpecDiffWorkspaceState.reduce,
     undefined,
-    createInitialSpecDiffWorkspaceState,
+    SpecDiffWorkspaceState.initial,
   );
   const [comparison, setComparison] = useState<ComparisonRevisionValue>(
     ComparisonRevision.head,
@@ -224,14 +220,14 @@ export function useSpecDiffWorkspace({
       allowStaleRecovery: boolean,
       recoverOverview: () => Promise<boolean>,
     ): Promise<boolean> => {
-      const change = findSpecChange(overview.files, detailSelection);
+      const change = SpecChange.find(overview.files, detailSelection);
       if (change === null) {
         return true;
       }
 
       const detailGeneration = detailGenerationRef.current + 1;
       detailGenerationRef.current = detailGeneration;
-      const fileId = createSpecChangeId(change);
+      const fileId = SpecChange.createId(change);
 
       try {
         const value = await api.getSpecFileDiff({
@@ -404,7 +400,7 @@ export function useSpecDiffWorkspace({
     const currentState = stateRef.current;
     const change =
       currentState.status === "ready"
-        ? findSpecChange(currentState.overview.files, selectionRef.current)
+        ? SpecChange.find(currentState.overview.files, selectionRef.current)
         : null;
     const token = Symbol();
     historyRequestTokenRef.current = token;
@@ -484,7 +480,7 @@ export function useSpecDiffWorkspace({
           });
           const overview = toSpecChangeOverview(response);
           const currentSelection = selectionRef.current;
-          const change = findSpecChange(overview.files, currentSelection);
+          const change = SpecChange.find(overview.files, currentSelection);
           const detail =
             change === null
               ? null
@@ -512,7 +508,7 @@ export function useSpecDiffWorkspace({
             dispatch({
               type: "detailSucceeded",
               ...identity,
-              fileId: createSpecChangeId(change),
+              fileId: SpecChange.createId(change),
               value: detail,
             });
           }
@@ -663,7 +659,7 @@ export function useSpecDiffWorkspace({
   const badges = useMemo(
     () =>
       state.status === "ready"
-        ? projectSpecChangeBadges(state.overview.files)
+        ? SpecChange.projectBadges(state.overview.files)
         : new Map<string, "U" | "M">(),
     [state],
   );

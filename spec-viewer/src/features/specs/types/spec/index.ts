@@ -7,11 +7,7 @@ import type {
   SpecArtifactIdentity,
   SpecProgress,
 } from "@/features/specs/domain/specArtifact";
-export type SpecFileScope = Readonly<{
-  workspacePath: string;
-  specId: string;
-  fileKey: SpecFileKey;
-}>;
+export type { SpecFileScope } from "@/features/specs/domain/specTree";
 
 export type {
   ConfigSource,
