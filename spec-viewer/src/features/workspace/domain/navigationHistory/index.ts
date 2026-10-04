@@ -1,5 +1,5 @@
 import type { WorktreeId } from "@/features/workspace/domain/worktree";
-import type { ViewMode } from "@/features/workspace/types/viewMode";
+import type { ViewMode } from "@/features/workspace/domain/viewMode";
 import type { Brand } from "@/types/utilityTypes";
 
 export type NavigationHistoryKey = Brand<string, "NavigationHistoryKey">;

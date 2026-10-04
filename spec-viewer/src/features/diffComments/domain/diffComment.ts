@@ -1,3 +1,5 @@
+import type { IsoDateTimeString } from "@/shared/kernel/isoDateTimeString";
+
 export type DiffCommentSide = "base" | "current";
 
 export type DiffReviewIdentity = Readonly<{
@@ -95,14 +97,14 @@ export type DiffAnchorResolution =
 export type DiffCommentReply = Readonly<{
   id: string;
   body: string;
-  createdAt: string;
+  createdAt: IsoDateTimeString;
 }>;
 
 export type StoredDiffComment = Readonly<{
   id: string;
   body: string;
   resolved: boolean;
-  createdAt: string;
+  createdAt: IsoDateTimeString;
   anchor: DiffLineAnchor;
   replies?: readonly DiffCommentReply[];
 }>;

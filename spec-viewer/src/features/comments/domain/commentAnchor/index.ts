@@ -1,4 +1,4 @@
-import type { SpecFileKey } from "@/features/specs/domain/specFile";
+import type { SpecFileKey } from "@/shared/kernel/specFileKey";
 
 export type CommentBlockType =
   | "paragraph"

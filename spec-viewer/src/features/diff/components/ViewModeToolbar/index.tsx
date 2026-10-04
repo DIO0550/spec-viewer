@@ -5,7 +5,7 @@ import {
   useRef,
 } from "react";
 
-import type { ViewMode } from "@/features/workspace/types/viewMode";
+import type { ViewMode } from "@/features/workspace/domain";
 
 export type ViewModeDiffAvailability =
   | Readonly<{ status: "ready" }>

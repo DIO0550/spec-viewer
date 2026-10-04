@@ -34,8 +34,8 @@ import {
   useComments,
   commentCommands,
 } from "@/features/comments";
-import { CommentScope } from "@/features/comments/domain/commentScope";
-import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
+import { CommentScope } from "@/features/comments";
+import { CommentStatusFilter } from "@/features/comments";
 import {
   ChangesNavigation,
   CurrentFileViewer,
@@ -63,12 +63,12 @@ import {
 import type {
   DiffCommentJumpTarget,
   DiffLineCommentsController,
-} from "@/features/diffComments/components/DiffLineCommentSlot";
-import { DiffReviewPanel } from "@/features/diffComments/components/DiffReviewPanel";
+} from "@/features/diffComments";
+import { DiffReviewPanel } from "@/features/diffComments";
 import {
   createDiffLineCommentsController,
   groupCommentsByResolvedTarget,
-} from "@/features/diffComments/components/presentation";
+} from "@/features/diffComments";
 import {
   ThemeProvider,
   useLeftNavigationPreference,
@@ -97,8 +97,8 @@ import {
 import type {
   RepositoryDiffSelection,
   RepositoryDiffTreeProjectionNode,
-} from "@/features/repositoryDiff/domain/repositoryDiff";
-import type { RepositoryDiffWorkspaceState } from "@/features/repositoryDiff/domain/repositoryDiffWorkspaceState";
+} from "@/features/repositoryDiff";
+import type { RepositoryDiffWorkspaceState } from "@/features/repositoryDiff";
 import {
   SidebarLayout,
   SidebarPreferenceProvider,
@@ -125,7 +125,7 @@ import {
   WorkspaceToolbar,
   WorktreeTree,
 } from "@/features/workspace";
-import { resolveActiveWorktreePath } from "@/features/workspace/lib/resolveActiveWorktreePath";
+import { resolveActiveWorktreePath } from "@/features/workspace";
 
 const specDiffApi = {
   getSpecFileDiff,

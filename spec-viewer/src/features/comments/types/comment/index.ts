@@ -11,7 +11,7 @@ import type {
   CommentStatus,
   CommentStatusFilter,
 } from "@/features/comments/domain/commentStatusFilter";
-import type { SpecFileKey } from "@/features/specs/domain/specFile";
+import type { SpecFileKey } from "@/shared/kernel/specFileKey";
 
 export type CommentDisplayFilter = CommentStatusFilter;
 

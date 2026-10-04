@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 
-import { CommentComposer } from "@/features/comments/components/CommentComposer";
+import { CommentComposer } from "@/features/comments";
 
 export type DiffCommentDisabledReason =
   | "staleTarget"

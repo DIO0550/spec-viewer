@@ -1,1 +1,1 @@
-export type ViewMode = "specs" | "diff";
+export type { ViewMode } from "../domain/viewMode";

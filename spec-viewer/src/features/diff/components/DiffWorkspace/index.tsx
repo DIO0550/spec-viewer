@@ -1,6 +1,6 @@
 import type { ReactElement, ReactNode } from "react";
 
-import type { WorkspaceWorktreesUnavailableReason } from "@/features/workspace/types/workspaceWorktreesLoadState";
+import type { WorkspaceWorktreesUnavailableReason } from "@/features/workspace";
 
 export type DiffWorkspaceAvailability =
   | Readonly<{ status: "ready" }>

@@ -9,5 +9,5 @@ export {
   SelectionIdentity,
   SpecId,
   SpecViewSelection,
-} from "@/features/specs/domain/specViewSelection";
-export type { SpecViewTargetScope } from "@/features/specs/domain/specViewSelection";
+} from "@/features/specs/domain";
+export type { SpecViewTargetScope } from "@/features/specs/domain";

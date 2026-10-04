@@ -112,6 +112,12 @@ export type SaveCommentFailure = SaveCommandError;
 （workspace/preferences などが使う純粋な型演算）。SidebarWidth は sidebar 表示に固有で、独立した複数 feature 利用がないため認定しない。
 WorkspacePath の値検証強化は #112 の担当であり、認定は値検証の十分性を保証しない。
 
+## 横断型の所有台帳
+
+[Shared vocabulary and public APIs](./frontend-shared-vocabulary.md) に認定 Kernel 型ごとの owner・共有理由、
+feature 固有 identity の公開入口、#106 と旧 PR #28 の supersede 関係を記録する。
+Specs / Diff / Workspace の認定 domain API は `policy.json` に登録し、UI/DTO を再 export しない。
+
 ## 自動検査
 
 `spec-viewer/` で実行する。

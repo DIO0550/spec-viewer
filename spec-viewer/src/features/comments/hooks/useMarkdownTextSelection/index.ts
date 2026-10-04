@@ -2,7 +2,7 @@ import { type RefObject, useCallback, useEffect, useState } from "react";
 
 import { createCommentAnchorDraftFromSelection } from "@/features/comments/lib/comment-anchor-draft";
 import type { CommentAnchorDraft } from "@/features/comments/types/comment";
-import type { SpecFileKey } from "@/features/specs/types/spec";
+import type { SpecFileKey } from "@/features/specs";
 
 type UseMarkdownTextSelectionOptions = Readonly<{
   renderedRootRef: RefObject<HTMLElement | null>;

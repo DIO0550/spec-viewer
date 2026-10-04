@@ -122,3 +122,14 @@ export {
   type StopSpecFileWatchCommandContract,
   stopSpecFileWatch,
 } from "./infra/tauri/stopSpecFileWatch";
+
+export {
+  SelectionIdentity,
+  SpecId,
+  SpecViewSelection,
+  type SpecViewSelectionInput,
+  type SpecViewTargetScope,
+  type SpecViewFileTarget,
+  type SpecViewReviewTarget,
+} from "./domain";
+export type { SpecFileWatchSubscriber } from "./hooks/useSpecFileWatcher";

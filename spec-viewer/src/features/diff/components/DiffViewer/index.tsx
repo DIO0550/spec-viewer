@@ -31,15 +31,15 @@ import {
   type HeightMeasurementCache,
   mergeMeasuredHeights,
 } from "@/features/diff/lib/editorWindowing";
-import type { DiffLineCommentTarget } from "@/features/diffComments/components/DiffLineCommentControl";
+import type { DiffLineCommentTarget } from "@/features/diffComments";
 import {
   DiffInlineCommentThread,
   DiffLineCommentSlot,
   type DiffCommentJumpTarget,
   type DiffLineCommentsController,
-} from "@/features/diffComments/components/DiffLineCommentSlot";
+} from "@/features/diffComments";
 
-import { CommentTargets } from "@/features/diffComments/components/DiffLineCommentSlot/CommentTargets";
+import { CommentTargets } from "@/features/diffComments";
 export type DiffViewerProps = Readonly<{
   fileDiff: FileDiff;
   mode: DiffProjectionViewMode;

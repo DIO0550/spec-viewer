@@ -3,8 +3,8 @@ import type {
   DiffAnchorTarget,
   DiffReviewIdentity,
   ResolvedDiffComment,
-  UseDiffCommentsResult,
-} from "@/features/diffComments";
+} from "@/features/diffComments/domain/diffComment";
+import type { UseDiffCommentsResult } from "@/features/diffComments/hooks/useDiffComments";
 import type {
   DiffLineCommentSummary,
   DiffLineCommentTarget,

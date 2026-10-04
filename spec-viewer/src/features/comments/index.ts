@@ -42,3 +42,9 @@ export {
 export type { CommentCommands } from "./application/commentCommands";
 export type { CommentExportCommands } from "./application/commentExportCommands";
 export * from "./infra/tauri";
+
+export { CommentListState } from "./domain/commentListState";
+export { CommentScope } from "./domain/commentScope";
+export { CommentStatusFilter } from "./domain/commentStatusFilter";
+export { ReviewComment } from "./components/ReviewComment";
+export type { IsoDateTimeString } from "@/shared/kernel/isoDateTimeString";

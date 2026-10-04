@@ -9,7 +9,7 @@ import type {
   CommentAnchorDisplayState,
   CommentId,
 } from "@/features/comments";
-import { CommentListState } from "@/features/comments/domain/commentListState";
+import { CommentListState } from "@/features/comments";
 
 /** useComments の戻り値のうち本フックが使う操作のみの狭い構造的型（DI テスト容易性のため）。 */
 export type CommentSelectionCommentActions = Readonly<{

@@ -1,5 +1,5 @@
 import { Worktree, WorktreeId } from "@/features/workspace/domain/worktree";
-import { ViewMode } from "@/features/workspace/types/viewMode";
+import { ViewMode } from "@/features/workspace/domain/viewMode";
 
 export type WorktreeRowCount =
   | Readonly<{ kind: "spec-count"; value: number }>

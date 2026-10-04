@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 
-import type { FileChangeStatus } from "@/features/diff/domain/fileDiff";
-import { getFileChangePresentation } from "@/features/diff/lib/fileChangePresentation";
+import type { FileChangeStatus } from "@/features/diff/domain";
+import { getFileChangePresentation } from "@/features/diff";
 import type { DiffLineSummary } from "@/features/repositoryDiff/lib/repositoryDiffFilePresentation";
 
 export type RepositoryDiffFileHeaderProps = Readonly<{

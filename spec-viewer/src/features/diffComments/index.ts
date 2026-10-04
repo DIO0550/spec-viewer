@@ -61,3 +61,17 @@ export {
   decodeDiffCommentRevision,
   decodeDiffReviewIdentity,
 } from "./infra/tauri/diffCommentDecoder";
+
+export * from "./components";
+export {
+  DiffInlineCommentThread,
+  type DiffCommentJumpTarget,
+} from "./components/DiffLineCommentSlot";
+export { CommentTargets } from "./components/DiffLineCommentSlot/CommentTargets";
+export { DiffReviewPanel } from "./components/DiffReviewPanel";
+export {
+  createDiffLineCommentsController,
+  toDiffReviewComments,
+  groupCommentsByResolvedTarget,
+} from "./components/presentation";
+export type { IsoDateTimeString } from "@/shared/kernel/isoDateTimeString";

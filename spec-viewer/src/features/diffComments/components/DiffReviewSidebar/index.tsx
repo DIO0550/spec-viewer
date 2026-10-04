@@ -8,8 +8,8 @@ import {
   useState,
 } from "react";
 
-import { ReviewComment } from "@/features/comments/components/ReviewComment";
-import type { DiffCommentReply } from "@/features/diffComments";
+import { ReviewComment } from "@/features/comments";
+import type { DiffCommentReply } from "@/features/diffComments/domain/diffComment";
 
 export type DiffReviewFilter = "open" | "resolved" | "all";
 

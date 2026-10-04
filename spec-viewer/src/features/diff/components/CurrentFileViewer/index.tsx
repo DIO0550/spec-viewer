@@ -32,8 +32,8 @@ import {
   DiffLineCommentSlot,
   type DiffCommentJumpTarget,
   type DiffLineCommentsController,
-} from "@/features/diffComments/components/DiffLineCommentSlot";
-import { CommentTargets } from "@/features/diffComments/components/DiffLineCommentSlot/CommentTargets";
+} from "@/features/diffComments";
+import { CommentTargets } from "@/features/diffComments";
 
 export type CurrentFileViewerProps = Readonly<{
   fileDiff: FileDiff;
