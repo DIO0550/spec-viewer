@@ -49,6 +49,70 @@ test("IPC transport は feature に依存せず concrete adapter は owner infra
   }
 });
 
+test("production の横断 import は公開 API を使い feature / Kernel の循環を作らない", async () => {
+  const { findViolations } = await import("./rules.mjs");
+  const project = fileURLToPath(new URL("../../", import.meta.url));
+  const graph = collectGraph(project);
+  const policy = JSON.parse(
+    readFileSync(
+      path.join(project, "scripts/architecture/policy.json"),
+      "utf8",
+    ),
+  );
+  const isProduction = (file) =>
+    file.startsWith("src/") &&
+    !/\.(?:test|spec|stories)\.[^/]+$/.test(file) &&
+    !/(?:^|\/)__tests__\//.test(file) &&
+    !file.startsWith("src/tests/");
+  assert.deepEqual(graph.diagnostics, []);
+  // Check raw violations, not the exception-filtered result: an exception cannot
+  // reintroduce a production deep import, impure public domain API or Kernel.
+  assert.deepEqual(
+    findViolations(graph, policy).filter(
+      ({ rule, from }) =>
+        (rule === "feature-public-api" && isProduction(from)) ||
+        (rule === "domain-dependency" &&
+          policy.domainPublicApis.some(({ entry }) => entry === from)) ||
+        rule === "kernel-dependency" ||
+        rule === "kernel-public-api",
+    ),
+    [],
+  );
+
+  const productionEdges = graph.edges.filter(
+    ({ from, to }) => isProduction(from) && isProduction(to),
+  );
+  const adjacency = Map.groupBy(productionEdges, ({ from }) => from);
+  const reaches = (start, target) => {
+    const pending = [start];
+    const visited = new Set();
+    while (pending.length > 0) {
+      const node = pending.pop();
+      if (node === target) return true;
+      if (visited.has(node)) continue;
+      visited.add(node);
+      pending.push(...(adjacency.get(node) ?? []).map(({ to }) => to));
+    }
+    return false;
+  };
+  const featureOf = (file) => /^src\/features\/([^/]+)\//.exec(file)?.[1];
+  for (const { from, to } of productionEdges) {
+    const crossesFeature =
+      (featureOf(from) || featureOf(to)) && featureOf(from) !== featureOf(to);
+    const touchesKernel = policy.kernelEntries.some(({ entry }) =>
+      [from, to].some((file) =>
+        file.startsWith(path.posix.dirname(entry) + "/"),
+      ),
+    );
+    if (!crossesFeature && !touchesKernel) continue;
+    assert.equal(
+      reaches(to, from),
+      false,
+      `${from} -> ${to} must not form a cycle`,
+    );
+  }
+});
+
 /** @param {object} files Fixture files. @returns {string} Temporary project root. */
 function fixture(t, files) {
   const root = mkdtempSync(path.join(tmpdir(), "architecture-"));

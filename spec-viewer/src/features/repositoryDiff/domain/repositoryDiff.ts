@@ -6,7 +6,7 @@ import type {
   OmissionReason,
   StructuredDiff,
   SubmoduleState,
-} from "@/features/diff/domain/fileDiff";
+} from "@/features/diff/domain";
 
 export type BaseResolutionSource =
   | "explicit"

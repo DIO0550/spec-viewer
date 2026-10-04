@@ -1,6 +1,6 @@
 import { type ReactElement, useMemo } from "react";
 
-import type { UseDiffCommentsResult } from "@/features/diffComments";
+import type { UseDiffCommentsResult } from "@/features/diffComments/hooks/useDiffComments";
 import { DiffReviewSidebar } from "@/features/diffComments/components/DiffReviewSidebar";
 import { toDiffReviewComments } from "@/features/diffComments/components/presentation";
 

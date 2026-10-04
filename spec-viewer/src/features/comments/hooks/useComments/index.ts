@@ -30,7 +30,7 @@ import { listComments as listCommentsViaGateway } from "@/features/comments/appl
 import {
   SelectionIdentity,
   type SelectionIdentity as SelectionIdentityType,
-} from "@/features/specs/domain/specViewSelection";
+} from "@/features/specs/domain";
 import type { CommentCommands } from "@/features/comments/application/commentCommands";
 import { ListCommentsCommandError } from "@/features/comments";
 import {

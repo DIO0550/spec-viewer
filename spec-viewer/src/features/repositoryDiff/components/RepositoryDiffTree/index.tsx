@@ -9,7 +9,7 @@ import {
 } from "react";
 import { LoadingSkeleton } from "@/components";
 
-import { getFileChangePresentation } from "@/features/diff/lib/fileChangePresentation";
+import { getFileChangePresentation } from "@/features/diff";
 import type {
   RepositoryDiffFilter,
   RepositoryDiffTreeProjectionNode,

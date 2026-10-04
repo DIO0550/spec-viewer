@@ -2,8 +2,8 @@ import type {
   FileChangeStatus,
   FileReview,
   OmissionReason,
-} from "@/features/diff/domain/fileDiff";
-import { FileDiff } from "@/features/diff/domain/fileDiff";
+} from "@/features/diff/domain";
+import { FileDiff } from "@/features/diff/domain";
 import type {
   IgnoredPage,
   RepositoryDiffFilter,

@@ -1,4 +1,4 @@
-import type { FileDiff } from "@/features/diff/domain/fileDiff";
+import type { FileDiff } from "@/features/diff/domain";
 import type {
   RepositoryDiffFile,
   RepositoryDiffOverview,

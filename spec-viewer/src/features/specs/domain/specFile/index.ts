@@ -1,13 +1,5 @@
-export type SpecFileKey =
-  | "exploration"
-  | "hearing"
-  | "impl"
-  | "tasks"
-  | "tech-reference"
-  | "test-cases"
-  | "requirements"
-  | "quiz-plan"
-  | "quiz-impl";
+import type { SpecFileKey } from "@/shared/kernel/specFileKey";
+export type { SpecFileKey } from "@/shared/kernel/specFileKey";
 
 export type SpecFileStatus = "present" | "missing";
 export type SpecDocumentFormat = "markdown" | "html";

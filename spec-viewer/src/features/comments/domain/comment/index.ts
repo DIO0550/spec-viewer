@@ -10,7 +10,8 @@ import {
 } from "@/features/comments/domain/commentStatusFilter";
 import { Comments } from "@/features/comments/domain/comments";
 
-export type IsoDateTimeString = string;
+import type { IsoDateTimeString } from "@/shared/kernel/isoDateTimeString";
+export type { IsoDateTimeString } from "@/shared/kernel/isoDateTimeString";
 
 export type Comment = Readonly<{
   id: CommentId;

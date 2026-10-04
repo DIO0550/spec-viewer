@@ -4,7 +4,7 @@ import type {
   FileChangeStatus,
   FileDiff,
 } from "@/features/diff/domain/fileDiff";
-import type { SpecFileKey } from "@/features/specs/types/spec";
+import type { SpecFileKey } from "@/shared/kernel/specFileKey";
 
 export type SpecChange = Readonly<{
   specId: string;

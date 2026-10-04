@@ -37,7 +37,7 @@ import {
 import {
   SelectionIdentity,
   type SelectionIdentity as SelectionIdentityType,
-} from "@/features/specs/domain/specViewSelection";
+} from "@/features/specs/domain";
 import type { CommentCommands } from "@/features/comments/application/commentCommands";
 
 export type AddCommentInput = Readonly<{

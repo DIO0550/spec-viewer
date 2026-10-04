@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useReducer } from "react";
 
-import type { FileReviewViewMode } from "@/features/diff/domain/fileDiff";
+import type { FileReviewViewMode } from "@/features/diff/domain";
 import type { RepositoryDiffFilter } from "@/features/repositoryDiff/domain/repositoryDiff";
 import {
   RepositoryDiffNavigationEntry,
@@ -9,7 +9,7 @@ import {
 import {
   NavigationHistory,
   NavigationHistoryKey,
-} from "@/features/workspace/domain/navigationHistory";
+} from "@/features/workspace/domain";
 
 export type UseRepositoryDiffNavigationStateOptions = Readonly<{
   workspaceId: string | null;

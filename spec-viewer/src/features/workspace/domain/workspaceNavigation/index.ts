@@ -6,7 +6,7 @@ import type {
   WorktreeId,
   WorkspaceWorktrees,
 } from "@/features/workspace/domain/worktree";
-import type { ViewMode } from "@/features/workspace/types/viewMode";
+import type { ViewMode } from "@/features/workspace/domain/viewMode";
 
 export type WorkspaceNavigation = Readonly<{
   workspaceId: string | null;

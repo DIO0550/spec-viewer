@@ -1,5 +1,5 @@
-import type { ViewMode } from "@/features/workspace/types/viewMode";
-import type { RepositoryDiffWorkspaceStatus } from "@/features/repositoryDiff/domain/repositoryDiffWorkspaceState";
+import type { ViewMode } from "@/features/workspace/domain";
+import type { RepositoryDiffWorkspaceStatus } from "@/features/repositoryDiff";
 
 /**
  * Defers the repository-wide scan until the user opens Diff mode.

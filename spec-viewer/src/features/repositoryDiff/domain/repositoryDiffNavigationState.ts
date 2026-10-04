@@ -1,8 +1,8 @@
 import {
   NavigationHistory,
   type NavigationHistoryKey,
-} from "@/features/workspace/domain/navigationHistory";
-import type { FileReviewViewMode } from "@/features/diff/domain/fileDiff";
+} from "@/features/workspace/domain";
+import type { FileReviewViewMode } from "@/features/diff/domain";
 import type { RepositoryDiffFilter } from "./repositoryDiff";
 
 export type RepositoryDiffNavigationEntry = Readonly<{

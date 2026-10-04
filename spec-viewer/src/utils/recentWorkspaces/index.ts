@@ -1,7 +1,4 @@
-import type {
-  Workspace,
-  WorkspaceKind,
-} from "@/features/workspace/types/workspace";
+import type { Workspace, WorkspaceKind } from "@/features/workspace/domain";
 
 export type RecentWorkspace = Readonly<{
   path: string;

@@ -5,8 +5,8 @@ import {
   useRef,
 } from "react";
 
-import type { FileChangeStatus } from "@/features/diff/domain/fileDiff";
-import { getFileChangePresentation } from "@/features/diff/lib/fileChangePresentation";
+import type { FileChangeStatus } from "@/features/diff/domain";
+import { getFileChangePresentation } from "@/features/diff";
 
 export type RepositoryFileTabItem = Readonly<{
   path: string;
@@ -159,7 +159,8 @@ export function RepositoryFileTabs(
                 onClick={(event) => {
                   const clickedCloseAffordance =
                     event.target instanceof Element &&
-                    event.target.closest(".repository-file-tab__close") !== null;
+                    event.target.closest(".repository-file-tab__close") !==
+                      null;
                   if (clickedCloseAffordance) {
                     close(item.path);
                     return;

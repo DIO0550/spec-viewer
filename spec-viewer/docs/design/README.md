@@ -5,6 +5,9 @@ This folder contains current product contracts and the source material that shap
 
 ## Current contracts
 
+- [Frontend shared vocabulary](./frontend-shared-vocabulary.md): Kernel owners,
+  certified feature domain APIs and the #106 / PR #28 migration boundary.
+
 - [Frontend architecture guidelines](./frontend-architecture-guidelines.md):
   layer responsibilities, public APIs, Shared Kernel, and import checks.
 

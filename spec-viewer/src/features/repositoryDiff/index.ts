@@ -87,3 +87,8 @@ export {
   traverseRepositoryIgnored,
 } from "./infra/tauri/repositoryDiff";
 export { decodeRepositoryOverview } from "./infra/tauri/repositoryDiffDecoder";
+
+export {
+  RepositoryDiffWorkspaceState,
+  type RepositoryDiffWorkspaceStatus,
+} from "./domain/repositoryDiffWorkspaceState";

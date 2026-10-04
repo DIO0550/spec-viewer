@@ -63,7 +63,7 @@ export type {
   OmissionReason,
   SubmoduleState,
 } from "./domain/fileDiff";
-export type { ViewMode } from "@/features/workspace/types/viewMode";
+export type { ViewMode } from "@/features/workspace/domain";
 
 export type {
   GetSpecFileDiffCommandContract,
@@ -98,3 +98,8 @@ export {
   LIST_SPEC_FILE_COMMIT_HISTORY_COMMAND,
   listSpecFileCommitHistory,
 } from "./infra/tauri/listSpecFileCommitHistory";
+
+export {
+  getFileChangePresentation,
+  type FileChangePresentation,
+} from "./lib/fileChangePresentation";

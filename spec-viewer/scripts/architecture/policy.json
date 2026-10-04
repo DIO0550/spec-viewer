@@ -5,6 +5,21 @@
       "entry": "src/features/diffComments/domain/index.ts",
       "reason": "Pure Diff review identity shared with the diff workspace domain; keeps the domain independent of the newly feature-owned IPC adapters.",
       "issue": 107
+    },
+    {
+      "entry": "src/features/specs/domain/index.ts",
+      "reason": "Specs owns spec selection and its branded identity; comments consume the pure selection contract without depending on UI or export DTOs.",
+      "issue": 106
+    },
+    {
+      "entry": "src/features/diff/domain/index.ts",
+      "reason": "Diff owns structured file review vocabulary shared with repositoryDiff; the public domain API has no UI or transport dependencies.",
+      "issue": 106
+    },
+    {
+      "entry": "src/features/workspace/domain/index.ts",
+      "reason": "Workspace owns navigation history identity and view mode, shared with repositoryDiff; no UI, storage or transport dependencies.",
+      "issue": 106
     }
   ],
   "kernelEntries": [
@@ -17,6 +32,16 @@
       "entry": "src/types/utilityTypes/index.ts",
       "reason": "Pure type operations shared by workspace navigation and preferences; no runtime, feature or transport dependencies.",
       "issue": 105
+    },
+    {
+      "entry": "src/shared/kernel/specFileKey/index.ts",
+      "reason": "Stable configured document identity shared by specs, comments and diff; independent of feature state, UI and transport.",
+      "issue": 106
+    },
+    {
+      "entry": "src/shared/kernel/isoDateTimeString/index.ts",
+      "reason": "Stable instant vocabulary shared by comments and diffComments for comment creation/update timestamps; a type alias only, with validation owned by each boundary.",
+      "issue": 106
     }
   ],
   "pureExternals": []

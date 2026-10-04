@@ -8,7 +8,7 @@ import {
   type CommentOperationState,
   CommentSidebar,
 } from "@/features/comments";
-import type { CommentListState } from "@/features/comments/domain/commentListState";
+import type { CommentListState } from "@/features/comments";
 
 export type SpecViewCommentSidebarProps = Readonly<{
   comments: readonly Comment[];

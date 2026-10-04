@@ -67,3 +67,6 @@ export * from "./infra/tauri/selectWorkspaceDirectory";
 export * from "./infra/tauri/validateWorkspaceDirectory";
 export { subscribeWorkspaceDragDropEvents } from "./infra/tauri/subscribeWorkspaceDragDropEvents";
 export { tauriWorkspaceCommands } from "./infra/tauri/workspaceCommands";
+
+export { resolveActiveWorktreePath } from "./lib/resolveActiveWorktreePath";
+export { NavigationHistory, NavigationHistoryKey } from "./domain";
