@@ -1,0 +1,1 @@
+import{n as e}from"./chunk-DnJy8xQt.js";function t(e){return e instanceof Error?e.message:typeof e==`string`?e:typeof e==`object`&&e&&`message`in e&&typeof e.message==`string`?e.message:`Unknown failure`}var n=e((()=>{}));export{n,t};
