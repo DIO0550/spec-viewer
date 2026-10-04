@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import type { WorkspaceWorktrees } from "@/features/workspace/domain/worktree";
-import { listWorktrees } from "@/lib/api/tauri";
+import type { WorkspaceWorktreeCommands } from "../../application/workspaceCommands";
 
 import type { WorkspaceWorktreesLoadState } from "../../types/workspaceWorktreesLoadState";
 
@@ -29,11 +29,14 @@ const initialRequestState: WorkspaceWorktreesRequestState = {
  * Loads Git worktrees for the active workspace and ignores stale responses.
  *
  * @param workspacePath - Active workspace root, or null when no workspace is open.
+ * @param commands - Worktree query supplied by composition.
  * @returns The current worktree source snapshot for navigation.
  */
 export function useWorkspaceWorktrees(
   workspacePath: string | null,
+  commands: WorkspaceWorktreeCommands,
 ): UseWorkspaceWorktreesResult {
+  const { listWorktrees } = commands;
   const [requestState, setRequestState] =
     useState<WorkspaceWorktreesRequestState>(initialRequestState);
   const [requestVersion, setRequestVersion] = useState(0);
@@ -83,7 +86,7 @@ export function useWorkspaceWorktrees(
     return () => {
       isCurrent = false;
     };
-  }, [requestVersion, workspacePath]);
+  }, [listWorktrees, requestVersion, workspacePath]);
 
   const state =
     requestState.workspacePath === workspacePath

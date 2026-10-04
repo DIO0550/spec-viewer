@@ -4,7 +4,7 @@ import { expect, test, vi } from "vitest";
 
 import { createCommentCommandTestDouble } from "@/features/comments/testing/comment-command-test-double";
 import { configurePerformanceLoggerForTest } from "@/lib/performance";
-import type { CommentCommands } from "@/lib/api/tauri";
+import type { CommentCommands } from "@/features/comments/application/commentCommands";
 import type { Comment } from "@/features/comments/domain/comment";
 import type { CommentAnchor } from "@/features/comments/domain/commentAnchor";
 import type { ListCommentsResponse } from "@/features/comments/types/comment";

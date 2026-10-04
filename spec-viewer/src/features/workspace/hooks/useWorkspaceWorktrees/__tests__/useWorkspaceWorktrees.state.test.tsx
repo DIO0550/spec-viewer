@@ -4,13 +4,10 @@ import { expect, test, vi } from "vitest";
 
 import type { WorkspaceWorktrees } from "@/features/workspace/domain/worktree";
 import { useWorkspaceWorktrees } from "@/features/workspace/hooks/useWorkspaceWorktrees";
-import { listWorktrees } from "@/lib/api/tauri";
 
-vi.mock("@/lib/api/tauri", () => ({
-  listWorktrees: vi.fn(),
-}));
-
-const listWorktreesMock = vi.mocked(listWorktrees);
+const listWorktreesMock =
+  vi.fn<(workspacePath: string) => Promise<WorkspaceWorktrees>>();
+const commands = { listWorktrees: listWorktreesMock };
 
 const loadedWorktrees: WorkspaceWorktrees = {
   workspaceId: "/workspace/spec-reviewer",
@@ -38,7 +35,7 @@ function renderHook(workspacePath: string | null): Readonly<{
   function TestComponent(
     props: Readonly<{ workspacePath: string | null }>,
   ): null {
-    result.current = useWorkspaceWorktrees(props.workspacePath);
+    result.current = useWorkspaceWorktrees(props.workspacePath, commands);
     return null;
   }
 

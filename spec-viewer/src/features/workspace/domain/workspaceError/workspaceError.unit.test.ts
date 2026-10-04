@@ -1,16 +1,6 @@
-import { expect, expectTypeOf, test } from "vitest";
+import { expect, test } from "vitest";
 
 import { WorkspaceError } from "@/features/workspace/domain/workspaceError";
-import {
-  LoadWorkspaceCommandError,
-  type LoadWorkspaceCommandError as LoadWorkspaceCommandErrorType,
-} from "@/lib/api/tauri/loadWorkspace";
-
-test("WorkspaceErrorのcauseはload_workspace command-local errorだけを保持する", () => {
-  expectTypeOf<
-    WorkspaceError["cause"]
-  >().toEqualTypeOf<LoadWorkspaceCommandErrorType>();
-});
 
 test.each([
   ["invalidRequest", "invalidSelection"],
@@ -18,12 +8,12 @@ test.each([
   ["configLoad", "configLoadFailed"],
   ["unknown", "unknown"],
 ] as const)("toWorkspaceErrorは%sをworkspace reason %sへ写す", (code, expectedReason) => {
-  const cause = LoadWorkspaceCommandError.fromUnknown({
-    command: "load_workspace",
+  const cause = {
+    command: "load_workspace" as const,
     code,
     message: "workspace failed",
     raw: { code },
-  });
+  };
 
   expect(WorkspaceError.fromCommand(cause)).toEqual({
     reason: expectedReason,

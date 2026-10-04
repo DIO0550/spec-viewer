@@ -10,12 +10,16 @@ import type {
   WorkspaceActions,
   WorkspaceContextValue,
 } from "@/features/workspace/context/types";
-import { WorkspaceError } from "@/features/workspace/domain/workspaceError";
-import { loadWorkspace as defaultLoadWorkspace } from "@/lib/api/tauri";
-import { LoadWorkspaceCommandError } from "@/lib/api/tauri/loadWorkspace";
+import type { WorkspaceLoadCommands } from "../application/workspaceCommands";
 
-/** @returns Workspace loading state and actions for selecting/resetting a workspace. */
-export function useWorkspaceState(): WorkspaceContextValue {
+/**
+ * @param commands - Workspace loading and error-mapping operations from composition.
+ * @returns Workspace loading state and actions for selecting/resetting a workspace.
+ */
+export function useWorkspaceState(
+  commands: WorkspaceLoadCommands,
+): WorkspaceContextValue {
+  const { loadWorkspace, toWorkspaceError } = commands;
   const generationRef = useRef<Generation>(createGeneration());
   const [machine, dispatch] = useReducer(
     WorkspaceState.reduce,
@@ -39,7 +43,7 @@ export function useWorkspaceState(): WorkspaceContextValue {
       );
 
       try {
-        const workspace = await defaultLoadWorkspace(selectedDirectory);
+        const workspace = await loadWorkspace(selectedDirectory);
 
         if (!generation.isCurrent(requestId)) {
           return false;
@@ -49,16 +53,14 @@ export function useWorkspaceState(): WorkspaceContextValue {
         dispatch(WorkspaceState.openSucceeded({ requestId, workspace }));
         return true;
       } catch (error) {
-        const workspaceError = WorkspaceError.fromCommand(
-          LoadWorkspaceCommandError.fromUnknown(error),
-        );
+        const workspaceError = toWorkspaceError(error);
         dispatch(
           WorkspaceState.openFailed({ requestId, error: workspaceError }),
         );
         return false;
       }
     },
-    [generation],
+    [generation, loadWorkspace, toWorkspaceError],
   );
 
   const reset = useCallback((): void => {

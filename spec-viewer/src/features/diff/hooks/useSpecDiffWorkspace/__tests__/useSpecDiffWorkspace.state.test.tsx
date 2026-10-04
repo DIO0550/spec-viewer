@@ -8,7 +8,7 @@ import {
   type UseSpecDiffWorkspaceOptions,
   useSpecDiffWorkspace,
 } from "@/features/diff/hooks/useSpecDiffWorkspace";
-import type { ListChangedSpecFilesCommandResponse } from "@/lib/api/tauri";
+import type { ListChangedSpecFilesCommandResponse } from "@/features/diff";
 
 type HookHandle = Readonly<{
   current: () => ReturnType<typeof useSpecDiffWorkspace>;

@@ -1,4 +1,3 @@
-import { listen } from "@tauri-apps/api/event";
 import { useEffect, useLayoutEffect, useRef } from "react";
 import {
   SelectionIdentity,
@@ -10,50 +9,37 @@ import {
   SpecFileWatchNotification,
   type SpecFileWatchNotification as WatchNotification,
 } from "@/features/specs/domain/specFileWatchNotification";
+import type { StartSpecFileWatchRequest } from "@/features/specs/types/watch";
 import type {
-  StartSpecFileWatchRequest,
-  StartSpecFileWatchResponse,
-  StopSpecFileWatchResponse,
-} from "@/features/specs/types/watch";
-import {
-  createSpecWatchSubscriber,
-  type SpecWatchSubscriber,
-} from "@/features/specs/services/specFileWatchEvents";
-import {
-  startSpecFileWatch as defaultStartSpecFileWatch,
-  stopSpecFileWatch as defaultStopSpecFileWatch,
-} from "@/lib/api/tauri";
+  SpecFileWatchCommands,
+  SpecWatchSubscriber,
+} from "@/features/specs/application/specFileWatchPort";
 import { WorkspacePath } from "@/domains/workspacePath";
 
-export type StartSpecFileWatchCommand = (
-  request: StartSpecFileWatchRequest,
-) => Promise<StartSpecFileWatchResponse>;
-
-export type StopSpecFileWatchCommand = () => Promise<StopSpecFileWatchResponse>;
-
+export type {
+  StartSpecFileWatchCommand,
+  StopSpecFileWatchCommand,
+} from "@/features/specs/application/specFileWatchPort";
 export type SpecFileWatchSubscriber = SpecWatchSubscriber;
 
 export type SpecFileWatchScope = StartSpecFileWatchRequest;
 
-export type UseSpecFileWatcherOptions = Readonly<{
-  selection: SpecViewSelectionType;
-  /** Called on Markdown change. @param event - The file watch change event. */
-  onMarkdownChange: (
-    event: Extract<WatchNotification, { type: "markdownChanged" }>,
-  ) => void | Promise<void>;
-  onConfigChange?: (
-    event: Extract<WatchNotification, { type: "configChanged" }>,
-  ) => void | Promise<void>;
-  onWatcherError?: (
-    event: Extract<WatchNotification, { type: "watchFailed" }>,
-  ) => void;
-  startWatch?: StartSpecFileWatchCommand;
-  stopWatch?: StopSpecFileWatchCommand;
-  subscribe?: SpecFileWatchSubscriber;
-}>;
+export type UseSpecFileWatcherOptions = SpecFileWatchCommands &
+  Readonly<{
+    selection: SpecViewSelectionType;
+    /** Called on Markdown change. @param event - The file watch change event. */
+    onMarkdownChange: (
+      event: Extract<WatchNotification, { type: "markdownChanged" }>,
+    ) => void | Promise<void>;
+    onConfigChange?: (
+      event: Extract<WatchNotification, { type: "configChanged" }>,
+    ) => void | Promise<void>;
+    onWatcherError?: (
+      event: Extract<WatchNotification, { type: "watchFailed" }>,
+    ) => void;
+  }>;
 
 let specFileWatchLifecycleQueue: Promise<void> = Promise.resolve();
-const defaultSubscribe = createSpecWatchSubscriber(listen);
 
 /**
  * Serializes commands that mutate the backend's single global watcher.
@@ -70,12 +56,10 @@ function enqueueSpecFileWatchLifecycleOperation(
 
 /**
  * Keeps the backend file watcher aligned with the selected spec file.
- * @param options - Selection aggregate, callbacks, and command overrides.
+ * @param options - Selection aggregate, callbacks, and injected watcher port.
  */
 export function useSpecFileWatcher(options: UseSpecFileWatcherOptions): void {
-  const startWatch = options.startWatch ?? defaultStartSpecFileWatch;
-  const stopWatch = options.stopWatch ?? defaultStopSpecFileWatch;
-  const subscribe = options.subscribe ?? defaultSubscribe;
+  const { startWatch, stopWatch, subscribe } = options;
   const { fileKey, specId, targetScope, workspacePath } = options.selection;
   const activeWatchTarget = SpecViewSelection.watchTarget(options.selection);
   const activeSelectionIdentity = activeWatchTarget?.selectionIdentity ?? null;

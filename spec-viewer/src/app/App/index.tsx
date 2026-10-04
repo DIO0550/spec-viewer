@@ -32,6 +32,7 @@ import {
   CommentOperationFailedState,
   CommentOperationSavingState,
   useComments,
+  commentCommands,
 } from "@/features/comments";
 import { CommentScope } from "@/features/comments/domain/commentScope";
 import { CommentStatusFilter } from "@/features/comments/domain/commentStatusFilter";
@@ -47,11 +48,17 @@ import {
   RevisionSelector,
   type SpecDiffWorkspaceState,
   useSpecDiffWorkspace,
+  getSpecFileDiff,
+  listChangedSpecFiles,
+  listSpecDiffRevisions,
+  listSpecFileCommitHistory,
   ViewModeToolbar,
 } from "@/features/diff";
 import {
   type DiffReviewIdentity,
   useDiffComments,
+  diffCommentCommands,
+  getDiffReviewIdentity,
 } from "@/features/diffComments";
 import type {
   DiffCommentJumpTarget,
@@ -82,13 +89,16 @@ import {
   summarizeFileDiff,
   toDiffViewerFileDiff,
   useRepositoryDiffNavigationState,
+  useRepositoryDiffWorkspace,
+  loadRepositoryDiff,
+  loadRepositoryFile,
+  traverseRepositoryIgnored,
 } from "@/features/repositoryDiff";
 import type {
   RepositoryDiffSelection,
   RepositoryDiffTreeProjectionNode,
 } from "@/features/repositoryDiff/domain/repositoryDiff";
 import type { RepositoryDiffWorkspaceState } from "@/features/repositoryDiff/domain/repositoryDiffWorkspaceState";
-import { useRepositoryDiffWorkspace } from "@/features/repositoryDiff/hooks/useRepositoryDiffWorkspace";
 import {
   SidebarLayout,
   SidebarPreferenceProvider,
@@ -99,9 +109,13 @@ import {
   type SpecSelectionChange,
   SpecTree,
   useSpecs,
+  specCommands,
+  specFileWatchCommands,
 } from "@/features/specs";
 import {
   useWorkspaceLoader,
+  tauriWorkspaceCommands,
+  subscribeWorkspaceDragDropEvents,
   useWorkspaceNavigationState,
   useWorkspaceSidebarSectionPreference,
   useWorkspaceWorktrees,
@@ -112,7 +126,19 @@ import {
   WorktreeTree,
 } from "@/features/workspace";
 import { resolveActiveWorktreePath } from "@/features/workspace/lib/resolveActiveWorktreePath";
-import { getDiffReviewIdentity } from "@/lib/api/tauri";
+
+const specDiffApi = {
+  getSpecFileDiff,
+  listChangedSpecFiles,
+  listSpecDiffRevisions,
+  listSpecFileCommitHistory,
+};
+
+const repositoryDiffApi = {
+  loadRepositoryDiff,
+  loadRepositoryFile,
+  traverseRepositoryIgnored,
+};
 
 type DiffCommentJump = Readonly<{
   selectionPath: string;
@@ -130,7 +156,7 @@ type DiffCommentJump = Readonly<{
 function App(): ReactElement {
   return (
     <ThemeProvider fixedTheme="light">
-      <WorkspaceProvider>
+      <WorkspaceProvider commands={tauriWorkspaceCommands}>
         <SidebarPreferenceProvider>
           <SpecViewSelectionProvider>
             <SpecViewAppContent />
@@ -153,10 +179,15 @@ function SpecViewAppContent(): ReactElement {
   );
   // workspace を開く知識は feature に集約済み — App は onError を渡して呼ぶだけ。
   const workspaceLoader = useWorkspaceLoader({
+    commands: tauriWorkspaceCommands,
+    subscribeDragDropEvents: subscribeWorkspaceDragDropEvents,
     onError: setDialogErrorMessage,
   });
   const { activeWorkspaceRoot, isWorkspaceOpening } = workspaceLoader.state;
-  const workspaceWorktrees = useWorkspaceWorktrees(activeWorkspaceRoot);
+  const workspaceWorktrees = useWorkspaceWorktrees(
+    activeWorkspaceRoot,
+    tauriWorkspaceCommands,
+  );
   const worktreesLoadState = workspaceWorktrees.state;
   const worktreeCount =
     worktreesLoadState.status === "ready"
@@ -190,6 +221,7 @@ function SpecViewAppContent(): ReactElement {
     [synchronizeSelection],
   );
   const specs = useSpecs({
+    commands: specCommands,
     workspacePath: activeSpecWorkspacePath,
     onSelectionChange: selectCurrentSpecView,
   });
@@ -207,6 +239,7 @@ function SpecViewAppContent(): ReactElement {
     activeWorkspaceRoot,
   );
   const repositoryDiff = useRepositoryDiffWorkspace({
+    api: repositoryDiffApi,
     workspacePath: repositoryDiffWorkspacePath,
     worktreeId: repositoryDiffWorkspacePath,
   });
@@ -216,6 +249,7 @@ function SpecViewAppContent(): ReactElement {
     repositoryStatus: repositoryDiff.state.status,
   });
   const specDiff = useSpecDiffWorkspace({
+    api: specDiffApi,
     workspacePath: specDiffWorkspacePath,
     selection: specState.selection,
   });
@@ -270,6 +304,7 @@ function SpecViewAppContent(): ReactElement {
     void specDiff.refresh();
   }, [isRepositoryDiffView, repositoryDiff.refresh, specDiff.refresh]);
   const diffComments = useDiffComments({
+    commands: diffCommentCommands,
     identity: activeDiffReviewIdentity,
     onIdentityInvalidated: refreshActiveDiffIdentity,
   });
@@ -305,6 +340,7 @@ function SpecViewAppContent(): ReactElement {
     ],
   );
   const comments = useComments({
+    commands: commentCommands,
     scope: commentScope,
     statusFilter: CommentStatusFilter.All,
     correlationId: specState.documentState.correlationId ?? null,
@@ -355,6 +391,7 @@ function SpecViewAppContent(): ReactElement {
   });
 
   const viewRefresh = useViewRefresh({
+    watcher: specFileWatchCommands,
     selection: specViewSelection,
     isCurrentViewLoading,
     isRepositoryView: isRepositoryDiffView,

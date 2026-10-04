@@ -4,7 +4,7 @@ import {
   RepositoryDiffCommandError,
   TRAVERSE_REPOSITORY_IGNORED_COMMAND,
   type RepositoryDiffCommandName,
-} from "@/lib/api/tauri";
+} from "@/features/repositoryDiff";
 import type { RepositoryDiffFailure } from "@/features/repositoryDiff/domain/repositoryDiffWorkspaceState";
 
 const NON_RETRYABLE_CODES = new Set([

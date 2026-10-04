@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import type { WorkspaceLoadCommands } from "../application/workspaceCommands";
 import type { WorkspaceState } from "@/features/workspace/application/workspaceState";
 import type { Workspace } from "@/features/workspace/domain/workspace";
 
@@ -31,5 +32,6 @@ export type WorkspaceContextValue = Readonly<{
 }>;
 
 export type WorkspaceProviderProps = Readonly<{
+  commands: WorkspaceLoadCommands;
   children: ReactNode;
 }>;

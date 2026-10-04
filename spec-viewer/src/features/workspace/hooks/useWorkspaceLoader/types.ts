@@ -1,19 +1,12 @@
 import type { WorkspaceContextValue } from "@/features/workspace/context/types";
 import type { UseRecentWorkspacesResult } from "@/features/workspace/hooks/useRecentWorkspaces";
-import type { SubscribeWorkspaceDragDropEvents } from "@/features/workspace/hooks/useWorkspaceDrop";
 import type {
-  selectWorkspaceDirectory as defaultSelectWorkspaceDirectory,
-  validateWorkspaceDirectory as defaultValidateWorkspaceDirectory,
-} from "@/lib/api/tauri";
+  SubscribeWorkspaceDragDropEvents,
+  WorkspaceLoaderCommands,
+} from "../../application/workspaceCommands";
 import type { RecentWorkspaceStorage } from "@/lib/recentWorkspaces";
 
-/** IPC コマンドの DI（useComments の `commands?` 規約に合わせた1オブジェクト）。 */
-export type WorkspaceLoaderCommands = Readonly<{
-  /** browse アダプタ（index.ts）が使う。flow には渡さない（ダイアログはフック専有の副作用）。 */
-  selectWorkspaceDirectory: typeof defaultSelectWorkspaceDirectory;
-  /** index.ts が io.validate ラッパーに包んで flow へ渡す。 */
-  validateWorkspaceDirectory: typeof defaultValidateWorkspaceDirectory;
-}>;
+export type { WorkspaceLoaderCommands } from "../../application/workspaceCommands";
 
 /**
  * flow へ注入する IPC 2関数（flow に注入してよい副作用は IPC のみ。
@@ -22,6 +15,7 @@ export type WorkspaceLoaderCommands = Readonly<{
  * 直前に合成したラッパーとして組み立てる。flow は結果値だけを読む。
  */
 export type WorkspaceLoaderFlowIo = Readonly<{
+  getValidationErrorMessage: WorkspaceLoaderCommands["getValidationErrorMessage"];
   /**
    * validateWorkspaceDirectory の薄いラッパー。flow は isDirectory のみ読む（構造的最小型）。
    * @param path - 検証対象のワークスペースディレクトリパス。
@@ -78,10 +72,10 @@ export type UseWorkspaceLoaderOptions = Readonly<{
    * @param message - 表示するエラーメッセージ。null でクリア。
    */
   onError: (message: string | null) => void;
-  /** テスト用 DI（デフォルト実装付き）。 */
-  commands?: WorkspaceLoaderCommands;
+  /** Composition supplies the workspace platform operations. */
+  commands: WorkspaceLoaderCommands;
   /** useWorkspaceDrop へのパススルー DI。 */
-  subscribeDragDropEvents?: SubscribeWorkspaceDragDropEvents;
+  subscribeDragDropEvents: SubscribeWorkspaceDragDropEvents;
   /**
    * @internal テスト専用 override — プロダクションコードで渡してはならない。
    * 省略時（プロダクション）はフック内部で useWorkspace() を読む。

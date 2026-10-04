@@ -64,3 +64,26 @@ export {
   summarizeFileDiff,
   type DiffLineSummary,
 } from "./lib/repositoryDiffFilePresentation";
+
+export type {
+  LoadRepositoryDiffRequest,
+  LoadRepositoryDiffResponse,
+  LoadRepositoryFileRequest,
+  LoadRepositoryFileResponse,
+  RepositoryDiffAnchor,
+  RepositoryDiffBackendErrorCode,
+  RepositoryDiffCommandErrorCode,
+  RepositoryDiffCommandName,
+  TraverseRepositoryIgnoredRequest,
+  TraverseRepositoryIgnoredResponse,
+} from "./infra/tauri/repositoryDiff";
+export {
+  LOAD_REPOSITORY_DIFF_COMMAND,
+  LOAD_REPOSITORY_FILE_COMMAND,
+  RepositoryDiffCommandError,
+  TRAVERSE_REPOSITORY_IGNORED_COMMAND,
+  loadRepositoryDiff,
+  loadRepositoryFile,
+  traverseRepositoryIgnored,
+} from "./infra/tauri/repositoryDiff";
+export { decodeRepositoryOverview } from "./infra/tauri/repositoryDiffDecoder";

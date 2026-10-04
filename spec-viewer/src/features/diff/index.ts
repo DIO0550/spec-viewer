@@ -64,3 +64,37 @@ export type {
   SubmoduleState,
 } from "./domain/fileDiff";
 export type { ViewMode } from "@/features/workspace/types/viewMode";
+
+export type {
+  GetSpecFileDiffCommandContract,
+  GetSpecFileDiffCommandErrorCode,
+  GetSpecFileDiffCommandRequest,
+  GetSpecFileDiffCommandResponse,
+} from "./infra/tauri/getSpecFileDiff";
+export {
+  GET_SPEC_FILE_DIFF_COMMAND,
+  GetSpecFileDiffCommandError,
+  getSpecFileDiff,
+} from "./infra/tauri/getSpecFileDiff";
+export type {
+  ListChangedSpecFilesCommandContract,
+  ListChangedSpecFilesCommandErrorCode,
+  ListChangedSpecFilesCommandRequest,
+  ListChangedSpecFilesCommandResponse,
+  SpecDiffBackendErrorCode,
+} from "./infra/tauri/listChangedSpecFiles";
+export {
+  LIST_CHANGED_SPEC_FILES_COMMAND,
+  ListChangedSpecFilesCommandError,
+  listChangedSpecFiles,
+} from "./infra/tauri/listChangedSpecFiles";
+export type { ListSpecDiffRevisionsRequest } from "./infra/tauri/listSpecDiffRevisions";
+export {
+  LIST_SPEC_DIFF_REVISIONS_COMMAND,
+  listSpecDiffRevisions,
+} from "./infra/tauri/listSpecDiffRevisions";
+export type { ListSpecFileCommitHistoryRequest } from "./infra/tauri/listSpecFileCommitHistory";
+export {
+  LIST_SPEC_FILE_COMMIT_HISTORY_COMMAND,
+  listSpecFileCommitHistory,
+} from "./infra/tauri/listSpecFileCommitHistory";

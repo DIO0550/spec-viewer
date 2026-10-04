@@ -4,18 +4,13 @@ import { beforeEach, expect, test, vi } from "vitest";
 
 import { useSpecs } from "@/features/specs/hooks/useSpecs";
 import type { SpecBundle, SpecTree } from "@/features/specs/types/spec";
-import type { SpecCommands } from "@/lib/api/tauri";
+import type { SpecCommands } from "@/features/specs/application/specCommands";
 
 const commands = vi.hoisted(() => ({
   listSpecs: vi.fn<SpecCommands["listSpecs"]>(),
   loadSpecBundle: vi.fn<SpecCommands["loadSpecBundle"]>(),
   readSpecFile: vi.fn<SpecCommands["readSpecFile"]>(),
   archiveSpec: vi.fn<SpecCommands["archiveSpec"]>(),
-}));
-
-vi.mock("@/lib/api/tauri", async (importActual) => ({
-  ...(await importActual<typeof import("@/lib/api/tauri")>()),
-  specCommands: commands,
 }));
 
 const tree: SpecTree = {
@@ -86,7 +81,10 @@ function renderSpecs(): HookResult {
   };
 
   function TestComponent(): null {
-    result.current = useSpecs({ workspacePath: "/workspace/spec-viewer" });
+    result.current = useSpecs({
+      commands: commands,
+      workspacePath: "/workspace/spec-viewer",
+    });
     return null;
   }
 

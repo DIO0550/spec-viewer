@@ -20,17 +20,19 @@ import type {
   SpecsState,
   UseSpecsResult,
 } from "@/features/specs/hooks/useSpecs/types";
-import * as specGateway from "@/features/specs/infra/specGateway";
+import * as specGateway from "@/features/specs/application/specGateway";
 import type {
   SpecArtifact as SpecArtifactType,
   SpecBundle,
   SpecFileKey,
   SpecTree as SpecTreeType,
 } from "@/features/specs/types/spec";
-import { specCommands } from "@/lib/api/tauri";
-import { ArchiveSpecCommandError } from "@/lib/api/tauri/archiveSpec";
-import { ListSpecsCommandError } from "@/lib/api/tauri/listSpecs";
-import { LoadSpecBundleCommandError } from "@/lib/api/tauri/loadSpecBundle";
+import type { SpecCommands } from "@/features/specs/application/specCommands";
+import {
+  ArchiveSpecCommandError,
+  ListSpecsCommandError,
+  LoadSpecBundleCommandError,
+} from "@/features/specs";
 
 export type SpecSelectionChange = Readonly<{
   workspacePath: string | null;
@@ -39,6 +41,7 @@ export type SpecSelectionChange = Readonly<{
 }>;
 
 export type UseSpecsOptions = Readonly<{
+  commands: SpecCommands;
   workspacePath: string | null;
   onSelectionChange?: (selection: SpecSelectionChange) => void;
 }>;
@@ -157,7 +160,7 @@ function resolveSpec(tree: SpecTreeType, preferredSpecId: string | null) {
  * @returns Spec tree, bundle, and document state plus actions for a workspace.
  */
 export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
-  const { onSelectionChange, workspacePath } = options;
+  const { commands: specCommands, onSelectionChange, workspacePath } = options;
   const [state, setState] = useState<SpecsState>(initialState);
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -270,7 +273,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
         return false;
       }
     },
-    [commit, publishSelection],
+    [commit, publishSelection, specCommands],
   );
 
   const loadTreeAndBundle = useCallback(
@@ -365,7 +368,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
         return false;
       }
     },
-    [commit, loadBundle, publishSelection],
+    [commit, loadBundle, publishSelection, specCommands],
   );
 
   useEffect(() => {
@@ -580,7 +583,7 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
         finishOperation(operationId);
       }
     },
-    [beginOperation, commit, finishOperation, loadTreeAndBundle],
+    [beginOperation, commit, finishOperation, loadTreeAndBundle, specCommands],
   );
 
   const retryArchiveSpec = useCallback(async (): Promise<boolean> => {

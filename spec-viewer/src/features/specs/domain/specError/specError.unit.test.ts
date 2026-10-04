@@ -6,7 +6,6 @@ import {
   type SpecFeatureError as SpecFeatureErrorType,
   type SpecFeatureErrorCode,
 } from "@/features/specs/domain/specError";
-import { ListSpecsCommandError } from "@/lib/api/tauri/listSpecs";
 
 test("SpecFeatureErrorはfeatureとcommand-local causeを必須にする", () => {
   expectTypeOf<SpecFeatureErrorType>().toEqualTypeOf<
@@ -32,12 +31,12 @@ test.each([
 });
 
 test("SpecFeatureError.fromCommandErrorはfeature/message/causeを保持する", () => {
-  const cause = ListSpecsCommandError.fromUnknown({
+  const cause: SpecCommandError = {
     command: "list_specs",
     code: "specTreeScan",
     message: "scan failed",
     raw: { path: "/workspace/spec-reviewer" },
-  });
+  };
 
   expect(SpecFeatureError.fromCommandError(cause)).toEqual({
     feature: "specs",

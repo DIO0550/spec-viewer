@@ -9,8 +9,8 @@ import { useWorkspaceState } from "@/features/workspace/context/useWorkspaceStat
  * @returns Context provider that owns the active workspace state.
  */
 export function WorkspaceProvider(props: WorkspaceProviderProps): ReactElement {
-  const { children } = props;
-  const value = useWorkspaceState();
+  const { children, commands } = props;
+  const value = useWorkspaceState(commands);
 
   return <WorkspaceContext value={value}>{children}</WorkspaceContext>;
 }

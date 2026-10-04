@@ -15,19 +15,9 @@ import type {
   OpenRecentWorkspaceOutcome,
   UseWorkspaceLoaderOptions,
   UseWorkspaceLoaderResult,
-  WorkspaceLoaderCommands,
   WorkspaceLoaderFlowIo,
 } from "@/features/workspace/hooks/useWorkspaceLoader/types";
-import {
-  selectWorkspaceDirectory as defaultSelectWorkspaceDirectory,
-  validateWorkspaceDirectory as defaultValidateWorkspaceDirectory,
-} from "@/lib/api/tauri";
 import { getUnknownErrorMessage } from "@/utils/errorMessage";
-
-const defaultWorkspaceLoaderCommands: WorkspaceLoaderCommands = {
-  selectWorkspaceDirectory: defaultSelectWorkspaceDirectory,
-  validateWorkspaceDirectory: defaultValidateWorkspaceDirectory,
-};
 
 export type {
   UseWorkspaceLoaderOptions,
@@ -36,7 +26,7 @@ export type {
 } from "@/features/workspace/hooks/useWorkspaceLoader/types";
 
 /**
- * @param options - Shared error sink plus test-only DI (commands / storage / workspace override).
+ * @param options - Injected platform operations, shared error sink and optional test overrides.
  * @returns Workspace open/restore/drop state and guarded loader actions.
  */
 export function useWorkspaceLoader(
@@ -61,7 +51,7 @@ export function useWorkspaceLoader(
   const [hasAttemptedStartupRestore, setHasAttemptedStartupRestore] =
     useState(false);
 
-  const commands = options.commands ?? defaultWorkspaceLoaderCommands;
+  const commands = options.commands;
   const onError = options.onError;
   const recordWorkspace = recentWorkspaces.recordWorkspace;
   const removeWorkspace = recentWorkspaces.removeWorkspace;
@@ -69,6 +59,7 @@ export function useWorkspaceLoader(
   const workspaceReset = workspace.actions.reset;
   const validateWorkspaceDirectory = commands.validateWorkspaceDirectory;
   const selectWorkspaceDirectory = commands.selectWorkspaceDirectory;
+  const getValidationErrorMessage = commands.getValidationErrorMessage;
 
   // io ラッパー: 各 IPC 呼び出しの直前に「クリア + input 更新」を合成する（途中経過の等価維持）。
   const flowIo: WorkspaceLoaderFlowIo = useMemo(() => {
@@ -83,6 +74,7 @@ export function useWorkspaceLoader(
     };
 
     return {
+      getValidationErrorMessage,
       /** @param path - 検証対象のワークスペースディレクトリパス。 */
       validate: (path) => {
         applyOpenProgress(path);
@@ -100,7 +92,13 @@ export function useWorkspaceLoader(
         });
       },
     };
-  }, [onError, recordWorkspace, validateWorkspaceDirectory, workspaceLoad]);
+  }, [
+    getValidationErrorMessage,
+    onError,
+    recordWorkspace,
+    validateWorkspaceDirectory,
+    workspaceLoad,
+  ]);
 
   /**
    * ドロップ結果を状態へ適用する（ディレクトリでない/例外時はエラー表示）。

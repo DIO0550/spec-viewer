@@ -1,7 +1,6 @@
 import { expect, test } from "vitest";
 
 import { CommentFeatureError } from "@/features/comments/domain/commentError";
-import { AddCommentCommandError } from "@/lib/api/tauri/addComment";
 
 test.each([
   ["invalidComment", "invalidComment"],
@@ -17,10 +16,12 @@ test.each([
 });
 
 test("CommentFeatureError.fromCommandErrorはmessageとcauseを保持する", () => {
-  const commandError = AddCommentCommandError.fromUnknown({
-    code: "invalidComment",
+  const commandError = {
+    command: "add_comment" as const,
+    raw: null,
+    code: "invalidComment" as const,
     message: "comment body is required",
-  });
+  };
 
   expect(CommentFeatureError.fromCommandError(commandError)).toEqual({
     feature: "comments",

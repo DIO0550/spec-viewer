@@ -3,18 +3,14 @@ import { createRoot } from "react-dom/client";
 import { beforeEach, expect, test, vi } from "vitest";
 import { useSpecsLegacy as useSpecs } from "@/features/specs/hooks/useSpecs";
 import { createSpecNodeFixture } from "@/features/specs/testing/specNodeFixture";
-import type { SpecCommands } from "@/lib/api/tauri";
+import type { SpecCommands } from "@/features/specs/application/specCommands";
 
 const commands = vi.hoisted(() => ({
   listSpecs: vi.fn<SpecCommands["listSpecs"]>(),
+  loadSpecBundle: vi.fn<SpecCommands["loadSpecBundle"]>(),
   readSpecFile: vi.fn<SpecCommands["readSpecFile"]>(),
   archiveSpec: vi.fn<SpecCommands["archiveSpec"]>(),
 }));
-
-vi.mock("@/lib/api/tauri", async (importActual) => {
-  const actual = await importActual<typeof import("@/lib/api/tauri")>();
-  return { ...actual, specCommands: commands };
-});
 
 beforeEach(() => {
   commands.listSpecs.mockReset();
@@ -60,7 +56,11 @@ test("selectSpecFileはspec/fileを原子的に更新しcallbackとdocument read
   }));
   const onSelectionChange = vi.fn();
   const hook = renderHook(() =>
-    useSpecs({ workspacePath: "/workspace", onSelectionChange }),
+    useSpecs({
+      commands: commands,
+      workspacePath: "/workspace",
+      onSelectionChange,
+    }),
   );
   await flush();
   onSelectionChange.mockClear();
@@ -115,7 +115,11 @@ test.each([
   }));
   const onSelectionChange = vi.fn();
   const hook = renderHook(() =>
-    useSpecs({ workspacePath: "/workspace", onSelectionChange }),
+    useSpecs({
+      commands: commands,
+      workspacePath: "/workspace",
+      onSelectionChange,
+    }),
   );
   await flush();
   onSelectionChange.mockClear();

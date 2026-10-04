@@ -36,6 +36,17 @@ application が具体的な adapter を import して生成しない。公開 AP
 - `src/shared/` と既存 `src/lib/`、`src/hooks/`、`src/components/`、`src/types/`、`src/domains/` は共通領域。`lib/api/tauri` は transport であり、domain の共通ライブラリではない。
 - feature 外のその他の src からも、feature は公開 API 経由で利用する。
 
+### Tauri IPC adapter の所有者
+
+- `src/lib/api/tauri/` は汎用 `invokeTauriCommand` と payload 判定用 `isRecord` のみを所有する。feature 型や command 一覧を集約しない。
+- command 名・request/response contract・codec・command error は `features/<owner>/infra/tauri/` に置く。owner は comments、specs、workspace、diff、repositoryDiff、diffComments。
+- Spec file watch の event/subscription は specs、directory picker と native drag/drop は workspace、comment export dialog は comments が所有する。
+- composition は feature 公開 API から adapter を取得して port を注入する。hook は具体的な Tauri adapter を default として生成しない。command error の既存変換を利用する場合も feature 公開 API を経由する。
+- command 境界のテストは owner の infra 配下、hook の test double は注入する feature port に合わせる。
+- domain error の既存 cause は import 依存を切った構造型で互換性を維持している。transport の意味を取り除く error model の変更は #109 で扱う。
+
+`test:architecture` は production 共通コードから feature への依存がないこと、raw Tauri core import が汎用 transport 一箇所だけであること、command の呼び出し元が owner infra にあることも検証する。
+
 ### 各層の良い例・悪い例
 
 次は配置を説明する例であり、存在しない API の追加指示ではない。

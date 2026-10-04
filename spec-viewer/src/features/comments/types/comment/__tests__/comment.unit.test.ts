@@ -1,8 +1,6 @@
 import { expectTypeOf, test } from "vitest";
-import type { Comment } from "@/features/comments/domain/comment";
 import type { CommentStatusFilter as CommentStatusFilterType } from "@/features/comments/domain/commentStatusFilter";
 import type {
-  AddCommentRequest,
   ApplyWithAiCommentSelectionInput,
   ApplyWithAiGeneratedDiffPreview,
   ApplyWithAiPlaceholderState,
@@ -12,24 +10,6 @@ import type {
   CommentExportOperation,
   SpecSkillMcpFeedbackPayload,
 } from "@/features/comments/types/comment";
-import type {
-  AddCommentCommandRequest,
-  AddCommentCommandResponse,
-} from "@/lib/api/tauri/addComment";
-
-test("addCommentのper-command contractはcomment DTOと一致する", () => {
-  expectTypeOf<AddCommentCommandRequest>().toEqualTypeOf<AddCommentRequest>();
-  expectTypeOf<AddCommentCommandResponse>().toEqualTypeOf<Comment>();
-});
-
-test("tauri barrelはaddComment error型を同名exportとして公開する", () => {
-  expectTypeOf<
-    import("@/lib/api/tauri").AddCommentCommandError
-  >().toEqualTypeOf<
-    import("@/lib/api/tauri/addComment").AddCommentCommandError
-  >();
-});
-
 test("comment view modelは状態フィルターとorphan表示状態を共有できる", () => {
   expectTypeOf<CommentStatusFilterType>().toEqualTypeOf<
     "all" | "open" | "resolved"

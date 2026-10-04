@@ -4,7 +4,7 @@ import { beforeEach, expect, test, vi } from "vitest";
 import { useSpecsLegacy as useSpecs } from "@/features/specs/hooks/useSpecs";
 import { createSpecNodeFixture } from "@/features/specs/testing/specNodeFixture";
 import type { SpecDocument, SpecTree } from "@/features/specs/types/spec";
-import type { SpecCommands } from "@/lib/api/tauri";
+import type { SpecCommands } from "@/features/specs/application/specCommands";
 
 const specCommandMocks = vi.hoisted(() => ({
   listSpecs: vi.fn<SpecCommands["listSpecs"]>(),
@@ -12,15 +12,6 @@ const specCommandMocks = vi.hoisted(() => ({
   readSpecFile: vi.fn<SpecCommands["readSpecFile"]>(),
   archiveSpec: vi.fn<SpecCommands["archiveSpec"]>(),
 }));
-
-vi.mock("@/lib/api/tauri", async (importActual) => {
-  const actual = await importActual<typeof import("@/lib/api/tauri")>();
-
-  return {
-    ...actual,
-    specCommands: specCommandMocks,
-  };
-});
 
 void (specCommandMocks satisfies SpecCommands);
 
@@ -410,7 +401,8 @@ const archiveResponse = {
 
 test("useSpecsはworkspace未選択ならspecとMarkdownをidleにする", () => {
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: null as string | null },
   );
 
@@ -429,7 +421,8 @@ test("useSpecsはロード中だけ単一のisLoadingをtrueにする", async ()
   specCommandMocks.readSpecFile.mockResolvedValue(loadedDocument);
 
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -454,7 +447,8 @@ test("useSpecsはloading中のarchiveを実行しない", async () => {
   specCommandMocks.readSpecFile.mockResolvedValue(loadedDocument);
 
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -478,7 +472,8 @@ test("useSpecsはloading中のarchiveを実行しない", async () => {
 test("useSpecsはworkspace pathからspec treeを読み込みempty状態を表現する", async () => {
   specCommandMocks.listSpecs.mockResolvedValue({ specs: [] });
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -502,7 +497,8 @@ test("useSpecsはspec tree読み込み後に最初のspecとfileを選択してM
     specCommandMocks.readSpecFile.mockResolvedValue(loadedDocument);
 
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -527,7 +523,8 @@ test("useSpecsは子階層にある最初のfile付きspecを初期選択する"
   specCommandMocks.readSpecFile.mockResolvedValue(designDocument);
 
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -547,7 +544,8 @@ test("useSpecsは選択したspec fileのMarkdownを読み込む", async () => {
     specCommandMocks.readSpecFile.mockResolvedValue(loadedDocument);
 
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -585,7 +583,8 @@ test("useSpecsはmissing Markdownをmissing状態として返す", async () => {
   specCommandMocks.readSpecFile.mockResolvedValue(missingDocument);
 
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -617,7 +616,8 @@ test("useSpecsはspec選択時に最初のfileを選択してMarkdownを読み�
   specCommandMocks.readSpecFile.mockResolvedValue(designDocument);
 
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -647,7 +647,8 @@ test("useSpecsはfileを持たないspec選択時にspecだけ選択してMarkdo
   specCommandMocks.readSpecFile.mockResolvedValue(designDocument);
 
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -676,7 +677,8 @@ test("useSpecsはworkspace変更時に選択状態とMarkdown状態をリセッ�
   specCommandMocks.readSpecFile.mockResolvedValue(loadedDocument);
 
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -703,7 +705,8 @@ test("useSpecsはresetSelectionで選択状態とMarkdown状態をidleに戻す"
   specCommandMocks.readSpecFile.mockResolvedValue(loadedDocument);
 
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -733,7 +736,8 @@ test("useSpecsはspec tree再読み込み時に選択中のspecとfileを保持�
   specCommandMocks.readSpecFile.mockResolvedValue(designDocument);
 
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -767,7 +771,8 @@ test("useSpecsはrefresh時に選択中fileが消えたら同じspecの先頭fil
     specCommandMocks.readSpecFile.mockResolvedValue(loadedDocument);
 
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -805,7 +810,8 @@ test("useSpecsは6タブ構成でも選択中のTech Referenceをrefresh後に�
     .mockResolvedValue(techReferenceDocument);
 
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -840,7 +846,8 @@ test("useSpecsはrefresh時に選択中Markdownが削除されたらmissing状�
     specCommandMocks.readSpecFile.mockResolvedValue(loadedDocument);
 
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -878,7 +885,8 @@ test("useSpecsはworkspace変更後に古いspec tree responseで最新stateを�
     specCommandMocks.readSpecFile.mockResolvedValue(loadedDocument);
 
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -921,7 +929,8 @@ test("useSpecsはworkspace変更後に古いmanual reload responseで最新state
   specCommandMocks.readSpecFile.mockResolvedValue(loadedDocument);
 
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -968,7 +977,8 @@ test("useSpecsは同じworkspace pathへ戻った後も古いmanual reload respo
   specCommandMocks.readSpecFile.mockResolvedValue(loadedDocument);
 
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -1020,7 +1030,8 @@ test("useSpecsはworkspace変更後に古いdocument responseで最新document s
     .mockResolvedValueOnce(loadedDocument);
 
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -1081,7 +1092,8 @@ test("useSpecsはarchive完了後のreloadでworkspace変更後のstateを上書
   specCommandMocks.archiveSpec.mockReturnValue(deferredArchive.promise);
 
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -1136,7 +1148,12 @@ test("useSpecsはarchive後のreload中にworkspaceが変わったら古いselec
   specCommandMocks.archiveSpec.mockResolvedValue(archiveResult);
 
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath, onSelectionChange }),
+    ({ workspacePath }) =>
+      useSpecs({
+        commands: specCommandMocks,
+        workspacePath,
+        onSelectionChange,
+      }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -1194,7 +1211,8 @@ test("[R199-ARCH-001] useSpecsはspecをアーカイブした後にtreeを再読
   });
 
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -1222,7 +1240,8 @@ test("useSpecsはarchive成功後に1回再取得して複合destinationを保�
   specCommandMocks.readSpecFile.mockResolvedValue(loadedDocument);
   specCommandMocks.archiveSpec.mockResolvedValue(archiveResponse);
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -1253,7 +1272,8 @@ test("useSpecsは失敗した同じspec IDでarchiveをretryする", async () =>
     .mockRejectedValueOnce(archiveError)
     .mockResolvedValueOnce(archiveResponse);
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -1286,7 +1306,8 @@ test("useSpecsはdestination missingを保持しrefreshで通常fallbackへ回�
   specCommandMocks.readSpecFile.mockResolvedValue(loadedDocument);
   specCommandMocks.archiveSpec.mockResolvedValue(archiveResponse);
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -1325,7 +1346,8 @@ test("useSpecsはarchive中の追加archiveを実行しない", async () => {
   );
 
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -1367,7 +1389,8 @@ test("useSpecsは同一tickの追加archiveを実行しない", async () => {
   );
 
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -1399,7 +1422,8 @@ test("useSpecsはarchive error stateを保持して現在のtreeを維持する"
   specCommandMocks.archiveSpec.mockRejectedValue(archiveError);
 
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -1435,7 +1459,8 @@ test("useSpecsはlistSpecs errorでtreeをerrorにしてselectionをresetする"
   specCommandMocks.listSpecs.mockRejectedValue(scanError);
 
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -1472,7 +1497,8 @@ test("useSpecsはreadSpecFile errorでdocumentをerrorにしてtree selectionを
   specCommandMocks.readSpecFile.mockRejectedValue(readError);
 
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -1521,7 +1547,8 @@ test("useSpecsはarchive errorをreloadやselectionで保持し次のarchive開�
     });
 
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -1569,7 +1596,12 @@ test("[R199-ARCH-003] useSpecsはarchive後に選択中specが消えたらdefaul
   });
 
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath, onSelectionChange }),
+    ({ workspacePath }) =>
+      useSpecs({
+        commands: specCommandMocks,
+        workspacePath,
+        onSelectionChange,
+      }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -1597,7 +1629,8 @@ test("useSpecsはworkspace changeでarchive errorをclearする", async () => {
   specCommandMocks.archiveSpec.mockRejectedValue(archiveError);
 
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 
@@ -1630,7 +1663,8 @@ test("useSpecsはarchive実行中のworkspace changeでarchivingSpecIdを残留�
   specCommandMocks.archiveSpec.mockReturnValue(deferredArchive.promise);
 
   const result = renderHook(
-    ({ workspacePath }) => useSpecs({ workspacePath }),
+    ({ workspacePath }) =>
+      useSpecs({ commands: specCommandMocks, workspacePath }),
     { workspacePath: "/workspace/spec-reviewer" },
   );
 

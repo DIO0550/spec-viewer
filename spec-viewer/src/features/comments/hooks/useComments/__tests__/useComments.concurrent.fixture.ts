@@ -11,7 +11,7 @@ import type { Comment } from "@/features/comments/domain/comment";
 import type { ListCommentsResponse } from "@/features/comments/types/comment";
 import { CommentId } from "@/features/comments/domain/commentId";
 import { SpecViewSelection } from "@/features/specs/domain/specViewSelection";
-import type { CommentCommands } from "@/lib/api/tauri";
+import type { CommentCommands } from "@/features/comments/application/commentCommands";
 import { WorkspacePath } from "@/domains/workspacePath";
 
 export type CommentsHostProps = Readonly<{
