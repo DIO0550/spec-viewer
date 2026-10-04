@@ -53,3 +53,17 @@ export { useRecentWorkspaces } from "./hooks/useRecentWorkspaces";
 export { useWorkspaceDrop } from "./hooks/useWorkspaceDrop";
 export { useWorkspaceLoader } from "./hooks/useWorkspaceLoader";
 export { useWorkspaceSidebarSectionPreference } from "./hooks/useWorkspaceSidebarSectionPreference";
+
+export type {
+  WorkspaceCommands,
+  WorkspaceLoadCommands,
+  WorkspaceLoaderCommands,
+  WorkspaceWorktreeCommands,
+  SubscribeWorkspaceDragDropEvents,
+} from "./application/workspaceCommands";
+export * from "./infra/tauri/loadWorkspace";
+export * from "./infra/tauri/listWorktrees";
+export * from "./infra/tauri/selectWorkspaceDirectory";
+export * from "./infra/tauri/validateWorkspaceDirectory";
+export { subscribeWorkspaceDragDropEvents } from "./infra/tauri/subscribeWorkspaceDragDropEvents";
+export { tauriWorkspaceCommands } from "./infra/tauri/workspaceCommands";

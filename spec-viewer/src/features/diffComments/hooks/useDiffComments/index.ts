@@ -15,8 +15,7 @@ import type {
   DiffCommentCommandError,
   DiffCommentCommandName,
   DiffCommentCommands,
-} from "@/lib/api/tauri";
-import { diffCommentCommands as defaultCommands } from "@/lib/api/tauri";
+} from "@/features/diffComments";
 
 export type CreateDiffCommentDraftInput = Readonly<{
   target: DiffAnchorTarget;
@@ -37,7 +36,7 @@ export type UpdateDiffCommentInput =
 
 export type UseDiffCommentsOptions = Readonly<{
   identity: DiffReviewIdentity | null;
-  commands?: DiffCommentCommands;
+  commands: DiffCommentCommands;
   onIdentityInvalidated?: () => void;
 }>;
 
@@ -152,7 +151,7 @@ function isVisibleComment(
 /** @returns Origin-aware Diff comment loading and mutation state. */
 export function useDiffComments({
   identity: inputIdentity,
-  commands = defaultCommands,
+  commands,
   onIdentityInvalidated,
 }: UseDiffCommentsOptions): UseDiffCommentsResult {
   const repositoryId = inputIdentity?.repositoryId ?? null;

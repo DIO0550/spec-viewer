@@ -1,6 +1,12 @@
 {
   "version": 1,
-  "domainPublicApis": [],
+  "domainPublicApis": [
+    {
+      "entry": "src/features/diffComments/domain/index.ts",
+      "reason": "Pure Diff review identity shared with the diff workspace domain; keeps the domain independent of the newly feature-owned IPC adapters.",
+      "issue": 107
+    }
+  ],
   "kernelEntries": [
     {
       "entry": "src/domains/workspacePath/index.ts",

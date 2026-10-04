@@ -8,14 +8,15 @@ import {
   CommentOperationSavingState,
   type CommentOperationState,
 } from "@/features/comments/domain/commentOperation";
-import { AddCommentCommandError } from "@/lib/api/tauri/addComment";
 
 const commentId = CommentId.fromString;
 
-const commandError = AddCommentCommandError.fromUnknown({
-  code: "commentRepository",
+const commandError = {
+  command: "add_comment" as const,
+  raw: null,
+  code: "commentRepository" as const,
   message: "Comment operation failed.",
-});
+};
 
 const featureError: CommentFeatureError = {
   feature: "comments",

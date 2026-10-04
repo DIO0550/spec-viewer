@@ -4,18 +4,7 @@ import { beforeEach, expect, test, vi } from "vitest";
 
 import type { Workspace } from "@/features/workspace/types/workspace";
 
-const loadWorkspaceMock = vi.hoisted(() =>
-  vi.fn<(selectedDirectory: string) => Promise<Workspace>>(),
-);
-
-vi.mock("@/lib/api/tauri", async (importActual) => {
-  const actual = await importActual<typeof import("@/lib/api/tauri")>();
-
-  return {
-    ...actual,
-    loadWorkspace: loadWorkspaceMock,
-  };
-});
+import { workspaceLoadFixtures } from "../../__tests__/workspaceCommandFixtures";
 
 import {
   selectActiveWorkspaceRoot,
@@ -24,6 +13,10 @@ import {
   selectWorkspaceError,
   useWorkspaceState,
 } from "@/features/workspace/context";
+
+const loadWorkspaceMock =
+  vi.fn<(selectedDirectory: string) => Promise<Workspace>>();
+const commands = { ...workspaceLoadFixtures, loadWorkspace: loadWorkspaceMock };
 
 const workspace: Workspace = {
   root: "/workspace/spec-reviewer",
@@ -90,7 +83,7 @@ beforeEach(() => {
 });
 
 test("useWorkspaceStateは初期状態を未選択として返す", () => {
-  const result = renderHook(() => useWorkspaceState());
+  const result = renderHook(() => useWorkspaceState(commands));
 
   expect(result.current.state.status).toBe("idle");
   expect(selectActiveWorkspaceRoot(result.current.state)).toBeNull();
@@ -106,7 +99,7 @@ test("useWorkspaceStateは初期状態を未選択として返す", () => {
 test("useWorkspaceStateは選択したworkspaceを読み込み成功状態にする", async () => {
   loadWorkspaceMock.mockResolvedValue(workspace);
   const onWorkspaceLoaded = vi.fn();
-  const result = renderHook(() => useWorkspaceState());
+  const result = renderHook(() => useWorkspaceState(commands));
 
   await act(async () => {
     const isLoaded = await result.current.actions.load(
@@ -133,7 +126,7 @@ test("useWorkspaceStateは読み込み後callbackの例外をopen失敗状態に
   const onWorkspaceLoaded = vi.fn(() => {
     throw new Error("recent workspace storage failed");
   });
-  const result = renderHook(() => useWorkspaceState());
+  const result = renderHook(() => useWorkspaceState(commands));
 
   let isLoaded!: boolean;
   await act(async () => {
@@ -156,7 +149,7 @@ test("useWorkspaceStateは読み込み後callbackの例外をopen失敗状態に
 
 test("useWorkspaceStateは読み込み失敗をWorkspaceError状態にする", async () => {
   loadWorkspaceMock.mockRejectedValue("missing workspace");
-  const result = renderHook(() => useWorkspaceState());
+  const result = renderHook(() => useWorkspaceState(commands));
 
   await act(async () => {
     await result.current.actions.load("/workspace/missing");
@@ -187,7 +180,7 @@ test("useWorkspaceStateは指定時に読み込み失敗後も現在のworkspace
   loadWorkspaceMock
     .mockResolvedValueOnce(workspace)
     .mockRejectedValueOnce("unsupported workspace");
-  const result = renderHook(() => useWorkspaceState());
+  const result = renderHook(() => useWorkspaceState(commands));
 
   await act(async () => {
     await result.current.actions.load("/workspace/spec-reviewer");
@@ -226,7 +219,7 @@ test("useWorkspaceStateは古いload成功で最新workspace stateを上書き�
   loadWorkspaceMock
     .mockReturnValueOnce(firstLoad.promise)
     .mockResolvedValueOnce(otherWorkspace);
-  const result = renderHook(() => useWorkspaceState());
+  const result = renderHook(() => useWorkspaceState(commands));
 
   let firstResult!: Promise<boolean>;
   act(() => {
@@ -264,7 +257,7 @@ test("useWorkspaceStateはreset後のload成功でidle stateを上書きしな�
   const load = createDeferred<Workspace>();
   const onWorkspaceLoaded = vi.fn();
   loadWorkspaceMock.mockReturnValue(load.promise);
-  const result = renderHook(() => useWorkspaceState());
+  const result = renderHook(() => useWorkspaceState(commands));
 
   let loadResult!: Promise<boolean>;
   act(() => {
@@ -294,7 +287,7 @@ test("useWorkspaceStateは古いload失敗で最新workspace stateを上書き�
   loadWorkspaceMock
     .mockReturnValueOnce(firstLoad.promise)
     .mockResolvedValueOnce(otherWorkspace);
-  const result = renderHook(() => useWorkspaceState());
+  const result = renderHook(() => useWorkspaceState(commands));
 
   let firstResult!: Promise<boolean>;
   act(() => {

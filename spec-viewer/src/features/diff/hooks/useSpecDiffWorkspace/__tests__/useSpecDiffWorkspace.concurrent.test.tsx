@@ -7,7 +7,7 @@ import {
   type UseSpecDiffWorkspaceOptions,
   useSpecDiffWorkspace,
 } from "@/features/diff/hooks/useSpecDiffWorkspace";
-import type { ListChangedSpecFilesCommandResponse } from "@/lib/api/tauri";
+import type { ListChangedSpecFilesCommandResponse } from "@/features/diff";
 
 const unchangedResponse: ListChangedSpecFilesCommandResponse = {
   currentSnapshotId: "snapshot-1",

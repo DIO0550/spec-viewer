@@ -1,4 +1,15 @@
-import type { LoadWorkspaceCommandError } from "@/lib/api/tauri/loadWorkspace";
+/** Existing command-shaped cause, retained until the error-model cleanup in #109. */
+export type WorkspaceErrorCause = Readonly<{
+  command: "load_workspace";
+  code:
+    | "invalidRequest"
+    | "workspaceDetection"
+    | "configLoad"
+    | "unexpected"
+    | "unknown";
+  message: string;
+  raw: unknown;
+}>;
 
 export type WorkspaceErrorReason =
   | "invalidSelection"
@@ -9,11 +20,11 @@ export type WorkspaceErrorReason =
 export type WorkspaceError = Readonly<{
   reason: WorkspaceErrorReason;
   message: string;
-  cause: LoadWorkspaceCommandError;
+  cause: WorkspaceErrorCause;
 }>;
 
 /** @returns A workspace-domain error converted from a load_workspace command error. */
-function toWorkspaceError(error: LoadWorkspaceCommandError): WorkspaceError {
+function toWorkspaceError(error: WorkspaceErrorCause): WorkspaceError {
   return {
     reason: toWorkspaceErrorReason(error.code),
     message: error.message,
@@ -24,7 +35,7 @@ function toWorkspaceError(error: LoadWorkspaceCommandError): WorkspaceError {
 /** @returns The workspace-domain reason for a load_workspace command code. */
 function toWorkspaceErrorReason(
   /** @param code - 変換対象の load_workspace コマンドエラーコード。 */
-  code: LoadWorkspaceCommandError["code"],
+  code: WorkspaceErrorCause["code"],
 ): WorkspaceErrorReason {
   if (code === "invalidRequest") {
     return "invalidSelection";

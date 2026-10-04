@@ -14,6 +14,41 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { collectGraph } from "./graph.mjs";
 
+test("IPC transport は feature に依存せず concrete adapter は owner infra に置く", () => {
+  const project = fileURLToPath(new URL("../../", import.meta.url));
+  const graph = collectGraph(project);
+  assert.deepEqual(graph.diagnostics, []);
+
+  const productionEdges = graph.edges.filter(
+    ({ from }) =>
+      from.startsWith("src/") &&
+      !/\.(?:test|spec|stories)\.[^/]+$/.test(from) &&
+      !/(?:^|\/)__tests__\//.test(from) &&
+      !from.startsWith("src/tests/"),
+  );
+  const sharedFeatureEdges = productionEdges.filter(
+    ({ from, to }) =>
+      /^src\/(?:shared|lib|hooks|components|types|domains)\//.test(from) &&
+      to.startsWith("src/features/"),
+  );
+  assert.deepEqual(sharedFeatureEdges, []);
+
+  const coreImporters = productionEdges
+    .filter(({ to }) => to === "npm:@tauri-apps/api/core")
+    .map(({ from }) => from);
+  assert.deepEqual(coreImporters, ["src/lib/api/tauri/invokeTauriCommand.ts"]);
+
+  const commandImporters = productionEdges.filter(
+    ({ from, to }) =>
+      to === "src/lib/api/tauri/invokeTauriCommand.ts" &&
+      from !== "src/lib/api/tauri/index.ts",
+  );
+  assert.ok(commandImporters.length > 0);
+  for (const { from } of commandImporters) {
+    assert.match(from, /^src\/features\/[^/]+\/infra\/tauri\//);
+  }
+});
+
 /** @param {object} files Fixture files. @returns {string} Temporary project root. */
 function fixture(t, files) {
   const root = mkdtempSync(path.join(tmpdir(), "architecture-"));

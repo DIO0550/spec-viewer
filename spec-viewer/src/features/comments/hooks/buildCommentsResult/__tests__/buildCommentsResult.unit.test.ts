@@ -14,7 +14,7 @@ import type {
   CommentListState,
   UseCommentsResult,
 } from "@/features/comments/hooks/useComments";
-import { AddCommentCommandError } from "@/lib/api/tauri/addComment";
+import { AddCommentCommandError } from "@/features/comments";
 
 const commentId = CommentId.fromString;
 

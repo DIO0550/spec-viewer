@@ -22,16 +22,12 @@ import {
   GetSpecFileDiffCommandError,
   type GetSpecFileDiffCommandRequest,
   type GetSpecFileDiffCommandResponse,
-  getSpecFileDiff,
   ListChangedSpecFilesCommandError,
   type ListChangedSpecFilesCommandRequest,
   type ListChangedSpecFilesCommandResponse,
   type ListSpecDiffRevisionsRequest,
   type ListSpecFileCommitHistoryRequest,
-  listChangedSpecFiles,
-  listSpecDiffRevisions,
-  listSpecFileCommitHistory,
-} from "@/lib/api/tauri";
+} from "@/features/diff";
 
 export type AsyncCatalogState<T> =
   | Readonly<{ status: "loading"; value: T }>
@@ -77,7 +73,7 @@ export type SpecDiffWorkspaceApi = Readonly<{
 export type UseSpecDiffWorkspaceOptions = Readonly<{
   workspacePath: string | null;
   selection: SpecDiffSelection;
-  api?: SpecDiffWorkspaceApi;
+  api: SpecDiffWorkspaceApi;
 }>;
 
 export type UseSpecDiffWorkspaceResult = Readonly<{
@@ -124,13 +120,6 @@ type RequestIdentity = Readonly<{
   requestGeneration: number;
 }>;
 
-const DEFAULT_API: SpecDiffWorkspaceApi = {
-  listChangedSpecFiles,
-  getSpecFileDiff,
-  listSpecDiffRevisions,
-  listSpecFileCommitHistory,
-};
-
 const HEAD_OPTION: RevisionOption = {
   id: "head",
   revision: ComparisonRevision.head(),
@@ -167,7 +156,7 @@ export function toSpecChangeOverview(
 export function useSpecDiffWorkspace({
   workspacePath,
   selection,
-  api = DEFAULT_API,
+  api,
 }: UseSpecDiffWorkspaceOptions): UseSpecDiffWorkspaceResult {
   const [state, dispatch] = useReducer(
     SpecDiffWorkspaceState.reduce,

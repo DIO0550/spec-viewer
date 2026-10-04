@@ -26,14 +26,13 @@ import {
   type UpdateCommentInput,
   useCommentOperations,
 } from "@/features/comments/hooks/useCommentOperations";
-import { listComments as listCommentsViaGateway } from "@/features/comments/infra/commentGateway";
+import { listComments as listCommentsViaGateway } from "@/features/comments/application/commentGateway";
 import {
   SelectionIdentity,
   type SelectionIdentity as SelectionIdentityType,
 } from "@/features/specs/domain/specViewSelection";
-import type { CommentCommands } from "@/lib/api/tauri";
-import { commentCommands as defaultCommentCommands } from "@/lib/api/tauri";
-import { ListCommentsCommandError } from "@/lib/api/tauri/listComments";
+import type { CommentCommands } from "@/features/comments/application/commentCommands";
+import { ListCommentsCommandError } from "@/features/comments";
 import {
   resolvePerformanceCorrelationId,
   startPerformanceSpan,
@@ -53,7 +52,7 @@ export type UseCommentsOptions = Readonly<{
   scope: CommentScopeType | null;
   statusFilter?: CommentStatusFilter;
   correlationId?: string | null;
-  commands?: CommentCommands;
+  commands: CommentCommands;
 }>;
 
 export type UseCommentsResult = Readonly<{
@@ -86,7 +85,7 @@ const defaultStatusFilter: CommentStatusFilter = CommentStatusFilter.All;
 
 /** @returns Comment loading and operation state for the selected spec file. */
 export function useComments({
-  commands = defaultCommentCommands,
+  commands,
   correlationId = null,
   scope,
   statusFilter = defaultStatusFilter,

@@ -20,6 +20,11 @@ import { getUnknownErrorMessage } from "@/utils/errorMessage";
 import type { RecentWorkspaceStorage } from "@/lib/recentWorkspaces";
 import { writeLastActiveWorkspacePath } from "@/lib/recentWorkspaces";
 
+import {
+  workspaceCommandFixtures,
+  workspaceLoadFixtures,
+} from "../../../__tests__/workspaceCommandFixtures";
+
 class MemoryStorage implements RecentWorkspaceStorage {
   private readonly values = new Map<string, string>();
 
@@ -73,6 +78,8 @@ function fakeWorkspace(
 
 function defaultCommands() {
   return {
+    getValidationErrorMessage:
+      workspaceCommandFixtures.getValidationErrorMessage,
     selectWorkspaceDirectory: vi.fn(async () => "/selected"),
     validateWorkspaceDirectory: vi.fn(async () => ({ isDirectory: true })),
   };
@@ -94,13 +101,21 @@ async function flush(): Promise<void> {
   });
 }
 
+type LoaderTestOptions = Omit<
+  UseWorkspaceLoaderOptions,
+  "subscribeDragDropEvents"
+> &
+  Partial<Pick<UseWorkspaceLoaderOptions, "subscribeDragDropEvents">>;
+
+const subscribeNoop = async () => () => undefined;
+
 type LoaderHandle = Readonly<{
   current: UseWorkspaceLoaderResult;
-  rerender: (options: UseWorkspaceLoaderOptions) => void;
+  rerender: (options: LoaderTestOptions) => void;
   unmount: () => void;
 }>;
 
-function renderLoader(options: UseWorkspaceLoaderOptions): LoaderHandle {
+function renderLoader(options: LoaderTestOptions): LoaderHandle {
   const container = document.createElement("div");
   const root = createRoot(container);
   const result = {
@@ -108,14 +123,21 @@ function renderLoader(options: UseWorkspaceLoaderOptions): LoaderHandle {
   };
 
   function TestComponent(
-    props: Readonly<{ options: UseWorkspaceLoaderOptions }>,
+    props: Readonly<{ options: LoaderTestOptions }>,
   ): null {
-    result.current = useWorkspaceLoader(props.options);
+    result.current = useWorkspaceLoader({
+      subscribeDragDropEvents: subscribeNoop,
+      ...props.options,
+    });
     return null;
   }
 
   function Wrapper(props: Readonly<{ children: ReactNode }>): ReactNode {
-    return <WorkspaceProvider>{props.children}</WorkspaceProvider>;
+    return (
+      <WorkspaceProvider commands={workspaceLoadFixtures}>
+        {props.children}
+      </WorkspaceProvider>
+    );
   }
 
   act(() => {
@@ -199,6 +221,7 @@ test("io.loadラッパーはload開始前にクリア+input更新しonWorkspaceL
 test("io.validateラッパーの2段クリア（validate pending中に書いたdropエラーがload直前に消える）", async () => {
   const validateDeferred = deferred<{ isDirectory: boolean }>();
   const commands = {
+    ...defaultCommands(),
     selectWorkspaceDirectory: vi.fn(async () => "/selected"),
     validateWorkspaceDirectory: vi.fn(() => validateDeferred.promise),
   };
@@ -237,6 +260,7 @@ test("io.validateラッパーの2段クリア（validate pending中に書いたd
 test("browseアダプタはダイアログ表示中にbrowsingフラグをtrueにする", async () => {
   const dialog = deferred<string | null>();
   const commands = {
+    ...defaultCommands(),
     selectWorkspaceDirectory: vi.fn(() => dialog.promise),
     validateWorkspaceDirectory: vi.fn(async () => ({ isDirectory: true })),
   };
@@ -263,6 +287,7 @@ test("browseアダプタはダイアログ表示中にbrowsingフラグをtrue�
 
 test("browseアダプタはキャンセル（null）でloadせずbrowsingをfalseへ戻す", async () => {
   const commands = {
+    ...defaultCommands(),
     selectWorkspaceDirectory: vi.fn(async () => null),
     validateWorkspaceDirectory: vi.fn(async () => ({ isDirectory: true })),
   };
@@ -286,6 +311,7 @@ test("browseアダプタはキャンセル（null）でloadせずbrowsingをfals
 test("browseアダプタはダイアログ例外でonErrorへメッセージを渡しbrowsingを戻す", async () => {
   const failure = new Error("dialog boom");
   const commands = {
+    ...defaultCommands(),
     selectWorkspaceDirectory: vi.fn(async () => {
       throw failure;
     }),
@@ -346,6 +372,7 @@ test("手入力アダプタは現在のworkspaceInput stateの値をloadへ渡�
 
 test("recent失敗outcomeは一覧削除→onError→input rollbackの順で適用される", async () => {
   const commands = {
+    ...defaultCommands(),
     selectWorkspaceDirectory: vi.fn(async () => "/selected"),
     validateWorkspaceDirectory: vi.fn(async () => ({ isDirectory: false })),
   };
@@ -371,6 +398,7 @@ test("recent失敗outcomeは一覧削除→onError→input rollbackの順で適�
 
 test("drop失敗outcomeはdropErrorMessageへ固定文言を設定する", async () => {
   const commands = {
+    ...defaultCommands(),
     selectWorkspaceDirectory: vi.fn(async () => "/selected"),
     validateWorkspaceDirectory: vi.fn(async () => ({ isDirectory: false })),
   };
@@ -437,6 +465,7 @@ test("recentWorkspacesは所有する単一インスタンスを再露出しreco
     onError: vi.fn(),
     workspace: fakeWorkspace(idleState(), { load }),
     commands: {
+      ...defaultCommands(),
       selectWorkspaceDirectory: vi.fn(async () => "/added"),
       validateWorkspaceDirectory: vi.fn(async () => ({ isDirectory: true })),
     },
@@ -537,11 +566,12 @@ test("startup restoreはvalidate→loadを1回だけ実行しrerenderで再実�
   const storage = new MemoryStorage();
   writeLastActiveWorkspacePath("/last", storage);
   const commands = {
+    ...defaultCommands(),
     selectWorkspaceDirectory: vi.fn(async () => "/selected"),
     validateWorkspaceDirectory: vi.fn(async () => ({ isDirectory: true })),
   };
   const load = vi.fn(async () => true);
-  const options: UseWorkspaceLoaderOptions = {
+  const options: LoaderTestOptions = {
     onError: vi.fn(),
     workspace: fakeWorkspace(idleState(), { load }),
     commands,
@@ -573,6 +603,7 @@ test.each([
 ])("startup restore抑止（%s）ではvalidateが呼ばれない", async (_label, state, makeStorage) => {
   const storage = makeStorage();
   const commands = {
+    ...defaultCommands(),
     selectWorkspaceDirectory: vi.fn(async () => "/selected"),
     validateWorkspaceDirectory: vi.fn(async () => ({ isDirectory: true })),
   };

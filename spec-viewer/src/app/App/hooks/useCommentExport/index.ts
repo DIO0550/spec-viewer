@@ -2,22 +2,21 @@ import { useCallback, useEffect, useState } from "react";
 import type { SpecViewResetKeys } from "@/app/App/hooks/types";
 import {
   type Comment,
+  type CommentExportCommands,
   type CommentExportOperation,
   type CommentExportScope,
   createSpecSkillMcpFeedbackDryRunPayload,
+  exportComments as defaultExportComments,
+  ExportCommentsCommandError,
   type ExportCommentsResponse,
   type ExportCommentsTarget,
+  generateLlmPrompt as defaultGenerateLlmPrompt,
+  GenerateLlmPromptCommandError,
   type GenerateLlmPromptResponse,
   renderSpecSkillMcpFeedbackDryRunPayload,
+  selectCommentExportDestination as defaultSelectCommentExportDestination,
   type SpecSkillMcpFeedbackPayload,
 } from "@/features/comments";
-import {
-  exportComments as defaultExportComments,
-  generateLlmPrompt as defaultGenerateLlmPrompt,
-  selectCommentExportDestination as defaultSelectCommentExportDestination,
-} from "@/lib/api/tauri";
-import { ExportCommentsCommandError } from "@/lib/api/tauri/exportComments";
-import { GenerateLlmPromptCommandError } from "@/lib/api/tauri/generateLlmPrompt";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { getUnknownErrorMessage } from "@/utils/errorMessage";
 
@@ -39,12 +38,7 @@ export type CommentExportState =
       message: string;
     }>;
 
-/** IPC コマンドの DI（useComments の `commands?` 規約に合わせて1オブジェクトに集約）。 */
-export type CommentExportCommands = Readonly<{
-  exportComments: typeof defaultExportComments;
-  generateLlmPrompt: typeof defaultGenerateLlmPrompt;
-  selectCommentExportDestination: typeof defaultSelectCommentExportDestination;
-}>;
+export type { CommentExportCommands } from "@/features/comments";
 
 export type UseCommentExportOptions = Readonly<{
   resetKeys: SpecViewResetKeys;

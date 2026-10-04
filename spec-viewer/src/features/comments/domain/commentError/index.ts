@@ -1,21 +1,116 @@
-import type { AddCommentCommandError } from "@/lib/api/tauri/addComment";
-import type { DeleteCommentCommandError } from "@/lib/api/tauri/deleteComment";
-import type { ExportCommentsCommandError } from "@/lib/api/tauri/exportComments";
-import type { GenerateLlmPromptCommandError } from "@/lib/api/tauri/generateLlmPrompt";
-import type { ListCommentsCommandError } from "@/lib/api/tauri/listComments";
-import type { ReopenCommentCommandError } from "@/lib/api/tauri/reopenComment";
-import type { ResolveCommentCommandError } from "@/lib/api/tauri/resolveComment";
-import type { UpdateCommentCommandError } from "@/lib/api/tauri/updateComment";
-
+/** Compatibility cause shape; semantic transport-error cleanup is tracked in #109. */
 export type CommentCommandError =
-  | AddCommentCommandError
-  | DeleteCommentCommandError
-  | ExportCommentsCommandError
-  | GenerateLlmPromptCommandError
-  | ListCommentsCommandError
-  | ReopenCommentCommandError
-  | ResolveCommentCommandError
-  | UpdateCommentCommandError;
+  | Readonly<{
+      command: "add_comment";
+      code:
+        | "invalidRequest"
+        | "workspaceDetection"
+        | "configLoad"
+        | "invalidComment"
+        | "commentRepository"
+        | "unexpected"
+        | "unknown";
+      message: string;
+      raw: unknown;
+    }>
+  | Readonly<{
+      command: "delete_comment";
+      code:
+        | "invalidRequest"
+        | "workspaceDetection"
+        | "configLoad"
+        | "markdownRead"
+        | "invalidComment"
+        | "commentRepository"
+        | "unexpected"
+        | "unknown";
+      message: string;
+      raw: unknown;
+    }>
+  | Readonly<{
+      command: "export_comments";
+      code:
+        | "invalidRequest"
+        | "workspaceDetection"
+        | "configLoad"
+        | "markdownRead"
+        | "invalidComment"
+        | "commentRepository"
+        | "unexpected"
+        | "unknown";
+      message: string;
+      raw: unknown;
+    }>
+  | Readonly<{
+      command: "generate_llm_prompt";
+      code:
+        | "invalidRequest"
+        | "workspaceDetection"
+        | "configLoad"
+        | "markdownRead"
+        | "invalidComment"
+        | "commentRepository"
+        | "unexpected"
+        | "unknown";
+      message: string;
+      raw: unknown;
+    }>
+  | Readonly<{
+      command: "list_comments";
+      code:
+        | "invalidRequest"
+        | "workspaceDetection"
+        | "configLoad"
+        | "markdownRead"
+        | "invalidComment"
+        | "commentRepository"
+        | "unexpected"
+        | "unknown";
+      message: string;
+      raw: unknown;
+    }>
+  | Readonly<{
+      command: "reopen_comment";
+      code:
+        | "invalidRequest"
+        | "workspaceDetection"
+        | "configLoad"
+        | "markdownRead"
+        | "invalidComment"
+        | "commentRepository"
+        | "unexpected"
+        | "unknown";
+      message: string;
+      raw: unknown;
+    }>
+  | Readonly<{
+      command: "resolve_comment";
+      code:
+        | "invalidRequest"
+        | "workspaceDetection"
+        | "configLoad"
+        | "markdownRead"
+        | "invalidComment"
+        | "commentRepository"
+        | "unexpected"
+        | "unknown";
+      message: string;
+      raw: unknown;
+    }>
+  | Readonly<{
+      command: "update_comment";
+      code:
+        | "invalidRequest"
+        | "workspaceDetection"
+        | "configLoad"
+        | "markdownRead"
+        | "invalidComment"
+        | "commentRepository"
+        | "unexpected"
+        | "unknown";
+      message: string;
+      raw: unknown;
+    }>;
 
 export type CommentFeatureErrorCode =
   | "invalidComment"

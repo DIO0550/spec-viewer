@@ -9,7 +9,7 @@ import type {
   DiffCommentCommands,
   LoadDiffCommentsRequest,
   SaveDiffCommentRequest,
-} from "@/lib/api/tauri";
+} from "@/features/diffComments";
 
 const actEnvironment = globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean };
 actEnvironment.IS_REACT_ACT_ENVIRONMENT = true;

@@ -8,7 +8,7 @@ import {
   openWorkspacePath,
 } from "@/features/workspace/hooks/useWorkspaceLoader/flow";
 import type { WorkspaceLoaderFlowIo } from "@/features/workspace/hooks/useWorkspaceLoader/types";
-import { ValidateWorkspaceDirectoryCommandError } from "@/lib/api/tauri/validateWorkspaceDirectory";
+import { workspaceCommandFixtures } from "../../../__tests__/workspaceCommandFixtures";
 
 const invalidDroppedDirectoryMessage =
   "ワークスペースフォルダをドロップしてください。ファイルはワークスペースとして開けません。";
@@ -23,6 +23,8 @@ function createIo(
   overrides: Partial<WorkspaceLoaderFlowIo> = {},
 ): WorkspaceLoaderFlowIo {
   return {
+    getValidationErrorMessage:
+      workspaceCommandFixtures.getValidationErrorMessage,
     validate: vi.fn(async () => ({ isDirectory: true })),
     load: vi.fn(async () => true),
     ...overrides,
@@ -43,6 +45,8 @@ function deferred<T>(): {
 test("drop成功でio.validate→io.loadがこの順に各1回呼ばれる", async () => {
   const order: string[] = [];
   const io: WorkspaceLoaderFlowIo = {
+    getValidationErrorMessage:
+      workspaceCommandFixtures.getValidationErrorMessage,
     validate: vi.fn(async () => {
       order.push("validate");
       return { isDirectory: true };
@@ -163,8 +167,7 @@ test("drop: validate例外でdropExceptionを返す", async () => {
 
   expect(outcome).toEqual({
     type: "dropException",
-    dropMessage:
-      ValidateWorkspaceDirectoryCommandError.fromUnknown(failure).message,
+    dropMessage: "validate boom",
   });
 });
 
@@ -259,7 +262,7 @@ test("recent: validate例外でrecentExceptionを返す（文言連結）", asyn
   expect(outcome).toEqual({
     type: "recentException",
     removePath: "/recent",
-    dialogMessage: `${missingSavedWorkspaceMessage} ${ValidateWorkspaceDirectoryCommandError.fromUnknown(failure).message}`,
+    dialogMessage: `${missingSavedWorkspaceMessage} validate boom`,
     rollbackInput: "/active",
   });
 });
@@ -307,6 +310,8 @@ test.each([
 test("競合: recentのvalidate pending中でもdropはskippedにならず並行実行される", async () => {
   const validateDeferred = deferred<{ isDirectory: boolean }>();
   const io: WorkspaceLoaderFlowIo = {
+    getValidationErrorMessage:
+      workspaceCommandFixtures.getValidationErrorMessage,
     validate: vi.fn(() => validateDeferred.promise),
     load: vi.fn(async () => true),
   };
@@ -330,4 +335,23 @@ test("競合: recentのvalidate pending中でもdropはskippedにならず並行
 
   expect(recentOutcome).toEqual({ type: "loaded" });
   expect(dropOutcome).toEqual({ type: "loaded" });
+});
+
+test("dropは注入されたerror formatterで失敗文言を決める", async () => {
+  const failure = { detail: "transport-specific payload" };
+  const getValidationErrorMessage = vi.fn(() => "formatted validation failure");
+  const io = createIo({
+    validate: vi.fn(async () => {
+      throw failure;
+    }),
+    getValidationErrorMessage,
+  });
+
+  await expect(
+    openDroppedWorkspacePath("/drop", noGuards, io),
+  ).resolves.toEqual({
+    type: "dropException",
+    dropMessage: "formatted validation failure",
+  });
+  expect(getValidationErrorMessage).toHaveBeenCalledExactlyOnceWith(failure);
 });

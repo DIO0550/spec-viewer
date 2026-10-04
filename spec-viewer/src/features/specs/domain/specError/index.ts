@@ -1,13 +1,57 @@
-import type { ArchiveSpecCommandError } from "@/lib/api/tauri/archiveSpec";
-import type { ListSpecsCommandError } from "@/lib/api/tauri/listSpecs";
-import type { LoadSpecBundleCommandError } from "@/lib/api/tauri/loadSpecBundle";
-import type { ReadSpecFileCommandError } from "@/lib/api/tauri/readSpecFile";
-
+// Preserve the existing cause contract while transport-independent errors are designed in #109.
 export type SpecCommandError =
-  | ArchiveSpecCommandError
-  | ListSpecsCommandError
-  | LoadSpecBundleCommandError
-  | ReadSpecFileCommandError;
+  | Readonly<{
+      command: "archive_spec";
+      code:
+        | "invalidRequest"
+        | "workspaceDetection"
+        | "configLoad"
+        | "specArchive"
+        | "invalidSpec"
+        | "unexpected"
+        | "unknown";
+      message: string;
+      raw: unknown;
+    }>
+  | Readonly<{
+      command: "list_specs";
+      code:
+        | "invalidRequest"
+        | "workspaceDetection"
+        | "configLoad"
+        | "specTreeScan"
+        | "unexpected"
+        | "unknown";
+      message: string;
+      raw: unknown;
+    }>
+  | Readonly<{
+      command: "load_spec_bundle";
+      code:
+        | "invalidRequest"
+        | "workspaceDetection"
+        | "configLoad"
+        | "specTreeScan"
+        | "markdownRead"
+        | "invalidSpec"
+        | "unexpected"
+        | "unknown";
+      message: string;
+      raw: unknown;
+    }>
+  | Readonly<{
+      command: "read_spec_file";
+      code:
+        | "invalidRequest"
+        | "workspaceDetection"
+        | "configLoad"
+        | "markdownRead"
+        | "invalidSpec"
+        | "unexpected"
+        | "unknown";
+      message: string;
+      raw: unknown;
+    }>;
 
 export type SpecFeatureErrorCode =
   | "invalidSpec"

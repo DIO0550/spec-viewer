@@ -17,16 +17,18 @@ import type {
   SpecsState,
   UseSpecsResult,
 } from "@/features/specs/hooks/useSpecs/types";
-import * as specGateway from "@/features/specs/infra/specGateway";
+import * as specGateway from "@/features/specs/application/specGateway";
 import type {
   SpecDocument,
   SpecFileKey,
   SpecFileScope,
 } from "@/features/specs/types/spec";
-import { specCommands } from "@/lib/api/tauri";
-import { ArchiveSpecCommandError } from "@/lib/api/tauri/archiveSpec";
-import { ListSpecsCommandError } from "@/lib/api/tauri/listSpecs";
-import { ReadSpecFileCommandError } from "@/lib/api/tauri/readSpecFile";
+import type { SpecCommands } from "@/features/specs/application/specCommands";
+import {
+  ArchiveSpecCommandError,
+  ListSpecsCommandError,
+  ReadSpecFileCommandError,
+} from "@/features/specs";
 import { createPerformanceCorrelationId } from "@/lib/performance";
 
 export type { SpecDocumentState } from "@/features/specs/domain/specDocumentState";
@@ -40,6 +42,7 @@ export type SpecSelectionChange = Readonly<{
 }>;
 
 export type UseSpecsOptions = Readonly<{
+  commands: SpecCommands;
   workspacePath: string | null;
   onSelectionChange?: (selection: SpecSelectionChange) => void;
 }>;
@@ -83,10 +86,12 @@ type ReadDocumentResult = Readonly<
 
 /**
  * Reads one spec document and normalizes the command boundary result.
+ * @param specCommands - Injected spec command port.
  * @param input - Document scope and correlation id for the read operation.
  * @returns A successful document result or a normalized feature error.
  */
 async function readDocument(
+  specCommands: SpecCommands,
   input: ReadDocumentInput,
 ): Promise<ReadDocumentResult> {
   const { correlationId, target } = input;
@@ -138,7 +143,7 @@ const initialSpecsState: SpecsState = {
  * @returns Spec tree, selection, and Markdown loading state for a workspace.
  */
 export function useSpecsLegacy(options: UseSpecsOptions): UseSpecsResult {
-  const { onSelectionChange, workspacePath } = options;
+  const { commands: specCommands, onSelectionChange, workspacePath } = options;
   const [state, setState] = useState<SpecsState>(initialSpecsState);
   const workspacePathRef = useRef(workspacePath);
   workspacePathRef.current = workspacePath;
@@ -242,7 +247,10 @@ export function useSpecsLegacy(options: UseSpecsOptions): UseSpecsResult {
         ),
       }));
 
-      const result = await readDocument({ target, correlationId });
+      const result = await readDocument(specCommands, {
+        target,
+        correlationId,
+      });
 
       if (result.status === "success") {
         commitLoadState(operationId, (currentState) => ({
@@ -270,7 +278,7 @@ export function useSpecsLegacy(options: UseSpecsOptions): UseSpecsResult {
       }));
       return false;
     },
-    [commitLoadState],
+    [commitLoadState, specCommands],
   );
 
   const loadResolvedSelection = useCallback(
@@ -408,7 +416,13 @@ export function useSpecsLegacy(options: UseSpecsOptions): UseSpecsResult {
         return false;
       }
     },
-    [commitLoadState, loadResolvedSelection, onSelectionChange, workspacePath],
+    [
+      commitLoadState,
+      loadResolvedSelection,
+      onSelectionChange,
+      specCommands,
+      workspacePath,
+    ],
   );
 
   const reloadSpecs = useCallback(
@@ -732,6 +746,7 @@ export function useSpecsLegacy(options: UseSpecsOptions): UseSpecsResult {
       });
     },
     [
+      specCommands,
       commitLoadState,
       loadSpecTree,
       runSpecLoad,

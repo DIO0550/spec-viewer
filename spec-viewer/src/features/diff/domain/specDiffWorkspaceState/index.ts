@@ -1,4 +1,4 @@
-import type { DiffReviewIdentity } from "@/features/diffComments";
+import type { DiffReviewIdentity } from "@/features/diffComments/domain";
 import { DiffAvailability } from "@/features/diff/domain/diffAvailability";
 import type {
   FileChangeStatus,

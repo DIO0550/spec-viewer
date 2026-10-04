@@ -20,11 +20,8 @@ import {
 import {
   type LoadRepositoryDiffRequest,
   type LoadRepositoryFileRequest,
-  loadRepositoryDiff,
-  loadRepositoryFile,
   type TraverseRepositoryIgnoredRequest,
-  traverseRepositoryIgnored,
-} from "@/lib/api/tauri";
+} from "@/features/repositoryDiff";
 import {
   createPerformanceCorrelationId,
   startPerformanceSpan,
@@ -47,7 +44,7 @@ export type UseRepositoryDiffWorkspaceOptions = Readonly<{
   worktreeId: string | null;
   baseOverride?: string | null;
   selection?: RepositoryDiffSelectionRequest | RepositoryDiffSelection | null;
-  api?: RepositoryDiffWorkspaceApi;
+  api: RepositoryDiffWorkspaceApi;
 }>;
 
 export type UseRepositoryDiffWorkspaceResult = Readonly<{
@@ -64,12 +61,6 @@ export type UseRepositoryDiffWorkspaceResult = Readonly<{
   retry: () => Promise<boolean>;
   invalidate: () => void;
 }>;
-
-const DEFAULT_API: RepositoryDiffWorkspaceApi = {
-  loadRepositoryDiff,
-  loadRepositoryFile,
-  traverseRepositoryIgnored,
-};
 
 type IgnoredPageQueueItem = Readonly<{
   key: string;
@@ -174,7 +165,7 @@ export function useRepositoryDiffWorkspace({
   worktreeId,
   baseOverride = null,
   selection: requestedSelection = null,
-  api = DEFAULT_API,
+  api,
 }: UseRepositoryDiffWorkspaceOptions): UseRepositoryDiffWorkspaceResult {
   const [state, dispatch] = useReducer(
     RepositoryDiffWorkspaceState.reduce,

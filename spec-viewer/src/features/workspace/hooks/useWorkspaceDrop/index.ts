@@ -3,18 +3,15 @@ import {
   WorkspaceDropIntent,
   type WorkspaceDropIntent as WorkspaceDropIntentType,
 } from "@/features/workspace/domain/workspaceDropIntent";
-import { subscribeWorkspaceDragDropEvents } from "@/features/workspace/services/subscribeWorkspaceDragDropEvents";
+import type { SubscribeWorkspaceDragDropEvents } from "../../application/workspaceCommands";
 import {
   createWorkspaceDropCandidate,
   extractBrowserDropPaths,
 } from "@/utils/workspaceDrop";
 
-export type WorkspaceDropStatus = "idle" | "dragging";
+export type { SubscribeWorkspaceDragDropEvents } from "../../application/workspaceCommands";
 
-export type SubscribeWorkspaceDragDropEvents = (
-  /** @param handler - 各ドラッグ&ドロップイベントを受け取るコールバック。 */
-  handler: (event: WorkspaceDropIntentType) => void,
-) => Promise<() => void>;
+export type WorkspaceDropStatus = "idle" | "dragging";
 
 export type UseWorkspaceDropOptions = Readonly<{
   isDisabled: boolean;
@@ -22,7 +19,7 @@ export type UseWorkspaceDropOptions = Readonly<{
   onDropWorkspacePath: (path: string) => void;
   /** @param message - 無効なドロップ時に表示するエラーメッセージ。 */
   onInvalidDrop: (message: string) => void;
-  subscribeDragDropEvents?: SubscribeWorkspaceDragDropEvents;
+  subscribeDragDropEvents: SubscribeWorkspaceDragDropEvents;
 }>;
 
 export type UseWorkspaceDropResult = Readonly<{
@@ -34,7 +31,7 @@ export function useWorkspaceDrop({
   isDisabled,
   onDropWorkspacePath,
   onInvalidDrop,
-  subscribeDragDropEvents = subscribeWorkspaceDragDropEvents,
+  subscribeDragDropEvents,
 }: UseWorkspaceDropOptions): UseWorkspaceDropResult {
   const [status, setStatus] = useState<WorkspaceDropStatus>("idle");
 

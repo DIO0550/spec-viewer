@@ -4,7 +4,6 @@ import type { CommentAnchor } from "@/features/comments/domain/commentAnchor";
 import type { CommentFeatureError } from "@/features/comments/domain/commentError";
 import { CommentId } from "@/features/comments/domain/commentId";
 import { CommentListState } from "@/features/comments/domain/commentListState";
-import { AddCommentCommandError } from "@/lib/api/tauri/addComment";
 
 const commentId = CommentId.fromString;
 
@@ -35,10 +34,12 @@ const updatedComment: Comment = {
   updatedAt: "2026-05-05T10:15:00Z",
 };
 
-const commandError = AddCommentCommandError.fromUnknown({
-  code: "commentRepository",
+const commandError = {
+  command: "add_comment" as const,
+  raw: null,
+  code: "commentRepository" as const,
   message: "Comment operation failed.",
-});
+};
 
 const featureError: CommentFeatureError = {
   feature: "comments",

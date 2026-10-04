@@ -39,3 +39,6 @@ export {
   createSpecSkillMcpFeedbackDryRunPayload,
   renderSpecSkillMcpFeedbackDryRunPayload,
 } from "./lib/mcpFeedback";
+export type { CommentCommands } from "./application/commentCommands";
+export type { CommentExportCommands } from "./application/commentExportCommands";
+export * from "./infra/tauri";

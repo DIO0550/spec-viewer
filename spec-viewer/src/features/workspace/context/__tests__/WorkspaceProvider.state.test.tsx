@@ -10,6 +10,8 @@ import {
   type WorkspaceContextValue,
 } from "@/features/workspace/context";
 
+import { workspaceLoadFixtures } from "../../__tests__/workspaceCommandFixtures";
+
 test("WorkspaceProviderはworkspace contextを提供する", () => {
   const container = document.createElement("div");
   const root = createRoot(container);
@@ -22,7 +24,7 @@ test("WorkspaceProviderはworkspace contextを提供する", () => {
 
   act(() => {
     root.render(
-      <WorkspaceProvider>
+      <WorkspaceProvider commands={workspaceLoadFixtures}>
         <Consumer />
       </WorkspaceProvider>,
     );

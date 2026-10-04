@@ -33,10 +33,10 @@ export type UseViewRefreshOptions = Readonly<{
   }>;
   /** Reports an error message, or clears it. @param message - Error message, or null to clear. */
   onError: (message: string | null) => void;
-  watcher?: Readonly<{
-    startWatch?: StartSpecFileWatchCommand;
-    stopWatch?: StopSpecFileWatchCommand;
-    subscribe?: SpecFileWatchSubscriber;
+  watcher: Readonly<{
+    startWatch: StartSpecFileWatchCommand;
+    stopWatch: StopSpecFileWatchCommand;
+    subscribe: SpecFileWatchSubscriber;
   }>;
 }>;
 
@@ -196,9 +196,9 @@ export function useViewRefresh(
     onMarkdownChange: reloadCurrentMarkdownFromWatcher,
     onConfigChange: reloadWorkspaceConfigFromWatcher,
     onWatcherError: handleWatcherError,
-    startWatch: watcher?.startWatch,
-    stopWatch: watcher?.stopWatch,
-    subscribe: watcher?.subscribe,
+    startWatch: watcher.startWatch,
+    stopWatch: watcher.stopWatch,
+    subscribe: watcher.subscribe,
   });
 
   return {

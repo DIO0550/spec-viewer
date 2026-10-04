@@ -5,6 +5,13 @@ import {
   useReducer,
   useRef,
 } from "react";
+import {
+  AddCommentCommandError,
+  DeleteCommentCommandError,
+  ReopenCommentCommandError,
+  ResolveCommentCommandError,
+  UpdateCommentCommandError,
+} from "@/features/comments";
 import type { Comment } from "@/features/comments/domain/comment";
 import type { CommentAnchor } from "@/features/comments/domain/commentAnchor";
 import type { CommentFeatureError as CommentFeatureErrorType } from "@/features/comments/domain/commentError";
@@ -26,17 +33,12 @@ import {
   reopenComment as reopenCommentViaGateway,
   resolveComment as resolveCommentViaGateway,
   updateComment as updateCommentViaGateway,
-} from "@/features/comments/infra/commentGateway";
+} from "@/features/comments/application/commentGateway";
 import {
   SelectionIdentity,
   type SelectionIdentity as SelectionIdentityType,
 } from "@/features/specs/domain/specViewSelection";
-import type { CommentCommands } from "@/lib/api/tauri";
-import { AddCommentCommandError } from "@/lib/api/tauri/addComment";
-import { DeleteCommentCommandError } from "@/lib/api/tauri/deleteComment";
-import { ReopenCommentCommandError } from "@/lib/api/tauri/reopenComment";
-import { ResolveCommentCommandError } from "@/lib/api/tauri/resolveComment";
-import { UpdateCommentCommandError } from "@/lib/api/tauri/updateComment";
+import type { CommentCommands } from "@/features/comments/application/commentCommands";
 
 export type AddCommentInput = Readonly<{
   anchor: CommentAnchor;

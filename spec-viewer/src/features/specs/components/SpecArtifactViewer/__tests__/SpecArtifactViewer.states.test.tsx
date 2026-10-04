@@ -7,7 +7,7 @@ import type { RenderedDocumentPort } from "@/features/specs/components/MarkdownV
 import { SpecBundleState } from "@/features/specs/domain/specBundleState";
 import { SpecFeatureError } from "@/features/specs/domain/specError";
 import type { SpecArtifact, SpecBundle } from "@/features/specs/types/spec";
-import { LoadSpecBundleCommandError } from "@/lib/api/tauri/loadSpecBundle";
+import { LoadSpecBundleCommandError } from "@/features/specs";
 
 const artifact: SpecArtifact = {
   identity: { kind: "directMarkdown", fileName: "Notes.md" },

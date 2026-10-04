@@ -6,7 +6,6 @@ import type {
   WorkspaceLoaderGuards,
   WorkspaceOpenOutcome,
 } from "@/features/workspace/hooks/useWorkspaceLoader/types";
-import { ValidateWorkspaceDirectoryCommandError } from "@/lib/api/tauri/validateWorkspaceDirectory";
 
 const invalidDroppedDirectoryMessage =
   "ワークスペースフォルダをドロップしてください。ファイルはワークスペースとして開けません。";
@@ -95,8 +94,7 @@ export async function openDroppedWorkspacePath(
   } catch (error) {
     return {
       type: "dropException",
-      dropMessage:
-        ValidateWorkspaceDirectoryCommandError.fromUnknown(error).message,
+      dropMessage: io.getValidationErrorMessage(error),
     };
   }
 }
@@ -151,9 +149,9 @@ export async function openRecentWorkspacePath(
     return {
       type: "recentException",
       removePath: path,
-      dialogMessage: `${missingSavedWorkspaceMessage} ${
-        ValidateWorkspaceDirectoryCommandError.fromUnknown(error).message
-      }`,
+      dialogMessage: `${missingSavedWorkspaceMessage} ${io.getValidationErrorMessage(
+        error,
+      )}`,
       rollbackInput,
     };
   }
