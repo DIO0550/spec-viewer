@@ -8,8 +8,23 @@ import {
   X,
 } from "lucide-react";
 import { useId, useState } from "react";
-import { CommentThread } from "@/features/comments/components/CommentThread";
-import type { Comment } from "@/features/comments/domain/comment";
+import { CommentSection } from "@/features/comments/components/CommentSection";
+import {
+  createCommentFilterCounts,
+  createEmptyFilterCounts,
+  filterCommentsByDisplayFilter,
+  filterCommentsBySearchQuery,
+  groupCommentsByStatus,
+  normalizeCommentSearchQuery,
+  type CommentFilterCounts,
+} from "@/features/comments/domain/commentQuery";
+import {
+  commentFilterOptions,
+  createAnchorDisplayStatusByCommentId,
+  createCommentSearchAliases,
+  createCommentSectionModels,
+  formatFilterLabel,
+} from "@/features/comments/presenters/commentSidebar";
 import type { CommentId } from "@/features/comments/domain/commentId";
 import type { CommentListState } from "@/features/comments/domain/commentListState";
 import {
@@ -19,7 +34,6 @@ import {
 import type {
   ApplyWithAiPlaceholderState,
   CommentAnchorDisplayState,
-  CommentAnchorDisplayStatus,
   CommentDisplayFilter,
   CommentExportOperation,
   CommentExportScope,
@@ -68,26 +82,6 @@ type Props = Readonly<{
   onCopyMcpFeedback?: () => void;
 }>;
 
-type CommentGroups = Readonly<{
-  openComments: readonly Comment[];
-  resolvedComments: readonly Comment[];
-}>;
-
-type CommentFilterOption = Readonly<{
-  filter: CommentDisplayFilter;
-  label: string;
-  ariaLabel: string;
-}>;
-
-type CommentFilterCounts = Readonly<Record<CommentDisplayFilter, number>>;
-
-type CommentSectionModel = Readonly<{
-  id: string;
-  title: string;
-  comments: readonly Comment[];
-  emptyMessage: string;
-}>;
-
 export type CommentExportState =
   | Readonly<{
       status: "idle";
@@ -100,34 +94,7 @@ export type CommentExportState =
       message: string;
     }>;
 
-type CommentSearchFilterParams = Readonly<{
-  comments: readonly Comment[];
-  searchQuery: string;
-  anchorDisplayStatusByCommentId: ReadonlyMap<
-    CommentId,
-    CommentAnchorDisplayStatus
-  >;
-}>;
-
 const defaultDisplayFilter: CommentDisplayFilter = "open";
-
-const commentFilterOptions: readonly CommentFilterOption[] = [
-  {
-    filter: "open",
-    label: uiText.sidebar.openFilter,
-    ariaLabel: "未解決コメントを表示",
-  },
-  {
-    filter: "resolved",
-    label: uiText.sidebar.resolved,
-    ariaLabel: "解決済みコメントを表示",
-  },
-  {
-    filter: "all",
-    label: uiText.sidebar.all,
-    ariaLabel: "すべてのコメントを表示",
-  },
-];
 
 /** @returns The right-side comment review surface for the active spec file. */
 export function CommentSidebar({
@@ -268,7 +235,10 @@ export function CommentSidebar({
   const searchedComments = filterCommentsBySearchQuery({
     comments: filteredComments,
     searchQuery: normalizedSearchQuery,
-    anchorDisplayStatusByCommentId,
+    additionalSearchFieldsByCommentId: createCommentSearchAliases(
+      filteredComments,
+      anchorDisplayStatusByCommentId,
+    ),
   });
   const sectionModels = createCommentSectionModels(
     activeFilter,
@@ -319,11 +289,13 @@ export function CommentSidebar({
             searchQuery={normalizedSearchQuery}
             operationState={operationState}
             emptyMessage={sectionModel.emptyMessage}
-            onSelectComment={onSelectComment}
-            onResolveComment={onResolveComment}
-            onReopenComment={onReopenComment}
-            onDeleteComment={onDeleteComment}
-            onUpdateComment={onUpdateComment}
+            actions={{
+              onSelectComment,
+              onResolveComment,
+              onReopenComment,
+              onDeleteComment,
+              onUpdateComment,
+            }}
           />
         ))
       )}
@@ -723,96 +695,6 @@ function OperationErrorMessage({ operationState }: OperationErrorMessageProps) {
   );
 }
 
-type SectionProps = Readonly<{
-  id: string;
-  title: string;
-  comments: readonly Comment[];
-  activeCommentId: CommentId | null;
-  anchorDisplayStatusByCommentId: ReadonlyMap<
-    CommentId,
-    CommentAnchorDisplayStatus
-  >;
-  searchQuery: string;
-  operationState: CommentOperationState;
-  emptyMessage: string;
-  /**
-   * Selects the given comment.
-   * @param commentId - The comment to select.
-   */
-  onSelectComment: (commentId: CommentId) => void;
-  /**
-   * Marks the given comment as resolved.
-   * @param commentId - The comment to resolve.
-   */
-  onResolveComment: (commentId: CommentId) => void;
-  /**
-   * Reopens the given resolved comment.
-   * @param commentId - The comment to reopen.
-   */
-  onReopenComment: (commentId: CommentId) => void;
-  /**
-   * Deletes the given comment.
-   * @param commentId - The comment to delete.
-   */
-  onDeleteComment: (commentId: CommentId) => void;
-  /**
-   * Updates the given comment's body.
-   * @param commentId - The comment to update.
-   * @param body - The new comment body text.
-   */
-  onUpdateComment: (commentId: CommentId, body: string) => void;
-}>;
-
-/** @returns One grouped comment section with its count badge. */
-function CommentSection({
-  id,
-  title,
-  comments,
-  activeCommentId,
-  anchorDisplayStatusByCommentId,
-  searchQuery,
-  operationState,
-  emptyMessage,
-  onSelectComment,
-  onResolveComment,
-  onReopenComment,
-  onDeleteComment,
-  onUpdateComment,
-}: SectionProps) {
-  return (
-    <section className="comment-sidebar__section" aria-labelledby={id}>
-      <div className="comment-sidebar__section-header">
-        <h3 id={id}>{title}</h3>
-        <span title={`${title} comment count`}>{comments.length}</span>
-      </div>
-      {comments.length === 0 ? (
-        <p className="comment-sidebar__section-empty">{emptyMessage}</p>
-      ) : (
-        <ul className="comment-sidebar__list">
-          {comments.map((comment) => (
-            <li key={comment.id}>
-              <CommentThread
-                comment={comment}
-                isActive={comment.id === activeCommentId}
-                anchorDisplayStatus={
-                  anchorDisplayStatusByCommentId.get(comment.id) ?? "exact"
-                }
-                searchQuery={searchQuery}
-                operationState={operationState}
-                onSelectComment={onSelectComment}
-                onResolveComment={onResolveComment}
-                onReopenComment={onReopenComment}
-                onDeleteComment={onDeleteComment}
-                onUpdateComment={onUpdateComment}
-              />
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
-
 type FilteredEmptyStateProps = Readonly<{
   activeFilter: CommentDisplayFilter;
   searchQuery: string;
@@ -839,83 +721,6 @@ function FilteredEmptyState({
   );
 }
 
-/** @returns Comments whose searchable fields include the normalized query. */
-function filterCommentsBySearchQuery({
-  comments,
-  searchQuery,
-  anchorDisplayStatusByCommentId,
-}: CommentSearchFilterParams): readonly Comment[] {
-  if (searchQuery.length === 0) {
-    return comments;
-  }
-
-  return comments.filter((comment) =>
-    commentMatchesSearchQuery(
-      comment,
-      searchQuery,
-      anchorDisplayStatusByCommentId.get(comment.id) ?? "exact",
-    ),
-  );
-}
-
-/** @returns True when a comment contains the normalized query in a visible search field. */
-function commentMatchesSearchQuery(
-  comment: Comment,
-  searchQuery: string,
-  anchorDisplayStatus: CommentAnchorDisplayStatus,
-): boolean {
-  return createCommentSearchFields(comment, anchorDisplayStatus).some((field) =>
-    normalizeCommentSearchQuery(field).includes(searchQuery),
-  );
-}
-
-/** @returns Text fields covered by local comment search. */
-function createCommentSearchFields(
-  comment: Comment,
-  anchorDisplayStatus: CommentAnchorDisplayStatus,
-): readonly string[] {
-  const anchorStatusLabel = formatAnchorDisplayStatus(anchorDisplayStatus);
-
-  return [
-    comment.body,
-    comment.anchor.fileKey,
-    comment.anchor.textSnippet,
-    comment.status === "resolved"
-      ? uiText.sidebar.resolved
-      : uiText.sidebar.openFilter,
-    anchorStatusLabel ?? "",
-  ];
-}
-
-/** @returns The visible anchor reconciliation status, or null for exact anchors. */
-function formatAnchorDisplayStatus(
-  status: CommentAnchorDisplayStatus,
-): string | null {
-  if (status === "exact") {
-    return null;
-  }
-
-  const statusLabels: Record<
-    Exclude<CommentAnchorDisplayStatus, "exact">,
-    string
-  > = {
-    moved: uiText.commentThread.anchorMoved,
-    fuzzy: uiText.commentThread.fuzzyAnchor,
-    orphaned: uiText.commentThread.anchorOrphaned,
-    stale: uiText.commentThread.anchorStale,
-  };
-
-  return statusLabels[status];
-}
-
-/**
- * @param query - The raw search query to normalize.
- * @returns A case-insensitive query with redundant whitespace collapsed.
- */
-function normalizeCommentSearchQuery(query: string): string {
-  return query.trim().replace(/\s+/g, " ").toLocaleLowerCase();
-}
-
 /**
  * @param resultCount - The number of matching search results.
  * @returns A compact result count label for the search field.
@@ -926,115 +731,4 @@ function formatSearchResultCount(resultCount: number): string {
   }
 
   return `${resultCount}件`;
-}
-
-/**
- * @param comments - The comments to split into display groups.
- * @returns Comments split by open and resolved display sections.
- */
-function groupCommentsByStatus(comments: readonly Comment[]): CommentGroups {
-  return {
-    openComments: comments.filter((comment) => comment.status !== "resolved"),
-    resolvedComments: comments.filter(
-      (comment) => comment.status === "resolved",
-    ),
-  };
-}
-
-/** @returns A lookup of rendered anchor status by comment id. */
-function createAnchorDisplayStatusByCommentId(
-  states: readonly CommentAnchorDisplayState[],
-): ReadonlyMap<CommentId, CommentAnchorDisplayStatus> {
-  return new Map(
-    states.map((state) => [state.commentId, state.status] as const),
-  );
-}
-
-/** @returns An empty filter count record for non-ready sidebar states. */
-function createEmptyFilterCounts(): CommentFilterCounts {
-  return {
-    all: 0,
-    open: 0,
-    resolved: 0,
-  };
-}
-
-/** @returns Count badges for each available comment filter. */
-function createCommentFilterCounts(
-  comments: readonly Comment[],
-): CommentFilterCounts {
-  return comments.reduce<CommentFilterCounts>(
-    (counts, comment) => ({
-      all: counts.all + 1,
-      open: comment.status === "resolved" ? counts.open : counts.open + 1,
-      resolved:
-        comment.status === "resolved" ? counts.resolved + 1 : counts.resolved,
-    }),
-    createEmptyFilterCounts(),
-  );
-}
-
-/** @returns Comments visible for the selected display filter. */
-function filterCommentsByDisplayFilter(
-  comments: readonly Comment[],
-  activeFilter: CommentDisplayFilter,
-): readonly Comment[] {
-  if (activeFilter === "all") {
-    return comments;
-  }
-
-  if (activeFilter === "open") {
-    return comments.filter((comment) => comment.status !== "resolved");
-  }
-
-  return comments.filter((comment) => comment.status === "resolved");
-}
-
-/** @returns Display sections for the filtered comment list. */
-function createCommentSectionModels(
-  activeFilter: CommentDisplayFilter,
-  filteredComments: readonly Comment[],
-): readonly CommentSectionModel[] {
-  if (activeFilter === "all") {
-    const groups = groupCommentsByStatus(filteredComments);
-
-    return [
-      {
-        id: "comment-section-open",
-        title: uiText.sidebar.openFilter,
-        comments: groups.openComments,
-        emptyMessage: uiText.sidebar.noOpenComments,
-      },
-      {
-        id: "comment-section-resolved",
-        title: uiText.sidebar.resolved,
-        comments: groups.resolvedComments,
-        emptyMessage: uiText.sidebar.noResolvedComments,
-      },
-    ];
-  }
-
-  return [
-    {
-      id: `comment-section-${activeFilter}`,
-      title: formatFilterLabel(activeFilter),
-      comments: filteredComments,
-      emptyMessage:
-        activeFilter === "open"
-          ? uiText.sidebar.noOpenComments
-          : uiText.sidebar.noResolvedComments,
-    },
-  ];
-}
-
-/**
- * @param filter - The display filter to label.
- * @returns A readable label for the selected filter.
- */
-function formatFilterLabel(filter: CommentDisplayFilter): string {
-  const option = commentFilterOptions.find(
-    (filterOption) => filterOption.filter === filter,
-  );
-
-  return option?.label ?? filter;
 }
