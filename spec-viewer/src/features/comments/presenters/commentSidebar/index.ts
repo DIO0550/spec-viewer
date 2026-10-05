@@ -39,7 +39,7 @@ export const commentFilterOptions: readonly CommentFilterOption[] = [
   },
 ];
 
-/** @returns Localized search aliases for status and the existing rendered anchor projection. */
+/** @returns コメントの状態と既存のアンカー表示状態に対応する、ローカライズされた検索別名。 */
 export function createCommentSearchAliases(
   comments: readonly Comment[],
   anchorDisplayStatusByCommentId: ReadonlyMap<
@@ -62,7 +62,7 @@ export function createCommentSearchAliases(
   );
 }
 
-/** @returns The visible anchor reconciliation status, or null for exact anchors. */
+/** @returns アンカーの照合状態を表す表示ラベル。完全一致するアンカーの場合は null。 */
 function formatAnchorDisplayStatus(
   status: CommentAnchorDisplayStatus,
 ): string | null {
@@ -83,7 +83,7 @@ function formatAnchorDisplayStatus(
   return statusLabels[status];
 }
 
-/** @returns A lookup of rendered anchor status by comment id. */
+/** @returns コメント ID をキーにしたアンカー表示状態の対応表。 */
 export function createAnchorDisplayStatusByCommentId(
   states: readonly CommentAnchorDisplayState[],
 ): ReadonlyMap<CommentId, CommentAnchorDisplayStatus> {
@@ -92,7 +92,7 @@ export function createAnchorDisplayStatusByCommentId(
   );
 }
 
-/** @returns Display sections for the filtered comment list. */
+/** @returns 絞り込み済みのコメント一覧に対応する表示セクション。 */
 export function createCommentSectionModels(
   activeFilter: CommentDisplayFilter,
   filteredComments: readonly Comment[],
@@ -130,8 +130,8 @@ export function createCommentSectionModels(
 }
 
 /**
- * @param filter - The display filter to label.
- * @returns A readable label for the selected filter.
+ * @param filter - 表示ラベルを取得するフィルター。
+ * @returns 選択されたフィルターの表示ラベル。
  */
 export function formatFilterLabel(filter: CommentDisplayFilter): string {
   const option = commentFilterOptions.find(

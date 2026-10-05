@@ -11,16 +11,16 @@ export type CommentGroups = Readonly<{
 type CommentSearchFilterParams = Readonly<{
   comments: readonly Comment[];
   searchQuery: string;
-  /** Presentation aliases supplement intrinsic fields without coupling query policy to a locale. */
+  /** 表示用の検索別名でコメント固有のフィールドを補い、検索のルールをロケールに依存させない。 */
   additionalSearchFieldsByCommentId?: ReadonlyMap<CommentId, readonly string[]>;
 }>;
 
-/** @returns A case-insensitive query with redundant whitespace collapsed. */
+/** @returns 連続する空白をまとめ、大文字と小文字を区別しないように正規化した検索クエリ。 */
 export function normalizeCommentSearchQuery(query: string): string {
   return query.trim().replace(/\s+/g, " ").toLocaleLowerCase();
 }
 
-/** @returns Comments matching any intrinsic field or supplied search alias, in original order. */
+/** @returns コメント固有のフィールドまたは指定された検索別名に一致するコメント。元の順序を維持する。 */
 export function filterCommentsBySearchQuery({
   comments,
   searchQuery,
@@ -38,7 +38,7 @@ export function filterCommentsBySearchQuery({
   );
 }
 
-/** @returns Comments accepted by the aggregate's shared status predicate. */
+/** @returns 集約で共通の状態判定条件を満たすコメント。 */
 export function filterCommentsByDisplayFilter(
   comments: readonly Comment[],
   filter: CommentStatusFilter,
@@ -48,7 +48,7 @@ export function filterCommentsByDisplayFilter(
     : comments.filter((comment) => Comment.shouldDisplay(comment, filter));
 }
 
-/** @returns Stable open and resolved groups using the same predicate as filtering. */
+/** @returns 絞り込みと同じ判定条件で分類した未解決・解決済みのグループ。各グループ内の元の順序を維持する。 */
 export function groupCommentsByStatus(
   comments: readonly Comment[],
 ): CommentGroups {
@@ -58,12 +58,12 @@ export function groupCommentsByStatus(
   };
 }
 
-/** @returns Zero counts for an empty collection. */
+/** @returns 空のコレクションに対応する、すべての件数がゼロの集計結果。 */
 export function createEmptyFilterCounts(): CommentFilterCounts {
   return { all: 0, open: 0, resolved: 0 };
 }
 
-/** @returns Counts using the same aggregate predicate as filtering and grouping. */
+/** @returns 絞り込み・グループ化と同じ集約の判定条件で求めた件数。 */
 export function createCommentFilterCounts(
   comments: readonly Comment[],
 ): CommentFilterCounts {

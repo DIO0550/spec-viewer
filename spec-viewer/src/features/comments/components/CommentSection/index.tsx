@@ -6,29 +6,29 @@ import type { CommentAnchorDisplayStatus } from "@/features/comments/types/comme
 
 export type CommentSectionActions = Readonly<{
   /**
-   * Selects the given comment.
-   * @param commentId - The comment to select.
+   * 指定したコメントを選択する。
+   * @param commentId - 選択するコメントの ID。
    */
   onSelectComment: (commentId: CommentId) => void;
   /**
-   * Marks the given comment as resolved.
-   * @param commentId - The comment to resolve.
+   * 指定したコメントを解決済みにする。
+   * @param commentId - 解決済みにするコメントの ID。
    */
   onResolveComment: (commentId: CommentId) => void;
   /**
-   * Reopens the given resolved comment.
-   * @param commentId - The comment to reopen.
+   * 指定した解決済みコメントを未解決に戻す。
+   * @param commentId - 未解決に戻すコメントの ID。
    */
   onReopenComment: (commentId: CommentId) => void;
   /**
-   * Deletes the given comment.
-   * @param commentId - The comment to delete.
+   * 指定したコメントを削除する。
+   * @param commentId - 削除するコメントの ID。
    */
   onDeleteComment: (commentId: CommentId) => void;
   /**
-   * Updates the given comment's body.
-   * @param commentId - The comment to update.
-   * @param body - The new comment body text.
+   * 指定したコメントの本文を更新する。
+   * @param commentId - 更新するコメントの ID。
+   * @param body - 更新後のコメント本文。
    */
   onUpdateComment: (commentId: CommentId, body: string) => void;
 }>;
@@ -48,7 +48,7 @@ type SectionProps = Readonly<{
   actions: CommentSectionActions;
 }>;
 
-/** @returns One grouped comment section with its count badge. */
+/** @returns 件数バッジを含む、グループ化されたコメントのセクション。 */
 export function CommentSection({
   id,
   title,
