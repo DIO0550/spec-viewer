@@ -48,7 +48,16 @@ jobs:
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
       - name: Install cargo-nextest
-        run: cargo install cargo-nextest --locked
+        # 監査時と同じ版を固定し、公式バイナリを展開前に検証する。
+        run: |
+          tool_dir=$(mktemp -d)
+          curl --fail --silent --show-error --location --retry 3 --proto '=https' --tlsv1.2 \
+            https://github.com/nextest-rs/nextest/releases/download/cargo-nextest-0.9.146/cargo-nextest-0.9.146-x86_64-unknown-linux-gnu.tar.gz \
+            -o "$tool_dir/tool.tar.gz"
+          echo "682c21b777c333e96fd532e114d3a5a894e0729ab88d94c0a9f20f8419695428  $tool_dir/tool.tar.gz" | sha256sum --check --strict
+          tar -xzf "$tool_dir/tool.tar.gz" -C "$tool_dir" cargo-nextest
+          install -Dm755 "$tool_dir/cargo-nextest" "${CARGO_HOME:-$HOME/.cargo}/bin/cargo-nextest"
+          cargo nextest --version
 
       - name: Run Rust acceptance tests with JUnit
         run: |
@@ -72,7 +81,16 @@ jobs:
 
       - name: Install cargo-llvm-cov
         if: always()
-        run: cargo install cargo-llvm-cov --locked
+        # ソースビルドを省き、固定した公式リリースのチェックサムを照合する。
+        run: |
+          tool_dir=$(mktemp -d)
+          curl --fail --silent --show-error --location --retry 3 --proto '=https' --tlsv1.2 \
+            https://github.com/taiki-e/cargo-llvm-cov/releases/download/v0.9.1/cargo-llvm-cov-x86_64-unknown-linux-gnu.tar.gz \
+            -o "$tool_dir/tool.tar.gz"
+          echo "b3f68e625481fed9b16444174f3fa5ebcdbde4a1878803a35eabe2dcefcdc41a  $tool_dir/tool.tar.gz" | sha256sum --check --strict
+          tar -xzf "$tool_dir/tool.tar.gz" -C "$tool_dir" cargo-llvm-cov
+          install -Dm755 "$tool_dir/cargo-llvm-cov" "${CARGO_HOME:-$HOME/.cargo}/bin/cargo-llvm-cov"
+          cargo llvm-cov --version
 
       - name: Generate coverage
         if: always()
@@ -144,7 +162,23 @@ jobs:
           rustup target add x86_64-pc-windows-msvc
 
       - name: Install cargo-nextest
-        run: cargo install cargo-nextest --locked
+        shell: pwsh
+        # Windows 版も同じ固定バージョンを検証してから配置する。
+        run: |
+          $toolDir = Join-Path $env:RUNNER_TEMP "cargo-nextest"
+          New-Item -ItemType Directory -Force $toolDir | Out-Null
+          $archive = Join-Path $toolDir "tool.tar.gz"
+          Invoke-WebRequest -Uri https://github.com/nextest-rs/nextest/releases/download/cargo-nextest-0.9.146/cargo-nextest-0.9.146-x86_64-pc-windows-msvc.tar.gz -OutFile $archive
+          if ((Get-FileHash $archive -Algorithm SHA256).Hash -ne "809b01f2c94d031ab6cf5f4d4a4f477c8f51b69c96ab3cb2fe4db7ecb222d0d3") {
+            throw "cargo-nextest のチェックサムが一致しません"
+          }
+          tar -xzf $archive -C $toolDir cargo-nextest.exe
+          if ($LASTEXITCODE -ne 0) { throw "cargo-nextest の展開に失敗しました" }
+          $cargoHome = if ($env:CARGO_HOME) { $env:CARGO_HOME } else { Join-Path $HOME ".cargo" }
+          $cargoBin = Join-Path $cargoHome "bin"
+          New-Item -ItemType Directory -Force $cargoBin | Out-Null
+          Copy-Item (Join-Path $toolDir "cargo-nextest.exe") $cargoBin -Force
+          cargo nextest --version
 
       - name: Configure JUnit
         shell: pwsh
