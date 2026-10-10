@@ -347,6 +347,11 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
           preserveArtifact,
         );
       } catch (error) {
+        // 古い一覧取得の失敗で、新しいワークスペースの選択を通知し直さない。
+        if (activeOperationRef.current !== operationId) {
+          return false;
+        }
+
         const featureError = SpecFeatureError.fromCommandError(
           ListSpecsCommandError.fromUnknown(error),
         );
@@ -375,6 +380,10 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
     const operationId = beginOperation();
     setState((current) => ({
       ...current,
+      archivingSpecId: null,
+      archiveSpecError: null,
+      archiveFailure: null,
+      archiveReveal: null,
       bundleState: SpecBundleState.idle(),
       documentState: SpecDocumentState.idle(workspacePath),
       selection: { specId: null, artifactIdentity: null, fileKey: null },
@@ -544,6 +553,11 @@ export function useSpecs(options: UseSpecsOptions): UseSpecsResult {
           workspacePath: activeWorkspacePath,
           specId,
         });
+        // 同じパスへ戻っていても、切替前のアーカイブから再読込を始めない。
+        if (activeOperationRef.current !== operationId) {
+          return false;
+        }
+
         const current = stateRef.current;
         return await loadTreeAndBundle(
           operationId,
